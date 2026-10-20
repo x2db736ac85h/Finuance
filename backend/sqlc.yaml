@@ -30,3 +30,11 @@ sql:
               import: github.com/x2db736ac85h/finuance/backend/internal/platform
               type: Date
               pointer: true
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              import: time
+              type: Time
+              pointer: true

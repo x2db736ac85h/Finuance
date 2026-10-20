@@ -5,12 +5,238 @@
 package db
 
 import (
+	"net/netip"
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
+
+type Account struct {
+	ID                  uuid.UUID
+	UserID              uuid.UUID
+	Name                string
+	NameN               string
+	Currency            string
+	NumberHint          *string
+	OpeningBalanceMinor int64
+	IsDemo              bool
+	ArchivedAt          *time.Time
+	CreatedAt           time.Time
+}
+
+type Budget struct {
+	UserID      uuid.UUID
+	CategoryID  uuid.UUID
+	AmountMinor int64
+	UpdatedAt   time.Time
+}
+
+type Category struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Name      string
+	NameN     string
+	CreatedAt time.Time
+}
+
+type DedupeOverride struct {
+	AccountID         uuid.UUID
+	Fingerprint       []byte
+	UserID            uuid.UUID
+	Mode              string
+	PreferredImportID *uuid.UUID
+	UpdatedAt         time.Time
+}
 
 type GooseDbVersion struct {
 	ID        int32
 	VersionID int64
 	IsApplied bool
 	Tstamp    pgtype.Timestamp
+}
+
+type Group struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Name      string
+	NameN     string
+	Color     int16
+	CreatedAt time.Time
+}
+
+type Import struct {
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	AccountID       *uuid.UUID
+	Filename        string
+	SizeBytes       int32
+	Sha256          []byte
+	Status          string
+	Encoding        string
+	Delimiter       string
+	Headers         []byte
+	ColumnTypes     []byte
+	Mapping         []byte
+	Options         []byte
+	MappingSource   string
+	HeaderSignature []byte
+	Stats           []byte
+	Error           *string
+	CreatedAt       time.Time
+	CommittedAt     *time.Time
+}
+
+type ImportFile struct {
+	ImportID uuid.UUID
+	UserID   uuid.UUID
+	Content  []byte
+}
+
+type ImportProfile struct {
+	UserID          uuid.UUID
+	HeaderSignature []byte
+	Name            string
+	Mapping         []byte
+	Options         []byte
+	UpdatedAt       time.Time
+}
+
+type ImportRow struct {
+	ImportID            uuid.UUID
+	RowIndex            int32
+	UserID              uuid.UUID
+	Fingerprint         []byte
+	Occurrence          *int32
+	SplitScope          uuid.UUID
+	BookedOn            *platform.Date
+	ValueOn             *platform.Date
+	AmountMinor         *int64
+	Currency            *string
+	Payee               *string
+	PayeeN              *string
+	PayeeGroup          *string
+	Description         *string
+	DescriptionN        *string
+	Reference           *string
+	ReferenceN          *string
+	TxType              *string
+	TxTypeN             *string
+	BankCategory        *string
+	BankCategoryN       *string
+	CounterpartyAccount *string
+	CounterpartyN       *string
+	BalanceAfterMinor   *int64
+	Raw                 []byte
+	SearchText          *string
+	ParseError          *string
+	TransactionID       *uuid.UUID
+}
+
+type InvestmentPosition struct {
+	ID                uuid.UUID
+	UserID            uuid.UUID
+	Position          int32
+	Name              string
+	Type              string
+	InvestedMinor     int64
+	ValueMinor        int64
+	AnnualIncomeMinor int64
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type InvestmentProfile struct {
+	UserID           uuid.UUID
+	PpkEmployeeMinor int64
+	PpkEmployerMinor int64
+	PpkStateMinor    int64
+	PpkValueMinor    int64
+	SwrBp            int32
+	RealReturnBp     int32
+	Version          int32
+	UpdatedAt        time.Time
+}
+
+type Session struct {
+	TokenHash  []byte
+	UserID     uuid.UUID
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	ExpiresAt  time.Time
+	UserAgent  string
+	Ip         *netip.Addr
+}
+
+type Transaction struct {
+	ID                  uuid.UUID
+	Seq                 *int64
+	UserID              uuid.UUID
+	AccountID           uuid.UUID
+	Origin              string
+	Fingerprint         []byte
+	Occurrence          int32
+	SplitScope          uuid.UUID
+	SourceImportID      *uuid.UUID
+	BookedOn            platform.Date
+	ValueOn             *platform.Date
+	AmountMinor         int64
+	Currency            string
+	Payee               string
+	PayeeN              string
+	PayeeGroup          string
+	Description         string
+	DescriptionN        string
+	Reference           string
+	ReferenceN          string
+	TxType              string
+	TxTypeN             string
+	BankCategory        string
+	BankCategoryN       string
+	CounterpartyAccount string
+	CounterpartyN       string
+	BalanceAfterMinor   *int64
+	CategoryID          *uuid.UUID
+	CategorySource      string
+	GroupID             *uuid.UUID
+	IsTransfer          bool
+	TransferPeerID      *uuid.UUID
+	Note                string
+	NoteN               string
+	Raw                 []byte
+	SearchText          string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type TxAnnotation struct {
+	AccountID        uuid.UUID
+	Fingerprint      []byte
+	Occurrence       int32
+	SplitScope       uuid.UUID
+	UserID           uuid.UUID
+	GroupID          *uuid.UUID
+	CategoryID       *uuid.UUID
+	Note             string
+	NoteN            string
+	TransferOverride *bool
+	UpdatedAt        time.Time
+}
+
+type User struct {
+	ID           uuid.UUID
+	Email        string
+	PasswordHash string
+	DisplayName  string
+	IsDemo       bool
+	CreatedAt    time.Time
+	LastLoginAt  *time.Time
+}
+
+type UserPreference struct {
+	UserID    uuid.UUID
+	Prefs     []byte
+	Version   int32
+	UpdatedAt time.Time
 }

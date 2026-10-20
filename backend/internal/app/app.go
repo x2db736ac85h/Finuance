@@ -21,7 +21,6 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
-	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
 
 // Build identifies the binary (set with -ldflags in cmd/finuance).
@@ -34,7 +33,8 @@ type common struct {
 	log     *slog.Logger
 	metrics *observability.Metrics
 	tracing *observability.Tracing
-	pool    *pgxpool.Pool
+	pool    *pgxpool.Pool // for River; data access goes through store
+	store   *store.Store
 }
 
 func setup(ctx context.Context, cfg config.Config, b Build, log *slog.Logger, service string) (*common, error) {
@@ -49,7 +49,7 @@ func setup(ctx context.Context, cfg config.Config, b Build, log *slog.Logger, se
 		return nil, err
 	}
 	m.Registry.MustRegister(store.NewPoolCollector(pool))
-	return &common{log: log, metrics: m, tracing: tr, pool: pool}, nil
+	return &common{log: log, metrics: m, tracing: tr, pool: pool, store: store.New(pool)}, nil
 }
 
 func (c *common) close(ctx context.Context) {
@@ -68,10 +68,9 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 		return err
 	}
 	defer c.close(ctx)
-	q := db.New(c.pool)
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Ready: []httpapi.Check{{Name: "database", Probe: store.Ping(q)}, {Name: "migrations", Probe: store.MigrationsCurrent(q)}},
+		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
 		return err
@@ -100,10 +99,9 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	if err := client.Start(ctx); err != nil {
 		return fmt.Errorf("start river: %w", err)
 	}
-	q := db.New(c.pool)
 	checks := []httpapi.Check{
-		{Name: "database", Probe: store.Ping(q)},
-		{Name: "migrations", Probe: store.MigrationsCurrent(q)},
+		{Name: "database", Probe: c.store.Ping},
+		{Name: "migrations", Probe: c.store.MigrationsCurrent},
 		{Name: "river", Probe: func(context.Context) error {
 			select {
 			case <-client.Stopped():

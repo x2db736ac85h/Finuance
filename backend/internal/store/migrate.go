@@ -13,8 +13,6 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivermigrate"
-
-	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
 
 //go:embed migrations/*.sql
@@ -92,25 +90,4 @@ func ExpectedVersion() int64 {
 		}
 	}
 	return top
-}
-
-// MigrationsCurrent returns a readiness probe: the database must be at least at ExpectedVersion,
-// so an api whose migrate job failed never receives traffic.
-func MigrationsCurrent(q db.Querier) func(context.Context) error {
-	want := ExpectedVersion()
-	return func(ctx context.Context) error {
-		got, err := q.SchemaVersion(ctx)
-		if err != nil {
-			return fmt.Errorf("read schema version: %w", err)
-		}
-		if got < want {
-			return fmt.Errorf("schema version %d is behind the expected %d", got, want)
-		}
-		return nil
-	}
-}
-
-// Ping returns a readiness probe that runs a trivial query.
-func Ping(q db.Querier) func(context.Context) error {
-	return func(ctx context.Context) error { _, err := q.Ping(ctx); return err }
 }

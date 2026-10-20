@@ -6,12 +6,140 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
+	// Commit step 1b: re-apply user annotations (group, manual category, note) to freshly inserted
+	// transactions, so labels survive delete + re-import.
+	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
+	ClearDedupeOverride(ctx context.Context, arg ClearDedupeOverrideParams) (int64, error)
+	// How many staged rows step 1 of the commit may insert; the caller generates that many ids.
+	CountEligibleImportRows(ctx context.Context, arg CountEligibleImportRowsParams) (int64, error)
+	CountImportRows(ctx context.Context, arg CountImportRowsParams) (CountImportRowsRow, error)
+	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
+	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
+	// Transaction groups (PLAN §4.7).
+	CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error)
+	CreateImport(ctx context.Context, arg CreateImportParams) (Import, error)
+	CreateInvestmentPosition(ctx context.Context, arg CreateInvestmentPositionParams) (InvestmentPosition, error)
+	// Sessions store only the SHA-256 of the cookie token (PLAN §5.2). Time comes from the caller
+	// (platform.Clock), so expiry is testable.
+	CreateSession(ctx context.Context, arg CreateSessionParams) error
+	// users and sessions are outside RLS (PLAN §5.3); only the auth package uses these queries,
+	// through store.WithoutUser.
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// Cascades to the account's imports, transactions, annotations and overrides.
+	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
+	DeleteBudget(ctx context.Context, arg DeleteBudgetParams) (int64, error)
+	// Transactions keep existing with category_id NULL; budgets of the category go with it.
+	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error)
+	// An annotation with nothing left (no group, no manual category, no note, no transfer override)
+	// is deleted (PLAN §4.4 "explicit clear").
+	DeleteEmptyAnnotations(ctx context.Context, userID uuid.UUID) (int64, error)
+	DeleteExpiredSessions(ctx context.Context, now time.Time) (int64, error)
+	// Removes the group and its labels only (ON DELETE SET NULL on transactions and annotations).
+	DeleteGroup(ctx context.Context, arg DeleteGroupParams) (int64, error)
+	// Cascades to import_files and import_rows. Transactions are cleaned up by DeleteOrphanTransactions.
+	DeleteImport(ctx context.Context, arg DeleteImportParams) (int64, error)
+	DeleteImportProfile(ctx context.Context, arg DeleteImportProfileParams) (int64, error)
+	// Re-staging (PATCH / reprocess) and the first step of deleting an import.
+	DeleteImportRows(ctx context.Context, arg DeleteImportRowsParams) (int64, error)
+	DeleteInvestmentPosition(ctx context.Context, arg DeleteInvestmentPositionParams) (int64, error)
+	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
+	// references any more. Transactions another import also contains stay.
+	DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphanTransactionsParams) (int64, error)
+	DeleteSession(ctx context.Context, tokenHash []byte) error
+	// Cascades to every user-owned table.
+	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
+	// Log out everywhere (password change), optionally keeping the current session.
+	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
+	// Account suggestion (PLAN §4.4): last four digits of the own-account column.
+	FindAccountsByNumberHint(ctx context.Context, arg FindAccountsByNumberHintParams) ([]Account, error)
+	// Exact duplicate file check (PLAN §4.4): an earlier non-failed import with the same bytes.
+	FindImportBySHA(ctx context.Context, arg FindImportBySHAParams) (uuid.UUID, error)
+	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
+	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
+	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
+	GetGroup(ctx context.Context, arg GetGroupParams) (Group, error)
+	GetImport(ctx context.Context, arg GetImportParams) (Import, error)
+	GetImportFile(ctx context.Context, arg GetImportFileParams) ([]byte, error)
+	// Import profiles: a remembered mapping per file layout (PLAN §4.4).
+	GetImportProfile(ctx context.Context, arg GetImportProfileParams) (ImportProfile, error)
+	// Manual investment data (PLAN §4.9). The repository comes with the investments API.
+	GetInvestmentProfile(ctx context.Context, userID uuid.UUID) (InvestmentProfile, error)
+	GetPreferences(ctx context.Context, userID uuid.UUID) (UserPreference, error)
+	// A live session and its user; expired sessions are not returned.
+	GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error)
+	// Detail view: the transaction with its category and group names.
+	GetTransaction(ctx context.Context, arg GetTransactionParams) (GetTransactionRow, error)
+	GetUser(ctx context.Context, id uuid.UUID) (User, error)
+	// email is citext, so the lookup ignores case.
+	GetUserByEmail(ctx context.Context, email string) (User, error)
+	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
+	// Commit step 1 (PLAN §4.4): new transactions from the staged rows, in file order. Errored rows and
+	// fingerprints with a dedupe override are skipped (the override path re-materialises them). A row
+	// whose (fingerprint, occurrence) already exists in the account is a duplicate: ON CONFLICT skips
+	// it. ids holds one pre-generated UUIDv7 per eligible row (CountEligibleImportRows); ids of skipped
+	// rows are simply unused. The bank category is resolved by normalised name; the caller upserts the
+	// categories first. Returns the inserted ids (the "new" rows).
+	InsertTransactionsFromImport(ctx context.Context, arg InsertTransactionsFromImportParams) ([]uuid.UUID, error)
+	// Commit step 2: link every staged row to its transaction, new or pre-existing (provenance).
+	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
+	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
+	ListBudgets(ctx context.Context, userID uuid.UUID) ([]ListBudgetsRow, error)
+	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
+	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
+	ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, error)
+	ListImportProfiles(ctx context.Context, userID uuid.UUID) ([]ImportProfile, error)
+	// Staged rows are inserted by store.InsertImportRows (hand-written unnest, see importrows.go).
+	// A page of staged rows in file order; only_errors restricts it to rows with a parse error.
+	ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ImportRow, error)
+	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
+	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
 	Ping(ctx context.Context) (int32, error)
+	RenameCategory(ctx context.Context, arg RenameCategoryParams) (Category, error)
+	// Optimistic concurrency as in SavePreferences.
+	SaveInvestmentProfile(ctx context.Context, arg SaveInvestmentProfileParams) (int32, error)
+	// Optimistic concurrency: the update applies only when the stored version is the one the client
+	// read (expected_version); otherwise no row is returned and the caller reports a conflict. The first
+	// save creates the row at version 1.
+	SavePreferences(ctx context.Context, arg SavePreferencesParams) (int32, error)
 	// Highest applied goose migration (the readiness check compares it with the binary's expectation).
 	SchemaVersion(ctx context.Context) (int64, error)
+	// Budgets are global per category (legacy behaviour).
+	SetBudget(ctx context.Context, arg SetBudgetParams) error
+	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
+	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
+	// Moves an import along previewed → committing → committed | failed. from_status guards the move,
+	// so two concurrent commits can't both start.
+	SetImportStatus(ctx context.Context, arg SetImportStatusParams) (Import, error)
+	SetUserDisplayName(ctx context.Context, arg SetUserDisplayNameParams) error
+	SetUserLastLogin(ctx context.Context, arg SetUserLastLoginParams) error
+	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
+	// Sliding expiry.
+	TouchSession(ctx context.Context, arg TouchSessionParams) error
+	// The staged rows (one per import that contains this transaction), oldest import first.
+	TransactionProvenance(ctx context.Context, arg TransactionProvenanceParams) ([]TransactionProvenanceRow, error)
+	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
+	UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group, error)
+	// PATCH while previewed: a new mapping/options and the re-parse results.
+	UpdateImportPreview(ctx context.Context, arg UpdateImportPreviewParams) (Import, error)
+	UpdateInvestmentPosition(ctx context.Context, arg UpdateInvestmentPositionParams) (InvestmentPosition, error)
+	// The user-editable fields of a set of transactions (ledger.Annotate). Each set_* flag says whether
+	// that field is part of the patch. Resetting the category (set_category with a NULL category_id)
+	// falls back to the bank category. Returns the dedupe identity and the new values, which the caller
+	// mirrors into tx_annotations.
+	UpdateTransactionAnnotations(ctx context.Context, arg UpdateTransactionAnnotationsParams) ([]UpdateTransactionAnnotationsRow, error)
+	// User annotations keyed by dedupe identity (PLAN §4.4): they outlive the transaction row, so a
+	// label comes back when the same transaction is imported again.
+	UpsertAnnotation(ctx context.Context, arg UpsertAnnotationParams) error
+	// Returns the id of the category with this normalised name, creating it if needed. The no-op
+	// update makes RETURNING work for an existing row; the first spelling of the name is kept.
+	UpsertCategory(ctx context.Context, arg UpsertCategoryParams) (uuid.UUID, error)
+	UpsertImportProfile(ctx context.Context, arg UpsertImportProfileParams) error
 }
 
 var _ Querier = (*Queries)(nil)
