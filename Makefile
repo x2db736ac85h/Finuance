@@ -7,6 +7,7 @@ SHELL := bash
 MAKEFLAGS += --no-print-directory
 
 ENV_FILE ?= .env
+ORACLE   := tools/legacy-oracle
 COMPOSE  := docker compose --env-file $(ENV_FILE) -f deploy/compose/compose.yaml
 FUZZTIME ?= 30s
 
@@ -26,7 +27,7 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check check-private ## Lint, typecheck, unit tests, codegen drift, private-data check
+check: lint typecheck test gen-check fixtures-check check-private ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data check
 	@echo "check: ok"
 
 .PHONY: check-private
@@ -34,8 +35,9 @@ check-private: ## Fail on IBAN-like numbers or files under testdata/private/
 	@tools/check-private.sh
 
 .PHONY: lint
-lint: ## golangci-lint + ESLint
-	$(call todo,2)
+lint: ## gofmt check (golangci-lint arrives in Phase 2, ESLint in Phase 8)
+	@out="$$(cd backend && gofmt -l .)"; if [ -n "$$out" ]; then echo "gofmt: needs formatting:"; echo "$$out"; exit 1; fi
+	@echo "lint: gofmt ok (golangci-lint: Phase 2, ESLint: Phase 8)"
 
 .PHONY: fmt
 fmt: ## gofmt, goimports, Prettier
@@ -47,7 +49,8 @@ typecheck: ## tsc --noEmit
 
 .PHONY: test
 test: ## Go unit tests (-short) + Vitest
-	$(call todo,2)
+	cd backend && go vet ./... && go test -short ./...
+	@echo "test: Vitest arrives in Phase 8"
 
 .PHONY: test-integration
 test-integration: ## All Go tests incl. testcontainers (Docker required)
@@ -76,8 +79,15 @@ gen-check: ## Regenerate and fail on diff
 	$(call todo,2)
 
 .PHONY: oracle
-oracle: ## Run tools/legacy-oracle -> testdata/oracle/
-	$(call todo,1)
+oracle: ## Run tools/legacy-oracle -> testdata/oracle/ (headless Chromium via Playwright)
+	@[ -d $(ORACLE)/node_modules ] || (cd $(ORACLE) && npm ci --no-audit --no-fund)
+	node $(ORACLE)/oracle.mjs
+
+.PHONY: fixtures fixtures-check
+fixtures: ## Regenerate testdata/fixtures/synthetic/ from make-fixtures.mjs
+	node $(ORACLE)/make-fixtures.mjs
+fixtures-check: ## Fail if the synthetic fixtures differ from the generator
+	@node $(ORACLE)/make-fixtures.mjs --check
 
 ##@ Local database
 

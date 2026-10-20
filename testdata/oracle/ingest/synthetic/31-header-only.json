@@ -1,0 +1,62 @@
+{
+  "columns": [
+    {
+      "dates": [],
+      "name": "Data",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "Opis",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "Kwota",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "Waluta",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "Kategoria",
+      "numbers": [],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/31-header-only.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "",
+    "date": "",
+    "payee": "Opis"
+  },
+  "rowNorm": [],
+  "rows": []
+}

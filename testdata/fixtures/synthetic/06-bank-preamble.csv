@@ -1,0 +1,9 @@
+Wyciąg z rachunku
+Rachunek: 00000000000000000000000001
+Właściciel: JAN PRZYKŁADOWY
+Okres: 01.01.2025 - 31.01.2025
+Waluta: PLN
+Data;Opis;Kwota;Waluta;Kategoria
+02.01.2025;Sklep A;-10,00;PLN;Zakupy
+03.01.2025;Sklep B;-20,00;PLN;Zakupy
+04.01.2025;Sklep C;-30,00;PLN;Zakupy

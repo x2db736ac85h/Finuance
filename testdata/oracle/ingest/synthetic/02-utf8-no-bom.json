@@ -1,0 +1,128 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-03",
+        "2025-01-05",
+        "2025-01-11"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        11012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -59.99,
+        -6.5,
+        120
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/02-utf8-no-bom.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "03.01.2025\u0001ksiegarnia cma\u0001-59,99\u0001pln\u0001ksiazki",
+    "05.01.2025\u0001zrodlo wody na\u0001-6,50\u0001pln\u0001artykuly spozywcze",
+    "11.01.2025\u0001zwrot za bilet gdansk\u0001120,00\u0001pln\u0001wplywy"
+  ],
+  "rows": [
+    [
+      "03.01.2025",
+      "Księgarnia Ćma",
+      "-59,99",
+      "PLN",
+      "Książki"
+    ],
+    [
+      "05.01.2025",
+      "Źródło wody Ńa",
+      "-6,50",
+      "PLN",
+      "Artykuły spożywcze"
+    ],
+    [
+      "11.01.2025",
+      "Zwrot za bilet Gdańsk",
+      "120,00",
+      "PLN",
+      "Wpływy"
+    ]
+  ]
+}

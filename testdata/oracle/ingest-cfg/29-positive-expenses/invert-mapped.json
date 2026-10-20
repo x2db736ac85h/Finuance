@@ -1,0 +1,96 @@
+{
+  "cfg": {
+    "invert": true,
+    "map": {
+      "0": "date",
+      "1": "desc",
+      "2": "amount"
+    }
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-10"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -45.2,
+        -14,
+        20
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/29-positive-expenses.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "2025-01-02\u0001shop\u0001-45.20",
+    "2025-01-03\u0001cafe\u0001-14.00",
+    "2025-01-10\u0001refund\u000120.00"
+  ],
+  "rows": [
+    [
+      "2025-01-02",
+      "Shop",
+      "-45.20"
+    ],
+    [
+      "2025-01-03",
+      "Cafe",
+      "-14.00"
+    ],
+    [
+      "2025-01-10",
+      "Refund",
+      "20.00"
+    ]
+  ],
+  "variant": "invert-mapped"
+}

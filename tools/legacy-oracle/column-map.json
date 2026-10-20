@@ -1,0 +1,17 @@
+{
+  "description": "Maps the legacy demo CSV headers to the rebuild's canonical transaction columns (docs/PLAN.md §4.3). Used to replay legacy filter cases against the new query engine.",
+  "columns": {
+    "Data księgowania": "booked_on",
+    "Data waluty": "value_on",
+    "Nadawca / Odbiorca": "payee",
+    "Adres nadawcy / odbiorcy": "payee_address",
+    "Rachunek źródłowy": "account_from",
+    "Rachunek docelowy": "account_to",
+    "Tytułem": "description",
+    "Kwota operacji": "amount",
+    "Waluta": "currency",
+    "Numer referencyjny": "reference",
+    "Typ operacji": "operation_type",
+    "Kategoria": "category"
+  }
+}

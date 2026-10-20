@@ -1,0 +1,229 @@
+{
+  "dataset": "demo/demo-legacy.csv",
+  "periods": [
+    {
+      "custom": null,
+      "period": "all",
+      "result": null
+    },
+    {
+      "custom": null,
+      "period": "l30",
+      "result": {
+        "from": "2025-02-16",
+        "kind": "range",
+        "label": "Last 30 days",
+        "to": "2025-03-18"
+      }
+    },
+    {
+      "custom": null,
+      "period": "l3m",
+      "result": {
+        "from": "2025-01-01",
+        "kind": "range",
+        "label": "Last 3 months",
+        "to": "2025-04-01"
+      }
+    },
+    {
+      "custom": null,
+      "period": "l12m",
+      "result": {
+        "from": "2024-04-01",
+        "kind": "range",
+        "label": "Last 12 months",
+        "to": "2025-04-01"
+      }
+    },
+    {
+      "custom": null,
+      "period": "ytd",
+      "result": {
+        "from": "2025-01-01",
+        "kind": "range",
+        "label": "Year to date 2025",
+        "to": "2025-03-18"
+      }
+    },
+    {
+      "custom": null,
+      "period": "m:2024-06",
+      "result": {
+        "from": "2024-06-01",
+        "kind": "month",
+        "label": "June 2024",
+        "to": "2024-07-01"
+      }
+    },
+    {
+      "custom": null,
+      "period": "m:2025-03",
+      "result": {
+        "from": "2025-03-01",
+        "kind": "month",
+        "label": "March 2025",
+        "to": "2025-04-01"
+      }
+    },
+    {
+      "custom": null,
+      "period": "m:2023-01",
+      "result": {
+        "from": "2023-01-01",
+        "kind": "month",
+        "label": "January 2023",
+        "to": "2023-02-01"
+      }
+    },
+    {
+      "custom": null,
+      "period": "y:2024",
+      "result": {
+        "from": "2024-01-01",
+        "kind": "year",
+        "label": "2024",
+        "to": "2025-01-01"
+      }
+    },
+    {
+      "custom": null,
+      "period": "y:2025",
+      "result": {
+        "from": "2025-01-01",
+        "kind": "year",
+        "label": "2025",
+        "to": "2026-01-01"
+      }
+    },
+    {
+      "custom": [
+        "2024-07-01T00:00:00Z",
+        "2024-07-15T00:00:00Z"
+      ],
+      "period": "custom",
+      "result": {
+        "from": "2024-07-01",
+        "kind": "range",
+        "label": "Jul 1, 2024 – Jul 14, 2024",
+        "to": "2024-07-15"
+      }
+    },
+    {
+      "custom": [
+        "2025-03-10T00:00:00Z",
+        "2025-03-11T00:00:00Z"
+      ],
+      "period": "custom",
+      "result": {
+        "from": "2025-03-10",
+        "kind": "range",
+        "label": "Mar 10, 2025",
+        "to": "2025-03-11"
+      }
+    },
+    {
+      "custom": null,
+      "period": "bogus",
+      "result": null
+    }
+  ],
+  "recurring": [
+    {
+      "active": true,
+      "cat": "Mieszkanie",
+      "count": 15,
+      "last": "2025-03-02",
+      "med": 2850,
+      "name": "WSPÓLNOTA MIESZKANIOWA",
+      "next": "2025-04-02",
+      "yearly": 34200
+    },
+    {
+      "active": true,
+      "cat": "Rachunki",
+      "count": 15,
+      "last": "2025-03-15",
+      "med": 260.29,
+      "name": "DOSTAWCA ENERGII",
+      "next": "2025-04-15",
+      "yearly": 3123.4800000000005
+    },
+    {
+      "active": true,
+      "cat": "Rachunki",
+      "count": 14,
+      "last": "2025-02-20",
+      "med": 79.99,
+      "name": "OPERATOR INTERNETU",
+      "next": "2025-03-20",
+      "yearly": 959.8799999999999
+    }
+  ],
+  "roles": {
+    "amount": "Kwota operacji",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data księgowania",
+    "payee": "Nadawca / Odbiorca"
+  },
+  "roundNice": [
+    {
+      "in": 0,
+      "out": 0
+    },
+    {
+      "in": -5,
+      "out": 0
+    },
+    {
+      "in": 1,
+      "out": 5
+    },
+    {
+      "in": 4,
+      "out": 5
+    },
+    {
+      "in": 5,
+      "out": 5
+    },
+    {
+      "in": 6,
+      "out": 10
+    },
+    {
+      "in": 99,
+      "out": 100
+    },
+    {
+      "in": 100,
+      "out": 100
+    },
+    {
+      "in": 101,
+      "out": 100
+    },
+    {
+      "in": 104,
+      "out": 100
+    },
+    {
+      "in": 105,
+      "out": 110
+    },
+    {
+      "in": 2849,
+      "out": 2850
+    },
+    {
+      "in": 2855,
+      "out": 2860
+    },
+    {
+      "in": 12345.6,
+      "out": 12350
+    }
+  ]
+}

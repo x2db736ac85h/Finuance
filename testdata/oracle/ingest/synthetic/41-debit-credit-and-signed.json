@@ -1,0 +1,110 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-10"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        10012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -45.2,
+        8500
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Wydatki",
+      "numbers": [
+        45.2,
+        null
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Wpływy",
+      "numbers": [
+        null,
+        8500
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/41-debit-credit-and-signed.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Wydatki",
+    "Wpływy"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep\u0001-45,20\u000145,20\u0001",
+    "10.01.2025\u0001wynagrodzenie\u00018 500,00\u0001\u00018 500,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep",
+      "-45,20",
+      "45,20",
+      ""
+    ],
+    [
+      "10.01.2025",
+      "Wynagrodzenie",
+      "8 500,00",
+      "",
+      "8 500,00"
+    ]
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -1234.56,
+        -20,
+        3000
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ",",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/15-comma-quoted-decimals.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep a\u0001-1 234,56\u0001pln",
+    "03.01.2025\u0001sklep b, warszawa\u0001-20,00\u0001pln",
+    "04.01.2025\u0001wplyw\u00013 000,00\u0001pln"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep A",
+      "-1 234,56",
+      "PLN"
+    ],
+    [
+      "03.01.2025",
+      "Sklep B, Warszawa",
+      "-20,00",
+      "PLN"
+    ],
+    [
+      "04.01.2025",
+      "Wpływ",
+      "3 000,00",
+      "PLN"
+    ]
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "cfg": {
+    "header": 3
+  },
+  "columns": [
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Klient",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        "2025-01-01",
+        null,
+        "2025-02-01",
+        null,
+        null,
+        null
+      ],
+      "name": "JAN PRZYKŁADOWY",
+      "numbers": [
+        null,
+        1000,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        "2025-01-31",
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Column 3",
+      "numbers": [
+        31012025,
+        null,
+        null,
+        null,
+        -10,
+        -20
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Column 4",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Column 5",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/38-header-on-record-7.csv",
+  "headerAt": 3,
+  "headers": [
+    "Klient",
+    "JAN PRZYKŁADOWY",
+    "Column 3",
+    "Column 4",
+    "Column 5"
+  ],
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "",
+    "payee": ""
+  },
+  "rowNorm": [
+    "okres\u000101.01.2025\u000131.01.2025\u0001\u0001",
+    "saldo poczatkowe\u00011 000,00\u0001pln\u0001\u0001",
+    "wygenerowano\u00012025-02-01\u000110:00\u0001utc\u0001",
+    "data\u0001opis\u0001kwota\u0001waluta\u0001kategoria",
+    "02.01.2025\u0001a\u0001-10,00\u0001pln\u0001zakupy",
+    "03.01.2025\u0001b\u0001-20,00\u0001pln\u0001zakupy"
+  ],
+  "rows": [
+    [
+      "Okres",
+      "01.01.2025",
+      "31.01.2025",
+      "",
+      ""
+    ],
+    [
+      "Saldo początkowe",
+      "1 000,00",
+      "PLN",
+      "",
+      ""
+    ],
+    [
+      "Wygenerowano",
+      "2025-02-01",
+      "10:00",
+      "UTC",
+      ""
+    ],
+    [
+      "Data",
+      "Opis",
+      "Kwota",
+      "Waluta",
+      "Kategoria"
+    ],
+    [
+      "02.01.2025",
+      "A",
+      "-10,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "03.01.2025",
+      "B",
+      "-20,00",
+      "PLN",
+      "Zakupy"
+    ]
+  ],
+  "variant": "header-3"
+}

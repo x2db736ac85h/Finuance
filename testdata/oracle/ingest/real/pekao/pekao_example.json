@@ -1,0 +1,410 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2024-08-16",
+        "2024-08-16",
+        "2024-08-16",
+        "2024-08-15",
+        "2023-10-01",
+        "2023-10-01",
+        "2023-10-01"
+      ],
+      "name": "Data księgowania",
+      "numbers": [
+        16082024,
+        16082024,
+        16082024,
+        15082024,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        "2024-08-16",
+        "2024-08-15",
+        "2024-08-15",
+        "2024-08-15",
+        "2023-10-01",
+        "2023-10-01",
+        "2023-09-30"
+      ],
+      "name": "Data waluty",
+      "numbers": [
+        16082024,
+        15082024,
+        15082024,
+        15082024,
+        null,
+        null,
+        30092023
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Nadawca / Odbiorca",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Adres nadawcy / odbiorcy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Rachunek źródłowy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Rachunek docelowy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Tytułem",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota operacji",
+      "numbers": [
+        -134.88,
+        -47.72,
+        -4.67,
+        -42.44,
+        -212.2,
+        -31.08,
+        -249.34
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Numer referencyjny",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Typ operacji",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "real/pekao/pekao_example.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data księgowania",
+    "Data waluty",
+    "Nadawca / Odbiorca",
+    "Adres nadawcy / odbiorcy",
+    "Rachunek źródłowy",
+    "Rachunek docelowy",
+    "Tytułem",
+    "Kwota operacji",
+    "Waluta",
+    "Numer referencyjny",
+    "Typ operacji",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota operacji",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data księgowania",
+    "payee": "Nadawca / Odbiorca"
+  },
+  "rowNorm": [
+    "16.08.2024\u000116.08.2024\u0001serwis kometa\u0001ojufab.pl 38 yhucyl emih f. tecowol,ygisisecu\u000100000000000000000000004971\u0001\u0001blik ref       12021815721\u0001-134,88\u0001pln\u0001d135819147239101\u0001platnosc blik\u0001zakupy przez internet",
+    "16.08.2024\u000115.08.2024\u0001restauracja most       kamieniec maly\u0001\u000100000000000000000000004971\u0001\u0001*********0485348\u0001-47,72\u0001pln\u0001m687151428897172\u0001transakcja karta platnicza\u0001artykuly spozywcze",
+    "16.08.2024\u000115.08.2024\u0001piekarnia zorza\u0001yridenega.pl nupywurimut 43/4,zohysu\u000100000000000000000000004971\u0001\u0001blik ref       12777848267\u0001-4,67\u0001pln\u0001i063292491460986\u0001platnosc blik\u0001bez kategorii",
+    "15.08.2024\u000115.08.2024\u0001teatr promyk           potokowo\u0001\u000100000000000000000000004971\u0001\u0001*********0485348\u0001-42,44\u0001pln\u0001y395451382157046\u0001transakcja karta platnicza\u0001sport",
+    "01.10.2023\u000101.10.2023\u0001restauracja most\u0001ul. ynolupazu 8 60-198 zohysu\u000100000000000000000000004971\u000100000000000000000000066511\u0001/opt/x/////p24-c0m-b8f-b7q m01804-32579\u0001-212,20\u0001pln\u0001473276s027683301\u0001przelew mobile\u0001bez kategorii",
+    "01.10.2023\u000101.10.2023\u0001kwiaciarnia roza       brzozowice\u0001\u000100000000000000000000004971\u0001\u0001*********1315640\u0001-31,08\u0001pln\u0001f037228203558456\u0001transakcja karta platnicza\u0001ogrod",
+    "01.10.2023\u000130.09.2023\u0001weterynarz lapa  * yzyb pending  borowina\u0001\u000100000000000000000000004971\u0001\u0001*********1315640\u0001-249,34\u0001pln\u0001y758792746790787\u0001transakcja karta platnicza\u0001restauracje i kawiarnie"
+  ],
+  "rows": [
+    [
+      "16.08.2024",
+      "16.08.2024",
+      "SERWIS KOMETA",
+      "OJUFAB.PL 38 YHUCYL EMIH F. TECOWOL,YGISISECU",
+      "00000000000000000000004971",
+      "",
+      "BLIK REF       12021815721",
+      "-134,88",
+      "PLN",
+      "D135819147239101",
+      "PŁATNOŚĆ BLIK",
+      "Zakupy przez internet"
+    ],
+    [
+      "16.08.2024",
+      "15.08.2024",
+      "RESTAURACJA MOST       KAMIENIEC MALY",
+      "",
+      "00000000000000000000004971",
+      "",
+      "*********0485348",
+      "-47,72",
+      "PLN",
+      "M687151428897172",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Artykuły spożywcze"
+    ],
+    [
+      "16.08.2024",
+      "15.08.2024",
+      "PIEKARNIA ZORZA",
+      "YRIDENEGA.PL NUPYWURIMUT 43/4,ZOHYSU",
+      "00000000000000000000004971",
+      "",
+      "BLIK REF       12777848267",
+      "-4,67",
+      "PLN",
+      "I063292491460986",
+      "PŁATNOŚĆ BLIK",
+      "Bez kategorii"
+    ],
+    [
+      "15.08.2024",
+      "15.08.2024",
+      "TEATR PROMYK           POTOKOWO",
+      "",
+      "00000000000000000000004971",
+      "",
+      "*********0485348",
+      "-42,44",
+      "PLN",
+      "Y395451382157046",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Sport"
+    ],
+    [
+      "01.10.2023",
+      "01.10.2023",
+      "RESTAURACJA MOST",
+      "UL. YNOLUPAZU 8 60-198 ZOHYSU",
+      "00000000000000000000004971",
+      "00000000000000000000066511",
+      "/OPT/X/////P24-C0M-B8F-B7Q M01804-32579",
+      "-212,20",
+      "PLN",
+      "473276S027683301",
+      "PRZELEW MOBILE",
+      "Bez kategorii"
+    ],
+    [
+      "01.10.2023",
+      "01.10.2023",
+      "KWIACIARNIA ROZA       BRZOZOWICE",
+      "",
+      "00000000000000000000004971",
+      "",
+      "*********1315640",
+      "-31,08",
+      "PLN",
+      "F037228203558456",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Ogród"
+    ],
+    [
+      "01.10.2023",
+      "30.09.2023",
+      "WETERYNARZ LAPA  * YZYB PENDING  BOROWINA",
+      "",
+      "00000000000000000000004971",
+      "",
+      "*********1315640",
+      "-249,34",
+      "PLN",
+      "Y758792746790787",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Restauracje i kawiarnie"
+    ]
+  ]
+}

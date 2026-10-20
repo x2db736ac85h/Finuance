@@ -35,4 +35,5 @@ It is a rebuild of the single-file legacy app in `legacy/`.
 - `make up` / `make down` — full stack via Docker Compose (web on http://localhost:8000)
 - `make dev-api`, `make dev-worker`, `make dev-web` — local dev processes
 - `make oracle` — regenerate legacy expectations (Playwright)
+- `make fixtures` — regenerate the synthetic CSV fixtures (`make fixtures-check` is part of `make check`)
 - `make eval-assistant MODEL=…` — assistant eval suite against a real local model (not part of CI)

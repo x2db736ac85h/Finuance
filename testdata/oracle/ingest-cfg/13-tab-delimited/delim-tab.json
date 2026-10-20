@@ -1,0 +1,94 @@
+{
+  "cfg": {
+    "delim": "\t"
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": "\t",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/13-tab-delimited.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep a\u0001-10,00\u0001pln",
+    "03.01.2025\u0001sklep, filia\u0001-20,00\u0001pln"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep A",
+      "-10,00",
+      "PLN"
+    ],
+    [
+      "03.01.2025",
+      "Sklep, filia",
+      "-20,00",
+      "PLN"
+    ]
+  ],
+  "variant": "delim-tab"
+}

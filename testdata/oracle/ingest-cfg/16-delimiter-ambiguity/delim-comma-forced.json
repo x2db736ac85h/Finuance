@@ -1,0 +1,68 @@
+{
+  "cfg": {
+    "delim": ","
+  },
+  "columns": [
+    {
+      "dates": [],
+      "name": "05.01.2025;Sklep D;al. Polna 4",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "lok. 5",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "00-002",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "Łódź",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "PL;-40",
+      "numbers": [],
+      "type": "text"
+    },
+    {
+      "dates": [],
+      "name": "00",
+      "numbers": [],
+      "type": "text"
+    }
+  ],
+  "delimiter": ",",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/16-delimiter-ambiguity.csv",
+  "headerAt": 5,
+  "headers": [
+    "05.01.2025;Sklep D;al. Polna 4",
+    "lok. 5",
+    "00-002",
+    "Łódź",
+    "PL;-40",
+    "00"
+  ],
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "",
+    "payee": ""
+  },
+  "rowNorm": [],
+  "rows": [],
+  "variant": "delim-comma-forced"
+}

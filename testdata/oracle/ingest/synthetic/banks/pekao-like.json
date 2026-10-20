@@ -1,0 +1,371 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-03-01",
+        "2025-03-01",
+        "2025-02-28",
+        "2024-04-15",
+        "2024-04-15",
+        "2024-04-10"
+      ],
+      "name": "Data księgowania",
+      "numbers": [
+        null,
+        null,
+        28022025,
+        15042024,
+        15042024,
+        10042024
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        "2025-03-01",
+        "2025-02-28",
+        "2025-02-28",
+        "2024-04-15",
+        "2024-04-14",
+        "2024-04-10"
+      ],
+      "name": "Data waluty",
+      "numbers": [
+        null,
+        28022025,
+        28022025,
+        15042024,
+        14042024,
+        10042024
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Nadawca / Odbiorca",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Adres nadawcy / odbiorcy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Rachunek źródłowy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Rachunek docelowy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Tytułem",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota operacji",
+      "numbers": [
+        -127.13,
+        -44.98,
+        -40,
+        -200,
+        -235,
+        9250
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Numer referencyjny",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Typ operacji",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/banks/pekao-like.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data księgowania",
+    "Data waluty",
+    "Nadawca / Odbiorca",
+    "Adres nadawcy / odbiorcy",
+    "Rachunek źródłowy",
+    "Rachunek docelowy",
+    "Tytułem",
+    "Kwota operacji",
+    "Waluta",
+    "Numer referencyjny",
+    "Typ operacji",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota operacji",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data księgowania",
+    "payee": "Nadawca / Odbiorca"
+  },
+  "rowNorm": [
+    "01.03.2025\u000101.03.2025\u0001sklep internetowy alfa\u0001alfa.pl ul. przykladowa 1,warszawa\u000100000000000000000000000001\u0001\u0001blik ref       10000000001\u0001-127,13\u0001pln\u0001c000000000000001\u0001platnosc blik\u0001zakupy przez internet",
+    "01.03.2025\u000128.02.2025\u0001minimarket z1001 k.1   raszyn\u0001\u000100000000000000000000000001\u0001\u0001*********0000001\u0001-44,98\u0001pln\u0001c000000000000002\u0001transakcja karta platnicza\u0001artykuly spozywcze",
+    "28.02.2025\u000128.02.2025\u0001galeria sztuki         warszawa\u0001\u000100000000000000000000000001\u0001\u0001*********0000001\u0001-40,00\u0001pln\u0001c000000000000003\u0001transakcja karta platnicza\u0001sport",
+    "15.04.2024\u000115.04.2024\u0001platnosci s.a.\u0001ul. testowa 8 00-001 poznan\u000100000000000000000000000001\u000100000000000000000000000002\u0001/opt/x/////p24-a1b-c2d-e3f m00001-00001\u0001-200,00\u0001pln\u0001000000f000000001\u0001przelew mobile\u0001bez kategorii",
+    "15.04.2024\u000114.04.2024\u0001rides  * food pending  amsterdam\u0001\u000100000000000000000000000001\u0001\u0001*********0000002\u0001-235,00\u0001pln\u0001c000000000000004\u0001transakcja karta platnicza\u0001restauracje i kawiarnie",
+    "10.04.2024\u000110.04.2024\u0001pracodawca przykladowy sp. z o.o.\u0001ul. firmowa 1 00-002 warszawa\u000100000000000000000000000001\u0001\u0001wynagrodzenie 04/2024\u00019 250,00\u0001pln\u0001c000000000000005\u0001przelew przychodzacy\u0001wynagrodzenie"
+  ],
+  "rows": [
+    [
+      "01.03.2025",
+      "01.03.2025",
+      "SKLEP INTERNETOWY ALFA",
+      "ALFA.PL UL. PRZYKŁADOWA 1,WARSZAWA",
+      "00000000000000000000000001",
+      "",
+      "BLIK REF       10000000001",
+      "-127,13",
+      "PLN",
+      "C000000000000001",
+      "PŁATNOŚĆ BLIK",
+      "Zakupy przez internet"
+    ],
+    [
+      "01.03.2025",
+      "28.02.2025",
+      "MINIMARKET Z1001 K.1   RASZYN",
+      "",
+      "00000000000000000000000001",
+      "",
+      "*********0000001",
+      "-44,98",
+      "PLN",
+      "C000000000000002",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Artykuły spożywcze"
+    ],
+    [
+      "28.02.2025",
+      "28.02.2025",
+      "GALERIA SZTUKI         WARSZAWA",
+      "",
+      "00000000000000000000000001",
+      "",
+      "*********0000001",
+      "-40,00",
+      "PLN",
+      "C000000000000003",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Sport"
+    ],
+    [
+      "15.04.2024",
+      "15.04.2024",
+      "PŁATNOŚCI S.A.",
+      "UL. TESTOWA 8 00-001 POZNAŃ",
+      "00000000000000000000000001",
+      "00000000000000000000000002",
+      "/OPT/X/////P24-A1B-C2D-E3F M00001-00001",
+      "-200,00",
+      "PLN",
+      "000000F000000001",
+      "PRZELEW MOBILE",
+      "Bez kategorii"
+    ],
+    [
+      "15.04.2024",
+      "14.04.2024",
+      "RIDES  * FOOD PENDING  AMSTERDAM",
+      "",
+      "00000000000000000000000001",
+      "",
+      "*********0000002",
+      "-235,00",
+      "PLN",
+      "C000000000000004",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Restauracje i kawiarnie"
+    ],
+    [
+      "10.04.2024",
+      "10.04.2024",
+      "PRACODAWCA PRZYKŁADOWY SP. Z O.O.",
+      "UL. FIRMOWA 1 00-002 WARSZAWA",
+      "00000000000000000000000001",
+      "",
+      "WYNAGRODZENIE 04/2024",
+      "9 250,00",
+      "PLN",
+      "C000000000000005",
+      "PRZELEW PRZYCHODZĄCY",
+      "Wynagrodzenie"
+    ]
+  ]
+}

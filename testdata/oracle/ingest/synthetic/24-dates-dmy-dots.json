@@ -1,0 +1,92 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-02-01",
+        "2024-12-31"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        122025,
+        31122024
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20,
+        -30
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/24-dates-dmy-dots.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001a\u0001-10,00",
+    "1.2.2025\u0001b\u0001-20,00",
+    "31.12.2024\u0001c\u0001-30,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "A",
+      "-10,00"
+    ],
+    [
+      "1.2.2025",
+      "B",
+      "-20,00"
+    ],
+    [
+      "31.12.2024",
+      "C",
+      "-30,00"
+    ]
+  ]
+}

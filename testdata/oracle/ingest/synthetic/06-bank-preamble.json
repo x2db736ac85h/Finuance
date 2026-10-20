@@ -1,0 +1,218 @@
+{
+  "columns": [
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04"
+      ],
+      "name": "Wyciąg z rachunku",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Column 2",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Column 3",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        -10,
+        -20,
+        -30
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Column 4",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Column 5",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/06-bank-preamble.csv",
+  "headerAt": 1,
+  "headers": [
+    "Wyciąg z rachunku",
+    "Column 2",
+    "Column 3",
+    "Column 4",
+    "Column 5"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "",
+    "payee": ""
+  },
+  "rowNorm": [
+    "rachunek: 00000000000000000000000001\u0001\u0001\u0001\u0001",
+    "wlasciciel: jan przykladowy\u0001\u0001\u0001\u0001",
+    "okres: 01.01.2025 - 31.01.2025\u0001\u0001\u0001\u0001",
+    "waluta: pln\u0001\u0001\u0001\u0001",
+    "data\u0001opis\u0001kwota\u0001waluta\u0001kategoria",
+    "02.01.2025\u0001sklep a\u0001-10,00\u0001pln\u0001zakupy",
+    "03.01.2025\u0001sklep b\u0001-20,00\u0001pln\u0001zakupy",
+    "04.01.2025\u0001sklep c\u0001-30,00\u0001pln\u0001zakupy"
+  ],
+  "rows": [
+    [
+      "Rachunek: 00000000000000000000000001",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Właściciel: JAN PRZYKŁADOWY",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Okres: 01.01.2025 - 31.01.2025",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Waluta: PLN",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Data",
+      "Opis",
+      "Kwota",
+      "Waluta",
+      "Kategoria"
+    ],
+    [
+      "02.01.2025",
+      "Sklep A",
+      "-10,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "03.01.2025",
+      "Sklep B",
+      "-20,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "04.01.2025",
+      "Sklep C",
+      "-30,00",
+      "PLN",
+      "Zakupy"
+    ]
+  ]
+}

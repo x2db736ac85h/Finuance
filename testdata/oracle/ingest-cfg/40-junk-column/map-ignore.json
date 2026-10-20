@@ -1,0 +1,84 @@
+{
+  "cfg": {
+    "map": {
+      "0": "date",
+      "1": "desc",
+      "2": "amount",
+      "3": "ignore"
+    }
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/40-junk-column.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001a\u0001-10,00",
+    "03.01.2025\u0001b\u0001-20,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "A",
+      "-10,00"
+    ],
+    [
+      "03.01.2025",
+      "B",
+      "-20,00"
+    ]
+  ],
+  "variant": "map-ignore"
+}

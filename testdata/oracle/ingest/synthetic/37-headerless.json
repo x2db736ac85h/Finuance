@@ -1,0 +1,95 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-03",
+        "2025-01-04"
+      ],
+      "name": "02.01.2025",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Sklep A",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "-10,00",
+      "numbers": [
+        -20,
+        -30
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "PLN",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/37-headerless.csv",
+  "headerAt": 1,
+  "headers": [
+    "02.01.2025",
+    "Sklep A",
+    "-10,00",
+    "PLN"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "-10,00",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "02.01.2025",
+    "payee": ""
+  },
+  "rowNorm": [
+    "03.01.2025\u0001sklep b\u0001-20,00\u0001pln",
+    "04.01.2025\u0001sklep c\u0001-30,00\u0001pln"
+  ],
+  "rows": [
+    [
+      "03.01.2025",
+      "Sklep B",
+      "-20,00",
+      "PLN"
+    ],
+    [
+      "04.01.2025",
+      "Sklep C",
+      "-30,00",
+      "PLN"
+    ]
+  ]
+}

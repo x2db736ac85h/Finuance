@@ -1,0 +1,7 @@
+Bank export;;;;
+Konto;00000000000000000000000001;;;
+;;;;
+Data;Opis;Kwota;Waluta;Kategoria
+02.01.2025;A;-10,00;PLN;Zakupy
+03.01.2025;B;-20,00;PLN;Zakupy
+04.01.2025;C;-30,00;PLN;Zakupy

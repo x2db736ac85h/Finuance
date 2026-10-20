@@ -1,0 +1,9 @@
+Raport operacji
+Bank Przykładowy S.A.
+Klient;JAN PRZYKŁADOWY
+Okres;01.01.2025;31.01.2025
+Saldo początkowe;1 000,00;PLN
+Wygenerowano;2025-02-01;10:00;UTC
+Data;Opis;Kwota;Waluta;Kategoria
+02.01.2025;A;-10,00;PLN;Zakupy
+03.01.2025;B;-20,00;PLN;Zakupy

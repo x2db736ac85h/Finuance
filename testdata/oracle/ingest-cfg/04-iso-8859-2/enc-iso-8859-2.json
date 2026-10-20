@@ -1,0 +1,109 @@
+{
+  "cfg": {
+    "enc": "iso-8859-2"
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-03",
+        "2025-01-04"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -21,
+        -22
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "ISO-8859-2",
+  "error": null,
+  "fixture": "synthetic/04-iso-8859-2.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "03.01.2025\u0001swietokrzyska zrodla al\u0001-21,00\u0001pln\u0001zakupy",
+    "04.01.2025\u0001swietokrzyska zrodla al\u0001-22,00\u0001pln\u0001zakupy"
+  ],
+  "rows": [
+    [
+      "03.01.2025",
+      "ŚWIĘTOKRZYSKA ŹRÓDŁA ĄŁ",
+      "-21,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "04.01.2025",
+      "świętokrzyska źródła ął",
+      "-22,00",
+      "PLN",
+      "Zakupy"
+    ]
+  ],
+  "variant": "enc-iso-8859-2"
+}

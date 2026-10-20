@@ -1,0 +1,176 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-01",
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04",
+        "2025-01-05",
+        "2025-01-06",
+        "2025-01-07",
+        "2025-01-08",
+        "2025-01-09",
+        "2025-01-10"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        10012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -1234.56,
+        1234.56,
+        1234.56,
+        12,
+        12,
+        -2500,
+        15,
+        -7.5,
+        -10,
+        1234567
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/17-amount-formats.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "01.01.2025\u0001space thousands\u0001-1 234,56",
+    "02.01.2025\u0001dot thousands\u00011.234,56",
+    "03.01.2025\u0001comma thousands\u00011,234.56",
+    "04.01.2025\u0001pln suffix\u000112,00 pln",
+    "05.01.2025\u0001euro prefix\u0001€12",
+    "06.01.2025\u0001nbsp thousands\u0001-2 500,00",
+    "07.01.2025\u0001plus sign\u0001+15,00",
+    "08.01.2025\u0001zl suffix\u0001-7,50 zl",
+    "09.01.2025\u0001integer\u0001-10",
+    "10.01.2025\u0001many dots\u00011.234.567"
+  ],
+  "rows": [
+    [
+      "01.01.2025",
+      "space thousands",
+      "-1 234,56"
+    ],
+    [
+      "02.01.2025",
+      "dot thousands",
+      "1.234,56"
+    ],
+    [
+      "03.01.2025",
+      "comma thousands",
+      "1,234.56"
+    ],
+    [
+      "04.01.2025",
+      "PLN suffix",
+      "12,00 PLN"
+    ],
+    [
+      "05.01.2025",
+      "euro prefix",
+      "€12"
+    ],
+    [
+      "06.01.2025",
+      "nbsp thousands",
+      "-2 500,00"
+    ],
+    [
+      "07.01.2025",
+      "plus sign",
+      "+15,00"
+    ],
+    [
+      "08.01.2025",
+      "zł suffix",
+      "-7,50 zł"
+    ],
+    [
+      "09.01.2025",
+      "integer",
+      "-10"
+    ],
+    [
+      "10.01.2025",
+      "many dots",
+      "1.234.567"
+    ]
+  ]
+}

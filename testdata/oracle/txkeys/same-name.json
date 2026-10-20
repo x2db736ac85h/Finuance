@@ -1,0 +1,29 @@
+{
+  "datasets": [
+    {
+      "dataset": "export.csv",
+      "keys": [
+        "1736553600000|-12.00|kawiarnia beta|kawa",
+        "1736640000000|-30.00|sklep alfa|zakupy"
+      ]
+    },
+    {
+      "dataset": "export.csv",
+      "keys": [
+        "1736553600000|-12.00|kawiarnia beta|kawa",
+        "1736553600000|-12.00|kawiarnia beta|kawa#2",
+        "1736726400000|-25.99|apteka|leki"
+      ]
+    },
+    {
+      "dataset": "merged",
+      "keys": [
+        "1736553600000|-12.00|kawiarnia beta|kawa",
+        "1736640000000|-30.00|sklep alfa|zakupy",
+        "1736553600000|-12.00|kawiarnia beta|kawa#2",
+        "1736726400000|-25.99|apteka|leki"
+      ]
+    }
+  ],
+  "set": "same-name"
+}

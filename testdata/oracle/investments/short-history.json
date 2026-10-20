@@ -1,0 +1,246 @@
+{
+  "dataset": "demo-short",
+  "inv": {
+    "positions": [
+      {
+        "id": "p1",
+        "income": 50,
+        "invested": 5000,
+        "name": "ETF",
+        "type": "ETF",
+        "value": 5200
+      }
+    ],
+    "ppk": {
+      "employee": 1000,
+      "employer": 750,
+      "state": 250,
+      "value": 2100
+    },
+    "ret": 5,
+    "swr": 4
+  },
+  "months": [
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "70,437.74 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,760,943.60 PLN"
+            ],
+            [
+              "Invested assets",
+              "7,300.00 PLN"
+            ],
+            [
+              "Progress",
+              "0.4%"
+            ],
+            [
+              "Yearly savings",
+              "42,237.46 PLN"
+            ],
+            [
+              "Years to FI",
+              "23"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "2,000.00 PLN",
+              "2,100.00 PLN",
+              "0.00 PLN",
+              "100.00 PLN",
+              "+5.0%"
+            ],
+            [
+              "ETF",
+              "5,000.00 PLN",
+              "5,200.00 PLN",
+              "50.00 PLN",
+              "200.00 PLN",
+              "+4.0%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "ETF",
+              "5,000.00 PLN",
+              "50.00 PLN",
+              "1.00%"
+            ],
+            [
+              "Total",
+              "5,000.00 PLN",
+              "50.00 PLN",
+              "1.00%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-03-01",
+      "partial": true
+    },
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "72,591.72 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,814,793.00 PLN"
+            ],
+            [
+              "Invested assets",
+              "7,300.00 PLN"
+            ],
+            [
+              "Progress",
+              "0.4%"
+            ],
+            [
+              "Yearly savings",
+              "40,283.28 PLN"
+            ],
+            [
+              "Years to FI",
+              "24"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "2,000.00 PLN",
+              "2,100.00 PLN",
+              "0.00 PLN",
+              "100.00 PLN",
+              "+5.0%"
+            ],
+            [
+              "ETF",
+              "5,000.00 PLN",
+              "5,200.00 PLN",
+              "50.00 PLN",
+              "200.00 PLN",
+              "+4.0%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "ETF",
+              "5,000.00 PLN",
+              "50.00 PLN",
+              "1.00%"
+            ],
+            [
+              "Total",
+              "5,000.00 PLN",
+              "50.00 PLN",
+              "1.00%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-02-01",
+      "partial": false
+    }
+  ],
+  "portfolio": "short-history"
+}

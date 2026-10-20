@@ -1,0 +1,290 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-03-02",
+        "2025-03-10",
+        "2025-03-21",
+        "2025-03-21",
+        "2025-02-02",
+        "2025-02-10",
+        "2025-02-14",
+        "2025-01-03",
+        "2025-01-03",
+        "2025-01-03",
+        "2025-01-10",
+        "2025-01-15"
+      ],
+      "name": "Data operacji",
+      "numbers": [
+        null,
+        10032025,
+        21032025,
+        21032025,
+        null,
+        10022025,
+        14022025,
+        null,
+        null,
+        null,
+        10012025,
+        15012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kontrahent",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Tytuł",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -2850,
+        8500,
+        -55.1,
+        -55.1,
+        -2850,
+        8500,
+        -89,
+        -12,
+        -12,
+        -12,
+        8500,
+        -210.4
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/overlap/C_q1_again.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data operacji",
+    "Kontrahent",
+    "Tytuł",
+    "Kwota",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "",
+    "date": "Data operacji",
+    "payee": "Kontrahent"
+  },
+  "rowNorm": [
+    "02.03.2025\u0001wspolnota\u0001czynsz 03\u0001-2 850,00\u0001mieszkanie",
+    "10.03.2025\u0001pracodawca\u0001wynagrodzenie 03\u00018 500,00\u0001wynagrodzenie",
+    "21.03.2025\u0001sklep alfa\u0001zakupy\u0001-55,10\u0001zakupy",
+    "21.03.2025\u0001sklep alfa\u0001zakupy\u0001-55,10\u0001zakupy",
+    "02.02.2025\u0001wspolnota\u0001czynsz 02\u0001-2 850,00\u0001mieszkanie",
+    "10.02.2025\u0001pracodawca\u0001wynagrodzenie 02\u00018 500,00\u0001wynagrodzenie",
+    "14.02.2025\u0001kwiaciarnia\u0001kwiaty\u0001-89,00\u0001prezenty",
+    "03.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+    "03.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+    "03.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+    "10.01.2025\u0001pracodawca\u0001wynagrodzenie 01\u00018 500,00\u0001wynagrodzenie",
+    "15.01.2025\u0001sklep alfa\u0001zakupy\u0001-210,40\u0001zakupy"
+  ],
+  "rows": [
+    [
+      "02.03.2025",
+      "WSPÓLNOTA",
+      "Czynsz 03",
+      "-2 850,00",
+      "Mieszkanie"
+    ],
+    [
+      "10.03.2025",
+      "PRACODAWCA",
+      "Wynagrodzenie 03",
+      "8 500,00",
+      "Wynagrodzenie"
+    ],
+    [
+      "21.03.2025",
+      "SKLEP ALFA",
+      "Zakupy",
+      "-55,10",
+      "Zakupy"
+    ],
+    [
+      "21.03.2025",
+      "SKLEP ALFA",
+      "Zakupy",
+      "-55,10",
+      "Zakupy"
+    ],
+    [
+      "02.02.2025",
+      "WSPÓLNOTA",
+      "Czynsz 02",
+      "-2 850,00",
+      "Mieszkanie"
+    ],
+    [
+      "10.02.2025",
+      "PRACODAWCA",
+      "Wynagrodzenie 02",
+      "8 500,00",
+      "Wynagrodzenie"
+    ],
+    [
+      "14.02.2025",
+      "KWIACIARNIA",
+      "Kwiaty",
+      "-89,00",
+      "Prezenty"
+    ],
+    [
+      "03.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "Restauracje"
+    ],
+    [
+      "03.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "Restauracje"
+    ],
+    [
+      "03.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "Restauracje"
+    ],
+    [
+      "10.01.2025",
+      "PRACODAWCA",
+      "Wynagrodzenie 01",
+      "8 500,00",
+      "Wynagrodzenie"
+    ],
+    [
+      "15.01.2025",
+      "SKLEP ALFA",
+      "Zakupy",
+      "-210,40",
+      "Zakupy"
+    ]
+  ]
+}

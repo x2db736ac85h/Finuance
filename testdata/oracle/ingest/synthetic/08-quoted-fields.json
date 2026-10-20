@@ -1,0 +1,104 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04",
+        "2025-01-05"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20,
+        -30,
+        -40
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/08-quoted-fields.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep; filia nr 2\u0001-10,00",
+    "03.01.2025\u0001ksiegarnia \"pod sowa\"\u0001-20,00",
+    "04.01.2025\u0001linia pierwsza\r\nlinia druga\u0001-30,00",
+    "05.01.2025\u0001\u0001-40,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep; filia nr 2",
+      "-10,00"
+    ],
+    [
+      "03.01.2025",
+      "Księgarnia \"Pod Sową\"",
+      "-20,00"
+    ],
+    [
+      "04.01.2025",
+      "Linia pierwsza\r\nlinia druga",
+      "-30,00"
+    ],
+    [
+      "05.01.2025",
+      "",
+      "-40,00"
+    ]
+  ]
+}

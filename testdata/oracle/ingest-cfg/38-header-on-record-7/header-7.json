@@ -1,0 +1,109 @@
+{
+  "cfg": {
+    "header": 7
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/38-header-on-record-7.csv",
+  "headerAt": 7,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001a\u0001-10,00\u0001pln\u0001zakupy",
+    "03.01.2025\u0001b\u0001-20,00\u0001pln\u0001zakupy"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "A",
+      "-10,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "03.01.2025",
+      "B",
+      "-20,00",
+      "PLN",
+      "Zakupy"
+    ]
+  ],
+  "variant": "header-7"
+}

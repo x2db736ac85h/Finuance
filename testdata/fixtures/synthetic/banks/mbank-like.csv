@@ -1,0 +1,40 @@
+﻿mBank Przykładowy S.A. Bankowość Detaliczna;
+			Skrytka Pocztowa 0000;
+			00-000 Miasto 2;
+			www.example.pl;
+			Infolinia: 000 000 000;
+			+48 (00) 0 000 000;
+			
+
+#Klient;
+JAN PRZYKŁADOWY;
+
+Lista operacji;
+
+#Za okres:;
+09.04.2025;09.04.2026;
+
+#zgodnie z wybranymi filtrami wyszukiwania;
+      #dla rachunków:;
+      Konto - 00000000000000000000000003;
+      
+      #Lista nie jest dokumentem w rozumieniu art. 7 Ustawy Prawo Bankowe, ponieważ operacje można samodzielnie edytować.;
+      
+      #Waluta;#Wpływy;#Wydatki;
+PLN;584,30;-2 132,22;
+      
+#Data operacji;#Opis operacji;#Rachunek;#Kategoria;#Kwota;
+2026-04-08;"BLIK WYPŁATA ATM WŁASNY  BANKOMAT ALFA                                                                                                                                    BLIK WYPŁATA ATM WŁASNY                                                             ";"Konto 0000 ... 0003";"Wypłata gotówki";-800,00 PLN;;
+2026-04-08;"SERWIS PRZYKŁADOWY  ZAKUP PRZY UŻYCIU KARTY - MO/TO                                                           transakcja nierozliczona";"Konto 0000 ... 0003";"Bez kategorii";-31,43 PLN;;
+2026-04-08;"PŁATNIK ZAGRANICZNY 1 EXAMPLE STREET, SINGAPORE SG, 0000000000001 /RFB/0000000000001  SINGAPORE SG                                                                                            PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001001  ";"Konto 0000 ... 0003";"Wpływy - inne";284,30 PLN;;
+2026-04-07;"URZĄD PRZYKŁADOWY 000001  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona";"Konto 0000 ... 0003";"Płatności - inne";-82,22 PLN;;
+2026-04-07;"URZĄD PRZYKŁADOWY 000001  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona";"Konto 0000 ... 0003";"Płatności - inne";-82,22 PLN;;
+2026-04-03;"FIRMA X  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                                   ";"Konto 0000 ... 0003";"Multimedia, książki i prasa";-26,44 PLN;;
+2026-04-02;"FUNDACJA PRZYKŁADOWA, DAROWIZNA NA CELE STATUTOWE                                                                     PRZELEW WEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001002  ";"Konto 0000 ... 0003";"Bez kategorii";-200,00 PLN;;
+2026-04-01;"KONTRAHENT  UL.TESTOWA 3                      00-123 MIASTO                                                             PRZELEW WEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001000  ";"Konto 0000 ... 0003";"Wpływy - inne";300,00 PLN;;
+2026-03-20;"OPŁATA ZA KARTĘ                ";"Konto 0000 ... 0003";"Opłaty i odsetki";-10,00 PLN;;
+2026-03-16;"UBEZPIECZYCIEL.PL                                                                BLIK ZAKUP E-COMMERCE                                                               ";"Konto 0000 ... 0003";"Ubezpieczenie domu";-843,43 PLN;;
+2026-03-15;"FIRMA R                                                                          BLIK ZAKUP E-COMMERCE                                                               ";"Konto 0000 ... 0003";"Zajęcia dodatkowe";-1 190,00 PLN;;
+
+
+

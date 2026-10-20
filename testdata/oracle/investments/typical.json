@@ -1,0 +1,318 @@
+{
+  "dataset": "demo",
+  "inv": {
+    "positions": [
+      {
+        "id": "p1",
+        "income": 0,
+        "invested": 40000,
+        "name": "ETF World",
+        "type": "ETF",
+        "value": 46500
+      },
+      {
+        "id": "p2",
+        "income": 1360,
+        "invested": 20000,
+        "name": "Obligacje EDO",
+        "type": "Bonds",
+        "value": 21300
+      },
+      {
+        "id": "p3",
+        "income": 640,
+        "invested": 8000,
+        "name": "Akcje dywidendowe",
+        "type": "Stocks",
+        "value": 9100
+      }
+    ],
+    "ppk": {
+      "employee": 12000,
+      "employer": 9000,
+      "state": 690,
+      "value": 25400
+    },
+    "ret": 5,
+    "swr": 4
+  },
+  "months": [
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "76,046.07 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,901,151.75 PLN"
+            ],
+            [
+              "Invested assets",
+              "102,300.00 PLN"
+            ],
+            [
+              "Progress",
+              "5.4%"
+            ],
+            [
+              "Yearly savings",
+              "36,820.93 PLN"
+            ],
+            [
+              "Years to FI",
+              "24"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "21,690.00 PLN",
+              "25,400.00 PLN",
+              "0.00 PLN",
+              "3,710.00 PLN",
+              "+17.1%"
+            ],
+            [
+              "ETF World",
+              "40,000.00 PLN",
+              "46,500.00 PLN",
+              "0.00 PLN",
+              "6,500.00 PLN",
+              "+16.3%"
+            ],
+            [
+              "Obligacje EDO",
+              "20,000.00 PLN",
+              "21,300.00 PLN",
+              "1,360.00 PLN",
+              "1,300.00 PLN",
+              "+6.5%"
+            ],
+            [
+              "Akcje dywidendowe",
+              "8,000.00 PLN",
+              "9,100.00 PLN",
+              "640.00 PLN",
+              "1,100.00 PLN",
+              "+13.8%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "ETF World",
+              "40,000.00 PLN",
+              "0.00 PLN",
+              "0.00%"
+            ],
+            [
+              "Obligacje EDO",
+              "20,000.00 PLN",
+              "1,360.00 PLN",
+              "6.80%"
+            ],
+            [
+              "Akcje dywidendowe",
+              "8,000.00 PLN",
+              "640.00 PLN",
+              "8.00%"
+            ],
+            [
+              "Total",
+              "68,000.00 PLN",
+              "2,000.00 PLN",
+              "2.94%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-03-01",
+      "partial": true
+    },
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "78,655.27 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,966,381.75 PLN"
+            ],
+            [
+              "Invested assets",
+              "102,300.00 PLN"
+            ],
+            [
+              "Progress",
+              "5.2%"
+            ],
+            [
+              "Yearly savings",
+              "34,226.73 PLN"
+            ],
+            [
+              "Years to FI",
+              "25"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "21,690.00 PLN",
+              "25,400.00 PLN",
+              "0.00 PLN",
+              "3,710.00 PLN",
+              "+17.1%"
+            ],
+            [
+              "ETF World",
+              "40,000.00 PLN",
+              "46,500.00 PLN",
+              "0.00 PLN",
+              "6,500.00 PLN",
+              "+16.3%"
+            ],
+            [
+              "Obligacje EDO",
+              "20,000.00 PLN",
+              "21,300.00 PLN",
+              "1,360.00 PLN",
+              "1,300.00 PLN",
+              "+6.5%"
+            ],
+            [
+              "Akcje dywidendowe",
+              "8,000.00 PLN",
+              "9,100.00 PLN",
+              "640.00 PLN",
+              "1,100.00 PLN",
+              "+13.8%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "ETF World",
+              "40,000.00 PLN",
+              "0.00 PLN",
+              "0.00%"
+            ],
+            [
+              "Obligacje EDO",
+              "20,000.00 PLN",
+              "1,360.00 PLN",
+              "6.80%"
+            ],
+            [
+              "Akcje dywidendowe",
+              "8,000.00 PLN",
+              "640.00 PLN",
+              "8.00%"
+            ],
+            [
+              "Total",
+              "68,000.00 PLN",
+              "2,000.00 PLN",
+              "2.94%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-02-01",
+      "partial": false
+    }
+  ],
+  "portfolio": "typical"
+}

@@ -1,0 +1,74 @@
+{
+  "columns": [
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "02.01.2025;A;-10",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "00;PLN",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ",",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/22-ragged-rows.csv",
+  "headerAt": 2,
+  "headers": [
+    "02.01.2025;A;-10",
+    "00;PLN"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "",
+    "payee": ""
+  },
+  "rowNorm": [
+    "03.01.2025;b;-20\u000100",
+    "04.01.2025;c;-30\u000100;pln;extra",
+    "05.01.2025;d;-40\u000100;pln"
+  ],
+  "rows": [
+    [
+      "03.01.2025;B;-20",
+      "00"
+    ],
+    [
+      "04.01.2025;C;-30",
+      "00;PLN;extra"
+    ],
+    [
+      "05.01.2025;D;-40",
+      "00;PLN"
+    ]
+  ]
+}

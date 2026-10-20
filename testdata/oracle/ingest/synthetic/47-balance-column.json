@@ -1,0 +1,95 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Saldo",
+      "numbers": [
+        990,
+        970
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/47-balance-column.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Saldo",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "Saldo",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001a\u0001990,00\u0001-10,00",
+    "03.01.2025\u0001b\u0001970,00\u0001-20,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "A",
+      "990,00",
+      "-10,00"
+    ],
+    [
+      "03.01.2025",
+      "B",
+      "970,00",
+      "-20,00"
+    ]
+  ]
+}

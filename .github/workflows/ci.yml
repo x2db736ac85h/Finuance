@@ -41,6 +41,11 @@ jobs:
       - name: Private-data check
         run: tools/check-private.sh
 
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
       - name: make check
         run: make check
 
@@ -69,11 +74,42 @@ jobs:
         run: docker compose --env-file .env -f deploy/compose/compose.yaml logs db
 
   backend:
-    name: backend (placeholder)
+    name: backend (Go)
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - run: echo "Go lint, unit and integration tests arrive in Phase 2."
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: gofmt
+        run: make lint
+      - name: vet + unit tests
+        run: make test
+
+  oracle-fresh:
+    name: legacy oracle is fresh
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/legacy-oracle/package-lock.json
+      - name: Install oracle dependencies
+        working-directory: tools/legacy-oracle
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Synthetic fixtures match the generator
+        run: make fixtures-check
+      - name: Regenerate legacy expectations
+        run: make oracle
+      - name: No drift
+        run: |
+          git add -A -N testdata
+          git diff --exit-code --stat -- testdata || { echo "::error::make oracle changed testdata/ — run it locally and commit the result"; exit 1; }
 
   web:
     name: web (placeholder)

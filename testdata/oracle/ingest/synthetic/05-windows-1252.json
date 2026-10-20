@@ -1,0 +1,110 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-02-01",
+        "2025-02-02",
+        "2025-02-03"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        null,
+        -3.2,
+        -7
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Currency",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "Windows-1250",
+  "error": null,
+  "fixture": "synthetic/05-windows-1252.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount",
+    "Currency"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "",
+    "currency": "EUR",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "2025-02-01\u0001cafe muller\u0001-€12,50\u0001eur",
+    "2025-02-02\u0001straße brotchen\u0001-3,20\u0001eur",
+    "2025-02-03\u0001crcme brulee\u0001-7,00\u0001eur"
+  ],
+  "rows": [
+    [
+      "2025-02-01",
+      "Café Müller",
+      "-€12,50",
+      "EUR"
+    ],
+    [
+      "2025-02-02",
+      "Straße Brötchen",
+      "-3,20",
+      "EUR"
+    ],
+    [
+      "2025-02-03",
+      "Crčme brulée",
+      "-7,00",
+      "EUR"
+    ]
+  ]
+}

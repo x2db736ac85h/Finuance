@@ -1,0 +1,246 @@
+{
+  "dataset": "demo-expenses-only",
+  "inv": {
+    "positions": [
+      {
+        "id": "p1",
+        "income": 10,
+        "invested": 1000,
+        "name": "Konto oszczędnościowe",
+        "type": "Cash",
+        "value": 1000
+      }
+    ],
+    "ppk": {
+      "employee": 0,
+      "employer": 0,
+      "state": 0,
+      "value": 0
+    },
+    "ret": 0,
+    "swr": 4
+  },
+  "months": [
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "76,046.07 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,901,151.75 PLN"
+            ],
+            [
+              "Invested assets",
+              "1,000.00 PLN"
+            ],
+            [
+              "Progress",
+              "0.1%"
+            ],
+            [
+              "Yearly savings",
+              "-76,046.07 PLN"
+            ],
+            [
+              "Years to FI",
+              "–"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "–"
+            ],
+            [
+              "Konto oszczędnościowe",
+              "1,000.00 PLN",
+              "1,000.00 PLN",
+              "10.00 PLN",
+              "0.00 PLN",
+              "+0.0%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "Konto oszczędnościowe",
+              "1,000.00 PLN",
+              "10.00 PLN",
+              "1.00%"
+            ],
+            [
+              "Total",
+              "1,000.00 PLN",
+              "10.00 PLN",
+              "1.00%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-03-01",
+      "partial": true
+    },
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "78,655.27 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,966,381.75 PLN"
+            ],
+            [
+              "Invested assets",
+              "1,000.00 PLN"
+            ],
+            [
+              "Progress",
+              "0.1%"
+            ],
+            [
+              "Yearly savings",
+              "-78,655.27 PLN"
+            ],
+            [
+              "Years to FI",
+              "–"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "–"
+            ],
+            [
+              "Konto oszczędnościowe",
+              "1,000.00 PLN",
+              "1,000.00 PLN",
+              "10.00 PLN",
+              "0.00 PLN",
+              "+0.0%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "Konto oszczędnościowe",
+              "1,000.00 PLN",
+              "10.00 PLN",
+              "1.00%"
+            ],
+            [
+              "Total",
+              "1,000.00 PLN",
+              "10.00 PLN",
+              "1.00%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-02-01",
+      "partial": false
+    }
+  ],
+  "portfolio": "fi-unreachable"
+}

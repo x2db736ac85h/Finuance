@@ -1,0 +1,104 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02T07:21:00Z",
+        "2025-01-03T16:40:05Z",
+        "2025-01-04T18:26:00Z",
+        "2025-01-05T10:36:00Z"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20,
+        -30,
+        -40
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/26-dates-with-times.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "2025-01-02 07:21\u0001a\u0001-10,00",
+    "2025-01-03t16:40:05\u0001b\u0001-20,00",
+    "04.01.2025 18:26\u0001c\u0001-30,00",
+    "05.01.2025, 10:36\u0001d\u0001-40,00"
+  ],
+  "rows": [
+    [
+      "2025-01-02 07:21",
+      "A",
+      "-10,00"
+    ],
+    [
+      "2025-01-03T16:40:05",
+      "B",
+      "-20,00"
+    ],
+    [
+      "04.01.2025 18:26",
+      "C",
+      "-30,00"
+    ],
+    [
+      "05.01.2025, 10:36",
+      "D",
+      "-40,00"
+    ]
+  ]
+}

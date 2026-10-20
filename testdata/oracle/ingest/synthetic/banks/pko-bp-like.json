@@ -1,0 +1,344 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2026-04-04",
+        "2026-04-02",
+        "2026-03-31",
+        "2026-03-13",
+        "2026-03-10",
+        "2026-02-20"
+      ],
+      "name": "2026-04-04",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        "2026-04-04",
+        "2026-03-31",
+        "2026-03-30",
+        "2026-03-12",
+        "2026-03-10",
+        "2026-02-19"
+      ],
+      "name": "2026-04-03",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Płatność kartą",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "-43.52",
+      "numbers": [
+        -10,
+        -265.13,
+        -5.65,
+        -25,
+        3200,
+        -1600
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "PLN",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Tytuł: 000000001 00000000000000000000001",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Data wykonania operacji: 2026-04-03 07:21",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota Cash Back:  0.00",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Oryginalna kwota operacji: 43.52",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Numer karty: 000000******0001",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ",",
+  "dropped": 0,
+  "encoding": "Windows-1250",
+  "error": null,
+  "fixture": "synthetic/banks/pko-bp-like.csv",
+  "headerAt": 2,
+  "headers": [
+    "2026-04-04",
+    "2026-04-03",
+    "Płatność kartą",
+    "-43.52",
+    "PLN",
+    "Tytuł: 000000001 00000000000000000000001",
+    "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+    "Data wykonania operacji: 2026-04-03 07:21",
+    "Kwota Cash Back:  0.00",
+    "Oryginalna kwota operacji: 43.52",
+    "Numer karty: 000000******0001"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "-43.52",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "2026-04-04",
+    "payee": "Tytuł: 000000001 00000000000000000000001"
+  },
+  "rowNorm": [
+    "2026-04-04\u00012026-04-04\u0001oplata za uzytkowanie karty\u0001-10\u0001pln\u0001tytul: oplata miesieczna za karte 000000******0001, 28.02-28.03\u0001\u0001\u0001\u0001\u0001",
+    "2026-04-02\u00012026-03-31\u0001platnosc karta\u0001-265.13\u0001pln\u0001tytul: 000000002 00000000000000000000002\u0001lokalizacja: adres: stacja paliw miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-03-31\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 265.13\u0001numer karty: 000000******0001",
+    "2026-03-31\u00012026-03-30\u0001platnosc karta\u0001-5.65\u0001pln\u0001tytul: 000000001 00000000000000000000003\u0001lokalizacja: adres: sklep dyskont dluga miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-03-30 16:40\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 5.65\u0001numer karty: 000000******0001",
+    "2026-03-13\u00012026-03-12\u0001platnosc karta\u0001-25\u0001pln\u0001tytul: 000000001 00000000000000000000004\u0001lokalizacja: adres: bar szybki 1, poznan 1 miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-03-12 13:03\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 25.00\u0001numer karty: 000000******0001",
+    "2026-03-10\u00012026-03-10\u0001przelew przychodzacy\u00013200\u0001pln\u0001tytul: wynagrodzenie 03/2026\u0001nadawca: pracodawca przykladowy\u0001rachunek nadawcy: 00000000000000000000000003\u0001\u0001\u0001",
+    "2026-02-20\u00012026-02-19\u0001wyplata z bankomatu\u0001-1600\u0001pln\u0001tytul: bankomat 0000000000000000a0000\u0001lokalizacja: adres: szeroka 1 miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-02-19 17:57\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 1600.00\u0001numer karty: 000000******0001"
+  ],
+  "rows": [
+    [
+      "2026-04-04",
+      "2026-04-04",
+      "Opłata za użytkowanie karty",
+      "-10",
+      "PLN",
+      "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 000000******0001, 28.02-28.03",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "2026-04-02",
+      "2026-03-31",
+      "Płatność kartą",
+      "-265.13",
+      "PLN",
+      "Tytuł: 000000002 00000000000000000000002",
+      "Lokalizacja: Adres: STACJA PALIW Miasto: POZNAN Kraj: POLSKA",
+      "Data wykonania operacji: 2026-03-31",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 265.13",
+      "Numer karty: 000000******0001"
+    ],
+    [
+      "2026-03-31",
+      "2026-03-30",
+      "Płatność kartą",
+      "-5.65",
+      "PLN",
+      "Tytuł: 000000001 00000000000000000000003",
+      "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+      "Data wykonania operacji: 2026-03-30 16:40",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 5.65",
+      "Numer karty: 000000******0001"
+    ],
+    [
+      "2026-03-13",
+      "2026-03-12",
+      "Płatność kartą",
+      "-25",
+      "PLN",
+      "Tytuł: 000000001 00000000000000000000004",
+      "Lokalizacja: Adres: BAR SZYBKI 1, Poznan 1 Miasto: Poznan Kraj: POLSKA",
+      "Data wykonania operacji: 2026-03-12 13:03",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 25.00",
+      "Numer karty: 000000******0001"
+    ],
+    [
+      "2026-03-10",
+      "2026-03-10",
+      "Przelew przychodzący",
+      "3200",
+      "PLN",
+      "Tytuł: WYNAGRODZENIE 03/2026",
+      "Nadawca: PRACODAWCA PRZYKŁADOWY",
+      "Rachunek nadawcy: 00000000000000000000000003",
+      "",
+      "",
+      ""
+    ],
+    [
+      "2026-02-20",
+      "2026-02-19",
+      "Wypłata z bankomatu",
+      "-1600",
+      "PLN",
+      "Tytuł: BANKOMAT 0000000000000000A0000",
+      "Lokalizacja: Adres: Szeroka 1 Miasto: POZNAN Kraj: POLSKA",
+      "Data wykonania operacji: 2026-02-19 17:57",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 1600.00",
+      "Numer karty: 000000******0001"
+    ]
+  ]
+}

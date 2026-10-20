@@ -1,0 +1,110 @@
+{
+  "cfg": {
+    "header": 0,
+    "skip": 1
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04"
+      ],
+      "name": "Column 1",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Column 2",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Column 3",
+      "numbers": [
+        -10,
+        -20,
+        -30
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Column 4",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/37-headerless.csv",
+  "headerAt": 0,
+  "headers": [
+    "Column 1",
+    "Column 2",
+    "Column 3",
+    "Column 4"
+  ],
+  "roles": {
+    "amount": "Column 3",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Column 1",
+    "payee": ""
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep a\u0001-10,00\u0001pln",
+    "03.01.2025\u0001sklep b\u0001-20,00\u0001pln",
+    "04.01.2025\u0001sklep c\u0001-30,00\u0001pln"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep A",
+      "-10,00",
+      "PLN"
+    ],
+    [
+      "03.01.2025",
+      "Sklep B",
+      "-20,00",
+      "PLN"
+    ],
+    [
+      "04.01.2025",
+      "Sklep C",
+      "-30,00",
+      "PLN"
+    ]
+  ],
+  "variant": "none-skip-1"
+}

@@ -1,0 +1,127 @@
+{
+  "cfg": {
+    "dropShort": true
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20,
+        1264.56
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 2,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/36-footer-summary.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001a\u0001-10,00\u0001pln\u0001zakupy",
+    "03.01.2025\u0001b\u0001-20,00\u0001pln\u0001zakupy",
+    "04.01.2025\u0001c\u00011 264,56\u0001pln\u0001wplywy"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "A",
+      "-10,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "03.01.2025",
+      "B",
+      "-20,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "04.01.2025",
+      "C",
+      "1 264,56",
+      "PLN",
+      "Wpływy"
+    ]
+  ],
+  "variant": "dropshort-on"
+}

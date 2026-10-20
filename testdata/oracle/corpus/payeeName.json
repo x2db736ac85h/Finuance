@@ -1,0 +1,617 @@
+{
+  "cases": [
+    {
+      "in": "ZABKA Z6373 K.1        RASZYN",
+      "out": "ZABKA Z6373 K.1"
+    },
+    {
+      "in": "ZACHETA                WARSZAWA",
+      "out": "ZACHETA"
+    },
+    {
+      "in": "UBER   * EATS PENDING  AMSTERDAM",
+      "out": "UBER"
+    },
+    {
+      "in": "IA *CEBULEKWIATOWE     CZESTOCHOWA",
+      "out": "IA *CEBULEKWIATOWE"
+    },
+    {
+      "in": "AMAZON MARKETPLACE",
+      "out": "AMAZON MARKETPLACE"
+    },
+    {
+      "in": "PAYPRO S.A.",
+      "out": "PAYPRO S.A."
+    },
+    {
+      "in": "CITY-NAV SPOLKA Z OGRAN",
+      "out": "CITY-NAV SPOLKA Z OGRAN"
+    },
+    {
+      "in": "  LEADING SPACES",
+      "out": "LEADING SPACES"
+    },
+    {
+      "in": "TRAILING SPACES  ",
+      "out": "TRAILING SPACES"
+    },
+    {
+      "in": "  BOTH  ",
+      "out": "BOTH"
+    },
+    {
+      "in": "",
+      "out": "(unknown)"
+    },
+    {
+      "in": " ",
+      "out": "(unknown)"
+    },
+    {
+      "in": "   ",
+      "out": "(unknown)"
+    },
+    {
+      "in": "A",
+      "out": "A"
+    },
+    {
+      "in": "A  B",
+      "out": "A"
+    },
+    {
+      "in": "A B",
+      "out": "A B"
+    },
+    {
+      "in": "A\tB",
+      "out": "A B"
+    },
+    {
+      "in": "A\t\tB",
+      "out": "A"
+    },
+    {
+      "in": "A \tB",
+      "out": "A"
+    },
+    {
+      "in": "A  B",
+      "out": "A"
+    },
+    {
+      "in": "A\nB",
+      "out": "A B"
+    },
+    {
+      "in": "A\n\nB",
+      "out": "A"
+    },
+    {
+      "in": "A\r\nB",
+      "out": "A"
+    },
+    {
+      "in": "MULTI   SPACE   RUNS",
+      "out": "MULTI"
+    },
+    {
+      "in": "single space only here",
+      "out": "single space only here"
+    },
+    {
+      "in": "X  ",
+      "out": "X"
+    },
+    {
+      "in": "  X",
+      "out": "X"
+    },
+    {
+      "in": "one  two  three  four",
+      "out": "one"
+    },
+    {
+      "in": "Tab\tin\tmiddle",
+      "out": "Tab in middle"
+    },
+    {
+      "in": "MARKET NA ROGU       WARSZAWA",
+      "out": "MARKET NA ROGU"
+    },
+    {
+      "in": "DELIKATESY POD LIPĄ  WARSZAWA",
+      "out": "DELIKATESY POD LIPĄ"
+    },
+    {
+      "in": "PIEKARNIA ZIARNO     WARSZAWA",
+      "out": "PIEKARNIA ZIARNO"
+    },
+    {
+      "in": "KAWIARNIA PODWÓRKO   WARSZAWA",
+      "out": "KAWIARNIA PODWÓRKO"
+    },
+    {
+      "in": "KOMUNIKACJA MIEJSKA",
+      "out": "KOMUNIKACJA MIEJSKA"
+    },
+    {
+      "in": "STACJA PALIW POLNA   WARSZAWA",
+      "out": "STACJA PALIW POLNA"
+    },
+    {
+      "in": "SKLEP INTERNETOWY ALFA",
+      "out": "SKLEP INTERNETOWY ALFA"
+    },
+    {
+      "in": "PRACODAWCA PRZYKŁADOWY SP. Z O.O.",
+      "out": "PRACODAWCA PRZYKŁADOWY SP. Z O.O."
+    },
+    {
+      "in": "WSPÓLNOTA MIESZKANIOWA",
+      "out": "WSPÓLNOTA MIESZKANIOWA"
+    },
+    {
+      "in": null,
+      "out": "(unknown)"
+    },
+    {
+      "in": 0,
+      "out": "(unknown)"
+    },
+    {
+      "in": 123,
+      "out": "123"
+    },
+    {
+      "in": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "out": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "in": "NAME                                                  CITY",
+      "out": "NAME"
+    },
+    {
+      "in": " SKLEP 0WARSZAWA  ",
+      "out": "SKLEP 0WARSZAWA"
+    },
+    {
+      "in": "KAWIARNIA 1 Kraków",
+      "out": "KAWIARNIA 1 Kraków"
+    },
+    {
+      "in": "Bistro 2  ŁÓDŹ",
+      "out": "Bistro 2"
+    },
+    {
+      "in": " apteka 3   gdańsk",
+      "out": "apteka 3"
+    },
+    {
+      "in": "STACJA PALIW 4\tPOZNAŃ  ",
+      "out": "STACJA PALIW 4 POZNAŃ"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 5        ",
+      "out": "Kino Pod Gwiazdami 5"
+    },
+    {
+      "in": " BLIK 6  \t  WARSZAWA",
+      "out": "BLIK 6"
+    },
+    {
+      "in": "PRZELEW 7Kraków",
+      "out": "PRZELEW 7Kraków"
+    },
+    {
+      "in": "SKLEP 8 ŁÓDŹ  ",
+      "out": "SKLEP 8 ŁÓDŹ"
+    },
+    {
+      "in": " KAWIARNIA 9  gdańsk",
+      "out": "KAWIARNIA 9"
+    },
+    {
+      "in": "Bistro 10   POZNAŃ",
+      "out": "Bistro 10"
+    },
+    {
+      "in": "apteka 11\t",
+      "out": "apteka 11"
+    },
+    {
+      "in": " STACJA PALIW 12        WARSZAWA  ",
+      "out": "STACJA PALIW 12"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 13  \t  Kraków",
+      "out": "Kino Pod Gwiazdami 13"
+    },
+    {
+      "in": "BLIK 14ŁÓDŹ",
+      "out": "BLIK 14ŁÓDŹ"
+    },
+    {
+      "in": " PRZELEW 15 gdańsk",
+      "out": "PRZELEW 15 gdańsk"
+    },
+    {
+      "in": "SKLEP 16  POZNAŃ  ",
+      "out": "SKLEP 16"
+    },
+    {
+      "in": "KAWIARNIA 17   ",
+      "out": "KAWIARNIA 17"
+    },
+    {
+      "in": " Bistro 18\tWARSZAWA",
+      "out": "Bistro 18 WARSZAWA"
+    },
+    {
+      "in": "apteka 19        Kraków",
+      "out": "apteka 19"
+    },
+    {
+      "in": "STACJA PALIW 20  \t  ŁÓDŹ  ",
+      "out": "STACJA PALIW 20"
+    },
+    {
+      "in": " Kino Pod Gwiazdami 21gdańsk",
+      "out": "Kino Pod Gwiazdami 21gdańsk"
+    },
+    {
+      "in": "BLIK 22 POZNAŃ",
+      "out": "BLIK 22 POZNAŃ"
+    },
+    {
+      "in": "PRZELEW 23  ",
+      "out": "PRZELEW 23"
+    },
+    {
+      "in": " SKLEP 24   WARSZAWA  ",
+      "out": "SKLEP 24"
+    },
+    {
+      "in": "KAWIARNIA 25\tKraków",
+      "out": "KAWIARNIA 25 Kraków"
+    },
+    {
+      "in": "Bistro 26        ŁÓDŹ",
+      "out": "Bistro 26"
+    },
+    {
+      "in": " apteka 27  \t  gdańsk",
+      "out": "apteka 27"
+    },
+    {
+      "in": "STACJA PALIW 28POZNAŃ  ",
+      "out": "STACJA PALIW 28POZNAŃ"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 29 ",
+      "out": "Kino Pod Gwiazdami 29"
+    },
+    {
+      "in": " BLIK 30  WARSZAWA",
+      "out": "BLIK 30"
+    },
+    {
+      "in": "PRZELEW 31   Kraków",
+      "out": "PRZELEW 31"
+    },
+    {
+      "in": "SKLEP 32\tŁÓDŹ  ",
+      "out": "SKLEP 32 ŁÓDŹ"
+    },
+    {
+      "in": " KAWIARNIA 33        gdańsk",
+      "out": "KAWIARNIA 33"
+    },
+    {
+      "in": "Bistro 34  \t  POZNAŃ",
+      "out": "Bistro 34"
+    },
+    {
+      "in": "apteka 35",
+      "out": "apteka 35"
+    },
+    {
+      "in": " STACJA PALIW 36 WARSZAWA  ",
+      "out": "STACJA PALIW 36 WARSZAWA"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 37  Kraków",
+      "out": "Kino Pod Gwiazdami 37"
+    },
+    {
+      "in": "BLIK 38   ŁÓDŹ",
+      "out": "BLIK 38"
+    },
+    {
+      "in": " PRZELEW 39\tgdańsk",
+      "out": "PRZELEW 39 gdańsk"
+    },
+    {
+      "in": "SKLEP 40        POZNAŃ  ",
+      "out": "SKLEP 40"
+    },
+    {
+      "in": "KAWIARNIA 41  \t  ",
+      "out": "KAWIARNIA 41"
+    },
+    {
+      "in": " Bistro 42WARSZAWA",
+      "out": "Bistro 42WARSZAWA"
+    },
+    {
+      "in": "apteka 43 Kraków",
+      "out": "apteka 43 Kraków"
+    },
+    {
+      "in": "STACJA PALIW 44  ŁÓDŹ  ",
+      "out": "STACJA PALIW 44"
+    },
+    {
+      "in": " Kino Pod Gwiazdami 45   gdańsk",
+      "out": "Kino Pod Gwiazdami 45"
+    },
+    {
+      "in": "BLIK 46\tPOZNAŃ",
+      "out": "BLIK 46 POZNAŃ"
+    },
+    {
+      "in": "PRZELEW 47        ",
+      "out": "PRZELEW 47"
+    },
+    {
+      "in": " SKLEP 48  \t  WARSZAWA  ",
+      "out": "SKLEP 48"
+    },
+    {
+      "in": "KAWIARNIA 49Kraków",
+      "out": "KAWIARNIA 49Kraków"
+    },
+    {
+      "in": "Bistro 50 ŁÓDŹ",
+      "out": "Bistro 50 ŁÓDŹ"
+    },
+    {
+      "in": " apteka 51  gdańsk",
+      "out": "apteka 51"
+    },
+    {
+      "in": "STACJA PALIW 52   POZNAŃ  ",
+      "out": "STACJA PALIW 52"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 53\t",
+      "out": "Kino Pod Gwiazdami 53"
+    },
+    {
+      "in": " BLIK 54        WARSZAWA",
+      "out": "BLIK 54"
+    },
+    {
+      "in": "PRZELEW 55  \t  Kraków",
+      "out": "PRZELEW 55"
+    },
+    {
+      "in": "SKLEP 56ŁÓDŹ  ",
+      "out": "SKLEP 56ŁÓDŹ"
+    },
+    {
+      "in": " KAWIARNIA 57 gdańsk",
+      "out": "KAWIARNIA 57 gdańsk"
+    },
+    {
+      "in": "Bistro 58  POZNAŃ",
+      "out": "Bistro 58"
+    },
+    {
+      "in": "apteka 59   ",
+      "out": "apteka 59"
+    },
+    {
+      "in": " STACJA PALIW 60\tWARSZAWA  ",
+      "out": "STACJA PALIW 60 WARSZAWA"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 61        Kraków",
+      "out": "Kino Pod Gwiazdami 61"
+    },
+    {
+      "in": "BLIK 62  \t  ŁÓDŹ",
+      "out": "BLIK 62"
+    },
+    {
+      "in": " PRZELEW 63gdańsk",
+      "out": "PRZELEW 63gdańsk"
+    },
+    {
+      "in": "SKLEP 64 POZNAŃ  ",
+      "out": "SKLEP 64 POZNAŃ"
+    },
+    {
+      "in": "KAWIARNIA 65  ",
+      "out": "KAWIARNIA 65"
+    },
+    {
+      "in": " Bistro 66   WARSZAWA",
+      "out": "Bistro 66"
+    },
+    {
+      "in": "apteka 67\tKraków",
+      "out": "apteka 67 Kraków"
+    },
+    {
+      "in": "STACJA PALIW 68        ŁÓDŹ  ",
+      "out": "STACJA PALIW 68"
+    },
+    {
+      "in": " Kino Pod Gwiazdami 69  \t  gdańsk",
+      "out": "Kino Pod Gwiazdami 69"
+    },
+    {
+      "in": "BLIK 70POZNAŃ",
+      "out": "BLIK 70POZNAŃ"
+    },
+    {
+      "in": "PRZELEW 71 ",
+      "out": "PRZELEW 71"
+    },
+    {
+      "in": " SKLEP 72  WARSZAWA  ",
+      "out": "SKLEP 72"
+    },
+    {
+      "in": "KAWIARNIA 73   Kraków",
+      "out": "KAWIARNIA 73"
+    },
+    {
+      "in": "Bistro 74\tŁÓDŹ",
+      "out": "Bistro 74 ŁÓDŹ"
+    },
+    {
+      "in": " apteka 75        gdańsk",
+      "out": "apteka 75"
+    },
+    {
+      "in": "STACJA PALIW 76  \t  POZNAŃ  ",
+      "out": "STACJA PALIW 76"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 77",
+      "out": "Kino Pod Gwiazdami 77"
+    },
+    {
+      "in": " BLIK 78 WARSZAWA",
+      "out": "BLIK 78 WARSZAWA"
+    },
+    {
+      "in": "PRZELEW 79  Kraków",
+      "out": "PRZELEW 79"
+    },
+    {
+      "in": "SKLEP 80   ŁÓDŹ  ",
+      "out": "SKLEP 80"
+    },
+    {
+      "in": " KAWIARNIA 81\tgdańsk",
+      "out": "KAWIARNIA 81 gdańsk"
+    },
+    {
+      "in": "Bistro 82        POZNAŃ",
+      "out": "Bistro 82"
+    },
+    {
+      "in": "apteka 83  \t  ",
+      "out": "apteka 83"
+    },
+    {
+      "in": " STACJA PALIW 84WARSZAWA  ",
+      "out": "STACJA PALIW 84WARSZAWA"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 85 Kraków",
+      "out": "Kino Pod Gwiazdami 85 Kraków"
+    },
+    {
+      "in": "BLIK 86  ŁÓDŹ",
+      "out": "BLIK 86"
+    },
+    {
+      "in": " PRZELEW 87   gdańsk",
+      "out": "PRZELEW 87"
+    },
+    {
+      "in": "SKLEP 88\tPOZNAŃ  ",
+      "out": "SKLEP 88 POZNAŃ"
+    },
+    {
+      "in": "KAWIARNIA 89        ",
+      "out": "KAWIARNIA 89"
+    },
+    {
+      "in": " Bistro 90  \t  WARSZAWA",
+      "out": "Bistro 90"
+    },
+    {
+      "in": "apteka 91Kraków",
+      "out": "apteka 91Kraków"
+    },
+    {
+      "in": "STACJA PALIW 92 ŁÓDŹ  ",
+      "out": "STACJA PALIW 92 ŁÓDŹ"
+    },
+    {
+      "in": " Kino Pod Gwiazdami 93  gdańsk",
+      "out": "Kino Pod Gwiazdami 93"
+    },
+    {
+      "in": "BLIK 94   POZNAŃ",
+      "out": "BLIK 94"
+    },
+    {
+      "in": "PRZELEW 95\t",
+      "out": "PRZELEW 95"
+    },
+    {
+      "in": " SKLEP 96        WARSZAWA  ",
+      "out": "SKLEP 96"
+    },
+    {
+      "in": "KAWIARNIA 97  \t  Kraków",
+      "out": "KAWIARNIA 97"
+    },
+    {
+      "in": "Bistro 98ŁÓDŹ",
+      "out": "Bistro 98ŁÓDŹ"
+    },
+    {
+      "in": " apteka 99 gdańsk",
+      "out": "apteka 99 gdańsk"
+    },
+    {
+      "in": "STACJA PALIW 100  POZNAŃ  ",
+      "out": "STACJA PALIW 100"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 101   ",
+      "out": "Kino Pod Gwiazdami 101"
+    },
+    {
+      "in": " BLIK 102\tWARSZAWA",
+      "out": "BLIK 102 WARSZAWA"
+    },
+    {
+      "in": "PRZELEW 103        Kraków",
+      "out": "PRZELEW 103"
+    },
+    {
+      "in": "SKLEP 104  \t  ŁÓDŹ  ",
+      "out": "SKLEP 104"
+    },
+    {
+      "in": " KAWIARNIA 105gdańsk",
+      "out": "KAWIARNIA 105gdańsk"
+    },
+    {
+      "in": "Bistro 106 POZNAŃ",
+      "out": "Bistro 106 POZNAŃ"
+    },
+    {
+      "in": "apteka 107  ",
+      "out": "apteka 107"
+    },
+    {
+      "in": " STACJA PALIW 108   WARSZAWA  ",
+      "out": "STACJA PALIW 108"
+    },
+    {
+      "in": "Kino Pod Gwiazdami 109\tKraków",
+      "out": "Kino Pod Gwiazdami 109 Kraków"
+    }
+  ],
+  "function": "payeeName"
+}

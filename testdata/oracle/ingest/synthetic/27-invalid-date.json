@@ -1,0 +1,104 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-02-28",
+        "2025-03-03",
+        "2025-03-01",
+        null
+      ],
+      "name": "Data",
+      "numbers": [
+        28022025,
+        31022025,
+        null,
+        32012025
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20,
+        -30,
+        -40
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/27-invalid-date.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "28.02.2025\u0001a\u0001-10,00",
+    "31.02.2025\u0001invalid\u0001-20,00",
+    "01.03.2025\u0001b\u0001-30,00",
+    "32.01.2025\u0001out of range\u0001-40,00"
+  ],
+  "rows": [
+    [
+      "28.02.2025",
+      "A",
+      "-10,00"
+    ],
+    [
+      "31.02.2025",
+      "Invalid",
+      "-20,00"
+    ],
+    [
+      "01.03.2025",
+      "B",
+      "-30,00"
+    ],
+    [
+      "32.01.2025",
+      "Out of range",
+      "-40,00"
+    ]
+  ]
+}
