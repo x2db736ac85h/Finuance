@@ -155,3 +155,16 @@ func TestAssignOccurrences(t *testing.T) {
 		t.Errorf("occurrences = %v, want %v", got, want)
 	}
 }
+
+// SearchText is built per cell; it must equal Norm of the joined row (the legacy rowNorm).
+func TestSearchTextEqualsNormOfJoin(t *testing.T) {
+	tb := table([]string{"a", "b", "c"}, []string{"ZAŻÓŁĆ", "é x", "Σ ΟΔΟΣ"}, []string{"", "Ą", "plain"})
+	m := NewMapping()
+	m.BookedOn, m.Amount = 0, 1
+	rows, _, _ := Stage(context.Background(), tb, m, StageOptions{})
+	for i, r := range rows {
+		if want := Norm(strings.Join(tb.Rows[i], "\u0001")); r.SearchText != want {
+			t.Errorf("row %d: %q, want %q", i, r.SearchText, want)
+		}
+	}
+}

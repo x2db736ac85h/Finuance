@@ -1,0 +1,145 @@
+{
+  "fixture": "synthetic/02-utf8-no-bom.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "category": "Kategoria",
+    "currency": "Waluta",
+    "payee": "Opis"
+  },
+  "currency": "PLN",
+  "headerSignature": "60e5be87c1c54627774ab4657c59e9204c261ff5cbbeee58f2621170a0fdafaa",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -5999,
+      "currency": "PLN",
+      "payee": "Księgarnia Ćma",
+      "bankCategory": "Książki",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Księgarnia Ćma"
+        },
+        {
+          "header": "Kwota",
+          "value": "-59,99"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Książki"
+        }
+      ],
+      "searchText": "03.01.2025\u0001ksiegarnia cma\u0001-59,99\u0001pln\u0001ksiazki",
+      "payeeN": "ksiegarnia cma",
+      "bankCategoryN": "ksiazki",
+      "payeeGroup": "Księgarnia Ćma",
+      "occurrence": 1,
+      "fingerprint": "6f354fb84178cc301a633ca1deefad89091cc0989cc6a0b67b3623c6618b632d"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-05",
+      "amountMinor": -650,
+      "currency": "PLN",
+      "payee": "Źródło wody Ńa",
+      "bankCategory": "Artykuły spożywcze",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Źródło wody Ńa"
+        },
+        {
+          "header": "Kwota",
+          "value": "-6,50"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Artykuły spożywcze"
+        }
+      ],
+      "searchText": "05.01.2025\u0001zrodlo wody na\u0001-6,50\u0001pln\u0001artykuly spozywcze",
+      "payeeN": "zrodlo wody na",
+      "bankCategoryN": "artykuly spozywcze",
+      "payeeGroup": "Źródło wody Ńa",
+      "occurrence": 1,
+      "fingerprint": "336c835351014273e9df0e1b1555d5b8cb2a026cd7d6bf2df3c460d9cc61f378"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-11",
+      "amountMinor": 12000,
+      "currency": "PLN",
+      "payee": "Zwrot za bilet Gdańsk",
+      "bankCategory": "Wpływy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "11.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Zwrot za bilet Gdańsk"
+        },
+        {
+          "header": "Kwota",
+          "value": "120,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Wpływy"
+        }
+      ],
+      "searchText": "11.01.2025\u0001zwrot za bilet gdansk\u0001120,00\u0001pln\u0001wplywy",
+      "payeeN": "zwrot za bilet gdansk",
+      "bankCategoryN": "wplywy",
+      "payeeGroup": "Zwrot za bilet Gdańsk",
+      "occurrence": 1,
+      "fingerprint": "ae9406b1b9afcde236fd38199d0ce9bff368ab360990c458712bd4447f8691a0"
+    }
+  ]
+}

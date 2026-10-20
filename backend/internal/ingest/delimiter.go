@@ -17,12 +17,11 @@ var delimiterCandidates = []rune{';', ',', '\t', '|'}
 // placeholder that the first candidate always replaces; the legacy behaviour is the spec.
 func DetectDelimiter(text string) rune {
 	var lines []string
-	for _, l := range splitLines(text) {
+	for rest := text; rest != "" && len(lines) < 30; {
+		var l string
+		l, rest = nextLine(rest)
 		if hasNonSpace(l) {
 			lines = append(lines, l)
-			if len(lines) == 30 {
-				break
-			}
 		}
 	}
 	best, bestScore := ',', -1
@@ -63,6 +62,18 @@ func countOutsideQuotes(line string, d rune) int {
 		}
 	}
 	return n
+}
+
+// nextLine cuts the first line (ended by CRLF, LF or CR) off text.
+func nextLine(text string) (line, rest string) {
+	i := strings.IndexAny(text, "\r\n")
+	if i < 0 {
+		return text, ""
+	}
+	if text[i] == '\r' && i+1 < len(text) && text[i+1] == '\n' {
+		return text[:i], text[i+2:]
+	}
+	return text[:i], text[i+1:]
 }
 
 // splitLines splits on CRLF, LF or CR (legacy text.split(/\r\n|\n|\r/)).

@@ -1,0 +1,78 @@
+{
+  "fixture": "synthetic/44-single-column.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Opis"
+  ],
+  "types": [
+    "text"
+  ],
+  "roles": {
+    "payee": "Opis"
+  },
+  "headerSignature": "4dab60676e6369cca8b78dbbcf72a387a94fef0f23720924594cf5366a70b35b",
+  "stats": {
+    "rows": 3,
+    "valid": 0,
+    "errors": 3
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "payee": "A",
+      "raw": [
+        {
+          "header": "Opis",
+          "value": "A"
+        }
+      ],
+      "searchText": "a",
+      "payeeN": "a",
+      "payeeGroup": "A",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "payee": "B",
+      "raw": [
+        {
+          "header": "Opis",
+          "value": "B"
+        }
+      ],
+      "searchText": "b",
+      "payeeN": "b",
+      "payeeGroup": "B",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "payee": "C",
+      "raw": [
+        {
+          "header": "Opis",
+          "value": "C"
+        }
+      ],
+      "searchText": "c",
+      "payeeN": "c",
+      "payeeGroup": "C",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    }
+  ]
+}

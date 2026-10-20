@@ -1,0 +1,150 @@
+{
+  "fixture": "synthetic/same-name/b/export.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data operacji",
+    "Kontrahent",
+    "Tytuł",
+    "Kwota",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data operacji",
+    "category": "Kategoria",
+    "description": "Tytuł",
+    "payee": "Kontrahent"
+  },
+  "headerSignature": "5c2918664920e62a3cbb89b911f87ee6ec63d1f3bde96f21b026a56ea9c5be14",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-11",
+      "amountMinor": -1200,
+      "currency": "PLN",
+      "payee": "KAWIARNIA BETA",
+      "description": "Kawa",
+      "bankCategory": "Restauracje",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "11.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "KAWIARNIA BETA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Kawa"
+        },
+        {
+          "header": "Kwota",
+          "value": "-12,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Restauracje"
+        }
+      ],
+      "searchText": "11.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+      "payeeN": "kawiarnia beta",
+      "descriptionN": "kawa",
+      "bankCategoryN": "restauracje",
+      "payeeGroup": "KAWIARNIA BETA",
+      "occurrence": 1,
+      "fingerprint": "8c19b477d6ff3d74da2f8cc868f88a793ddeaa65ad85c2322488ff77f70524c1"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-11",
+      "amountMinor": -1200,
+      "currency": "PLN",
+      "payee": "KAWIARNIA BETA",
+      "description": "Kawa",
+      "bankCategory": "Restauracje",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "11.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "KAWIARNIA BETA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Kawa"
+        },
+        {
+          "header": "Kwota",
+          "value": "-12,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Restauracje"
+        }
+      ],
+      "searchText": "11.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+      "payeeN": "kawiarnia beta",
+      "descriptionN": "kawa",
+      "bankCategoryN": "restauracje",
+      "payeeGroup": "KAWIARNIA BETA",
+      "occurrence": 2,
+      "fingerprint": "8c19b477d6ff3d74da2f8cc868f88a793ddeaa65ad85c2322488ff77f70524c1"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-13",
+      "amountMinor": -2599,
+      "currency": "PLN",
+      "payee": "APTEKA",
+      "description": "Leki",
+      "bankCategory": "Zdrowie",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "13.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "APTEKA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Leki"
+        },
+        {
+          "header": "Kwota",
+          "value": "-25,99"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zdrowie"
+        }
+      ],
+      "searchText": "13.01.2025\u0001apteka\u0001leki\u0001-25,99\u0001zdrowie",
+      "payeeN": "apteka",
+      "descriptionN": "leki",
+      "bankCategoryN": "zdrowie",
+      "payeeGroup": "APTEKA",
+      "occurrence": 1,
+      "fingerprint": "2cd18606594247466960c019c5d0e21a5ada36ca19c0bbd155144da14fc756e1"
+    }
+  ]
+}

@@ -3,8 +3,10 @@ package ingest
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/money"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -146,90 +148,51 @@ func Stage(ctx context.Context, t *Table, m Mapping, o StageOptions) ([]StagedRo
 	if o.DateOrder == DateOrderMDY {
 		mdy[m.BookedOn], mdy[m.ValueOn] = true, true
 	}
-	unknown := map[string]bool{}
 	rows := make([]StagedRow, len(t.Rows))
+	// Rows are independent until AssignOccurrences, so they are staged in parallel chunks. Each
+	// worker writes only its own rows and its own counters; the merge below is deterministic.
+	workers := min(runtime.GOMAXPROCS(0), max(1, len(t.Rows)/2000))
+	chunk := (len(t.Rows) + workers - 1) / max(workers, 1)
+	type part struct {
+		valid, errors int
+		unknown       map[string]bool
+		err           error
+	}
+	parts := make([]part, workers)
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		lo, hi := w*chunk, min((w+1)*chunk, len(t.Rows))
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p := &parts[w]
+			p.unknown = map[string]bool{}
+			for i := lo; i < hi; i++ {
+				if (i-lo)%ctxCheckEvery == 0 {
+					if p.err = ctx.Err(); p.err != nil {
+						return
+					}
+				}
+				if stageRow(&rows[i], i, t, m, o, mode, mdy, ignored, p.unknown) {
+					p.valid++
+				} else {
+					p.errors++
+				}
+			}
+		}()
+	}
+	wg.Wait()
 	stats := Stats{Rows: len(t.Rows)}
-	for i, cells := range t.Rows {
-		if i%ctxCheckEvery == 0 {
-			if err := ctx.Err(); err != nil {
-				return nil, stats, err
-			}
+	unknown := map[string]bool{}
+	for _, p := range parts {
+		if p.err != nil {
+			return nil, stats, p.err
 		}
-		cell := func(k int) string {
-			if k < 0 || k >= len(cells) {
-				return ""
-			}
-			return cells[k]
+		stats.Valid += p.valid
+		stats.Errors += p.errors
+		for c := range p.unknown {
+			unknown[c] = true
 		}
-		r := &rows[i]
-		r.RowIndex = i
-		r.Payee, r.Description, r.Reference = cell(m.Payee), cell(m.Description), cell(m.Reference)
-		r.TxType, r.BankCategory = cell(m.TxType), cell(m.Category)
-		r.CounterpartyAccount, r.OwnAccount = cell(m.CounterpartyAccount), cell(m.OwnAccount)
-
-		r.Currency = firstNonEmpty(strings.ToUpper(jsTrim(cell(m.Currency))), strings.ToUpper(o.ImportCurrency), strings.ToUpper(o.AccountCurrency), "PLN")
-		exp, known := money.Exponent(r.Currency)
-		if !known {
-			unknown[r.Currency] = true
-		}
-
-		var errs []string
-		order := func(k int) DateOrder {
-			if mdy[k] {
-				return DateOrderMDY
-			}
-			return DateOrderDMY
-		}
-		switch v := cell(m.BookedOn); {
-		case m.BookedOn == NoColumn:
-			errs = append(errs, "no booking date column is mapped")
-		case v == "":
-			errs = append(errs, "booking date is empty")
-		default:
-			d, ok := ParseDateOrdered(v, order(m.BookedOn))
-			if !ok {
-				errs = append(errs, fmt.Sprintf("booking date %q is not a date", v))
-			}
-			r.BookedOn = d
-		}
-		if v := cell(m.ValueOn); m.ValueOn != NoColumn && v != "" {
-			if d, ok := ParseDateOrdered(v, order(m.ValueOn)); ok {
-				r.ValueOn = &d
-			}
-		}
-		amount, err := stageAmount(cell, m, mode, exp)
-		if err != "" {
-			errs = append(errs, err)
-		} else if o.InvertSign {
-			amount = -amount
-		}
-		r.AmountMinor = amount
-		if v := cell(m.Balance); m.Balance != NoColumn && v != "" {
-			if b, err := money.ParseMinor(v, exp); err == nil {
-				r.BalanceMinor = &b
-			}
-		}
-
-		values := make([]string, 0, len(cells))
-		for k, v := range cells {
-			if ignored[k] {
-				continue
-			}
-			r.Raw = append(r.Raw, RawField{Header: t.Headers[k], Value: v})
-			values = append(values, v)
-		}
-		r.SearchText = Norm(strings.Join(values, "\u0001"))
-		r.PayeeN, r.DescriptionN, r.ReferenceN = shadow(r.Payee), shadow(r.Description), shadow(r.Reference)
-		r.TxTypeN, r.BankCategoryN, r.CounterpartyN = shadow(r.TxType), shadow(r.BankCategory), shadow(r.CounterpartyAccount)
-		r.PayeeGroup = PayeeName(r.Payee)
-
-		if len(errs) > 0 {
-			r.Error = strings.Join(errs, "; ")
-			stats.Errors++
-			continue
-		}
-		r.Fingerprint = Fingerprint(FingerprintKey(r, exp))
-		stats.Valid++
 	}
 	AssignOccurrences(rows)
 	for c := range unknown {
@@ -237,6 +200,85 @@ func Stage(ctx context.Context, t *Table, m Mapping, o StageOptions) ([]StagedRo
 	}
 	sort.Strings(stats.UnknownCurrencies)
 	return rows, stats, nil
+}
+
+// stageRow fills r from data row i and reports whether it is valid (see Stage for the rules).
+func stageRow(r *StagedRow, i int, t *Table, m Mapping, o StageOptions, mode AmountMode, mdy, ignored map[int]bool, unknown map[string]bool) bool {
+	cells := t.Rows[i]
+	cell := func(k int) string {
+		if k < 0 || k >= len(cells) {
+			return ""
+		}
+		return cells[k]
+	}
+	r.RowIndex = i
+	r.Payee, r.Description, r.Reference = cell(m.Payee), cell(m.Description), cell(m.Reference)
+	r.TxType, r.BankCategory = cell(m.TxType), cell(m.Category)
+	r.CounterpartyAccount, r.OwnAccount = cell(m.CounterpartyAccount), cell(m.OwnAccount)
+
+	r.Currency = firstNonEmpty(strings.ToUpper(jsTrim(cell(m.Currency))), strings.ToUpper(o.ImportCurrency), strings.ToUpper(o.AccountCurrency), "PLN")
+	exp, known := money.Exponent(r.Currency)
+	if !known {
+		unknown[r.Currency] = true
+	}
+
+	var errs []string
+	order := func(k int) DateOrder {
+		if mdy[k] {
+			return DateOrderMDY
+		}
+		return DateOrderDMY
+	}
+	switch v := cell(m.BookedOn); {
+	case m.BookedOn == NoColumn:
+		errs = append(errs, "no booking date column is mapped")
+	case v == "":
+		errs = append(errs, "booking date is empty")
+	default:
+		d, ok := ParseDateOrdered(v, order(m.BookedOn))
+		if !ok {
+			errs = append(errs, fmt.Sprintf("booking date %q is not a date", v))
+		}
+		r.BookedOn = d
+	}
+	if v := cell(m.ValueOn); m.ValueOn != NoColumn && v != "" {
+		if d, ok := ParseDateOrdered(v, order(m.ValueOn)); ok {
+			r.ValueOn = &d
+		}
+	}
+	amount, err := stageAmount(cell, m, mode, exp)
+	if err != "" {
+		errs = append(errs, err)
+	} else if o.InvertSign {
+		amount = -amount
+	}
+	r.AmountMinor = amount
+	if v := cell(m.Balance); m.Balance != NoColumn && v != "" {
+		if b, err := money.ParseMinor(v, exp); err == nil {
+			r.BalanceMinor = &b
+		}
+	}
+
+	values := make([]string, 0, len(cells))
+	r.Raw = make([]RawField, 0, len(cells))
+	for k, v := range cells {
+		if ignored[k] {
+			continue
+		}
+		r.Raw = append(r.Raw, RawField{Header: t.Headers[k], Value: v})
+		values = append(values, v)
+	}
+	r.SearchText = Norm(strings.Join(values, "\u0001"))
+	r.PayeeN, r.DescriptionN, r.ReferenceN = shadow(r.Payee), shadow(r.Description), shadow(r.Reference)
+	r.TxTypeN, r.BankCategoryN, r.CounterpartyN = shadow(r.TxType), shadow(r.BankCategory), shadow(r.CounterpartyAccount)
+	r.PayeeGroup = PayeeName(r.Payee)
+
+	if len(errs) > 0 {
+		r.Error = strings.Join(errs, "; ")
+		return false
+	}
+	r.Fingerprint = Fingerprint(FingerprintKey(r, exp))
+	return true
 }
 
 // stageAmount reads the amount of one row in minor units, or returns an error message.

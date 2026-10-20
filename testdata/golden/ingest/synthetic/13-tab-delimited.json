@@ -1,0 +1,94 @@
+{
+  "fixture": "synthetic/13-tab-delimited.csv",
+  "encoding": "utf-8",
+  "delimiter": "\t",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "currency": "Waluta",
+    "payee": "Opis"
+  },
+  "currency": "PLN",
+  "headerSignature": "87d520fa0d04385a96f021578e3860791d739f78e0a286ed159cac567a4c3fac",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Sklep A",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep A"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep a\u0001-10,00\u0001pln",
+      "payeeN": "sklep a",
+      "payeeGroup": "Sklep A",
+      "occurrence": 1,
+      "fingerprint": "0af8ecb9bcdf7c26fc7545b09482856d55a5a249de31e280616fa2f78553f427"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "Sklep, filia",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep, filia"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "03.01.2025\u0001sklep, filia\u0001-20,00\u0001pln",
+      "payeeN": "sklep, filia",
+      "payeeGroup": "Sklep, filia",
+      "occurrence": 1,
+      "fingerprint": "c0313682f53a0234a5bb9ba50c00c10514410301ffa93cb82332d1b2e32e3f7a"
+    }
+  ]
+}

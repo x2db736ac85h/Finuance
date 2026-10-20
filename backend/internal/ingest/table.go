@@ -108,7 +108,10 @@ func Shape(raw [][]string, o ShapeOptions) (*Table, error) {
 	}
 	cells := make([][]string, len(data))
 	for i, r := range data {
-		row := make([]string, width)
+		row := r // rows that already have the full width are trimmed in place (they are ours)
+		if len(r) != width {
+			row = make([]string, width)
+		}
 		for k := range row {
 			if k < len(r) {
 				v := jsTrim(r[k])
@@ -222,8 +225,8 @@ func nonBlank(rows [][]string) [][]string {
 
 // nonBlankIndexed drops blank records and remembers where each kept record was in rows.
 func nonBlankIndexed(rows [][]string) ([][]string, []int) {
-	var out [][]string
-	var at []int
+	out := make([][]string, 0, len(rows))
+	at := make([]int, 0, len(rows))
 	for i, r := range rows {
 		if filled(r) > 0 {
 			out = append(out, r)

@@ -1,0 +1,152 @@
+{
+  "fixture": "synthetic/16-delimiter-ambiguity.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Kontrahent",
+    "Adres",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "payee": "Kontrahent"
+  },
+  "headerSignature": "f0da3a4babef8fb097d9c7c5de1a71a376103c1c3d41e63875ec419f14e0437a",
+  "stats": {
+    "rows": 4,
+    "valid": 4,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Sklep A",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "Sklep A"
+        },
+        {
+          "header": "Adres",
+          "value": "ul. Długa 1, 00-001 Warszawa, PL"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep a\u0001ul. dluga 1, 00-001 warszawa, pl\u0001-10,00",
+      "payeeN": "sklep a",
+      "payeeGroup": "Sklep A",
+      "occurrence": 1,
+      "fingerprint": "0af8ecb9bcdf7c26fc7545b09482856d55a5a249de31e280616fa2f78553f427"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "Sklep B",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "Sklep B"
+        },
+        {
+          "header": "Adres",
+          "value": "ul. Krótka 2, Kraków"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "03.01.2025\u0001sklep b\u0001ul. krotka 2, krakow\u0001-20,00",
+      "payeeN": "sklep b",
+      "payeeGroup": "Sklep B",
+      "occurrence": 1,
+      "fingerprint": "5be783edec96a00125ec0b670b9bc88645ba66c25e70692ea3d74189c483894f"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -3000,
+      "currency": "PLN",
+      "payee": "Sklep C",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "Sklep C"
+        },
+        {
+          "header": "Adres",
+          "value": "Rynek 3"
+        },
+        {
+          "header": "Kwota",
+          "value": "-30,00"
+        }
+      ],
+      "searchText": "04.01.2025\u0001sklep c\u0001rynek 3\u0001-30,00",
+      "payeeN": "sklep c",
+      "payeeGroup": "Sklep C",
+      "occurrence": 1,
+      "fingerprint": "a5db51cbf4139cf3c3cd69890f37c45ba8d7cf38973fd090b506bbb5d7ac7eab"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2025-01-05",
+      "amountMinor": -4000,
+      "currency": "PLN",
+      "payee": "Sklep D",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "Sklep D"
+        },
+        {
+          "header": "Adres",
+          "value": "al. Polna 4, lok. 5, 00-002, Łódź, PL"
+        },
+        {
+          "header": "Kwota",
+          "value": "-40,00"
+        }
+      ],
+      "searchText": "05.01.2025\u0001sklep d\u0001al. polna 4, lok. 5, 00-002, lodz, pl\u0001-40,00",
+      "payeeN": "sklep d",
+      "payeeGroup": "Sklep D",
+      "occurrence": 1,
+      "fingerprint": "41718de845b60a6fd17b5488c52b28d468f2b6bf8b7bce0785236ab6827e7006"
+    }
+  ]
+}

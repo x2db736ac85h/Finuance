@@ -1,0 +1,145 @@
+{
+  "fixture": "synthetic/35-padded-preamble.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 4,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "category": "Kategoria",
+    "currency": "Waluta",
+    "payee": "Opis"
+  },
+  "currency": "PLN",
+  "headerSignature": "60e5be87c1c54627774ab4657c59e9204c261ff5cbbeee58f2621170a0fdafaa",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "A",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "A"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "02.01.2025\u0001a\u0001-10,00\u0001pln\u0001zakupy",
+      "payeeN": "a",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "A",
+      "occurrence": 1,
+      "fingerprint": "772a8a1ea94f81edba586a21c323901032189f0aba240d2a7014f6bb54b14ec0"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "B",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "B"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "03.01.2025\u0001b\u0001-20,00\u0001pln\u0001zakupy",
+      "payeeN": "b",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "B",
+      "occurrence": 1,
+      "fingerprint": "60e98a6bbf822592497490f36e6f7efe5e25cbb835813a9c4c3ac9a7e1a8ea6b"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -3000,
+      "currency": "PLN",
+      "payee": "C",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "C"
+        },
+        {
+          "header": "Kwota",
+          "value": "-30,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "04.01.2025\u0001c\u0001-30,00\u0001pln\u0001zakupy",
+      "payeeN": "c",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "C",
+      "occurrence": 1,
+      "fingerprint": "0fc910a3e16d903b299775985194ead91322e625aa0b732eab592300fd636bf0"
+    }
+  ]
+}

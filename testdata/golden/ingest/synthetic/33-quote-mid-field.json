@@ -1,0 +1,82 @@
+{
+  "fixture": "synthetic/33-quote-mid-field.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "a994889d56b7c99dc1e8df8596cc7f0c984a201faa11afe0e470aeb3ab67d3f9",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Sklep 5\" ekran",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep 5\" ekran"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep 5\" ekran\u0001-10,00",
+      "payeeN": "sklep 5\" ekran",
+      "payeeGroup": "Sklep 5\" ekran",
+      "occurrence": 1,
+      "fingerprint": "d6b884e2236815f74d43facd633918e8d0cac5ef82d9e4eb8cf9e5eba322a17b"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "Pod \"Lipą\" bar",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Pod \"Lipą\" bar"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "03.01.2025\u0001pod \"lipa\" bar\u0001-20,00",
+      "payeeN": "pod \"lipa\" bar",
+      "payeeGroup": "Pod \"Lipą\" bar",
+      "occurrence": 1,
+      "fingerprint": "7d44603981c2915e020b09592b6911f0c0cef0ee9d37d339391d95fd0a8995e6"
+    }
+  ]
+}

@@ -55,7 +55,13 @@ func dateDiffReason(in, got string) string {
 	return ""
 }
 
-// dateFields extracts the numeric fields with the same regexes ParseDate uses.
+// The legacy regexes, kept here as the reference for the hand-written scanners and dateFields.
+var (
+	isoDate = regexp.MustCompile(`^(\d{4})[-./](\d{1,2})[-./](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?`)
+	dmyDate = regexp.MustCompile(`^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$`)
+)
+
+// dateFields extracts the numeric fields with the legacy regexes.
 func dateFields(in string) (y, m, d, hh, mi, ss int, ok bool) {
 	s := jsTrim(in)
 	atoi := func(v string) int { n, _ := strconv.Atoi(v); return n }

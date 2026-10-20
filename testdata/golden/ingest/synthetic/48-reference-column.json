@@ -1,0 +1,129 @@
+{
+  "fixture": "synthetic/48-reference-column.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Numer referencyjny",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "payee": "Opis",
+    "reference": "Numer referencyjny"
+  },
+  "headerSignature": "aeb3333974c3c05b51f57c386ae66b772f691bd09d47928e5dd8c1e86cbeda0a",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "A",
+      "reference": "REF-0001",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "A"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "REF-0001"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001a\u0001ref-0001\u0001-10,00",
+      "payeeN": "a",
+      "referenceN": "ref-0001",
+      "payeeGroup": "A",
+      "occurrence": 1,
+      "fingerprint": "921970773f21a4b11cc1e23cbe34e61a7277ef692d429a35ec1a0d5a5581a802"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "A",
+      "reference": "REF-0002",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "A"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "REF-0002"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001a\u0001ref-0002\u0001-10,00",
+      "payeeN": "a",
+      "referenceN": "ref-0002",
+      "payeeGroup": "A",
+      "occurrence": 1,
+      "fingerprint": "d744734868882a8341919c415edc14ede85c35551f58a4feb1570b347a65bec1"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "B",
+      "reference": "REF-0003",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "B"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "REF-0003"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "03.01.2025\u0001b\u0001ref-0003\u0001-20,00",
+      "payeeN": "b",
+      "referenceN": "ref-0003",
+      "payeeGroup": "B",
+      "occurrence": 1,
+      "fingerprint": "41aa109985b21f8750393a51f72f61776b1b2c91e2a87942ae29b69dc9ccfd03"
+    }
+  ]
+}

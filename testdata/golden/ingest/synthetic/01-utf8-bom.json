@@ -1,0 +1,145 @@
+{
+  "fixture": "synthetic/01-utf8-bom.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "category": "Kategoria",
+    "currency": "Waluta",
+    "payee": "Opis"
+  },
+  "currency": "PLN",
+  "headerSignature": "60e5be87c1c54627774ab4657c59e9204c261ff5cbbeee58f2621170a0fdafaa",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -4520,
+      "currency": "PLN",
+      "payee": "Sklep spożywczy Żółw",
+      "bankCategory": "Artykuły spożywcze",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep spożywczy Żółw"
+        },
+        {
+          "header": "Kwota",
+          "value": "-45,20"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Artykuły spożywcze"
+        }
+      ],
+      "searchText": "03.01.2025\u0001sklep spozywczy zolw\u0001-45,20\u0001pln\u0001artykuly spozywcze",
+      "payeeN": "sklep spozywczy zolw",
+      "bankCategoryN": "artykuly spozywcze",
+      "payeeGroup": "Sklep spożywczy Żółw",
+      "occurrence": 1,
+      "fingerprint": "363a49e84937c51e3f64889a15346322f89580f2e26ed616d24e08aa0cdde954"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -1400,
+      "currency": "PLN",
+      "payee": "Kawiarnia Łąka",
+      "bankCategory": "Restauracje i kawiarnie",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Kawiarnia Łąka"
+        },
+        {
+          "header": "Kwota",
+          "value": "-14,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Restauracje i kawiarnie"
+        }
+      ],
+      "searchText": "04.01.2025\u0001kawiarnia laka\u0001-14,00\u0001pln\u0001restauracje i kawiarnie",
+      "payeeN": "kawiarnia laka",
+      "bankCategoryN": "restauracje i kawiarnie",
+      "payeeGroup": "Kawiarnia Łąka",
+      "occurrence": 1,
+      "fingerprint": "8628a72cad207493f5746f6aa46d58278e68ed43b3ed6d37501636fbe02806cc"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-10",
+      "amountMinor": 850000,
+      "currency": "PLN",
+      "payee": "Wynagrodzenie styczeń",
+      "bankCategory": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "10.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Wynagrodzenie styczeń"
+        },
+        {
+          "header": "Kwota",
+          "value": "8 500,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Wynagrodzenie"
+        }
+      ],
+      "searchText": "10.01.2025\u0001wynagrodzenie styczen\u00018 500,00\u0001pln\u0001wynagrodzenie",
+      "payeeN": "wynagrodzenie styczen",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "Wynagrodzenie styczeń",
+      "occurrence": 1,
+      "fingerprint": "c184d7edcef0782a3f87691b7595ce22edcd5c80505947ceb6d6a7de0b22d4bf"
+    }
+  ]
+}

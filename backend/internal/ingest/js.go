@@ -28,6 +28,9 @@ func jsTrim(s string) string { return strings.TrimFunc(s, isJSSpace) }
 
 // jsCollapse is s.replace(/\s+/g, ' '): every run of JS whitespace becomes one space (no trim).
 func jsCollapse(s string) string {
+	if !needsCollapse(s) {
+		return s
+	}
 	var b strings.Builder
 	b.Grow(len(s))
 	inSpace := false
@@ -43,6 +46,20 @@ func jsCollapse(s string) string {
 		b.WriteRune(r)
 	}
 	return b.String()
+}
+
+// needsCollapse reports whether jsCollapse would change s: a whitespace character other than a
+// single ASCII space, or two whitespace characters in a row.
+func needsCollapse(s string) bool {
+	prev := false
+	for _, r := range s {
+		sp := isJSSpace(r)
+		if sp && (prev || r != ' ') {
+			return true
+		}
+		prev = sp
+	}
+	return false
 }
 
 // splitWideSpace is s.split(/\s{2,}/): split on runs of two or more JS whitespace characters.

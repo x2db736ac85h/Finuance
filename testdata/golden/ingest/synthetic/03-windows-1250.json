@@ -1,0 +1,145 @@
+{
+  "fixture": "synthetic/03-windows-1250.csv",
+  "encoding": "windows-1250",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "category": "Kategoria",
+    "currency": "Waluta",
+    "payee": "Opis"
+  },
+  "currency": "PLN",
+  "headerSignature": "60e5be87c1c54627774ab4657c59e9204c261ff5cbbeee58f2621170a0fdafaa",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -1234,
+      "currency": "PLN",
+      "payee": "ZAŻÓŁĆ GĘŚLĄ JAŹŃ",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "ZAŻÓŁĆ GĘŚLĄ JAŹŃ"
+        },
+        {
+          "header": "Kwota",
+          "value": "-12,34"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "03.01.2025\u0001zazolc gesla jazn\u0001-12,34\u0001pln\u0001zakupy",
+      "payeeN": "zazolc gesla jazn",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "ZAŻÓŁĆ GĘŚLĄ JAŹŃ",
+      "occurrence": 1,
+      "fingerprint": "d6d7b03bedd0f2341bcd8389015846a41b3c79fbcfb122ed0a2d1268c2e4aeb5"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -5678,
+      "currency": "PLN",
+      "payee": "zażółć gęślą jaźń",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "zażółć gęślą jaźń"
+        },
+        {
+          "header": "Kwota",
+          "value": "-56,78"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "04.01.2025\u0001zazolc gesla jazn\u0001-56,78\u0001pln\u0001zakupy",
+      "payeeN": "zazolc gesla jazn",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "zażółć gęślą jaźń",
+      "occurrence": 1,
+      "fingerprint": "79feba43aff5a302c9b9d9a009ba4788ed4c6d300024e8181dfeaf4d9fa86b41"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-05",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Opłata „miesięczna” – karta",
+      "bankCategory": "Opłaty i odsetki",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Opłata „miesięczna” – karta"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Opłaty i odsetki"
+        }
+      ],
+      "searchText": "05.01.2025\u0001oplata „miesieczna” – karta\u0001-10,00\u0001pln\u0001oplaty i odsetki",
+      "payeeN": "oplata „miesieczna” – karta",
+      "bankCategoryN": "oplaty i odsetki",
+      "payeeGroup": "Opłata „miesięczna” – karta",
+      "occurrence": 1,
+      "fingerprint": "f58d321d9daddd223409d89092e2f76dc6bd03eb1e4b961d3100690fae1da89c"
+    }
+  ]
+}

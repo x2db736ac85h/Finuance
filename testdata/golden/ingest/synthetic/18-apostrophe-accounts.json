@@ -1,0 +1,92 @@
+{
+  "fixture": "synthetic/18-apostrophe-accounts.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Rachunek",
+    "Referencja",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "reference": "Referencja"
+  },
+  "headerSignature": "f3ca6988aa8def64e46199e5bd05ea3c1c51f5ae8b9aa9a0d586e5923bad3837",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "reference": "C000000000000001",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Rachunek",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Referencja",
+          "value": "C000000000000001"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u000100000000000000000000000001\u0001c000000000000001\u0001-10,00",
+      "referenceN": "c000000000000001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "a1386808970cc309d045b4214076224588eae1db565345a0e03d7a3d6058aa11"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "reference": "C000000000000002",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Rachunek",
+          "value": "00000000000000000000000002"
+        },
+        {
+          "header": "Referencja",
+          "value": "C000000000000002"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "03.01.2025\u000100000000000000000000000002\u0001c000000000000002\u0001-20,00",
+      "referenceN": "c000000000000002",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "fad3d1337c3b903a3c26482aa6ce088f2a3dc012cc535961e49ddaacb5ce0916"
+    }
+  ]
+}

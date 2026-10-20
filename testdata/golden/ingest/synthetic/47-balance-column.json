@@ -1,0 +1,95 @@
+{
+  "fixture": "synthetic/47-balance-column.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Saldo",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "balance": "Saldo",
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "d91c73b77625111e53d143f84b801913d187ba30deac030abba47387d7b738a9",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "A",
+      "balanceMinor": 99000,
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "A"
+        },
+        {
+          "header": "Saldo",
+          "value": "990,00"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001a\u0001990,00\u0001-10,00",
+      "payeeN": "a",
+      "payeeGroup": "A",
+      "occurrence": 1,
+      "fingerprint": "772a8a1ea94f81edba586a21c323901032189f0aba240d2a7014f6bb54b14ec0"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "B",
+      "balanceMinor": 97000,
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "B"
+        },
+        {
+          "header": "Saldo",
+          "value": "970,00"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "03.01.2025\u0001b\u0001970,00\u0001-20,00",
+      "payeeN": "b",
+      "payeeGroup": "B",
+      "occurrence": 1,
+      "fingerprint": "60e98a6bbf822592497490f36e6f7efe5e25cbb835813a9c4c3ac9a7e1a8ea6b"
+    }
+  ]
+}

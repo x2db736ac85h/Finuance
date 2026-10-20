@@ -1,0 +1,487 @@
+{
+  "fixture": "synthetic/dup-versions/v2_jan-mar.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data księgowania",
+    "Data waluty",
+    "Nadawca / Odbiorca",
+    "Adres nadawcy / odbiorcy",
+    "Rachunek źródłowy",
+    "Rachunek docelowy",
+    "Tytułem",
+    "Kwota operacji",
+    "Waluta",
+    "Numer referencyjny",
+    "Typ operacji",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "date",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "number",
+    "text",
+    "text",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota operacji",
+    "bookedOn": "Data księgowania",
+    "category": "Kategoria",
+    "counterpartyAccount": "Rachunek docelowy",
+    "currency": "Waluta",
+    "description": "Tytułem",
+    "ownAccount": "Rachunek źródłowy",
+    "payee": "Nadawca / Odbiorca",
+    "reference": "Numer referencyjny",
+    "txType": "Typ operacji",
+    "valueOn": "Data waluty"
+  },
+  "currency": "PLN",
+  "headerSignature": "6c7a448fe6992dfc1a54fa6a16ee4f1ebc9585c56bd89a5e5cddf2de210eff36",
+  "stats": {
+    "rows": 6,
+    "valid": 6,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-03-10",
+      "valueOn": "2025-03-10",
+      "amountMinor": 850000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA",
+      "description": "Wynagrodzenie 03",
+      "reference": "D000000000000006",
+      "txType": "PRZELEW PRZYCHODZĄCY",
+      "bankCategory": "Wynagrodzenie",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "10.03.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "10.03.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "PRACODAWCA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "Wynagrodzenie 03"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "8 500,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "D000000000000006"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "PRZELEW PRZYCHODZĄCY"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Wynagrodzenie"
+        }
+      ],
+      "searchText": "10.03.2025\u000110.03.2025\u0001pracodawca\u0001\u000100000000000000000000000001\u0001\u0001wynagrodzenie 03\u00018 500,00\u0001pln\u0001d000000000000006\u0001przelew przychodzacy\u0001wynagrodzenie",
+      "payeeN": "pracodawca",
+      "descriptionN": "wynagrodzenie 03",
+      "referenceN": "d000000000000006",
+      "txTypeN": "przelew przychodzacy",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA",
+      "occurrence": 1,
+      "fingerprint": "e6377f5ec0c23c045514c55d03e96a045f3c49c152746c132316efabfbed11e9"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-02-28",
+      "valueOn": "2025-02-28",
+      "amountMinor": -12000,
+      "currency": "PLN",
+      "payee": "SKLEP ALFA",
+      "description": "Zakupy luty",
+      "reference": "D000000000000005",
+      "txType": "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "bankCategory": "Artykuły spożywcze",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "28.02.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "28.02.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "SKLEP ALFA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "Zakupy luty"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-120,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "D000000000000005"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "TRANSAKCJA KARTĄ PŁATNICZĄ"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Artykuły spożywcze"
+        }
+      ],
+      "searchText": "28.02.2025\u000128.02.2025\u0001sklep alfa\u0001\u000100000000000000000000000001\u0001\u0001zakupy luty\u0001-120,00\u0001pln\u0001d000000000000005\u0001transakcja karta platnicza\u0001artykuly spozywcze",
+      "payeeN": "sklep alfa",
+      "descriptionN": "zakupy luty",
+      "referenceN": "d000000000000005",
+      "txTypeN": "transakcja karta platnicza",
+      "bankCategoryN": "artykuly spozywcze",
+      "payeeGroup": "SKLEP ALFA",
+      "occurrence": 1,
+      "fingerprint": "ff6d112d87f56cd3792c46309cc99e69e5da895a7188e1b4136afa6f9c180862"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-02-14",
+      "valueOn": "2025-02-14",
+      "amountMinor": -8900,
+      "currency": "PLN",
+      "payee": "KWIACIARNIA",
+      "description": "Kwiaty",
+      "reference": "D000000000000004",
+      "txType": "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "bankCategory": "Prezenty",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "14.02.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "14.02.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "KWIACIARNIA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "Kwiaty"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-89,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "D000000000000004"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "TRANSAKCJA KARTĄ PŁATNICZĄ"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Prezenty"
+        }
+      ],
+      "searchText": "14.02.2025\u000114.02.2025\u0001kwiaciarnia\u0001\u000100000000000000000000000001\u0001\u0001kwiaty\u0001-89,00\u0001pln\u0001d000000000000004\u0001transakcja karta platnicza\u0001prezenty",
+      "payeeN": "kwiaciarnia",
+      "descriptionN": "kwiaty",
+      "referenceN": "d000000000000004",
+      "txTypeN": "transakcja karta platnicza",
+      "bankCategoryN": "prezenty",
+      "payeeGroup": "KWIACIARNIA",
+      "occurrence": 1,
+      "fingerprint": "3caeaf8a2a0e57e5e48a761a1fc5e144cdc168b687bd94a85851644f7475db47"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2025-02-02",
+      "valueOn": "2025-02-02",
+      "amountMinor": -285000,
+      "currency": "PLN",
+      "payee": "WSPÓLNOTA",
+      "description": "Czynsz 02",
+      "reference": "D000000000000003",
+      "txType": "PRZELEW",
+      "bankCategory": "Mieszkanie",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "02.02.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "02.02.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "WSPÓLNOTA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "Czynsz 02"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-2 850,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "D000000000000003"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "PRZELEW"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Mieszkanie"
+        }
+      ],
+      "searchText": "02.02.2025\u000102.02.2025\u0001wspolnota\u0001\u000100000000000000000000000001\u0001\u0001czynsz 02\u0001-2 850,00\u0001pln\u0001d000000000000003\u0001przelew\u0001mieszkanie",
+      "payeeN": "wspolnota",
+      "descriptionN": "czynsz 02",
+      "referenceN": "d000000000000003",
+      "txTypeN": "przelew",
+      "bankCategoryN": "mieszkanie",
+      "payeeGroup": "WSPÓLNOTA",
+      "occurrence": 1,
+      "fingerprint": "3a42532a906e350332b21c136edc8df754ad7b6b4fd8be8111ff94efb4f73a60"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "2025-01-15",
+      "valueOn": "2025-01-15",
+      "amountMinor": -21040,
+      "currency": "PLN",
+      "payee": "SKLEP ALFA",
+      "description": "Zakupy styczeń",
+      "reference": "D000000000000002",
+      "txType": "PŁATNOŚĆ BLIK",
+      "bankCategory": "Zakupy przez internet",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "15.01.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "15.01.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "SKLEP ALFA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "Zakupy styczeń"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-210,40"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "D000000000000002"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "PŁATNOŚĆ BLIK"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy przez internet"
+        }
+      ],
+      "searchText": "15.01.2025\u000115.01.2025\u0001sklep alfa\u0001\u000100000000000000000000000001\u0001\u0001zakupy styczen\u0001-210,40\u0001pln\u0001d000000000000002\u0001platnosc blik\u0001zakupy przez internet",
+      "payeeN": "sklep alfa",
+      "descriptionN": "zakupy styczen",
+      "referenceN": "d000000000000002",
+      "txTypeN": "platnosc blik",
+      "bankCategoryN": "zakupy przez internet",
+      "payeeGroup": "SKLEP ALFA",
+      "occurrence": 1,
+      "fingerprint": "7427b5802d69cf1dbde8ec769a8e6145abc1806cfd9cd3eb762fac960031c6b1"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2025-01-05",
+      "valueOn": "2025-01-05",
+      "amountMinor": -1200,
+      "currency": "PLN",
+      "payee": "KAWIARNIA BETA",
+      "description": "Kawa",
+      "txType": "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "bankCategory": "Restauracje i kawiarnie",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "KAWIARNIA BETA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "Kawa"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-12,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": ""
+        },
+        {
+          "header": "Typ operacji",
+          "value": "TRANSAKCJA KARTĄ PŁATNICZĄ"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Restauracje i kawiarnie"
+        }
+      ],
+      "searchText": "05.01.2025\u000105.01.2025\u0001kawiarnia beta\u0001\u000100000000000000000000000001\u0001\u0001kawa\u0001-12,00\u0001pln\u0001\u0001transakcja karta platnicza\u0001restauracje i kawiarnie",
+      "payeeN": "kawiarnia beta",
+      "descriptionN": "kawa",
+      "txTypeN": "transakcja karta platnicza",
+      "bankCategoryN": "restauracje i kawiarnie",
+      "payeeGroup": "KAWIARNIA BETA",
+      "occurrence": 1,
+      "fingerprint": "b446274b8b8d93a4f385d5bf88f74f6bbd3f79fdf326dcc69e02d899f140a4d8"
+    }
+  ]
+}

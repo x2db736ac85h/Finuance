@@ -1,0 +1,67 @@
+{
+  "fixture": "synthetic/45-numeric-looking-dates.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data"
+  },
+  "headerSignature": "be5c4683717509790e5bf95ebd4e3562bd14b01e9e0fc217366c18cb58179b0d",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2024-04-15",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "15.04.2024"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "15.04.2024\u0001-10,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "4f1bbb1b5f3360cd442c20d67d2dc68c53ea203b595e0368d4ff03e356d95a9a"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2024-04-16",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "16.04.2024"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "16.04.2024\u0001-20,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "e826bd95911822c6de2a42cb1205ca197bffc1b0013a8837ac32c0ada62c9d5a"
+    }
+  ]
+}

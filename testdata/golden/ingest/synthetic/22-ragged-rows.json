@@ -1,0 +1,84 @@
+{
+  "fixture": "synthetic/22-ragged-rows.csv",
+  "encoding": "utf-8",
+  "delimiter": ",",
+  "headerAt": 2,
+  "dropped": 0,
+  "headers": [
+    "02.01.2025;A;-10",
+    "00;PLN"
+  ],
+  "types": [
+    "text",
+    "text"
+  ],
+  "roles": {},
+  "headerSignature": "d4f8ff5603f12c8a9fcbd89b685bfae8ba1661e207912a028a11eaf68e2ff9ad",
+  "stats": {
+    "rows": 3,
+    "valid": 0,
+    "errors": 3
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "02.01.2025;A;-10",
+          "value": "03.01.2025;B;-20"
+        },
+        {
+          "header": "00;PLN",
+          "value": "00"
+        }
+      ],
+      "searchText": "03.01.2025;b;-20\u000100",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "02.01.2025;A;-10",
+          "value": "04.01.2025;C;-30"
+        },
+        {
+          "header": "00;PLN",
+          "value": "00;PLN;extra"
+        }
+      ],
+      "searchText": "04.01.2025;c;-30\u000100;pln;extra",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "02.01.2025;A;-10",
+          "value": "05.01.2025;D;-40"
+        },
+        {
+          "header": "00;PLN",
+          "value": "00;PLN"
+        }
+      ],
+      "searchText": "05.01.2025;d;-40\u000100;pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    }
+  ]
+}

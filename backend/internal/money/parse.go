@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -23,11 +22,72 @@ type Parts struct {
 	Frac     string // fraction digits; may be ""
 }
 
-// currencyToken matches one currency marker at the start or the end. The legacy regex has no /g
-// flag, so only the leftmost match is removed: "PLN 12 PLN" keeps its trailing "PLN" and fails.
-var currencyToken = regexp.MustCompile(`(?i)^(?:PLN|EUR|USD|GBP|CHF|zł|\$|€|£)|(?:PLN|EUR|USD|GBP|CHF|zł|\$|€|£)$`)
+// currencyTokens are the markers Split strips once, at the start or the end (case-insensitive).
+var currencyTokens = []string{"PLN", "EUR", "USD", "GBP", "CHF", "zł", "$", "€", "£"}
 
-var numberShape = regexp.MustCompile(`^[-+]?[\d.,]+$`)
+// stripCurrency removes one currency token like the legacy regex
+// /^(PLN|…|£)|(PLN|…|£)$/i, which has no /g flag: the leftmost match wins, so a prefix is removed
+// in preference to a suffix and "PLN 12 PLN" keeps its trailing "PLN". It is hand-written
+// because the regex was the hottest spot when typing every cell of a 100k-row file.
+func stripCurrency(s string) string {
+	for _, t := range currencyTokens {
+		if len(s) >= len(t) && strings.EqualFold(s[:len(t)], t) {
+			return s[len(t):]
+		}
+	}
+	for _, t := range currencyTokens {
+		if len(s) >= len(t) && strings.EqualFold(s[len(s)-len(t):], t) {
+			return s[:len(s)-len(t)]
+		}
+	}
+	return s
+}
+
+// plausibleNumber is a cheap pre-check that rejects most text without allocating: a number has at
+// least one digit and at most three ASCII letters (one currency token such as "PLN").
+func plausibleNumber(s string) bool {
+	digit, letters := false, 0
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c >= '0' && c <= '9':
+			digit = true
+		case c|0x20 >= 'a' && c|0x20 <= 'z':
+			if letters++; letters > 3 {
+				return false
+			}
+		}
+	}
+	return digit
+}
+
+// needsStrip reports whether s may contain whitespace or apostrophes (any non-ASCII byte may be a
+// Unicode space), so the common case skips the copy.
+func needsStrip(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; c <= ' ' || c == '\'' || c >= 0x80 {
+			return true
+		}
+	}
+	return false
+}
+
+// numberShaped is the legacy test /^[-+]?[\d.,]+$/ plus "contains a digit".
+func numberShaped(s string) bool {
+	if s != "" && (s[0] == '-' || s[0] == '+') {
+		s = s[1:]
+	}
+	digit := false
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c >= '0' && c <= '9':
+			digit = true
+		case c == '.' || c == ',':
+		default:
+			return false
+		}
+	}
+	return digit
+}
 
 // Split validates s with the legacy `parseNum` rules and splits it into digits:
 //
@@ -41,16 +101,19 @@ var numberShape = regexp.MustCompile(`^[-+]?[\d.,]+$`)
 //     thousands ("1.234,56", "1,234.56"); with only one kind, a single occurrence is the decimal
 //     mark ("12,50", "12.50") and repeated ones group thousands ("1.234.567").
 func Split(s string) (Parts, bool) {
-	s = strings.Map(func(r rune) rune {
-		if isJSSpace(r) || r == '\'' {
-			return -1
-		}
-		return r
-	}, s)
-	if loc := currencyToken.FindStringIndex(s); loc != nil {
-		s = s[:loc[0]] + s[loc[1]:]
+	if !plausibleNumber(s) {
+		return Parts{}, false
 	}
-	if !numberShape.MatchString(s) || !strings.ContainsAny(s, "0123456789") {
+	if needsStrip(s) {
+		s = strings.Map(func(r rune) rune {
+			if isJSSpace(r) || r == '\'' {
+				return -1
+			}
+			return r
+		}, s)
+	}
+	s = stripCurrency(s)
+	if !numberShaped(s) {
 		return Parts{}, false
 	}
 	if len(strings.Map(keepDigits, s)) > 15 {

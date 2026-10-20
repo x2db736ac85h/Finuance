@@ -1,0 +1,269 @@
+{
+  "fixture": "synthetic/46-mostly-numbers.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Ninety",
+    "Eighty"
+  ],
+  "types": [
+    "date",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "Ninety",
+    "bookedOn": "Data"
+  },
+  "headerSignature": "78c720b391aa29ce3fc2ddb563584461387e90d435edd98ba0ab070847440c0b",
+  "stats": {
+    "rows": 10,
+    "valid": 9,
+    "errors": 1
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-01",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "01.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "n/a"
+        },
+        {
+          "header": "Eighty",
+          "value": "n/a"
+        }
+      ],
+      "searchText": "01.01.2025\u0001n/a\u0001n/a",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "amount \"n/a\" is not an amount"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-02",
+      "amountMinor": 2000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "20,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "n/a"
+        }
+      ],
+      "searchText": "02.01.2025\u000120,00\u0001n/a",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "f7cd2b6a6f9f5e05f740eebab068d5b0b3a4174a4ade1446815a1d7de15eab17"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-03",
+      "amountMinor": 3000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "30,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "30,00"
+        }
+      ],
+      "searchText": "03.01.2025\u000130,00\u000130,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "aa8bb7afd0c939717926db5c51ee5c0b909f9fb80253beb04280ff8cec610b41"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2025-01-04",
+      "amountMinor": 4000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "40,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "40,00"
+        }
+      ],
+      "searchText": "04.01.2025\u000140,00\u000140,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "e54a76b03d638bbb54c847f42bf771c240a4d2eac2294552eb67e4e86d8978ba"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "2025-01-05",
+      "amountMinor": 5000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "50,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "50,00"
+        }
+      ],
+      "searchText": "05.01.2025\u000150,00\u000150,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "9a838dcdc1aa0f9cef190e35929961cf5ec8dfac046a081cc0a4381bfb8c3de3"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2025-01-06",
+      "amountMinor": 6000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "06.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "60,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "60,00"
+        }
+      ],
+      "searchText": "06.01.2025\u000160,00\u000160,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "34e9e098b3fecf2e15b9f64263fe6e2c7b5c7c686d8e12b80064947bbcb7af13"
+    },
+    {
+      "rowIndex": 6,
+      "bookedOn": "2025-01-07",
+      "amountMinor": 7000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "07.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "70,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "70,00"
+        }
+      ],
+      "searchText": "07.01.2025\u000170,00\u000170,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "8e895e53927fca092cac369a75a6a42c455a9f36992c58056db4b91265414125"
+    },
+    {
+      "rowIndex": 7,
+      "bookedOn": "2025-01-08",
+      "amountMinor": 8000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "08.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "80,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "80,00"
+        }
+      ],
+      "searchText": "08.01.2025\u000180,00\u000180,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "26c7ee076c1711f3a11164168410d42f15bd607632b516d97850cd633ee8c1bc"
+    },
+    {
+      "rowIndex": 8,
+      "bookedOn": "2025-01-09",
+      "amountMinor": 9000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "09.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "90,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "90,00"
+        }
+      ],
+      "searchText": "09.01.2025\u000190,00\u000190,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "b9633ca3b75bdadb94f05d9d8d50e8fe1416f722663182564bb0af66f7765e9a"
+    },
+    {
+      "rowIndex": 9,
+      "bookedOn": "2025-01-10",
+      "amountMinor": 10000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "10.01.2025"
+        },
+        {
+          "header": "Ninety",
+          "value": "100,00"
+        },
+        {
+          "header": "Eighty",
+          "value": "100,00"
+        }
+      ],
+      "searchText": "10.01.2025\u0001100,00\u0001100,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "b8f684c356c289108f8fb9c200b882c5d119c3d2ada1b2be849212d1ca9c52d6"
+    }
+  ]
+}

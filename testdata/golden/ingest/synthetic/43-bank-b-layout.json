@@ -1,0 +1,124 @@
+{
+  "fixture": "synthetic/43-bank-b-layout.csv",
+  "encoding": "utf-8",
+  "delimiter": ",",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Category",
+    "Amount",
+    "Currency",
+    "Booking date",
+    "Payee",
+    "Title"
+  ],
+  "types": [
+    "text",
+    "number",
+    "text",
+    "date",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "bookedOn": "Booking date",
+    "category": "Category",
+    "currency": "Currency",
+    "description": "Title",
+    "payee": "Payee"
+  },
+  "currency": "PLN",
+  "headerSignature": "89512bdae482b114dcd812c97a191830c9b1526c03cfc6dc5f17e976f8efab07",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -1500,
+      "currency": "PLN",
+      "payee": "SKLEP GAMMA",
+      "description": "Zakupy",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Category",
+          "value": "Zakupy"
+        },
+        {
+          "header": "Amount",
+          "value": "-15.00"
+        },
+        {
+          "header": "Currency",
+          "value": "PLN"
+        },
+        {
+          "header": "Booking date",
+          "value": "2025-01-04"
+        },
+        {
+          "header": "Payee",
+          "value": "SKLEP GAMMA"
+        },
+        {
+          "header": "Title",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "zakupy\u0001-15.00\u0001pln\u00012025-01-04\u0001sklep gamma\u0001zakupy",
+      "payeeN": "sklep gamma",
+      "descriptionN": "zakupy",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "SKLEP GAMMA",
+      "occurrence": 1,
+      "fingerprint": "1ae0a33c27b1e9b73a4ac6a5c136f983938d279c71350958892b91df10ad2062"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -1200,
+      "currency": "PLN",
+      "payee": "KAWIARNIA BETA",
+      "description": "Kawa",
+      "bankCategory": "Restauracje",
+      "raw": [
+        {
+          "header": "Category",
+          "value": "Restauracje"
+        },
+        {
+          "header": "Amount",
+          "value": "-12.00"
+        },
+        {
+          "header": "Currency",
+          "value": "PLN"
+        },
+        {
+          "header": "Booking date",
+          "value": "2025-01-03"
+        },
+        {
+          "header": "Payee",
+          "value": "KAWIARNIA BETA"
+        },
+        {
+          "header": "Title",
+          "value": "Kawa"
+        }
+      ],
+      "searchText": "restauracje\u0001-12.00\u0001pln\u00012025-01-03\u0001kawiarnia beta\u0001kawa",
+      "payeeN": "kawiarnia beta",
+      "descriptionN": "kawa",
+      "bankCategoryN": "restauracje",
+      "payeeGroup": "KAWIARNIA BETA",
+      "occurrence": 1,
+      "fingerprint": "214202319cb9930f257e8c3101c9104cae7048da029f8ef11e06366b37937a41"
+    }
+  ]
+}

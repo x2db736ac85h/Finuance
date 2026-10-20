@@ -1,0 +1,107 @@
+{
+  "fixture": "synthetic/20-duplicate-headers.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Opis (2)",
+    "Kwota (2)"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "description": "Opis (2)",
+    "payee": "Opis"
+  },
+  "headerSignature": "b7ccf45b955bcf4e7b1f281265794aba2acd08e1c2c10a4492c4d6b0915135c4",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "A",
+      "description": "a",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "A"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        },
+        {
+          "header": "Opis (2)",
+          "value": "a"
+        },
+        {
+          "header": "Kwota (2)",
+          "value": "-1,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001a\u0001-10,00\u0001a\u0001-1,00",
+      "payeeN": "a",
+      "descriptionN": "a",
+      "payeeGroup": "A",
+      "occurrence": 1,
+      "fingerprint": "4c1ffd4602607d12d17bffe6636fb2dfba35d89c1056f6310483b808457a4db9"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "B",
+      "description": "b",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "B"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        },
+        {
+          "header": "Opis (2)",
+          "value": "b"
+        },
+        {
+          "header": "Kwota (2)",
+          "value": "-2,00"
+        }
+      ],
+      "searchText": "03.01.2025\u0001b\u0001-20,00\u0001b\u0001-2,00",
+      "payeeN": "b",
+      "descriptionN": "b",
+      "payeeGroup": "B",
+      "occurrence": 1,
+      "fingerprint": "8c50c0c1ca419f59a806cad43bc08b409f743db3e40c134ade2f027f2254d53a"
+    }
+  ]
+}

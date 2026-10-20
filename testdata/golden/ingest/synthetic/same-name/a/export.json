@@ -1,0 +1,112 @@
+{
+  "fixture": "synthetic/same-name/a/export.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data operacji",
+    "Kontrahent",
+    "Tytuł",
+    "Kwota",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data operacji",
+    "category": "Kategoria",
+    "description": "Tytuł",
+    "payee": "Kontrahent"
+  },
+  "headerSignature": "5c2918664920e62a3cbb89b911f87ee6ec63d1f3bde96f21b026a56ea9c5be14",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-11",
+      "amountMinor": -1200,
+      "currency": "PLN",
+      "payee": "KAWIARNIA BETA",
+      "description": "Kawa",
+      "bankCategory": "Restauracje",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "11.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "KAWIARNIA BETA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Kawa"
+        },
+        {
+          "header": "Kwota",
+          "value": "-12,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Restauracje"
+        }
+      ],
+      "searchText": "11.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+      "payeeN": "kawiarnia beta",
+      "descriptionN": "kawa",
+      "bankCategoryN": "restauracje",
+      "payeeGroup": "KAWIARNIA BETA",
+      "occurrence": 1,
+      "fingerprint": "8c19b477d6ff3d74da2f8cc868f88a793ddeaa65ad85c2322488ff77f70524c1"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-12",
+      "amountMinor": -3000,
+      "currency": "PLN",
+      "payee": "SKLEP ALFA",
+      "description": "Zakupy",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "12.01.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "SKLEP ALFA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Zakupy"
+        },
+        {
+          "header": "Kwota",
+          "value": "-30,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "12.01.2025\u0001sklep alfa\u0001zakupy\u0001-30,00\u0001zakupy",
+      "payeeN": "sklep alfa",
+      "descriptionN": "zakupy",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "SKLEP ALFA",
+      "occurrence": 1,
+      "fingerprint": "174dfe605795f5bc29562d16a387a86161af86e313b85fed8dea252fa13b3854"
+    }
+  ]
+}

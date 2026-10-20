@@ -3,6 +3,8 @@ package ingest
 import (
 	"math"
 	"regexp"
+	"runtime"
+	"sync"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -77,13 +79,23 @@ func AnalyzeTable(t *Table, order DateOrder, mdyAlso ...int) []Column {
 		}
 	}
 	cols := make([]Column, len(t.Headers))
+	// Columns are independent, so they are typed in parallel; each goroutine writes only its own
+	// slot, and the result does not depend on scheduling.
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, runtime.GOMAXPROCS(0))
 	for k, h := range t.Headers {
 		o := DateOrderDMY
 		if mdy[k] {
 			o = DateOrderMDY
 		}
-		cols[k] = AnalyzeColumn(k, h, t.Rows, o)
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer func() { <-sem; wg.Done() }()
+			cols[k] = AnalyzeColumn(k, h, t.Rows, o)
+		}()
 	}
+	wg.Wait()
 	return cols
 }
 

@@ -3,6 +3,7 @@ package ingest
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	unorm "golang.org/x/text/unicode/norm"
 )
@@ -17,6 +18,79 @@ import (
 // "PŁATNOŚĆ" → "platnosc": accent-insensitive search was chosen because users type Polish without
 // diacritics.
 func Norm(s string) string {
+	ascii := true
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 0x80 {
+			ascii = false
+			break
+		}
+	}
+	if ascii {
+		return strings.ToLower(s) // NFD and the mark/ł steps cannot change ASCII text
+	}
+	if out, ok := normFast(s); ok {
+		return out
+	}
+	return normFull(s)
+}
+
+// normFast lowercases and decomposes character by character in one pass. That equals full NFD
+// of lowerJS(s) as long as s has no combining marks of its own (their canonical reordering needs
+// the whole string), no Hangul syllables (decomposed algorithmically) and none of the characters
+// lowerJS special-cases (Σ, İ); for those it reports false and Norm uses normFull.
+func normFast(s string) (string, bool) {
+	var b strings.Builder
+	b.Grow(len(s))
+	var buf [utf8.UTFMax]byte
+	for _, r := range s {
+		switch {
+		case r < 0x80:
+			if r >= 'A' && r <= 'Z' {
+				r += 'a' - 'A'
+			}
+			b.WriteByte(byte(r)) //nolint:gosec // r < 0x80 in this case
+			continue
+		case r == 'Σ' || r == 'İ':
+			return "", false
+		}
+		r = unicode.ToLower(r)
+		switch {
+		case r < 0x80:
+			b.WriteByte(byte(r)) //nolint:gosec // r < 0x80 in this case
+			continue
+		case r == 'ł':
+			b.WriteByte('l')
+			continue
+		case r >= 0xAC00 && r <= 0xD7A3:
+			return "", false
+		}
+		n := utf8.EncodeRune(buf[:], r)
+		p := unorm.NFD.Properties(buf[:n])
+		if p.CCC() != 0 {
+			return "", false
+		}
+		d := p.Decomposition()
+		if d == nil {
+			if r < 0x0300 || r > 0x036F {
+				b.WriteRune(r)
+			}
+			continue
+		}
+		for _, dr := range string(d) {
+			switch {
+			case dr >= 0x0300 && dr <= 0x036F:
+			case dr == 'ł':
+				b.WriteByte('l')
+			default:
+				b.WriteRune(dr)
+			}
+		}
+	}
+	return b.String(), true
+}
+
+// normFull is the reference implementation of Norm: full NFD of the lowercased string.
+func normFull(s string) string {
 	d := unorm.NFD.String(lowerJS(s))
 	var b strings.Builder
 	b.Grow(len(d))
