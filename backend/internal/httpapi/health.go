@@ -13,6 +13,12 @@ type Check struct {
 	Probe func(context.Context) error
 }
 
+// HealthzHandler reports that the process is alive.
+func HealthzHandler() http.Handler { return http.HandlerFunc(healthz) }
+
+// ReadyzHandler runs every readiness check (used by the worker's admin server too).
+func ReadyzHandler(checks []Check) http.Handler { return readyz(checks) }
+
 func healthz(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

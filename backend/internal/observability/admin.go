@@ -9,8 +9,9 @@ import (
 )
 
 // NewAdminServer serves /metrics and /debug/pprof/* on the admin address. It must never be
-// exposed through the ingress (docs/PLAN.md §3.5).
-func NewAdminServer(addr string, m *Metrics) *http.Server {
+// exposed through the ingress (docs/PLAN.md §3.5). extra may register more routes (the worker adds
+// /healthz and /readyz, because it has no API port).
+func NewAdminServer(addr string, m *Metrics, extra func(*http.ServeMux)) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{Registry: m.Registry}))
 	mux.HandleFunc("GET /debug/pprof/", pprof.Index)
@@ -18,6 +19,9 @@ func NewAdminServer(addr string, m *Metrics) *http.Server {
 	mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
+	if extra != nil {
+		extra(mux)
+	}
 	return &http.Server{
 		Addr:              addr,
 		Handler:           mux,

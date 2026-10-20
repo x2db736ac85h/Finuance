@@ -45,7 +45,7 @@ func TestNoopTracingAndAdmin(t *testing.T) {
 	}
 	m := NewMetrics()
 	m.HTTPRequests.WithLabelValues("GET /x", "GET", "2xx").Inc()
-	srv := NewAdminServer(":0", m)
+	srv := NewAdminServer(":0", m, nil)
 	w := httptest.NewRecorder()
 	srv.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/metrics", nil))
 	for _, want := range []string{"http_server_requests_total", "go_goroutines", "process_cpu_seconds_total"} {
