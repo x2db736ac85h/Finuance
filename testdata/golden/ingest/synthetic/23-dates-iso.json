@@ -1,0 +1,108 @@
+{
+  "fixture": "synthetic/23-dates-iso.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "bookedOn": "Date",
+    "payee": "Description"
+  },
+  "headerSignature": "d92f6d8289978d837942e5c48f519fac4b12190d960896141019fae4f097501b",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "A",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-01-02"
+        },
+        {
+          "header": "Description",
+          "value": "A"
+        },
+        {
+          "header": "Amount",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "2025-01-02\u0001a\u0001-10,00",
+      "payeeN": "a",
+      "payeeGroup": "A",
+      "occurrence": 1,
+      "fingerprint": "772a8a1ea94f81edba586a21c323901032189f0aba240d2a7014f6bb54b14ec0"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-31",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "B",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-01-31"
+        },
+        {
+          "header": "Description",
+          "value": "B"
+        },
+        {
+          "header": "Amount",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "2025-01-31\u0001b\u0001-20,00",
+      "payeeN": "b",
+      "payeeGroup": "B",
+      "occurrence": 1,
+      "fingerprint": "959d27e3c423b11e2b5410f6f4c1953a26464803f814fdc207c3ff7f108b2a4a"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2024-02-29",
+      "amountMinor": -3000,
+      "currency": "PLN",
+      "payee": "Leap",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2024-02-29"
+        },
+        {
+          "header": "Description",
+          "value": "Leap"
+        },
+        {
+          "header": "Amount",
+          "value": "-30,00"
+        }
+      ],
+      "searchText": "2024-02-29\u0001leap\u0001-30,00",
+      "payeeN": "leap",
+      "payeeGroup": "Leap",
+      "occurrence": 1,
+      "fingerprint": "141e46319247072a27550fd9b5a89b8f7f0a8dc908b908ebdbfa28774c6e9763"
+    }
+  ]
+}

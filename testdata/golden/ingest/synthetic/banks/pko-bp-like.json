@@ -1,0 +1,394 @@
+{
+  "fixture": "synthetic/banks/pko-bp-like.csv",
+  "encoding": "windows-1250",
+  "delimiter": ",",
+  "headerAt": 2,
+  "dropped": 0,
+  "headers": [
+    "2026-04-04",
+    "2026-04-03",
+    "Płatność kartą",
+    "-43.52",
+    "PLN",
+    "Tytuł: 000000001 00000000000000000000001",
+    "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+    "Data wykonania operacji: 2026-04-03 07:21",
+    "Kwota Cash Back:  0.00",
+    "Oryginalna kwota operacji: 43.52",
+    "Numer karty: 000000******0001"
+  ],
+  "types": [
+    "date",
+    "date",
+    "text",
+    "number",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "-43.52",
+    "bookedOn": "2026-04-04",
+    "payee": "Tytuł: 000000001 00000000000000000000001"
+  },
+  "headerSignature": "7ca750ce371244a6134470c56bd15244bcf2ca40490cd4a54fc190431deb2f85",
+  "stats": {
+    "rows": 6,
+    "valid": 6,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2026-04-04",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 000000******0001, 28.02-28.03",
+      "raw": [
+        {
+          "header": "2026-04-04",
+          "value": "2026-04-04"
+        },
+        {
+          "header": "2026-04-03",
+          "value": "2026-04-04"
+        },
+        {
+          "header": "Płatność kartą",
+          "value": "Opłata za użytkowanie karty"
+        },
+        {
+          "header": "-43.52",
+          "value": "-10"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        },
+        {
+          "header": "Tytuł: 000000001 00000000000000000000001",
+          "value": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 000000******0001, 28.02-28.03"
+        },
+        {
+          "header": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+          "value": ""
+        },
+        {
+          "header": "Data wykonania operacji: 2026-04-03 07:21",
+          "value": ""
+        },
+        {
+          "header": "Kwota Cash Back:  0.00",
+          "value": ""
+        },
+        {
+          "header": "Oryginalna kwota operacji: 43.52",
+          "value": ""
+        },
+        {
+          "header": "Numer karty: 000000******0001",
+          "value": ""
+        }
+      ],
+      "searchText": "2026-04-04\u00012026-04-04\u0001oplata za uzytkowanie karty\u0001-10\u0001pln\u0001tytul: oplata miesieczna za karte 000000******0001, 28.02-28.03\u0001\u0001\u0001\u0001\u0001",
+      "payeeN": "tytul: oplata miesieczna za karte 000000******0001, 28.02-28.03",
+      "payeeGroup": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 000000******0001, 28.02-28.03",
+      "occurrence": 1,
+      "fingerprint": "356493d65e983275cb8e6b59b560e83168b78efb5d9121aa4c2e336e2811b78f"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2026-04-02",
+      "amountMinor": -26513,
+      "currency": "PLN",
+      "payee": "Tytuł: 000000002 00000000000000000000002",
+      "raw": [
+        {
+          "header": "2026-04-04",
+          "value": "2026-04-02"
+        },
+        {
+          "header": "2026-04-03",
+          "value": "2026-03-31"
+        },
+        {
+          "header": "Płatność kartą",
+          "value": "Płatność kartą"
+        },
+        {
+          "header": "-43.52",
+          "value": "-265.13"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        },
+        {
+          "header": "Tytuł: 000000001 00000000000000000000001",
+          "value": "Tytuł: 000000002 00000000000000000000002"
+        },
+        {
+          "header": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+          "value": "Lokalizacja: Adres: STACJA PALIW Miasto: POZNAN Kraj: POLSKA"
+        },
+        {
+          "header": "Data wykonania operacji: 2026-04-03 07:21",
+          "value": "Data wykonania operacji: 2026-03-31"
+        },
+        {
+          "header": "Kwota Cash Back:  0.00",
+          "value": "Kwota Cash Back:  0.00"
+        },
+        {
+          "header": "Oryginalna kwota operacji: 43.52",
+          "value": "Oryginalna kwota operacji: 265.13"
+        },
+        {
+          "header": "Numer karty: 000000******0001",
+          "value": "Numer karty: 000000******0001"
+        }
+      ],
+      "searchText": "2026-04-02\u00012026-03-31\u0001platnosc karta\u0001-265.13\u0001pln\u0001tytul: 000000002 00000000000000000000002\u0001lokalizacja: adres: stacja paliw miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-03-31\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 265.13\u0001numer karty: 000000******0001",
+      "payeeN": "tytul: 000000002 00000000000000000000002",
+      "payeeGroup": "Tytuł: 000000002 00000000000000000000002",
+      "occurrence": 1,
+      "fingerprint": "1c138b2cc0fbf74416abc8e56d71aea9661474d760c2e88a78056be8ad896ec1"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2026-03-31",
+      "amountMinor": -565,
+      "currency": "PLN",
+      "payee": "Tytuł: 000000001 00000000000000000000003",
+      "raw": [
+        {
+          "header": "2026-04-04",
+          "value": "2026-03-31"
+        },
+        {
+          "header": "2026-04-03",
+          "value": "2026-03-30"
+        },
+        {
+          "header": "Płatność kartą",
+          "value": "Płatność kartą"
+        },
+        {
+          "header": "-43.52",
+          "value": "-5.65"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        },
+        {
+          "header": "Tytuł: 000000001 00000000000000000000001",
+          "value": "Tytuł: 000000001 00000000000000000000003"
+        },
+        {
+          "header": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+          "value": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA"
+        },
+        {
+          "header": "Data wykonania operacji: 2026-04-03 07:21",
+          "value": "Data wykonania operacji: 2026-03-30 16:40"
+        },
+        {
+          "header": "Kwota Cash Back:  0.00",
+          "value": "Kwota Cash Back:  0.00"
+        },
+        {
+          "header": "Oryginalna kwota operacji: 43.52",
+          "value": "Oryginalna kwota operacji: 5.65"
+        },
+        {
+          "header": "Numer karty: 000000******0001",
+          "value": "Numer karty: 000000******0001"
+        }
+      ],
+      "searchText": "2026-03-31\u00012026-03-30\u0001platnosc karta\u0001-5.65\u0001pln\u0001tytul: 000000001 00000000000000000000003\u0001lokalizacja: adres: sklep dyskont dluga miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-03-30 16:40\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 5.65\u0001numer karty: 000000******0001",
+      "payeeN": "tytul: 000000001 00000000000000000000003",
+      "payeeGroup": "Tytuł: 000000001 00000000000000000000003",
+      "occurrence": 1,
+      "fingerprint": "df842168a2a8528f8956e23aea47cb1080c3ae4e85a96838ec9a51c52617fc19"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2026-03-13",
+      "amountMinor": -2500,
+      "currency": "PLN",
+      "payee": "Tytuł: 000000001 00000000000000000000004",
+      "raw": [
+        {
+          "header": "2026-04-04",
+          "value": "2026-03-13"
+        },
+        {
+          "header": "2026-04-03",
+          "value": "2026-03-12"
+        },
+        {
+          "header": "Płatność kartą",
+          "value": "Płatność kartą"
+        },
+        {
+          "header": "-43.52",
+          "value": "-25"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        },
+        {
+          "header": "Tytuł: 000000001 00000000000000000000001",
+          "value": "Tytuł: 000000001 00000000000000000000004"
+        },
+        {
+          "header": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+          "value": "Lokalizacja: Adres: BAR SZYBKI 1, Poznan 1 Miasto: Poznan Kraj: POLSKA"
+        },
+        {
+          "header": "Data wykonania operacji: 2026-04-03 07:21",
+          "value": "Data wykonania operacji: 2026-03-12 13:03"
+        },
+        {
+          "header": "Kwota Cash Back:  0.00",
+          "value": "Kwota Cash Back:  0.00"
+        },
+        {
+          "header": "Oryginalna kwota operacji: 43.52",
+          "value": "Oryginalna kwota operacji: 25.00"
+        },
+        {
+          "header": "Numer karty: 000000******0001",
+          "value": "Numer karty: 000000******0001"
+        }
+      ],
+      "searchText": "2026-03-13\u00012026-03-12\u0001platnosc karta\u0001-25\u0001pln\u0001tytul: 000000001 00000000000000000000004\u0001lokalizacja: adres: bar szybki 1, poznan 1 miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-03-12 13:03\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 25.00\u0001numer karty: 000000******0001",
+      "payeeN": "tytul: 000000001 00000000000000000000004",
+      "payeeGroup": "Tytuł: 000000001 00000000000000000000004",
+      "occurrence": 1,
+      "fingerprint": "a0575a76606ed8f874d4dc0be34c78066a4a48bdbf2ff9d7fb546ec8343d27e3"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "2026-03-10",
+      "amountMinor": 320000,
+      "currency": "PLN",
+      "payee": "Tytuł: WYNAGRODZENIE 03/2026",
+      "raw": [
+        {
+          "header": "2026-04-04",
+          "value": "2026-03-10"
+        },
+        {
+          "header": "2026-04-03",
+          "value": "2026-03-10"
+        },
+        {
+          "header": "Płatność kartą",
+          "value": "Przelew przychodzący"
+        },
+        {
+          "header": "-43.52",
+          "value": "3200"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        },
+        {
+          "header": "Tytuł: 000000001 00000000000000000000001",
+          "value": "Tytuł: WYNAGRODZENIE 03/2026"
+        },
+        {
+          "header": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+          "value": "Nadawca: PRACODAWCA PRZYKŁADOWY"
+        },
+        {
+          "header": "Data wykonania operacji: 2026-04-03 07:21",
+          "value": "Rachunek nadawcy: 00000000000000000000000003"
+        },
+        {
+          "header": "Kwota Cash Back:  0.00",
+          "value": ""
+        },
+        {
+          "header": "Oryginalna kwota operacji: 43.52",
+          "value": ""
+        },
+        {
+          "header": "Numer karty: 000000******0001",
+          "value": ""
+        }
+      ],
+      "searchText": "2026-03-10\u00012026-03-10\u0001przelew przychodzacy\u00013200\u0001pln\u0001tytul: wynagrodzenie 03/2026\u0001nadawca: pracodawca przykladowy\u0001rachunek nadawcy: 00000000000000000000000003\u0001\u0001\u0001",
+      "payeeN": "tytul: wynagrodzenie 03/2026",
+      "payeeGroup": "Tytuł: WYNAGRODZENIE 03/2026",
+      "occurrence": 1,
+      "fingerprint": "f1ebec7240aa6ed4dedd51a523dec5ae5dc32761872d1497a0e74892a1a5ba11"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2026-02-20",
+      "amountMinor": -160000,
+      "currency": "PLN",
+      "payee": "Tytuł: BANKOMAT 0000000000000000A0000",
+      "raw": [
+        {
+          "header": "2026-04-04",
+          "value": "2026-02-20"
+        },
+        {
+          "header": "2026-04-03",
+          "value": "2026-02-19"
+        },
+        {
+          "header": "Płatność kartą",
+          "value": "Wypłata z bankomatu"
+        },
+        {
+          "header": "-43.52",
+          "value": "-1600"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        },
+        {
+          "header": "Tytuł: 000000001 00000000000000000000001",
+          "value": "Tytuł: BANKOMAT 0000000000000000A0000"
+        },
+        {
+          "header": "Lokalizacja: Adres: SKLEP DYSKONT Długa Miasto: Poznan Kraj: POLSKA",
+          "value": "Lokalizacja: Adres: Szeroka 1 Miasto: POZNAN Kraj: POLSKA"
+        },
+        {
+          "header": "Data wykonania operacji: 2026-04-03 07:21",
+          "value": "Data wykonania operacji: 2026-02-19 17:57"
+        },
+        {
+          "header": "Kwota Cash Back:  0.00",
+          "value": "Kwota Cash Back:  0.00"
+        },
+        {
+          "header": "Oryginalna kwota operacji: 43.52",
+          "value": "Oryginalna kwota operacji: 1600.00"
+        },
+        {
+          "header": "Numer karty: 000000******0001",
+          "value": "Numer karty: 000000******0001"
+        }
+      ],
+      "searchText": "2026-02-20\u00012026-02-19\u0001wyplata z bankomatu\u0001-1600\u0001pln\u0001tytul: bankomat 0000000000000000a0000\u0001lokalizacja: adres: szeroka 1 miasto: poznan kraj: polska\u0001data wykonania operacji: 2026-02-19 17:57\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 1600.00\u0001numer karty: 000000******0001",
+      "payeeN": "tytul: bankomat 0000000000000000a0000",
+      "payeeGroup": "Tytuł: BANKOMAT 0000000000000000A0000",
+      "occurrence": 1,
+      "fingerprint": "cdd06322caf84e9b17fa493a436c3947f6bc25d0463db1ab24586b2373012175"
+    }
+  ]
+}

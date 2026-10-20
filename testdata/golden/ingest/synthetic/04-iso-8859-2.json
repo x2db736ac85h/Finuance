@@ -1,0 +1,109 @@
+{
+  "fixture": "synthetic/04-iso-8859-2.csv",
+  "encoding": "windows-1250",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "category": "Kategoria",
+    "currency": "Waluta",
+    "payee": "Opis"
+  },
+  "currency": "PLN",
+  "headerSignature": "60e5be87c1c54627774ab4657c59e9204c261ff5cbbeee58f2621170a0fdafaa",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2100,
+      "currency": "PLN",
+      "payee": "¦WIĘTOKRZYSKA ¬RÓDŁA ˇŁ",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "¦WIĘTOKRZYSKA ¬RÓDŁA ˇŁ"
+        },
+        {
+          "header": "Kwota",
+          "value": "-21,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "03.01.2025\u0001¦wietokrzyska ¬rodla ˇl\u0001-21,00\u0001pln\u0001zakupy",
+      "payeeN": "¦wietokrzyska ¬rodla ˇl",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "¦WIĘTOKRZYSKA ¬RÓDŁA ˇŁ",
+      "occurrence": 1,
+      "fingerprint": "bffdc37b702cb47a1911d6806fc5e2c7b02a8222326e29bf4516af268dddd5ac"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -2200,
+      "currency": "PLN",
+      "payee": "¶więtokrzyska Ľródła ±ł",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "¶więtokrzyska Ľródła ±ł"
+        },
+        {
+          "header": "Kwota",
+          "value": "-22,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "04.01.2025\u0001¶wietokrzyska lrodla ±l\u0001-22,00\u0001pln\u0001zakupy",
+      "payeeN": "¶wietokrzyska lrodla ±l",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "¶więtokrzyska Ľródła ±ł",
+      "occurrence": 1,
+      "fingerprint": "c9a6a844803356a58a337ce84a7cd1abfb2dd4b6c685a0bfa33c0b7ebf53fabe"
+    }
+  ]
+}

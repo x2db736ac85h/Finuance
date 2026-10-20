@@ -1,0 +1,108 @@
+{
+  "fixture": "synthetic/12-mixed-line-endings.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "a994889d56b7c99dc1e8df8596cc7f0c984a201faa11afe0e470aeb3ab67d3f9",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -100,
+      "currency": "PLN",
+      "payee": "A",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "A"
+        },
+        {
+          "header": "Kwota",
+          "value": "-1,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001a\u0001-1,00",
+      "payeeN": "a",
+      "payeeGroup": "A",
+      "occurrence": 1,
+      "fingerprint": "272bde25ec4ea7b60a899aa1ef5e8e7e9e99fcfdbaee6f2e91c256d301c10766"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -200,
+      "currency": "PLN",
+      "payee": "B",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "B"
+        },
+        {
+          "header": "Kwota",
+          "value": "-2,00"
+        }
+      ],
+      "searchText": "03.01.2025\u0001b\u0001-2,00",
+      "payeeN": "b",
+      "payeeGroup": "B",
+      "occurrence": 1,
+      "fingerprint": "250a6884ddb3fc15b834aff230b9c5e3b1b99f3b8ff0f76dc7c1da2eb8b67aba"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -300,
+      "currency": "PLN",
+      "payee": "C",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "C"
+        },
+        {
+          "header": "Kwota",
+          "value": "-3,00"
+        }
+      ],
+      "searchText": "04.01.2025\u0001c\u0001-3,00",
+      "payeeN": "c",
+      "payeeGroup": "C",
+      "occurrence": 1,
+      "fingerprint": "fea681b125587246edf0d8d111b0e4d635db4d34332d4b83acaa8fb1fe15709f"
+    }
+  ]
+}

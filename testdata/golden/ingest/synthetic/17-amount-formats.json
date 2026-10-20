@@ -1,0 +1,290 @@
+{
+  "fixture": "synthetic/17-amount-formats.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "a994889d56b7c99dc1e8df8596cc7f0c984a201faa11afe0e470aeb3ab67d3f9",
+  "stats": {
+    "rows": 10,
+    "valid": 10,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-01",
+      "amountMinor": -123456,
+      "currency": "PLN",
+      "payee": "space thousands",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "01.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "space thousands"
+        },
+        {
+          "header": "Kwota",
+          "value": "-1 234,56"
+        }
+      ],
+      "searchText": "01.01.2025\u0001space thousands\u0001-1 234,56",
+      "payeeN": "space thousands",
+      "payeeGroup": "space thousands",
+      "occurrence": 1,
+      "fingerprint": "eec8bd8f758ca213bdb287c8a6dcdda16304c9d62745ec1a9f8accc885ece41e"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-02",
+      "amountMinor": 123456,
+      "currency": "PLN",
+      "payee": "dot thousands",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "dot thousands"
+        },
+        {
+          "header": "Kwota",
+          "value": "1.234,56"
+        }
+      ],
+      "searchText": "02.01.2025\u0001dot thousands\u00011.234,56",
+      "payeeN": "dot thousands",
+      "payeeGroup": "dot thousands",
+      "occurrence": 1,
+      "fingerprint": "e3c46d2076c615e48a0bd26abfd64ac80114ce68a9f3d2ce7a170ec8041f9155"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-03",
+      "amountMinor": 123456,
+      "currency": "PLN",
+      "payee": "comma thousands",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "comma thousands"
+        },
+        {
+          "header": "Kwota",
+          "value": "1,234.56"
+        }
+      ],
+      "searchText": "03.01.2025\u0001comma thousands\u00011,234.56",
+      "payeeN": "comma thousands",
+      "payeeGroup": "comma thousands",
+      "occurrence": 1,
+      "fingerprint": "0b068f55eaae09bc592776946fa93c4e31367607e3dfbfbaae0b53d1940155e7"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2025-01-04",
+      "amountMinor": 1200,
+      "currency": "PLN",
+      "payee": "PLN suffix",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "PLN suffix"
+        },
+        {
+          "header": "Kwota",
+          "value": "12,00 PLN"
+        }
+      ],
+      "searchText": "04.01.2025\u0001pln suffix\u000112,00 pln",
+      "payeeN": "pln suffix",
+      "payeeGroup": "PLN suffix",
+      "occurrence": 1,
+      "fingerprint": "b40dd7ff5b8af5cf98773be414598e04c1eb9c11dbb8d50fe0bfa254a1d4f5ba"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "2025-01-05",
+      "amountMinor": 1200,
+      "currency": "PLN",
+      "payee": "euro prefix",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "euro prefix"
+        },
+        {
+          "header": "Kwota",
+          "value": "€12"
+        }
+      ],
+      "searchText": "05.01.2025\u0001euro prefix\u0001€12",
+      "payeeN": "euro prefix",
+      "payeeGroup": "euro prefix",
+      "occurrence": 1,
+      "fingerprint": "d063264b20a7e1515cb93b6082a79d63177e68c3296e79945fc4224e201da8f4"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2025-01-06",
+      "amountMinor": -250000,
+      "currency": "PLN",
+      "payee": "nbsp thousands",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "06.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "nbsp thousands"
+        },
+        {
+          "header": "Kwota",
+          "value": "-2 500,00"
+        }
+      ],
+      "searchText": "06.01.2025\u0001nbsp thousands\u0001-2 500,00",
+      "payeeN": "nbsp thousands",
+      "payeeGroup": "nbsp thousands",
+      "occurrence": 1,
+      "fingerprint": "c3a5773c973e9d6bb5d4d4257a9ffea7ae10e0f8dd9e8a45f31e00749d3e4048"
+    },
+    {
+      "rowIndex": 6,
+      "bookedOn": "2025-01-07",
+      "amountMinor": 1500,
+      "currency": "PLN",
+      "payee": "plus sign",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "07.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "plus sign"
+        },
+        {
+          "header": "Kwota",
+          "value": "+15,00"
+        }
+      ],
+      "searchText": "07.01.2025\u0001plus sign\u0001+15,00",
+      "payeeN": "plus sign",
+      "payeeGroup": "plus sign",
+      "occurrence": 1,
+      "fingerprint": "78e7994ec5feb339f829449da62948670891c009b979ce6d868d8ae6207d0a21"
+    },
+    {
+      "rowIndex": 7,
+      "bookedOn": "2025-01-08",
+      "amountMinor": -750,
+      "currency": "PLN",
+      "payee": "zł suffix",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "08.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "zł suffix"
+        },
+        {
+          "header": "Kwota",
+          "value": "-7,50 zł"
+        }
+      ],
+      "searchText": "08.01.2025\u0001zl suffix\u0001-7,50 zl",
+      "payeeN": "zl suffix",
+      "payeeGroup": "zł suffix",
+      "occurrence": 1,
+      "fingerprint": "8aa98c72f3ec5621db939759667ff0fe4ea00cee88fefe58e3180c075148015f"
+    },
+    {
+      "rowIndex": 8,
+      "bookedOn": "2025-01-09",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "integer",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "09.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "integer"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10"
+        }
+      ],
+      "searchText": "09.01.2025\u0001integer\u0001-10",
+      "payeeN": "integer",
+      "payeeGroup": "integer",
+      "occurrence": 1,
+      "fingerprint": "8ca99a5973f7459160f61abfcaac0038bb37fff347db80bb4751a27a5e674d56"
+    },
+    {
+      "rowIndex": 9,
+      "bookedOn": "2025-01-10",
+      "amountMinor": 123456700,
+      "currency": "PLN",
+      "payee": "many dots",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "10.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "many dots"
+        },
+        {
+          "header": "Kwota",
+          "value": "1.234.567"
+        }
+      ],
+      "searchText": "10.01.2025\u0001many dots\u00011.234.567",
+      "payeeN": "many dots",
+      "payeeGroup": "many dots",
+      "occurrence": 1,
+      "fingerprint": "3a4af8eeb661daa33cdbf10acd63ef5f1879f7b3e2ff41db8ef8a50e3b82461e"
+    }
+  ]
+}

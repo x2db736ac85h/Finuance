@@ -1,0 +1,11 @@
+{
+  "fixture": "synthetic/30-empty.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "error": "empty file",
+  "headerAt": 0,
+  "dropped": 0,
+  "headers": null,
+  "types": null,
+  "roles": null
+}

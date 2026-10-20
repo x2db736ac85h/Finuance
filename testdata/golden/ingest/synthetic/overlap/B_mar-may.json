@@ -1,0 +1,378 @@
+{
+  "fixture": "synthetic/overlap/B_mar-may.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data operacji",
+    "Kontrahent",
+    "Tytuł",
+    "Kwota",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data operacji",
+    "category": "Kategoria",
+    "description": "Tytuł",
+    "payee": "Kontrahent"
+  },
+  "headerSignature": "5c2918664920e62a3cbb89b911f87ee6ec63d1f3bde96f21b026a56ea9c5be14",
+  "stats": {
+    "rows": 9,
+    "valid": 9,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-05-02",
+      "amountMinor": -285000,
+      "currency": "PLN",
+      "payee": "WSPÓLNOTA",
+      "description": "Czynsz 05",
+      "bankCategory": "Mieszkanie",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "02.05.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "WSPÓLNOTA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Czynsz 05"
+        },
+        {
+          "header": "Kwota",
+          "value": "-2 850,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Mieszkanie"
+        }
+      ],
+      "searchText": "02.05.2025\u0001wspolnota\u0001czynsz 05\u0001-2 850,00\u0001mieszkanie",
+      "payeeN": "wspolnota",
+      "descriptionN": "czynsz 05",
+      "bankCategoryN": "mieszkanie",
+      "payeeGroup": "WSPÓLNOTA",
+      "occurrence": 1,
+      "fingerprint": "3713869600b285fea0369c6fa4691c4d02a8705ae5b0e37c798eabdc1095c832"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-05-10",
+      "amountMinor": 850000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA",
+      "description": "Wynagrodzenie 05",
+      "bankCategory": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "10.05.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "PRACODAWCA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Wynagrodzenie 05"
+        },
+        {
+          "header": "Kwota",
+          "value": "8 500,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Wynagrodzenie"
+        }
+      ],
+      "searchText": "10.05.2025\u0001pracodawca\u0001wynagrodzenie 05\u00018 500,00\u0001wynagrodzenie",
+      "payeeN": "pracodawca",
+      "descriptionN": "wynagrodzenie 05",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA",
+      "occurrence": 1,
+      "fingerprint": "d7af24f50d5d33b58d829e1b07fbb0d56db394570f829bedd8fe97d87533b02d"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-05-20",
+      "amountMinor": -1200,
+      "currency": "PLN",
+      "payee": "KAWIARNIA BETA",
+      "description": "Kawa",
+      "bankCategory": "Restauracje",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "20.05.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "KAWIARNIA BETA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Kawa"
+        },
+        {
+          "header": "Kwota",
+          "value": "-12,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Restauracje"
+        }
+      ],
+      "searchText": "20.05.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+      "payeeN": "kawiarnia beta",
+      "descriptionN": "kawa",
+      "bankCategoryN": "restauracje",
+      "payeeGroup": "KAWIARNIA BETA",
+      "occurrence": 1,
+      "fingerprint": "3478df6d1aa2f65e455b754e8e92a370ab392a7ccf087ab4de2d1403f920e925"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2025-04-02",
+      "amountMinor": -285000,
+      "currency": "PLN",
+      "payee": "WSPÓLNOTA",
+      "description": "Czynsz 04",
+      "bankCategory": "Mieszkanie",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "02.04.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "WSPÓLNOTA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Czynsz 04"
+        },
+        {
+          "header": "Kwota",
+          "value": "-2 850,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Mieszkanie"
+        }
+      ],
+      "searchText": "02.04.2025\u0001wspolnota\u0001czynsz 04\u0001-2 850,00\u0001mieszkanie",
+      "payeeN": "wspolnota",
+      "descriptionN": "czynsz 04",
+      "bankCategoryN": "mieszkanie",
+      "payeeGroup": "WSPÓLNOTA",
+      "occurrence": 1,
+      "fingerprint": "e1563bb7abac9f403fcf7a27cb27a63b70335e342d5b2deba79a631c4779923f"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "2025-04-10",
+      "amountMinor": 850000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA",
+      "description": "Wynagrodzenie 04",
+      "bankCategory": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "10.04.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "PRACODAWCA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Wynagrodzenie 04"
+        },
+        {
+          "header": "Kwota",
+          "value": "8 500,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Wynagrodzenie"
+        }
+      ],
+      "searchText": "10.04.2025\u0001pracodawca\u0001wynagrodzenie 04\u00018 500,00\u0001wynagrodzenie",
+      "payeeN": "pracodawca",
+      "descriptionN": "wynagrodzenie 04",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA",
+      "occurrence": 1,
+      "fingerprint": "ac332fffab9fec09830f85ae8704ed74ab06e483f43ff3f30d292a23b7ab6b87"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2025-03-02",
+      "amountMinor": -285000,
+      "currency": "PLN",
+      "payee": "WSPÓLNOTA",
+      "description": "Czynsz 03",
+      "bankCategory": "Mieszkanie",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "02.03.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "WSPÓLNOTA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Czynsz 03"
+        },
+        {
+          "header": "Kwota",
+          "value": "-2 850,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Mieszkanie"
+        }
+      ],
+      "searchText": "02.03.2025\u0001wspolnota\u0001czynsz 03\u0001-2 850,00\u0001mieszkanie",
+      "payeeN": "wspolnota",
+      "descriptionN": "czynsz 03",
+      "bankCategoryN": "mieszkanie",
+      "payeeGroup": "WSPÓLNOTA",
+      "occurrence": 1,
+      "fingerprint": "bb73e9877e2546dedd55c5f2e1156b6165539b661bddf05fb207fc15899f420f"
+    },
+    {
+      "rowIndex": 6,
+      "bookedOn": "2025-03-10",
+      "amountMinor": 850000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA",
+      "description": "Wynagrodzenie 03",
+      "bankCategory": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "10.03.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "PRACODAWCA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Wynagrodzenie 03"
+        },
+        {
+          "header": "Kwota",
+          "value": "8 500,00"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Wynagrodzenie"
+        }
+      ],
+      "searchText": "10.03.2025\u0001pracodawca\u0001wynagrodzenie 03\u00018 500,00\u0001wynagrodzenie",
+      "payeeN": "pracodawca",
+      "descriptionN": "wynagrodzenie 03",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA",
+      "occurrence": 1,
+      "fingerprint": "95b16047dd418b0476ecfeb6fd3553043397d3cd256425ecaae3111e4ffe6ac6"
+    },
+    {
+      "rowIndex": 7,
+      "bookedOn": "2025-03-21",
+      "amountMinor": -5510,
+      "currency": "PLN",
+      "payee": "SKLEP ALFA",
+      "description": "Zakupy",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "21.03.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "SKLEP ALFA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Zakupy"
+        },
+        {
+          "header": "Kwota",
+          "value": "-55,10"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "21.03.2025\u0001sklep alfa\u0001zakupy\u0001-55,10\u0001zakupy",
+      "payeeN": "sklep alfa",
+      "descriptionN": "zakupy",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "SKLEP ALFA",
+      "occurrence": 1,
+      "fingerprint": "24e8d13ba6f973d9b931105986403ffa3cde23c4342b037eab9aa4d0cec87ce4"
+    },
+    {
+      "rowIndex": 8,
+      "bookedOn": "2025-03-21",
+      "amountMinor": -5510,
+      "currency": "PLN",
+      "payee": "SKLEP ALFA",
+      "description": "Zakupy",
+      "bankCategory": "Zakupy",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "21.03.2025"
+        },
+        {
+          "header": "Kontrahent",
+          "value": "SKLEP ALFA"
+        },
+        {
+          "header": "Tytuł",
+          "value": "Zakupy"
+        },
+        {
+          "header": "Kwota",
+          "value": "-55,10"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "21.03.2025\u0001sklep alfa\u0001zakupy\u0001-55,10\u0001zakupy",
+      "payeeN": "sklep alfa",
+      "descriptionN": "zakupy",
+      "bankCategoryN": "zakupy",
+      "payeeGroup": "SKLEP ALFA",
+      "occurrence": 2,
+      "fingerprint": "24e8d13ba6f973d9b931105986403ffa3cde23c4342b037eab9aa4d0cec87ce4"
+    }
+  ]
+}

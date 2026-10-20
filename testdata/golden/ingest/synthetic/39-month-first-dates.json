@@ -1,0 +1,107 @@
+{
+  "fixture": "synthetic/39-month-first-dates.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "types": [
+    "text",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "payee": "Description"
+  },
+  "headerSignature": "d92f6d8289978d837942e5c48f519fac4b12190d960896141019fae4f097501b",
+  "stats": {
+    "rows": 3,
+    "valid": 0,
+    "errors": 3
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "",
+      "amountMinor": -2500,
+      "currency": "PLN",
+      "payee": "Halloween shop",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "10/31/2025"
+        },
+        {
+          "header": "Description",
+          "value": "Halloween shop"
+        },
+        {
+          "header": "Amount",
+          "value": "-25.00"
+        }
+      ],
+      "searchText": "10/31/2025\u0001halloween shop\u0001-25.00",
+      "payeeN": "halloween shop",
+      "payeeGroup": "Halloween shop",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Ambiguous",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "03/04/2025"
+        },
+        {
+          "header": "Description",
+          "value": "Ambiguous"
+        },
+        {
+          "header": "Amount",
+          "value": "-10.00"
+        }
+      ],
+      "searchText": "03/04/2025\u0001ambiguous\u0001-10.00",
+      "payeeN": "ambiguous",
+      "payeeGroup": "Ambiguous",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "",
+      "amountMinor": -9999,
+      "currency": "PLN",
+      "payee": "Gift",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "12/25/2025"
+        },
+        {
+          "header": "Description",
+          "value": "Gift"
+        },
+        {
+          "header": "Amount",
+          "value": "-99.99"
+        }
+      ],
+      "searchText": "12/25/2025\u0001gift\u0001-99.99",
+      "payeeN": "gift",
+      "payeeGroup": "Gift",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    }
+  ]
+}

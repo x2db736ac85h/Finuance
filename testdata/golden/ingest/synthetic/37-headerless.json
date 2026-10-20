@@ -1,0 +1,87 @@
+{
+  "fixture": "synthetic/37-headerless.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "02.01.2025",
+    "Sklep A",
+    "-10,00",
+    "PLN"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "-10,00",
+    "bookedOn": "02.01.2025"
+  },
+  "headerSignature": "638f09e9f0951027178d2a5ef9cb12f8c9eb6020cdf6d468801b6f976aed65de",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "02.01.2025",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Sklep A",
+          "value": "Sklep B"
+        },
+        {
+          "header": "-10,00",
+          "value": "-20,00"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "03.01.2025\u0001sklep b\u0001-20,00\u0001pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "69a0cb2730fe5617a5260f934b0de5ed9336a8d8517fb855c7614318b01ac758"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -3000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "02.01.2025",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Sklep A",
+          "value": "Sklep C"
+        },
+        {
+          "header": "-10,00",
+          "value": "-30,00"
+        },
+        {
+          "header": "PLN",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "04.01.2025\u0001sklep c\u0001-30,00\u0001pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "ff4906eb27df1642f311c822ea790475c8c6d45089c743da1b4f89fcb1232225"
+    }
+  ]
+}

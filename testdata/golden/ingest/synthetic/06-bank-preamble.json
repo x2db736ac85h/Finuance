@@ -1,0 +1,286 @@
+{
+  "fixture": "synthetic/06-bank-preamble.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Wyciąg z rachunku",
+    "Column 2",
+    "Column 3",
+    "Column 4",
+    "Column 5"
+  ],
+  "types": [
+    "text",
+    "text",
+    "text",
+    "text",
+    "text"
+  ],
+  "roles": {},
+  "headerSignature": "6f3ff829d6bb8f359c651a873d9089030133ac182e3f37f4db51379c3d6e6246",
+  "stats": {
+    "rows": 8,
+    "valid": 0,
+    "errors": 8
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "Rachunek: 00000000000000000000000001"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "rachunek: 00000000000000000000000001\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "Właściciel: JAN PRZYKŁADOWY"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "wlasciciel: jan przykladowy\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "Okres: 01.01.2025 - 31.01.2025"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "okres: 01.01.2025 - 31.01.2025\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "Waluta: PLN"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "waluta: pln\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "Data"
+        },
+        {
+          "header": "Column 2",
+          "value": "Opis"
+        },
+        {
+          "header": "Column 3",
+          "value": "Kwota"
+        },
+        {
+          "header": "Column 4",
+          "value": "Waluta"
+        },
+        {
+          "header": "Column 5",
+          "value": "Kategoria"
+        }
+      ],
+      "searchText": "data\u0001opis\u0001kwota\u0001waluta\u0001kategoria",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Column 2",
+          "value": "Sklep A"
+        },
+        {
+          "header": "Column 3",
+          "value": "-10,00"
+        },
+        {
+          "header": "Column 4",
+          "value": "PLN"
+        },
+        {
+          "header": "Column 5",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep a\u0001-10,00\u0001pln\u0001zakupy",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 6,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Column 2",
+          "value": "Sklep B"
+        },
+        {
+          "header": "Column 3",
+          "value": "-20,00"
+        },
+        {
+          "header": "Column 4",
+          "value": "PLN"
+        },
+        {
+          "header": "Column 5",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "03.01.2025\u0001sklep b\u0001-20,00\u0001pln\u0001zakupy",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    },
+    {
+      "rowIndex": 7,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Wyciąg z rachunku",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Column 2",
+          "value": "Sklep C"
+        },
+        {
+          "header": "Column 3",
+          "value": "-30,00"
+        },
+        {
+          "header": "Column 4",
+          "value": "PLN"
+        },
+        {
+          "header": "Column 5",
+          "value": "Zakupy"
+        }
+      ],
+      "searchText": "04.01.2025\u0001sklep c\u0001-30,00\u0001pln\u0001zakupy",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; no amount column is mapped"
+    }
+  ]
+}

@@ -1,0 +1,928 @@
+{
+  "fixture": "synthetic/banks/mbank-like.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "mBank Przykładowy S.A. Bankowość Detaliczna",
+    "Column 2",
+    "Column 3",
+    "Column 4",
+    "Column 5"
+  ],
+  "types": [
+    "text",
+    "text",
+    "text",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Column 5"
+  },
+  "headerSignature": "9c2eb8a048320666ed92574ab7382ea1b13cac51cfe98fa2e635d142d88efe9e",
+  "stats": {
+    "rows": 28,
+    "valid": 0,
+    "errors": 28
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "Skrytka Pocztowa 0000"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "skrytka pocztowa 0000\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "00-000 Miasto 2"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "00-000 miasto 2\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "www.example.pl"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "www.example.pl\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "Infolinia: 000 000 000"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "infolinia: 000 000 000\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "+48 (00) 0 000 000"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "+48 (00) 0 000 000\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "#Klient"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "#klient\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 6,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "JAN PRZYKŁADOWY"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "jan przykladowy\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 7,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "Lista operacji"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "lista operacji\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 8,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "#Za okres:"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "#za okres:\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 9,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "09.04.2025"
+        },
+        {
+          "header": "Column 2",
+          "value": "09.04.2026"
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "09.04.2025\u000109.04.2026\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 10,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "#zgodnie z wybranymi filtrami wyszukiwania"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "#zgodnie z wybranymi filtrami wyszukiwania\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 11,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "#dla rachunków:"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "#dla rachunkow:\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 12,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "Konto - 00000000000000000000000003"
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "konto - 00000000000000000000000003\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 13,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "#Lista nie jest dokumentem w rozumieniu art. 7 Ustawy Prawo Bankowe, ponieważ operacje można samodzielnie edytować."
+        },
+        {
+          "header": "Column 2",
+          "value": ""
+        },
+        {
+          "header": "Column 3",
+          "value": ""
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "#lista nie jest dokumentem w rozumieniu art. 7 ustawy prawo bankowe, poniewaz operacje mozna samodzielnie edytowac.\u0001\u0001\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 14,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "#Waluta"
+        },
+        {
+          "header": "Column 2",
+          "value": "#Wpływy"
+        },
+        {
+          "header": "Column 3",
+          "value": "#Wydatki"
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "#waluta\u0001#wplywy\u0001#wydatki\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 15,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "PLN"
+        },
+        {
+          "header": "Column 2",
+          "value": "584,30"
+        },
+        {
+          "header": "Column 3",
+          "value": "-2 132,22"
+        },
+        {
+          "header": "Column 4",
+          "value": ""
+        },
+        {
+          "header": "Column 5",
+          "value": ""
+        }
+      ],
+      "searchText": "pln\u0001584,30\u0001-2 132,22\u0001\u0001",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount is empty"
+    },
+    {
+      "rowIndex": 16,
+      "bookedOn": "",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "#Data operacji"
+        },
+        {
+          "header": "Column 2",
+          "value": "#Opis operacji"
+        },
+        {
+          "header": "Column 3",
+          "value": "#Rachunek"
+        },
+        {
+          "header": "Column 4",
+          "value": "#Kategoria"
+        },
+        {
+          "header": "Column 5",
+          "value": "#Kwota"
+        }
+      ],
+      "searchText": "#data operacji\u0001#opis operacji\u0001#rachunek\u0001#kategoria\u0001#kwota",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped; amount \"#Kwota\" is not an amount"
+    },
+    {
+      "rowIndex": 17,
+      "bookedOn": "",
+      "amountMinor": -80000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-08"
+        },
+        {
+          "header": "Column 2",
+          "value": "BLIK WYPŁATA ATM WŁASNY  BANKOMAT ALFA                                                                                                                                    BLIK WYPŁATA ATM WŁASNY"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Wypłata gotówki"
+        },
+        {
+          "header": "Column 5",
+          "value": "-800,00 PLN"
+        }
+      ],
+      "searchText": "2026-04-08\u0001blik wyplata atm wlasny  bankomat alfa                                                                                                                                    blik wyplata atm wlasny\u0001konto 0000 ... 0003\u0001wyplata gotowki\u0001-800,00 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 18,
+      "bookedOn": "",
+      "amountMinor": -3143,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-08"
+        },
+        {
+          "header": "Column 2",
+          "value": "SERWIS PRZYKŁADOWY  ZAKUP PRZY UŻYCIU KARTY - MO/TO                                                           transakcja nierozliczona"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Bez kategorii"
+        },
+        {
+          "header": "Column 5",
+          "value": "-31,43 PLN"
+        }
+      ],
+      "searchText": "2026-04-08\u0001serwis przykladowy  zakup przy uzyciu karty - mo/to                                                           transakcja nierozliczona\u0001konto 0000 ... 0003\u0001bez kategorii\u0001-31,43 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 19,
+      "bookedOn": "",
+      "amountMinor": 28430,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-08"
+        },
+        {
+          "header": "Column 2",
+          "value": "PŁATNIK ZAGRANICZNY 1 EXAMPLE STREET, SINGAPORE SG, 0000000000001 /RFB/0000000000001  SINGAPORE SG                                                                                            PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001001"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Wpływy - inne"
+        },
+        {
+          "header": "Column 5",
+          "value": "284,30 PLN"
+        }
+      ],
+      "searchText": "2026-04-08\u0001platnik zagraniczny 1 example street, singapore sg, 0000000000001 /rfb/0000000000001  singapore sg                                                                                            przelew zewnetrzny przychodzacy                                                   00000000000000000000001001\u0001konto 0000 ... 0003\u0001wplywy - inne\u0001284,30 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 20,
+      "bookedOn": "",
+      "amountMinor": -8222,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-07"
+        },
+        {
+          "header": "Column 2",
+          "value": "URZĄD PRZYKŁADOWY 000001  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Płatności - inne"
+        },
+        {
+          "header": "Column 5",
+          "value": "-82,22 PLN"
+        }
+      ],
+      "searchText": "2026-04-07\u0001urzad przykladowy 000001  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001konto 0000 ... 0003\u0001platnosci - inne\u0001-82,22 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 21,
+      "bookedOn": "",
+      "amountMinor": -8222,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-07"
+        },
+        {
+          "header": "Column 2",
+          "value": "URZĄD PRZYKŁADOWY 000001  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Płatności - inne"
+        },
+        {
+          "header": "Column 5",
+          "value": "-82,22 PLN"
+        }
+      ],
+      "searchText": "2026-04-07\u0001urzad przykladowy 000001  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001konto 0000 ... 0003\u0001platnosci - inne\u0001-82,22 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 22,
+      "bookedOn": "",
+      "amountMinor": -2644,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-03"
+        },
+        {
+          "header": "Column 2",
+          "value": "FIRMA X  ZAKUP PRZY UŻYCIU KARTY - INTERNET"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Multimedia, książki i prasa"
+        },
+        {
+          "header": "Column 5",
+          "value": "-26,44 PLN"
+        }
+      ],
+      "searchText": "2026-04-03\u0001firma x  zakup przy uzyciu karty - internet\u0001konto 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-26,44 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 23,
+      "bookedOn": "",
+      "amountMinor": -20000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-02"
+        },
+        {
+          "header": "Column 2",
+          "value": "FUNDACJA PRZYKŁADOWA, DAROWIZNA NA CELE STATUTOWE                                                                     PRZELEW WEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001002"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Bez kategorii"
+        },
+        {
+          "header": "Column 5",
+          "value": "-200,00 PLN"
+        }
+      ],
+      "searchText": "2026-04-02\u0001fundacja przykladowa, darowizna na cele statutowe                                                                     przelew wewnetrzny wychodzacy                                                     00000000000000000000001002\u0001konto 0000 ... 0003\u0001bez kategorii\u0001-200,00 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 24,
+      "bookedOn": "",
+      "amountMinor": 30000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-04-01"
+        },
+        {
+          "header": "Column 2",
+          "value": "KONTRAHENT  UL.TESTOWA 3                      00-123 MIASTO                                                             PRZELEW WEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001000"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Wpływy - inne"
+        },
+        {
+          "header": "Column 5",
+          "value": "300,00 PLN"
+        }
+      ],
+      "searchText": "2026-04-01\u0001kontrahent  ul.testowa 3                      00-123 miasto                                                             przelew wewnetrzny przychodzacy                                                   00000000000000000000001000\u0001konto 0000 ... 0003\u0001wplywy - inne\u0001300,00 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 25,
+      "bookedOn": "",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-03-20"
+        },
+        {
+          "header": "Column 2",
+          "value": "OPŁATA ZA KARTĘ"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Opłaty i odsetki"
+        },
+        {
+          "header": "Column 5",
+          "value": "-10,00 PLN"
+        }
+      ],
+      "searchText": "2026-03-20\u0001oplata za karte\u0001konto 0000 ... 0003\u0001oplaty i odsetki\u0001-10,00 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 26,
+      "bookedOn": "",
+      "amountMinor": -84343,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-03-16"
+        },
+        {
+          "header": "Column 2",
+          "value": "UBEZPIECZYCIEL.PL                                                                BLIK ZAKUP E-COMMERCE"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Ubezpieczenie domu"
+        },
+        {
+          "header": "Column 5",
+          "value": "-843,43 PLN"
+        }
+      ],
+      "searchText": "2026-03-16\u0001ubezpieczyciel.pl                                                                blik zakup e-commerce\u0001konto 0000 ... 0003\u0001ubezpieczenie domu\u0001-843,43 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    },
+    {
+      "rowIndex": 27,
+      "bookedOn": "",
+      "amountMinor": -119000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "mBank Przykładowy S.A. Bankowość Detaliczna",
+          "value": "2026-03-15"
+        },
+        {
+          "header": "Column 2",
+          "value": "FIRMA R                                                                          BLIK ZAKUP E-COMMERCE"
+        },
+        {
+          "header": "Column 3",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "Column 4",
+          "value": "Zajęcia dodatkowe"
+        },
+        {
+          "header": "Column 5",
+          "value": "-1 190,00 PLN"
+        }
+      ],
+      "searchText": "2026-03-15\u0001firma r                                                                          blik zakup e-commerce\u0001konto 0000 ... 0003\u0001zajecia dodatkowe\u0001-1 190,00 pln",
+      "payeeGroup": "(unknown)",
+      "occurrence": 0,
+      "error": "no booking date column is mapped"
+    }
+  ]
+}

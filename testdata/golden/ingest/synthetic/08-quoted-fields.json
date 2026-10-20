@@ -1,0 +1,132 @@
+{
+  "fixture": "synthetic/08-quoted-fields.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "a994889d56b7c99dc1e8df8596cc7f0c984a201faa11afe0e470aeb3ab67d3f9",
+  "stats": {
+    "rows": 4,
+    "valid": 4,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Sklep; filia nr 2",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep; filia nr 2"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep; filia nr 2\u0001-10,00",
+      "payeeN": "sklep; filia nr 2",
+      "payeeGroup": "Sklep; filia nr 2",
+      "occurrence": 1,
+      "fingerprint": "583b94e799fa1ef5d6b472c4cdfb44e213306de2b4b74d94c4b562aa6eb41463"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "Księgarnia \"Pod Sową\"",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Księgarnia \"Pod Sową\""
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "03.01.2025\u0001ksiegarnia \"pod sowa\"\u0001-20,00",
+      "payeeN": "ksiegarnia \"pod sowa\"",
+      "payeeGroup": "Księgarnia \"Pod Sową\"",
+      "occurrence": 1,
+      "fingerprint": "b33953475f5779722cee2107c2a725ab5c498d8d470a61f0f169c9704f7d3584"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -3000,
+      "currency": "PLN",
+      "payee": "Linia pierwsza\r\nlinia druga",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Linia pierwsza\r\nlinia druga"
+        },
+        {
+          "header": "Kwota",
+          "value": "-30,00"
+        }
+      ],
+      "searchText": "04.01.2025\u0001linia pierwsza\r\nlinia druga\u0001-30,00",
+      "payeeN": "linia pierwsza linia druga",
+      "payeeGroup": "Linia pierwsza",
+      "occurrence": 1,
+      "fingerprint": "f3671e77379b6de351bd53798b38d81d6c82f14e38d97d1dc28d07fac30d6fdc"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2025-01-05",
+      "amountMinor": -4000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "05.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": ""
+        },
+        {
+          "header": "Kwota",
+          "value": "-40,00"
+        }
+      ],
+      "searchText": "05.01.2025\u0001\u0001-40,00",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "95a79f46a844bbd4c47b4d34cac30e91044cbd264b8691a486a83796debe49f2"
+    }
+  ]
+}

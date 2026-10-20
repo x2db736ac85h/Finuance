@@ -1,0 +1,94 @@
+{
+  "fixture": "synthetic/14-pipe-delimited.csv",
+  "encoding": "utf-8",
+  "delimiter": "|",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount",
+    "Currency"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "bookedOn": "Date",
+    "currency": "Currency",
+    "payee": "Description"
+  },
+  "currency": "PLN",
+  "headerSignature": "39e2bf0f55d049c7853d7d9ad2ae8c2e371f3e844d5425731ce7e2736a70f606",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "Shop A",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-01-02"
+        },
+        {
+          "header": "Description",
+          "value": "Shop A"
+        },
+        {
+          "header": "Amount",
+          "value": "-10.00"
+        },
+        {
+          "header": "Currency",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "2025-01-02\u0001shop a\u0001-10.00\u0001pln",
+      "payeeN": "shop a",
+      "payeeGroup": "Shop A",
+      "occurrence": 1,
+      "fingerprint": "284f5b557b18ff5ed3d3ac21d38d3c6202940b355ad16ab00fd1d080e7be22fd"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2050,
+      "currency": "PLN",
+      "payee": "Shop B",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-01-03"
+        },
+        {
+          "header": "Description",
+          "value": "Shop B"
+        },
+        {
+          "header": "Amount",
+          "value": "-20.50"
+        },
+        {
+          "header": "Currency",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "2025-01-03\u0001shop b\u0001-20.50\u0001pln",
+      "payeeN": "shop b",
+      "payeeGroup": "Shop B",
+      "occurrence": 1,
+      "fingerprint": "15e0df9c82c434927029da4a5df1fee3b76b09078c18d9f5dd0d2d6b392a5560"
+    }
+  ]
+}

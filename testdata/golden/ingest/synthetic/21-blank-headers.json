@@ -1,0 +1,59 @@
+{
+  "fixture": "synthetic/21-blank-headers.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 2,
+  "dropped": 0,
+  "headers": [
+    "02.01.2025",
+    "x",
+    "-10,00",
+    "y"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "-10,00",
+    "bookedOn": "02.01.2025"
+  },
+  "headerSignature": "403653be7a57b75b50645d2d827b4408077d84ab1698ef540ff9be1570ae1a3a",
+  "stats": {
+    "rows": 1,
+    "valid": 1,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "02.01.2025",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "x",
+          "value": "z"
+        },
+        {
+          "header": "-10,00",
+          "value": "-20,00"
+        },
+        {
+          "header": "y",
+          "value": "w"
+        }
+      ],
+      "searchText": "03.01.2025\u0001z\u0001-20,00\u0001w",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "69a0cb2730fe5617a5260f934b0de5ed9336a8d8517fb855c7614318b01ac758"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "fixture": "synthetic/05-windows-1252.csv",
+  "encoding": "windows-1250",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount",
+    "Currency"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "bookedOn": "Date",
+    "currency": "Currency",
+    "payee": "Description"
+  },
+  "currency": "EUR",
+  "headerSignature": "4f4428a5affdf0d9ff9ae05932248d9e71043cf6c1a004f248ad45ff99337907",
+  "stats": {
+    "rows": 3,
+    "valid": 0,
+    "errors": 3
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-02-01",
+      "amountMinor": 0,
+      "currency": "EUR",
+      "payee": "Café Müller",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-02-01"
+        },
+        {
+          "header": "Description",
+          "value": "Café Müller"
+        },
+        {
+          "header": "Amount",
+          "value": "-€12,50"
+        },
+        {
+          "header": "Currency",
+          "value": "EUR"
+        }
+      ],
+      "searchText": "2025-02-01\u0001cafe muller\u0001-€12,50\u0001eur",
+      "payeeN": "cafe muller",
+      "payeeGroup": "Café Müller",
+      "occurrence": 0,
+      "error": "no amount column is mapped"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-02-02",
+      "amountMinor": 0,
+      "currency": "EUR",
+      "payee": "Straße Brötchen",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-02-02"
+        },
+        {
+          "header": "Description",
+          "value": "Straße Brötchen"
+        },
+        {
+          "header": "Amount",
+          "value": "-3,20"
+        },
+        {
+          "header": "Currency",
+          "value": "EUR"
+        }
+      ],
+      "searchText": "2025-02-02\u0001straße brotchen\u0001-3,20\u0001eur",
+      "payeeN": "straße brotchen",
+      "payeeGroup": "Straße Brötchen",
+      "occurrence": 0,
+      "error": "no amount column is mapped"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-02-03",
+      "amountMinor": 0,
+      "currency": "EUR",
+      "payee": "Crčme brulée",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-02-03"
+        },
+        {
+          "header": "Description",
+          "value": "Crčme brulée"
+        },
+        {
+          "header": "Amount",
+          "value": "-7,00"
+        },
+        {
+          "header": "Currency",
+          "value": "EUR"
+        }
+      ],
+      "searchText": "2025-02-03\u0001crcme brulee\u0001-7,00\u0001eur",
+      "payeeN": "crcme brulee",
+      "payeeGroup": "Crčme brulée",
+      "occurrence": 0,
+      "error": "no amount column is mapped"
+    }
+  ]
+}

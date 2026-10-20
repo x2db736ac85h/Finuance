@@ -1,0 +1,491 @@
+{
+  "fixture": "synthetic/banks/pekao-like.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data księgowania",
+    "Data waluty",
+    "Nadawca / Odbiorca",
+    "Adres nadawcy / odbiorcy",
+    "Rachunek źródłowy",
+    "Rachunek docelowy",
+    "Tytułem",
+    "Kwota operacji",
+    "Waluta",
+    "Numer referencyjny",
+    "Typ operacji",
+    "Kategoria"
+  ],
+  "types": [
+    "date",
+    "date",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "number",
+    "text",
+    "text",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota operacji",
+    "bookedOn": "Data księgowania",
+    "category": "Kategoria",
+    "counterpartyAccount": "Rachunek docelowy",
+    "currency": "Waluta",
+    "description": "Tytułem",
+    "ownAccount": "Rachunek źródłowy",
+    "payee": "Nadawca / Odbiorca",
+    "reference": "Numer referencyjny",
+    "txType": "Typ operacji",
+    "valueOn": "Data waluty"
+  },
+  "currency": "PLN",
+  "headerSignature": "6c7a448fe6992dfc1a54fa6a16ee4f1ebc9585c56bd89a5e5cddf2de210eff36",
+  "stats": {
+    "rows": 6,
+    "valid": 6,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-03-01",
+      "valueOn": "2025-03-01",
+      "amountMinor": -12713,
+      "currency": "PLN",
+      "payee": "SKLEP INTERNETOWY ALFA",
+      "description": "BLIK REF       10000000001",
+      "reference": "C000000000000001",
+      "txType": "PŁATNOŚĆ BLIK",
+      "bankCategory": "Zakupy przez internet",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "01.03.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "01.03.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "SKLEP INTERNETOWY ALFA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": "ALFA.PL UL. PRZYKŁADOWA 1,WARSZAWA"
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "BLIK REF       10000000001"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-127,13"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "C000000000000001"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "PŁATNOŚĆ BLIK"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Zakupy przez internet"
+        }
+      ],
+      "searchText": "01.03.2025\u000101.03.2025\u0001sklep internetowy alfa\u0001alfa.pl ul. przykladowa 1,warszawa\u000100000000000000000000000001\u0001\u0001blik ref       10000000001\u0001-127,13\u0001pln\u0001c000000000000001\u0001platnosc blik\u0001zakupy przez internet",
+      "payeeN": "sklep internetowy alfa",
+      "descriptionN": "blik ref 10000000001",
+      "referenceN": "c000000000000001",
+      "txTypeN": "platnosc blik",
+      "bankCategoryN": "zakupy przez internet",
+      "payeeGroup": "SKLEP INTERNETOWY ALFA",
+      "occurrence": 1,
+      "fingerprint": "ed2d91fc7b64816c6510b50d20e497be3aa9b67781f1d074160a7ee070564201"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-03-01",
+      "valueOn": "2025-02-28",
+      "amountMinor": -4498,
+      "currency": "PLN",
+      "payee": "MINIMARKET Z1001 K.1   RASZYN",
+      "description": "*********0000001",
+      "reference": "C000000000000002",
+      "txType": "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "bankCategory": "Artykuły spożywcze",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "01.03.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "28.02.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "MINIMARKET Z1001 K.1   RASZYN"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "*********0000001"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-44,98"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "C000000000000002"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "TRANSAKCJA KARTĄ PŁATNICZĄ"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Artykuły spożywcze"
+        }
+      ],
+      "searchText": "01.03.2025\u000128.02.2025\u0001minimarket z1001 k.1   raszyn\u0001\u000100000000000000000000000001\u0001\u0001*********0000001\u0001-44,98\u0001pln\u0001c000000000000002\u0001transakcja karta platnicza\u0001artykuly spozywcze",
+      "payeeN": "minimarket z1001 k.1 raszyn",
+      "descriptionN": "*********0000001",
+      "referenceN": "c000000000000002",
+      "txTypeN": "transakcja karta platnicza",
+      "bankCategoryN": "artykuly spozywcze",
+      "payeeGroup": "MINIMARKET Z1001 K.1",
+      "occurrence": 1,
+      "fingerprint": "b725c7ba4c2d49a1b1f080eba85092497710e9202802180183afd6b8b44da9e4"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-02-28",
+      "valueOn": "2025-02-28",
+      "amountMinor": -4000,
+      "currency": "PLN",
+      "payee": "GALERIA SZTUKI         WARSZAWA",
+      "description": "*********0000001",
+      "reference": "C000000000000003",
+      "txType": "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "bankCategory": "Sport",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "28.02.2025"
+        },
+        {
+          "header": "Data waluty",
+          "value": "28.02.2025"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "GALERIA SZTUKI         WARSZAWA"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "*********0000001"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-40,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "C000000000000003"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "TRANSAKCJA KARTĄ PŁATNICZĄ"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Sport"
+        }
+      ],
+      "searchText": "28.02.2025\u000128.02.2025\u0001galeria sztuki         warszawa\u0001\u000100000000000000000000000001\u0001\u0001*********0000001\u0001-40,00\u0001pln\u0001c000000000000003\u0001transakcja karta platnicza\u0001sport",
+      "payeeN": "galeria sztuki warszawa",
+      "descriptionN": "*********0000001",
+      "referenceN": "c000000000000003",
+      "txTypeN": "transakcja karta platnicza",
+      "bankCategoryN": "sport",
+      "payeeGroup": "GALERIA SZTUKI",
+      "occurrence": 1,
+      "fingerprint": "8a09f9315610386dd68dd604cf00329d923754de2ac42e0a78f8f0b3017f9226"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2024-04-15",
+      "valueOn": "2024-04-15",
+      "amountMinor": -20000,
+      "currency": "PLN",
+      "payee": "PŁATNOŚCI S.A.",
+      "description": "/OPT/X/////P24-A1B-C2D-E3F M00001-00001",
+      "reference": "000000F000000001",
+      "txType": "PRZELEW MOBILE",
+      "bankCategory": "Bez kategorii",
+      "counterpartyAccount": "00000000000000000000000002",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "15.04.2024"
+        },
+        {
+          "header": "Data waluty",
+          "value": "15.04.2024"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "PŁATNOŚCI S.A."
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": "UL. TESTOWA 8 00-001 POZNAŃ"
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": "00000000000000000000000002"
+        },
+        {
+          "header": "Tytułem",
+          "value": "/OPT/X/////P24-A1B-C2D-E3F M00001-00001"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-200,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "000000F000000001"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "PRZELEW MOBILE"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Bez kategorii"
+        }
+      ],
+      "searchText": "15.04.2024\u000115.04.2024\u0001platnosci s.a.\u0001ul. testowa 8 00-001 poznan\u000100000000000000000000000001\u000100000000000000000000000002\u0001/opt/x/////p24-a1b-c2d-e3f m00001-00001\u0001-200,00\u0001pln\u0001000000f000000001\u0001przelew mobile\u0001bez kategorii",
+      "payeeN": "platnosci s.a.",
+      "descriptionN": "/opt/x/////p24-a1b-c2d-e3f m00001-00001",
+      "referenceN": "000000f000000001",
+      "txTypeN": "przelew mobile",
+      "bankCategoryN": "bez kategorii",
+      "counterpartyN": "00000000000000000000000002",
+      "payeeGroup": "PŁATNOŚCI S.A.",
+      "occurrence": 1,
+      "fingerprint": "f57476564e8feb1444098dbdd198c82c2e057399baddab3aac92a5dfd508a283"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "2024-04-15",
+      "valueOn": "2024-04-14",
+      "amountMinor": -23500,
+      "currency": "PLN",
+      "payee": "RIDES  * FOOD PENDING  AMSTERDAM",
+      "description": "*********0000002",
+      "reference": "C000000000000004",
+      "txType": "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "bankCategory": "Restauracje i kawiarnie",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "15.04.2024"
+        },
+        {
+          "header": "Data waluty",
+          "value": "14.04.2024"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "RIDES  * FOOD PENDING  AMSTERDAM"
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": ""
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "*********0000002"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "-235,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "C000000000000004"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "TRANSAKCJA KARTĄ PŁATNICZĄ"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Restauracje i kawiarnie"
+        }
+      ],
+      "searchText": "15.04.2024\u000114.04.2024\u0001rides  * food pending  amsterdam\u0001\u000100000000000000000000000001\u0001\u0001*********0000002\u0001-235,00\u0001pln\u0001c000000000000004\u0001transakcja karta platnicza\u0001restauracje i kawiarnie",
+      "payeeN": "rides * food pending amsterdam",
+      "descriptionN": "*********0000002",
+      "referenceN": "c000000000000004",
+      "txTypeN": "transakcja karta platnicza",
+      "bankCategoryN": "restauracje i kawiarnie",
+      "payeeGroup": "RIDES",
+      "occurrence": 1,
+      "fingerprint": "7beb705389e0e4ecf2479005cf1a2646a59a05f0d733f6344f5f616ef0b59c72"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2024-04-10",
+      "valueOn": "2024-04-10",
+      "amountMinor": 925000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA PRZYKŁADOWY SP. Z O.O.",
+      "description": "WYNAGRODZENIE 04/2024",
+      "reference": "C000000000000005",
+      "txType": "PRZELEW PRZYCHODZĄCY",
+      "bankCategory": "Wynagrodzenie",
+      "ownAccount": "00000000000000000000000001",
+      "raw": [
+        {
+          "header": "Data księgowania",
+          "value": "10.04.2024"
+        },
+        {
+          "header": "Data waluty",
+          "value": "10.04.2024"
+        },
+        {
+          "header": "Nadawca / Odbiorca",
+          "value": "PRACODAWCA PRZYKŁADOWY SP. Z O.O."
+        },
+        {
+          "header": "Adres nadawcy / odbiorcy",
+          "value": "UL. FIRMOWA 1 00-002 WARSZAWA"
+        },
+        {
+          "header": "Rachunek źródłowy",
+          "value": "00000000000000000000000001"
+        },
+        {
+          "header": "Rachunek docelowy",
+          "value": ""
+        },
+        {
+          "header": "Tytułem",
+          "value": "WYNAGRODZENIE 04/2024"
+        },
+        {
+          "header": "Kwota operacji",
+          "value": "9 250,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Numer referencyjny",
+          "value": "C000000000000005"
+        },
+        {
+          "header": "Typ operacji",
+          "value": "PRZELEW PRZYCHODZĄCY"
+        },
+        {
+          "header": "Kategoria",
+          "value": "Wynagrodzenie"
+        }
+      ],
+      "searchText": "10.04.2024\u000110.04.2024\u0001pracodawca przykladowy sp. z o.o.\u0001ul. firmowa 1 00-002 warszawa\u000100000000000000000000000001\u0001\u0001wynagrodzenie 04/2024\u00019 250,00\u0001pln\u0001c000000000000005\u0001przelew przychodzacy\u0001wynagrodzenie",
+      "payeeN": "pracodawca przykladowy sp. z o.o.",
+      "descriptionN": "wynagrodzenie 04/2024",
+      "referenceN": "c000000000000005",
+      "txTypeN": "przelew przychodzacy",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA PRZYKŁADOWY SP. Z O.O.",
+      "occurrence": 1,
+      "fingerprint": "5a94a508ee9bf105756dc6d0f0c124d4d260796b76514a9899ce8ede3d00c7f3"
+    }
+  ]
+}

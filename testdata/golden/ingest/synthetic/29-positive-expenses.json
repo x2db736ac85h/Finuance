@@ -1,0 +1,108 @@
+{
+  "fixture": "synthetic/29-positive-expenses.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "bookedOn": "Date",
+    "payee": "Description"
+  },
+  "headerSignature": "d92f6d8289978d837942e5c48f519fac4b12190d960896141019fae4f097501b",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": 4520,
+      "currency": "PLN",
+      "payee": "Shop",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-01-02"
+        },
+        {
+          "header": "Description",
+          "value": "Shop"
+        },
+        {
+          "header": "Amount",
+          "value": "45.20"
+        }
+      ],
+      "searchText": "2025-01-02\u0001shop\u000145.20",
+      "payeeN": "shop",
+      "payeeGroup": "Shop",
+      "occurrence": 1,
+      "fingerprint": "c3ff7d8f3354913589eb908251e7c79e7049288cb084a0e28e23af68eb7168da"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": 1400,
+      "currency": "PLN",
+      "payee": "Cafe",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-01-03"
+        },
+        {
+          "header": "Description",
+          "value": "Cafe"
+        },
+        {
+          "header": "Amount",
+          "value": "14.00"
+        }
+      ],
+      "searchText": "2025-01-03\u0001cafe\u000114.00",
+      "payeeN": "cafe",
+      "payeeGroup": "Cafe",
+      "occurrence": 1,
+      "fingerprint": "37829d18796d478becd6b1b641175b67596a1a30299dcfc7809c3010a9a04342"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-10",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "Refund",
+      "raw": [
+        {
+          "header": "Date",
+          "value": "2025-01-10"
+        },
+        {
+          "header": "Description",
+          "value": "Refund"
+        },
+        {
+          "header": "Amount",
+          "value": "-20.00"
+        }
+      ],
+      "searchText": "2025-01-10\u0001refund\u0001-20.00",
+      "payeeN": "refund",
+      "payeeGroup": "Refund",
+      "occurrence": 1,
+      "fingerprint": "f3fef1ea40370ba0ddb6eaee2a6cb4c2651fa81e52d1df2f81aec1915b87b84f"
+    }
+  ]
+}

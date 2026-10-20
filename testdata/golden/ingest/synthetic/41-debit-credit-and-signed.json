@@ -1,0 +1,102 @@
+{
+  "fixture": "synthetic/41-debit-credit-and-signed.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Wydatki",
+    "Wpływy"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "number",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "704eecfc549b2041a0650d46a15ea8883b8c317649f716bc16570d0fc504f48c",
+  "stats": {
+    "rows": 2,
+    "valid": 2,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -4520,
+      "currency": "PLN",
+      "payee": "Sklep",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep"
+        },
+        {
+          "header": "Kwota",
+          "value": "-45,20"
+        },
+        {
+          "header": "Wydatki",
+          "value": "45,20"
+        },
+        {
+          "header": "Wpływy",
+          "value": ""
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep\u0001-45,20\u000145,20\u0001",
+      "payeeN": "sklep",
+      "payeeGroup": "Sklep",
+      "occurrence": 1,
+      "fingerprint": "a33d58ff845a432cc47d3d4759ec8e4f35da3fb3e98d3bc1944a466a1a31664b"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-10",
+      "amountMinor": 850000,
+      "currency": "PLN",
+      "payee": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "10.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Wynagrodzenie"
+        },
+        {
+          "header": "Kwota",
+          "value": "8 500,00"
+        },
+        {
+          "header": "Wydatki",
+          "value": ""
+        },
+        {
+          "header": "Wpływy",
+          "value": "8 500,00"
+        }
+      ],
+      "searchText": "10.01.2025\u0001wynagrodzenie\u00018 500,00\u0001\u00018 500,00",
+      "payeeN": "wynagrodzenie",
+      "payeeGroup": "Wynagrodzenie",
+      "occurrence": 1,
+      "fingerprint": "cb1c4e2db83f0e1c8ce9fe2226f68c4534d19cf3b658c555d8cd87b12495c2d4"
+    }
+  ]
+}

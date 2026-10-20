@@ -1,0 +1,122 @@
+{
+  "fixture": "synthetic/19-leading-zero-and-long-ids.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Id",
+    "Referencja",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "reference": "Referencja"
+  },
+  "headerSignature": "82b7dd3c7e44fdffa8c5023b65e5f1bf5c95ddd3134673795f318af62b4ad612",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "reference": "1234567890123456",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Id",
+          "value": "0012345"
+        },
+        {
+          "header": "Referencja",
+          "value": "1234567890123456"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        }
+      ],
+      "searchText": "02.01.2025\u00010012345\u00011234567890123456\u0001-10,00",
+      "referenceN": "1234567890123456",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "d59baa95381734cfd79cc41d0cad636bdb8fa73d72c2a1094480e3675f544cae"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "reference": "98765432109876543",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Id",
+          "value": "0000042"
+        },
+        {
+          "header": "Referencja",
+          "value": "98765432109876543"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        }
+      ],
+      "searchText": "03.01.2025\u00010000042\u000198765432109876543\u0001-20,00",
+      "referenceN": "98765432109876543",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "c6fee64522099bab39ba545394ebc47764f337ea5913169e25433c3e991af5a2"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-04",
+      "amountMinor": -3000,
+      "currency": "PLN",
+      "reference": "12345678901234567890",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Id",
+          "value": "0099"
+        },
+        {
+          "header": "Referencja",
+          "value": "12345678901234567890"
+        },
+        {
+          "header": "Kwota",
+          "value": "-30,00"
+        }
+      ],
+      "searchText": "04.01.2025\u00010099\u000112345678901234567890\u0001-30,00",
+      "referenceN": "12345678901234567890",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "96d2eb7b90cb0333faf7850864a8464bbb30c5a3ee078d29875debf0c91fa62b"
+    }
+  ]
+}

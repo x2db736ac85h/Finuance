@@ -1,0 +1,55 @@
+{
+  "fixture": "synthetic/34-unterminated-quote.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text"
+  ],
+  "roles": {
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "a994889d56b7c99dc1e8df8596cc7f0c984a201faa11afe0e470aeb3ab67d3f9",
+  "stats": {
+    "rows": 1,
+    "valid": 0,
+    "errors": 1
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "payee": "Otwarty cudzysłów;-10,00\n03.01.2025;B;-20,00",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Otwarty cudzysłów;-10,00\n03.01.2025;B;-20,00"
+        },
+        {
+          "header": "Kwota",
+          "value": ""
+        }
+      ],
+      "searchText": "02.01.2025\u0001otwarty cudzyslow;-10,00\n03.01.2025;b;-20,00\u0001",
+      "payeeN": "otwarty cudzyslow;-10,00 03.01.2025;b;-20,00",
+      "payeeGroup": "Otwarty cudzysłów;-10,00 03.01.2025;B;-20,00",
+      "occurrence": 0,
+      "error": "no amount column is mapped"
+    }
+  ]
+}

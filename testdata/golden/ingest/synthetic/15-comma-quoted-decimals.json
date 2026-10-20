@@ -1,0 +1,124 @@
+{
+  "fixture": "synthetic/15-comma-quoted-decimals.csv",
+  "encoding": "utf-8",
+  "delimiter": ",",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "text"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "bookedOn": "Data",
+    "currency": "Waluta",
+    "payee": "Opis"
+  },
+  "currency": "PLN",
+  "headerSignature": "b34b272e0963ea217331f0c636e9fb404b8d077cd2c4c91689cf47630134f398",
+  "stats": {
+    "rows": 3,
+    "valid": 3,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -123456,
+      "currency": "PLN",
+      "payee": "Sklep A",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep A"
+        },
+        {
+          "header": "Kwota",
+          "value": "-1 234,56"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep a\u0001-1 234,56\u0001pln",
+      "payeeN": "sklep a",
+      "payeeGroup": "Sklep A",
+      "occurrence": 1,
+      "fingerprint": "d7493c518b4e23cc80ac21a04b2d583bdebe6c79b11c37d0f257232ab71d7eab"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-03",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "Sklep B, Warszawa",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "03.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep B, Warszawa"
+        },
+        {
+          "header": "Kwota",
+          "value": "-20,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "03.01.2025\u0001sklep b, warszawa\u0001-20,00\u0001pln",
+      "payeeN": "sklep b, warszawa",
+      "payeeGroup": "Sklep B, Warszawa",
+      "occurrence": 1,
+      "fingerprint": "f562b204352ab2ae13306886e14ab68a4240d591af4a63cadfdb6d5481837803"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-04",
+      "amountMinor": 300000,
+      "currency": "PLN",
+      "payee": "Wpływ",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "04.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Wpływ"
+        },
+        {
+          "header": "Kwota",
+          "value": "3 000,00"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        }
+      ],
+      "searchText": "04.01.2025\u0001wplyw\u00013 000,00\u0001pln",
+      "payeeN": "wplyw",
+      "payeeGroup": "Wpływ",
+      "occurrence": 1,
+      "fingerprint": "53ef053cdbd3a1252aa0d91263809841b284fe5d2a4f59ed722ee78ac9976885"
+    }
+  ]
+}

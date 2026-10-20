@@ -1,0 +1,122 @@
+{
+  "fixture": "synthetic/28-debit-credit.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 1,
+  "dropped": 0,
+  "headers": [
+    "Data",
+    "Opis",
+    "Obciążenia",
+    "Uznania"
+  ],
+  "types": [
+    "date",
+    "text",
+    "number",
+    "number"
+  ],
+  "roles": {
+    "amount": "Obciążenia",
+    "bookedOn": "Data",
+    "payee": "Opis"
+  },
+  "headerSignature": "bccfe695598b220041a59464ca5bf3b0d6a0db83f7b0abebda8f23d263ffcb3e",
+  "stats": {
+    "rows": 3,
+    "valid": 2,
+    "errors": 1
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": 4520,
+      "currency": "PLN",
+      "payee": "Sklep",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Sklep"
+        },
+        {
+          "header": "Obciążenia",
+          "value": "45,20"
+        },
+        {
+          "header": "Uznania",
+          "value": ""
+        }
+      ],
+      "searchText": "02.01.2025\u0001sklep\u000145,20\u0001",
+      "payeeN": "sklep",
+      "payeeGroup": "Sklep",
+      "occurrence": 1,
+      "fingerprint": "57e7ae33b4961f3252171fd9faff944200e3d98f644c18df33be22a0e252dce2"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-01-10",
+      "amountMinor": 0,
+      "currency": "PLN",
+      "payee": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "10.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Wynagrodzenie"
+        },
+        {
+          "header": "Obciążenia",
+          "value": ""
+        },
+        {
+          "header": "Uznania",
+          "value": "8 500,00"
+        }
+      ],
+      "searchText": "10.01.2025\u0001wynagrodzenie\u0001\u00018 500,00",
+      "payeeN": "wynagrodzenie",
+      "payeeGroup": "Wynagrodzenie",
+      "occurrence": 0,
+      "error": "amount is empty"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-01-11",
+      "amountMinor": 1400,
+      "currency": "PLN",
+      "payee": "Kawiarnia",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "11.01.2025"
+        },
+        {
+          "header": "Opis",
+          "value": "Kawiarnia"
+        },
+        {
+          "header": "Obciążenia",
+          "value": "14,00"
+        },
+        {
+          "header": "Uznania",
+          "value": ""
+        }
+      ],
+      "searchText": "11.01.2025\u0001kawiarnia\u000114,00\u0001",
+      "payeeN": "kawiarnia",
+      "payeeGroup": "Kawiarnia",
+      "occurrence": 1,
+      "fingerprint": "cbb740c9fdd9b670cf8051a2a9de8937d3b1b95b6b7caa658f5b6c2d445afc69"
+    }
+  ]
+}
