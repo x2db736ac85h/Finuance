@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 3 — Ingest engine · **Branch:** phase/03-ingest-engine · **Status:** gate review
+**Current phase:** 3 — Ingest engine · **Branch:** phase/03-ingest-engine · **Status:** gate approved
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -31,7 +31,7 @@
 - [x] 3.11 oracle differential suite (62 ingest fixtures, 5 corpora, 7 dedupe sets)
 - [x] 3.12 fuzz targets (5 min each, no crash: Tokenize 2.9 M, ParseNumber 8.7 M, ParseMinor 9.7 M, ParseDate 10.3 M, Parse 0.97 M execs)
 - [x] 3.13 golden files (61, `-update` to regenerate)
-- [x] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port): median ≈ 563 ms on the 4-vCPU sandbox, **above the 500 ms target**; see perf.md
+- [x] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port): median ≈ 563 ms on the 4-vCPU sandbox, above the 500 ms target; **accepted by Irwin at the gate**, see perf.md
 - [x] 3.15 v7 import-settings parity (27 recorded cfg variants)
 - [x] CI: coverage gate (`make coverage`, ingest + money 96.7 %), no-float check (`make check-no-float`), fuzz smoke (`make fuzz FUZZTIME=10s`), benchmark in the job summary
 
@@ -58,6 +58,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 3 — Ingest engine: gate approved 2026-10-20 (benchmark ≈ 563 ms accepted against the 500 ms target); `phase/03-ingest-engine` merged with `--no-ff`.
 - Phase 2 — Backend skeleton: gate approved 2026-10-20 (image size target amended); `phase/02-backend-skeleton` merged with `--no-ff`.
 - Phase 1 — Legacy extraction: gate approved 2026-10-20 (anonymised samples reviewed); `phase/01-legacy-extraction` merged with `--no-ff`.
 - Phase 0 — Repository bootstrap: gate approved 2026-10-20; `main` rewritten to the scrubbed root commit `0b05487`, then `phase/00-bootstrap` merged with `--no-ff`.
@@ -78,6 +79,7 @@
 - 3.8: `Stage(ctx, table, mapping, opts) ([]StagedRow, Stats, error)`: the account currency is a field of `StageOptions`, and `ctx` + `error` were added so cancellation works on large files (PLAN §3.10). `Parse` takes `ctx` too.
 - 3.8: in debit/credit mode a side that is not a number counts as 0, and the row is an error only when neither side is a number. Legacy rule; an earlier draft was stricter.
 - 3.6: `ParseNumber` and column typing use `float64`, as in the legacy (typing and role heuristics only). Every stored amount goes through `money.ParseMinor`, and `check-no-float` covers `internal/money` and the fingerprint path.
+- 3.14: `BenchmarkParse_100k` median ≈ 563 ms on the shared 4-vCPU sandbox (best 509 ms) vs the 500 ms target. **Irwin's decision at the gate:** accepted; further optimisation can go into a later phase that touches ingest (options in `docs/perf.md`).
 - 3.6/3.11: dates with a time, years 0–99 and query dates with a time differ from the legacy on purpose: `ALLOWED_DIFFS.md` rows 9–11, each checked by a strict classifier in the tests.
 - 0.2: the scrub also replaced digit runs of 6–7 digits in `SAMPLE` (card fragments `*********0229197`, reference parts), not only runs of 8 or more, plus the P24 reference and merchant addresses. 26-digit account numbers became the allowlisted all-zero form (`'00000000000000000000000001`), so `check-private.sh` stays strict. One example id in `legacy/DESIGN.md` §7.1 (`0229197`) became `0123456`.
 - 0.2: `check-private.sh` also catches the spaced IBAN form (`PL61 1090 1014 …`), and scans untracked, non-ignored files too, so it fails before a commit, not after.
@@ -115,6 +117,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-20 — Phase 3 gate approved (benchmark accepted); merged. Next: plan Phase 4.
 - 2026-10-20 — Phase 3 built on `phase/03-ingest-engine`: decode, delimiter, tokenizer, shape, value parsers, exact money parsing, column typing and roles, staging, fingerprints, `Parse`. Oracle differential suite + cfg parity pass. 61 golden files, 5 fuzz targets (5 min each, clean), coverage 96.7 %, demo generator port. Benchmark ≈ 563 ms median (target 500 ms, not met in the sandbox). CI green. Next: Irwin's gate review.
 - 2026-10-20 — Phase 2 gate approved (image limits ≤ 35 MB / ≤ 15 MB compressed); merged. Next: plan Phase 3.
 - 2026-10-20 — Phase 2 built on `phase/02-backend-skeleton`: binary + subcommands, config, observability, middleware, problems, OpenAPI v0 + codegen, store + migrations + sqlc, testcontainers harness, image, Compose, CI. `make up` verified locally. Next: Irwin's gate review.
