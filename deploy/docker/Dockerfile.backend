@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1.7
+# Backend image: one static binary (serve, worker, migrate, healthcheck) on distroless.
+# Build from the repository root:  make images   (or docker build -f deploy/docker/Dockerfile.backend .)
+
+FROM golang:1.27.3-trixie@sha256:1896654cfc5c2b5ad74c07f29cb36f5d2d1cbed42e3054070fbfe444e521e83c AS build
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-trimpath
+WORKDIR /src
+COPY backend/go.mod backend/go.sum ./
+# Modules come from the cache mount; a vendor/ directory, when present in the build context, is used
+# instead (offline builds).
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=bind,source=backend,target=/ctx \
+    if [ ! -d /ctx/vendor ]; then go mod download; fi
+COPY backend/ ./
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG DATE=unknown
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" \
+      -o /out/finuance ./cmd/finuance
+
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:516757106de35205efb70b91ba03f6f1298424a0678c603255cf2852a7000087
+LABEL org.opencontainers.image.source="https://github.com/x2db736ac85h/Finuance" \
+      org.opencontainers.image.title="finuance-backend" \
+      org.opencontainers.image.licenses="MIT"
+COPY --from=build /out/finuance /finuance
+USER nonroot:nonroot
+EXPOSE 8080 9090
+# No shell in distroless: the container healthcheck runs `finuance healthcheck`.
+HEALTHCHECK --interval=10s --timeout=4s --start-period=5s --retries=3 CMD ["/finuance", "healthcheck"]
+ENTRYPOINT ["/finuance"]
+CMD ["serve"]

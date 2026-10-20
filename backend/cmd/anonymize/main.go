@@ -52,7 +52,7 @@ func run(args []string, log io.Writer) error {
 	}
 	a := newAnonymizer(*key, *shift)
 	fmt.Fprintf(log, "shift-days=%d amount-factor=%.3f\n", a.shiftDays, a.factor)
-	if err := os.MkdirAll(*out, 0o755); err != nil {
+	if err := os.MkdirAll(*out, 0o755); err != nil { //nolint:gosec // fixtures are committed and must be readable
 		return err
 	}
 	for _, in := range fs.Args() {
@@ -60,7 +60,7 @@ func run(args []string, log io.Writer) error {
 		if same(in, dst) {
 			return fmt.Errorf("%s: refusing to overwrite the input", in)
 		}
-		b, err := os.ReadFile(in)
+		b, err := os.ReadFile(in) //nolint:gosec // reading the user-named input file is the tool's job
 		if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func run(args []string, log io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", in, err)
 		}
-		if err := os.WriteFile(dst, res, 0o644); err != nil {
+		if err := os.WriteFile(dst, res, 0o644); err != nil { //nolint:gosec // fixtures are committed and must be readable
 			return err
 		}
 		// Only structural facts are printed, never cell contents.

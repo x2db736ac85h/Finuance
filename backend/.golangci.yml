@@ -1,0 +1,73 @@
+# golangci-lint v2 (pinned in tools/bin-tools.sh). Linter set from docs/PLAN.md §8.4.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - gosec
+    - bodyclose
+    - sqlclosecheck
+    - rowserrcheck
+    - errorlint
+    - contextcheck
+    - noctx
+    - misspell
+    - unparam
+    - prealloc
+    - gocritic
+  settings:
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: var-naming
+        - name: indent-error-flow
+        - name: errorf
+        - name: error-return
+        - name: error-strings
+        - name: receiver-naming
+        - name: unused-parameter
+          disabled: true
+    gocritic:
+      enabled-tags: [diagnostic, performance]
+      disabled-checks: [hugeParam]
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    gosec:
+      excludes:
+        - G104 # duplicated by errcheck
+    misspell:
+      ignore-rules:
+        - adres # Polish bank-export vocabulary
+  exclusions:
+    generated: strict
+    paths:
+      - internal/httpapi/gen
+      - internal/store/db
+    rules:
+      # Tests may ignore errors from cleanup helpers and use plain http.Get against local servers.
+      - path: _test\.go
+        linters: [errcheck, gosec, noctx, bodyclose, prealloc, unparam]
+      # Middleware derives request contexts with r.WithContext by design.
+      - path: internal/httpapi/middleware/
+        linters: [contextcheck]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/x2db736ac85h/finuance
+  exclusions:
+    paths:
+      - internal/httpapi/gen
+      - internal/store/db

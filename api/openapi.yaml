@@ -1,0 +1,124 @@
+openapi: 3.0.3
+info:
+  title: Finuance API
+  version: 0.0.0
+  description: |
+    Self-hosted personal finance for European bank CSV exports.
+
+    Conventions (docs/PLAN.md §6.1): camelCase JSON; ids are UUID strings; dates are `YYYY-MM-DD`;
+    timestamps are RFC 3339 UTC; money is `{amountMinor, currency}` in integer minor units.
+    Errors are RFC 9457 `application/problem+json` with a stable `code`.
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
+servers:
+  - url: /api/v1
+paths:
+  /meta:
+    get:
+      operationId: getMeta
+      summary: Public instance information
+      description: Unauthenticated. The web app reads it before login to decide which screens to show.
+      tags: [meta]
+      responses:
+        "200":
+          description: Instance information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meta"
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Meta:
+      type: object
+      additionalProperties: false
+      required: [version, signupEnabled, demoMode]
+      properties:
+        version:
+          type: string
+          description: Build version of the server.
+          example: v0.1.0
+        signupEnabled:
+          type: boolean
+          description: Whether new accounts can be created (`FINUANCE_ALLOW_SIGNUP`).
+        demoMode:
+          type: boolean
+          description: Whether this is the public demo instance (`FINUANCE_DEMO_MODE`).
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amountMinor, currency]
+      properties:
+        amountMinor:
+          type: integer
+          format: int64
+          description: Signed amount in minor units (grosze for PLN). Negative = money out.
+          example: -4498
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: ISO 4217 code.
+          example: PLN
+    ProblemCode:
+      type: string
+      description: Stable machine-readable error code.
+      enum:
+        - validation_failed
+        - unauthenticated
+        - forbidden
+        - not_found
+        - conflict
+        - duplicate_file
+        - import_not_committable
+        - stale_version
+        - rate_limited
+        - payload_too_large
+        - unsupported_file
+        - internal
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: Dotted path of the offending field, e.g. `mapping.amount`.
+        message:
+          type: string
+    Problem:
+      type: object
+      description: RFC 9457 problem details.
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          description: Relative URI reference `/problems/<code>`.
+          example: /problems/validation_failed
+        title:
+          type: string
+          example: Validation failed
+        status:
+          type: integer
+          example: 422
+        code:
+          $ref: "#/components/schemas/ProblemCode"
+        detail:
+          type: string
+        instance:
+          type: string
+          description: Request path.
+        requestId:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"

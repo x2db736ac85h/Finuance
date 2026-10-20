@@ -1,5 +1,5 @@
-# Development stack. Phase 0: database only; api, worker and web services arrive in Phases 2 and 8.
-# Run through the Makefile (make db-up / db-down / db-reset / db-psql), which passes --env-file .env.
+# Development stack: db → migrate (one-shot) → api. The worker joins in Phase 6, web in Phase 8.
+# Run through the Makefile (make up / down / logs, make db-up …), which passes --env-file .env.
 name: finuance
 
 services:
@@ -25,6 +25,47 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
+
+  migrate:
+    image: finuance-backend:dev
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.backend
+    command: ["migrate", "up"]
+    environment:
+      FINUANCE_MIGRATE_DATABASE_URL: postgres://finuance_owner:${FINUANCE_OWNER_PASSWORD}@db:5432/finuance?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: finuance-backend:dev
+    command: ["serve"]
+    environment:
+      FINUANCE_ENV: ${FINUANCE_ENV:-dev}
+      FINUANCE_LOG_LEVEL: ${FINUANCE_LOG_LEVEL:-info}
+      FINUANCE_PUBLIC_ORIGIN: ${FINUANCE_PUBLIC_ORIGIN:-http://localhost:8000}
+      FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
+      FINUANCE_COOKIE_SECURE: ${FINUANCE_COOKIE_SECURE:-false}
+      FINUANCE_ALLOW_SIGNUP: ${FINUANCE_ALLOW_SIGNUP:-true}
+      FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    ports:
+      - "127.0.0.1:8080:8080" # API
+      - "127.0.0.1:9090:9090" # admin (/metrics, pprof) — published in dev only, never via an ingress
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/finuance", "healthcheck"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
 
 volumes:
   db-data:

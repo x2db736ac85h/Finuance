@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 2 — Backend skeleton · **Branch:** — · **Status:** not started (run /phase-start 2)
+**Current phase:** 3 — Ingest engine · **Branch:** — · **Status:** planning
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -12,7 +12,23 @@
 - Test data policy (Phase 1): committed fixtures are synthetic and must cover the edge cases. Real exports are only ever used through the anonymiser; Claude runs it on the samples in `testdata/private/`, and Irwin reviews the output before anything goes into `testdata/fixtures/real/`.
 - Anonymiser keeps category, currency and operation-type columns verbatim. Amounts keep their original number of decimals.
 - Legacy oracle pins Playwright 1.56.1 (matches the Chromium in cloud sessions; CI installs the same build).
+- Phase 2: `/readyz` returns 503 when the DB is reachable but migrations are behind. `X-Request-ID` is accepted from any client when it is ≤ 64 chars of `[A-Za-z0-9_-]`, otherwise generated.
+- Phase 2 tooling: oapi-codegen and govulncheck as Go `tool` deps; sqlc and golangci-lint as pinned, checksum-verified binaries in `backend/bin/`. OTel over OTLP/HTTP. No `worker` Compose service until Phase 6.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
+
+## Phase 2 tasks (done)
+- [x] 2.1 `cmd/finuance` subcommands + build info
+- [x] 2.2 `internal/config`
+- [x] 2.3 `internal/observability` (slog, Prometheus, OTel, admin server)
+- [x] 2.4 `internal/httpapi` server, middleware chain, health, graceful shutdown
+- [x] 2.5 `httpapi/problems.go`
+- [x] 2.6 `api/openapi.yaml` v0 + oapi-codegen + validator + `make gen`/`gen-check`
+- [x] 2.7 `internal/store` pool + goose + River migrations
+- [x] 2.8 sqlc + `platform.Date`
+- [x] 2.9 `testutil` testcontainers harness; `make test-integration`
+- [x] 2.10 `Dockerfile.backend`
+- [x] 2.11 Compose `migrate` + `api`; `make up/down/logs`, `dev-api`, `dev-worker`
+- [x] 2.12 CI `backend` job
 
 ## Phase 1 tasks (done)
 - [x] 1.1 `docs/PARITY.md` (≈ 140 rows; MVP failures and §27 limitations with decisions)
@@ -23,6 +39,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 2 — Backend skeleton: gate approved 2026-10-20 (image size target amended); `phase/02-backend-skeleton` merged with `--no-ff`.
 - Phase 1 — Legacy extraction: gate approved 2026-10-20 (anonymised samples reviewed); `phase/01-legacy-extraction` merged with `--no-ff`.
 - Phase 0 — Repository bootstrap: gate approved 2026-10-20; `main` rewritten to the scrubbed root commit `0b05487`, then `phase/00-bootstrap` merged with `--no-ff`.
 
@@ -42,6 +59,12 @@
 - 0.7: Docker isn't available in the cloud session that built Phase 0. `bootstrap.sql` and the init wrapper were run against a throwaway PostgreSQL 16 cluster: roles and extensions were created, a password containing a quote worked, `finuance_app` can't create tables but gets DML on tables the owner creates. The Compose file was checked with `docker compose config`. The CI job `db` runs the real `make db-up` and the role/extension checks on `postgres:18.6`.
 - 0.7: the acceptance command is `make db-psql SQL='\du'`, not `make db-psql -c '\du'`, because make treats `-c` as its own flag.
 - 0.1: the Go module path is `github.com/x2db736ac85h/finuance/backend`, not `…/finuance`, because `go.mod` lives in `backend/` (§3.3). A module path should match its directory so `go` tooling and imports resolve. Recorded in ADR 0001.
+- 2.7: the baseline migration is `00001_baseline.sql`, not `00000_…`, because goose rejects version 0. Phase 4's migrations therefore become `00002_core.sql` and `00003_rls.sql`.
+- 2.1: `worker` needs at least one River worker to start, so `internal/jobs` has a `noop` job kind (also used by the end-to-end test that proves a job inserted by another connection is processed). `seed-demo` and `admin` print "not yet implemented (Phase 9 / Phase 5)".
+- 2.10: image size is 32.3 MB uncompressed (9.8 MiB compressed). The OTLP/HTTP trace exporter alone adds ~10 MiB (it links protobuf and gRPC even over HTTP). **Irwin's decision at the gate:** the target is now ≤ 35 MB uncompressed / ≤ 15 MB compressed, enforced by the CI `image` job.
+- 2.10: the Dockerfile also builds from a `backend/vendor/` directory when one is in the build context (gitignored), for builds without network access to the module proxy; CI downloads modules normally.
+- 2.12: images are scanned with Trivy in a separate CI job (`image`); CI also runs on pushes to `phase/**` so a phase can be verified before it is merged.
+- 2.12: `govulncheck` can't run in the cloud session (`vuln.go.dev` is blocked there); it runs in CI. Its first run flagged `moby/go-archive` v0.2.0 (pinned by testcontainers v0.44.0, reached through `testutil`); it was bumped to v0.3.3 and CI is green.
 - 1.2: fixtures are generated by `tools/legacy-oracle/make-fixtures.mjs`, not hand-written byte by byte. The script writes the exact bytes (and the README), and `make fixtures-check` catches drift. 58 fixtures instead of the minimum 35.
 - 1.3: the anonymiser's header detection deliberately differs from legacy `buildTable`. Picking a data row as the header would copy it verbatim, which the legacy rule does for PKO BP and mBank. Fake cities are invented names, because a real city can coincide with the user's. Alphanumeric codes of 8+ characters (references, terminal ids) are replaced as a whole.
 - 1.4: the oracle exposes 10 names beyond the plan's list (`CHARTS`, `ovCtx`, `drawChart`, `view`, `setActive`, `addFiles`, `setPassphrase`, `savePrivate`, `saveChatsNow`, `INV0`), which the investment cards and backups need. All 32 plan names exist unchanged.
@@ -57,7 +80,9 @@
 
 - Anonymisation key: `testdata/private/anon.key` (gitignored, lost with the container). A new key only changes the fake values of future runs.
 - Phase 3: port ingest against `testdata/oracle/ingest*/` and `corpus/`; fix header detection for mBank and PKO BP (`ALLOWED_DIFFS.md` row 4; the targets are `ingest-cfg/banks/*/header-*.json`).
-- Phase 2: replace the gofmt-only `make lint` with golangci-lint.
+
+- Phase 5: ADRs 0010–0012 (password hashing, sessions/CSRF, rate limiting) and the first endpoints with parameters, which exercise the OpenAPI request validator beyond routing.
+- Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
 
 ## Backlog (ideas, not scheduled)
 - Recurring detection for weekly/yearly cadence (legacy §27).
@@ -65,6 +90,8 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-20 — Phase 2 gate approved (image limits ≤ 35 MB / ≤ 15 MB compressed); merged. Next: plan Phase 3.
+- 2026-10-20 — Phase 2 built on `phase/02-backend-skeleton`: binary + subcommands, config, observability, middleware, problems, OpenAPI v0 + codegen, store + migrations + sqlc, testcontainers harness, image, Compose, CI. `make up` verified locally. Next: Irwin's gate review.
 - 2026-10-20 — Phase 1 gate approved; real fixtures committed, oracle regenerated (62 ingest outputs), branch merged. Next: Phase 2 (backend skeleton).
 - 2026-10-20 — Phase 1 built on `phase/01-legacy-extraction`: parity checklist, 58 synthetic fixtures, anonymiser, legacy oracle (deterministic), allowed diffs, CI. Next: Irwin reviews the anonymised samples and the gate; then Phase 2.
 - 2026-10-20 — Phase 0 gate approved; main rewritten and phase/00-bootstrap merged. Next: plan Phase 1.

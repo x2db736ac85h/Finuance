@@ -1,0 +1,32 @@
+# sqlc v1.31.1 (installed by tools/bin-tools.sh). Run through `make gen`.
+version: "2"
+sql:
+  - engine: postgresql
+    schema:
+      - internal/store/migrations
+      - internal/store/schema
+    queries: internal/store/queries
+    gen:
+      go:
+        package: db
+        out: internal/store/db
+        sql_package: pgx/v5
+        emit_interface: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: uuid
+            go_type: github.com/google/uuid.UUID
+          - db_type: uuid
+            nullable: true
+            go_type:
+              import: github.com/google/uuid
+              type: UUID
+              pointer: true
+          - db_type: date
+            go_type: github.com/x2db736ac85h/finuance/backend/internal/platform.Date
+          - db_type: date
+            nullable: true
+            go_type:
+              import: github.com/x2db736ac85h/finuance/backend/internal/platform
+              type: Date
+              pointer: true

@@ -11,11 +11,24 @@ Go (stdlib `net/http`, spec-first OpenAPI) · PostgreSQL (pgx, sqlc, goose, Rive
 
 ## Getting started (development)
 
+Requirements: Docker (with Compose), Go 1.27, Node 22 (for the legacy oracle and, from Phase 8, the web app).
+
 ```sh
-cp .env.example .env
-make db-up      # local PostgreSQL 17 in Docker
-make db-psql    # psql shell as the app role
-make check      # lint, tests, private-data guard
+make up                       # db → migrate → api (creates .env from .env.example on first run)
+curl -s localhost:8080/api/v1/meta
+curl -s localhost:8080/readyz
+curl -s localhost:9090/metrics | head   # admin port: metrics + pprof (dev only)
+make logs                     # follow the logs
+make down                     # stop (the database volume is kept; make db-reset wipes it)
+```
+
+Day to day:
+
+```sh
+make check              # lint, unit tests, codegen drift, fixture drift, private-data guard
+make test-integration   # all Go tests, incl. Postgres via testcontainers
+make gen                # regenerate code after editing api/openapi.yaml or store/queries/*.sql
+make db-up migrate-up dev-api   # run the API on the host against the Compose database
 ```
 
 ## License

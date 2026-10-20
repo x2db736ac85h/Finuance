@@ -10,6 +10,15 @@ ENV_FILE ?= .env
 ORACLE   := tools/legacy-oracle
 COMPOSE  := docker compose --env-file $(ENV_FILE) -f deploy/compose/compose.yaml
 FUZZTIME ?= 30s
+BIN      := backend/bin
+SQLC     := $(BIN)/sqlc
+GOLANGCI := $(BIN)/golangci-lint
+VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT   ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+DATE     ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+UP_FLAGS ?= --build
+# Loads .env into the environment of host processes (dev-api, migrate-*).
+RUN_ENV  := set -a; . ./$(ENV_FILE); set +a;
 
 # Prints the standard placeholder for a target that a later phase implements.
 define todo
@@ -35,13 +44,12 @@ check-private: ## Fail on IBAN-like numbers or files under testdata/private/
 	@tools/check-private.sh
 
 .PHONY: lint
-lint: ## gofmt check (golangci-lint arrives in Phase 2, ESLint in Phase 8)
-	@out="$$(cd backend && gofmt -l .)"; if [ -n "$$out" ]; then echo "gofmt: needs formatting:"; echo "$$out"; exit 1; fi
-	@echo "lint: gofmt ok (golangci-lint: Phase 2, ESLint: Phase 8)"
+lint: $(GOLANGCI) ## golangci-lint (ESLint arrives in Phase 8)
+	cd backend && bin/golangci-lint run ./...
 
 .PHONY: fmt
-fmt: ## gofmt, goimports, Prettier
-	$(call todo,2)
+fmt: $(GOLANGCI) ## gofmt + goimports (Prettier arrives in Phase 8)
+	cd backend && bin/golangci-lint fmt ./...
 
 .PHONY: typecheck
 typecheck: ## tsc --noEmit
@@ -54,7 +62,7 @@ test: ## Go unit tests (-short) + Vitest
 
 .PHONY: test-integration
 test-integration: ## All Go tests incl. testcontainers (Docker required)
-	$(call todo,2)
+	cd backend && go test ./...
 
 .PHONY: test-e2e
 test-e2e: ## Playwright against compose.ci.yaml
@@ -66,17 +74,24 @@ fuzz: ## All fuzz targets for FUZZTIME (default 30s each)
 
 .PHONY: bench
 bench: ## Go benchmarks with -benchmem
-	$(call todo,3)
+	cd backend && go test -short -run='^$$' -bench=. -benchmem ./...
 
 ##@ Code generation
 
-.PHONY: gen
-gen: ## sqlc + oapi-codegen + openapi-typescript
-	$(call todo,2)
+$(SQLC) $(GOLANGCI): tools/bin-tools.sh
+	tools/bin-tools.sh $(notdir $@)
 
+.PHONY: gen
+gen: $(SQLC) ## oapi-codegen + sqlc (openapi-typescript arrives in Phase 8)
+	cd backend && go tool oapi-codegen -config oapi-codegen.yaml ../api/openapi.yaml
+	cd backend && bin/sqlc generate
+
+GENERATED := backend/internal/httpapi/gen backend/internal/store/db
 .PHONY: gen-check
-gen-check: ## Regenerate and fail on diff
-	$(call todo,2)
+gen-check: gen ## Regenerate and fail if generated code differs from what is committed
+	@drift="$$(git status --porcelain -- $(GENERATED))"; if [ -n "$$drift" ]; then \
+	  echo "gen-check: generated code is out of date; run 'make gen' and commit:"; echo "$$drift"; git --no-pager diff --stat -- $(GENERATED); exit 1; fi
+	@echo "gen-check: ok"
 
 .PHONY: oracle
 oracle: ## Run tools/legacy-oracle -> testdata/oracle/ (headless Chromium via Playwright)
@@ -117,40 +132,44 @@ db-psql: $(ENV_FILE) ## psql in the finuance database (SQL='…' to run one comm
 	$(COMPOSE) exec $(if $(SQL),-T) db psql -U $(DB_USER) -d finuance $(if $(SQL),-c "$(SQL)")
 
 .PHONY: migrate-up migrate-down migrate-status migrate-new
-migrate-up: ## Apply migrations (finuance migrate up)
-	$(call todo,2)
-migrate-down: ## Roll back one migration
-	$(call todo,2)
-migrate-status: ## Show migration status
-	$(call todo,2)
-migrate-new: ## Create a migration: make migrate-new name=…
-	$(call todo,2)
+migrate-up: $(ENV_FILE) ## Apply migrations (finuance migrate up) against the local database
+	$(RUN_ENV) cd backend && go run ./cmd/finuance migrate up
+migrate-down: $(ENV_FILE) ## Roll back one migration
+	$(RUN_ENV) cd backend && go run ./cmd/finuance migrate down
+migrate-status: $(ENV_FILE) ## Show migration status
+	$(RUN_ENV) cd backend && go run ./cmd/finuance migrate status
+MIGRATIONS := backend/internal/store/migrations
+migrate-new: ## Create a migration: make migrate-new name=add_accounts
+	@[ -n "$(name)" ] || { echo "usage: make migrate-new name=short_description"; exit 2; }
+	@last="$$(ls $(MIGRATIONS) | sed -n 's/^\([0-9]\{5\}\)_.*/\1/p' | sort | tail -1)"; \
+	  f="$(MIGRATIONS)/$$(printf '%05d' $$((10#$${last:-0} + 1)))_$(name).sql"; \
+	  printf -- '-- +goose Up\n\n-- +goose Down\n' > "$$f"; echo "created $$f"
 
 ##@ Running
 
 .PHONY: up
-up: ## Full Compose stack (web on http://localhost:8000)
-	$(call todo,2)
+up: $(ENV_FILE) ## Full Compose stack: db, migrate, api on http://localhost:8080 (web joins in Phase 8)
+	VERSION=$(VERSION) $(COMPOSE) up -d $(UP_FLAGS) --wait
 
 .PHONY: down
-down: ## Stop the full Compose stack
-	$(call todo,2)
+down: $(ENV_FILE) ## Stop the full Compose stack (keeps the database volume)
+	$(COMPOSE) down
 
 .PHONY: logs
-logs: ## Follow Compose logs
-	$(call todo,2)
+logs: $(ENV_FILE) ## Follow Compose logs
+	$(COMPOSE) logs -f --tail=100
 
 .PHONY: dev-api dev-worker dev-web
-dev-api: ## Run the API locally with .env
-	$(call todo,2)
-dev-worker: ## Run the worker locally with .env
-	$(call todo,2)
+dev-api: $(ENV_FILE) ## Run the API on the host with .env (needs make db-up + migrate-up)
+	$(RUN_ENV) cd backend && go run ./cmd/finuance serve
+dev-worker: $(ENV_FILE) ## Run the worker on the host with .env
+	$(RUN_ENV) cd backend && go run ./cmd/finuance worker
 dev-web: ## Run the Vite dev server
 	$(call todo,8)
 
 .PHONY: seed-demo
 seed-demo: ## Demo data for a user: make seed-demo email=…
-	$(call todo,2)
+	$(call todo,9)
 
 .PHONY: llmmock
 llmmock: ## Mock OpenAI-compatible server for local UI work
@@ -163,8 +182,9 @@ eval-assistant: ## Assistant evals against FINUANCE_AI_BASE_URL (MODEL= optional
 ##@ Build and deploy
 
 .PHONY: images
-images: ## Build both images locally
-	$(call todo,2)
+images: ## Build the images locally (backend now; web arrives in Phase 8)
+	docker build -f deploy/docker/Dockerfile.backend --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
+	  --build-arg DATE=$(DATE) -t finuance-backend:dev .
 
 .PHONY: helm-lint
 helm-lint: ## helm lint + kubeconform
