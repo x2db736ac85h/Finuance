@@ -1,0 +1,16 @@
+* text=auto
+
+# Fixtures keep their exact bytes: encodings, BOMs and line endings are test inputs.
+testdata/** -text
+*.csv -text
+
+*.go text eol=lf
+*.sql text eol=lf
+*.sh text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+Makefile text eol=lf
+
+backend/internal/httpapi/gen/** linguist-generated=true
+backend/internal/store/db/** linguist-generated=true
+web/src/api/schema.d.ts linguist-generated=true
