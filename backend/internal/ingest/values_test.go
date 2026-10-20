@@ -29,7 +29,7 @@ func TestParseNumberCorpus(t *testing.T) {
 }
 
 // dateDiffReason explains an intentional difference between ParseDate and the legacy parseDate
-// (ALLOWED_DIFFS.md rows 1, 9 and 10) — or returns "" when the difference is a bug. It is strict:
+// (ALLOWED_DIFFS.md rows 1, 9–11) — or returns "" when the difference is a bug. It is strict:
 // it re-derives the date fields from the input and checks that our result is exactly what the
 // rule predicts, so it cannot hide an unrelated mismatch.
 //

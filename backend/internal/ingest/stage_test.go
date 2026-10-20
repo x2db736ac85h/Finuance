@@ -58,11 +58,14 @@ func TestStageAmountModes(t *testing.T) {
 		[]string{"10.01.2025", "b", "", "8 500,00", "8 500,00"},
 		[]string{"11.01.2025", "c", "", "", ""},
 		[]string{"12.01.2025", "d", "-3,00", "1,00", "x"},
+		[]string{"13.01.2025", "e", "—", "7,00", ""},
+		[]string{"14.01.2025", "f", "—", "n/a", ""},
 	)
 	m := NewMapping()
 	m.BookedOn, m.Description, m.Debit, m.Credit = 0, 1, 2, 3
 	rows, _, _ := Stage(context.Background(), tb, m, StageOptions{AmountMode: AmountDebitCredit})
-	want := []int64{-4520, 850000, 0, -200} // |credit| − |debit|: debit signs are ignored
+	// |credit| − |debit|: debit signs are ignored, and a side that is not a number counts as 0.
+	want := []int64{-4520, 850000, 0, -200, 700, 0}
 	for i, w := range want {
 		if rows[i].AmountMinor != w {
 			t.Errorf("debit/credit row %d = %d, want %d", i, rows[i].AmountMinor, w)
@@ -70,6 +73,9 @@ func TestStageAmountModes(t *testing.T) {
 	}
 	if rows[2].Error != "debit and credit are both empty" {
 		t.Errorf("both empty: %q", rows[2].Error)
+	}
+	if rows[4].Error != "" || rows[5].Error != `neither debit "—" nor credit "n/a" is an amount` {
+		t.Errorf("unparseable sides: %q, %q", rows[4].Error, rows[5].Error)
 	}
 	inv, _, _ := Stage(context.Background(), tb, m, StageOptions{AmountMode: AmountDebitCredit, InvertSign: true})
 	if inv[0].AmountMinor != 4520 || inv[1].AmountMinor != -850000 {

@@ -142,7 +142,7 @@ func legacyViewOf(t *testing.T, o oracleIngest, ours legacyView) legacyView {
 			if d != nil {
 				dates[i] = (*d)[:10]
 			}
-			// An intentional date difference (ALLOWED_DIFFS.md rows 1, 9, 10): accept ours.
+			// An intentional date difference (ALLOWED_DIFFS.md rows 1, 9–11): accept ours.
 			if ci < len(ours.Dates) && i < len(ours.Dates[ci]) && dates[i] != ours.Dates[ci][i] &&
 				dateDiffReason(o.Rows[i][ci], ours.Dates[ci][i]) != "" {
 				dates[i] = ours.Dates[ci][i]

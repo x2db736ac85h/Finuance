@@ -129,7 +129,8 @@ type Stats struct {
 //   - Required: the booking date and the amount. A missing or unparseable value is a row error,
 //     not a failed import: the preview shows the row and the error.
 //   - Amount: money.ParseMinor of the mapped column, in the row's currency exponent. In debit/credit
-//     mode the amount is |credit| − |debit| (both empty → error). If a signed Amount is mapped too,
+//     mode the amount is |credit| − |debit|; a side that is not a number counts as 0, and an error
+//     is reported only when neither side is a number. If a signed Amount is mapped too,
 //     the legacy rule applies: Amount is used and debit/credit stay ordinary columns. InvertSign
 //     flips the result.
 //   - Currency: the row's currency cell, else the import currency, else the account currency,
@@ -298,17 +299,18 @@ func stageAmount(cell func(int) string, m Mapping, mode AmountMode, exp int) (in
 		if debit == "" && credit == "" {
 			return 0, "debit and credit are both empty"
 		}
-		var d, c int64
-		var e string
-		if debit != "" {
-			if d, e = parse("debit", debit); e != "" {
-				return 0, e
-			}
+		// Legacy rule: a cell that is not a number counts as empty, so "—" next to a valid credit
+		// is fine. Only when neither side is a number is the amount missing.
+		d, errD := money.ParseMinor(debit, exp)
+		c, errC := money.ParseMinor(credit, exp)
+		if errD != nil && errC != nil {
+			return 0, fmt.Sprintf("neither debit %q nor credit %q is an amount", debit, credit)
 		}
-		if credit != "" {
-			if c, e = parse("credit", credit); e != "" {
-				return 0, e
-			}
+		if errD != nil {
+			d = 0
+		}
+		if errC != nil {
+			c = 0
 		}
 		return abs(c) - abs(d), ""
 	}
