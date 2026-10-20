@@ -1,0 +1,488 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-09-19",
+        "2025-09-19",
+        "2025-09-17",
+        "2025-09-15",
+        "2025-09-13",
+        "2025-09-04",
+        "2025-08-28",
+        "2025-08-21",
+        "2025-08-21",
+        "2025-08-07"
+      ],
+      "name": "2025-09-19",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        "2025-09-19",
+        "2025-09-19",
+        "2025-09-15",
+        "2025-09-14",
+        "2025-09-12",
+        "2025-09-03",
+        "2025-08-27",
+        "2025-08-21",
+        "2025-08-21",
+        "2025-08-06"
+      ],
+      "name": "2025-09-18",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Płatność kartą",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "-46.17",
+      "numbers": [
+        -11,
+        -11,
+        -281.3,
+        -5.99,
+        -48.42,
+        -20.15,
+        -27,
+        -11,
+        -11,
+        -1698
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "PLN",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Tytuł: 020598153 00000000000000000000000",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Data wykonania operacji: 2025-09-18 07:21",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota Cash Back:  0.00",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Oryginalna kwota operacji: 46.17",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Numer karty: 480101******3596",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ",",
+  "dropped": 0,
+  "encoding": "Windows-1250",
+  "error": null,
+  "fixture": "real/pko-bp/pko_bp_example.csv",
+  "headerAt": 2,
+  "headers": [
+    "2025-09-19",
+    "2025-09-18",
+    "Płatność kartą",
+    "-46.17",
+    "PLN",
+    "Tytuł: 020598153 00000000000000000000000",
+    "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+    "Data wykonania operacji: 2025-09-18 07:21",
+    "Kwota Cash Back:  0.00",
+    "Oryginalna kwota operacji: 46.17",
+    "Numer karty: 480101******3596"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "-46.17",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "2025-09-19",
+    "payee": "Tytuł: 020598153 00000000000000000000000"
+  },
+  "rowNorm": [
+    "2025-09-19\u00012025-09-19\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******3596, 28.02-28.03\u0001\u0001\u0001\u0001\u0001",
+    "2025-09-19\u00012025-09-19\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******2990, 28.02-28.03\u0001\u0001\u0001\u0001\u0001",
+    "2025-09-17\u00012025-09-15\u0001platnosc karta\u0001-281.30\u0001pln\u0001tytul: 022634812 00000000000000000000849\u0001lokalizacja: adres: bp cesubu bedut miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-15\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 281.30\u0001numer karty: 480101******3596",
+    "2025-09-15\u00012025-09-14\u0001platnosc karta\u0001-5.99\u0001pln\u0001tytul: 020598153 00000000000000000000933\u0001lokalizacja: adres: maku kityz miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-14 16:40\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 5.99\u0001numer karty: 480101******3596",
+    "2025-09-13\u00012025-09-12\u0001platnosc karta\u0001-48.42\u0001pln\u0001tytul: 020598153 00000000000000000000552\u0001lokalizacja: adres: maku kityz miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-12 18:26\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 48.42\u0001numer karty: 480101******3596",
+    "2025-09-04\u00012025-09-03\u0001platnosc karta\u0001-20.15\u0001pln\u0001tytul: 020598153 00000000000000000000194\u0001lokalizacja: adres: pl esu zohysu fogydo miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-03 10:36\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 20.15\u0001numer karty: 480101******3596",
+    "2025-08-28\u00012025-08-27\u0001platnosc karta\u0001-27\u0001pln\u0001tytul: 020598153 00000000000000000000394\u0001lokalizacja: adres: ocepuwycy 1337, zohysu 1 miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-08-27 13:03\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 26.53\u0001numer karty: 480101******3596",
+    "2025-08-21\u00012025-08-21\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******3596, 29.01-27.02\u0001\u0001\u0001\u0001\u0001",
+    "2025-08-21\u00012025-08-21\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******2990, 29.01-27.02\u0001\u0001\u0001\u0001\u0001",
+    "2025-08-07\u00012025-08-06\u0001wyplata z bankomatu\u0001-1698\u0001pln\u0001tytul: dyg bp 51399008l9ew8423r4177v4952\u0001lokalizacja: adres: jugogoj 67 miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-08-06 17:57\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 1697.60\u0001numer karty: 480101******3596"
+  ],
+  "rows": [
+    [
+      "2025-09-19",
+      "2025-09-19",
+      "Opłata za użytkowanie karty",
+      "-11",
+      "PLN",
+      "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 28.02-28.03",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "2025-09-19",
+      "2025-09-19",
+      "Opłata za użytkowanie karty",
+      "-11",
+      "PLN",
+      "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 28.02-28.03",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "2025-09-17",
+      "2025-09-15",
+      "Płatność kartą",
+      "-281.30",
+      "PLN",
+      "Tytuł: 022634812 00000000000000000000849",
+      "Lokalizacja: Adres: BP CESUBU BEDUT Miasto: ZOHYSU Kraj: POLSKA",
+      "Data wykonania operacji: 2025-09-15",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 281.30",
+      "Numer karty: 480101******3596"
+    ],
+    [
+      "2025-09-15",
+      "2025-09-14",
+      "Płatność kartą",
+      "-5.99",
+      "PLN",
+      "Tytuł: 020598153 00000000000000000000933",
+      "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+      "Data wykonania operacji: 2025-09-14 16:40",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 5.99",
+      "Numer karty: 480101******3596"
+    ],
+    [
+      "2025-09-13",
+      "2025-09-12",
+      "Płatność kartą",
+      "-48.42",
+      "PLN",
+      "Tytuł: 020598153 00000000000000000000552",
+      "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+      "Data wykonania operacji: 2025-09-12 18:26",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 48.42",
+      "Numer karty: 480101******3596"
+    ],
+    [
+      "2025-09-04",
+      "2025-09-03",
+      "Płatność kartą",
+      "-20.15",
+      "PLN",
+      "Tytuł: 020598153 00000000000000000000194",
+      "Lokalizacja: Adres: PL ESU ZOHYSU Fogydo Miasto: ZOHYSU Kraj: POLSKA",
+      "Data wykonania operacji: 2025-09-03 10:36",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 20.15",
+      "Numer karty: 480101******3596"
+    ],
+    [
+      "2025-08-28",
+      "2025-08-27",
+      "Płatność kartą",
+      "-27",
+      "PLN",
+      "Tytuł: 020598153 00000000000000000000394",
+      "Lokalizacja: Adres: OcEpuwycy 1337, Zohysu 1 Miasto: Zohysu Kraj: POLSKA",
+      "Data wykonania operacji: 2025-08-27 13:03",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 26.53",
+      "Numer karty: 480101******3596"
+    ],
+    [
+      "2025-08-21",
+      "2025-08-21",
+      "Opłata za użytkowanie karty",
+      "-11",
+      "PLN",
+      "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 29.01-27.02",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "2025-08-21",
+      "2025-08-21",
+      "Opłata za użytkowanie karty",
+      "-11",
+      "PLN",
+      "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 29.01-27.02",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "2025-08-07",
+      "2025-08-06",
+      "Wypłata z bankomatu",
+      "-1698",
+      "PLN",
+      "Tytuł: DYG BP 51399008L9EW8423R4177V4952",
+      "Lokalizacja: Adres: Jugogoj 67 Miasto: ZOHYSU Kraj: POLSKA",
+      "Data wykonania operacji: 2025-08-06 17:57",
+      "Kwota Cash Back:  0.00",
+      "Oryginalna kwota operacji: 1697.60",
+      "Numer karty: 480101******3596"
+    ]
+  ]
+}
