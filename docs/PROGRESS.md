@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 3 — Ingest engine · **Branch:** — · **Status:** planning
+**Current phase:** 3 — Ingest engine · **Branch:** phase/03-ingest-engine · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -14,7 +14,26 @@
 - Legacy oracle pins Playwright 1.56.1 (matches the Chromium in cloud sessions; CI installs the same build).
 - Phase 2: `/readyz` returns 503 when the DB is reachable but migrations are behind. `X-Request-ID` is accepted from any client when it is ≤ 64 chars of `[A-Za-z0-9_-]`, otherwise generated.
 - Phase 2 tooling: oapi-codegen and govulncheck as Go `tool` deps; sqlc and golangci-lint as pinned, checksum-verified binaries in `backend/bin/`. OTel over OTLP/HTTP. No `worker` Compose service until Phase 6.
+- Phase 3: Claude writes all of `ingest`/`money`, with explanatory comments so Irwin can tweak it later (no hand-written parts). The ingest engine is a **strict port** of the legacy rules, including auto header detection; the mBank/PKO BP header fix moves to Phase 9 (import preview). The legacy demo generator is ported now (`internal/demo`) for the 100k-row benchmark.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
+
+## Current phase tasks
+- [ ] 3.1 `ingest/normalize.go`
+- [ ] 3.2 `ingest/decode.go`
+- [ ] 3.3 `ingest/delimiter.go`
+- [ ] 3.4 `ingest/csv.go`
+- [ ] 3.5 `ingest/table.go`
+- [ ] 3.6 `ingest/values.go` + `money/parse.go`
+- [ ] 3.7 `ingest/columns.go`
+- [ ] 3.8 `ingest/stage.go`
+- [ ] 3.9 `ingest/fingerprint.go`
+- [ ] 3.10 `ingest/parse.go`
+- [ ] 3.11 oracle differential suite
+- [ ] 3.12 fuzz targets (5 min each)
+- [ ] 3.13 golden files
+- [ ] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port)
+- [ ] 3.15 v7 import-settings parity
+- [ ] CI: coverage gate, no-float64 check, fuzz smoke
 
 ## Phase 2 tasks (done)
 - [x] 2.1 `cmd/finuance` subcommands + build info
@@ -79,7 +98,7 @@
   - **mBank**: UTF-8 with BOM, CRLF, `;`. A ~25-line preamble holds the client name, period and account summary. The header is `#Data operacji;#Opis operacji;…` with `#`-prefixed names. Amounts carry the currency suffix (`-800,00 PLN`), rows end in a trailing `;;`, and descriptions are quoted and padded with runs of spaces.
 
 - Anonymisation key: `testdata/private/anon.key` (gitignored, lost with the container). A new key only changes the fake values of future runs.
-- Phase 3: port ingest against `testdata/oracle/ingest*/` and `corpus/`; fix header detection for mBank and PKO BP (`ALLOWED_DIFFS.md` row 4; the targets are `ingest-cfg/banks/*/header-*.json`).
+- Phase 9: fix auto header detection for mBank and PKO BP in the import preview (`ALLOWED_DIFFS.md` row 4; targets `ingest-cfg/banks/*/header-*.json`). Phase 3 ports the legacy rule as is.
 
 - Phase 5: ADRs 0010–0012 (password hashing, sessions/CSRF, rate limiting) and the first endpoints with parameters, which exercise the OpenAPI request validator beyond routing.
 - Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
