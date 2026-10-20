@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -21,7 +22,7 @@ func Recover(base *slog.Logger, onPanic func(http.ResponseWriter, *http.Request,
 				if v == nil {
 					return
 				}
-				if v == http.ErrAbortHandler {
+				if err, ok := v.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 					panic(v)
 				}
 				base.LogAttrs(r.Context(), slog.LevelError, "panic", slog.String("request_id", info.RequestID),

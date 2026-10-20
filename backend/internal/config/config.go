@@ -98,7 +98,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		PublicOrigin:         p.origin("FINUANCE_PUBLIC_ORIGIN"),
 		DatabaseURL:          p.dsn("FINUANCE_DATABASE_URL"),
 		MigrateDatabaseURL:   p.dsn("FINUANCE_MIGRATE_DATABASE_URL"),
-		DBMaxConns:           int32(p.int("FINUANCE_DB_MAX_CONNS", 10, 1, 1000)),
+		DBMaxConns:           int32(p.int("FINUANCE_DB_MAX_CONNS", 10, 1, 1000)), //nolint:gosec // bounded to 1..1000 by p.int
 		SessionTTL:           p.duration("FINUANCE_SESSION_TTL", 720*time.Hour),
 		SessionIdleTTL:       p.duration("FINUANCE_SESSION_IDLE_TTL", 168*time.Hour),
 		AllowSignup:          p.bool("FINUANCE_ALLOW_SIGNUP", true),

@@ -9,6 +9,7 @@ testdata/private/*
 
 # Go
 /backend/bin/
+/backend/vendor/
 *.test
 *.out
 coverage.*

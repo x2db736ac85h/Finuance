@@ -218,7 +218,7 @@ func (a *anonymizer) cell(v string, k colKind) string {
 	if core == "" {
 		return v
 	}
-	lead := v[:strings.Index(v, core)]
+	lead := v[:len(v)-len(strings.TrimLeftFunc(v, unicode.IsSpace))]
 	trail := v[len(lead)+len(core):]
 	if s, ok := a.shiftDateCell(core); ok {
 		return lead + s + trail
@@ -466,7 +466,7 @@ func (a *anonymizer) payee(s string) string {
 
 func (a *anonymizer) pick(kind, v string, list []string) string {
 	h := a.mac(kind, collapse(norm(v)))
-	return list[binary.BigEndian.Uint32(h)%uint32(len(list))]
+	return list[binary.BigEndian.Uint32(h)%uint32(len(list))] //nolint:gosec // list lengths are tiny constants
 }
 
 /* ---------- free text ---------- */
@@ -582,7 +582,7 @@ func (a *anonymizer) code(t string) string {
 	h := a.mac("code", t)
 	out := []rune(t)
 	for i, r := range out {
-		c := h[i%len(h)] ^ byte(i/len(h)*7)
+		c := h[i%len(h)] ^ byte(i/len(h)*7) //nolint:gosec // wraps on purpose: only used to vary characters
 		switch {
 		case unicode.IsDigit(r):
 			out[i] = rune('0' + c%10)
@@ -610,7 +610,7 @@ func (a *anonymizer) fakeWord(w string) string {
 		h := a.mac("word", norm(w)+strings.Repeat("#", salt))
 		out := make([]rune, len(src))
 		for i := range src {
-			c := h[i%len(h)] ^ byte(i/len(h))
+			c := h[i%len(h)] ^ byte(i/len(h)) //nolint:gosec // wraps on purpose: only used to vary letters
 			var r rune
 			if i%2 == int(h[0]%2) {
 				r = rune(consonants[int(c)%len(consonants)])

@@ -80,8 +80,8 @@ func StartPostgres(ctx context.Context) (*DB, func(), error) {
 		tcpostgres.WithPassword(superPassword),
 		testcontainers.WithEnv(map[string]string{"FINUANCE_OWNER_PASSWORD": ownerPassword, "FINUANCE_APP_PASSWORD": appPassword}),
 		testcontainers.WithFiles(
-			testcontainers.ContainerFile{HostFilePath: filepath.Join(root, "deploy/db/bootstrap.sql"), ContainerFilePath: "/finuance/bootstrap.sql", FileMode: 0o644},
-			testcontainers.ContainerFile{HostFilePath: filepath.Join(root, "deploy/db/initdb/00-bootstrap.sh"), ContainerFilePath: "/docker-entrypoint-initdb.d/00-bootstrap.sh", FileMode: 0o755},
+			testcontainers.ContainerFile{HostFilePath: filepath.Join(root, "deploy", "db", "bootstrap.sql"), ContainerFilePath: "/finuance/bootstrap.sql", FileMode: 0o644},
+			testcontainers.ContainerFile{HostFilePath: filepath.Join(root, "deploy", "db", "initdb", "00-bootstrap.sh"), ContainerFilePath: "/docker-entrypoint-initdb.d/00-bootstrap.sh", FileMode: 0o755},
 		),
 		tcpostgres.BasicWaitStrategies(),
 	)

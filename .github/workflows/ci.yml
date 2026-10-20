@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'phase/**']
   pull_request:
 
 permissions:
@@ -76,17 +76,47 @@ jobs:
   backend:
     name: backend (Go)
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - name: gofmt
+      - name: golangci-lint
         run: make lint
-      - name: vet + unit tests
-        run: make test
+      - name: Generated code is up to date
+        run: make gen-check
+      - name: Unit tests (race)
+        working-directory: backend
+        run: go test -race -short ./...
+      - name: Integration tests (race, testcontainers)
+        working-directory: backend
+        run: go test -race ./...
+      - name: govulncheck
+        working-directory: backend
+        run: go tool govulncheck ./...
+
+  image:
+    name: backend image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Build
+        run: make images
+      - name: Size and user
+        run: |
+          docker image inspect finuance-backend:dev --format 'user={{.Config.User}}'
+          test "$(docker image inspect finuance-backend:dev --format '{{.Config.User}}')" = "nonroot:nonroot"
+          docker history --format '{{.Size}}\t{{.CreatedBy}}' finuance-backend:dev | head -10
+          echo "compressed: $(docker save finuance-backend:dev | gzip -c | wc -c) bytes"
+      - name: Smoke test
+        run: docker run --rm finuance-backend:dev version
+      - name: Trivy (HIGH/CRITICAL fail the build)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.0 \
+            image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-backend:dev
 
   oracle-fresh:
     name: legacy oracle is fresh

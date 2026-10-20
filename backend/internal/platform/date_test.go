@@ -60,7 +60,7 @@ func TestArithmetic(t *testing.T) {
 		t.Errorf("DaysUntil = %d", n)
 	}
 	a, b := MustDate(2025, 1, 2), MustDate(2025, 1, 10)
-	if !a.Before(b) || !b.After(a) || a.Compare(a) != 0 || b.Compare(a) != 1 {
+	if !a.Before(b) || !b.After(a) || a.Compare(MustDate(2025, 1, 2)) != 0 || b.Compare(a) != 1 {
 		t.Error("compare")
 	}
 }

@@ -1,0 +1,7 @@
+# Only the backend sources go into the image build context.
+*
+!backend/
+backend/bin/
+backend/**/*_test.go
+backend/testutil/
+!backend/vendor/

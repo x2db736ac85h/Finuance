@@ -52,9 +52,9 @@ func setup(ctx context.Context, cfg config.Config, b Build, log *slog.Logger, se
 	return &common{log: log, metrics: m, tracing: tr, pool: pool}, nil
 }
 
-func (c *common) close() {
+func (c *common) close(ctx context.Context) {
 	c.pool.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	if err := c.tracing.Shutdown(ctx); err != nil {
 		c.log.Warn("trace flush", "error", err)
@@ -67,7 +67,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	if err != nil {
 		return err
 	}
-	defer c.close()
+	defer c.close(ctx)
 	q := db.New(c.pool)
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
@@ -88,7 +88,7 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	if err != nil {
 		return err
 	}
-	defer c.close()
+	defer c.close(ctx)
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
 		Logger:  log,
 		Queues:  map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
@@ -131,7 +131,8 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 func serveAll(ctx context.Context, log *slog.Logger, servers ...*http.Server) error {
 	g, gctx := errgroup.WithContext(ctx)
 	for _, s := range servers {
-		ln, err := net.Listen("tcp", s.Addr)
+		var lc net.ListenConfig
+		ln, err := lc.Listen(ctx, "tcp", s.Addr)
 		if err != nil {
 			return fmt.Errorf("listen %s: %w", s.Addr, err)
 		}
@@ -212,7 +213,7 @@ func Healthcheck(ctx context.Context, cfg config.Config) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("healthz returned %d", resp.StatusCode)
 	}
