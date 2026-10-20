@@ -23,9 +23,10 @@
 ## Deviations from the plan (with reason)
 - 0.2: the scrub also replaced digit runs of 6–7 digits in `SAMPLE` (card fragments `*********0229197`, reference parts), not only runs of 8 or more, plus the P24 reference and merchant addresses. 26-digit account numbers became the allowlisted all-zero form (`'00000000000000000000000001`), so `check-private.sh` stays strict. One example id in `legacy/DESIGN.md` §7.1 (`0229197`) became `0123456`.
 - 0.2: `check-private.sh` also catches the spaced IBAN form (`PL61 1090 1014 …`), and scans untracked, non-ignored files too, so it fails before a commit, not after.
-- 0.7: Docker isn't available in the cloud session that built Phase 0. The Compose stack was checked with a static review, and `bootstrap.sql` was run against a local PostgreSQL 16 server. The `db-up` acceptance check must be run on Irwin's machine or in CI.
-
+- 0.7: Docker isn't available in the cloud session that built Phase 0. `bootstrap.sql` and the init wrapper were run against a throwaway PostgreSQL 16 cluster: roles and extensions were created, a password containing a quote worked, `finuance_app` can't create tables but gets DML on tables the owner creates. The Compose file was checked with `docker compose config`. The CI job `db` runs the real `make db-up` and the role/extension checks on `postgres:18.6`.
+- 0.7: the acceptance command is `make db-psql SQL='\du'`, not `make db-psql -c '\du'`, because make treats `-c` as its own flag.
 - 0.1: the Go module path is `github.com/x2db736ac85h/finuance/backend`, not `…/finuance`, because `go.mod` lives in `backend/` (§3.3). A module path should match its directory so `go` tooling and imports resolve. Recorded in ADR 0001.
+- 0.8: gitleaks runs as the pinned release binary (checksum verified) instead of `gitleaks-action`, which needs a license key for organisation accounts.
 
 ## Follow-ups (must be done in a later phase)
 - Phase 1: bank notes from the private samples, for the fixtures and the anonymiser:

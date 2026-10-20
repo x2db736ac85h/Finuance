@@ -104,7 +104,7 @@ db-reset: $(ENV_FILE) ## Delete the local database volume and bootstrap again
 DB_USER ?= finuance_owner
 .PHONY: db-psql
 db-psql: $(ENV_FILE) ## psql in the finuance database (SQL='…' to run one command)
-	$(COMPOSE) exec db psql -U $(DB_USER) -d finuance $(if $(SQL),-c "$(SQL)")
+	$(COMPOSE) exec $(if $(SQL),-T) db psql -U $(DB_USER) -d finuance $(if $(SQL),-c "$(SQL)")
 
 .PHONY: migrate-up migrate-down migrate-status migrate-new
 migrate-up: ## Apply migrations (finuance migrate up)
