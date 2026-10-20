@@ -18,22 +18,22 @@
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
-- [ ] 3.1 `ingest/normalize.go`
-- [ ] 3.2 `ingest/decode.go`
-- [ ] 3.3 `ingest/delimiter.go`
-- [ ] 3.4 `ingest/csv.go`
-- [ ] 3.5 `ingest/table.go`
-- [ ] 3.6 `ingest/values.go` + `money/parse.go`
-- [ ] 3.7 `ingest/columns.go`
-- [ ] 3.8 `ingest/stage.go`
-- [ ] 3.9 `ingest/fingerprint.go`
-- [ ] 3.10 `ingest/parse.go`
-- [ ] 3.11 oracle differential suite
+- [x] 3.1 `ingest/normalize.go`
+- [x] 3.2 `ingest/decode.go`
+- [x] 3.3 `ingest/delimiter.go`
+- [x] 3.4 `ingest/csv.go` (rune state machine + byte fast path for ASCII delimiters, fuzzed against each other)
+- [x] 3.5 `ingest/table.go`
+- [x] 3.6 `ingest/values.go` + `money/parse.go`
+- [x] 3.7 `ingest/columns.go`
+- [x] 3.8 `ingest/stage.go`
+- [x] 3.9 `ingest/fingerprint.go`
+- [x] 3.10 `ingest/parse.go`
+- [x] 3.11 oracle differential suite (62 ingest fixtures, 5 corpora, 7 dedupe sets)
 - [ ] 3.12 fuzz targets (5 min each)
-- [ ] 3.13 golden files
+- [x] 3.13 golden files (61, `-update` to regenerate)
 - [ ] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port)
-- [ ] 3.15 v7 import-settings parity
-- [ ] CI: coverage gate, no-float64 check, fuzz smoke
+- [x] 3.15 v7 import-settings parity (27 recorded cfg variants)
+- [x] CI: coverage gate (`make coverage`, ingest + money 96.7 %), no-float check (`make check-no-float`), fuzz smoke (`make fuzz FUZZTIME=10s`), benchmark in the job summary
 
 ## Phase 2 tasks (done)
 - [x] 2.1 `cmd/finuance` subcommands + build info
@@ -73,6 +73,12 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 3.3: an empty file, or one with no candidate delimiter, gets `;`, not the plan's "default ','". That is what the legacy does (every candidate scores 0 and `;` comes first), and the strict port keeps it.
+- 3.7: the plan's amount-role regex reads `finuance`, a search-and-replace slip from the rename; the legacy (and the port) use `kwota`.
+- 3.8: `Stage(ctx, table, mapping, opts) ([]StagedRow, Stats, error)`: the account currency is a field of `StageOptions`, and `ctx` + `error` were added so cancellation works on large files (PLAN §3.10). `Parse` takes `ctx` too.
+- 3.8: in debit/credit mode a side that is not a number counts as 0, and the row is an error only when neither side is a number. Legacy rule; an earlier draft was stricter.
+- 3.6: `ParseNumber` and column typing use `float64`, as in the legacy (typing and role heuristics only). Every stored amount goes through `money.ParseMinor`, and `check-no-float` covers `internal/money` and the fingerprint path.
+- 3.6/3.11: dates with a time, years 0–99 and query dates with a time differ from the legacy on purpose: `ALLOWED_DIFFS.md` rows 9–11, each checked by a strict classifier in the tests.
 - 0.2: the scrub also replaced digit runs of 6–7 digits in `SAMPLE` (card fragments `*********0229197`, reference parts), not only runs of 8 or more, plus the P24 reference and merchant addresses. 26-digit account numbers became the allowlisted all-zero form (`'00000000000000000000000001`), so `check-private.sh` stays strict. One example id in `legacy/DESIGN.md` §7.1 (`0229197`) became `0123456`.
 - 0.2: `check-private.sh` also catches the spaced IBAN form (`PL61 1090 1014 …`), and scans untracked, non-ignored files too, so it fails before a commit, not after.
 - 0.7: Docker isn't available in the cloud session that built Phase 0. `bootstrap.sql` and the init wrapper were run against a throwaway PostgreSQL 16 cluster: roles and extensions were created, a password containing a quote worked, `finuance_app` can't create tables but gets DML on tables the owner creates. The Compose file was checked with `docker compose config`. The CI job `db` runs the real `make db-up` and the role/extension checks on `postgres:18.6`.
