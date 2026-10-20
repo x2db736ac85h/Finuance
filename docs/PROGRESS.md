@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 1 — Legacy extraction · **Branch:** phase/01-legacy-extraction · **Status:** planning
+**Current phase:** 1 — Legacy extraction · **Branch:** phase/01-legacy-extraction · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -9,6 +9,18 @@
 - Demo hosting: TBD (ask in Phase 18)
 - Homelab (ingress, cert-manager issuer, storage class, backup bucket): TBD (ask in Phase 16)
 - Assistant LLM endpoint and model: TBD (ask in Phase 13)
+- Test data policy (Phase 1): committed fixtures are synthetic and must cover the edge cases. Real exports are only ever used through the anonymiser; Claude runs it on the samples in `testdata/private/`, and Irwin reviews the output before anything goes into `testdata/fixtures/real/`.
+- Anonymiser keeps category, currency and operation-type columns verbatim. Amounts keep their original number of decimals.
+- Legacy oracle pins Playwright 1.56.1 (matches the Chromium in cloud sessions; CI installs the same build).
+- Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
+
+## Current phase tasks
+- [ ] 1.1 `docs/PARITY.md`
+- [ ] 1.2 Synthetic fixtures (≥ 35) + overlap, same-name, duplicate-versions and bank look-alike sets
+- [ ] 1.3 Anonymiser `backend/cmd/anonymize` (+ run on private samples for review)
+- [ ] 1.4 `tools/legacy-oracle` and `make oracle`
+- [ ] 1.5 `testdata/oracle/ALLOWED_DIFFS.md`
+- [ ] Makefile + CI (`oracle-fresh`, Go tests)
 
 ## Completed phases
 - Phase 0 — Repository bootstrap: gate approved 2026-10-20; `main` rewritten to the scrubbed root commit `0b05487`, then `phase/00-bootstrap` merged with `--no-ff`.
