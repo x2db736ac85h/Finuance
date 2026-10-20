@@ -6,6 +6,7 @@ package db
 
 import (
 	"net/netip"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -21,15 +22,15 @@ type Account struct {
 	NumberHint          *string
 	OpeningBalanceMinor int64
 	IsDemo              bool
-	ArchivedAt          pgtype.Timestamptz
-	CreatedAt           pgtype.Timestamptz
+	ArchivedAt          *time.Time
+	CreatedAt           time.Time
 }
 
 type Budget struct {
 	UserID      uuid.UUID
 	CategoryID  uuid.UUID
 	AmountMinor int64
-	UpdatedAt   pgtype.Timestamptz
+	UpdatedAt   time.Time
 }
 
 type Category struct {
@@ -37,7 +38,7 @@ type Category struct {
 	UserID    uuid.UUID
 	Name      string
 	NameN     string
-	CreatedAt pgtype.Timestamptz
+	CreatedAt time.Time
 }
 
 type DedupeOverride struct {
@@ -46,7 +47,7 @@ type DedupeOverride struct {
 	UserID            uuid.UUID
 	Mode              string
 	PreferredImportID *uuid.UUID
-	UpdatedAt         pgtype.Timestamptz
+	UpdatedAt         time.Time
 }
 
 type GooseDbVersion struct {
@@ -62,7 +63,7 @@ type Group struct {
 	Name      string
 	NameN     string
 	Color     int16
-	CreatedAt pgtype.Timestamptz
+	CreatedAt time.Time
 }
 
 type Import struct {
@@ -83,8 +84,8 @@ type Import struct {
 	HeaderSignature []byte
 	Stats           []byte
 	Error           *string
-	CreatedAt       pgtype.Timestamptz
-	CommittedAt     pgtype.Timestamptz
+	CreatedAt       time.Time
+	CommittedAt     *time.Time
 }
 
 type ImportFile struct {
@@ -99,7 +100,7 @@ type ImportProfile struct {
 	Name            string
 	Mapping         []byte
 	Options         []byte
-	UpdatedAt       pgtype.Timestamptz
+	UpdatedAt       time.Time
 }
 
 type ImportRow struct {
@@ -142,8 +143,8 @@ type InvestmentPosition struct {
 	InvestedMinor     int64
 	ValueMinor        int64
 	AnnualIncomeMinor int64
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type InvestmentProfile struct {
@@ -155,15 +156,15 @@ type InvestmentProfile struct {
 	SwrBp            int32
 	RealReturnBp     int32
 	Version          int32
-	UpdatedAt        pgtype.Timestamptz
+	UpdatedAt        time.Time
 }
 
 type Session struct {
 	TokenHash  []byte
 	UserID     uuid.UUID
-	CreatedAt  pgtype.Timestamptz
-	LastSeenAt pgtype.Timestamptz
-	ExpiresAt  pgtype.Timestamptz
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	ExpiresAt  time.Time
 	UserAgent  string
 	Ip         *netip.Addr
 }
@@ -205,8 +206,8 @@ type Transaction struct {
 	NoteN               string
 	Raw                 []byte
 	SearchText          string
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type TxAnnotation struct {
@@ -220,7 +221,7 @@ type TxAnnotation struct {
 	Note             string
 	NoteN            string
 	TransferOverride *bool
-	UpdatedAt        pgtype.Timestamptz
+	UpdatedAt        time.Time
 }
 
 type User struct {
@@ -229,13 +230,13 @@ type User struct {
 	PasswordHash string
 	DisplayName  string
 	IsDemo       bool
-	CreatedAt    pgtype.Timestamptz
-	LastLoginAt  pgtype.Timestamptz
+	CreatedAt    time.Time
+	LastLoginAt  *time.Time
 }
 
 type UserPreference struct {
 	UserID    uuid.UUID
 	Prefs     []byte
 	Version   int32
-	UpdatedAt pgtype.Timestamptz
+	UpdatedAt time.Time
 }

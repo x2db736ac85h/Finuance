@@ -7,7 +7,6 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
-	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 	"github.com/x2db736ac85h/finuance/backend/testutil"
 )
 
@@ -35,6 +34,11 @@ func TestMigrationsUpDownUp(t *testing.T) {
 	for i := int64(0); i < store.ExpectedVersion(); i++ {
 		if _, err := mig.Down(ctx); err != nil {
 			t.Fatalf("down: %v", err)
+		}
+		if i == 0 {
+			if err := store.New(tdb.App).MigrationsCurrent(ctx); err == nil {
+				t.Error("readiness probe passed with the schema one migration behind")
+			}
 		}
 	}
 	if v, _ := mig.Version(ctx); v != 0 {
@@ -78,12 +82,12 @@ func TestRiverTablesAndRoles(t *testing.T) {
 
 func TestReadinessProbes(t *testing.T) {
 	tdb := testutil.Require(t, testDB)
-	q := db.New(tdb.App)
+	s := store.New(tdb.App)
 	ctx := context.Background()
-	if err := store.Ping(q)(ctx); err != nil {
+	if err := s.Ping(ctx); err != nil {
 		t.Errorf("ping: %v", err)
 	}
-	if err := store.MigrationsCurrent(q)(ctx); err != nil {
+	if err := s.MigrationsCurrent(ctx); err != nil {
 		t.Errorf("migrations current: %v", err)
 	}
 }

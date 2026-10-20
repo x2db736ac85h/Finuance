@@ -106,7 +106,8 @@ gen: $(SQLC) ## oapi-codegen + sqlc (openapi-typescript arrives in Phase 8)
 GENERATED := backend/internal/httpapi/gen backend/internal/store/db
 .PHONY: gen-check
 gen-check: gen ## Regenerate and fail if generated code differs from what is committed
-	@drift="$$(git status --porcelain -- $(GENERATED))"; if [ -n "$$drift" ]; then \
+	@# Compares with the index, so generated code that is staged for the next commit counts as clean.
+	@drift="$$(git diff --name-only -- $(GENERATED); git ls-files --others --exclude-standard -- $(GENERATED))"; if [ -n "$$drift" ]; then \
 	  echo "gen-check: generated code is out of date; run 'make gen' and commit:"; echo "$$drift"; git --no-pager diff --stat -- $(GENERATED); exit 1; fi
 	@echo "gen-check: ok"
 
