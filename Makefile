@@ -36,12 +36,25 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data check
+check: lint typecheck test gen-check fixtures-check check-private check-no-float ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data and float checks
 	@echo "check: ok"
 
 .PHONY: check-private
 check-private: ## Fail on IBAN-like numbers or files under testdata/private/
 	@tools/check-private.sh
+
+.PHONY: check-no-float
+check-no-float: ## Fail on floating point in internal/money or the fingerprint path
+	@tools/check-no-float.sh
+
+COVER_PKGS := ./internal/ingest/ ./internal/money/
+COVER_MIN  ?= 90
+.PHONY: coverage
+coverage: ## Line coverage of ingest + money; fails below COVER_MIN (default 90 %)
+	@cd backend && go test -short -coverprofile=cover.out $(COVER_PKGS) >/dev/null && \
+	  total="$$(go tool cover -func=cover.out | awk '/^total:/ {sub("%", "", $$3); print $$3}')" && rm -f cover.out && \
+	  echo "coverage: ingest + money $$total % (minimum $(COVER_MIN) %)" && \
+	  awk -v t="$$total" -v m="$(COVER_MIN)" 'BEGIN { exit !(t >= m) }'
 
 .PHONY: lint
 lint: $(GOLANGCI) ## golangci-lint (ESLint arrives in Phase 8)
@@ -70,7 +83,11 @@ test-e2e: ## Playwright against compose.ci.yaml
 
 .PHONY: fuzz
 fuzz: ## All fuzz targets for FUZZTIME (default 30s each)
-	$(call todo,3)
+	@cd backend && for pkg in $$(go list ./...); do \
+	  for f in $$(go test -list '^Fuzz' "$$pkg" | grep '^Fuzz' || true); do \
+	    echo "fuzz: $$f ($$pkg) for $(FUZZTIME)"; \
+	    go test -run '^$$' -fuzz "^$$f$$" -fuzztime $(FUZZTIME) "$$pkg"; \
+	  done; done
 
 .PHONY: bench
 bench: ## Go benchmarks with -benchmem
