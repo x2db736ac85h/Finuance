@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 2 — Backend skeleton · **Branch:** — · **Status:** not started (run /phase-start 2)
+**Current phase:** 2 — Backend skeleton · **Branch:** phase/02-backend-skeleton · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -12,7 +12,23 @@
 - Test data policy (Phase 1): committed fixtures are synthetic and must cover the edge cases. Real exports are only ever used through the anonymiser; Claude runs it on the samples in `testdata/private/`, and Irwin reviews the output before anything goes into `testdata/fixtures/real/`.
 - Anonymiser keeps category, currency and operation-type columns verbatim. Amounts keep their original number of decimals.
 - Legacy oracle pins Playwright 1.56.1 (matches the Chromium in cloud sessions; CI installs the same build).
+- Phase 2: `/readyz` returns 503 when the DB is reachable but migrations are behind. `X-Request-ID` is accepted from any client when it is ≤ 64 chars of `[A-Za-z0-9_-]`, otherwise generated.
+- Phase 2 tooling: oapi-codegen and govulncheck as Go `tool` deps; sqlc and golangci-lint as pinned, checksum-verified binaries in `backend/bin/`. OTel over OTLP/HTTP. No `worker` Compose service until Phase 6.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
+
+## Current phase tasks
+- [ ] 2.1 `cmd/finuance` subcommands + build info
+- [ ] 2.2 `internal/config`
+- [ ] 2.3 `internal/observability` (slog, Prometheus, OTel, admin server)
+- [ ] 2.4 `internal/httpapi` server, middleware chain, health, graceful shutdown
+- [ ] 2.5 `httpapi/problems.go`
+- [ ] 2.6 `api/openapi.yaml` v0 + oapi-codegen + validator + `make gen`/`gen-check`
+- [ ] 2.7 `internal/store` pool + goose + River migrations
+- [ ] 2.8 sqlc + `platform.Date`
+- [ ] 2.9 `testutil` testcontainers harness; `make test-integration`
+- [ ] 2.10 `Dockerfile.backend`
+- [ ] 2.11 Compose `migrate` + `api`; `make up/down/logs`, `dev-api`, `dev-worker`
+- [ ] 2.12 CI `backend` job
 
 ## Phase 1 tasks (done)
 - [x] 1.1 `docs/PARITY.md` (≈ 140 rows; MVP failures and §27 limitations with decisions)
