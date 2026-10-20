@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 0 — Repository bootstrap · **Branch:** phase/00-bootstrap · **Status:** in review (gate)
+**Current phase:** 1 — Legacy extraction · **Branch:** phase/01-legacy-extraction · **Status:** planning
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -10,7 +10,10 @@
 - Homelab (ingress, cert-manager issuer, storage class, backup bucket): TBD (ask in Phase 16)
 - Assistant LLM endpoint and model: TBD (ask in Phase 13)
 
-## Current phase tasks
+## Completed phases
+- Phase 0 — Repository bootstrap: gate approved 2026-10-20; `main` rewritten to the scrubbed root commit `0b05487`, then `phase/00-bootstrap` merged with `--no-ff`.
+
+## Phase 0 tasks (done)
 - [x] 0.1 Open questions asked; answers recorded here and in ADR 0001
 - [x] 0.2 Repo layout (§3.3); legacy files in `legacy/`, `SAMPLE` scrubbed; `tools/check-private.sh`
 - [x] 0.3 Root files: README stub, LICENSE (MIT), `.editorconfig`, `.gitignore`, `.gitattributes`
@@ -33,10 +36,10 @@
   - **Pekao**: UTF-8 without BOM, LF, `;`, `dd.mm.yyyy`, comma decimals, `'`-prefixed account numbers and references, payee padded with spaces before the city. This is the same layout as the legacy `SAMPLE`.
   - **PKO BP**: Windows-1250, CRLF, `,`, ISO dates, dot decimals with no fixed scale (`-10`, `-43.52`). The header has 6 named columns plus 5 blank ones; extra description fields (`Lokalizacja: …`, `Numer karty: …`) spill into the unnamed columns. There are blank lines between rows.
   - **mBank**: UTF-8 with BOM, CRLF, `;`. A ~25-line preamble holds the client name, period and account summary. The header is `#Data operacji;#Opis operacji;…` with `#`-prefixed names. Amounts carry the currency suffix (`-800,00 PLN`), rows end in a trailing `;;`, and descriptions are quoted and padded with runs of spaces.
-- Phase 0 gate: once Irwin allows it, force-update `main` to the clean root of `phase/00-bootstrap`, then merge the phase branch (see the PR description).
 
 ## Backlog (ideas, not scheduled)
 -
 
 ## Session log
+- 2026-10-20 — Phase 0 gate approved; main rewritten and phase/00-bootstrap merged. Next: plan Phase 1.
 - 2026-10-20 — Phase 0 built on `phase/00-bootstrap` (clean orphan root, legacy scrub, guardrails, docs, ADRs, Makefile, local DB, CI). Next: Irwin reviews the gate; then Phase 1 (legacy extraction).
