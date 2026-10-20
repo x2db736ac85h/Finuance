@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 3 — Ingest engine · **Branch:** phase/03-ingest-engine · **Status:** in progress
+**Current phase:** 3 — Ingest engine · **Branch:** phase/03-ingest-engine · **Status:** gate review
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -29,9 +29,9 @@
 - [x] 3.9 `ingest/fingerprint.go`
 - [x] 3.10 `ingest/parse.go`
 - [x] 3.11 oracle differential suite (62 ingest fixtures, 5 corpora, 7 dedupe sets)
-- [ ] 3.12 fuzz targets (5 min each)
+- [x] 3.12 fuzz targets (5 min each, no crash: Tokenize 2.9 M, ParseNumber 8.7 M, ParseMinor 9.7 M, ParseDate 10.3 M, Parse 0.97 M execs)
 - [x] 3.13 golden files (61, `-update` to regenerate)
-- [ ] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port)
+- [x] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port): median ≈ 563 ms on the 4-vCPU sandbox, **above the 500 ms target**; see perf.md
 - [x] 3.15 v7 import-settings parity (27 recorded cfg variants)
 - [x] CI: coverage gate (`make coverage`, ingest + money 96.7 %), no-float check (`make check-no-float`), fuzz smoke (`make fuzz FUZZTIME=10s`), benchmark in the job summary
 
@@ -115,6 +115,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-20 — Phase 3 built on `phase/03-ingest-engine`: decode, delimiter, tokenizer, shape, value parsers, exact money parsing, column typing and roles, staging, fingerprints, `Parse`. Oracle differential suite + cfg parity pass. 61 golden files, 5 fuzz targets (5 min each, clean), coverage 96.7 %, demo generator port. Benchmark ≈ 563 ms median (target 500 ms, not met in the sandbox). CI green. Next: Irwin's gate review.
 - 2026-10-20 — Phase 2 gate approved (image limits ≤ 35 MB / ≤ 15 MB compressed); merged. Next: plan Phase 3.
 - 2026-10-20 — Phase 2 built on `phase/02-backend-skeleton`: binary + subcommands, config, observability, middleware, problems, OpenAPI v0 + codegen, store + migrations + sqlc, testcontainers harness, image, Compose, CI. `make up` verified locally. Next: Irwin's gate review.
 - 2026-10-20 — Phase 1 gate approved; real fixtures committed, oracle regenerated (62 ingest outputs), branch merged. Next: Phase 2 (backend skeleton).
