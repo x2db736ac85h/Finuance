@@ -17,3 +17,6 @@ UPDATE categories SET name = @name, name_n = @name_n WHERE user_id = @user_id AN
 -- name: DeleteCategory :execrows
 -- Transactions keep existing with category_id NULL; budgets of the category go with it.
 DELETE FROM categories WHERE user_id = @user_id AND id = @id;
+
+-- name: GetCategory :one
+SELECT * FROM categories WHERE user_id = @user_id AND id = @id;

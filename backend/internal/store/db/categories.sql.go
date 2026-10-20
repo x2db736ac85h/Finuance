@@ -58,6 +58,28 @@ func (q *Queries) DeleteCategory(ctx context.Context, arg DeleteCategoryParams) 
 	return result.RowsAffected(), nil
 }
 
+const getCategory = `-- name: GetCategory :one
+SELECT id, user_id, name, name_n, created_at FROM categories WHERE user_id = $1 AND id = $2
+`
+
+type GetCategoryParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error) {
+	row := q.db.QueryRow(ctx, getCategory, arg.UserID, arg.ID)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.NameN,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listCategories = `-- name: ListCategories :many
 SELECT id, user_id, name, name_n, created_at FROM categories WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
 `

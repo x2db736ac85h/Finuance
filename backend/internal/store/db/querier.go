@@ -62,6 +62,7 @@ type Querier interface {
 	FindImportBySHA(ctx context.Context, arg FindImportBySHAParams) (uuid.UUID, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
+	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
 	GetGroup(ctx context.Context, arg GetGroupParams) (Group, error)
 	GetImport(ctx context.Context, arg GetImportParams) (Import, error)
 	GetImportFile(ctx context.Context, arg GetImportFileParams) ([]byte, error)
