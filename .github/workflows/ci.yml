@@ -110,7 +110,12 @@ jobs:
           docker image inspect finuance-backend:dev --format 'user={{.Config.User}}'
           test "$(docker image inspect finuance-backend:dev --format '{{.Config.User}}')" = "nonroot:nonroot"
           docker history --format '{{.Size}}\t{{.CreatedBy}}' finuance-backend:dev | head -10
-          echo "compressed: $(docker save finuance-backend:dev | gzip -c | wc -c) bytes"
+          # Limits agreed at the Phase 2 gate: ≤ 35 MB uncompressed, ≤ 15 MB compressed.
+          raw=$(docker history --format '{{.Size}}' finuance-backend:dev | python3 -c 'import re,sys; u={"B":1,"kB":1e3,"MB":1e6,"GB":1e9}; print(int(sum(float(m[1])*u[m[2]] for m in (re.match(r"([\d.]+)([kMG]?B)", l.strip()) for l in sys.stdin) if m)))')
+          gz=$(docker save finuance-backend:dev | gzip -c | wc -c)
+          echo "uncompressed: $raw bytes, compressed: $gz bytes"
+          test "$raw" -le 35000000 || { echo "::error::image exceeds 35 MB uncompressed"; exit 1; }
+          test "$gz" -le 15000000 || { echo "::error::image exceeds 15 MB compressed"; exit 1; }
       - name: Smoke test
         run: docker run --rm finuance-backend:dev version
       - name: Trivy (HIGH/CRITICAL fail the build)

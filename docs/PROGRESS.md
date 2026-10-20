@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 2 — Backend skeleton · **Branch:** phase/02-backend-skeleton · **Status:** in review (gate)
+**Current phase:** 3 — Ingest engine · **Branch:** — · **Status:** planning
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -16,7 +16,7 @@
 - Phase 2 tooling: oapi-codegen and govulncheck as Go `tool` deps; sqlc and golangci-lint as pinned, checksum-verified binaries in `backend/bin/`. OTel over OTLP/HTTP. No `worker` Compose service until Phase 6.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
-## Current phase tasks
+## Phase 2 tasks (done)
 - [x] 2.1 `cmd/finuance` subcommands + build info
 - [x] 2.2 `internal/config`
 - [x] 2.3 `internal/observability` (slog, Prometheus, OTel, admin server)
@@ -39,6 +39,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 2 — Backend skeleton: gate approved 2026-10-20 (image size target amended); `phase/02-backend-skeleton` merged with `--no-ff`.
 - Phase 1 — Legacy extraction: gate approved 2026-10-20 (anonymised samples reviewed); `phase/01-legacy-extraction` merged with `--no-ff`.
 - Phase 0 — Repository bootstrap: gate approved 2026-10-20; `main` rewritten to the scrubbed root commit `0b05487`, then `phase/00-bootstrap` merged with `--no-ff`.
 
@@ -60,7 +61,7 @@
 - 0.1: the Go module path is `github.com/x2db736ac85h/finuance/backend`, not `…/finuance`, because `go.mod` lives in `backend/` (§3.3). A module path should match its directory so `go` tooling and imports resolve. Recorded in ADR 0001.
 - 2.7: the baseline migration is `00001_baseline.sql`, not `00000_…`, because goose rejects version 0. Phase 4's migrations therefore become `00002_core.sql` and `00003_rls.sql`.
 - 2.1: `worker` needs at least one River worker to start, so `internal/jobs` has a `noop` job kind (also used by the end-to-end test that proves a job inserted by another connection is processed). `seed-demo` and `admin` print "not yet implemented (Phase 9 / Phase 5)".
-- 2.10: **image size is 32.3 MB uncompressed (9.8 MiB compressed), not ≤ 30 MB.** The OTLP/HTTP trace exporter alone adds ~10 MiB (it links protobuf and gRPC even over HTTP). Awaiting Irwin's decision at the gate (see the PR).
+- 2.10: image size is 32.3 MB uncompressed (9.8 MiB compressed). The OTLP/HTTP trace exporter alone adds ~10 MiB (it links protobuf and gRPC even over HTTP). **Irwin's decision at the gate:** the target is now ≤ 35 MB uncompressed / ≤ 15 MB compressed, enforced by the CI `image` job.
 - 2.10: the Dockerfile also builds from a `backend/vendor/` directory when one is in the build context (gitignored), for builds without network access to the module proxy; CI downloads modules normally.
 - 2.12: images are scanned with Trivy in a separate CI job (`image`); CI also runs on pushes to `phase/**` so a phase can be verified before it is merged.
 - 2.12: `govulncheck` can't run in the cloud session (`vuln.go.dev` is blocked there); it runs in CI. Its first run flagged `moby/go-archive` v0.2.0 (pinned by testcontainers v0.44.0, reached through `testutil`); it was bumped to v0.3.3 and CI is green.
@@ -89,6 +90,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-20 — Phase 2 gate approved (image limits ≤ 35 MB / ≤ 15 MB compressed); merged. Next: plan Phase 3.
 - 2026-10-20 — Phase 2 built on `phase/02-backend-skeleton`: binary + subcommands, config, observability, middleware, problems, OpenAPI v0 + codegen, store + migrations + sqlc, testcontainers harness, image, Compose, CI. `make up` verified locally. Next: Irwin's gate review.
 - 2026-10-20 — Phase 1 gate approved; real fixtures committed, oracle regenerated (62 ingest outputs), branch merged. Next: Phase 2 (backend skeleton).
 - 2026-10-20 — Phase 1 built on `phase/01-legacy-extraction`: parity checklist, 58 synthetic fixtures, anonymiser, legacy oracle (deterministic), allowed diffs, CI. Next: Irwin reviews the anonymised samples and the gate; then Phase 2.
