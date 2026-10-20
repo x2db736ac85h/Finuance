@@ -1,0 +1,11 @@
+Data;Opis;Kwota
+01.01.2025;space thousands;-1 234,56
+02.01.2025;dot thousands;1.234,56
+03.01.2025;comma thousands;1,234.56
+04.01.2025;PLN suffix;12,00 PLN
+05.01.2025;euro prefix;€12
+06.01.2025;nbsp thousands;-2 500,00
+07.01.2025;plus sign;+15,00
+08.01.2025;zł suffix;-7,50 zł
+09.01.2025;integer;-10
+10.01.2025;many dots;1.234.567
