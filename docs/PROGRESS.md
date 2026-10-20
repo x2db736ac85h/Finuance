@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 4 — Schema, store layer, RLS · **Branch:** phase/04-schema-store-rls · **Status:** in progress
+**Current phase:** 4 — Schema, store layer, RLS · **Branch:** phase/04-schema-store-rls · **Status:** gate review
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -19,15 +19,15 @@
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
-- [ ] 4.1 migrations `00002_core.sql` (§5.2 + collation) and `00003_rls.sql` (§5.3, forced), with Down sections
-- [ ] 4.2 `store.Store`: `WithUser`, `WithUserReadOnly`; guard test against pool access outside `store`
-- [ ] 4.3 sqlc queries (users, sessions, preferences, accounts, categories, groups, imports, import_files, import_rows, transactions, budgets, profiles, annotations, overrides, investments)
-- [ ] 4.4 `InsertImportRows` via `unnest`, 5,000 rows per statement; 100k-row benchmark (≤ 3 s)
-- [ ] 4.5 `ledger` repositories returning domain types
-- [ ] 4.6 tests: migrate up/down/up, every query, RLS suite, collation sort
-- [ ] 4.7 `docs/ARCHITECTURE.md` (components, ERD, RLS)
-- [ ] 4.8 groups + annotations (`ledger.Annotate`), commit core (steps 1, 1b, 2) + orphan cleanup; annotate → delete → re-import test
-- [ ] 4.9 overrides + investments schema, `split_scope`/`source_import_id`, RLS tests
+- [x] 4.1 migrations `00002_core.sql` (§5.2 + collation) and `00003_rls.sql` (§5.3, forced), with Down sections
+- [x] 4.2 `store.Store`: `WithUser`, `WithUserReadOnly`; guard test against pool access outside `store`
+- [x] 4.3 sqlc queries (users, sessions, preferences, accounts, categories, groups, imports, import_files, import_rows, transactions, budgets, profiles, annotations, overrides, investments)
+- [x] 4.4 `InsertImportRows` via `unnest`, 5,000 rows per statement; 100k-row benchmark: **8.0–9.7 s in the sandbox, above the 3 s target** (see perf.md)
+- [x] 4.5 `ledger` repositories returning domain types
+- [x] 4.6 tests: migrate up/down/up, every query, RLS suite, collation sort
+- [x] 4.7 `docs/ARCHITECTURE.md` (components, ERD, RLS)
+- [x] 4.8 groups + annotations (`ledger.Annotate`), commit core (steps 1, 1b, 2) + orphan cleanup; annotate → delete → re-import test
+- [x] 4.9 overrides + investments schema, `split_scope`/`source_import_id`, RLS tests
 
 ## Phase 3 tasks (done)
 - [x] 3.1 `ingest/normalize.go`
@@ -86,6 +86,13 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 4.3: queries beyond the plan's list: `groups.sql`, `annotations.sql`, `overrides.sql`, `investments.sql`, `import_rows.sql`. `timestamptz` maps to `time.Time` (sqlc override), not `pgtype.Timestamptz`. Times that matter to logic (session expiry, `updated_at`, `committed_at`) are parameters from `platform.Clock`, not `now()`.
+- 4.3: `make gen-check` compares the working tree with the index (plus untracked files) instead of `git status`, so regenerated code that is staged for the next commit counts as clean. A fresh CI checkout still catches drift.
+- 4.4: `InsertImportRows` is hand-written in `store/importrows.go`, not sqlc: the arrays carry NULL elements (errored rows), which sqlc can't type. It is the only hand-written statement and is tested against the generated model.
+- 4.4: the 100k-row staging insert takes 8.0–9.7 s in the sandbox (target ≤ 3 s on a dev machine). About 75 % is server time. Half of that is parsing the `{"h","v"}` raw JSON, and a third is per-row FK triggers. Even a constraint-free server-side copy takes 2.1 s here. Options (both schema changes) are in `docs/perf.md`; **decision needed at the gate**.
+- 4.5: foreign keys are checked without RLS, so a reference to another user's account, group or category would pass the FK. The ledger checks ownership in the same transaction (`ledger/owned.go`, tested). Composite FKs on `(user_id, id)` would move this into the schema; that is left for an ADR.
+- 4.5/4.8: the ledger also has `CreateImport` (file + staged rows in one transaction), `ImportRowsPage`, `TransactionProvenance` and `EnsureCategories`, which Phase 6 needs and which the 4.8 test uses. `CommitImport` records the stats and marks the import committed.
+- 4.7: `docs/ARCHITECTURE.md` uses Mermaid for the component diagram, the ERD and the request sequence (GitHub renders it).
 - 3.3: an empty file, or one with no candidate delimiter, gets `;`, not the plan's "default ','". That is what the legacy does (every candidate scores 0 and `;` comes first), and the strict port keeps it.
 - 3.7: the plan's amount-role regex reads `finuance`, a search-and-replace slip from the rename; the legacy (and the port) use `kwota`.
 - 3.8: `Stage(ctx, table, mapping, opts) ([]StagedRow, Stats, error)`: the account currency is a field of `StageOptions`, and `ctx` + `error` were added so cancellation works on large files (PLAN §3.10). `Parse` takes `ctx` too.
@@ -120,6 +127,8 @@
 - Anonymisation key: `testdata/private/anon.key` (gitignored, lost with the container). A new key only changes the fake values of future runs.
 - Phase 9: fix auto header detection for mBank and PKO BP in the import preview (`ALLOWED_DIFFS.md` row 4; targets `ingest-cfg/banks/*/header-*.json`). Phase 3 ports the legacy rule as is.
 
+- Phase 6: around `ledger.CommitImport`: the River job, the category upsert before step 1 (`EnsureCategories` exists), dedupe overrides in commit/delete (step 2b, `Rematerialize`), the profile upsert, re-staging on PATCH/reprocess (`DeleteImportRows` + `InsertImportRows`).
+- Phase 6 (or an ADR before it): decide on the staging-insert options in `docs/perf.md` if the 3 s target also fails on a dev machine.
 - Phase 5: ADRs 0010–0012 (password hashing, sessions/CSRF, rate limiting) and the first endpoints with parameters, which exercise the OpenAPI request validator beyond routing.
 - Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
 
@@ -129,6 +138,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-20 — Phase 4 built on `phase/04-schema-store-rls`: core schema + forced RLS, `store.Store` (`WithUser`, `WithUserReadOnly`, `WithoutUser`), the sqlc query set, the `unnest` staging insert, `ledger` repositories, commit core, annotations, RLS suite, `ARCHITECTURE.md`. Staging benchmark above target in the sandbox. Next: Irwin's gate review.
 - 2026-10-20 — Phase 4 planned and approved (FORCE RLS, query-time collation, commit core in `ledger`, investments repo later). Branch `phase/04-schema-store-rls`.
 - 2026-10-20 — Phase 3 gate approved (benchmark accepted); merged. Next: plan Phase 4.
 - 2026-10-20 — Phase 3 built on `phase/03-ingest-engine`: decode, delimiter, tokenizer, shape, value parsers, exact money parsing, column typing and roles, staging, fingerprints, `Parse`. Oracle differential suite + cfg parity pass. 61 golden files, 5 fuzz targets (5 min each, clean), coverage 96.7 %, demo generator port. Benchmark ≈ 563 ms median (target 500 ms, not met in the sandbox). CI green. Next: Irwin's gate review.
