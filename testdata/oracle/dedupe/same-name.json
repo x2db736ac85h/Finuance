@@ -1,0 +1,103 @@
+{
+  "default": {
+    "dupKeep": {},
+    "dupPick": {},
+    "dupes": 1,
+    "groups": [
+      {
+        "both": false,
+        "date": "2025-01-11",
+        "key": "1736553600000|-12.00|kawiarnia beta|kawa",
+        "versions": [
+          {
+            "file": "export.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "11.01.2025",
+              "KAWIARNIA BETA",
+              "Kawa",
+              "-12,00",
+              "Restauracje",
+              "export.csv"
+            ]
+          },
+          {
+            "file": "export.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "11.01.2025",
+              "KAWIARNIA BETA",
+              "Kawa",
+              "-12,00",
+              "Restauracje",
+              "export.csv"
+            ]
+          },
+          {
+            "file": "export.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "11.01.2025",
+              "KAWIARNIA BETA",
+              "Kawa",
+              "-12,00",
+              "Restauracje",
+              "export.csv"
+            ]
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "Data operacji",
+      "Kontrahent",
+      "Tytuł",
+      "Kwota",
+      "Kategoria",
+      "Source file"
+    ],
+    "rowCount": 4,
+    "rows": [
+      [
+        "11.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "export.csv"
+      ],
+      [
+        "11.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "export.csv"
+      ],
+      [
+        "12.01.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-30,00",
+        "Zakupy",
+        "export.csv"
+      ],
+      [
+        "13.01.2025",
+        "APTEKA",
+        "Leki",
+        "-25,99",
+        "Zdrowie",
+        "export.csv"
+      ]
+    ]
+  },
+  "files": [
+    "export.csv",
+    "export.csv"
+  ],
+  "set": "same-name"
+}

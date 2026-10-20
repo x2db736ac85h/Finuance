@@ -1,0 +1,332 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-02-28",
+        "2025-02-14",
+        "2025-02-02",
+        "2025-01-15",
+        "2025-01-05"
+      ],
+      "name": "Data księgowania",
+      "numbers": [
+        28022025,
+        14022025,
+        null,
+        15012025,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        "2025-02-28",
+        "2025-02-14",
+        "2025-02-02",
+        "2025-01-15",
+        "2025-01-05"
+      ],
+      "name": "Data waluty",
+      "numbers": [
+        28022025,
+        14022025,
+        null,
+        15012025,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Nadawca / Odbiorca",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Adres nadawcy / odbiorcy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Rachunek źródłowy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Rachunek docelowy",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Tytułem",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota operacji",
+      "numbers": [
+        -120,
+        -89,
+        -2850,
+        -210.4,
+        -12
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Numer referencyjny",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Typ operacji",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/dup-versions/v1_jan-feb.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data księgowania",
+    "Data waluty",
+    "Nadawca / Odbiorca",
+    "Adres nadawcy / odbiorcy",
+    "Rachunek źródłowy",
+    "Rachunek docelowy",
+    "Tytułem",
+    "Kwota operacji",
+    "Waluta",
+    "Numer referencyjny",
+    "Typ operacji",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota operacji",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data księgowania",
+    "payee": "Nadawca / Odbiorca"
+  },
+  "rowNorm": [
+    "28.02.2025\u000128.02.2025\u0001sklep alfa\u0001\u000100000000000000000000000001\u0001\u0001zakupy luty\u0001-120,00\u0001pln\u0001d000000000000005\u0001transakcja karta platnicza\u0001bez kategorii",
+    "14.02.2025\u000114.02.2025\u0001kwiaciarnia\u0001\u000100000000000000000000000001\u0001\u0001kwiaty\u0001-89,00\u0001pln\u0001d000000000000004\u0001transakcja karta platnicza\u0001bez kategorii",
+    "02.02.2025\u000102.02.2025\u0001wspolnota\u0001\u000100000000000000000000000001\u0001\u0001czynsz 02\u0001-2 850,00\u0001pln\u0001d000000000000003\u0001przelew mobile\u0001mieszkanie",
+    "15.01.2025\u000115.01.2025\u0001sklep alfa\u0001\u000100000000000000000000000001\u0001\u0001zakupy styczen\u0001-210,40\u0001pln\u0001d000000000000002\u0001platnosc blik\u0001zakupy",
+    "05.01.2025\u000105.01.2025\u0001kawiarnia beta\u0001\u000100000000000000000000000001\u0001\u0001kawa\u0001-12,00\u0001pln\u0001d000000000000001\u0001transakcja karta platnicza\u0001restauracje i kawiarnie"
+  ],
+  "rows": [
+    [
+      "28.02.2025",
+      "28.02.2025",
+      "SKLEP ALFA",
+      "",
+      "00000000000000000000000001",
+      "",
+      "Zakupy luty",
+      "-120,00",
+      "PLN",
+      "D000000000000005",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Bez kategorii"
+    ],
+    [
+      "14.02.2025",
+      "14.02.2025",
+      "KWIACIARNIA",
+      "",
+      "00000000000000000000000001",
+      "",
+      "Kwiaty",
+      "-89,00",
+      "PLN",
+      "D000000000000004",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Bez kategorii"
+    ],
+    [
+      "02.02.2025",
+      "02.02.2025",
+      "WSPÓLNOTA",
+      "",
+      "00000000000000000000000001",
+      "",
+      "Czynsz 02",
+      "-2 850,00",
+      "PLN",
+      "D000000000000003",
+      "PRZELEW MOBILE",
+      "Mieszkanie"
+    ],
+    [
+      "15.01.2025",
+      "15.01.2025",
+      "SKLEP ALFA",
+      "",
+      "00000000000000000000000001",
+      "",
+      "Zakupy styczeń",
+      "-210,40",
+      "PLN",
+      "D000000000000002",
+      "PŁATNOŚĆ BLIK",
+      "Zakupy"
+    ],
+    [
+      "05.01.2025",
+      "05.01.2025",
+      "KAWIARNIA BETA",
+      "",
+      "00000000000000000000000001",
+      "",
+      "Kawa",
+      "-12,00",
+      "PLN",
+      "D000000000000001",
+      "TRANSAKCJA KARTĄ PŁATNICZĄ",
+      "Restauracje i kawiarnie"
+    ]
+  ]
+}

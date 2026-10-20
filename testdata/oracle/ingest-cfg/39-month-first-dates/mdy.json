@@ -1,0 +1,91 @@
+{
+  "cfg": {
+    "dateOrder": "mdy"
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-10-31",
+        "2025-03-04",
+        "2025-12-25"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -25,
+        -10,
+        -99.99
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/39-month-first-dates.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "2025-10-31\u0001halloween shop\u0001-25.00",
+    "2025-03-04\u0001ambiguous\u0001-10.00",
+    "2025-12-25\u0001gift\u0001-99.99"
+  ],
+  "rows": [
+    [
+      "2025-10-31",
+      "Halloween shop",
+      "-25.00"
+    ],
+    [
+      "2025-03-04",
+      "Ambiguous",
+      "-10.00"
+    ],
+    [
+      "2025-12-25",
+      "Gift",
+      "-99.99"
+    ]
+  ],
+  "variant": "mdy"
+}

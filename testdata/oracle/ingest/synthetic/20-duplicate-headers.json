@@ -1,0 +1,110 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis (2)",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota (2)",
+      "numbers": [
+        -1,
+        -2
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/20-duplicate-headers.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Opis (2)",
+    "Kwota (2)"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001a\u0001-10,00\u0001a\u0001-1,00",
+    "03.01.2025\u0001b\u0001-20,00\u0001b\u0001-2,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "A",
+      "-10,00",
+      "a",
+      "-1,00"
+    ],
+    [
+      "03.01.2025",
+      "B",
+      "-20,00",
+      "b",
+      "-2,00"
+    ]
+  ]
+}

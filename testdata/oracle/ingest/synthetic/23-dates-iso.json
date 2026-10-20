@@ -1,0 +1,92 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-31",
+        "2024-02-29"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -10,
+        -20,
+        -30
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/23-dates-iso.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "2025-01-02\u0001a\u0001-10,00",
+    "2025-01-31\u0001b\u0001-20,00",
+    "2024-02-29\u0001leap\u0001-30,00"
+  ],
+  "rows": [
+    [
+      "2025-01-02",
+      "A",
+      "-10,00"
+    ],
+    [
+      "2025-01-31",
+      "B",
+      "-20,00"
+    ],
+    [
+      "2024-02-29",
+      "Leap",
+      "-30,00"
+    ]
+  ]
+}

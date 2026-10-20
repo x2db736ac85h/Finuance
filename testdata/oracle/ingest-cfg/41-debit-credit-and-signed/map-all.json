@@ -1,0 +1,115 @@
+{
+  "cfg": {
+    "map": {
+      "0": "date",
+      "1": "desc",
+      "2": "amount",
+      "3": "debit",
+      "4": "credit"
+    }
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-10"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        10012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -45.2,
+        8500
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Debit",
+      "numbers": [
+        45.2,
+        null
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Credit",
+      "numbers": [
+        null,
+        8500
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/41-debit-credit-and-signed.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount",
+    "Debit",
+    "Credit"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep\u0001-45,20\u000145,20\u0001",
+    "10.01.2025\u0001wynagrodzenie\u00018 500,00\u0001\u00018 500,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep",
+      "-45,20",
+      "45,20",
+      ""
+    ],
+    [
+      "10.01.2025",
+      "Wynagrodzenie",
+      "8 500,00",
+      "",
+      "8 500,00"
+    ]
+  ],
+  "variant": "map-all"
+}

@@ -1,0 +1,1031 @@
+{
+  "default": {
+    "dupKeep": {},
+    "dupPick": {},
+    "dupes": 4,
+    "groups": [
+      {
+        "both": false,
+        "date": "2025-01-15",
+        "key": "r|d000000000000002|-210.40",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "15.01.2025",
+              "15.01.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy styczeń",
+              "-210,40",
+              "PLN",
+              "D000000000000002",
+              "PŁATNOŚĆ BLIK",
+              "Zakupy",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "15.01.2025",
+              "15.01.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy styczeń",
+              "-210,40",
+              "PLN",
+              "D000000000000002",
+              "PŁATNOŚĆ BLIK",
+              "Zakupy przez internet",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-02-02",
+        "key": "r|d000000000000003|-2850.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "02.02.2025",
+              "02.02.2025",
+              "WSPÓLNOTA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Czynsz 02",
+              "-2 850,00",
+              "PLN",
+              "D000000000000003",
+              "PRZELEW MOBILE",
+              "Mieszkanie",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "02.02.2025",
+              "02.02.2025",
+              "WSPÓLNOTA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Czynsz 02",
+              "-2 850,00",
+              "PLN",
+              "D000000000000003",
+              "PRZELEW",
+              "Mieszkanie",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-02-14",
+        "key": "r|d000000000000004|-89.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "14.02.2025",
+              "14.02.2025",
+              "KWIACIARNIA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Kwiaty",
+              "-89,00",
+              "PLN",
+              "D000000000000004",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Bez kategorii",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "14.02.2025",
+              "14.02.2025",
+              "KWIACIARNIA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Kwiaty",
+              "-89,00",
+              "PLN",
+              "D000000000000004",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Prezenty",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-02-28",
+        "key": "r|d000000000000005|-120.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "28.02.2025",
+              "28.02.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy luty",
+              "-120,00",
+              "PLN",
+              "D000000000000005",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Bez kategorii",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "28.02.2025",
+              "28.02.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy luty",
+              "-120,00",
+              "PLN",
+              "D000000000000005",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Artykuły spożywcze",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "Data księgowania",
+      "Data waluty",
+      "Nadawca / Odbiorca",
+      "Adres nadawcy / odbiorcy",
+      "Rachunek źródłowy",
+      "Rachunek docelowy",
+      "Tytułem",
+      "Kwota operacji",
+      "Waluta",
+      "Numer referencyjny",
+      "Typ operacji",
+      "Kategoria",
+      "Source file"
+    ],
+    "rowCount": 7,
+    "rows": [
+      [
+        "02.02.2025",
+        "02.02.2025",
+        "WSPÓLNOTA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Czynsz 02",
+        "-2 850,00",
+        "PLN",
+        "D000000000000003",
+        "PRZELEW MOBILE",
+        "Mieszkanie",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "05.01.2025",
+        "05.01.2025",
+        "KAWIARNIA BETA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kawa",
+        "-12,00",
+        "PLN",
+        "",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Restauracje i kawiarnie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "05.01.2025",
+        "05.01.2025",
+        "KAWIARNIA BETA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kawa",
+        "-12,00",
+        "PLN",
+        "D000000000000001",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Restauracje i kawiarnie",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "10.03.2025",
+        "10.03.2025",
+        "PRACODAWCA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Wynagrodzenie 03",
+        "8 500,00",
+        "PLN",
+        "D000000000000006",
+        "PRZELEW PRZYCHODZĄCY",
+        "Wynagrodzenie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "14.02.2025",
+        "14.02.2025",
+        "KWIACIARNIA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kwiaty",
+        "-89,00",
+        "PLN",
+        "D000000000000004",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Bez kategorii",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "15.01.2025",
+        "15.01.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy styczeń",
+        "-210,40",
+        "PLN",
+        "D000000000000002",
+        "PŁATNOŚĆ BLIK",
+        "Zakupy",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "28.02.2025",
+        "28.02.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy luty",
+        "-120,00",
+        "PLN",
+        "D000000000000005",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Bez kategorii",
+        "v1_jan-feb.csv"
+      ]
+    ]
+  },
+  "files": [
+    "v1_jan-feb.csv",
+    "v2_jan-mar.csv"
+  ],
+  "keepBoth": {
+    "dupKeep": {
+      "r|d000000000000002|-210.40": 1,
+      "r|d000000000000003|-2850.00": 1,
+      "r|d000000000000004|-89.00": 1,
+      "r|d000000000000005|-120.00": 1
+    },
+    "dupPick": {},
+    "dupes": 0,
+    "groups": [
+      {
+        "both": true,
+        "date": "2025-01-15",
+        "key": "r|d000000000000002|-210.40",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "15.01.2025",
+              "15.01.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy styczeń",
+              "-210,40",
+              "PLN",
+              "D000000000000002",
+              "PŁATNOŚĆ BLIK",
+              "Zakupy",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "15.01.2025",
+              "15.01.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy styczeń",
+              "-210,40",
+              "PLN",
+              "D000000000000002",
+              "PŁATNOŚĆ BLIK",
+              "Zakupy przez internet",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": true,
+        "date": "2025-02-02",
+        "key": "r|d000000000000003|-2850.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "02.02.2025",
+              "02.02.2025",
+              "WSPÓLNOTA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Czynsz 02",
+              "-2 850,00",
+              "PLN",
+              "D000000000000003",
+              "PRZELEW MOBILE",
+              "Mieszkanie",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "02.02.2025",
+              "02.02.2025",
+              "WSPÓLNOTA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Czynsz 02",
+              "-2 850,00",
+              "PLN",
+              "D000000000000003",
+              "PRZELEW",
+              "Mieszkanie",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": true,
+        "date": "2025-02-14",
+        "key": "r|d000000000000004|-89.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "14.02.2025",
+              "14.02.2025",
+              "KWIACIARNIA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Kwiaty",
+              "-89,00",
+              "PLN",
+              "D000000000000004",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Bez kategorii",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "14.02.2025",
+              "14.02.2025",
+              "KWIACIARNIA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Kwiaty",
+              "-89,00",
+              "PLN",
+              "D000000000000004",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Prezenty",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": true,
+        "date": "2025-02-28",
+        "key": "r|d000000000000005|-120.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "28.02.2025",
+              "28.02.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy luty",
+              "-120,00",
+              "PLN",
+              "D000000000000005",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Bez kategorii",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "28.02.2025",
+              "28.02.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy luty",
+              "-120,00",
+              "PLN",
+              "D000000000000005",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Artykuły spożywcze",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "Data księgowania",
+      "Data waluty",
+      "Nadawca / Odbiorca",
+      "Adres nadawcy / odbiorcy",
+      "Rachunek źródłowy",
+      "Rachunek docelowy",
+      "Tytułem",
+      "Kwota operacji",
+      "Waluta",
+      "Numer referencyjny",
+      "Typ operacji",
+      "Kategoria",
+      "Source file"
+    ],
+    "rowCount": 11,
+    "rows": [
+      [
+        "02.02.2025",
+        "02.02.2025",
+        "WSPÓLNOTA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Czynsz 02",
+        "-2 850,00",
+        "PLN",
+        "D000000000000003",
+        "PRZELEW MOBILE",
+        "Mieszkanie",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "02.02.2025",
+        "02.02.2025",
+        "WSPÓLNOTA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Czynsz 02",
+        "-2 850,00",
+        "PLN",
+        "D000000000000003",
+        "PRZELEW",
+        "Mieszkanie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "05.01.2025",
+        "05.01.2025",
+        "KAWIARNIA BETA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kawa",
+        "-12,00",
+        "PLN",
+        "",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Restauracje i kawiarnie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "05.01.2025",
+        "05.01.2025",
+        "KAWIARNIA BETA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kawa",
+        "-12,00",
+        "PLN",
+        "D000000000000001",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Restauracje i kawiarnie",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "10.03.2025",
+        "10.03.2025",
+        "PRACODAWCA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Wynagrodzenie 03",
+        "8 500,00",
+        "PLN",
+        "D000000000000006",
+        "PRZELEW PRZYCHODZĄCY",
+        "Wynagrodzenie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "14.02.2025",
+        "14.02.2025",
+        "KWIACIARNIA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kwiaty",
+        "-89,00",
+        "PLN",
+        "D000000000000004",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Bez kategorii",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "14.02.2025",
+        "14.02.2025",
+        "KWIACIARNIA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kwiaty",
+        "-89,00",
+        "PLN",
+        "D000000000000004",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Prezenty",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "15.01.2025",
+        "15.01.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy styczeń",
+        "-210,40",
+        "PLN",
+        "D000000000000002",
+        "PŁATNOŚĆ BLIK",
+        "Zakupy przez internet",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "15.01.2025",
+        "15.01.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy styczeń",
+        "-210,40",
+        "PLN",
+        "D000000000000002",
+        "PŁATNOŚĆ BLIK",
+        "Zakupy",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "28.02.2025",
+        "28.02.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy luty",
+        "-120,00",
+        "PLN",
+        "D000000000000005",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Artykuły spożywcze",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "28.02.2025",
+        "28.02.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy luty",
+        "-120,00",
+        "PLN",
+        "D000000000000005",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Bez kategorii",
+        "v1_jan-feb.csv"
+      ]
+    ]
+  },
+  "preferLastFile": {
+    "dupKeep": {},
+    "dupPick": {
+      "r|d000000000000002|-210.40": "f2",
+      "r|d000000000000003|-2850.00": "f2",
+      "r|d000000000000004|-89.00": "f2",
+      "r|d000000000000005|-120.00": "f2"
+    },
+    "dupes": 4,
+    "groups": [
+      {
+        "both": false,
+        "date": "2025-01-15",
+        "key": "r|d000000000000002|-210.40",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "15.01.2025",
+              "15.01.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy styczeń",
+              "-210,40",
+              "PLN",
+              "D000000000000002",
+              "PŁATNOŚĆ BLIK",
+              "Zakupy",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "15.01.2025",
+              "15.01.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy styczeń",
+              "-210,40",
+              "PLN",
+              "D000000000000002",
+              "PŁATNOŚĆ BLIK",
+              "Zakupy przez internet",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-02-02",
+        "key": "r|d000000000000003|-2850.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "02.02.2025",
+              "02.02.2025",
+              "WSPÓLNOTA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Czynsz 02",
+              "-2 850,00",
+              "PLN",
+              "D000000000000003",
+              "PRZELEW MOBILE",
+              "Mieszkanie",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "02.02.2025",
+              "02.02.2025",
+              "WSPÓLNOTA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Czynsz 02",
+              "-2 850,00",
+              "PLN",
+              "D000000000000003",
+              "PRZELEW",
+              "Mieszkanie",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-02-14",
+        "key": "r|d000000000000004|-89.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "14.02.2025",
+              "14.02.2025",
+              "KWIACIARNIA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Kwiaty",
+              "-89,00",
+              "PLN",
+              "D000000000000004",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Bez kategorii",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "14.02.2025",
+              "14.02.2025",
+              "KWIACIARNIA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Kwiaty",
+              "-89,00",
+              "PLN",
+              "D000000000000004",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Prezenty",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-02-28",
+        "key": "r|d000000000000005|-120.00",
+        "versions": [
+          {
+            "file": "v1_jan-feb.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "28.02.2025",
+              "28.02.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy luty",
+              "-120,00",
+              "PLN",
+              "D000000000000005",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Bez kategorii",
+              "v1_jan-feb.csv"
+            ]
+          },
+          {
+            "file": "v2_jan-mar.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "28.02.2025",
+              "28.02.2025",
+              "SKLEP ALFA",
+              "",
+              "00000000000000000000000001",
+              "",
+              "Zakupy luty",
+              "-120,00",
+              "PLN",
+              "D000000000000005",
+              "TRANSAKCJA KARTĄ PŁATNICZĄ",
+              "Artykuły spożywcze",
+              "v2_jan-mar.csv"
+            ]
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "Data księgowania",
+      "Data waluty",
+      "Nadawca / Odbiorca",
+      "Adres nadawcy / odbiorcy",
+      "Rachunek źródłowy",
+      "Rachunek docelowy",
+      "Tytułem",
+      "Kwota operacji",
+      "Waluta",
+      "Numer referencyjny",
+      "Typ operacji",
+      "Kategoria",
+      "Source file"
+    ],
+    "rowCount": 7,
+    "rows": [
+      [
+        "02.02.2025",
+        "02.02.2025",
+        "WSPÓLNOTA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Czynsz 02",
+        "-2 850,00",
+        "PLN",
+        "D000000000000003",
+        "PRZELEW",
+        "Mieszkanie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "05.01.2025",
+        "05.01.2025",
+        "KAWIARNIA BETA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kawa",
+        "-12,00",
+        "PLN",
+        "",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Restauracje i kawiarnie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "05.01.2025",
+        "05.01.2025",
+        "KAWIARNIA BETA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kawa",
+        "-12,00",
+        "PLN",
+        "D000000000000001",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Restauracje i kawiarnie",
+        "v1_jan-feb.csv"
+      ],
+      [
+        "10.03.2025",
+        "10.03.2025",
+        "PRACODAWCA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Wynagrodzenie 03",
+        "8 500,00",
+        "PLN",
+        "D000000000000006",
+        "PRZELEW PRZYCHODZĄCY",
+        "Wynagrodzenie",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "14.02.2025",
+        "14.02.2025",
+        "KWIACIARNIA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Kwiaty",
+        "-89,00",
+        "PLN",
+        "D000000000000004",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Prezenty",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "15.01.2025",
+        "15.01.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy styczeń",
+        "-210,40",
+        "PLN",
+        "D000000000000002",
+        "PŁATNOŚĆ BLIK",
+        "Zakupy przez internet",
+        "v2_jan-mar.csv"
+      ],
+      [
+        "28.02.2025",
+        "28.02.2025",
+        "SKLEP ALFA",
+        "",
+        "00000000000000000000000001",
+        "",
+        "Zakupy luty",
+        "-120,00",
+        "PLN",
+        "D000000000000005",
+        "TRANSAKCJA KARTĄ PŁATNICZĄ",
+        "Artykuły spożywcze",
+        "v2_jan-mar.csv"
+      ]
+    ]
+  },
+  "set": "dup-versions"
+}

@@ -1,0 +1,125 @@
+{
+  "columns": [
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Category",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -15,
+        -12
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Currency",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        "2025-01-04",
+        "2025-01-03"
+      ],
+      "name": "Booking date",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Payee",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Title",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ",",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/43-bank-b-layout.csv",
+  "headerAt": 1,
+  "headers": [
+    "Category",
+    "Amount",
+    "Currency",
+    "Booking date",
+    "Payee",
+    "Title"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "Category",
+    "currency": "PLN",
+    "date": "Booking date",
+    "payee": "Payee"
+  },
+  "rowNorm": [
+    "zakupy\u0001-15.00\u0001pln\u00012025-01-04\u0001sklep gamma\u0001zakupy",
+    "restauracje\u0001-12.00\u0001pln\u00012025-01-03\u0001kawiarnia beta\u0001kawa"
+  ],
+  "rows": [
+    [
+      "Zakupy",
+      "-15.00",
+      "PLN",
+      "2025-01-04",
+      "SKLEP GAMMA",
+      "Zakupy"
+    ],
+    [
+      "Restauracje",
+      "-12.00",
+      "PLN",
+      "2025-01-03",
+      "KAWIARNIA BETA",
+      "Kawa"
+    ]
+  ]
+}

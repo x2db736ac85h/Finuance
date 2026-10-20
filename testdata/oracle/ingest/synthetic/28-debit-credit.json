@@ -1,0 +1,110 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-10",
+        "2025-01-11"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        10012025,
+        11012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Obciążenia",
+      "numbers": [
+        45.2,
+        null,
+        14
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Uznania",
+      "numbers": [
+        null,
+        8500,
+        null
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/28-debit-credit.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Obciążenia",
+    "Uznania"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Obciążenia",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep\u000145,20\u0001",
+    "10.01.2025\u0001wynagrodzenie\u0001\u00018 500,00",
+    "11.01.2025\u0001kawiarnia\u000114,00\u0001"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep",
+      "45,20",
+      ""
+    ],
+    [
+      "10.01.2025",
+      "Wynagrodzenie",
+      "",
+      "8 500,00"
+    ],
+    [
+      "11.01.2025",
+      "Kawiarnia",
+      "14,00",
+      ""
+    ]
+  ]
+}

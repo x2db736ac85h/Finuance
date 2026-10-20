@@ -1,0 +1,68 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02"
+      ],
+      "name": "Data",
+      "numbers": [
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/34-unterminated-quote.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001otwarty cudzyslow;-10,00\n03.01.2025;b;-20,00\u0001"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Otwarty cudzysłów;-10,00\n03.01.2025;B;-20,00",
+      ""
+    ]
+  ]
+}

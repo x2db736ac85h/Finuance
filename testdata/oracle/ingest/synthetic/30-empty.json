@@ -1,0 +1,15 @@
+{
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": "Empty file",
+  "fixture": "synthetic/30-empty.csv",
+  "headerAt": 0,
+  "headers": [],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "rows": []
+}

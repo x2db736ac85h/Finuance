@@ -1,0 +1,128 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-11",
+        "2025-01-11",
+        "2025-01-13"
+      ],
+      "name": "Data operacji",
+      "numbers": [
+        11012025,
+        11012025,
+        13012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kontrahent",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Tytuł",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -12,
+        -12,
+        -25.99
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/same-name/b/export.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data operacji",
+    "Kontrahent",
+    "Tytuł",
+    "Kwota",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "",
+    "date": "Data operacji",
+    "payee": "Kontrahent"
+  },
+  "rowNorm": [
+    "11.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+    "11.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+    "13.01.2025\u0001apteka\u0001leki\u0001-25,99\u0001zdrowie"
+  ],
+  "rows": [
+    [
+      "11.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "Restauracje"
+    ],
+    [
+      "11.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "Restauracje"
+    ],
+    [
+      "13.01.2025",
+      "APTEKA",
+      "Leki",
+      "-25,99",
+      "Zdrowie"
+    ]
+  ]
+}

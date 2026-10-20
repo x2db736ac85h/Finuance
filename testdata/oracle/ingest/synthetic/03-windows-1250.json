@@ -1,0 +1,128 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-03",
+        "2025-01-04",
+        "2025-01-05"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -12.34,
+        -56.78,
+        -10
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "Windows-1250",
+  "error": null,
+  "fixture": "synthetic/03-windows-1250.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "03.01.2025\u0001zazolc gesla jazn\u0001-12,34\u0001pln\u0001zakupy",
+    "04.01.2025\u0001zazolc gesla jazn\u0001-56,78\u0001pln\u0001zakupy",
+    "05.01.2025\u0001oplata „miesieczna” – karta\u0001-10,00\u0001pln\u0001oplaty i odsetki"
+  ],
+  "rows": [
+    [
+      "03.01.2025",
+      "ZAŻÓŁĆ GĘŚLĄ JAŹŃ",
+      "-12,34",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "04.01.2025",
+      "zażółć gęślą jaźń",
+      "-56,78",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "05.01.2025",
+      "Opłata „miesięczna” – karta",
+      "-10,00",
+      "PLN",
+      "Opłaty i odsetki"
+    ]
+  ]
+}

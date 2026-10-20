@@ -1,0 +1,113 @@
+{
+  "cfg": {
+    "map": {
+      "0": "date",
+      "1": "desc",
+      "2": "amount"
+    }
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Opis (2)",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota (2)",
+      "numbers": [
+        -1,
+        -2
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/20-duplicate-headers.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount",
+    "Opis (2)",
+    "Kwota (2)"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001a\u0001-10,00\u0001a\u0001-1,00",
+    "03.01.2025\u0001b\u0001-20,00\u0001b\u0001-2,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "A",
+      "-10,00",
+      "a",
+      "-1,00"
+    ],
+    [
+      "03.01.2025",
+      "B",
+      "-20,00",
+      "b",
+      "-2,00"
+    ]
+  ],
+  "variant": "map-onto-existing-name"
+}

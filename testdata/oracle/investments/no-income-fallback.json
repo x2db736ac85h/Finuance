@@ -1,0 +1,282 @@
+{
+  "dataset": "demo-dividends",
+  "inv": {
+    "positions": [
+      {
+        "id": "p1",
+        "income": 0,
+        "invested": 15000,
+        "name": "Akcje dywidendowe",
+        "type": "Stocks",
+        "value": 16200
+      },
+      {
+        "id": "p2",
+        "income": "",
+        "invested": 10000,
+        "name": "Lokata",
+        "type": "Deposit",
+        "value": 10000
+      }
+    ],
+    "ppk": {
+      "employee": 3000,
+      "employer": 2250,
+      "state": 250,
+      "value": 6100
+    },
+    "ret": 4,
+    "swr": 3.5
+  },
+  "months": [
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "76,046.07 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "3.5%"
+            ],
+            [
+              "FI number",
+              "2,172,744.86 PLN"
+            ],
+            [
+              "Invested assets",
+              "32,300.00 PLN"
+            ],
+            [
+              "Progress",
+              "1.5%"
+            ],
+            [
+              "Yearly savings",
+              "37,798.48 PLN"
+            ],
+            [
+              "Years to FI",
+              "30"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "5,500.00 PLN",
+              "6,100.00 PLN",
+              "0.00 PLN",
+              "600.00 PLN",
+              "+10.9%"
+            ],
+            [
+              "Akcje dywidendowe",
+              "15,000.00 PLN",
+              "16,200.00 PLN",
+              "0.00 PLN",
+              "1,200.00 PLN",
+              "+8.0%"
+            ],
+            [
+              "Lokata",
+              "10,000.00 PLN",
+              "10,000.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "+0.0%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "Akcje dywidendowe",
+              "15,000.00 PLN",
+              "0.00 PLN",
+              "0.00%"
+            ],
+            [
+              "Lokata",
+              "10,000.00 PLN",
+              "0.00 PLN",
+              "0.00%"
+            ],
+            [
+              "Total",
+              "25,000.00 PLN",
+              "977.55 PLN",
+              "3.91%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-03-01",
+      "partial": true
+    },
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "78,655.27 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "3.5%"
+            ],
+            [
+              "FI number",
+              "2,247,293.43 PLN"
+            ],
+            [
+              "Invested assets",
+              "32,300.00 PLN"
+            ],
+            [
+              "Progress",
+              "1.4%"
+            ],
+            [
+              "Yearly savings",
+              "35,204.28 PLN"
+            ],
+            [
+              "Years to FI",
+              "32"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "5,500.00 PLN",
+              "6,100.00 PLN",
+              "0.00 PLN",
+              "600.00 PLN",
+              "+10.9%"
+            ],
+            [
+              "Akcje dywidendowe",
+              "15,000.00 PLN",
+              "16,200.00 PLN",
+              "0.00 PLN",
+              "1,200.00 PLN",
+              "+8.0%"
+            ],
+            [
+              "Lokata",
+              "10,000.00 PLN",
+              "10,000.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "+0.0%"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "Akcje dywidendowe",
+              "15,000.00 PLN",
+              "0.00 PLN",
+              "0.00%"
+            ],
+            [
+              "Lokata",
+              "10,000.00 PLN",
+              "0.00 PLN",
+              "0.00%"
+            ],
+            [
+              "Total",
+              "25,000.00 PLN",
+              "977.55 PLN",
+              "3.91%"
+            ]
+          ]
+        }
+      },
+      "month": "2025-02-01",
+      "partial": false
+    }
+  ],
+  "portfolio": "no-income-fallback"
+}

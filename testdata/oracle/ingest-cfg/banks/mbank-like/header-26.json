@@ -1,0 +1,271 @@
+{
+  "cfg": {
+    "header": 26
+  },
+  "columns": [
+    {
+      "dates": [
+        "2026-04-08",
+        "2026-04-08",
+        "2026-04-08",
+        "2026-04-07",
+        "2026-04-07",
+        "2026-04-03",
+        "2026-04-02",
+        "2026-04-01",
+        "2026-03-20",
+        "2026-03-16",
+        "2026-03-15"
+      ],
+      "name": "#Data operacji",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "#Opis operacji",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "#Rachunek",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "#Kategoria",
+      "numbers": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "#Kwota",
+      "numbers": [
+        -800,
+        -31.43,
+        284.3,
+        -82.22,
+        -82.22,
+        -26.44,
+        -200,
+        300,
+        -10,
+        -843.43,
+        -1190
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/banks/mbank-like.csv",
+  "headerAt": 26,
+  "headers": [
+    "#Data operacji",
+    "#Opis operacji",
+    "#Rachunek",
+    "#Kategoria",
+    "#Kwota"
+  ],
+  "roles": {
+    "amount": "#Kwota",
+    "balance": "",
+    "category": "#Kategoria",
+    "currency": "",
+    "date": "#Data operacji",
+    "payee": "#Opis operacji"
+  },
+  "rowNorm": [
+    "2026-04-08\u0001blik wyplata atm wlasny  bankomat alfa                                                                                                                                    blik wyplata atm wlasny\u0001konto 0000 ... 0003\u0001wyplata gotowki\u0001-800,00 pln",
+    "2026-04-08\u0001serwis przykladowy  zakup przy uzyciu karty - mo/to                                                           transakcja nierozliczona\u0001konto 0000 ... 0003\u0001bez kategorii\u0001-31,43 pln",
+    "2026-04-08\u0001platnik zagraniczny 1 example street, singapore sg, 0000000000001 /rfb/0000000000001  singapore sg                                                                                            przelew zewnetrzny przychodzacy                                                   00000000000000000000001001\u0001konto 0000 ... 0003\u0001wplywy - inne\u0001284,30 pln",
+    "2026-04-07\u0001urzad przykladowy 000001  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001konto 0000 ... 0003\u0001platnosci - inne\u0001-82,22 pln",
+    "2026-04-07\u0001urzad przykladowy 000001  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001konto 0000 ... 0003\u0001platnosci - inne\u0001-82,22 pln",
+    "2026-04-03\u0001firma x  zakup przy uzyciu karty - internet\u0001konto 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-26,44 pln",
+    "2026-04-02\u0001fundacja przykladowa, darowizna na cele statutowe                                                                     przelew wewnetrzny wychodzacy                                                     00000000000000000000001002\u0001konto 0000 ... 0003\u0001bez kategorii\u0001-200,00 pln",
+    "2026-04-01\u0001kontrahent  ul.testowa 3                      00-123 miasto                                                             przelew wewnetrzny przychodzacy                                                   00000000000000000000001000\u0001konto 0000 ... 0003\u0001wplywy - inne\u0001300,00 pln",
+    "2026-03-20\u0001oplata za karte\u0001konto 0000 ... 0003\u0001oplaty i odsetki\u0001-10,00 pln",
+    "2026-03-16\u0001ubezpieczyciel.pl                                                                blik zakup e-commerce\u0001konto 0000 ... 0003\u0001ubezpieczenie domu\u0001-843,43 pln",
+    "2026-03-15\u0001firma r                                                                          blik zakup e-commerce\u0001konto 0000 ... 0003\u0001zajecia dodatkowe\u0001-1 190,00 pln"
+  ],
+  "rows": [
+    [
+      "2026-04-08",
+      "BLIK WYPŁATA ATM WŁASNY  BANKOMAT ALFA                                                                                                                                    BLIK WYPŁATA ATM WŁASNY",
+      "Konto 0000 ... 0003",
+      "Wypłata gotówki",
+      "-800,00 PLN"
+    ],
+    [
+      "2026-04-08",
+      "SERWIS PRZYKŁADOWY  ZAKUP PRZY UŻYCIU KARTY - MO/TO                                                           transakcja nierozliczona",
+      "Konto 0000 ... 0003",
+      "Bez kategorii",
+      "-31,43 PLN"
+    ],
+    [
+      "2026-04-08",
+      "PŁATNIK ZAGRANICZNY 1 EXAMPLE STREET, SINGAPORE SG, 0000000000001 /RFB/0000000000001  SINGAPORE SG                                                                                            PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001001",
+      "Konto 0000 ... 0003",
+      "Wpływy - inne",
+      "284,30 PLN"
+    ],
+    [
+      "2026-04-07",
+      "URZĄD PRZYKŁADOWY 000001  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona",
+      "Konto 0000 ... 0003",
+      "Płatności - inne",
+      "-82,22 PLN"
+    ],
+    [
+      "2026-04-07",
+      "URZĄD PRZYKŁADOWY 000001  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona",
+      "Konto 0000 ... 0003",
+      "Płatności - inne",
+      "-82,22 PLN"
+    ],
+    [
+      "2026-04-03",
+      "FIRMA X  ZAKUP PRZY UŻYCIU KARTY - INTERNET",
+      "Konto 0000 ... 0003",
+      "Multimedia, książki i prasa",
+      "-26,44 PLN"
+    ],
+    [
+      "2026-04-02",
+      "FUNDACJA PRZYKŁADOWA, DAROWIZNA NA CELE STATUTOWE                                                                     PRZELEW WEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001002",
+      "Konto 0000 ... 0003",
+      "Bez kategorii",
+      "-200,00 PLN"
+    ],
+    [
+      "2026-04-01",
+      "KONTRAHENT  UL.TESTOWA 3                      00-123 MIASTO                                                             PRZELEW WEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001000",
+      "Konto 0000 ... 0003",
+      "Wpływy - inne",
+      "300,00 PLN"
+    ],
+    [
+      "2026-03-20",
+      "OPŁATA ZA KARTĘ",
+      "Konto 0000 ... 0003",
+      "Opłaty i odsetki",
+      "-10,00 PLN"
+    ],
+    [
+      "2026-03-16",
+      "UBEZPIECZYCIEL.PL                                                                BLIK ZAKUP E-COMMERCE",
+      "Konto 0000 ... 0003",
+      "Ubezpieczenie domu",
+      "-843,43 PLN"
+    ],
+    [
+      "2026-03-15",
+      "FIRMA R                                                                          BLIK ZAKUP E-COMMERCE",
+      "Konto 0000 ... 0003",
+      "Zajęcia dodatkowe",
+      "-1 190,00 PLN"
+    ]
+  ],
+  "variant": "header-26"
+}

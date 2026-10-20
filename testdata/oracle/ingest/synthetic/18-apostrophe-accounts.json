@@ -1,0 +1,95 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Rachunek",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Referencja",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/18-apostrophe-accounts.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Rachunek",
+    "Referencja",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": ""
+  },
+  "rowNorm": [
+    "02.01.2025\u000100000000000000000000000001\u0001c000000000000001\u0001-10,00",
+    "03.01.2025\u000100000000000000000000000002\u0001c000000000000002\u0001-20,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "00000000000000000000000001",
+      "C000000000000001",
+      "-10,00"
+    ],
+    [
+      "03.01.2025",
+      "00000000000000000000000002",
+      "C000000000000002",
+      "-20,00"
+    ]
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-03",
+        "2025-01-04",
+        "2025-01-10"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        10012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -45.2,
+        -14,
+        8500
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/01-utf8-bom.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "03.01.2025\u0001sklep spozywczy zolw\u0001-45,20\u0001pln\u0001artykuly spozywcze",
+    "04.01.2025\u0001kawiarnia laka\u0001-14,00\u0001pln\u0001restauracje i kawiarnie",
+    "10.01.2025\u0001wynagrodzenie styczen\u00018 500,00\u0001pln\u0001wynagrodzenie"
+  ],
+  "rows": [
+    [
+      "03.01.2025",
+      "Sklep spożywczy Żółw",
+      "-45,20",
+      "PLN",
+      "Artykuły spożywcze"
+    ],
+    [
+      "04.01.2025",
+      "Kawiarnia Łąka",
+      "-14,00",
+      "PLN",
+      "Restauracje i kawiarnie"
+    ],
+    [
+      "10.01.2025",
+      "Wynagrodzenie styczeń",
+      "8 500,00",
+      "PLN",
+      "Wynagrodzenie"
+    ]
+  ]
+}

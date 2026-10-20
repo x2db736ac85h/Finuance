@@ -1,0 +1,209 @@
+{
+  "dataset": "demo",
+  "inv": {
+    "positions": [],
+    "ppk": {
+      "employee": 0,
+      "employer": 0,
+      "state": 0,
+      "value": 0
+    },
+    "ret": 5,
+    "swr": 4
+  },
+  "months": [
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "76,046.07 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,901,151.75 PLN"
+            ],
+            [
+              "Invested assets",
+              "0.00 PLN"
+            ],
+            [
+              "Progress",
+              "0.0%"
+            ],
+            [
+              "Yearly savings",
+              "36,820.93 PLN"
+            ],
+            [
+              "Years to FI",
+              "27"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "–"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "Total",
+              "0.00 PLN",
+              "0.00 PLN",
+              "–"
+            ]
+          ]
+        }
+      },
+      "month": "2025-03-01",
+      "partial": true
+    },
+    {
+      "cards": {
+        "o_fire": {
+          "cols": [
+            "Item",
+            "Value"
+          ],
+          "num": [
+            0,
+            1
+          ],
+          "rows": [
+            [
+              "Annual expenses",
+              "78,655.27 PLN"
+            ],
+            [
+              "Safe withdrawal rate",
+              "4.0%"
+            ],
+            [
+              "FI number",
+              "1,966,381.75 PLN"
+            ],
+            [
+              "Invested assets",
+              "0.00 PLN"
+            ],
+            [
+              "Progress",
+              "0.0%"
+            ],
+            [
+              "Yearly savings",
+              "34,226.73 PLN"
+            ],
+            [
+              "Years to FI",
+              "28"
+            ]
+          ]
+        },
+        "o_inv": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Value",
+            "Annual income",
+            "Gain",
+            "Gain %"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "PPK",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "0.00 PLN",
+              "–"
+            ]
+          ]
+        },
+        "o_yoc": {
+          "cols": [
+            "Position",
+            "Invested",
+            "Annual income",
+            "Yield on cost"
+          ],
+          "num": [
+            0,
+            1,
+            1,
+            1
+          ],
+          "rows": [
+            [
+              "Total",
+              "0.00 PLN",
+              "0.00 PLN",
+              "–"
+            ]
+          ]
+        }
+      },
+      "month": "2025-02-01",
+      "partial": false
+    }
+  ],
+  "portfolio": "all-zero"
+}

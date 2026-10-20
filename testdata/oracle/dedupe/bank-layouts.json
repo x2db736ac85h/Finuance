@@ -1,0 +1,91 @@
+{
+  "default": {
+    "dupKeep": {},
+    "dupPick": {},
+    "dupes": 0,
+    "groups": [],
+    "headers": [
+      "Data operacji",
+      "Kontrahent",
+      "Tytuł",
+      "Kwota",
+      "Waluta",
+      "Kategoria",
+      "Category",
+      "Amount",
+      "Currency",
+      "Booking date",
+      "Payee",
+      "Title",
+      "Source file"
+    ],
+    "rowCount": 4,
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Restauracje",
+        "-12.00",
+        "PLN",
+        "2025-01-03",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "43-bank-b-layout.csv"
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Zakupy",
+        "-15.00",
+        "PLN",
+        "2025-01-04",
+        "SKLEP GAMMA",
+        "Zakupy",
+        "43-bank-b-layout.csv"
+      ],
+      [
+        "02.01.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-10,00",
+        "PLN",
+        "Zakupy",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "42-bank-a-layout.csv"
+      ],
+      [
+        "03.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "PLN",
+        "Restauracje",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "42-bank-a-layout.csv"
+      ]
+    ]
+  },
+  "files": [
+    "42-bank-a-layout.csv",
+    "43-bank-b-layout.csv"
+  ],
+  "set": "bank-layouts"
+}

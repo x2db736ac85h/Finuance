@@ -1,0 +1,127 @@
+{
+  "cfg": {
+    "enc": "utf-8"
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-03",
+        "2025-01-04",
+        "2025-01-05"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -12.34,
+        -56.78,
+        -10
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/03-windows-1250.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Opis",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "03.01.2025\u0001za�и� gʌl� ja��\u0001-12,34\u0001pln\u0001zakupy",
+    "04.01.2025\u0001za��� g�l� ja��\u0001-56,78\u0001pln\u0001zakupy",
+    "05.01.2025\u0001op�ata �miesi�czna� � karta\u0001-10,00\u0001pln\u0001op�aty i odsetki"
+  ],
+  "rows": [
+    [
+      "03.01.2025",
+      "ZA�ӣ� GʌL� JA��",
+      "-12,34",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "04.01.2025",
+      "za��� g�l� ja��",
+      "-56,78",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "05.01.2025",
+      "Op�ata �miesi�czna� � karta",
+      "-10,00",
+      "PLN",
+      "Op�aty i odsetki"
+    ]
+  ],
+  "variant": "enc-utf-8-wrong"
+}

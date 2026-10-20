@@ -1,0 +1,110 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Id",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Referencja",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20,
+        -30
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/19-leading-zero-and-long-ids.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Id",
+    "Referencja",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": ""
+  },
+  "rowNorm": [
+    "02.01.2025\u00010012345\u00011234567890123456\u0001-10,00",
+    "03.01.2025\u00010000042\u000198765432109876543\u0001-20,00",
+    "04.01.2025\u00010099\u000112345678901234567890\u0001-30,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "0012345",
+      "1234567890123456",
+      "-10,00"
+    ],
+    [
+      "03.01.2025",
+      "0000042",
+      "98765432109876543",
+      "-20,00"
+    ],
+    [
+      "04.01.2025",
+      "0099",
+      "12345678901234567890",
+      "-30,00"
+    ]
+  ]
+}

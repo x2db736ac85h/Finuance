@@ -1,0 +1,110 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-11",
+        "2025-01-12"
+      ],
+      "name": "Data operacji",
+      "numbers": [
+        11012025,
+        12012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kontrahent",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Tytuł",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -12,
+        -30
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/same-name/a/export.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data operacji",
+    "Kontrahent",
+    "Tytuł",
+    "Kwota",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "",
+    "date": "Data operacji",
+    "payee": "Kontrahent"
+  },
+  "rowNorm": [
+    "11.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001restauracje",
+    "12.01.2025\u0001sklep alfa\u0001zakupy\u0001-30,00\u0001zakupy"
+  ],
+  "rows": [
+    [
+      "11.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "Restauracje"
+    ],
+    [
+      "12.01.2025",
+      "SKLEP ALFA",
+      "Zakupy",
+      "-30,00",
+      "Zakupy"
+    ]
+  ]
+}

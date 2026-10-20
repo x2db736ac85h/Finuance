@@ -1,0 +1,80 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-03"
+      ],
+      "name": "02.01.2025",
+      "numbers": [
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null
+      ],
+      "name": "x",
+      "numbers": [
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null
+      ],
+      "name": "-10,00",
+      "numbers": [
+        -20
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null
+      ],
+      "name": "y",
+      "numbers": [
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/21-blank-headers.csv",
+  "headerAt": 2,
+  "headers": [
+    "02.01.2025",
+    "x",
+    "-10,00",
+    "y"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "-10,00",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "02.01.2025",
+    "payee": ""
+  },
+  "rowNorm": [
+    "03.01.2025\u0001z\u0001-20,00\u0001w"
+  ],
+  "rows": [
+    [
+      "03.01.2025",
+      "z",
+      "-20,00",
+      "w"
+    ]
+  ]
+}

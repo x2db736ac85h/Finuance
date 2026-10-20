@@ -1,0 +1,605 @@
+{
+  "cases": [
+    {
+      "in": "PŁATNOŚĆ",
+      "out": "platnosc"
+    },
+    {
+      "in": "płatność",
+      "out": "platnosc"
+    },
+    {
+      "in": "Łódź",
+      "out": "lodz"
+    },
+    {
+      "in": "ŁÓDŹ",
+      "out": "lodz"
+    },
+    {
+      "in": "Zażółć gęślą jaźń",
+      "out": "zazolc gesla jazn"
+    },
+    {
+      "in": "ZAŻÓŁĆ GĘŚLĄ JAŹŃ",
+      "out": "zazolc gesla jazn"
+    },
+    {
+      "in": "Ąą Ćć Ęę Łł Ńń Óó Śś Źź Żż",
+      "out": "aa cc ee ll nn oo ss zz zz"
+    },
+    {
+      "in": "Café",
+      "out": "cafe"
+    },
+    {
+      "in": "naïve",
+      "out": "naive"
+    },
+    {
+      "in": "Ångström",
+      "out": "angstrom"
+    },
+    {
+      "in": "Straße",
+      "out": "straße"
+    },
+    {
+      "in": "İstanbul",
+      "out": "istanbul"
+    },
+    {
+      "in": "ǅemal",
+      "out": "ǆemal"
+    },
+    {
+      "in": "Øre",
+      "out": "øre"
+    },
+    {
+      "in": "Æble",
+      "out": "æble"
+    },
+    {
+      "in": "œuvre",
+      "out": "œuvre"
+    },
+    {
+      "in": "ﬁnance",
+      "out": "ﬁnance"
+    },
+    {
+      "in": "Ⅻ",
+      "out": "ⅻ"
+    },
+    {
+      "in": "①",
+      "out": "①"
+    },
+    {
+      "in": "ｆｕｌｌ",
+      "out": "ｆｕｌｌ"
+    },
+    {
+      "in": "łódź",
+      "out": "lodz"
+    },
+    {
+      "in": "zażółć gęślą jaźń",
+      "out": "zazolc gesla jazn"
+    },
+    {
+      "in": "ąą ćć ęę łł ńń óó śś źź żż",
+      "out": "aa cc ee ll nn oo ss zz zz"
+    },
+    {
+      "in": "café",
+      "out": "cafe"
+    },
+    {
+      "in": "ångström",
+      "out": "angstrom"
+    },
+    {
+      "in": "straße",
+      "out": "straße"
+    },
+    {
+      "in": "i̇stanbul",
+      "out": "istanbul"
+    },
+    {
+      "in": "ǆemal",
+      "out": "ǆemal"
+    },
+    {
+      "in": "øre",
+      "out": "øre"
+    },
+    {
+      "in": "æble",
+      "out": "æble"
+    },
+    {
+      "in": "ⅻ",
+      "out": "ⅻ"
+    },
+    {
+      "in": "  PŁATNOŚĆ\t",
+      "out": "  platnosc\t"
+    },
+    {
+      "in": "  płatność\t",
+      "out": "  platnosc\t"
+    },
+    {
+      "in": "  Łódź\t",
+      "out": "  lodz\t"
+    },
+    {
+      "in": "  ŁÓDŹ\t",
+      "out": "  lodz\t"
+    },
+    {
+      "in": "  Zażółć gęślą jaźń\t",
+      "out": "  zazolc gesla jazn\t"
+    },
+    {
+      "in": "  ZAŻÓŁĆ GĘŚLĄ JAŹŃ\t",
+      "out": "  zazolc gesla jazn\t"
+    },
+    {
+      "in": "  Ąą Ćć Ęę Łł Ńń Óó Śś Źź Żż\t",
+      "out": "  aa cc ee ll nn oo ss zz zz\t"
+    },
+    {
+      "in": "  Café\t",
+      "out": "  cafe\t"
+    },
+    {
+      "in": "  naïve\t",
+      "out": "  naive\t"
+    },
+    {
+      "in": "  Ångström\t",
+      "out": "  angstrom\t"
+    },
+    {
+      "in": "  Straße\t",
+      "out": "  straße\t"
+    },
+    {
+      "in": "  İstanbul\t",
+      "out": "  istanbul\t"
+    },
+    {
+      "in": "  ǅemal\t",
+      "out": "  ǆemal\t"
+    },
+    {
+      "in": "  Øre\t",
+      "out": "  øre\t"
+    },
+    {
+      "in": "  Æble\t",
+      "out": "  æble\t"
+    },
+    {
+      "in": "  œuvre\t",
+      "out": "  œuvre\t"
+    },
+    {
+      "in": "  ﬁnance\t",
+      "out": "  ﬁnance\t"
+    },
+    {
+      "in": "  Ⅻ\t",
+      "out": "  ⅻ\t"
+    },
+    {
+      "in": "  ①\t",
+      "out": "  ①\t"
+    },
+    {
+      "in": "  ｆｕｌｌ\t",
+      "out": "  ｆｕｌｌ\t"
+    },
+    {
+      "in": "",
+      "out": ""
+    },
+    {
+      "in": " ",
+      "out": " "
+    },
+    {
+      "in": "a",
+      "out": "a"
+    },
+    {
+      "in": "A",
+      "out": "a"
+    },
+    {
+      "in": "123",
+      "out": "123"
+    },
+    {
+      "in": "-127,13",
+      "out": "-127,13"
+    },
+    {
+      "in": "BLIK REF       86772307062",
+      "out": "blik ref       86772307062"
+    },
+    {
+      "in": "ZABKA Z6373 K.1        RASZYN",
+      "out": "zabka z6373 k.1        raszyn"
+    },
+    {
+      "in": "é",
+      "out": "e"
+    },
+    {
+      "in": "Ȩ́",
+      "out": "e"
+    },
+    {
+      "in": "à́̂",
+      "out": "a"
+    },
+    {
+      "in": "l̵",
+      "out": "l"
+    },
+    {
+      "in": "ł́",
+      "out": "l"
+    },
+    {
+      "in": "Ł́",
+      "out": "l"
+    },
+    {
+      "in": " ",
+      "out": " "
+    },
+    {
+      "in": "x​y",
+      "out": "x​y"
+    },
+    {
+      "in": "tab\there",
+      "out": "tab\there"
+    },
+    {
+      "in": "new\nline",
+      "out": "new\nline"
+    },
+    {
+      "in": "cr\rlf",
+      "out": "cr\rlf"
+    },
+    {
+      "in": "emoji 💸",
+      "out": "emoji 💸"
+    },
+    {
+      "in": "ß",
+      "out": "ß"
+    },
+    {
+      "in": "ẞ",
+      "out": "ß"
+    },
+    {
+      "in": "ﬀ",
+      "out": "ﬀ"
+    },
+    {
+      "in": "Ǆ",
+      "out": "ǆ"
+    },
+    {
+      "in": "ǆ",
+      "out": "ǆ"
+    },
+    {
+      "in": "ı",
+      "out": "ı"
+    },
+    {
+      "in": "İ",
+      "out": "i"
+    },
+    {
+      "in": "ŉ",
+      "out": "ŉ"
+    },
+    {
+      "in": "ĳ",
+      "out": "ĳ"
+    },
+    {
+      "in": "Ĳ",
+      "out": "ĳ"
+    },
+    {
+      "in": "ð",
+      "out": "ð"
+    },
+    {
+      "in": "Þ",
+      "out": "þ"
+    },
+    {
+      "in": "đ",
+      "out": "đ"
+    },
+    {
+      "in": "Đ",
+      "out": "đ"
+    },
+    {
+      "in": "ħ",
+      "out": "ħ"
+    },
+    {
+      "in": "ŧ",
+      "out": "ŧ"
+    },
+    {
+      "in": "ŀ",
+      "out": "ŀ"
+    },
+    {
+      "in": "ſ",
+      "out": "ſ"
+    },
+    {
+      "in": "µ",
+      "out": "µ"
+    },
+    {
+      "in": "Ω",
+      "out": "ω"
+    },
+    {
+      "in": "Å",
+      "out": "a"
+    },
+    {
+      "in": "ǻ",
+      "out": "a"
+    },
+    {
+      "in": "Ŭ",
+      "out": "u"
+    },
+    {
+      "in": "ǖ",
+      "out": "u"
+    },
+    {
+      "in": "ṩ",
+      "out": "s"
+    },
+    {
+      "in": "ộ",
+      "out": "o"
+    },
+    {
+      "in": "ừ",
+      "out": "u"
+    },
+    {
+      "in": "ỹ",
+      "out": "y"
+    },
+    {
+      "in": "ı̇",
+      "out": "ı"
+    },
+    {
+      "in": "ģ",
+      "out": "g"
+    },
+    {
+      "in": "ķ",
+      "out": "k"
+    },
+    {
+      "in": "ļ",
+      "out": "l"
+    },
+    {
+      "in": "ņ",
+      "out": "n"
+    },
+    {
+      "in": "ŗ",
+      "out": "r"
+    },
+    {
+      "in": "ș",
+      "out": "s"
+    },
+    {
+      "in": "ț",
+      "out": "t"
+    },
+    {
+      "in": "ş",
+      "out": "s"
+    },
+    {
+      "in": "ţ",
+      "out": "t"
+    },
+    {
+      "in": "ğ",
+      "out": "g"
+    },
+    {
+      "in": "ž",
+      "out": "z"
+    },
+    {
+      "in": "š",
+      "out": "s"
+    },
+    {
+      "in": "č",
+      "out": "c"
+    },
+    {
+      "in": "ř",
+      "out": "r"
+    },
+    {
+      "in": "ď",
+      "out": "d"
+    },
+    {
+      "in": "ť",
+      "out": "t"
+    },
+    {
+      "in": "ň",
+      "out": "n"
+    },
+    {
+      "in": "ů",
+      "out": "u"
+    },
+    {
+      "in": "ő",
+      "out": "o"
+    },
+    {
+      "in": "ű",
+      "out": "u"
+    },
+    {
+      "in": "ǎ",
+      "out": "a"
+    },
+    {
+      "in": "ǐ",
+      "out": "i"
+    },
+    {
+      "in": "ǒ",
+      "out": "o"
+    },
+    {
+      "in": "ǔ",
+      "out": "u"
+    },
+    {
+      "in": "ȁ",
+      "out": "a"
+    },
+    {
+      "in": "ȅ",
+      "out": "e"
+    },
+    {
+      "in": "ạ",
+      "out": "a"
+    },
+    {
+      "in": "ẹ",
+      "out": "e"
+    },
+    {
+      "in": "ị",
+      "out": "i"
+    },
+    {
+      "in": "ọ",
+      "out": "o"
+    },
+    {
+      "in": "ụ",
+      "out": "u"
+    },
+    {
+      "in": "Ạ",
+      "out": "a"
+    },
+    {
+      "in": "ĺ",
+      "out": "l"
+    },
+    {
+      "in": "ľ",
+      "out": "l"
+    },
+    {
+      "in": "ŕ",
+      "out": "r"
+    },
+    {
+      "in": "ŷ",
+      "out": "y"
+    },
+    {
+      "in": "ẁ",
+      "out": "w"
+    },
+    {
+      "in": "ẃ",
+      "out": "w"
+    },
+    {
+      "in": "ẅ",
+      "out": "w"
+    },
+    {
+      "in": "ÿ",
+      "out": "y"
+    },
+    {
+      "in": "Ÿ",
+      "out": "y"
+    },
+    {
+      "in": "ñ",
+      "out": "n"
+    },
+    {
+      "in": "Ñ",
+      "out": "n"
+    },
+    {
+      "in": "õ",
+      "out": "o"
+    },
+    {
+      "in": "ã",
+      "out": "a"
+    },
+    {
+      "in": "â",
+      "out": "a"
+    },
+    {
+      "in": "ê",
+      "out": "e"
+    },
+    {
+      "in": "î",
+      "out": "i"
+    },
+    {
+      "in": "ô",
+      "out": "o"
+    },
+    {
+      "in": "û",
+      "out": "u"
+    }
+  ],
+  "function": "norm"
+}

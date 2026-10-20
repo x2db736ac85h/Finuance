@@ -1,0 +1,860 @@
+{
+  "default": {
+    "dupKeep": {},
+    "dupPick": {},
+    "dupes": 4,
+    "groups": [
+      {
+        "both": false,
+        "date": "2025-03-02",
+        "key": "1740873600000|-2850.00|wspolnota|czynsz 03",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "02.03.2025",
+              "WSPÓLNOTA",
+              "Czynsz 03",
+              "-2 850,00",
+              "Mieszkanie",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "02.03.2025",
+              "WSPÓLNOTA",
+              "Czynsz 03",
+              "-2 850,00",
+              "Mieszkanie",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-03-10",
+        "key": "1741564800000|8500.00|pracodawca|wynagrodzenie 03",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "10.03.2025",
+              "PRACODAWCA",
+              "Wynagrodzenie 03",
+              "8 500,00",
+              "Wynagrodzenie",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "10.03.2025",
+              "PRACODAWCA",
+              "Wynagrodzenie 03",
+              "8 500,00",
+              "Wynagrodzenie",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-03-21",
+        "key": "1742515200000|-55.10|sklep alfa|zakupy",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "B_mar-may.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": false,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "Data operacji",
+      "Kontrahent",
+      "Tytuł",
+      "Kwota",
+      "Kategoria",
+      "Source file"
+    ],
+    "rowCount": 16,
+    "rows": [
+      [
+        "02.02.2025",
+        "WSPÓLNOTA",
+        "Czynsz 02",
+        "-2 850,00",
+        "Mieszkanie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "02.03.2025",
+        "WSPÓLNOTA",
+        "Czynsz 03",
+        "-2 850,00",
+        "Mieszkanie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "02.04.2025",
+        "WSPÓLNOTA",
+        "Czynsz 04",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "02.05.2025",
+        "WSPÓLNOTA",
+        "Czynsz 05",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "03.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "A_jan-mar.csv"
+      ],
+      [
+        "03.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.01.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 01",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.02.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 02",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.03.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 03",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.04.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 04",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "10.05.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 05",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "14.02.2025",
+        "KWIACIARNIA",
+        "Kwiaty",
+        "-89,00",
+        "Prezenty",
+        "A_jan-mar.csv"
+      ],
+      [
+        "15.01.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-210,40",
+        "Zakupy",
+        "A_jan-mar.csv"
+      ],
+      [
+        "20.05.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "B_mar-may.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "A_jan-mar.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "A_jan-mar.csv"
+      ]
+    ]
+  },
+  "files": [
+    "A_jan-mar.csv",
+    "B_mar-may.csv"
+  ],
+  "keepBoth": {
+    "dupKeep": {
+      "1740873600000|-2850.00|wspolnota|czynsz 03": 1,
+      "1741564800000|8500.00|pracodawca|wynagrodzenie 03": 1,
+      "1742515200000|-55.10|sklep alfa|zakupy": 1
+    },
+    "dupPick": {},
+    "dupes": 0,
+    "groups": [
+      {
+        "both": true,
+        "date": "2025-03-02",
+        "key": "1740873600000|-2850.00|wspolnota|czynsz 03",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "02.03.2025",
+              "WSPÓLNOTA",
+              "Czynsz 03",
+              "-2 850,00",
+              "Mieszkanie",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "02.03.2025",
+              "WSPÓLNOTA",
+              "Czynsz 03",
+              "-2 850,00",
+              "Mieszkanie",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": true,
+        "date": "2025-03-10",
+        "key": "1741564800000|8500.00|pracodawca|wynagrodzenie 03",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "10.03.2025",
+              "PRACODAWCA",
+              "Wynagrodzenie 03",
+              "8 500,00",
+              "Wynagrodzenie",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "10.03.2025",
+              "PRACODAWCA",
+              "Wynagrodzenie 03",
+              "8 500,00",
+              "Wynagrodzenie",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": true,
+        "date": "2025-03-21",
+        "key": "1742515200000|-55.10|sklep alfa|zakupy",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "B_mar-may.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "Data operacji",
+      "Kontrahent",
+      "Tytuł",
+      "Kwota",
+      "Kategoria",
+      "Source file"
+    ],
+    "rowCount": 20,
+    "rows": [
+      [
+        "02.02.2025",
+        "WSPÓLNOTA",
+        "Czynsz 02",
+        "-2 850,00",
+        "Mieszkanie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "02.03.2025",
+        "WSPÓLNOTA",
+        "Czynsz 03",
+        "-2 850,00",
+        "Mieszkanie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "02.03.2025",
+        "WSPÓLNOTA",
+        "Czynsz 03",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "02.04.2025",
+        "WSPÓLNOTA",
+        "Czynsz 04",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "02.05.2025",
+        "WSPÓLNOTA",
+        "Czynsz 05",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "03.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "A_jan-mar.csv"
+      ],
+      [
+        "03.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.01.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 01",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.02.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 02",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.03.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 03",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.03.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 03",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "10.04.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 04",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "10.05.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 05",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "14.02.2025",
+        "KWIACIARNIA",
+        "Kwiaty",
+        "-89,00",
+        "Prezenty",
+        "A_jan-mar.csv"
+      ],
+      [
+        "15.01.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-210,40",
+        "Zakupy",
+        "A_jan-mar.csv"
+      ],
+      [
+        "20.05.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "B_mar-may.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "A_jan-mar.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "A_jan-mar.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "B_mar-may.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "B_mar-may.csv"
+      ]
+    ]
+  },
+  "preferLastFile": {
+    "dupKeep": {},
+    "dupPick": {
+      "1740873600000|-2850.00|wspolnota|czynsz 03": "f2",
+      "1741564800000|8500.00|pracodawca|wynagrodzenie 03": "f2",
+      "1742515200000|-55.10|sklep alfa|zakupy": "f2"
+    },
+    "dupes": 4,
+    "groups": [
+      {
+        "both": false,
+        "date": "2025-03-02",
+        "key": "1740873600000|-2850.00|wspolnota|czynsz 03",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "02.03.2025",
+              "WSPÓLNOTA",
+              "Czynsz 03",
+              "-2 850,00",
+              "Mieszkanie",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "02.03.2025",
+              "WSPÓLNOTA",
+              "Czynsz 03",
+              "-2 850,00",
+              "Mieszkanie",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-03-10",
+        "key": "1741564800000|8500.00|pracodawca|wynagrodzenie 03",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "10.03.2025",
+              "PRACODAWCA",
+              "Wynagrodzenie 03",
+              "8 500,00",
+              "Wynagrodzenie",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "10.03.2025",
+              "PRACODAWCA",
+              "Wynagrodzenie 03",
+              "8 500,00",
+              "Wynagrodzenie",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      },
+      {
+        "both": false,
+        "date": "2025-03-21",
+        "key": "1742515200000|-55.10|sklep alfa|zakupy",
+        "versions": [
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "A_jan-mar.csv",
+            "fileIndex": 0,
+            "kept": false,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "A_jan-mar.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "B_mar-may.csv"
+            ]
+          },
+          {
+            "file": "B_mar-may.csv",
+            "fileIndex": 1,
+            "kept": true,
+            "row": [
+              "21.03.2025",
+              "SKLEP ALFA",
+              "Zakupy",
+              "-55,10",
+              "Zakupy",
+              "B_mar-may.csv"
+            ]
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "Data operacji",
+      "Kontrahent",
+      "Tytuł",
+      "Kwota",
+      "Kategoria",
+      "Source file"
+    ],
+    "rowCount": 16,
+    "rows": [
+      [
+        "02.02.2025",
+        "WSPÓLNOTA",
+        "Czynsz 02",
+        "-2 850,00",
+        "Mieszkanie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "02.03.2025",
+        "WSPÓLNOTA",
+        "Czynsz 03",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "02.04.2025",
+        "WSPÓLNOTA",
+        "Czynsz 04",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "02.05.2025",
+        "WSPÓLNOTA",
+        "Czynsz 05",
+        "-2 850,00",
+        "Mieszkanie",
+        "B_mar-may.csv"
+      ],
+      [
+        "03.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "A_jan-mar.csv"
+      ],
+      [
+        "03.01.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.01.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 01",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.02.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 02",
+        "8 500,00",
+        "Wynagrodzenie",
+        "A_jan-mar.csv"
+      ],
+      [
+        "10.03.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 03",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "10.04.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 04",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "10.05.2025",
+        "PRACODAWCA",
+        "Wynagrodzenie 05",
+        "8 500,00",
+        "Wynagrodzenie",
+        "B_mar-may.csv"
+      ],
+      [
+        "14.02.2025",
+        "KWIACIARNIA",
+        "Kwiaty",
+        "-89,00",
+        "Prezenty",
+        "A_jan-mar.csv"
+      ],
+      [
+        "15.01.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-210,40",
+        "Zakupy",
+        "A_jan-mar.csv"
+      ],
+      [
+        "20.05.2025",
+        "KAWIARNIA BETA",
+        "Kawa",
+        "-12,00",
+        "Restauracje",
+        "B_mar-may.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "B_mar-may.csv"
+      ],
+      [
+        "21.03.2025",
+        "SKLEP ALFA",
+        "Zakupy",
+        "-55,10",
+        "Zakupy",
+        "B_mar-may.csv"
+      ]
+    ]
+  },
+  "set": "overlap-A-B"
+}

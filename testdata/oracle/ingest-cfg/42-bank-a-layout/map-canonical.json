@@ -1,0 +1,131 @@
+{
+  "cfg": {
+    "map": {
+      "0": "date",
+      "1": "payee",
+      "2": "desc",
+      "3": "amount",
+      "4": "currency",
+      "5": "category"
+    }
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Payee",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        -10,
+        -12
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Currency",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Category",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/42-bank-a-layout.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Payee",
+    "Description",
+    "Amount",
+    "Currency",
+    "Category"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "Category",
+    "currency": "PLN",
+    "date": "Date",
+    "payee": "Payee"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep alfa\u0001zakupy\u0001-10,00\u0001pln\u0001zakupy",
+    "03.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001pln\u0001restauracje"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "SKLEP ALFA",
+      "Zakupy",
+      "-10,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "03.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "PLN",
+      "Restauracje"
+    ]
+  ],
+  "variant": "map-canonical"
+}

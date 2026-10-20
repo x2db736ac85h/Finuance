@@ -1,0 +1,125 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04",
+        "2025-01-05"
+      ],
+      "name": "Data",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kontrahent",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Adres",
+      "numbers": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20,
+        -30,
+        -40
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/16-delimiter-ambiguity.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Kontrahent",
+    "Adres",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": "Kontrahent"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep a\u0001ul. dluga 1, 00-001 warszawa, pl\u0001-10,00",
+    "03.01.2025\u0001sklep b\u0001ul. krotka 2, krakow\u0001-20,00",
+    "04.01.2025\u0001sklep c\u0001rynek 3\u0001-30,00",
+    "05.01.2025\u0001sklep d\u0001al. polna 4, lok. 5, 00-002, lodz, pl\u0001-40,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep A",
+      "ul. Długa 1, 00-001 Warszawa, PL",
+      "-10,00"
+    ],
+    [
+      "03.01.2025",
+      "Sklep B",
+      "ul. Krótka 2, Kraków",
+      "-20,00"
+    ],
+    [
+      "04.01.2025",
+      "Sklep C",
+      "Rynek 3",
+      "-30,00"
+    ],
+    [
+      "05.01.2025",
+      "Sklep D",
+      "al. Polna 4, lok. 5, 00-002, Łódź, PL",
+      "-40,00"
+    ]
+  ]
+}

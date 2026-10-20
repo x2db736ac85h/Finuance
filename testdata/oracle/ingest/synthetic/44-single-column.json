@@ -1,0 +1,56 @@
+{
+  "columns": [
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Opis",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/44-single-column.csv",
+  "headerAt": 1,
+  "headers": [
+    "Opis"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "",
+    "payee": "Opis"
+  },
+  "rowNorm": [
+    "a",
+    "b",
+    "c"
+  ],
+  "rows": [
+    [
+      "A"
+    ],
+    [
+      "B"
+    ],
+    [
+      "C"
+    ]
+  ]
+}

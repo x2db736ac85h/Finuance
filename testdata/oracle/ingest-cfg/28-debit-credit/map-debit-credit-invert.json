@@ -1,0 +1,97 @@
+{
+  "cfg": {
+    "invert": true,
+    "map": {
+      "0": "date",
+      "1": "desc",
+      "2": "debit",
+      "3": "credit"
+    }
+  },
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-10",
+        "2025-01-11"
+      ],
+      "name": "Date",
+      "numbers": [
+        null,
+        10012025,
+        11012025
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Description",
+      "numbers": [
+        null,
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null,
+        null
+      ],
+      "name": "Amount",
+      "numbers": [
+        45.2,
+        -8500,
+        14
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/28-debit-credit.csv",
+  "headerAt": 1,
+  "headers": [
+    "Date",
+    "Description",
+    "Amount"
+  ],
+  "roles": {
+    "amount": "Amount",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Date",
+    "payee": "Description"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep\u000145,20",
+    "10.01.2025\u0001wynagrodzenie\u0001-8500,00",
+    "11.01.2025\u0001kawiarnia\u000114,00"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "Sklep",
+      "45,20"
+    ],
+    [
+      "10.01.2025",
+      "Wynagrodzenie",
+      "-8500,00"
+    ],
+    [
+      "11.01.2025",
+      "Kawiarnia",
+      "14,00"
+    ]
+  ],
+  "variant": "map-debit-credit-invert"
+}

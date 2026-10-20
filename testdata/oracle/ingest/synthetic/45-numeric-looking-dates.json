@@ -1,0 +1,65 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2024-04-15",
+        "2024-04-16"
+      ],
+      "name": "Data",
+      "numbers": [
+        15042024,
+        16042024
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -20
+      ],
+      "type": "number"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/45-numeric-looking-dates.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data",
+    "Kwota"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "",
+    "currency": "",
+    "date": "Data",
+    "payee": ""
+  },
+  "rowNorm": [
+    "15.04.2024\u0001-10,00",
+    "16.04.2024\u0001-20,00"
+  ],
+  "rows": [
+    [
+      "15.04.2024",
+      "-10,00"
+    ],
+    [
+      "16.04.2024",
+      "-20,00"
+    ]
+  ]
+}

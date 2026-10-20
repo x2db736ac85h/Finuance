@@ -1,0 +1,125 @@
+{
+  "columns": [
+    {
+      "dates": [
+        "2025-01-02",
+        "2025-01-03"
+      ],
+      "name": "Data operacji",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "date"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kontrahent",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Tytuł",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kwota",
+      "numbers": [
+        -10,
+        -12
+      ],
+      "type": "number"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Waluta",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    },
+    {
+      "dates": [
+        null,
+        null
+      ],
+      "name": "Kategoria",
+      "numbers": [
+        null,
+        null
+      ],
+      "type": "text"
+    }
+  ],
+  "delimiter": ";",
+  "dropped": 0,
+  "encoding": "UTF-8",
+  "error": null,
+  "fixture": "synthetic/42-bank-a-layout.csv",
+  "headerAt": 1,
+  "headers": [
+    "Data operacji",
+    "Kontrahent",
+    "Tytuł",
+    "Kwota",
+    "Waluta",
+    "Kategoria"
+  ],
+  "options": {
+    "delim": "auto",
+    "enc": "auto",
+    "strip": true
+  },
+  "roles": {
+    "amount": "Kwota",
+    "balance": "",
+    "category": "Kategoria",
+    "currency": "PLN",
+    "date": "Data operacji",
+    "payee": "Kontrahent"
+  },
+  "rowNorm": [
+    "02.01.2025\u0001sklep alfa\u0001zakupy\u0001-10,00\u0001pln\u0001zakupy",
+    "03.01.2025\u0001kawiarnia beta\u0001kawa\u0001-12,00\u0001pln\u0001restauracje"
+  ],
+  "rows": [
+    [
+      "02.01.2025",
+      "SKLEP ALFA",
+      "Zakupy",
+      "-10,00",
+      "PLN",
+      "Zakupy"
+    ],
+    [
+      "03.01.2025",
+      "KAWIARNIA BETA",
+      "Kawa",
+      "-12,00",
+      "PLN",
+      "Restauracje"
+    ]
+  ]
+}
