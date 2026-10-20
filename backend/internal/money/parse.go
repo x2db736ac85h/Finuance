@@ -141,7 +141,7 @@ func FromParts(p Parts, exp int) (int64, error) {
 		u++
 	}
 	// The magnitude may be at most MaxInt64, or MaxInt64+1 for negative values.
-	if u > math.MaxInt64 && !(p.Negative && u == math.MaxInt64+1) {
+	if u > math.MaxInt64 && (!p.Negative || u != math.MaxInt64+1) {
 		return 0, ErrOverflow
 	}
 	if p.Negative {
