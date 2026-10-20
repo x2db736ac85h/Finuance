@@ -1,0 +1,91 @@
+package httpapi
+
+import (
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+)
+
+// problemKind is one row of the error → problem mapping.
+type problemKind struct {
+	err    error
+	code   gen.ProblemCode
+	status int
+	title  string
+}
+
+// problemTable maps platform error kinds to stable problem codes (docs/PLAN.md §6.1). Order matters
+// only when an error wraps several kinds: the first match wins.
+var problemTable = []problemKind{
+	{platform.ErrUnauthenticated, gen.Unauthenticated, http.StatusUnauthorized, "Authentication required"},
+	{platform.ErrForbidden, gen.Forbidden, http.StatusForbidden, "Forbidden"},
+	{platform.ErrNotFound, gen.NotFound, http.StatusNotFound, "Not found"},
+	{platform.ErrDuplicateFile, gen.DuplicateFile, http.StatusConflict, "This file was already imported"},
+	{platform.ErrImportNotCommitable, gen.ImportNotCommittable, http.StatusConflict, "The import cannot be committed"},
+	{platform.ErrStaleVersion, gen.StaleVersion, http.StatusConflict, "The resource was changed by someone else"},
+	{platform.ErrConflict, gen.Conflict, http.StatusConflict, "Conflict"},
+	{platform.ErrRateLimited, gen.RateLimited, http.StatusTooManyRequests, "Too many requests"},
+	{platform.ErrPayloadTooLarge, gen.PayloadTooLarge, http.StatusRequestEntityTooLarge, "Payload too large"},
+	{platform.ErrUnsupportedFile, gen.UnsupportedFile, http.StatusUnsupportedMediaType, "Unsupported file"},
+}
+
+// ProblemFor converts any error into problem details. In prod, details of internal errors are
+// never exposed; the client gets the request id to quote instead.
+func ProblemFor(err error, r *http.Request, prod bool) gen.Problem {
+	p := gen.Problem{Code: gen.Internal, Status: http.StatusInternalServerError, Title: "Internal error"}
+	var ve *platform.ValidationError
+	var mbe *http.MaxBytesError
+	switch {
+	case errors.As(err, &ve):
+		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
+		fields := make([]gen.FieldError, 0, len(ve.Fields))
+		for _, f := range ve.Fields {
+			fields = append(fields, gen.FieldError{Field: f.Field, Message: f.Message})
+		}
+		p.Errors = &fields
+	case errors.As(err, &mbe):
+		p.Code, p.Status, p.Title = gen.PayloadTooLarge, http.StatusRequestEntityTooLarge, "Payload too large"
+	default:
+		for _, k := range problemTable {
+			if errors.Is(err, k.err) {
+				p.Code, p.Status, p.Title = k.code, k.status, k.title
+				break
+			}
+		}
+	}
+	p.Type = "/problems/" + string(p.Code)
+	if p.Code != gen.Internal || !prod {
+		d := err.Error()
+		p.Detail = &d
+	}
+	if r != nil {
+		inst := r.URL.Path
+		p.Instance = &inst
+		if id := middleware.RequestID(r.Context()); id != "" {
+			p.RequestId = &id
+		}
+	}
+	return p
+}
+
+// WriteProblem writes err as application/problem+json and logs internal errors.
+func WriteProblem(w http.ResponseWriter, r *http.Request, err error, prod bool) {
+	p := ProblemFor(err, r, prod)
+	if p.Status >= 500 {
+		observability.Logger(r.Context()).LogAttrs(r.Context(), slog.LevelError, "request failed", slog.String("error", err.Error()))
+	}
+	writeProblem(w, p)
+}
+
+func writeProblem(w http.ResponseWriter, p gen.Problem) {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(p.Status)
+	_ = json.NewEncoder(w).Encode(p)
+}
