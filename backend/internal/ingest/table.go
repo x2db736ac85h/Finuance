@@ -51,7 +51,16 @@ var (
 //     (Excel's "treat as text" marker on account numbers).
 //  4. Drop columns that have no header name and no data (trailing delimiters).
 //  5. Name blank headers "Column N" and de-duplicate names: "Kwota", "Kwota (2)", …
+//
+// Shape does not modify raw.
 func Shape(raw [][]string, o ShapeOptions) (*Table, error) {
+	return shape(raw, o, false)
+}
+
+// shape is Shape. With owned set, the caller hands over raw (Parse does: the records come
+// straight from the tokenizer), so rows that already have the full width are trimmed in place
+// instead of being copied, which saves one slice per row on large files.
+func shape(raw [][]string, o ShapeOptions, owned bool) (*Table, error) {
 	var (
 		headers  []string
 		data     [][]string
@@ -108,8 +117,8 @@ func Shape(raw [][]string, o ShapeOptions) (*Table, error) {
 	}
 	cells := make([][]string, len(data))
 	for i, r := range data {
-		row := r // rows that already have the full width are trimmed in place (they are ours)
-		if len(r) != width {
+		row := r
+		if !owned || len(r) != width {
 			row = make([]string, width)
 		}
 		for k := range row {

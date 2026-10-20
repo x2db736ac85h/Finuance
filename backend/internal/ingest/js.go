@@ -1,9 +1,6 @@
 package ingest
 
-import (
-	"strings"
-	"unicode/utf8"
-)
+import "strings"
 
 // The legacy code is JavaScript. Two of its primitives behave differently from the Go functions
 // with the same name, and the difference matters for bank exports:
@@ -95,10 +92,4 @@ func hasNonSpace(s string) bool {
 		}
 	}
 	return false
-}
-
-// firstRune returns the first rune of s, or utf8.RuneError for "".
-func firstRune(s string) rune {
-	r, _ := utf8.DecodeRuneInString(s)
-	return r
 }

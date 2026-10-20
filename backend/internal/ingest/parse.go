@@ -63,7 +63,7 @@ func Parse(ctx context.Context, raw []byte, o Options) (*Result, error) {
 	if err != nil {
 		return res, err
 	}
-	if res.Table, err = Shape(records, o.Shape); err != nil {
+	if res.Table, err = shape(records, o.Shape, true); err != nil {
 		return res, err
 	}
 	if err := ctx.Err(); err != nil {
