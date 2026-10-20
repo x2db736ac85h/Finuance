@@ -1,0 +1,34 @@
+# Private bank exports — never commit
+testdata/private/*
+!testdata/private/.gitkeep
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Go
+/backend/bin/
+*.test
+*.out
+coverage.*
+/backend/tmp/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+/playwright/.cache/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
