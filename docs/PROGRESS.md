@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 3 — Ingest engine · **Branch:** phase/03-ingest-engine · **Status:** gate approved
+**Current phase:** 4 — Schema, store layer, RLS · **Branch:** phase/04-schema-store-rls · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -15,9 +15,21 @@
 - Phase 2: `/readyz` returns 503 when the DB is reachable but migrations are behind. `X-Request-ID` is accepted from any client when it is ≤ 64 chars of `[A-Za-z0-9_-]`, otherwise generated.
 - Phase 2 tooling: oapi-codegen and govulncheck as Go `tool` deps; sqlc and golangci-lint as pinned, checksum-verified binaries in `backend/bin/`. OTel over OTLP/HTTP. No `worker` Compose service until Phase 6.
 - Phase 3: Claude writes all of `ingest`/`money`, with explanatory comments so Irwin can tweak it later (no hand-written parts). The ingest engine is a **strict port** of the legacy rules, including auto header detection; the mBank/PKO BP header fix moves to Phase 9 (import preview). The legacy demo generator is ported now (`internal/demo`) for the 100k-row benchmark.
+- Phase 4: RLS is **enabled and forced** on every user-owned table (ADR 0007; forced also binds the owner role). The `pl_natural` collation is applied in queries (`ORDER BY … COLLATE pl_natural`), not on columns. Phase 4 writes the set-based commit core (§4.4 steps 1, 1b, 2) and the delete-import orphan cleanup as `ledger` methods; Phase 6 adds the River job, category upsert, stats, profiles and `Rematerialize`. Investments get schema, RLS and queries now; the repository comes with their API.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 4.1 migrations `00002_core.sql` (§5.2 + collation) and `00003_rls.sql` (§5.3, forced), with Down sections
+- [ ] 4.2 `store.Store`: `WithUser`, `WithUserReadOnly`; guard test against pool access outside `store`
+- [ ] 4.3 sqlc queries (users, sessions, preferences, accounts, categories, groups, imports, import_files, import_rows, transactions, budgets, profiles, annotations, overrides, investments)
+- [ ] 4.4 `InsertImportRows` via `unnest`, 5,000 rows per statement; 100k-row benchmark (≤ 3 s)
+- [ ] 4.5 `ledger` repositories returning domain types
+- [ ] 4.6 tests: migrate up/down/up, every query, RLS suite, collation sort
+- [ ] 4.7 `docs/ARCHITECTURE.md` (components, ERD, RLS)
+- [ ] 4.8 groups + annotations (`ledger.Annotate`), commit core (steps 1, 1b, 2) + orphan cleanup; annotate → delete → re-import test
+- [ ] 4.9 overrides + investments schema, `split_scope`/`source_import_id`, RLS tests
+
+## Phase 3 tasks (done)
 - [x] 3.1 `ingest/normalize.go`
 - [x] 3.2 `ingest/decode.go`
 - [x] 3.3 `ingest/delimiter.go`
@@ -117,6 +129,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-20 — Phase 4 planned and approved (FORCE RLS, query-time collation, commit core in `ledger`, investments repo later). Branch `phase/04-schema-store-rls`.
 - 2026-10-20 — Phase 3 gate approved (benchmark accepted); merged. Next: plan Phase 4.
 - 2026-10-20 — Phase 3 built on `phase/03-ingest-engine`: decode, delimiter, tokenizer, shape, value parsers, exact money parsing, column typing and roles, staging, fingerprints, `Parse`. Oracle differential suite + cfg parity pass. 61 golden files, 5 fuzz targets (5 min each, clean), coverage 96.7 %, demo generator port. Benchmark ≈ 563 ms median (target 500 ms, not met in the sandbox). CI green. Next: Irwin's gate review.
 - 2026-10-20 — Phase 2 gate approved (image limits ≤ 35 MB / ≤ 15 MB compressed); merged. Next: plan Phase 3.
