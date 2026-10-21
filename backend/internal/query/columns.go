@@ -22,11 +22,13 @@ const (
 
 func (t Type) String() string { return [...]string{"text", "number", "date"}[t] }
 
-// Join names a table a column needs besides transactions (t) and accounts (a, always joined).
+// Join names a table a column needs besides transactions (t). Statements join only what their
+// predicates and order use, so totals over unfiltered contexts can be index-only scans.
 type Join string
 
 // Optional joins.
 const (
+	JoinAccounts   Join = "accounts"   // a
 	JoinCategories Join = "categories" // c
 	JoinGroups     Join = "groups"     // g
 )
@@ -107,7 +109,7 @@ var columns = func() map[string]Column {
 		textCol("txType", "Type", "t.tx_type", "t.tx_type_n", ""),
 		textCol("reference", "Reference", "t.reference", "t.reference_n", ""),
 		textCol("counterpartyAccount", "Counterparty account", "t.counterparty_account", "t.counterparty_n", ""),
-		textCol("account", "Account", "a.name", "a.name_n", ""),
+		textCol("account", "Account", "a.name", "a.name_n", JoinAccounts),
 		textCol("group", "Group", "g.name", "g.name_n", JoinGroups),
 		textCol("note", "Note", "t.note", "t.note_n", ""),
 	}

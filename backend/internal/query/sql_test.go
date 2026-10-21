@@ -3,6 +3,7 @@ package query_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -521,8 +522,64 @@ func FuzzQueryDB(f *testing.F) {
 		e, u := demoUser(t)
 		c := query.Context{Search: search, Filters: []query.Filter{{Column: col, Cond: cond, Excluded: []string{excluded}}},
 			ToolFilter: &query.ToolFilter{Payee: cond, MinAmount: &excluded}}
-		if _, err := e.q.Page(e.ctx, u, query.PageRequest{Context: c, Limit: 5, Sort: &query.Sort{Column: col}}); err != nil {
+		_, err := e.q.Page(e.ctx, u, query.PageRequest{Context: c, Limit: 5, Sort: &query.Sort{Column: col}})
+		var ve *platform.ValidationError
+		if err != nil && !errors.As(err, &ve) { // validation errors are fine (NUL, invalid UTF-8); SQL errors are not
 			t.Fatalf("%q %q %q %q: %v", col, cond, search, excluded, err)
 		}
 	})
+}
+
+// TestDuplicatesSkippedFormula: the query engine's index-friendly count (linked rows − distinct
+// linked transactions) equals the ledger's definition (linked rows − import-origin transactions)
+// through overlapping commits, a keep-both override and a delete.
+func TestDuplicatesSkippedFormula(t *testing.T) {
+	e := newEnv(t)
+	u := e.user()
+	acc, err := e.l.CreateAccount(e.ctx, u, ledger.AccountInput{Name: "Overlap"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var imports []uuid.UUID
+	check := func(step string) {
+		t.Helper()
+		want, err := e.l.DuplicatesSkipped(e.ctx, u, []uuid.UUID{acc.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range []query.Context{{}, {AccountIDs: []uuid.UUID{acc.ID}}} {
+			if got := e.page(u, query.PageRequest{Context: c, Limit: 1}).DuplicatesSkipped; got != want {
+				t.Errorf("%s: duplicatesSkipped %d, ledger %d", step, got, want)
+			}
+		}
+	}
+	for _, f := range []string{"A_jan-mar.csv", "B_mar-may.csv", "C_q1_again.csv"} {
+		p, err := e.l.CreatePreview(e.ctx, u, ledger.Upload{Filename: f, Content: fixture(t, "fixtures/synthetic/overlap/"+f), AccountID: &acc.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.l.StartCommit(e.ctx, u, p.Import.ID, func(context.Context, pgx.Tx) error { return nil }); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.l.CommitImport(e.ctx, u, p.Import.ID); err != nil {
+			t.Fatal(err)
+		}
+		imports = append(imports, p.Import.ID)
+		check("after " + f)
+	}
+	var fp []byte
+	if err := e.st.WithUser(e.ctx, u, func(_ *db.Queries, tx pgx.Tx) error {
+		return tx.QueryRow(e.ctx, `SELECT t.fingerprint FROM import_rows ir JOIN transactions t ON t.id = ir.transaction_id
+			WHERE ir.user_id = $1 GROUP BY t.id, t.fingerprint HAVING count(*) > 1 LIMIT 1`, u).Scan(&fp)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.l.SetOverride(e.ctx, u, acc.ID, fp, ledger.OverrideKeepBoth, nil); err != nil {
+		t.Fatal(err)
+	}
+	check("after keep both")
+	if _, err := e.l.DeleteImport(e.ctx, u, imports[0]); err != nil {
+		t.Fatal(err)
+	}
+	check("after deleting A")
 }

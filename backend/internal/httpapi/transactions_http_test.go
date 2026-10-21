@@ -96,6 +96,7 @@ func TestTransactionQueryHTTP(t *testing.T) {
 		{"context": map[string]any{"period": map[string]any{"preset": "l30", "year": 2024}}, "limit": 5},
 		{"context": map[string]any{"period": map[string]any{"from": "2025-01-02", "to": "2025-01-01"}}, "limit": 5},
 		{"context": map[string]any{"toolFilter": map[string]any{"minAmount": "1e3"}}, "limit": 5},
+		{"context": map[string]any{"search": "kino\u0000"}, "limit": 5}, // PostgreSQL can't take NUL: 422, not 500
 	} {
 		expect(t, b.do("POST", "/transactions/query", body), 422, "validation_failed")
 	}
@@ -146,6 +147,9 @@ func TestTransactionDetailAndPatchHTTP(t *testing.T) {
 	expect(t, b.do("PATCH", "/transactions/"+id, map[string]any{"resetCategory": true, "categoryName": "X"}), 422, "validation_failed")
 	expect(t, b.do("PATCH", "/transactions/"+id, map[string]any{}), 422, "validation_failed")
 	expect(t, b.do("PATCH", "/transactions/"+id, map[string]any{"categoryName": strings.Repeat("x", 81)}), 422, "validation_failed")
+	expect(t, b.do("PATCH", "/transactions/"+id, map[string]any{"note": "a\u0000b"}), 422, "validation_failed")
+	expect(t, b.do("PATCH", "/me", map[string]any{"displayName": "a\u0000b"}), 422, "validation_failed")
+	expect(t, b.do("POST", "/accounts", map[string]any{"name": "a\u0000b"}), 422, "validation_failed")
 
 	// Another user sees none of it.
 	other := signedIn(t, e, "other-"+testEmail(t))

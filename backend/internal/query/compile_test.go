@@ -143,7 +143,7 @@ func TestToolFilter(t *testing.T) {
 	}
 }
 
-var hostile = []string{"'; DROP TABLE transactions; --", `\' OR 1=1 --`, "%", "_", `\`, "$1", "\x00", "/* x */", "ąę'\"`;"}
+var hostile = []string{"'; DROP TABLE transactions; --", `\' OR 1=1 --`, "%", "_", `\`, "$1", "/* x */", "ąę'\"`;"}
 
 // TestHostileInputOnlyInArgs: whatever the user types, the SQL text is built from the registry
 // and placeholders only.
@@ -159,6 +159,17 @@ func TestHostileInputOnlyInArgs(t *testing.T) {
 	}
 }
 
+func TestNULIsAValidationError(t *testing.T) {
+	for _, c := range []Context{{Search: "a\x00"}, {Filters: []Filter{{Column: "payee", Cond: "\x00"}}},
+		{Filters: []Filter{{Column: "payee", Excluded: []string{"x\x00"}}}}, {ToolFilter: &ToolFilter{Payee: "\x00"}}, {Search: "\xff"}} {
+		_, err := Compile(testUser, c)
+		var ve *platform.ValidationError
+		if !asValidation(err, &ve) {
+			t.Errorf("%+v: %v, want a validation error", c, err)
+		}
+	}
+}
+
 func FuzzCompile(f *testing.F) {
 	for _, h := range hostile {
 		f.Add("payee", h, h)
@@ -169,10 +180,11 @@ func FuzzCompile(f *testing.F) {
 		out, err := Compile(testUser, Context{Search: search, Filters: []Filter{{Column: col, Cond: cond, Excluded: []string{cond}}},
 			ToolFilter: &ToolFilter{Query: search, Payee: cond, MinAmount: &cond}})
 		if err != nil {
-			if _, ok := Lookup(col); ok {
-				t.Fatalf("known column %q failed: %v", col, err)
+			var ve *platform.ValidationError
+			if !asValidation(err, &ve) {
+				t.Fatalf("not a validation error: %v", err)
 			}
-			return
+			return // unknown column, or text with NUL / invalid UTF-8
 		}
 		checkSQL(t, out)
 	})

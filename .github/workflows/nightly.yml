@@ -1,0 +1,25 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # 02:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: fuzz (60s per target, incl. the query compiler against Postgres)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Pure fuzz targets
+        run: make fuzz FUZZTIME=60s
+      - name: Database fuzz targets (testcontainers)
+        run: make fuzz-db FUZZTIME=60s

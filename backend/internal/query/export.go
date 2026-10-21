@@ -47,7 +47,7 @@ func (e *Engine) Export(ctx context.Context, userID uuid.UUID, c Context, s *Sor
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, "SELECT "+strings.Join(exprs, ", ")+" FROM "+from+" WHERE "+scoped+" ORDER BY "+order, cc.Args...)
+		rows, err := tx.Query(ctx, "SELECT "+strings.Join(exprs, ", ")+" FROM "+from+" WHERE "+scoped+" ORDER BY "+order.sql, cc.Args...)
 		if err != nil {
 			return err
 		}

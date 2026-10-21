@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -47,7 +48,12 @@ func Compile(userID uuid.UUID, c Context) (*Compiled, error) {
 	}
 	out.Where = append(out.Where, searchPreds("t.search_text", c.Search, a)...)
 	ve := &platform.ValidationError{}
+	checkText(ve, "context.search", c.Search)
 	for i, f := range c.Filters {
+		checkText(ve, fmt.Sprintf("context.filters[%d].cond", i), f.Cond)
+		for _, x := range f.Excluded {
+			checkText(ve, fmt.Sprintf("context.filters[%d].excluded", i), x)
+		}
 		col, ok := columns[f.Column]
 		if !ok {
 			ve.Add(fmt.Sprintf("context.filters[%d].column", i), fmt.Sprintf("unknown column %q", f.Column))
@@ -63,6 +69,11 @@ func Compile(userID uuid.UUID, c Context) (*Compiled, error) {
 			out.Where = append(out.Where, "coalesce("+col.Text+", '') <> ALL("+a.add(f.Excluded)+"::text[])")
 		}
 	}
+	if tf := c.ToolFilter; tf != nil {
+		for name, v := range map[string]string{"query": tf.Query, "payee": tf.Payee, "category": tf.Category, "group": tf.Group} {
+			checkText(ve, "context.toolFilter."+name, v)
+		}
+	}
 	if err := ve.Err(); err != nil {
 		return nil, err
 	}
@@ -71,6 +82,14 @@ func Compile(userID uuid.UUID, c Context) (*Compiled, error) {
 	}
 	out.Args = a.vals
 	return out, nil
+}
+
+// checkText rejects text PostgreSQL can't take as a parameter: a NUL character (JSON allows
+// \u0000; stored text never contains it, so such a filter could not match anything anyway).
+func checkText(ve *platform.ValidationError, field, s string) {
+	if strings.ContainsRune(s, 0) || !utf8.ValidString(s) {
+		ve.Add(field, "must be valid text without NUL characters")
+	}
 }
 
 // condition compiles one parsed condition for col (legacy compileCond). Numbers and dates try

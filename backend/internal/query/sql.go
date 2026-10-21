@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -38,24 +40,52 @@ const (
 	DefaultDistinct = 600
 )
 
-// from is the row source: transactions with their account, category and group.
+// from is the full row source: transactions with their account, category and group.
 const from = "transactions t JOIN accounts a ON a.id = t.account_id" +
 	" LEFT JOIN categories c ON c.id = t.category_id LEFT JOIN groups g ON g.id = t.group_id"
+
+// source is the row source with only the joins in need (the predicates' and the order's).
+func source(need ...Join) string {
+	has := func(j Join) bool { return slices.Contains(need, j) }
+	s := "transactions t"
+	if has(JoinAccounts) {
+		s += " JOIN accounts a ON a.id = t.account_id"
+	}
+	if has(JoinCategories) {
+		s += " LEFT JOIN categories c ON c.id = t.category_id"
+	}
+	if has(JoinGroups) {
+		s += " LEFT JOIN groups g ON g.id = t.group_id"
+	}
+	return s
+}
+
+// joins lists the joins a compiled context needs, plus extra.
+func (c *Compiled) joins(extra ...Join) []Join {
+	out := slices.Collect(maps.Keys(c.Joins))
+	return append(out, extra...)
+}
 
 // tieBreak is the stable end of every ordering (PLAN §4.5).
 const tieBreak = "t.booked_on DESC, t.seq ASC"
 
-func orderBy(s *Sort) (string, error) {
+// order is an ORDER BY list and the join its column needs.
+type order struct {
+	sql  string
+	join Join
+}
+
+func orderBy(s *Sort) (order, error) {
 	if s == nil {
-		return tieBreak, nil
+		return order{sql: tieBreak}, nil
 	}
 	col, ok := columns[s.Column]
 	if !ok {
 		ve := &platform.ValidationError{}
 		ve.Add("sort.column", fmt.Sprintf("unknown column %q", s.Column))
-		return "", ve
+		return order{}, ve
 	}
-	return col.sortExpr(s.Desc) + ", " + tieBreak, nil
+	return order{sql: col.sortExpr(s.Desc) + ", " + tieBreak, join: col.Join}, nil
 }
 
 func where(preds []string) string { return strings.Join(preds, " AND ") }
@@ -187,6 +217,79 @@ type Page struct {
 	LocatedOffset     *int // the position of LocateID in the ordered result, when found
 }
 
+// pageSQL builds the totals and rows statements of a page request (shared by Page and Explain).
+// The totals read only the tables the predicates need; the rows statement finds the window's ids
+// first (cheap, often index-only) and joins the display columns for those rows only.
+func pageSQL(r *resolved, stat string, o order, offset, limit int) (totals, rows string, totalsArgs, rowsArgs []any, err error) {
+	c, base, err := r.fresh(false)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+	statExpr := map[string]string{"amount": "t.amount_minor", "balanceAfter": "t.balance_after_minor"}[stat]
+	inPeriod := "true"
+	if p := r.period; p != nil {
+		inPeriod = "t.booked_on >= " + c.Add(p.From.String()) + "::date AND t.booked_on < " + c.Add(p.To.String()) + "::date"
+	}
+	totals = "SELECT count(*) FILTER (WHERE " + inPeriod + ")," +
+		" sum(" + statExpr + ") FILTER (WHERE " + inPeriod + ")::bigint, round(avg(" + statExpr + ") FILTER (WHERE " + inPeriod + "))::bigint," +
+		" min(" + statExpr + ") FILTER (WHERE " + inPeriod + "), max(" + statExpr + ") FILTER (WHERE " + inPeriod + ")," +
+		" min(t.booked_on), max(t.booked_on) FROM " + source(c.joins()...) + " WHERE " + base
+	rc, scoped, err := r.fresh(true)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+	rows = "SELECT " + rowColumns + " FROM " + from + " WHERE t.id IN (SELECT t.id FROM " + source(rc.joins(o.join)...) +
+		" WHERE " + scoped + " ORDER BY " + o.sql + " OFFSET " + rc.Add(offset) + " LIMIT " + rc.Add(limit) + ") ORDER BY " + o.sql
+	return totals, rows, c.Args, rc.Args, nil
+}
+
+// Explain runs EXPLAIN (ANALYZE, BUFFERS) on the statements of a page request, read-only, and
+// returns the plans by name: totals, rows, duplicates (PLAN task 7.11; docs/perf.md, debugging).
+func (e *Engine) Explain(ctx context.Context, userID uuid.UUID, req PageRequest) (map[string]string, error) {
+	order, err := orderBy(req.Sort)
+	if err != nil {
+		return nil, err
+	}
+	plans := map[string]string{}
+	stat := req.StatColumn
+	if stat == "" {
+		stat = "amount"
+	}
+	err = e.st.WithUserReadOnly(ctx, userID, func(_ *db.Queries, tx pgx.Tx) error {
+		r, err := resolve(ctx, tx, userID, req.Context)
+		if err != nil {
+			return err
+		}
+		totals, rows, ta, ra, err := pageSQL(r, stat, order, req.Offset, req.Limit)
+		if err != nil {
+			return err
+		}
+		explain := func(sql string, args []any) (string, error) {
+			rs, err := tx.Query(ctx, "EXPLAIN (ANALYZE, BUFFERS) "+sql, args...)
+			if err != nil {
+				return "", err
+			}
+			lines, err := pgx.CollectRows(rs, pgx.RowTo[string])
+			return strings.Join(lines, "\n"), err
+		}
+		dc, _, err := r.fresh(false)
+		if err != nil {
+			return err
+		}
+		ds, da := duplicatesSQL(dc)
+		for name, q := range map[string]struct {
+			sql  string
+			args []any
+		}{"totals": {totals, ta}, "rows": {rows, ra}, "duplicates": {ds, da}} {
+			if plans[name], err = explain(q.sql, q.args); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return plans, err
+}
+
 // Page returns a window of rows with the totals (PLAN task 7.5).
 func (e *Engine) Page(ctx context.Context, userID uuid.UUID, req PageRequest) (Page, error) {
 	ve := &platform.ValidationError{}
@@ -221,28 +324,23 @@ func (e *Engine) Page(ctx context.Context, userID uuid.UUID, req PageRequest) (P
 
 		// Totals: one pass over "base" (filters, no period) computes the data range, and the
 		// period-scoped count and stats with FILTER.
-		c, base, err := r.fresh(false)
+		totals, rowsSQL, ta, ra, err := pageSQL(r, stat, order, req.Offset, req.Limit)
 		if err != nil {
 			return err
 		}
-		statExpr := map[string]string{"amount": "t.amount_minor", "balanceAfter": "t.balance_after_minor"}[stat]
-		inPeriod := "true"
-		if p := r.period; p != nil {
-			inPeriod = "t.booked_on >= " + c.Add(p.From.String()) + "::date AND t.booked_on < " + c.Add(p.To.String()) + "::date"
-		}
 		var dmin, dmax pgtype.Date
 		var sum, avg, mn, mx pgtype.Int8
-		if err := tx.QueryRow(ctx, "SELECT count(*) FILTER (WHERE "+inPeriod+"),"+
-			" sum("+statExpr+") FILTER (WHERE "+inPeriod+")::bigint, round(avg("+statExpr+") FILTER (WHERE "+inPeriod+"))::bigint,"+
-			" min("+statExpr+") FILTER (WHERE "+inPeriod+"), max("+statExpr+") FILTER (WHERE "+inPeriod+"),"+
-			" min(t.booked_on), max(t.booked_on) FROM "+from+" WHERE "+base, c.Args...).
-			Scan(&out.Total, &sum, &avg, &mn, &mx, &dmin, &dmax); err != nil {
+		if err := tx.QueryRow(ctx, totals, ta...).Scan(&out.Total, &sum, &avg, &mn, &mx, &dmin, &dmax); err != nil {
 			return err
 		}
 		out.Stats.Sum, out.Stats.Avg, out.Stats.Min, out.Stats.Max = int8p(sum), int8p(avg), int8p(mn), int8p(mx)
 		out.DataMin, out.DataMax = dateOf(dmin), dateOf(dmax)
 
-		if out.DuplicatesSkipped, err = duplicatesSkipped(ctx, tx, c); err != nil {
+		dc, _, err := r.fresh(false)
+		if err != nil {
+			return err
+		}
+		if out.DuplicatesSkipped, err = duplicatesSkipped(ctx, tx, dc); err != nil {
 			return err
 		}
 
@@ -252,8 +350,8 @@ func (e *Engine) Page(ctx context.Context, userID uuid.UUID, req PageRequest) (P
 				return err
 			}
 			var n int
-			err = tx.QueryRow(ctx, "SELECT n FROM (SELECT t.id, row_number() OVER (ORDER BY "+order+") - 1 AS n FROM "+from+
-				" WHERE "+scoped+") x WHERE x.id = "+c.Add(*req.LocateID), c.Args...).Scan(&n)
+			err = tx.QueryRow(ctx, "SELECT n FROM (SELECT t.id, row_number() OVER (ORDER BY "+order.sql+") - 1 AS n FROM "+
+				source(c.joins(order.join)...)+" WHERE "+scoped+") x WHERE x.id = "+c.Add(*req.LocateID), c.Args...).Scan(&n)
 			switch {
 			case errors.Is(err, pgx.ErrNoRows): // not in the result: the requested window as is
 			case err != nil:
@@ -264,12 +362,12 @@ func (e *Engine) Page(ctx context.Context, userID uuid.UUID, req PageRequest) (P
 			}
 		}
 
-		c, scoped, err := r.fresh(true)
-		if err != nil {
-			return err
+		if out.Offset != req.Offset { // moved to the located row's window
+			if _, rowsSQL, _, ra, err = pageSQL(r, stat, order, out.Offset, req.Limit); err != nil {
+				return err
+			}
 		}
-		rows, err := tx.Query(ctx, "SELECT "+rowColumns+" FROM "+from+" WHERE "+scoped+" ORDER BY "+order+
-			" OFFSET "+c.Add(out.Offset)+" LIMIT "+c.Add(req.Limit), c.Args...)
+		rows, err := tx.Query(ctx, rowsSQL, ra...)
 		if err != nil {
 			return err
 		}
@@ -289,12 +387,19 @@ func int8p(v pgtype.Int8) *int64 {
 // duplicatesSkipped counts, for the context's accounts and ignoring filters, the staged rows that
 // were merged into an existing transaction (linked rows − import-origin transactions).
 func duplicatesSkipped(ctx context.Context, tx pgx.Tx, c *Compiled) (int64, error) {
-	scope := strings.NewReplacer("t.user_id", "ir.user_id", "t.account_id", "i.account_id").Replace(where(c.Scope))
+	sql, args := duplicatesSQL(c)
 	var n int64
-	err := tx.QueryRow(ctx, "SELECT (SELECT count(*) FROM import_rows ir JOIN imports i ON i.id = ir.import_id WHERE "+scope+
-		" AND ir.transaction_id IS NOT NULL) - (SELECT count(*) FROM transactions t WHERE "+where(c.Scope)+" AND t.origin = 'import')",
-		c.Args[:c.ScopeN]...).Scan(&n)
+	err := tx.QueryRow(ctx, sql, args...).Scan(&n)
 	return n, err
+}
+
+// duplicatesSQL: every import-origin transaction has at least one linked staging row (orphans are
+// deleted with their last import), so "linked rows − import-origin transactions" equals "linked
+// rows − distinct linked transactions", which import_rows_linked_idx answers without the heap.
+func duplicatesSQL(c *Compiled) (string, []any) {
+	scope := strings.NewReplacer("t.user_id", "ir.user_id", "t.account_id", "i.account_id").Replace(where(c.Scope))
+	return "SELECT count(*) - count(DISTINCT ir.transaction_id) FROM import_rows ir JOIN imports i ON i.id = ir.import_id WHERE " +
+		scope + " AND ir.transaction_id IS NOT NULL", c.Args[:c.ScopeN]
 }
 
 // Value is one entry of a column's value checklist.
@@ -315,6 +420,7 @@ func (e *Engine) Distinct(ctx context.Context, userID uuid.UUID, c Context, colu
 	if limit < 1 || limit > MaxDistinct {
 		ve.Add("limit", "must be 1–"+strconv.Itoa(MaxDistinct))
 	}
+	checkText(ve, "search", search)
 	if err := ve.Err(); err != nil {
 		return nil, err
 	}
@@ -332,7 +438,7 @@ func (e *Engine) Distinct(ctx context.Context, userID uuid.UUID, c Context, colu
 			w += " AND coalesce(" + col.Norm + ", '') LIKE " + c.Add(contains(shadow(s)))
 		}
 		v := "coalesce(" + col.Text + ", '')"
-		rows, err := tx.Query(ctx, "SELECT "+v+" AS v, count(*) AS n FROM "+from+" WHERE "+w+
+		rows, err := tx.Query(ctx, "SELECT "+v+" AS v, count(*) AS n FROM "+source(c.joins(col.Join)...)+" WHERE "+w+
 			" GROUP BY 1 ORDER BY n DESC, "+v+" COLLATE pl_natural LIMIT "+c.Add(limit), c.Args...)
 		if err != nil {
 			return err
@@ -379,7 +485,7 @@ func (e *Engine) IDs(ctx context.Context, userID uuid.UUID, c Context, s *Sort, 
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, "SELECT t.id, t.amount_minor FROM "+from+" WHERE "+scoped+" ORDER BY "+order+
+		rows, err := tx.Query(ctx, "SELECT t.id, t.amount_minor FROM "+source(c.joins(order.join)...)+" WHERE "+scoped+" ORDER BY "+order.sql+
 			" OFFSET "+c.Add(offset)+" LIMIT "+c.Add(limit), c.Args...)
 		if err != nil {
 			return err

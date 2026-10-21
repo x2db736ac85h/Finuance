@@ -52,6 +52,8 @@ func dbErr(what string, err error) error {
 			return fmt.Errorf("%s: %w", what, ErrConflict)
 		case "23503", "23514": // foreign_key_violation, check_violation
 			return fmt.Errorf("%s: %w: %s", what, ErrInvalid, pgErr.ConstraintName)
+		case "22021": // character_not_in_repertoire: a NUL character in text (JSON allows \u0000)
+			return fmt.Errorf("%s: %w: text must not contain NUL characters", what, ErrInvalid)
 		}
 	}
 	return fmt.Errorf("%s: %w", what, err)

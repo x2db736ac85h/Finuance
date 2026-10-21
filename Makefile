@@ -82,11 +82,19 @@ test-e2e: ## Playwright against compose.ci.yaml
 	$(call todo,9)
 
 .PHONY: fuzz
-fuzz: ## All fuzz targets for FUZZTIME (default 30s each)
+fuzz: ## All pure fuzz targets for FUZZTIME (default 30s each); *DB targets run in the nightly workflow
 	@cd backend && for pkg in $$(go list ./...); do \
-	  for f in $$(go test -list '^Fuzz' "$$pkg" | grep '^Fuzz' || true); do \
+	  for f in $$(go test -list '^Fuzz' "$$pkg" | grep '^Fuzz' | grep -v 'DB$$' || true); do \
 	    echo "fuzz: $$f ($$pkg) for $(FUZZTIME)"; \
 	    go test -run '^$$' -fuzz "^$$f$$" -fuzztime $(FUZZTIME) "$$pkg"; \
+	  done; done
+
+.PHONY: fuzz-db
+fuzz-db: ## Fuzz targets that need Postgres (Docker), FUZZTIME each (nightly CI: 60s)
+	@cd backend && for pkg in $$(go list ./...); do \
+	  for f in $$(go test -short -list '^Fuzz.*DB$$' "$$pkg" | grep '^Fuzz' || true); do \
+	    echo "fuzz: $$f ($$pkg) for $(FUZZTIME)"; \
+	    go test -run '^$$' -fuzz "^$$f$$" -fuzztime $(FUZZTIME) -parallel 1 "$$pkg"; \
 	  done; done
 
 .PHONY: bench
