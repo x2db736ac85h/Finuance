@@ -19,3 +19,16 @@ func Exponent(currency string) (int, bool) {
 	}
 	return DefaultExponent, false
 }
+
+// NonDefaultExponents returns the known currencies whose exponent is not DefaultExponent, for SQL
+// that has to scale amount_minor per row (internal/query). Empty while every known currency has
+// two decimals.
+func NonDefaultExponents() map[string]int {
+	out := map[string]int{}
+	for c, e := range exponents {
+		if e != DefaultExponent {
+			out[c] = e
+		}
+	}
+	return out
+}
