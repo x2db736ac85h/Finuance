@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 7 — Transactions query API · **Branch:** phase/07-query · **Status:** gate approved, merged
+**Current phase:** 8 — Frontend foundation · **Branch:** phase/08-frontend · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -20,9 +20,27 @@
 - Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
 - Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
 - Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
+- Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 6.0.x (typescript-eslint supports < 6.1). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 8.1 scaffold `web/` (Vite, React, TS strict, ESLint, Prettier, Vitest, Playwright config, `/api` proxy, `make dev-web`)
+- [ ] 8.2 API client: `openapi-typescript` in `make gen`, `openapi-fetch` client (CSRF header, Problem errors, 401 → `/login?next=`), hooks
+- [ ] 8.3 styles: `tokens.css` (verbatim), `base.css` (rem), `scale.ts` (auto heuristic), `theme.ts`
+- [ ] 8.4 `Icon` (legacy SVG set), `Logo`, favicon
+- [ ] 8.5 UI primitives + dev-only `/__ui`
+- [ ] 8.6 shell: TitleBar, Sidebar (accounts, auto-collapse), StatusBar, EmptyState, DropOverlay, keyboard manager
+- [ ] 8.7 auth pages, user menu, `RequireAuth` with the prefs gate
+- [ ] 8.8 `uiStore`, `viewStore`, `usePreferencesSync` (hydrate, debounce, 409 merge)
+- [ ] 8.9 settings pages: appearance, profile, sessions, data
+- [ ] 8.10 `POST /demo-data` + "Load demo data"
+- [ ] 8.11 web image (nginx, CSP, caching, `/api` proxy), Compose `web`, `compose.prod.yaml`
+- [ ] 8.12 CI `web` job (lint, typecheck, test, build, bundle size)
+- [ ] 8.13 E2E: `compose.ci.yaml`, CI `e2e` job, first spec
+- [ ] 8.14 SettingsPopover, KeyboardShortcuts dialog
+- [ ] Gate: legacy vs new screenshots (dark/light)
+
+## Phase 7 tasks (done)
 - [x] 7.1 `query/dsl`: condition lexer + parser → AST, round-trip printer, `FuzzParseCond`
 - [x] 7.2 `query/columns.go` + `compile.go`: column registry (§4.5 whitelist), `Compile` → `{where, args}` (number/date/text semantics, `excluded`, search, accounts)
 - [x] 7.3 `query/period.go`: anchor, presets, `prevRange`, labels
@@ -217,6 +235,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 8 planned and approved (3 dev type/lint deps; inline demo-data commit). Branch `phase/08-frontend`.
 - 2026-10-21 — Phase 7 gate approved with option (a) and `includeTotals`; both added (search p95 273 → 114 ms in the sandbox), merged. Next: plan Phase 8.
 - 2026-10-21 — Phase 7 built on `phase/07-query`: filter language + compiler + periods + engine (all 84 legacy filter cases, assistant filter parity), query/distinct/ids/detail/patch/categories endpoints, CSV export (ADR 0014), zip data export, query indexes (perf.md: 4 of 7 shapes within target in the sandbox; trigram index unusable under RLS), nightly DB fuzz, `query-smoke.sh`. Next: Irwin's gate review.
 - 2026-10-21 — Phase 7 planned and approved (collapsed-whitespace equality as an allowed diff; fixed `-79,99` / `dd.mm.yyyy` text form). Branch `phase/07-query`.
