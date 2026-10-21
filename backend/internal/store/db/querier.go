@@ -67,6 +67,11 @@ type Querier interface {
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
 	// "N duplicates skipped" for a set of accounts: linked staged rows − import-origin transactions.
 	DuplicatesSkipped(ctx context.Context, arg DuplicatesSkippedParams) (int64, error)
+	// Queries for the personal data export (GET /me/export, PLAN task 7.10).
+	ExportAnnotations(ctx context.Context, userID uuid.UUID) ([]TxAnnotation, error)
+	ExportDedupeOverrides(ctx context.Context, userID uuid.UUID) ([]DedupeOverride, error)
+	// Every import of the user, oldest first (the export streams their files one at a time).
+	ExportImportIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	// Account suggestion (PLAN §4.4): last four digits of the own-account column.
 	FindAccountsByNumberHint(ctx context.Context, arg FindAccountsByNumberHintParams) ([]Account, error)
 	// Exact duplicate file check (PLAN §4.4): an earlier non-failed import with the same bytes.

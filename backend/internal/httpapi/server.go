@@ -25,6 +25,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/internal/query"
 )
 
 // MaxJSONBody is the default request body limit (docs/PLAN.md §6.1).
@@ -54,6 +55,8 @@ type Deps struct {
 	Jobs *river.Client[pgx.Tx]
 	// Ledger serves accounts and imports. Nil in tests of the bare server.
 	Ledger *ledger.Ledger
+	// Query runs the transaction reads (query, distinct, export). Nil in tests of the bare server.
+	Query *query.Engine
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -85,7 +88,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if clock == nil {
 		clock = platform.SystemClock{}
 	}
-	impl := &api{cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
+	impl := &api{cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

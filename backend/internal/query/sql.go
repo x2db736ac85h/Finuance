@@ -392,3 +392,19 @@ func (e *Engine) IDs(ctx context.Context, userID uuid.UUID, c Context, s *Sort, 
 	})
 	return out, err
 }
+
+// Validate checks a context and sort without running anything (the export validates before it
+// starts streaming, when a problem response is still possible).
+func Validate(userID uuid.UUID, c Context, s *Sort) error {
+	if _, err := Compile(userID, c); err != nil {
+		return err
+	}
+	if c.Period != nil {
+		anchor := platform.MustDate(2000, 1, 1) // any date: only the shape is checked
+		if _, err := Resolve(c.Period, &anchor); err != nil {
+			return err
+		}
+	}
+	_, err := orderBy(s)
+	return err
+}

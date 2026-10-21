@@ -27,6 +27,105 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 )
 
+// Defines values for ColumnStatsColumn.
+const (
+	ColumnStatsColumnAmount       ColumnStatsColumn = "amount"
+	ColumnStatsColumnBalanceAfter ColumnStatsColumn = "balanceAfter"
+)
+
+// Valid indicates whether the value is a known member of the ColumnStatsColumn enum.
+func (e ColumnStatsColumn) Valid() bool {
+	switch e {
+	case ColumnStatsColumnAmount:
+		return true
+	case ColumnStatsColumnBalanceAfter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportRequestDelimiter.
+const (
+	DelimiterComma     ExportRequestDelimiter = ","
+	DelimiterPipe      ExportRequestDelimiter = "|"
+	DelimiterSemicolon ExportRequestDelimiter = ";"
+	DelimiterTab       ExportRequestDelimiter = "\\t"
+)
+
+// Valid indicates whether the value is a known member of the ExportRequestDelimiter enum.
+func (e ExportRequestDelimiter) Valid() bool {
+	switch e {
+	case DelimiterComma:
+		return true
+	case DelimiterPipe:
+		return true
+	case DelimiterSemicolon:
+		return true
+	case DelimiterTab:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterColumn.
+const (
+	FilterColumnAccount             FilterColumn = "account"
+	FilterColumnAmount              FilterColumn = "amount"
+	FilterColumnBalanceAfter        FilterColumn = "balanceAfter"
+	FilterColumnBankCategory        FilterColumn = "bankCategory"
+	FilterColumnBookedOn            FilterColumn = "bookedOn"
+	FilterColumnCategory            FilterColumn = "category"
+	FilterColumnCounterpartyAccount FilterColumn = "counterpartyAccount"
+	FilterColumnCurrency            FilterColumn = "currency"
+	FilterColumnDescription         FilterColumn = "description"
+	FilterColumnGroup               FilterColumn = "group"
+	FilterColumnNote                FilterColumn = "note"
+	FilterColumnPayee               FilterColumn = "payee"
+	FilterColumnReference           FilterColumn = "reference"
+	FilterColumnTxType              FilterColumn = "txType"
+	FilterColumnValueOn             FilterColumn = "valueOn"
+)
+
+// Valid indicates whether the value is a known member of the FilterColumn enum.
+func (e FilterColumn) Valid() bool {
+	switch e {
+	case FilterColumnAccount:
+		return true
+	case FilterColumnAmount:
+		return true
+	case FilterColumnBalanceAfter:
+		return true
+	case FilterColumnBankCategory:
+		return true
+	case FilterColumnBookedOn:
+		return true
+	case FilterColumnCategory:
+		return true
+	case FilterColumnCounterpartyAccount:
+		return true
+	case FilterColumnCurrency:
+		return true
+	case FilterColumnDescription:
+		return true
+	case FilterColumnGroup:
+		return true
+	case FilterColumnNote:
+		return true
+	case FilterColumnPayee:
+		return true
+	case FilterColumnReference:
+		return true
+	case FilterColumnTxType:
+		return true
+	case FilterColumnValueOn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportDetailColumnTypes.
 const (
 	Date   ImportDetailColumnTypes = "date"
@@ -168,6 +267,30 @@ func (e ImportSummaryStatus) Valid() bool {
 	}
 }
 
+// Defines values for PeriodPreset.
+const (
+	L12m PeriodPreset = "l12m"
+	L30  PeriodPreset = "l30"
+	L3m  PeriodPreset = "l3m"
+	Ytd  PeriodPreset = "ytd"
+)
+
+// Valid indicates whether the value is a known member of the PeriodPreset enum.
+func (e PeriodPreset) Valid() bool {
+	switch e {
+	case L12m:
+		return true
+	case L30:
+		return true
+	case L3m:
+		return true
+	case Ytd:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProblemCode.
 const (
 	Conflict             ProblemCode = "conflict"
@@ -219,6 +342,150 @@ func (e ProblemCode) Valid() bool {
 	}
 }
 
+// Defines values for ResolvedPeriodKind.
+const (
+	Month ResolvedPeriodKind = "month"
+	Range ResolvedPeriodKind = "range"
+	Year  ResolvedPeriodKind = "year"
+)
+
+// Valid indicates whether the value is a known member of the ResolvedPeriodKind enum.
+func (e ResolvedPeriodKind) Valid() bool {
+	switch e {
+	case Month:
+		return true
+	case Range:
+		return true
+	case Year:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SortDir.
+const (
+	Asc  SortDir = "asc"
+	Desc SortDir = "desc"
+)
+
+// Valid indicates whether the value is a known member of the SortDir enum.
+func (e SortDir) Valid() bool {
+	switch e {
+	case Asc:
+		return true
+	case Desc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ToolFilterType.
+const (
+	Any     ToolFilterType = "any"
+	Expense ToolFilterType = "expense"
+	Income  ToolFilterType = "income"
+)
+
+// Valid indicates whether the value is a known member of the ToolFilterType enum.
+func (e ToolFilterType) Valid() bool {
+	switch e {
+	case Any:
+		return true
+	case Expense:
+		return true
+	case Income:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransactionDetailCategorySource.
+const (
+	TransactionDetailCategorySourceBank   TransactionDetailCategorySource = "bank"
+	TransactionDetailCategorySourceManual TransactionDetailCategorySource = "manual"
+	TransactionDetailCategorySourceNone   TransactionDetailCategorySource = "none"
+	TransactionDetailCategorySourceRule   TransactionDetailCategorySource = "rule"
+)
+
+// Valid indicates whether the value is a known member of the TransactionDetailCategorySource enum.
+func (e TransactionDetailCategorySource) Valid() bool {
+	switch e {
+	case TransactionDetailCategorySourceBank:
+		return true
+	case TransactionDetailCategorySourceManual:
+		return true
+	case TransactionDetailCategorySourceNone:
+		return true
+	case TransactionDetailCategorySourceRule:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransactionDetailOrigin.
+const (
+	TransactionDetailOriginImport TransactionDetailOrigin = "import"
+	TransactionDetailOriginManual TransactionDetailOrigin = "manual"
+)
+
+// Valid indicates whether the value is a known member of the TransactionDetailOrigin enum.
+func (e TransactionDetailOrigin) Valid() bool {
+	switch e {
+	case TransactionDetailOriginImport:
+		return true
+	case TransactionDetailOriginManual:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransactionQueryStatColumn.
+const (
+	TransactionQueryStatColumnAmount       TransactionQueryStatColumn = "amount"
+	TransactionQueryStatColumnBalanceAfter TransactionQueryStatColumn = "balanceAfter"
+)
+
+// Valid indicates whether the value is a known member of the TransactionQueryStatColumn enum.
+func (e TransactionQueryStatColumn) Valid() bool {
+	switch e {
+	case TransactionQueryStatColumnAmount:
+		return true
+	case TransactionQueryStatColumnBalanceAfter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransactionRowCategorySource.
+const (
+	TransactionRowCategorySourceBank   TransactionRowCategorySource = "bank"
+	TransactionRowCategorySourceManual TransactionRowCategorySource = "manual"
+	TransactionRowCategorySourceNone   TransactionRowCategorySource = "none"
+	TransactionRowCategorySourceRule   TransactionRowCategorySource = "rule"
+)
+
+// Valid indicates whether the value is a known member of the TransactionRowCategorySource enum.
+func (e TransactionRowCategorySource) Valid() bool {
+	switch e {
+	case TransactionRowCategorySourceBank:
+		return true
+	case TransactionRowCategorySourceManual:
+		return true
+	case TransactionRowCategorySourceNone:
+		return true
+	case TransactionRowCategorySourceRule:
+		return true
+	default:
+		return false
+	}
+}
+
 // Account defines model for Account.
 type Account struct {
 	Archived  bool                `json:"archived"`
@@ -247,6 +514,14 @@ type AccountInput struct {
 	OpeningBalanceMinor *int64  `json:"openingBalanceMinor,omitempty"`
 }
 
+// Category defines model for Category.
+type Category struct {
+	ColorSlot *int               `json:"colorSlot,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Name      string             `json:"name"`
+	TxCount   int                `json:"txCount"`
+}
+
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"currentPassword"`
@@ -259,15 +534,61 @@ type ColRef struct {
 	Index  int    `json:"index"`
 }
 
+// ColumnFilter defines model for ColumnFilter.
+type ColumnFilter struct {
+	// Column A filterable, sortable column (PLAN §4.5).
+	Column FilterColumn `json:"column"`
+
+	// Cond Filter language (`>100`, `-50..50`, `2025-03`, `=x`, `!kino` …).
+	Cond *string `json:"cond,omitempty"`
+
+	// Excluded Display values unticked in the value checklist.
+	Excluded *[]string `json:"excluded,omitempty"`
+}
+
+// ColumnStats Over the period-scoped rows, in minor units; absent when no row has a value.
+type ColumnStats struct {
+	// Avg Rounded to whole minor units.
+	Avg    *int64            `json:"avg,omitempty"`
+	Column ColumnStatsColumn `json:"column"`
+	Max    *int64            `json:"max,omitempty"`
+	Min    *int64            `json:"min,omitempty"`
+	Sum    *int64            `json:"sum,omitempty"`
+}
+
+// ColumnStatsColumn defines model for ColumnStats.Column.
+type ColumnStatsColumn string
+
 // CommitRequest defines model for CommitRequest.
 type CommitRequest struct {
 	// RememberMapping Save the mapping and options for files with the same layout.
 	RememberMapping *bool `json:"rememberMapping,omitempty"`
 }
 
+// DateRange defines model for DateRange.
+type DateRange struct {
+	Max openapi_types.Date `json:"max"`
+	Min openapi_types.Date `json:"min"`
+}
+
 // DeleteMeRequest defines model for DeleteMeRequest.
 type DeleteMeRequest struct {
 	Password string `json:"password"`
+}
+
+// DistinctRequest defines model for DistinctRequest.
+type DistinctRequest struct {
+	// Column A filterable, sortable column (PLAN §4.5).
+	Column  FilterColumn `json:"column"`
+	Context QueryContext `json:"context"`
+	Limit   *int         `json:"limit,omitempty"`
+	Search  *string      `json:"search,omitempty"`
+}
+
+// DistinctValue defines model for DistinctValue.
+type DistinctValue struct {
+	Count int    `json:"count"`
+	Value string `json:"value"`
 }
 
 // DuplicateFileProblem defines model for DuplicateFileProblem.
@@ -294,11 +615,44 @@ type DuplicateFileProblem struct {
 	Type string `json:"type"`
 }
 
+// ExportRequest defines model for ExportRequest.
+type ExportRequest struct {
+	Columns []FilterColumn `json:"columns"`
+	Context QueryContext   `json:"context"`
+
+	// Delimiter `\t` (backslash, t) means a tab.
+	Delimiter *ExportRequestDelimiter `json:"delimiter,omitempty"`
+	Sort      *Sort                   `json:"sort,omitempty"`
+
+	// View Names the file (`finuance-<view>-<yyyy-mm-dd>.csv`); default `transactions`.
+	View *string `json:"view,omitempty"`
+}
+
+// ExportRequestDelimiter `\t` (backslash, t) means a tab.
+type ExportRequestDelimiter string
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	// Field Dotted path of the offending field, e.g. `mapping.amount`.
 	Field   string `json:"field"`
 	Message string `json:"message"`
+}
+
+// FilterColumn A filterable, sortable column (PLAN §4.5).
+type FilterColumn string
+
+// IdAmount defines model for IdAmount.
+type IdAmount struct {
+	AmountMinor int64              `json:"amountMinor"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// IdsRequest defines model for IdsRequest.
+type IdsRequest struct {
+	Context QueryContext `json:"context"`
+	Limit   int          `json:"limit"`
+	Offset  *int         `json:"offset,omitempty"`
+	Sort    *Sort        `json:"sort,omitempty"`
 }
 
 // ImportChanges defines model for ImportChanges.
@@ -482,6 +836,24 @@ type Money struct {
 	Currency string `json:"currency"`
 }
 
+// NamedRef defines model for NamedRef.
+type NamedRef struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
+// Period Exactly one of preset, month, year or from/to (to exclusive). Omit the period for all time.
+type Period struct {
+	From   *openapi_types.Date `json:"from,omitempty"`
+	Month  *string             `json:"month,omitempty"`
+	Preset *PeriodPreset       `json:"preset,omitempty"`
+	To     *openapi_types.Date `json:"to,omitempty"`
+	Year   *int                `json:"year,omitempty"`
+}
+
+// PeriodPreset defines model for Period.Preset.
+type PeriodPreset string
+
 // Preferences defines model for Preferences.
 type Preferences struct {
 	// Prefs UI settings document (theme, cards, per-view state, …); the web app owns its shape. At most 256 KiB.
@@ -515,11 +887,39 @@ type Problem struct {
 // ProblemCode Stable machine-readable error code.
 type ProblemCode string
 
+// QueryContext defines model for QueryContext.
+type QueryContext struct {
+	// AccountIds Empty or omitted = every account.
+	AccountIds       *[]openapi_types.UUID `json:"accountIds,omitempty"`
+	Filters          *[]ColumnFilter       `json:"filters,omitempty"`
+	IncludeTransfers *bool                 `json:"includeTransfers,omitempty"`
+
+	// Period Exactly one of preset, month, year or from/to (to exclusive). Omit the period for all time.
+	Period *Period `json:"period,omitempty"`
+	Search *string `json:"search,omitempty"`
+
+	// ToolFilter The assistant's lookup filter (PLAN §4.8), shown as a removable chip.
+	ToolFilter *ToolFilter `json:"toolFilter,omitempty"`
+}
+
 // RawField defines model for RawField.
 type RawField struct {
 	Header string `json:"header"`
 	Value  string `json:"value"`
 }
+
+// ResolvedPeriod defines model for ResolvedPeriod.
+type ResolvedPeriod struct {
+	From  openapi_types.Date `json:"from"`
+	Kind  ResolvedPeriodKind `json:"kind"`
+	Label string             `json:"label"`
+
+	// To Exclusive.
+	To openapi_types.Date `json:"to"`
+}
+
+// ResolvedPeriodKind defines model for ResolvedPeriod.Kind.
+type ResolvedPeriodKind string
 
 // Session defines model for Session.
 type Session struct {
@@ -550,6 +950,16 @@ type SignupRequest struct {
 	// Password At least 12 characters, at most 1024 bytes.
 	Password string `json:"password"`
 }
+
+// Sort defines model for Sort.
+type Sort struct {
+	// Column A filterable, sortable column (PLAN §4.5).
+	Column FilterColumn `json:"column"`
+	Dir    *SortDir     `json:"dir,omitempty"`
+}
+
+// SortDir defines model for Sort.Dir.
+type SortDir string
 
 // StagedRow defines model for StagedRow.
 type StagedRow struct {
@@ -600,6 +1010,137 @@ type StalePreferencesProblem struct {
 	Type string `json:"type"`
 }
 
+// ToolFilter The assistant's lookup filter (PLAN §4.8), shown as a removable chip.
+type ToolFilter struct {
+	Category *string             `json:"category,omitempty"`
+	DateFrom *openapi_types.Date `json:"dateFrom,omitempty"`
+
+	// DateTo Inclusive.
+	DateTo *openapi_types.Date `json:"dateTo,omitempty"`
+	Group  *string             `json:"group,omitempty"`
+	Label  *string             `json:"label,omitempty"`
+
+	// MaxAmount Absolute amount in major units.
+	MaxAmount *string `json:"maxAmount,omitempty"`
+
+	// MinAmount Absolute amount in major units.
+	MinAmount *string         `json:"minAmount,omitempty"`
+	Payee     *string         `json:"payee,omitempty"`
+	Query     *string         `json:"query,omitempty"`
+	Type      *ToolFilterType `json:"type,omitempty"`
+}
+
+// ToolFilterType defines model for ToolFilter.Type.
+type ToolFilterType string
+
+// TransactionDetail defines model for TransactionDetail.
+type TransactionDetail struct {
+	AccountId           openapi_types.UUID              `json:"accountId"`
+	AccountName         string                          `json:"accountName"`
+	Amount              Money                           `json:"amount"`
+	BalanceAfter        *Money                          `json:"balanceAfter,omitempty"`
+	BankCategory        string                          `json:"bankCategory"`
+	BookedOn            openapi_types.Date              `json:"bookedOn"`
+	Category            *NamedRef                       `json:"category,omitempty"`
+	CategorySource      TransactionDetailCategorySource `json:"categorySource"`
+	CounterpartyAccount string                          `json:"counterpartyAccount"`
+	CreatedAt           time.Time                       `json:"createdAt"`
+	Description         string                          `json:"description"`
+	Group               *NamedRef                       `json:"group,omitempty"`
+	Id                  openapi_types.UUID              `json:"id"`
+	IsTransfer          bool                            `json:"isTransfer"`
+	Note                string                          `json:"note"`
+	Origin              TransactionDetailOrigin         `json:"origin"`
+	Payee               string                          `json:"payee"`
+	Raw                 []RawField                      `json:"raw"`
+	Reference           string                          `json:"reference"`
+	Sources             []TransactionSource             `json:"sources"`
+	TxType              string                          `json:"txType"`
+	UpdatedAt           time.Time                       `json:"updatedAt"`
+	ValueOn             *openapi_types.Date             `json:"valueOn,omitempty"`
+}
+
+// TransactionDetailCategorySource defines model for TransactionDetail.CategorySource.
+type TransactionDetailCategorySource string
+
+// TransactionDetailOrigin defines model for TransactionDetail.Origin.
+type TransactionDetailOrigin string
+
+// TransactionPage defines model for TransactionPage.
+type TransactionPage struct {
+	DataRange         *DateRange `json:"dataRange,omitempty"`
+	DuplicatesSkipped int64      `json:"duplicatesSkipped"`
+	LocatedOffset     *int       `json:"locatedOffset,omitempty"`
+
+	// Offset The offset of `rows` (moved to the located row's window with `locateId`).
+	Offset int              `json:"offset"`
+	Period *ResolvedPeriod  `json:"period,omitempty"`
+	Rows   []TransactionRow `json:"rows"`
+
+	// Stats Over the period-scoped rows, in minor units; absent when no row has a value.
+	Stats ColumnStats `json:"stats"`
+
+	// Total Rows in the period-scoped result.
+	Total int `json:"total"`
+}
+
+// TransactionPatch defines model for TransactionPatch.
+type TransactionPatch struct {
+	CategoryId   *openapi_types.UUID `json:"categoryId,omitempty"`
+	CategoryName *string             `json:"categoryName,omitempty"`
+	Note         *string             `json:"note,omitempty"`
+
+	// ResetCategory Back to the bank's category (or none).
+	ResetCategory *bool `json:"resetCategory,omitempty"`
+}
+
+// TransactionQuery defines model for TransactionQuery.
+type TransactionQuery struct {
+	Context    QueryContext                `json:"context"`
+	Limit      int                         `json:"limit"`
+	LocateId   *openapi_types.UUID         `json:"locateId,omitempty"`
+	Offset     *int                        `json:"offset,omitempty"`
+	Sort       *Sort                       `json:"sort,omitempty"`
+	StatColumn *TransactionQueryStatColumn `json:"statColumn,omitempty"`
+}
+
+// TransactionQueryStatColumn defines model for TransactionQuery.StatColumn.
+type TransactionQueryStatColumn string
+
+// TransactionRow defines model for TransactionRow.
+type TransactionRow struct {
+	AccountId           openapi_types.UUID           `json:"accountId"`
+	AccountName         string                       `json:"accountName"`
+	Amount              Money                        `json:"amount"`
+	BalanceAfter        *Money                       `json:"balanceAfter,omitempty"`
+	BankCategory        string                       `json:"bankCategory"`
+	BookedOn            openapi_types.Date           `json:"bookedOn"`
+	Category            *NamedRef                    `json:"category,omitempty"`
+	CategorySource      TransactionRowCategorySource `json:"categorySource"`
+	CounterpartyAccount string                       `json:"counterpartyAccount"`
+	Description         string                       `json:"description"`
+	Group               *NamedRef                    `json:"group,omitempty"`
+	Id                  openapi_types.UUID           `json:"id"`
+	IsTransfer          bool                         `json:"isTransfer"`
+	Note                string                       `json:"note"`
+	Payee               string                       `json:"payee"`
+	Reference           string                       `json:"reference"`
+	TxType              string                       `json:"txType"`
+	ValueOn             *openapi_types.Date          `json:"valueOn,omitempty"`
+}
+
+// TransactionRowCategorySource defines model for TransactionRow.CategorySource.
+type TransactionRowCategorySource string
+
+// TransactionSource defines model for TransactionSource.
+type TransactionSource struct {
+	CommittedAt *time.Time         `json:"committedAt,omitempty"`
+	Filename    string             `json:"filename"`
+	ImportId    openapi_types.UUID `json:"importId"`
+	Raw         []RawField         `json:"raw"`
+	RowIndex    int                `json:"rowIndex"`
+}
+
 // UpdateMeRequest defines model for UpdateMeRequest.
 type UpdateMeRequest struct {
 	DisplayName string `json:"displayName"`
@@ -621,6 +1162,11 @@ type Id = openapi_types.UUID
 
 // TooManyRequests RFC 9457 problem details.
 type TooManyRequests = Problem
+
+// ListCategoriesParams defines parameters for ListCategories.
+type ListCategoriesParams struct {
+	AccountIds *[]openapi_types.UUID `form:"accountIds,omitempty" json:"accountIds,omitempty"`
+}
 
 // ListImportsParams defines parameters for ListImports.
 type ListImportsParams struct {
@@ -686,6 +1232,21 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 // PutPreferencesJSONRequestBody defines body for PutPreferences for application/json ContentType.
 type PutPreferencesJSONRequestBody = Preferences
 
+// DistinctValuesJSONRequestBody defines body for DistinctValues for application/json ContentType.
+type DistinctValuesJSONRequestBody = DistinctRequest
+
+// ExportTransactionsJSONRequestBody defines body for ExportTransactions for application/json ContentType.
+type ExportTransactionsJSONRequestBody = ExportRequest
+
+// TransactionRangeJSONRequestBody defines body for TransactionRange for application/json ContentType.
+type TransactionRangeJSONRequestBody = IdsRequest
+
+// QueryTransactionsJSONRequestBody defines body for QueryTransactions for application/json ContentType.
+type QueryTransactionsJSONRequestBody = TransactionQuery
+
+// UpdateTransactionJSONRequestBody defines body for UpdateTransaction for application/json ContentType.
+type UpdateTransactionJSONRequestBody = TransactionPatch
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// ListAccounts The user's accounts
@@ -709,6 +1270,9 @@ type ServerInterface interface {
 	// Signup Create an account and sign in
 	// (POST /auth/signup)
 	Signup(w http.ResponseWriter, r *http.Request)
+	// ListCategories Categories with counts and colour slots
+	// (GET /categories)
+	ListCategories(w http.ResponseWriter, r *http.Request, params ListCategoriesParams)
 	// ListImports Imports, newest first
 	// (GET /imports)
 	ListImports(w http.ResponseWriter, r *http.Request, params ListImportsParams)
@@ -748,7 +1312,7 @@ type ServerInterface interface {
 	// UpdateMe Change the display name
 	// (PATCH /me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
-	// ExportMe Download all of the user's data (Phase 7)
+	// ExportMe Download all of the user's data
 	// (GET /me/export)
 	ExportMe(w http.ResponseWriter, r *http.Request)
 	// ChangePassword Change the password
@@ -769,6 +1333,24 @@ type ServerInterface interface {
 	// PutPreferences Replace the UI preferences
 	// (PUT /preferences)
 	PutPreferences(w http.ResponseWriter, r *http.Request)
+	// DistinctValues A column's values with counts (the value checklist)
+	// (POST /transactions/distinct)
+	DistinctValues(w http.ResponseWriter, r *http.Request)
+	// ExportTransactions The filtered, sorted rows as CSV
+	// (POST /transactions/export)
+	ExportTransactions(w http.ResponseWriter, r *http.Request)
+	// TransactionRange Ids and amounts of a range of the ordered result (range selection)
+	// (POST /transactions/ids)
+	TransactionRange(w http.ResponseWriter, r *http.Request)
+	// QueryTransactions A window of transactions with totals
+	// (POST /transactions/query)
+	QueryTransactions(w http.ResponseWriter, r *http.Request)
+	// GetTransaction One transaction with its raw fields and source imports
+	// (GET /transactions/{id})
+	GetTransaction(w http.ResponseWriter, r *http.Request, id Id)
+	// UpdateTransaction Set the category or the note
+	// (PATCH /transactions/{id})
+	UpdateTransaction(w http.ResponseWriter, r *http.Request, id Id)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -893,6 +1475,39 @@ func (siw *ServerInterfaceWrapper) Signup(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Signup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCategories operation middleware
+func (siw *ServerInterfaceWrapper) ListCategories(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCategoriesParams
+
+	// ------------- Optional query parameter "accountIds" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "accountIds", r.URL.Query(), &params.AccountIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "accountIds"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accountIds", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCategories(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1386,6 +2001,114 @@ func (siw *ServerInterfaceWrapper) PutPreferences(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// DistinctValues operation middleware
+func (siw *ServerInterfaceWrapper) DistinctValues(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DistinctValues(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportTransactions operation middleware
+func (siw *ServerInterfaceWrapper) ExportTransactions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportTransactions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TransactionRange operation middleware
+func (siw *ServerInterfaceWrapper) TransactionRange(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TransactionRange(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// QueryTransactions operation middleware
+func (siw *ServerInterfaceWrapper) QueryTransactions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.QueryTransactions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTransaction operation middleware
+func (siw *ServerInterfaceWrapper) GetTransaction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTransaction(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTransaction operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTransaction(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1533,6 +2256,13 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports/{id}/file", wrapper.GetImportFile)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/commit", wrapper.CommitImport)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/reprocess", wrapper.ReprocessImport)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/transactions/query", wrapper.QueryTransactions)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/transactions/distinct", wrapper.DistinctValues)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/transactions/ids", wrapper.TransactionRange)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/transactions/export", wrapper.ExportTransactions)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/transactions/{id}", wrapper.GetTransaction)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/transactions/{id}", wrapper.UpdateTransaction)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/categories", wrapper.ListCategories)
 
 	return m
 }
@@ -1863,6 +2593,45 @@ type SignupdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response SignupdefaultApplicationProblemPlusJSONResponse) VisitSignupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCategoriesRequestObject struct {
+	Params ListCategoriesParams
+}
+
+type ListCategoriesResponseObject interface {
+	VisitListCategoriesResponse(w http.ResponseWriter) error
+}
+
+type ListCategories200JSONResponse []Category
+
+func (response ListCategories200JSONResponse) VisitListCategoriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCategoriesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListCategoriesdefaultApplicationProblemPlusJSONResponse) VisitListCategoriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2469,8 +3238,13 @@ type ExportMeResponseObject interface {
 	VisitExportMeResponse(w http.ResponseWriter) error
 }
 
+type ExportMe200ResponseHeaders struct {
+	ContentDisposition *string
+}
+
 type ExportMe200ApplicationzipResponse struct {
 	Body          io.Reader
+	Headers       ExportMe200ResponseHeaders
 	ContentLength int64
 }
 
@@ -2479,6 +3253,9 @@ func (response ExportMe200ApplicationzipResponse) VisitExportMeResponse(w http.R
 	w.Header().Set("Content-Type", "application/zip")
 	if response.ContentLength != 0 {
 		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
 	}
 	w.WriteHeader(200)
 
@@ -2766,6 +3543,255 @@ func (response PutPreferencesdefaultApplicationProblemPlusJSONResponse) VisitPut
 	return err
 }
 
+type DistinctValuesRequestObject struct {
+	Body *DistinctValuesJSONRequestBody
+}
+
+type DistinctValuesResponseObject interface {
+	VisitDistinctValuesResponse(w http.ResponseWriter) error
+}
+
+type DistinctValues200JSONResponse []DistinctValue
+
+func (response DistinctValues200JSONResponse) VisitDistinctValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DistinctValuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DistinctValuesdefaultApplicationProblemPlusJSONResponse) VisitDistinctValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTransactionsRequestObject struct {
+	Body *ExportTransactionsJSONRequestBody
+}
+
+type ExportTransactionsResponseObject interface {
+	VisitExportTransactionsResponse(w http.ResponseWriter) error
+}
+
+type ExportTransactions200ResponseHeaders struct {
+	ContentDisposition *string
+}
+
+type ExportTransactions200TextcsvResponse struct {
+	Body          io.Reader
+	Headers       ExportTransactions200ResponseHeaders
+	ContentLength int64
+}
+
+func (response ExportTransactions200TextcsvResponse) VisitExportTransactionsResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/csv")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type ExportTransactionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ExportTransactionsdefaultApplicationProblemPlusJSONResponse) VisitExportTransactionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TransactionRangeRequestObject struct {
+	Body *TransactionRangeJSONRequestBody
+}
+
+type TransactionRangeResponseObject interface {
+	VisitTransactionRangeResponse(w http.ResponseWriter) error
+}
+
+type TransactionRange200JSONResponse []IdAmount
+
+func (response TransactionRange200JSONResponse) VisitTransactionRangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TransactionRangedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response TransactionRangedefaultApplicationProblemPlusJSONResponse) VisitTransactionRangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryTransactionsRequestObject struct {
+	Body *QueryTransactionsJSONRequestBody
+}
+
+type QueryTransactionsResponseObject interface {
+	VisitQueryTransactionsResponse(w http.ResponseWriter) error
+}
+
+type QueryTransactions200JSONResponse TransactionPage
+
+func (response QueryTransactions200JSONResponse) VisitQueryTransactionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryTransactionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response QueryTransactionsdefaultApplicationProblemPlusJSONResponse) VisitQueryTransactionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTransactionRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type GetTransactionResponseObject interface {
+	VisitGetTransactionResponse(w http.ResponseWriter) error
+}
+
+type GetTransaction200JSONResponse TransactionDetail
+
+func (response GetTransaction200JSONResponse) VisitGetTransactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTransactiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTransactiondefaultApplicationProblemPlusJSONResponse) VisitGetTransactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTransactionRequestObject struct {
+	Id   Id `json:"id"`
+	Body *UpdateTransactionJSONRequestBody
+}
+
+type UpdateTransactionResponseObject interface {
+	VisitUpdateTransactionResponse(w http.ResponseWriter) error
+}
+
+type UpdateTransaction200JSONResponse TransactionDetail
+
+func (response UpdateTransaction200JSONResponse) VisitUpdateTransactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTransactiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateTransactiondefaultApplicationProblemPlusJSONResponse) VisitUpdateTransactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListAccounts The user's accounts
@@ -2789,6 +3815,9 @@ type StrictServerInterface interface {
 	// Signup Create an account and sign in
 	// (POST /auth/signup)
 	Signup(ctx context.Context, request SignupRequestObject) (SignupResponseObject, error)
+	// ListCategories Categories with counts and colour slots
+	// (GET /categories)
+	ListCategories(ctx context.Context, request ListCategoriesRequestObject) (ListCategoriesResponseObject, error)
 	// ListImports Imports, newest first
 	// (GET /imports)
 	ListImports(ctx context.Context, request ListImportsRequestObject) (ListImportsResponseObject, error)
@@ -2828,7 +3857,7 @@ type StrictServerInterface interface {
 	// UpdateMe Change the display name
 	// (PATCH /me)
 	UpdateMe(ctx context.Context, request UpdateMeRequestObject) (UpdateMeResponseObject, error)
-	// ExportMe Download all of the user's data (Phase 7)
+	// ExportMe Download all of the user's data
 	// (GET /me/export)
 	ExportMe(ctx context.Context, request ExportMeRequestObject) (ExportMeResponseObject, error)
 	// ChangePassword Change the password
@@ -2849,6 +3878,24 @@ type StrictServerInterface interface {
 	// PutPreferences Replace the UI preferences
 	// (PUT /preferences)
 	PutPreferences(ctx context.Context, request PutPreferencesRequestObject) (PutPreferencesResponseObject, error)
+	// DistinctValues A column's values with counts (the value checklist)
+	// (POST /transactions/distinct)
+	DistinctValues(ctx context.Context, request DistinctValuesRequestObject) (DistinctValuesResponseObject, error)
+	// ExportTransactions The filtered, sorted rows as CSV
+	// (POST /transactions/export)
+	ExportTransactions(ctx context.Context, request ExportTransactionsRequestObject) (ExportTransactionsResponseObject, error)
+	// TransactionRange Ids and amounts of a range of the ordered result (range selection)
+	// (POST /transactions/ids)
+	TransactionRange(ctx context.Context, request TransactionRangeRequestObject) (TransactionRangeResponseObject, error)
+	// QueryTransactions A window of transactions with totals
+	// (POST /transactions/query)
+	QueryTransactions(ctx context.Context, request QueryTransactionsRequestObject) (QueryTransactionsResponseObject, error)
+	// GetTransaction One transaction with its raw fields and source imports
+	// (GET /transactions/{id})
+	GetTransaction(ctx context.Context, request GetTransactionRequestObject) (GetTransactionResponseObject, error)
+	// UpdateTransaction Set the category or the note
+	// (PATCH /transactions/{id})
+	UpdateTransaction(ctx context.Context, request UpdateTransactionRequestObject) (UpdateTransactionResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -3083,6 +4130,32 @@ func (sh *strictHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SignupResponseObject); ok {
 		if err := validResponse.VisitSignupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCategories operation middleware
+func (sh *strictHandler) ListCategories(w http.ResponseWriter, r *http.Request, params ListCategoriesParams) {
+	var request ListCategoriesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCategories(ctx, request.(ListCategoriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCategories")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCategoriesResponseObject); ok {
+		if err := validResponse.VisitListCategoriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3653,116 +4726,341 @@ func (sh *strictHandler) PutPreferences(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// DistinctValues operation middleware
+func (sh *strictHandler) DistinctValues(w http.ResponseWriter, r *http.Request) {
+	var request DistinctValuesRequestObject
+
+	var body DistinctValuesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DistinctValues(ctx, request.(DistinctValuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DistinctValues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DistinctValuesResponseObject); ok {
+		if err := validResponse.VisitDistinctValuesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportTransactions operation middleware
+func (sh *strictHandler) ExportTransactions(w http.ResponseWriter, r *http.Request) {
+	var request ExportTransactionsRequestObject
+
+	var body ExportTransactionsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportTransactions(ctx, request.(ExportTransactionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportTransactions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ExportTransactionsResponseObject); ok {
+		if err := validResponse.VisitExportTransactionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TransactionRange operation middleware
+func (sh *strictHandler) TransactionRange(w http.ResponseWriter, r *http.Request) {
+	var request TransactionRangeRequestObject
+
+	var body TransactionRangeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TransactionRange(ctx, request.(TransactionRangeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TransactionRange")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TransactionRangeResponseObject); ok {
+		if err := validResponse.VisitTransactionRangeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// QueryTransactions operation middleware
+func (sh *strictHandler) QueryTransactions(w http.ResponseWriter, r *http.Request) {
+	var request QueryTransactionsRequestObject
+
+	var body QueryTransactionsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.QueryTransactions(ctx, request.(QueryTransactionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "QueryTransactions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(QueryTransactionsResponseObject); ok {
+		if err := validResponse.VisitQueryTransactionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTransaction operation middleware
+func (sh *strictHandler) GetTransaction(w http.ResponseWriter, r *http.Request, id Id) {
+	var request GetTransactionRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTransaction(ctx, request.(GetTransactionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTransaction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTransactionResponseObject); ok {
+		if err := validResponse.VisitGetTransactionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateTransaction operation middleware
+func (sh *strictHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request, id Id) {
+	var request UpdateTransactionRequestObject
+
+	request.Id = id
+
+	var body UpdateTransactionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTransaction(ctx, request.(UpdateTransactionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTransaction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateTransactionResponseObject); ok {
+		if err := validResponse.VisitUpdateTransactionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"3e+ryIj/OwA=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

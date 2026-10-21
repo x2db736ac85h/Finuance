@@ -30,6 +30,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 	tu "github.com/x2db736ac85h/finuance/backend/testutil"
@@ -113,7 +114,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Jobs: jc})
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +274,7 @@ func TestAuthFlow(t *testing.T) {
 	expect(t, b.do("GET", "/me", nil), 401, "unauthenticated")
 	b.setCookie(third)
 
-	expect(t, b.do("GET", "/me/export", nil), 501, "not_implemented")
+	expect(t, other.do("GET", "/me/export", nil), 401, "unauthenticated") // the export itself: TestExportMeHTTP
 }
 
 func TestPreferencesHTTP(t *testing.T) {

@@ -3,11 +3,9 @@ package httpapi
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
-	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
 // GetMe returns the signed-in user.
@@ -75,11 +73,6 @@ func (a *api) RevokeSession(ctx context.Context, req gen.RevokeSessionRequestObj
 		return nil, err
 	}
 	return gen.RevokeSession204Response{}, nil
-}
-
-// ExportMe arrives in Phase 7.
-func (a *api) ExportMe(context.Context, gen.ExportMeRequestObject) (gen.ExportMeResponseObject, error) {
-	return nil, fmt.Errorf("data export arrives in Phase 7: %w", platform.ErrNotImplemented)
 }
 
 // GetPreferences returns the UI preferences document.

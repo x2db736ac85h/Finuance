@@ -35,6 +35,7 @@ const (
 // the registry is the whitelist the compiler draws from.
 type Column struct {
 	Name  string // API name
+	Label string // English column header (grid, CSV export)
 	Type  Type
 	Value string // typed value: what number/date conditions compare and what sorting orders by
 	Text  string // display text: value checklist, `excluded`, export (amounts "-79,99", dates "dd.mm.yyyy")
@@ -78,37 +79,37 @@ func minorText(minor, currency string) string {
 		" || CASE WHEN " + sc + " = 1 THEN '' ELSE ',' || lpad((abs(" + minor + ") % " + sc + ")::text, " + digits + ", '0') END)"
 }
 
-func textCol(name, value, norm string, join Join) Column {
-	return Column{Name: name, Type: Text, Value: value, Text: value, Norm: norm, Join: join}
+func textCol(name, label, value, norm string, join Join) Column {
+	return Column{Name: name, Label: label, Type: Text, Value: value, Text: value, Norm: norm, Join: join}
 }
 
-func numberCol(name, minor string) Column {
+func numberCol(name, label, minor string) Column {
 	txt := minorText(minor, "t.currency")
-	return Column{Name: name, Type: Number, Value: major(minor, "t.currency"), Text: txt, Norm: txt}
+	return Column{Name: name, Label: label, Type: Number, Value: major(minor, "t.currency"), Text: txt, Norm: txt}
 }
 
-func dateCol(name, expr string) Column {
-	return Column{Name: name, Type: Date, Value: expr, Text: dateText(expr), Norm: dateText(expr)}
+func dateCol(name, label, expr string) Column {
+	return Column{Name: name, Label: label, Type: Date, Value: expr, Text: dateText(expr), Norm: dateText(expr)}
 }
 
 // columns is the §4.5 whitelist, keyed by API name.
 var columns = func() map[string]Column {
 	list := []Column{
-		dateCol("bookedOn", "t.booked_on"),
-		dateCol("valueOn", "t.value_on"),
-		numberCol("amount", "t.amount_minor"),
-		numberCol("balanceAfter", "t.balance_after_minor"),
-		textCol("currency", "t.currency::text", "lower(t.currency)", ""),
-		textCol("payee", "t.payee", "t.payee_n", ""),
-		textCol("description", "t.description", "t.description_n", ""),
-		textCol("category", "c.name", "c.name_n", JoinCategories),
-		textCol("bankCategory", "t.bank_category", "t.bank_category_n", ""),
-		textCol("txType", "t.tx_type", "t.tx_type_n", ""),
-		textCol("reference", "t.reference", "t.reference_n", ""),
-		textCol("counterpartyAccount", "t.counterparty_account", "t.counterparty_n", ""),
-		textCol("account", "a.name", "a.name_n", ""),
-		textCol("group", "g.name", "g.name_n", JoinGroups),
-		textCol("note", "t.note", "t.note_n", ""),
+		dateCol("bookedOn", "Date", "t.booked_on"),
+		dateCol("valueOn", "Value date", "t.value_on"),
+		numberCol("amount", "Amount", "t.amount_minor"),
+		numberCol("balanceAfter", "Balance after", "t.balance_after_minor"),
+		textCol("currency", "Currency", "t.currency::text", "lower(t.currency)", ""),
+		textCol("payee", "Payee", "t.payee", "t.payee_n", ""),
+		textCol("description", "Description", "t.description", "t.description_n", ""),
+		textCol("category", "Category", "c.name", "c.name_n", JoinCategories),
+		textCol("bankCategory", "Bank category", "t.bank_category", "t.bank_category_n", ""),
+		textCol("txType", "Type", "t.tx_type", "t.tx_type_n", ""),
+		textCol("reference", "Reference", "t.reference", "t.reference_n", ""),
+		textCol("counterpartyAccount", "Counterparty account", "t.counterparty_account", "t.counterparty_n", ""),
+		textCol("account", "Account", "a.name", "a.name_n", ""),
+		textCol("group", "Group", "g.name", "g.name_n", JoinGroups),
+		textCol("note", "Note", "t.note", "t.note_n", ""),
 	}
 	m := make(map[string]Column, len(list))
 	for _, c := range list {
@@ -122,6 +123,10 @@ func Lookup(name string) (Column, bool) {
 	c, ok := columns[name]
 	return c, ok
 }
+
+// GridOrder is the grid's column order (PLAN §7.7); full exports use it.
+var GridOrder = []string{"bookedOn", "valueOn", "payee", "description", "amount", "balanceAfter", "currency", "category",
+	"bankCategory", "txType", "reference", "counterpartyAccount", "account", "note", "group"}
 
 // ColumnNames lists the filterable columns in a stable order (OpenAPI enum, tests).
 func ColumnNames() []string { return slices.Sorted(maps.Keys(columns)) }

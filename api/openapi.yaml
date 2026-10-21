@@ -220,12 +220,19 @@ paths:
   /me/export:
     get:
       operationId: exportMe
-      summary: Download all of the user's data (Phase 7)
-      description: A zip of every entity and the original import files. Returns `501 not_implemented` until Phase 7.
+      summary: Download all of the user's data
+      description: >-
+        A zip stream: one JSON file per entity (accounts, categories, groups, budgets, annotations,
+        dedupe overrides, imports, investments, preferences), `transactions.csv` for every account and
+        the original import files under `imports/`.
       tags: [me]
       responses:
         "200":
           description: Zip archive.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
           content:
             application/zip:
               schema:
@@ -588,6 +595,174 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ImportDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+  /transactions/query:
+    post:
+      operationId: queryTransactions
+      summary: A window of transactions with totals
+      description: >-
+        Compiles the QueryContext (accounts, search, column filters, period) and returns the rows of
+        one window plus the total, stats, data range and resolved period (PLAN §4.5, ADR 0008).
+        With `locateId` the window that contains that transaction is returned instead.
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionQuery"
+      responses:
+        "200":
+          description: The window.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionPage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /transactions/distinct:
+    post:
+      operationId: distinctValues
+      summary: A column's values with counts (the value checklist)
+      description: Computed over the context with this column's own filter removed, so unticked values stay listed. Ordered by count, then value.
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DistinctRequest"
+      responses:
+        "200":
+          description: Values.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DistinctValue"
+        default:
+          $ref: "#/components/responses/Problem"
+  /transactions/ids:
+    post:
+      operationId: transactionRange
+      summary: Ids and amounts of a range of the ordered result (range selection)
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdsRequest"
+      responses:
+        "200":
+          description: Ids and amounts in order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IdAmount"
+        default:
+          $ref: "#/components/responses/Problem"
+  /transactions/export:
+    post:
+      operationId: exportTransactions
+      summary: The filtered, sorted rows as CSV
+      description: >-
+        Streams `text/csv`: UTF-8 with BOM, `;` by default, the given columns in order, amounts with a
+        comma decimal mark and dates as dd.mm.yyyy (ADR 0014). Text cells that would start a formula
+        get a `'` prefix.
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportRequest"
+      responses:
+        "200":
+          description: CSV.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Problem"
+  /transactions/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getTransaction
+      summary: One transaction with its raw fields and source imports
+      tags: [transactions]
+      responses:
+        "200":
+          description: The transaction.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateTransaction
+      summary: Set the category or the note
+      description: >-
+        `categoryName` creates the category when it doesn't exist. A set category becomes a manual
+        one; `resetCategory` goes back to the bank's category. Edits are kept as annotations, so they
+        survive deleting and re-importing the file.
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionPatch"
+      responses:
+        "200":
+          description: The updated transaction.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories:
+    get:
+      operationId: listCategories
+      summary: Categories with counts and colour slots
+      description: >-
+        `txCount` counts the transactions of the given accounts (all when omitted). `colorSlot` ranks
+        categories by all-time spending over those accounts: the top 7 get slots 1–7, the rest null
+        (PLAN §4.6).
+      tags: [categories]
+      parameters:
+        - name: accountIds
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            maxItems: 100
+            items:
+              type: string
+              format: uuid
+      responses:
+        "200":
+          description: Categories in natural order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
         default:
           $ref: "#/components/responses/Problem"
 components:
@@ -1133,6 +1308,432 @@ components:
             existingImportId:
               type: string
               format: uuid
+    FilterColumn:
+      type: string
+      description: A filterable, sortable column (PLAN §4.5).
+      enum: [bookedOn, valueOn, amount, balanceAfter, currency, payee, description, category, bankCategory, txType, reference, counterpartyAccount, account, group, note]
+    ColumnFilter:
+      type: object
+      additionalProperties: false
+      required: [column]
+      properties:
+        column:
+          $ref: "#/components/schemas/FilterColumn"
+        cond:
+          type: string
+          maxLength: 500
+          description: Filter language (`>100`, `-50..50`, `2025-03`, `=x`, `!kino` …).
+        excluded:
+          type: array
+          maxItems: 5000
+          description: Display values unticked in the value checklist.
+          items:
+            type: string
+            maxLength: 1000
+    Period:
+      type: object
+      additionalProperties: false
+      description: Exactly one of preset, month, year or from/to (to exclusive). Omit the period for all time.
+      properties:
+        preset:
+          type: string
+          enum: [l30, l3m, l12m, ytd]
+        month:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        year:
+          type: integer
+          minimum: 1000
+          maximum: 9998
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+    ToolFilter:
+      type: object
+      additionalProperties: false
+      description: The assistant's lookup filter (PLAN §4.8), shown as a removable chip.
+      properties:
+        query:
+          type: string
+          maxLength: 500
+        payee:
+          type: string
+          maxLength: 500
+        category:
+          type: string
+          maxLength: 500
+        group:
+          type: string
+          maxLength: 500
+        dateFrom:
+          type: string
+          format: date
+        dateTo:
+          type: string
+          format: date
+          description: Inclusive.
+        type:
+          type: string
+          enum: [expense, income, any]
+        minAmount:
+          type: string
+          pattern: "^-?[0-9]{1,15}([.][0-9]{1,6})?$"
+          description: Absolute amount in major units.
+        maxAmount:
+          type: string
+          pattern: "^-?[0-9]{1,15}([.][0-9]{1,6})?$"
+          description: Absolute amount in major units.
+        label:
+          type: string
+          maxLength: 200
+    QueryContext:
+      type: object
+      additionalProperties: false
+      properties:
+        accountIds:
+          type: array
+          maxItems: 100
+          description: Empty or omitted = every account.
+          items:
+            type: string
+            format: uuid
+        search:
+          type: string
+          maxLength: 500
+        filters:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/ColumnFilter"
+        period:
+          $ref: "#/components/schemas/Period"
+        includeTransfers:
+          type: boolean
+        toolFilter:
+          $ref: "#/components/schemas/ToolFilter"
+    Sort:
+      type: object
+      additionalProperties: false
+      required: [column]
+      properties:
+        column:
+          $ref: "#/components/schemas/FilterColumn"
+        dir:
+          type: string
+          enum: [asc, desc]
+          default: asc
+    TransactionQuery:
+      type: object
+      additionalProperties: false
+      required: [context, limit]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        sort:
+          $ref: "#/components/schemas/Sort"
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+        statColumn:
+          type: string
+          enum: [amount, balanceAfter]
+        locateId:
+          type: string
+          format: uuid
+    NamedRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    TransactionRow:
+      type: object
+      additionalProperties: false
+      required: [id, accountId, accountName, bookedOn, amount, payee, description, categorySource, bankCategory, txType, reference, counterpartyAccount, note, isTransfer]
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        accountName:
+          type: string
+        bookedOn:
+          type: string
+          format: date
+        valueOn:
+          type: string
+          format: date
+        amount:
+          $ref: "#/components/schemas/Money"
+        balanceAfter:
+          $ref: "#/components/schemas/Money"
+        payee:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        categorySource:
+          type: string
+          enum: [none, bank, rule, manual]
+        bankCategory:
+          type: string
+        txType:
+          type: string
+        reference:
+          type: string
+        counterpartyAccount:
+          type: string
+        note:
+          type: string
+        isTransfer:
+          type: boolean
+        group:
+          $ref: "#/components/schemas/NamedRef"
+    ResolvedPeriod:
+      type: object
+      additionalProperties: false
+      required: [kind, from, to, label]
+      properties:
+        kind:
+          type: string
+          enum: [range, month, year]
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+          description: Exclusive.
+        label:
+          type: string
+    DateRange:
+      type: object
+      additionalProperties: false
+      required: [min, max]
+      properties:
+        min:
+          type: string
+          format: date
+        max:
+          type: string
+          format: date
+    ColumnStats:
+      type: object
+      additionalProperties: false
+      required: [column]
+      description: Over the period-scoped rows, in minor units; absent when no row has a value.
+      properties:
+        column:
+          type: string
+          enum: [amount, balanceAfter]
+        sum:
+          type: integer
+          format: int64
+        avg:
+          type: integer
+          format: int64
+          description: Rounded to whole minor units.
+        min:
+          type: integer
+          format: int64
+        max:
+          type: integer
+          format: int64
+    TransactionPage:
+      type: object
+      additionalProperties: false
+      required: [rows, total, offset, stats, duplicatesSkipped]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionRow"
+        total:
+          type: integer
+          description: Rows in the period-scoped result.
+        offset:
+          type: integer
+          description: The offset of `rows` (moved to the located row's window with `locateId`).
+        period:
+          $ref: "#/components/schemas/ResolvedPeriod"
+        dataRange:
+          $ref: "#/components/schemas/DateRange"
+        stats:
+          $ref: "#/components/schemas/ColumnStats"
+        duplicatesSkipped:
+          type: integer
+          format: int64
+        locatedOffset:
+          type: integer
+    DistinctRequest:
+      type: object
+      additionalProperties: false
+      required: [context, column]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        column:
+          $ref: "#/components/schemas/FilterColumn"
+        search:
+          type: string
+          maxLength: 500
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 600
+          default: 600
+    DistinctValue:
+      type: object
+      additionalProperties: false
+      required: [value, count]
+      properties:
+        value:
+          type: string
+        count:
+          type: integer
+    IdsRequest:
+      type: object
+      additionalProperties: false
+      required: [context, limit]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        sort:
+          $ref: "#/components/schemas/Sort"
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 5000
+    IdAmount:
+      type: object
+      additionalProperties: false
+      required: [id, amountMinor]
+      properties:
+        id:
+          type: string
+          format: uuid
+        amountMinor:
+          type: integer
+          format: int64
+    ExportRequest:
+      type: object
+      additionalProperties: false
+      required: [context, columns]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        sort:
+          $ref: "#/components/schemas/Sort"
+        columns:
+          type: array
+          minItems: 1
+          maxItems: 15
+          items:
+            $ref: "#/components/schemas/FilterColumn"
+        delimiter:
+          type: string
+          enum: [';', ',', '\t', '|']
+          x-enum-varnames: [DelimiterSemicolon, DelimiterComma, DelimiterTab, DelimiterPipe]
+          default: ';'
+          description: '`\t` (backslash, t) means a tab.'
+        view:
+          type: string
+          maxLength: 60
+          description: Names the file (`finuance-<view>-<yyyy-mm-dd>.csv`); default `transactions`.
+    TransactionSource:
+      type: object
+      additionalProperties: false
+      required: [importId, filename, rowIndex, raw]
+      properties:
+        importId:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        committedAt:
+          type: string
+          format: date-time
+        rowIndex:
+          type: integer
+        raw:
+          type: array
+          items:
+            $ref: "#/components/schemas/RawField"
+    TransactionDetail:
+      allOf:
+        - $ref: "#/components/schemas/TransactionRow"
+        - type: object
+          required: [origin, raw, sources, createdAt, updatedAt]
+          properties:
+            origin:
+              type: string
+              enum: [import, manual]
+            raw:
+              type: array
+              items:
+                $ref: "#/components/schemas/RawField"
+            sources:
+              type: array
+              items:
+                $ref: "#/components/schemas/TransactionSource"
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+    TransactionPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        resetCategory:
+          type: boolean
+          description: Back to the bank's category (or none).
+        note:
+          type: string
+          maxLength: 2000
+    Category:
+      type: object
+      additionalProperties: false
+      required: [id, name, txCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        txCount:
+          type: integer
+        colorSlot:
+          type: integer
+          minimum: 1
+          maximum: 7
     Money:
       type: object
       additionalProperties: false
