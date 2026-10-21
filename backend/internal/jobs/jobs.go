@@ -1,6 +1,6 @@
 // Package jobs holds River job arguments, workers and periodic jobs (ADR 0006). Job args carry ids,
-// never user data. Noop proves the queue end to end; CleanupExpiredSessions is the first real job
-// (Phase 5); the import jobs arrive in Phase 6.
+// never user data. Noop proves the queue end to end; CleanupExpiredSessions runs hourly (Phase 5);
+// CommitImport and RematerializeFingerprint are the import pipeline's (Phase 6).
 package jobs
 
 import (
@@ -39,6 +39,8 @@ func (w *NoopWorker) Work(ctx context.Context, job *river.Job[NoopArgs]) error {
 // tests pass fakes.
 type Deps struct {
 	Sessions SessionCleaner
+	Ledger   Ledger
+	Metrics  *ImportMetrics // nil: unregistered metrics
 }
 
 // Workers registers every worker. The worker process, the api's insert-only client and the tests
@@ -47,6 +49,12 @@ func Workers(d Deps) *river.Workers {
 	w := river.NewWorkers()
 	river.AddWorker(w, &NoopWorker{})
 	river.AddWorker(w, &CleanupExpiredSessionsWorker{Sessions: d.Sessions})
+	m := d.Metrics
+	if m == nil {
+		m = NewImportMetrics(nil)
+	}
+	river.AddWorker(w, &CommitImportWorker{Ledger: d.Ledger, Metrics: m})
+	river.AddWorker(w, &RematerializeFingerprintWorker{Ledger: d.Ledger})
 	return w
 }
 

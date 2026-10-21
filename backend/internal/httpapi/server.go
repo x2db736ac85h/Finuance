@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -21,12 +22,17 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
 // MaxJSONBody is the default request body limit (docs/PLAN.md §6.1).
 const MaxJSONBody = 1 << 20
+
+// multipartOverhead is room for the multipart framing and the accountId field around an upload;
+// the file itself is checked against FINUANCE_MAX_UPLOAD_BYTES exactly.
+const multipartOverhead = 64 << 10
 
 // ShutdownGrace is how long in-flight requests may run after SIGTERM.
 const ShutdownGrace = 20 * time.Second
@@ -44,8 +50,10 @@ type Deps struct {
 	Auth *auth.Service
 	// Clock drives the rate limiters (platform.SystemClock in production).
 	Clock platform.Clock
-	// Jobs is the api's insert-only River client for transactional enqueue (used from Phase 6).
+	// Jobs is the api's insert-only River client for transactional enqueue.
 	Jobs *river.Client[pgx.Tx]
+	// Ledger serves accounts and imports. Nil in tests of the bare server.
+	Ledger *ledger.Ledger
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -66,20 +74,18 @@ func NewHandler(d Deps) (http.Handler, error) {
 		// The session layer (requireSession) authenticates; the validator only checks the shape.
 		Options: openapi3filter.Options{AuthenticationFunc: openapi3filter.NoopAuthenticationFunc},
 		ErrorHandlerWithOpts: func(_ context.Context, err error, w http.ResponseWriter, r *http.Request, opts nethttpmiddleware.ErrorHandlerOpts) {
-			ve := &platform.ValidationError{}
-			ve.Add("request", err.Error())
 			if opts.StatusCode == http.StatusNotFound {
 				WriteProblem(w, r, platform.ErrNotFound, prod)
 				return
 			}
-			WriteProblem(w, r, ve, prod)
+			WriteProblem(w, r, requestProblem(err), prod)
 		},
 	})
 	clock := d.Clock
 	if clock == nil {
 		clock = platform.SystemClock{}
 	}
-	impl := &api{cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, cookies: newCookies(d.Config), limits: newLimits(clock)}
+	impl := &api{cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}
@@ -122,7 +128,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 		mw.Metrics(d.Metrics),
 		mw.Tracing(d.Tracing),
 		mw.SecurityHeaders,
-		mw.MaxBytes(MaxJSONBody),
+		mw.MaxBytes(MaxJSONBody, map[string]int64{"POST /api/v1/imports": d.Config.MaxUploadBytes + multipartOverhead}),
 		mw.Route,
 	), nil
 }
@@ -160,4 +166,20 @@ func Serve(ctx context.Context, srv *http.Server, ln net.Listener, grace time.Du
 		return err
 	}
 	return nil
+}
+
+// requestProblem classifies a request-validation error: a body over the size limit is 413, a body
+// of a media type the operation doesn't accept is 415, anything else is a 422 on "request".
+func requestProblem(err error) error {
+	var mbe *http.MaxBytesError
+	if errors.As(err, &mbe) {
+		return fmt.Errorf("the request body is larger than %d bytes: %w", mbe.Limit, platform.ErrPayloadTooLarge)
+	}
+	var re *openapi3filter.RequestError
+	if errors.As(err, &re) && re.RequestBody != nil && strings.HasPrefix(re.Reason, "header Content-Type has unexpected value") {
+		return fmt.Errorf("%s: %w", re.Reason, platform.ErrUnsupportedFile)
+	}
+	ve := &platform.ValidationError{}
+	ve.Add("request", err.Error())
+	return ve
 }

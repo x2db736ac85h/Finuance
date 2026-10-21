@@ -199,7 +199,7 @@ func TestReprocessKeepsManualEdits(t *testing.T) {
 	}
 	st := staged(t, "v1.csv", fixture(t, v1), nil)
 	restaged, err := e.l.Restage(e.ctx, u, imp.ID, ledger.Staging{Encoding: st.Encoding, Delimiter: st.Delimiter, Headers: st.Headers,
-		Mapping: st.Mapping, Options: st.Options, MappingSource: "user", HeaderSignature: st.HeaderSignature, Rows: st.Rows})
+		Mapping: st.Mapping, Options: st.Options, MappingSource: "user", HeaderSignature: st.HeaderSignature, Rows: st.Rows}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

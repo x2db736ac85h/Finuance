@@ -34,3 +34,11 @@ func ownGroup(ctx context.Context, q *db.Queries, userID, id uuid.UUID) error {
 	}
 	return nil
 }
+
+// lockAccount takes the per-account writer lock (see LockAccount) for the rest of the transaction.
+func lockAccount(ctx context.Context, q *db.Queries, userID, id uuid.UUID) error {
+	if _, err := q.LockAccount(ctx, db.LockAccountParams{UserID: userID, ID: id}); err != nil {
+		return fmt.Errorf("account %s: %w", id, err)
+	}
+	return nil
+}

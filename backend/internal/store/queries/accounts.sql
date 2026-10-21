@@ -23,3 +23,14 @@ DELETE FROM accounts WHERE user_id = @user_id AND id = @id;
 -- name: FindAccountsByNumberHint :many
 -- Account suggestion (PLAN §4.4): last four digits of the own-account column.
 SELECT * FROM accounts WHERE user_id = @user_id AND number_hint = @number_hint AND archived_at IS NULL ORDER BY created_at;
+
+-- name: AccountStats :many
+-- Transaction count and date range per account (GET /accounts).
+SELECT account_id, count(*) AS tx_count, min(booked_on)::date AS first_on, max(booked_on)::date AS last_on
+FROM transactions WHERE user_id = @user_id GROUP BY account_id;
+
+-- name: LockAccount :one
+-- Serialises the writers of one account's transactions (commit, delete import, reprocess,
+-- overrides): concurrent commits of overlapping files would otherwise insert the same identities in
+-- different orders and could deadlock. NO KEY UPDATE doesn't block the FK checks of inserts.
+SELECT id FROM accounts WHERE user_id = @user_id AND id = @id FOR NO KEY UPDATE;

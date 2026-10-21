@@ -9,6 +9,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -21,8 +22,8 @@ type problemKind struct {
 	title  string
 }
 
-// problemTable maps platform error kinds to stable problem codes (docs/PLAN.md §6.1). Order matters
-// only when an error wraps several kinds: the first match wins.
+// problemTable maps platform and ledger error kinds to stable problem codes (docs/PLAN.md §6.1).
+// Order matters only when an error wraps several kinds: the first match wins.
 var problemTable = []problemKind{
 	{platform.ErrUnauthenticated, gen.Unauthenticated, http.StatusUnauthorized, "Authentication required"},
 	{platform.ErrForbidden, gen.Forbidden, http.StatusForbidden, "Forbidden"},
@@ -35,6 +36,10 @@ var problemTable = []problemKind{
 	{platform.ErrPayloadTooLarge, gen.PayloadTooLarge, http.StatusRequestEntityTooLarge, "Payload too large"},
 	{platform.ErrUnsupportedFile, gen.UnsupportedFile, http.StatusUnsupportedMediaType, "Unsupported file"},
 	{platform.ErrNotImplemented, gen.NotImplemented, http.StatusNotImplemented, "Not implemented yet"},
+	{ledger.ErrNotFound, gen.NotFound, http.StatusNotFound, "Not found"},
+	{ledger.ErrConflict, gen.Conflict, http.StatusConflict, "Conflict"},
+	{ledger.ErrState, gen.Conflict, http.StatusConflict, "Conflict"},
+	{ledger.ErrInvalid, gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"},
 }
 
 // ProblemFor converts any error into problem details. In prod, details of internal errors are

@@ -20,6 +20,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
@@ -71,15 +72,16 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	}
 	defer c.close(ctx)
 	authSvc := NewAuth(c.store, cfg)
+	led := ledger.New(c.store, platform.SystemClock{})
 	// Insert-only River client (no queues): handlers enqueue jobs in the same transaction as the
-	// state change (ADR 0006); the worker process runs them. The import endpoints use it (Phase 6).
-	jobClient, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{Logger: log, Workers: jobs.Workers(jobs.Deps{Sessions: authSvc})})
+	// state change (ADR 0006); the worker process runs them.
+	jobClient, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{Logger: log, Workers: jobs.Workers(jobs.Deps{Sessions: authSvc, Ledger: led})})
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)
 	}
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient,
+		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led,
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
@@ -99,9 +101,10 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	}
 	defer c.close(ctx)
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
-		Logger:       log,
-		Queues:       map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
-		Workers:      jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg)}),
+		Logger: log,
+		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
+		Workers: jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg), Ledger: ledger.New(c.store, platform.SystemClock{}),
+			Metrics: jobs.NewImportMetrics(c.metrics.Registry)}),
 		PeriodicJobs: jobs.PeriodicJobs(),
 	})
 	if err != nil {

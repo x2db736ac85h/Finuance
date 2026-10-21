@@ -161,7 +161,7 @@ func runModel(t *testing.T, seed uint64, steps int) {
 			imports[i].variant = r.IntN(3)
 			st := stage(t, imports[i].content, imports[i].variant, nil, "re.csv")
 			if _, err := e.l.Restage(e.ctx, u, imports[i].id, ledger.Staging{Encoding: st.Encoding, Delimiter: st.Delimiter,
-				Headers: st.Headers, Mapping: st.Mapping, Options: st.Options, MappingSource: "user", HeaderSignature: st.HeaderSignature, Rows: st.Rows}); err != nil {
+				Headers: st.Headers, Mapping: st.Mapping, Options: st.Options, MappingSource: "user", HeaderSignature: st.HeaderSignature, Rows: st.Rows}, nil); err != nil {
 				fail("restage: %v", err)
 			}
 			if _, err := e.l.CommitImport(e.ctx, u, imports[i].id); err != nil {

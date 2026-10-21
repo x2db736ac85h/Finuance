@@ -9,7 +9,30 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
+
+const countDuplicateEstimate = `-- name: CountDuplicateEstimate :one
+SELECT count(*) FROM import_rows ir
+WHERE ir.user_id = $1 AND ir.import_id = $2 AND ir.parse_error IS NULL
+  AND EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = $1 AND t.account_id = $3
+              AND t.fingerprint = ir.fingerprint AND t.occurrence = ir.occurrence)
+`
+
+type CountDuplicateEstimateParams struct {
+	UserID    uuid.UUID
+	ImportID  uuid.UUID
+	AccountID uuid.UUID
+}
+
+// Valid staged rows whose (fingerprint, occurrence) the account already has: the preview's
+// "duplicates" estimate before the commit.
+func (q *Queries) CountDuplicateEstimate(ctx context.Context, arg CountDuplicateEstimateParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countDuplicateEstimate, arg.UserID, arg.ImportID, arg.AccountID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const countImportRows = `-- name: CountImportRows :one
 SELECT count(*) AS rows, count(*) FILTER (WHERE parse_error IS NOT NULL) AS errors,
@@ -55,9 +78,18 @@ func (q *Queries) DeleteImportRows(ctx context.Context, arg DeleteImportRowsPara
 
 const listImportRows = `-- name: ListImportRows :many
 
-SELECT import_id, row_index, user_id, fingerprint, occurrence, split_scope, booked_on, value_on, amount_minor, currency, payee, payee_n, payee_group, description, description_n, reference, reference_n, tx_type, tx_type_n, bank_category, bank_category_n, counterparty_account, counterparty_n, balance_after_minor, raw, search_text, parse_error, transaction_id FROM import_rows
-WHERE user_id = $1 AND import_id = $2 AND (NOT $3::bool OR parse_error IS NOT NULL)
-ORDER BY row_index
+SELECT ir.import_id, ir.row_index, ir.user_id, ir.fingerprint, ir.occurrence, ir.split_scope, ir.booked_on, ir.value_on, ir.amount_minor, ir.currency, ir.payee, ir.payee_n, ir.payee_group, ir.description, ir.description_n, ir.reference, ir.reference_n, ir.tx_type, ir.tx_type_n, ir.bank_category, ir.bank_category_n, ir.counterparty_account, ir.counterparty_n, ir.balance_after_minor, ir.raw, ir.search_text, ir.parse_error, ir.transaction_id,
+       CASE WHEN ir.parse_error IS NOT NULL THEN false
+            WHEN ir.transaction_id IS NOT NULL THEN
+              coalesce((SELECT t.source_import_id IS DISTINCT FROM ir.import_id FROM transactions t WHERE t.id = ir.transaction_id), false)
+            ELSE EXISTS (SELECT 1 FROM transactions t
+                         WHERE t.user_id = ir.user_id AND t.account_id = i.account_id
+                           AND t.fingerprint = ir.fingerprint AND t.occurrence = ir.occurrence)
+       END::bool AS duplicate
+FROM import_rows ir
+JOIN imports i ON i.id = ir.import_id
+WHERE ir.user_id = $1 AND ir.import_id = $2 AND (NOT $3::bool OR ir.parse_error IS NOT NULL)
+ORDER BY ir.row_index
 LIMIT $5 OFFSET $4
 `
 
@@ -69,9 +101,44 @@ type ListImportRowsParams struct {
 	MaxRows    int32
 }
 
+type ListImportRowsRow struct {
+	ImportID            uuid.UUID
+	RowIndex            int32
+	UserID              uuid.UUID
+	Fingerprint         []byte
+	Occurrence          *int32
+	SplitScope          uuid.UUID
+	BookedOn            *platform.Date
+	ValueOn             *platform.Date
+	AmountMinor         *int64
+	Currency            *string
+	Payee               *string
+	PayeeN              *string
+	PayeeGroup          *string
+	Description         *string
+	DescriptionN        *string
+	Reference           *string
+	ReferenceN          *string
+	TxType              *string
+	TxTypeN             *string
+	BankCategory        *string
+	BankCategoryN       *string
+	CounterpartyAccount *string
+	CounterpartyN       *string
+	BalanceAfterMinor   *int64
+	Raw                 []byte
+	SearchText          *string
+	ParseError          *string
+	TransactionID       *uuid.UUID
+	Duplicate           bool
+}
+
 // Staged rows are inserted by store.InsertImportRows (hand-written unnest, see importrows.go).
 // A page of staged rows in file order; only_errors restricts it to rows with a parse error.
-func (q *Queries) ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ImportRow, error) {
+// duplicate: for a committed row, its transaction takes its values from another import (the row
+// was merged); before the commit, the import's account already has a transaction with this
+// (fingerprint, occurrence) — the preview's per-row estimate.
+func (q *Queries) ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ListImportRowsRow, error) {
 	rows, err := q.db.Query(ctx, listImportRows,
 		arg.UserID,
 		arg.ImportID,
@@ -83,9 +150,9 @@ func (q *Queries) ListImportRows(ctx context.Context, arg ListImportRowsParams) 
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ImportRow
+	var items []ListImportRowsRow
 	for rows.Next() {
-		var i ImportRow
+		var i ListImportRowsRow
 		if err := rows.Scan(
 			&i.ImportID,
 			&i.RowIndex,
@@ -115,6 +182,7 @@ func (q *Queries) ListImportRows(ctx context.Context, arg ListImportRowsParams) 
 			&i.SearchText,
 			&i.ParseError,
 			&i.TransactionID,
+			&i.Duplicate,
 		); err != nil {
 			return nil, err
 		}

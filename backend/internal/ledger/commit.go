@@ -47,6 +47,9 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 			return fmt.Errorf("import has no account: %w", ErrState)
 		}
 		account := *imp.AccountID
+		if err := lockAccount(ctx, q, userID, account); err != nil {
+			return err
+		}
 		now := l.clock.Now()
 
 		// 0.

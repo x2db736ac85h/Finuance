@@ -58,6 +58,9 @@ type sourceRow struct {
 // Rematerialize rebuilds the transactions of one (account, fingerprint) in its own transaction.
 func (l *Ledger) Rematerialize(ctx context.Context, userID, accountID uuid.UUID, fingerprint []byte) error {
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		if err := lockAccount(ctx, q, userID, accountID); err != nil {
+			return err
+		}
 		_, err := rematerialize(ctx, q, userID, accountID, fingerprint, l.clock.Now())
 		return err
 	})
@@ -210,7 +213,7 @@ func (l *Ledger) SetOverride(ctx context.Context, userID, accountID uuid.UUID, f
 		return invalidf("unknown override mode %q", mode)
 	}
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		if err := ownAccount(ctx, q, userID, accountID); err != nil {
+		if err := lockAccount(ctx, q, userID, accountID); err != nil {
 			return err
 		}
 		if importID != nil {
@@ -237,6 +240,9 @@ func (l *Ledger) SetOverride(ctx context.Context, userID, accountID uuid.UUID, f
 func (l *Ledger) ClearOverride(ctx context.Context, userID, accountID uuid.UUID, fingerprint []byte) error {
 	var n int64
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) (err error) {
+		if err := lockAccount(ctx, q, userID, accountID); err != nil {
+			return err
+		}
 		if n, err = q.ClearDedupeOverride(ctx, db.ClearDedupeOverrideParams{UserID: userID, AccountID: accountID, Fingerprint: fingerprint}); err != nil || n == 0 {
 			return err
 		}

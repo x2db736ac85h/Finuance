@@ -11,10 +11,15 @@ import (
 )
 
 type Querier interface {
+	// Transaction count and date range per account (GET /accounts).
+	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
 	// Commit step 1b: re-apply user annotations (group, manual category, note) to freshly inserted
 	// transactions, so labels survive delete + re-import.
 	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
 	ClearDedupeOverride(ctx context.Context, arg ClearDedupeOverrideParams) (int64, error)
+	// Valid staged rows whose (fingerprint, occurrence) the account already has: the preview's
+	// "duplicates" estimate before the commit.
+	CountDuplicateEstimate(ctx context.Context, arg CountDuplicateEstimateParams) (int64, error)
 	// How many staged rows step 1 of the commit may insert; the caller generates that many ids.
 	CountEligibleImportRows(ctx context.Context, arg CountEligibleImportRowsParams) (int64, error)
 	CountImportRows(ctx context.Context, arg CountImportRowsParams) (CountImportRowsRow, error)
@@ -100,6 +105,9 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	// Distinct bank categories of an import's valid rows (the commit upserts them as categories).
 	ImportBankCategories(ctx context.Context, arg ImportBankCategoriesParams) ([]*string, error)
+	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
+	// sidebar source labels b1, b2, … (task 6.12).
+	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
@@ -122,10 +130,17 @@ type Querier interface {
 	ListImportProfiles(ctx context.Context, userID uuid.UUID) ([]ImportProfile, error)
 	// Staged rows are inserted by store.InsertImportRows (hand-written unnest, see importrows.go).
 	// A page of staged rows in file order; only_errors restricts it to rows with a parse error.
-	ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ImportRow, error)
+	// duplicate: for a committed row, its transaction takes its values from another import (the row
+	// was merged); before the commit, the import's account already has a transaction with this
+	// (fingerprint, occurrence) — the preview's per-row estimate.
+	ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ListImportRowsRow, error)
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
 	ListUserSessions(ctx context.Context, arg ListUserSessionsParams) ([]ListUserSessionsRow, error)
+	// Serialises the writers of one account's transactions (commit, delete import, reprocess,
+	// overrides): concurrent commits of overlapping files would otherwise insert the same identities in
+	// different orders and could deadlock. NO KEY UPDATE doesn't block the FK checks of inserts.
+	LockAccount(ctx context.Context, arg LockAccountParams) (uuid.UUID, error)
 	// Fingerprints of this import that have an override: the commit re-materialises them (step 2b).
 	OverriddenFingerprintsInImport(ctx context.Context, arg OverriddenFingerprintsInImportParams) ([][]byte, error)
 	// Overrides that prefer this import: deleting the import removes them (FK cascade), so their

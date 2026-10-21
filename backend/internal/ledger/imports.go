@@ -91,6 +91,9 @@ type ErrDuplicateFile struct{ ExistingID uuid.UUID }
 
 func (e ErrDuplicateFile) Error() string { return fmt.Sprintf("duplicate of import %s", e.ExistingID) }
 
+// Unwrap maps the error to 409 duplicate_file.
+func (e ErrDuplicateFile) Unwrap() error { return platform.ErrDuplicateFile }
+
 // CreateImport stores the import, its file and its staged rows in one transaction (PLAN task 6.2
 // step 9). An identical file already imported is ErrDuplicateFile.
 func (l *Ledger) CreateImport(ctx context.Context, userID uuid.UUID, in NewImport) (Import, error) {
@@ -183,23 +186,13 @@ func (l *Ledger) ListImports(ctx context.Context, userID uuid.UUID, limit int) (
 	return out, dbErr("list imports", err)
 }
 
-// StoredRow is a staged row as read back for the preview.
-type StoredRow struct {
-	RowIndex      int
-	BookedOn      *platform.Date
-	AmountMinor   *int64
-	Currency      string
-	Payee         string
-	Description   string
-	Raw           []ingest.RawField
-	Error         string
-	TransactionID *uuid.UUID // set once the import is committed
-}
-
 // ImportRowsPage returns staged rows in file order; onlyErrors keeps the rows with a parse error.
-func (l *Ledger) ImportRowsPage(ctx context.Context, userID, importID uuid.UUID, onlyErrors bool, offset, limit int) ([]StoredRow, error) {
-	var out []StoredRow
+func (l *Ledger) ImportRowsPage(ctx context.Context, userID, importID uuid.UUID, onlyErrors bool, offset, limit int) ([]Row, error) {
+	var out []Row
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		if _, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: importID}); err != nil {
+			return err
+		}
 		rows, err := q.ListImportRows(ctx, db.ListImportRowsParams{UserID: userID, ImportID: importID, OnlyErrors: onlyErrors,
 			SkipRows: int32(max(offset, 0)), MaxRows: int32(min(max(limit, 1), 1000))}) //nolint:gosec // clamped
 		if err != nil {
@@ -207,13 +200,14 @@ func (l *Ledger) ImportRowsPage(ctx context.Context, userID, importID uuid.UUID,
 		}
 		for k := range rows {
 			r := &rows[k]
-			s := StoredRow{RowIndex: int(r.RowIndex), BookedOn: r.BookedOn, AmountMinor: r.AmountMinor,
-				Currency: deref(r.Currency), Payee: deref(r.Payee), Description: deref(r.Description),
-				Error: deref(r.ParseError), TransactionID: r.TransactionID}
-			if s.Raw, err = decodeRaw(r.Raw); err != nil {
+			row := Row{RowIndex: int(r.RowIndex), BookedOn: r.BookedOn, ValueOn: r.ValueOn, AmountMinor: r.AmountMinor,
+				Currency: deref(r.Currency), Payee: deref(r.Payee), Description: deref(r.Description), Reference: deref(r.Reference),
+				TxType: deref(r.TxType), BankCategory: deref(r.BankCategory), CounterpartyAccount: deref(r.CounterpartyAccount),
+				BalanceMinor: r.BalanceAfterMinor, Error: deref(r.ParseError), Duplicate: r.Duplicate, TransactionID: r.TransactionID}
+			if row.Raw, err = decodeRaw(r.Raw); err != nil {
 				return err
 			}
-			out = append(out, s)
+			out = append(out, row)
 		}
 		return nil
 	})
@@ -243,6 +237,9 @@ func (l *Ledger) DeleteImport(ctx context.Context, userID, id uuid.UUID) (orphan
 		}
 		var fps [][]byte
 		if imp.AccountID != nil {
+			if err := lockAccount(ctx, q, userID, *imp.AccountID); err != nil {
+				return err
+			}
 			if fps, err = sourcedFingerprints(ctx, q, userID, *imp.AccountID, id); err != nil {
 				return err
 			}
@@ -298,7 +295,10 @@ type Staging struct {
 //     deleted, fingerprints it was the source of move to other sources, and the import returns to
 //     "committing": the CommitImport job then commits the new rows. Manual edits survive wherever
 //     the fingerprint is unchanged (annotations).
-func (l *Ledger) Restage(ctx context.Context, userID, id uuid.UUID, s Staging) (Import, error) {
+//
+// enqueue, when not nil, runs in the same transaction after a reprocess restage (the handler inserts
+// the CommitImport job with River's InsertTx there, so the job exists exactly when the restage does).
+func (l *Ledger) Restage(ctx context.Context, userID, id uuid.UUID, s Staging, enqueue func(context.Context, pgx.Tx) error) (Import, error) {
 	headers, err := json.Marshal(nonNil(s.Headers))
 	if err != nil {
 		return Import{}, err
@@ -333,6 +333,9 @@ func (l *Ledger) Restage(ctx context.Context, userID, id uuid.UUID, s Staging) (
 		}
 		var fps [][]byte
 		if status == StatusCommitted {
+			if err := lockAccount(ctx, q, userID, *account); err != nil {
+				return err
+			}
 			if fps, err = sourcedFingerprints(ctx, q, userID, *account, id); err != nil {
 				return err
 			}
@@ -359,6 +362,11 @@ func (l *Ledger) Restage(ctx context.Context, userID, id uuid.UUID, s Staging) (
 			}
 			if _, err := rematerializeAll(ctx, q, userID, *account, fps, l.clock.Now()); err != nil {
 				return err
+			}
+			if enqueue != nil {
+				if err := enqueue(ctx, tx); err != nil {
+					return err
+				}
 			}
 		}
 		out, err = importOf(updated)
@@ -423,4 +431,23 @@ func ImportRows(rows []ingest.StagedRow) []store.ImportRow {
 		o.CounterpartyAccount, o.CounterpartyN = r.CounterpartyAccount, r.CounterpartyN
 	}
 	return out
+}
+
+// RowCounts are the staged rows of an import: all, with a parse error, and linked to a transaction.
+type RowCounts struct {
+	Rows, Errors, Linked int
+}
+
+// ImportRowCounts counts an import's staged rows.
+func (l *Ledger) ImportRowCounts(ctx context.Context, userID, importID uuid.UUID) (RowCounts, error) {
+	var out RowCounts
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		if _, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: importID}); err != nil {
+			return err
+		}
+		c, err := q.CountImportRows(ctx, db.CountImportRowsParams{UserID: userID, ImportID: importID})
+		out = RowCounts{Rows: int(c.Rows), Errors: int(c.Errors), Linked: int(c.Linked)}
+		return err
+	})
+	return out, dbErr("import row counts", err)
 }

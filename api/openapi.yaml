@@ -275,7 +275,330 @@ paths:
                 $ref: "#/components/schemas/StalePreferencesProblem"
         default:
           $ref: "#/components/responses/Problem"
+  /accounts:
+    get:
+      operationId: listAccounts
+      summary: The user's accounts
+      description: Natural Polish order of names, with transaction counts and date ranges.
+      tags: [accounts]
+      responses:
+        "200":
+          description: Accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createAccount
+      summary: Create an account
+      tags: [accounts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        default:
+          $ref: "#/components/responses/Problem"
+  /accounts/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      operationId: updateAccount
+      summary: Change an account
+      tags: [accounts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteAccount
+      summary: Delete an account with its imports and transactions
+      tags: [accounts]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /imports:
+    get:
+      operationId: listImports
+      summary: Imports, newest first
+      tags: [imports]
+      parameters:
+        - name: accountId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Imports.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImportSummary"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: uploadImport
+      summary: Upload a bank export and get a preview
+      description: |
+        One CSV/TSV file per request, at most `FINUANCE_MAX_UPLOAD_BYTES` (20 MiB). Files with NUL bytes
+        are refused (`415 unsupported_file`); identical bytes already imported give `409 duplicate_file`.
+        A remembered profile for the file's layout is applied automatically (`mappingSource: profile`).
+        With `autoCommit=true` a profile-matched, error-free file with a resolved account is committed
+        right away (`202`); otherwise the preview is returned as usual (`201`).
+      tags: [imports]
+      parameters:
+        - name: autoCommit
+          in: query
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                accountId:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Previewed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+        "202":
+          description: Auto-committed (the commit job is running).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+        "409":
+          description: The same file was already imported.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/DuplicateFileProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /imports/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getImport
+      summary: One import
+      tags: [imports]
+      responses:
+        "200":
+          description: The import.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateImport
+      summary: Change the account, mapping or options of a previewed import
+      description: Re-reads the stored file with the new settings, re-stages it and returns the new preview.
+      tags: [imports]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportChanges"
+      responses:
+        "200":
+          description: The new preview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteImport
+      summary: Delete an import (cancel a preview, or remove a committed import)
+      description: Transactions that another import of the account also contains are kept.
+      tags: [imports]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /imports/{id}/rows:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: listImportRows
+      summary: Staged rows of an import
+      tags: [imports]
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: onlyErrors
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: A page of rows in file order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRowPage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /imports/{id}/lines:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: listImportLines
+      summary: Decoded records of the file with their status (header-row picker)
+      tags: [imports]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 18
+      responses:
+        "200":
+          description: The first records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportLines"
+        default:
+          $ref: "#/components/responses/Problem"
+  /imports/{id}/file:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getImportFile
+      summary: The original file
+      tags: [imports]
+      responses:
+        "200":
+          description: The uploaded bytes.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Problem"
+  /imports/{id}/commit:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: commitImport
+      summary: Commit a previewed import
+      description: |
+        Needs an account, the required columns and at least one valid row. The commit runs as a job;
+        poll `GET /imports/{id}` until `committed` or `failed`. A second call gets `409 import_not_committable`.
+      tags: [imports]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitRequest"
+      responses:
+        "202":
+          description: Committing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+  /imports/{id}/reprocess:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: reprocessImport
+      summary: Re-read a committed import with a new mapping or options
+      description: Manual edits survive wherever a transaction's fingerprint is unchanged.
+      tags: [imports]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportChanges"
+      responses:
+        "202":
+          description: Committing again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportDetail"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     sessionCookie:
       type: apiKey
@@ -439,6 +762,377 @@ components:
           properties:
             current:
               $ref: "#/components/schemas/Preferences"
+    Account:
+      type: object
+      additionalProperties: false
+      required: [id, name, currency, openingBalance, txCount, isDemo, archived, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currency:
+          type: string
+        numberHint:
+          type: string
+          description: Last four digits of the account number.
+        openingBalance:
+          $ref: "#/components/schemas/Money"
+        txCount:
+          type: integer
+          format: int64
+        firstOn:
+          type: string
+          format: date
+        lastOn:
+          type: string
+          format: date
+        isDemo:
+          type: boolean
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    AccountInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 80
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: Default PLN.
+        numberHint:
+          type: string
+          pattern: "^([0-9]{4})?$"
+        openingBalanceMinor:
+          type: integer
+          format: int64
+        archived:
+          type: boolean
+    ColRef:
+      type: object
+      additionalProperties: false
+      required: [index, header]
+      properties:
+        index:
+          type: integer
+          minimum: 0
+        header:
+          type: string
+    Mapping:
+      type: object
+      additionalProperties: false
+      description: Columns per canonical role (PLAN §4.3). An absent role is not mapped.
+      x-go-type: ledger.MappingDoc
+      x-go-type-import:
+        path: github.com/x2db736ac85h/finuance/backend/internal/ledger
+      properties:
+        bookedOn: {$ref: "#/components/schemas/ColRef"}
+        amount: {$ref: "#/components/schemas/ColRef"}
+        payee: {$ref: "#/components/schemas/ColRef"}
+        description: {$ref: "#/components/schemas/ColRef"}
+        reference: {$ref: "#/components/schemas/ColRef"}
+        category: {$ref: "#/components/schemas/ColRef"}
+        currency: {$ref: "#/components/schemas/ColRef"}
+        valueOn: {$ref: "#/components/schemas/ColRef"}
+        txType: {$ref: "#/components/schemas/ColRef"}
+        counterpartyAccount: {$ref: "#/components/schemas/ColRef"}
+        ownAccount: {$ref: "#/components/schemas/ColRef"}
+        balance: {$ref: "#/components/schemas/ColRef"}
+        ignore:
+          type: array
+          items: {$ref: "#/components/schemas/ColRef"}
+    ImportOptions:
+      type: object
+      additionalProperties: false
+      description: How the file is read and staged (PLAN §4.3). headerRow is "auto", "none" or a 1-based record number.
+      x-go-type: ledger.OptionsDoc
+      x-go-type-import:
+        path: github.com/x2db736ac85h/finuance/backend/internal/ledger
+      properties:
+        encoding:
+          type: string
+          enum: [auto, utf-8, windows-1250, iso-8859-2, windows-1252]
+        delimiter:
+          type: string
+          enum: [auto, ";", ",", "\\t", "|"]
+        headerRow:
+          oneOf:
+            - type: string
+              enum: [auto, none]
+            - type: integer
+              minimum: 1
+        skipRows:
+          type: integer
+          minimum: 0
+        dropShort:
+          type: boolean
+        dateOrder:
+          type: string
+          enum: [dmy, mdy]
+        stripQuote:
+          type: boolean
+        invertSign:
+          type: boolean
+        amountMode:
+          type: string
+          enum: [single, debit_credit]
+        debitColumn: {$ref: "#/components/schemas/ColRef"}
+        creditColumn: {$ref: "#/components/schemas/ColRef"}
+        currencyFallback:
+          type: string
+    RawField:
+      type: object
+      additionalProperties: false
+      required: [header, value]
+      properties:
+        header:
+          type: string
+        value:
+          type: string
+    StagedRow:
+      type: object
+      additionalProperties: false
+      required: [rowIndex, payee, description, reference, txType, bankCategory, counterpartyAccount, raw, duplicate]
+      properties:
+        rowIndex:
+          type: integer
+          description: 0-based data row of the file.
+        bookedOn:
+          type: string
+          format: date
+        valueOn:
+          type: string
+          format: date
+        amount:
+          $ref: "#/components/schemas/Money"
+        balance:
+          $ref: "#/components/schemas/Money"
+        payee:
+          type: string
+        description:
+          type: string
+        reference:
+          type: string
+        txType:
+          type: string
+        bankCategory:
+          type: string
+        counterpartyAccount:
+          type: string
+        raw:
+          type: array
+          items: {$ref: "#/components/schemas/RawField"}
+        error:
+          type: string
+          description: Why the row can't be imported (it is never committed).
+        duplicate:
+          type: boolean
+          description: Before the commit, the account already has this transaction; after it, the row merged into another import's transaction.
+        transactionId:
+          type: string
+          format: uuid
+    ImportStats:
+      type: object
+      additionalProperties: false
+      required: [rows, errors, duplicatesEstimate, newEstimate, headerAt, dropped]
+      properties:
+        rows:
+          type: integer
+        errors:
+          type: integer
+        duplicatesEstimate:
+          type: integer
+        newEstimate:
+          type: integer
+        dateFrom:
+          type: string
+          format: date
+        dateTo:
+          type: string
+          format: date
+        headerAt:
+          type: integer
+          description: 1-based record of the header row; 0 = no header.
+        dropped:
+          type: integer
+          description: Short summary rows left out.
+    ImportSummary:
+      type: object
+      additionalProperties: false
+      required: [id, filename, sizeBytes, status, mappingSource, createdAt, stats]
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        sizeBytes:
+          type: integer
+        status:
+          type: string
+          enum: [previewed, committing, committed, failed]
+        mappingSource:
+          type: string
+          enum: [detected, profile, user]
+        createdAt:
+          type: string
+          format: date-time
+        committedAt:
+          type: string
+          format: date-time
+        stats:
+          type: object
+          additionalProperties: true
+          description: "{rows, errors, headerAt, dropped, dateFrom, dateTo} and, once committed, {new, duplicates}."
+        profileLabel:
+          type: string
+          description: Source label (b1, b2, …) of the file layout, when the user has more than one layout.
+        error:
+          type: string
+    ImportDetail:
+      allOf:
+        - $ref: "#/components/schemas/ImportSummary"
+        - type: object
+          required: [encoding, delimiter, headers, columnTypes, mapping, options]
+          properties:
+            encoding:
+              type: string
+            delimiter:
+              type: string
+            headers:
+              type: array
+              items:
+                type: string
+            columnTypes:
+              type: array
+              items:
+                type: string
+                enum: [date, number, text]
+            mapping:
+              $ref: "#/components/schemas/Mapping"
+            options:
+              $ref: "#/components/schemas/ImportOptions"
+    ImportPreview:
+      type: object
+      additionalProperties: false
+      required: [import, stats, suggestedAccount, sampleRows, tailRows, missing, warnings]
+      properties:
+        import:
+          $ref: "#/components/schemas/ImportDetail"
+        stats:
+          $ref: "#/components/schemas/ImportStats"
+        suggestedAccount:
+          type: object
+          additionalProperties: false
+          description: The account matching the file's own-account column (pre-filled when unique), or a name for a new one.
+          properties:
+            id:
+              type: string
+              format: uuid
+            createName:
+              type: string
+        sampleRows:
+          type: array
+          items: {$ref: "#/components/schemas/StagedRow"}
+          description: The first 50 staged rows.
+        tailRows:
+          type: array
+          items: {$ref: "#/components/schemas/StagedRow"}
+          description: The last 5 staged rows, when the file has more than 55.
+        missing:
+          type: array
+          items:
+            type: string
+          description: Required roles that are not mapped yet; the commit needs this empty.
+        warnings:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, message]
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+    ImportRowPage:
+      type: object
+      additionalProperties: false
+      required: [rows, total]
+      properties:
+        rows:
+          type: array
+          items: {$ref: "#/components/schemas/StagedRow"}
+        total:
+          type: integer
+          description: Rows in the import (errored rows only, with onlyErrors).
+    ImportLines:
+      type: object
+      additionalProperties: false
+      required: [encoding, delimiter, total, lines]
+      properties:
+        encoding:
+          type: string
+        delimiter:
+          type: string
+        total:
+          type: integer
+          description: Records in the file.
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [record, fields, status]
+            properties:
+              record:
+                type: integer
+                description: 1-based, as headerRow counts.
+              fields:
+                type: array
+                items:
+                  type: string
+              status:
+                type: string
+                enum: [header, preamble, data, footer_dropped, blank, skipped]
+    ImportChanges:
+      type: object
+      additionalProperties: false
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        mapping:
+          $ref: "#/components/schemas/Mapping"
+        options:
+          $ref: "#/components/schemas/ImportOptions"
+    CommitRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        rememberMapping:
+          type: boolean
+          default: true
+          description: Save the mapping and options for files with the same layout.
+    DuplicateFileProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          required: [existingImportId]
+          properties:
+            existingImportId:
+              type: string
+              format: uuid
     Money:
       type: object
       additionalProperties: false

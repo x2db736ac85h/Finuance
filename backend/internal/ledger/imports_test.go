@@ -2,7 +2,10 @@ package ledger_test
 
 import (
 	"errors"
+	"sync"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
@@ -229,5 +232,44 @@ func TestBankCategoryResolvedOnCommit(t *testing.T) {
 	}
 	if cats, _ := e.l.ListCategories(e.ctx, u); len(cats) != 2 {
 		t.Errorf("categories = %+v, want ŻYWNOŚĆ and Inne", cats)
+	}
+}
+
+// TestConcurrentOverlappingCommits commits two overlapping imports at the same time, several times:
+// no duplicate transactions, and the stats add up (PLAN 6 tests, "concurrency").
+func TestConcurrentOverlappingCommits(t *testing.T) {
+	e := newEnv(t)
+	for round := range 5 {
+		u := e.user()
+		a := e.account(u, "A")
+		impA, err := e.l.CreateImport(e.ctx, u, staged(t, "a.csv", fixture(t, fileA), &a.ID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		impC, err := e.l.CreateImport(e.ctx, u, staged(t, "c.csv", fixture(t, fileC), &a.ID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var res [2]ledger.CommitResult
+		var errs [2]error
+		var wg sync.WaitGroup
+		for i, id := range []uuid.UUID{impA.ID, impC.ID} {
+			wg.Go(func() { res[i], errs[i] = e.l.CommitImport(e.ctx, u, id) })
+		}
+		wg.Wait()
+		if errs[0] != nil || errs[1] != nil {
+			t.Fatalf("round %d: %v / %v", round, errs[0], errs[1])
+		}
+		want := len(identities(t, fileA, fileC))
+		if got := e.countTransactions(u, a.ID); got != want {
+			t.Fatalf("round %d: %d transactions, want %d", round, got, want)
+		}
+		if res[0].New+res[1].New != want {
+			t.Errorf("round %d: new %d + %d ≠ %d transactions", round, res[0].New, res[1].New, want)
+		}
+		rows := len(staged(t, fileA, fixture(t, fileA), nil).Rows) + len(staged(t, fileC, fixture(t, fileC), nil).Rows)
+		if total := int64(res[0].New+res[1].New) + res[0].Duplicates + res[1].Duplicates + res[0].Errors + res[1].Errors; total != int64(rows) {
+			t.Errorf("round %d: stats %+v %+v don't add up to %d rows", round, res[0], res[1], rows)
+		}
 	}
 }

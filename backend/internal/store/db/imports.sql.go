@@ -154,6 +154,39 @@ func (q *Queries) GetImport(ctx context.Context, arg GetImportParams) (Import, e
 	return i, err
 }
 
+const importLayoutLabels = `-- name: ImportLayoutLabels :many
+SELECT header_signature, row_number() OVER (ORDER BY min(created_at), header_signature) AS position
+FROM imports WHERE user_id = $1
+GROUP BY header_signature
+`
+
+type ImportLayoutLabelsRow struct {
+	HeaderSignature []byte
+	Position        int64
+}
+
+// Each distinct file layout (header signature) of the user's imports in first-seen order: the
+// sidebar source labels b1, b2, … (task 6.12).
+func (q *Queries) ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error) {
+	rows, err := q.db.Query(ctx, importLayoutLabels, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ImportLayoutLabelsRow
+	for rows.Next() {
+		var i ImportLayoutLabelsRow
+		if err := rows.Scan(&i.HeaderSignature, &i.Position); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listImports = `-- name: ListImports :many
 SELECT id, user_id, account_id, filename, size_bytes, sha256, status, encoding, delimiter, headers, column_types, mapping, options, mapping_source, header_signature, stats, error, created_at, committed_at FROM imports WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2
 `

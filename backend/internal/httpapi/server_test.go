@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -255,13 +256,18 @@ func TestProblemMapping(t *testing.T) {
 		{&http.MaxBytesError{Limit: 10}, "payload_too_large", 413},
 		{platform.ErrUnsupportedFile, "unsupported_file", 415},
 		{(&platform.ValidationError{Fields: []platform.FieldError{{Field: "a", Message: "b"}, {Field: "c", Message: "d"}}}), "validation_failed", 422},
+		{fmt.Errorf("get import: %w", ledger.ErrNotFound), "not_found", 404},
+		{ledger.ErrConflict, "conflict", 409},
+		{ledger.ErrState, "conflict", 409},
+		{fmt.Errorf("name too long: %w", ledger.ErrInvalid), "validation_failed", 422},
 		{errors.New("pq: relation x does not exist"), "internal", 500},
 	} {
 		p := ProblemFor(tc.err, r, false)
 		if string(p.Code) != tc.code || p.Status != tc.status || p.Type != "/problems/"+tc.code || p.Instance == nil || *p.Instance != "/api/v1/x" {
 			t.Errorf("%v → %s %d %s", tc.err, p.Code, p.Status, p.Type)
 		}
-		if tc.code == "validation_failed" && (p.Errors == nil || len(*p.Errors) != 2) {
+		var ve *platform.ValidationError
+		if errors.As(tc.err, &ve) && (p.Errors == nil || len(*p.Errors) != 2) {
 			t.Errorf("validation errors not aggregated: %+v", p.Errors)
 		}
 	}

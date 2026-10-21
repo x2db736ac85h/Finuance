@@ -20,10 +20,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
+	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -69,18 +72,48 @@ func (s *syncBuffer) String() string { s.mu.Lock(); defer s.mu.Unlock(); return 
 
 func newAuthEnv(t *testing.T, env config.Env, cookieSecure bool) *authEnv {
 	t.Helper()
+	return newTestEnv(t, func(c *config.Config) { c.Env, c.CookieSecure = env, cookieSecure }, false)
+}
+
+// newTestEnv builds the full API on the test database. mut adjusts the configuration; withWorkers
+// also starts a River client that works the jobs (commit), as the worker process does.
+func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authEnv {
+	t.Helper()
 	tdb := tu.Require(t, testDB)
 	o, _ := url.Parse(origin)
-	cfg := config.Config{Env: env, AllowSignup: true, PublicOrigin: o, CookieSecure: cookieSecure,
-		SessionTTL: 30 * 24 * time.Hour, SessionIdleTTL: 7 * 24 * time.Hour}
+	cfg := config.Config{Env: config.EnvTest, AllowSignup: true, PublicOrigin: o,
+		SessionTTL: 30 * 24 * time.Hour, SessionIdleTTL: 7 * 24 * time.Hour, MaxUploadBytes: 20 << 20}
+	if mut != nil {
+		mut(&cfg)
+	}
 	st := store.New(tdb.App)
 	clk := &fakeClock{t: time.Now().UTC()}
 	svc := auth.New(st, clk, auth.Config{Params: auth.Params{MemoryKiB: 8 * 1024, Time: 1, Threads: 1},
 		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: true})
+	led := ledger.New(st, platform.SystemClock{})
+	rc := &river.Config{Workers: jobs.Workers(jobs.Deps{Sessions: svc, Ledger: led})}
+	if withWorkers {
+		rc.Queues = map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}}
+		rc.FetchCooldown, rc.FetchPollInterval = 20*time.Millisecond, 50*time.Millisecond
+	}
+	jc, err := river.NewClient(riverpgxv5.New(tdb.App), rc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withWorkers {
+		if err := jc.Start(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = jc.Stop(ctx)
+		})
+	}
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk})
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Jobs: jc})
 	if err != nil {
 		t.Fatal(err)
 	}

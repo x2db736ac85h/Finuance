@@ -10,7 +10,46 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
+
+const accountStats = `-- name: AccountStats :many
+SELECT account_id, count(*) AS tx_count, min(booked_on)::date AS first_on, max(booked_on)::date AS last_on
+FROM transactions WHERE user_id = $1 GROUP BY account_id
+`
+
+type AccountStatsRow struct {
+	AccountID uuid.UUID
+	TxCount   int64
+	FirstOn   platform.Date
+	LastOn    platform.Date
+}
+
+// Transaction count and date range per account (GET /accounts).
+func (q *Queries) AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error) {
+	rows, err := q.db.Query(ctx, accountStats, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AccountStatsRow
+	for rows.Next() {
+		var i AccountStatsRow
+		if err := rows.Scan(
+			&i.AccountID,
+			&i.TxCount,
+			&i.FirstOn,
+			&i.LastOn,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO accounts (id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo)
@@ -175,6 +214,25 @@ func (q *Queries) ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockAccount = `-- name: LockAccount :one
+SELECT id FROM accounts WHERE user_id = $1 AND id = $2 FOR NO KEY UPDATE
+`
+
+type LockAccountParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// Serialises the writers of one account's transactions (commit, delete import, reprocess,
+// overrides): concurrent commits of overlapping files would otherwise insert the same identities in
+// different orders and could deadlock. NO KEY UPDATE doesn't block the FK checks of inserts.
+func (q *Queries) LockAccount(ctx context.Context, arg LockAccountParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockAccount, arg.UserID, arg.ID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const updateAccount = `-- name: UpdateAccount :one

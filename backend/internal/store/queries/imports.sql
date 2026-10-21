@@ -38,3 +38,10 @@ RETURNING *;
 -- name: DeleteImport :execrows
 -- Cascades to import_files and import_rows. Transactions are cleaned up by DeleteOrphanTransactions.
 DELETE FROM imports WHERE user_id = @user_id AND id = @id;
+
+-- name: ImportLayoutLabels :many
+-- Each distinct file layout (header signature) of the user's imports in first-seen order: the
+-- sidebar source labels b1, b2, … (task 6.12).
+SELECT header_signature, row_number() OVER (ORDER BY min(created_at), header_signature) AS position
+FROM imports WHERE user_id = @user_id
+GROUP BY header_signature;
