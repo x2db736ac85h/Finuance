@@ -197,6 +197,7 @@ type PageRequest struct {
 	Limit      int
 	StatColumn string     // amount (default) or balanceAfter
 	LocateID   *uuid.UUID // return the window that contains this row
+	SkipTotals bool       // only the window: no total, stats, data range or duplicatesSkipped
 }
 
 // Stats summarise the stat column over the period-scoped rows (minor units; Avg rounded).
@@ -215,6 +216,7 @@ type Page struct {
 	Stats             Stats
 	DuplicatesSkipped int64
 	LocatedOffset     *int // the position of LocateID in the ordered result, when found
+	TotalsIncluded    bool // false when the request skipped them
 }
 
 // pageSQL builds the totals and rows statements of a page request (shared by Page and Explain).
@@ -328,20 +330,23 @@ func (e *Engine) Page(ctx context.Context, userID uuid.UUID, req PageRequest) (P
 		if err != nil {
 			return err
 		}
-		var dmin, dmax pgtype.Date
-		var sum, avg, mn, mx pgtype.Int8
-		if err := tx.QueryRow(ctx, totals, ta...).Scan(&out.Total, &sum, &avg, &mn, &mx, &dmin, &dmax); err != nil {
-			return err
-		}
-		out.Stats.Sum, out.Stats.Avg, out.Stats.Min, out.Stats.Max = int8p(sum), int8p(avg), int8p(mn), int8p(mx)
-		out.DataMin, out.DataMax = dateOf(dmin), dateOf(dmax)
+		if !req.SkipTotals {
+			var dmin, dmax pgtype.Date
+			var sum, avg, mn, mx pgtype.Int8
+			if err := tx.QueryRow(ctx, totals, ta...).Scan(&out.Total, &sum, &avg, &mn, &mx, &dmin, &dmax); err != nil {
+				return err
+			}
+			out.Stats.Sum, out.Stats.Avg, out.Stats.Min, out.Stats.Max = int8p(sum), int8p(avg), int8p(mn), int8p(mx)
+			out.DataMin, out.DataMax = dateOf(dmin), dateOf(dmax)
 
-		dc, _, err := r.fresh(false)
-		if err != nil {
-			return err
-		}
-		if out.DuplicatesSkipped, err = duplicatesSkipped(ctx, tx, dc); err != nil {
-			return err
+			dc, _, err := r.fresh(false)
+			if err != nil {
+				return err
+			}
+			if out.DuplicatesSkipped, err = duplicatesSkipped(ctx, tx, dc); err != nil {
+				return err
+			}
+			out.TotalsIncluded = true
 		}
 
 		if req.LocateID != nil {

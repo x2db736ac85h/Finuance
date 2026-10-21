@@ -51,6 +51,8 @@ func TestQueryPerf(t *testing.T) {
 		{"sort by payee (collation)", query.PageRequest{Sort: &query.Sort{Column: "payee"}}},
 		{"amount < -100, sort by amount", query.PageRequest{Context: query.Context{Filters: []query.Filter{{Column: "amount", Cond: "<-100"}}},
 			Sort: &query.Sort{Column: "amount"}}},
+		{"scrolling: window at 9 000 without totals", query.PageRequest{Offset: 9000, SkipTotals: true}},
+		{"scrolling: search window at 2 000 without totals", query.PageRequest{Context: query.Context{Search: "blik warszawa"}, Offset: 2000, SkipTotals: true}},
 	}
 	fmt.Fprintf(&out, "| Shape | rows | p50 | p95 |\n|---|---|---|---|\n")
 	var plans strings.Builder
@@ -68,6 +70,9 @@ func TestQueryPerf(t *testing.T) {
 				times = append(times, time.Since(t0))
 			}
 			n = p.Total
+			if !p.TotalsIncluded {
+				n = -1
+			}
 		}
 		slices.Sort(times)
 		p50, p95 := times[len(times)/2], times[len(times)*95/100]
@@ -75,6 +80,9 @@ func TestQueryPerf(t *testing.T) {
 		pl, err := e.q.Explain(e.ctx, u, s.req)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if strings.HasPrefix(s.name, "search") && !strings.Contains(pl["totals"], "tx_search_trgm_idx") {
+			t.Errorf("search does not use the trigram index (bootstrap.sql LEAKPROOF):\n%s", pl["totals"])
 		}
 		fmt.Fprintf(&plans, "\n### %s\n", s.name)
 		for _, k := range []string{"totals", "rows", "duplicates"} {

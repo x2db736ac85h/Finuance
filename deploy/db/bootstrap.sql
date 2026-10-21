@@ -19,6 +19,12 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS citext;
 
+-- Let LIKE serve as an index condition under row-level security (Phase 7, Irwin's decision; docs/perf.md).
+-- PostgreSQL only uses leakproof operators in index scans on RLS tables. textlike can raise an error
+-- only for a malformed pattern, never because of the row's value, so it can't reveal other users'
+-- rows. The flag lives in this database's catalog: repeat it after a dump/restore into a new cluster.
+ALTER FUNCTION pg_catalog.textlike(text, text) LEAKPROOF;
+
 GRANT USAGE ON SCHEMA public TO finuance_app;
 ALTER DEFAULT PRIVILEGES FOR ROLE finuance_owner IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO finuance_app;

@@ -79,6 +79,18 @@ func TestTransactionQueryHTTP(t *testing.T) {
 		t.Errorf("locate = offset %v located %v", loc.body["offset"], loc.body["locatedOffset"])
 	}
 
+	// includeTotals: false returns the window only.
+	w := b.do("POST", "/transactions/query", map[string]any{"context": map[string]any{}, "offset": 200, "limit": 5, "includeTotals": false})
+	expect(t, w, 200, "")
+	for _, k := range []string{"total", "stats", "dataRange", "duplicatesSkipped"} {
+		if _, ok := w.body[k]; ok {
+			t.Errorf("includeTotals=false still has %q: %s", k, w.raw)
+		}
+	}
+	if len(rowsOf(t, w)) != 5 || num(w.body["offset"]) != 200 {
+		t.Errorf("window = %s", w.raw)
+	}
+
 	// Distinct ignores the column's own filter.
 	d := b.do("POST", "/transactions/distinct", map[string]any{"context": map[string]any{"filters": []any{
 		map[string]any{"column": "category", "cond": "=Rachunki", "excluded": []string{"Rachunki"}}}}, "column": "category"})

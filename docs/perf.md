@@ -135,17 +135,19 @@ Neither is done. The recommendation is to measure on a dev machine first (`make 
 
 ### Results — 2026-10-21, cloud sandbox (4 vCPU, Postgres 18.6 in Docker, default settings)
 
-| Shape | Rows | First version p50 / p95 | After tuning p50 / p95 |
-|---|---|---|---|
-| default sort, no filter | 108,098 | 255 / 296 ms | **77 / 101 ms** |
-| default sort, deep window (offset 90,000) | 108,098 | 496 / 571 ms | **98 / 125 ms** |
-| payee contains "kawiarnia" | 6,030 | 305 / 442 ms | 132 / 290 ms |
-| search "blik warszawa" | 5,049 | 449 / 523 ms | 221 / 273 ms |
-| category = Transport, last 3 months | 82 | 275 / 341 ms | **98 / 128 ms** |
-| sort by payee (Polish collation) | 108,098 | 369 / 419 ms | 141 / 167 ms |
-| amount < −100, sorted by amount | 18,117 | 328 / 381 ms | **107 / 128 ms** |
+| Shape | Rows | First version p50 / p95 | After tuning p50 / p95 | With Irwin's decisions p50 / p95 |
+|---|---|---|---|---|
+| default sort, no filter | 108,098 | 255 / 296 ms | 77 / 101 ms | **76 / 102 ms** |
+| default sort, deep window (offset 90,000) | 108,098 | 496 / 571 ms | 98 / 125 ms | **89 / 130 ms** |
+| payee contains "kawiarnia" | 6,030 | 305 / 442 ms | 132 / 290 ms | 133 / 233 ms |
+| search "blik warszawa" | 5,049 | 449 / 523 ms | 221 / 273 ms | **90 / 114 ms** |
+| category = Transport, last 3 months | 82 | 275 / 341 ms | 98 / 128 ms | **107 / 138 ms** |
+| sort by payee (Polish collation) | 108,098 | 369 / 419 ms | 141 / 167 ms | 162 / 181 ms |
+| amount < −100, sorted by amount | 18,117 | 328 / 381 ms | 107 / 128 ms | **109 / 139 ms** |
+| scrolling: window at 9,000, `includeTotals: false` | — | — | — | **7 / 12 ms** |
+| scrolling: search window at 2,000, `includeTotals: false` | — | — | — | **33 / 48 ms** |
 
-Target: p95 ≤ 150 ms on a dev machine. In the sandbox, four of the seven shapes meet it. The text-search shapes and the collation sort don't. Earlier phases measured this sandbox at roughly 2–3× slower than a dev machine (and its disk reads are slow), so those may meet it on a dev machine. That is not verified.
+Target: p95 ≤ 150 ms on a dev machine. In the sandbox, the first request of six of the seven shapes meets it, and scrolling windows (`includeTotals: false`) are far below it. The exceptions are the payee "contains" filter (no trigram index on `payee_n`) and the full Polish-collation sort. Earlier phases measured this sandbox at roughly 2–3× slower than a dev machine, so both may meet the target on a dev machine; that is not verified.
 
 ### What changed (migration `00004_query_indexes.sql` and `internal/query/sql.go`)
 
@@ -155,11 +157,14 @@ Target: p95 ≤ 150 ms on a dev machine. In the sandbox, four of the seven shape
 4. **`duplicatesSkipped` without the `import_rows` heap.** It was "linked rows − import-origin transactions", two full scans (about 240 ms, mostly reading the wide `import_rows` table). It is now "linked rows − distinct linked transactions", from the partial index `import_rows_linked_idx (user_id, import_id) INCLUDE (transaction_id) WHERE transaction_id IS NOT NULL` (30–65 ms). The two are equal because every import-origin transaction keeps at least one linked row; `TestDuplicatesSkippedFormula` checks that through commits, an override and a delete.
 5. Fresh statistics matter: before `ANALYZE` the planner estimated 527 rows instead of 108,098 and chose nested loops (the first version's numbers above are already after `ANALYZE`; without it they were 1.3–2× worse).
 
-### Findings that need a decision
+### Decisions (Irwin, Phase 7 gate)
 
-- **The trigram index can't be used under forced RLS.** `search_text` has a `gin_trgm_ops` index (Phase 4), but `LIKE` (`textlike`) is not *leakproof*. On a table with row-level security, PostgreSQL won't use a non-leakproof operator as an index condition, because it might reveal other users' rows before the policy filters them. So search and "contains" filters scan all of the user's rows (via `user_id`). That is bounded by one user's data, not the whole table, but it is about 100 ms per statement here at 100k rows. Options:
-  - **(a)** in `bootstrap.sql` (superuser, once): `ALTER FUNCTION textlike(text, text) LEAKPROOF`. `LIKE` errors only on a malformed pattern, never on the row's value, so it can't leak data. But this is a global catalog change, and upgrades of the cluster must repeat it;
-  - **(b)** accept the scan, and drop the unused trigram index (it only costs insert time);
-  - **(c)** keep it as is until real data shows a need.
-- **Fixed cost per request.** Every window request computes the totals and `duplicatesSkipped` (60–130 ms together here). Windows after the first don't need them. An `includeTotals: false` request flag for later windows would make scrolling cost only the rows statement (2–60 ms). That would be a small API addition for Phase 8.
+- **`LIKE` may use the trigram index under RLS: option (a).** On a table with row-level security, PostgreSQL only uses *leakproof* operators as index conditions, because a non-leakproof one might reveal other users' rows before the policy filters them. `LIKE` (`textlike`) is not leakproof by default, so the `search_text` trigram index was unused. `deploy/db/bootstrap.sql` now runs `ALTER FUNCTION pg_catalog.textlike(text, text) LEAKPROOF` as superuser. `LIKE` errors only on a malformed pattern, never because of a row's value. `TestLikeIsLeakproof` checks the flag, and `TestQueryPerf` checks that search plans use `tx_search_trgm_idx`.
+  - **A database bootstrapped before this change** needs it once, as superuser: `ALTER FUNCTION pg_catalog.textlike(text, text) LEAKPROOF;` in the `finuance` database (Compose: `docker compose exec db psql -U postgres -d finuance -c '…'`).
+  - **Moving to a new cluster:** the flag lives in the database's catalog, so a dump/restore into a new cluster must repeat it.
+- **`includeTotals: false`** on `POST /transactions/query` skips the totals, the stats, the data range and `duplicatesSkipped`. The grid sends it for every window after the first (Phase 8).
+
+### Still open (no decision needed now)
+
+- The payee/description/… "contains" filters scan the user's rows: only `search_text` has a trigram index. Indexes on the most-used `_n` columns are an option if real data needs them.
 - **Collation sorts** (any text column) sort all of the user's rows. An expression index per sortable text column would serve them. That is 9 indexes, so it's not worth it at this scale.

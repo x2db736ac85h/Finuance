@@ -366,6 +366,14 @@ func TestPagingAndLocate(t *testing.T) {
 	if p.LocatedOffset == nil || *p.LocatedOffset != 123 || p.Offset != 100 || p.Rows[23].ID != target.ID {
 		t.Errorf("locate: offset %d located %v", p.Offset, p.LocatedOffset)
 	}
+	// Later windows can skip the totals: same rows, no totals.
+	skip := e.page(u, query.PageRequest{Sort: sort, Offset: 37, Limit: 37, SkipTotals: true})
+	if skip.TotalsIncluded || skip.Total != 0 || skip.DataMax != nil || len(skip.Rows) != 37 || skip.Rows[0].ID != full[37].ID {
+		t.Errorf("SkipTotals page = included %v total %d, %d rows", skip.TotalsIncluded, skip.Total, len(skip.Rows))
+	}
+	if p := e.page(u, query.PageRequest{Sort: sort, Limit: 1}); !p.TotalsIncluded || p.Total != len(full) {
+		t.Errorf("default page = included %v total %d", p.TotalsIncluded, p.Total)
+	}
 	missing := uuid.New()
 	if p := e.page(u, query.PageRequest{Sort: sort, Offset: 50, Limit: 50, LocateID: &missing}); p.LocatedOffset != nil || p.Offset != 50 {
 		t.Errorf("unknown locateId moved the window: %d %v", p.Offset, p.LocatedOffset)

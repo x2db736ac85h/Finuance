@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 7 — Transactions query API · **Branch:** phase/07-query · **Status:** in progress
+**Current phase:** 7 — Transactions query API · **Branch:** phase/07-query · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -19,6 +19,7 @@
 - Phase 5: `golang.org/x/crypto` (argon2id), `golang.org/x/time/rate` and `github.com/oapi-codegen/runtime` (the generator's support library, needed once the API has path parameters and uuid fields) approved as direct dependencies. `finuance admin set-password --email … --password-stdin` is added next to `create-user` (no email sending, so admins reset forgotten passwords; it revokes the user's sessions). The first preferences save must send `version: 0`; anything else is `409 stale_version`.
 - Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
 - Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
+- Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
@@ -32,7 +33,7 @@
 - [x] 7.8 `GET /categories?accountIds=` (`txCount`, `colorSlot`)
 - [x] 7.9 `POST /transactions/export` (streamed, BOM, delimiter, injection guard); ADR 0014
 - [x] 7.10 `GET /me/export` (zip: manifest, JSON per entity, preferences, transactions.csv, original files)
-- [x] 7.11 performance: 108k-row seed, `EXPLAIN (ANALYZE, BUFFERS)`, migration `00004_query_indexes.sql`, `docs/perf.md` + `docs/perf-phase7-plans.md`; 4 of 7 shapes ≤ 150 ms p95 in the sandbox (search/contains/collation sort above; see perf.md)
+- [x] 7.11 performance: 108k-row seed, `EXPLAIN (ANALYZE, BUFFERS)`, migration `00004_query_indexes.sql`, `docs/perf.md` + `docs/perf-phase7-plans.md`; after the gate decisions 6 of 7 first-window shapes ≤ 150 ms p95 in the sandbox, scrolling windows 12–48 ms (payee contains and collation sort above; see perf.md)
 - [x] 7.12 `group` column, `toolFilter` (port of `aiFilter`, oracle parity on every search/aggregate case), `POST /transactions/ids`
 - [x] Tests: filter parity (84 oracle cases, 1 allowed diff), injection, sort, paging + `locateId`, stats, distinct, export, zip, tenancy; nightly workflow with `FuzzQueryDB`
 - [x] `scripts/query-smoke.sh` (17 steps pass against `make up`); THREAT-MODEL T2/T4, ARCHITECTURE query section, ALLOWED_DIFFS row 12
@@ -118,6 +119,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 7 — Transactions query API: gate approved 2026-10-21 (option a: `textlike` LEAKPROOF; `includeTotals` added); `phase/07-query` merged with `--no-ff`.
 - Phase 6 — Accounts and import pipeline: gate approved 2026-10-21 (import smoke matches the oracle; Pekao preview reviewed); `phase/06-imports` merged with `--no-ff`.
 - Phase 5 — Auth, users, preferences: gate approved 2026-10-21; `phase/05-auth` merged with `--no-ff`.
 - Phase 4 — Schema, store layer, RLS: gate approved 2026-10-20 (staging benchmark 8.0–9.7 s accepted against the 3 s target); `phase/04-schema-store-rls` merged with `--no-ff`.
@@ -203,7 +205,8 @@
 - Phase 9: fix auto header detection for mBank and PKO BP in the import preview (`ALLOWED_DIFFS.md` row 4; targets `ingest-cfg/banks/*/header-*.json`). Phase 3 ports the legacy rule as is.
 
 - Phase 8: `POST /demo-data` calls `ledger.SeedDemo` (the same path as `finuance seed-demo`).
-- Phase 8: the grid can send `includeTotals: false` for windows after the first, if Irwin approves that option (perf.md, Phase 7).
+- Phase 8: the grid sends `includeTotals: false` for every window after the first.
+- Phase 16: the RUNBOOK repeats the `textlike` LEAKPROOF step for restores into a new cluster (bootstrap.sql, docs/perf.md).
 - Phase 13: the assistant tool layer converts loose model arguments into `query.ToolFilter` as `toolFilterOf` in `query/sql_test.go` does (numbers or strings; dates via `query.ParseToolDate`).
 - Later (optional): re-measure the staging insert on a dev machine; the schema options in `docs/perf.md` stay open if it matters.
 - Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
@@ -214,6 +217,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 7 gate approved with option (a) and `includeTotals`; both added (search p95 273 → 114 ms in the sandbox), merged. Next: plan Phase 8.
 - 2026-10-21 — Phase 7 built on `phase/07-query`: filter language + compiler + periods + engine (all 84 legacy filter cases, assistant filter parity), query/distinct/ids/detail/patch/categories endpoints, CSV export (ADR 0014), zip data export, query indexes (perf.md: 4 of 7 shapes within target in the sandbox; trigram index unusable under RLS), nightly DB fuzz, `query-smoke.sh`. Next: Irwin's gate review.
 - 2026-10-21 — Phase 7 planned and approved (collapsed-whitespace equality as an allowed diff; fixed `-79,99` / `dd.mm.yyyy` text form). Branch `phase/07-query`.
 - 2026-10-21 — Phase 6 gate approved; merged. Next: plan Phase 7.

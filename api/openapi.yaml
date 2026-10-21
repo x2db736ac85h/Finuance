@@ -1448,6 +1448,13 @@ components:
         locateId:
           type: string
           format: uuid
+        includeTotals:
+          type: boolean
+          default: true
+          description: >-
+            false skips total, stats, dataRange and duplicatesSkipped (they are omitted from the
+            response). The grid sends it for the windows after the first while scrolling: those
+            numbers don't change with the window (Phase 7 decision; docs/perf.md).
     NamedRef:
       type: object
       additionalProperties: false
@@ -1557,7 +1564,8 @@ components:
     TransactionPage:
       type: object
       additionalProperties: false
-      required: [rows, total, offset, stats, duplicatesSkipped]
+      description: total, stats, dataRange and duplicatesSkipped are present unless the request set includeTotals to false.
+      required: [rows, offset]
       properties:
         rows:
           type: array

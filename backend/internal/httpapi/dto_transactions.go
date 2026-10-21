@@ -69,15 +69,19 @@ func txRowDTO(r *query.Row) gen.TransactionRow {
 }
 
 func pageDTO(p *query.Page) gen.TransactionPage {
-	out := gen.TransactionPage{Rows: make([]gen.TransactionRow, len(p.Rows)), Total: p.Total, Offset: p.Offset,
-		DuplicatesSkipped: p.DuplicatesSkipped, LocatedOffset: p.LocatedOffset,
-		Stats: gen.ColumnStats{Column: gen.ColumnStatsColumn(p.Stats.Column), Sum: p.Stats.Sum, Avg: p.Stats.Avg, Min: p.Stats.Min, Max: p.Stats.Max}}
+	out := gen.TransactionPage{Rows: make([]gen.TransactionRow, len(p.Rows)), Offset: p.Offset, LocatedOffset: p.LocatedOffset}
 	for i := range p.Rows {
 		out.Rows[i] = txRowDTO(&p.Rows[i])
 	}
 	if r := p.Period; r != nil {
 		out.Period = &gen.ResolvedPeriod{Kind: gen.ResolvedPeriodKind(r.Kind), From: *dateDTO(&r.From), To: *dateDTO(&r.To), Label: r.Label}
 	}
+	if !p.TotalsIncluded {
+		return out
+	}
+	total, dups := p.Total, p.DuplicatesSkipped
+	out.Total, out.DuplicatesSkipped = &total, &dups
+	out.Stats = &gen.ColumnStats{Column: gen.ColumnStatsColumn(p.Stats.Column), Sum: p.Stats.Sum, Avg: p.Stats.Avg, Min: p.Stats.Min, Max: p.Stats.Max}
 	if p.DataMin != nil && p.DataMax != nil {
 		out.DataRange = &gen.DateRange{Min: *dateDTO(p.DataMin), Max: *dateDTO(p.DataMax)}
 	}

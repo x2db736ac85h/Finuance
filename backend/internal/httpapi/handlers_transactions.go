@@ -21,7 +21,8 @@ import (
 // QueryTransactions returns one window of the filtered, sorted rows with the totals.
 func (a *api) QueryTransactions(ctx context.Context, req gen.QueryTransactionsRequestObject) (gen.QueryTransactionsResponseObject, error) {
 	b := req.Body
-	r := query.PageRequest{Context: contextIn(b.Context), Sort: sortIn(b.Sort), Offset: deref(b.Offset), Limit: b.Limit, LocateID: b.LocateId}
+	r := query.PageRequest{Context: contextIn(b.Context), Sort: sortIn(b.Sort), Offset: deref(b.Offset), Limit: b.Limit, LocateID: b.LocateId,
+		SkipTotals: b.IncludeTotals != nil && !*b.IncludeTotals}
 	if b.StatColumn != nil {
 		r.StatColumn = string(*b.StatColumn)
 	}
