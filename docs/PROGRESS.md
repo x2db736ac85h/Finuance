@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 5 — Auth, users, preferences · **Branch:** phase/05-auth · **Status:** gate review
+**Current phase:** 5 — Auth, users, preferences · **Branch:** phase/05-auth · **Status:** gate approved
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -83,6 +83,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 5 — Auth, users, preferences: gate approved 2026-10-21; `phase/05-auth` merged with `--no-ff`.
 - Phase 4 — Schema, store layer, RLS: gate approved 2026-10-20 (staging benchmark 8.0–9.7 s accepted against the 3 s target); `phase/04-schema-store-rls` merged with `--no-ff`.
 - Phase 3 — Ingest engine: gate approved 2026-10-20 (benchmark ≈ 563 ms accepted against the 500 ms target); `phase/03-ingest-engine` merged with `--no-ff`.
 - Phase 2 — Backend skeleton: gate approved 2026-10-20 (image size target amended); `phase/02-backend-skeleton` merged with `--no-ff`.
@@ -157,6 +158,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 5 gate approved; merged. Next: plan Phase 6.
 - 2026-10-21 — Phase 5 built on `phase/05-auth`: argon2id + ADR 0010, sessions (absolute + idle expiry, rotation, revoke), CSRF + ADR 0011, rate limits + ADR 0012, auth/me/sessions/preferences endpoints, `DELETE /me`, session cleanup job, insert-only River client, `admin create-user`/`set-password`, THREAT-MODEL v1, `auth-smoke.sh` (passes against `make up`). Next: Irwin's gate review.
 - 2026-10-21 — Phase 5 planned and approved (deps x/crypto + x/time, admin set-password, strict first preferences save). Branch `phase/05-auth`.
 - 2026-10-20 — Phase 4 gate approved (benchmark accepted); merged. Next: plan Phase 5.
