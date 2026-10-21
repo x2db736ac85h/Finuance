@@ -12,6 +12,8 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 )
 
@@ -74,4 +76,25 @@ func readPassword(r io.Reader) (string, error) {
 		return "", errors.New("empty password on stdin")
 	}
 	return line, nil
+}
+
+// SeedDemo gives the user with this email the demo account and its committed demo year
+// (finuance seed-demo --email …). It refuses when the user already has a demo account.
+func SeedDemo(ctx context.Context, cfg config.Config, email string, out func(format string, args ...any)) error {
+	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider())
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	st := store.New(pool)
+	u, err := NewAuth(st, cfg).UserByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	acc, res, err := ledger.New(st, platform.SystemClock{}).SeedDemo(ctx, u.ID)
+	if err != nil {
+		return err
+	}
+	out("seeded %q for %s: %d transactions (%s – %s)", acc.Name, u.Email, res.New, acc.FirstOn, acc.LastOn)
+	return nil
 }

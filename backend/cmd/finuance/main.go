@@ -122,8 +122,15 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		}
 		return fail(app.Healthcheck(ctx, cfg))
 	case "seed-demo":
-		fmt.Fprintln(stderr, "finuance seed-demo: not yet implemented (Phase 9)")
-		return 1
+		if email == "" || fs.NArg() != 0 {
+			fmt.Fprintln(stderr, "usage: finuance seed-demo -email=…")
+			return 2
+		}
+		cfg, ok := load(config.ForAdmin)
+		if !ok {
+			return 1
+		}
+		return fail(app.SeedDemo(ctx, cfg, email, func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
 	case "admin":
 		return admin(ctx, fs.Args(), stdin, stdout, stderr, load, fail)
 	}

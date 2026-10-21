@@ -1,14 +1,21 @@
 package ledger_test
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
 
 // identities is the set of (fingerprint, occurrence) of the valid staged rows of the given files:
@@ -271,5 +278,56 @@ func TestConcurrentOverlappingCommits(t *testing.T) {
 		if total := int64(res[0].New+res[1].New) + res[0].Duplicates + res[1].Duplicates + res[0].Errors + res[1].Errors; total != int64(rows) {
 			t.Errorf("round %d: stats %+v %+v don't add up to %d rows", round, res[0], res[1], rows)
 		}
+	}
+}
+
+// TestOverlapMatchesOracleRows: after A, B, C the account holds exactly the legacy merged rows,
+// with their multiplicity (the oracle's default result keeps three 03.01 coffees: two genuine ones
+// from A, plus the third that only C has).
+func TestOverlapMatchesOracleRows(t *testing.T) {
+	var oracle struct {
+		Default struct {
+			Rows [][]string `json:"rows"` // date, payee, title, amount, category, file
+		} `json:"default"`
+	}
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "oracle", "dedupe", "overlap-A-B-C.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &oracle); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]int{}
+	for _, r := range oracle.Default.Rows {
+		amount := strings.NewReplacer(" ", "", " ", "", ",", "").Replace(r[3]) // "-2 850,00" → "-285000"
+		want[strings.Join([]string{r[0], r[1], r[2], amount}, "|")]++
+	}
+
+	e := newEnv(t)
+	u := e.user()
+	a := e.account(u, "Overlap")
+	for _, f := range []string{fileA, fileB, fileC} {
+		e.importFile(u, a.ID, f)
+	}
+	got := map[string]int{}
+	if err := e.st.WithUser(e.ctx, u, func(_ *db.Queries, tx pgx.Tx) error {
+		rows, err := tx.Query(e.ctx, `SELECT to_char(booked_on, 'DD.MM.YYYY') || '|' || payee || '|' || description || '|' || amount_minor
+			FROM transactions WHERE user_id = $1 AND account_id = $2`, u, a.ID)
+		if err != nil {
+			return err
+		}
+		keys, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		for _, k := range keys {
+			got[k]++
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("transactions differ from the oracle's merged rows (-oracle +db):\n%s", diff)
+	}
+	if n := got["03.01.2025|KAWIARNIA BETA|Kawa|-1200"]; n != 3 {
+		t.Errorf("%d coffees on 03.01, want 3", n)
 	}
 }

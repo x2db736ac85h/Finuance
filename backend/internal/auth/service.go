@@ -283,19 +283,28 @@ func (s *Service) SetPassword(ctx context.Context, email, password string) error
 	if err := ve.Err(); err != nil {
 		return err
 	}
+	u, err := s.UserByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	_, err = s.setPassword(ctx, u.ID, password, nil)
+	return err
+}
+
+// UserByEmail finds a user for the admin commands (finuance admin, seed-demo).
+func (s *Service) UserByEmail(ctx context.Context, email string) (User, error) {
 	var u db.User
 	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) (err error) {
 		u, err = q.GetUserByEmail(ctx, strings.TrimSpace(email))
 		return err
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("user %q: %w", email, platform.ErrNotFound)
+		return User{}, fmt.Errorf("user %q: %w", email, platform.ErrNotFound)
 	}
 	if err != nil {
-		return err
+		return User{}, err
 	}
-	_, err = s.setPassword(ctx, u.ID, password, nil)
-	return err
+	return userOf(u), nil
 }
 
 // setPassword stores a new hash, deletes every session of the user and, when c is given, opens a

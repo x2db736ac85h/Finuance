@@ -40,3 +40,23 @@ func TestLongerRanges(t *testing.T) {
 		t.Errorf("only %d rows for 10 years", n)
 	}
 }
+
+func TestRecentEndsYesterday(t *testing.T) {
+	today := time.Date(2026, 10, 21, 15, 4, 0, 0, time.FixedZone("CEST", 2*3600))
+	s := Recent(today)
+	lines := strings.Split(s, "\n")
+	if lines[0] != Header {
+		t.Fatalf("header = %q", lines[0])
+	}
+	// Newest first: the first row is the latest day, the last row the earliest (442 days back).
+	if got := strings.SplitN(lines[1], ";", 2)[0]; got != "20.10.2026" {
+		t.Errorf("latest date %s, want yesterday 20.10.2026", got)
+	}
+	start := time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC).Add(-LegacyEnd.Sub(LegacyStart))
+	if got := strings.SplitN(lines[len(lines)-1], ";", 2)[0]; got != start.Format("02.01.2006") {
+		t.Errorf("earliest date %s, want %s", got, start.Format("02.01.2006"))
+	}
+	if Recent(today) != s {
+		t.Error("not deterministic")
+	}
+}
