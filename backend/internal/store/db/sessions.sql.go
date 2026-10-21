@@ -28,8 +28,9 @@ type CreateSessionParams struct {
 	Ip        *netip.Addr
 }
 
-// Sessions store only the SHA-256 of the cookie token (PLAN §5.2). Time comes from the caller
-// (platform.Clock), so expiry is testable.
+// Sessions store only the SHA-256 of the cookie token (PLAN §5.2). expires_at is the absolute
+// expiry (created + FINUANCE_SESSION_TTL); the idle expiry is last_seen_at + FINUANCE_SESSION_IDLE_TTL,
+// passed in as idle_cutoff. Time comes from the caller (platform.Clock), so both are testable.
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
 	_, err := q.db.Exec(ctx, createSession,
 		arg.TokenHash,
@@ -43,11 +44,17 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 }
 
 const deleteExpiredSessions = `-- name: DeleteExpiredSessions :execrows
-DELETE FROM sessions WHERE expires_at <= $1
+DELETE FROM sessions WHERE expires_at <= $1 OR last_seen_at <= $2
 `
 
-func (q *Queries) DeleteExpiredSessions(ctx context.Context, now time.Time) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredSessions, now)
+type DeleteExpiredSessionsParams struct {
+	Now        time.Time
+	IdleCutoff time.Time
+}
+
+// Periodic cleanup: absolute expiry passed, or idle for longer than the idle timeout.
+func (q *Queries) DeleteExpiredSessions(ctx context.Context, arg DeleteExpiredSessionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredSessions, arg.Now, arg.IdleCutoff)
 	if err != nil {
 		return 0, err
 	}
@@ -63,6 +70,24 @@ func (q *Queries) DeleteSession(ctx context.Context, tokenHash []byte) error {
 	return err
 }
 
+const deleteUserSessionByPrefix = `-- name: DeleteUserSessionByPrefix :execrows
+DELETE FROM sessions WHERE user_id = $1 AND substring(token_hash FROM 1 FOR 8) = $2::bytea
+`
+
+type DeleteUserSessionByPrefixParams struct {
+	UserID uuid.UUID
+	Prefix []byte
+}
+
+// Revoke one session by its public id: the first 8 bytes of the token hash (PLAN §6.2).
+func (q *Queries) DeleteUserSessionByPrefix(ctx context.Context, arg DeleteUserSessionByPrefixParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteUserSessionByPrefix, arg.UserID, arg.Prefix)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteUserSessions = `-- name: DeleteUserSessions :execrows
 DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2
 `
@@ -72,7 +97,7 @@ type DeleteUserSessionsParams struct {
 	KeepTokenHash []byte
 }
 
-// Log out everywhere (password change), optionally keeping the current session.
+// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 func (q *Queries) DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteUserSessions, arg.UserID, arg.KeepTokenHash)
 	if err != nil {
@@ -82,31 +107,34 @@ func (q *Queries) DeleteUserSessions(ctx context.Context, arg DeleteUserSessions
 }
 
 const getSession = `-- name: GetSession :one
-SELECT s.token_hash, s.user_id, s.created_at, s.last_seen_at, s.expires_at, u.email, u.display_name, u.is_demo
+SELECT s.token_hash, s.user_id, s.created_at, s.last_seen_at, s.expires_at,
+       u.email, u.display_name, u.is_demo, u.created_at AS user_created_at
 FROM sessions s
 JOIN users u ON u.id = s.user_id
-WHERE s.token_hash = $1 AND s.expires_at > $2
+WHERE s.token_hash = $1 AND s.expires_at > $2 AND s.last_seen_at > $3
 `
 
 type GetSessionParams struct {
-	TokenHash []byte
-	Now       time.Time
+	TokenHash  []byte
+	Now        time.Time
+	IdleCutoff time.Time
 }
 
 type GetSessionRow struct {
-	TokenHash   []byte
-	UserID      uuid.UUID
-	CreatedAt   time.Time
-	LastSeenAt  time.Time
-	ExpiresAt   time.Time
-	Email       string
-	DisplayName string
-	IsDemo      bool
+	TokenHash     []byte
+	UserID        uuid.UUID
+	CreatedAt     time.Time
+	LastSeenAt    time.Time
+	ExpiresAt     time.Time
+	Email         string
+	DisplayName   string
+	IsDemo        bool
+	UserCreatedAt time.Time
 }
 
-// A live session and its user; expired sessions are not returned.
+// A live session and its user: not past the absolute expiry and seen after idle_cutoff.
 func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error) {
-	row := q.db.QueryRow(ctx, getSession, arg.TokenHash, arg.Now)
+	row := q.db.QueryRow(ctx, getSession, arg.TokenHash, arg.Now, arg.IdleCutoff)
 	var i GetSessionRow
 	err := row.Scan(
 		&i.TokenHash,
@@ -117,22 +145,70 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (GetSess
 		&i.Email,
 		&i.DisplayName,
 		&i.IsDemo,
+		&i.UserCreatedAt,
 	)
 	return i, err
 }
 
+const listUserSessions = `-- name: ListUserSessions :many
+SELECT token_hash, created_at, last_seen_at, expires_at, user_agent, ip
+FROM sessions WHERE user_id = $1 AND expires_at > $2 AND last_seen_at > $3
+ORDER BY last_seen_at DESC
+`
+
+type ListUserSessionsParams struct {
+	UserID     uuid.UUID
+	Now        time.Time
+	IdleCutoff time.Time
+}
+
+type ListUserSessionsRow struct {
+	TokenHash  []byte
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	ExpiresAt  time.Time
+	UserAgent  string
+	Ip         *netip.Addr
+}
+
+func (q *Queries) ListUserSessions(ctx context.Context, arg ListUserSessionsParams) ([]ListUserSessionsRow, error) {
+	rows, err := q.db.Query(ctx, listUserSessions, arg.UserID, arg.Now, arg.IdleCutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserSessionsRow
+	for rows.Next() {
+		var i ListUserSessionsRow
+		if err := rows.Scan(
+			&i.TokenHash,
+			&i.CreatedAt,
+			&i.LastSeenAt,
+			&i.ExpiresAt,
+			&i.UserAgent,
+			&i.Ip,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const touchSession = `-- name: TouchSession :exec
-UPDATE sessions SET last_seen_at = $1, expires_at = $2 WHERE token_hash = $3
+UPDATE sessions SET last_seen_at = $1 WHERE token_hash = $2
 `
 
 type TouchSessionParams struct {
 	Now       time.Time
-	ExpiresAt time.Time
 	TokenHash []byte
 }
 
-// Sliding expiry.
+// Records activity (idle expiry). The caller throttles it to once every few minutes.
 func (q *Queries) TouchSession(ctx context.Context, arg TouchSessionParams) error {
-	_, err := q.db.Exec(ctx, touchSession, arg.Now, arg.ExpiresAt, arg.TokenHash)
+	_, err := q.db.Exec(ctx, touchSession, arg.Now, arg.TokenHash)
 	return err
 }

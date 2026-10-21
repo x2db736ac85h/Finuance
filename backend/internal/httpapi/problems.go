@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
@@ -33,6 +34,7 @@ var problemTable = []problemKind{
 	{platform.ErrRateLimited, gen.RateLimited, http.StatusTooManyRequests, "Too many requests"},
 	{platform.ErrPayloadTooLarge, gen.PayloadTooLarge, http.StatusRequestEntityTooLarge, "Payload too large"},
 	{platform.ErrUnsupportedFile, gen.UnsupportedFile, http.StatusUnsupportedMediaType, "Unsupported file"},
+	{platform.ErrNotImplemented, gen.NotImplemented, http.StatusNotImplemented, "Not implemented yet"},
 }
 
 // ProblemFor converts any error into problem details. In prod, details of internal errors are
@@ -79,6 +81,10 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, err error, prod bool) 
 	p := ProblemFor(err, r, prod)
 	if p.Status >= 500 {
 		observability.Logger(r.Context()).LogAttrs(r.Context(), slog.LevelError, "request failed", slog.String("error", err.Error()))
+	}
+	var ra *platform.RetryAfterError
+	if errors.As(err, &ra) {
+		w.Header().Set("Retry-After", strconv.Itoa(ra.Seconds()))
 	}
 	writeProblem(w, p)
 }

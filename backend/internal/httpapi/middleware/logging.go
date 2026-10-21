@@ -23,7 +23,7 @@ func Logging(base *slog.Logger) Middleware {
 			if rec.code() >= 500 {
 				level = slog.LevelError
 			}
-			l.LogAttrs(r.Context(), level, "request",
+			attrs := []slog.Attr{
 				slog.String("method", r.Method),
 				slog.String("route", info.Route),
 				slog.Int("status", rec.code()),
@@ -31,7 +31,11 @@ func Logging(base *slog.Logger) Middleware {
 				slog.Float64("duration_ms", float64(time.Since(start).Microseconds())/1000),
 				slog.String("client_ip", info.ClientIP),
 				slog.String("trace_id", info.TraceID),
-			)
+			}
+			if info.UserHash != "" {
+				attrs = append(attrs, slog.String("user", info.UserHash))
+			}
+			l.LogAttrs(r.Context(), level, "request", attrs...)
 		})
 	}
 }

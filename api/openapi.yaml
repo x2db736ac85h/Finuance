@@ -13,6 +13,8 @@ info:
     url: https://opensource.org/license/mit
 servers:
   - url: /api/v1
+security:
+  - sessionCookie: []
 paths:
   /meta:
     get:
@@ -20,6 +22,7 @@ paths:
       summary: Public instance information
       description: Unauthenticated. The web app reads it before login to decide which screens to show.
       tags: [meta]
+      security: []
       responses:
         "200":
           description: Instance information
@@ -29,8 +32,277 @@ paths:
                 $ref: "#/components/schemas/Meta"
         default:
           $ref: "#/components/responses/Problem"
+  /auth/signup:
+    post:
+      operationId: signup
+      summary: Create an account and sign in
+      description: |
+        Disabled (`403 forbidden`) when `FINUANCE_ALLOW_SIGNUP` is false; use `finuance admin create-user`.
+        Password: at least 12 characters, no composition rules. Rate-limited per IP and per (IP, email).
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Account created; the session cookie is set.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetSessionCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/login:
+    post:
+      operationId: login
+      summary: Sign in
+      description: |
+        A wrong password and an unknown email give the same `401` in the same time. Every login starts
+        a new session; a session cookie sent with the request is revoked (rotation).
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Signed in; the session cookie is set.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetSessionCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Sign out
+      description: Deletes the current session (if any) and clears the cookie. Always succeeds.
+      tags: [auth]
+      security: []
+      responses:
+        "204":
+          description: Signed out.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetSessionCookie"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me:
+    get:
+      operationId: getMe
+      summary: The signed-in user
+      tags: [me]
+      responses:
+        "200":
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateMe
+      summary: Change the display name
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeRequest"
+      responses:
+        "200":
+          description: The updated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteMe
+      summary: Delete the account and all of its data
+      description: Needs the current password. Every account, import, transaction and setting is deleted.
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteMeRequest"
+      responses:
+        "204":
+          description: Deleted; the cookie is cleared.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetSessionCookie"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/password:
+    post:
+      operationId: changePassword
+      summary: Change the password
+      description: |
+        Needs the current password. Every session of the user is revoked, including this one, and a
+        new session cookie is set for this browser.
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Changed; a new session cookie is set.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetSessionCookie"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/sessions:
+    get:
+      operationId: listSessions
+      summary: The user's active sessions
+      tags: [me]
+      responses:
+        "200":
+          description: Sessions, most recently used first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/sessions/{id}:
+    delete:
+      operationId: revokeSession
+      summary: Sign out one session
+      tags: [me]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Session id from the list (first 8 bytes of the token hash, hex).
+          schema:
+            type: string
+            pattern: "^[0-9a-f]{16}$"
+      responses:
+        "204":
+          description: Revoked.
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/export:
+    get:
+      operationId: exportMe
+      summary: Download all of the user's data (Phase 7)
+      description: A zip of every entity and the original import files. Returns `501 not_implemented` until Phase 7.
+      tags: [me]
+      responses:
+        "200":
+          description: Zip archive.
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Problem"
+  /preferences:
+    get:
+      operationId: getPreferences
+      summary: The user's UI preferences
+      tags: [preferences]
+      responses:
+        "200":
+          description: The document; version 0 and `{}` before the first save.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: putPreferences
+      summary: Replace the UI preferences
+      description: |
+        Optimistic concurrency: send the version you read (0 for the first save). A mismatch returns
+        `409 stale_version` with the current document in `current`.
+      tags: [preferences]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Preferences"
+      responses:
+        "200":
+          description: Saved; `version` is the new version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
+        "409":
+          description: The stored version is not the one sent.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/StalePreferencesProblem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: finuance_session
+      description: |
+        HttpOnly session cookie set by signup and login. Unsafe methods also need the header
+        `X-Finuance-Client: web` and, when sent, an `Origin` equal to the instance origin (CSRF, §6.1).
+  headers:
+    SetSessionCookie:
+      description: "`finuance_session=…; Path=/; HttpOnly; SameSite=Lax` (+ `Secure` outside dev). Max-Age=0 clears it."
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds until the request may be retried.
+      schema:
+        type: integer
   responses:
+    TooManyRequests:
+      description: Rate limit exceeded (`rate_limited`).
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
     Problem:
       description: Error
       content:
@@ -53,6 +325,120 @@ components:
         demoMode:
           type: boolean
           description: Whether this is the public demo instance (`FINUANCE_DEMO_MODE`).
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, isDemo, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          example: irwin@example.com
+        displayName:
+          type: string
+          maxLength: 80
+        isDemo:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    SignupRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        password:
+          type: string
+          description: At least 12 characters, at most 1024 bytes.
+        displayName:
+          type: string
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        password:
+          type: string
+    UpdateMeRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+    DeleteMeRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+    Session:
+      type: object
+      additionalProperties: false
+      required: [id, createdAt, lastSeenAt, expiresAt, userAgent, current]
+      properties:
+        id:
+          type: string
+          description: First 8 bytes of the token hash, hex. Not a credential.
+          example: 3f2a9c0d11e4b7a5
+        createdAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+          description: Updated at most every 5 minutes.
+        expiresAt:
+          type: string
+          format: date-time
+          description: Absolute expiry; the idle timeout may end the session earlier.
+        userAgent:
+          type: string
+        ip:
+          type: string
+        current:
+          type: boolean
+          description: True for the session making this request.
+    Preferences:
+      type: object
+      additionalProperties: false
+      required: [version, prefs]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 0
+        prefs:
+          type: object
+          additionalProperties: true
+          x-go-type: json.RawMessage # generated code already imports encoding/json
+          description: UI settings document (theme, cards, per-view state, …); the web app owns its shape. At most 256 KiB.
+    StalePreferencesProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          required: [current]
+          properties:
+            current:
+              $ref: "#/components/schemas/Preferences"
     Money:
       type: object
       additionalProperties: false
@@ -83,6 +469,7 @@ components:
         - rate_limited
         - payload_too_large
         - unsupported_file
+        - not_implemented
         - internal
     FieldError:
       type: object

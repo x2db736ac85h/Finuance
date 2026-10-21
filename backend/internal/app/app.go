@@ -16,10 +16,12 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 )
 
@@ -68,8 +70,16 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 		return err
 	}
 	defer c.close(ctx)
+	authSvc := NewAuth(c.store, cfg)
+	// Insert-only River client (no queues): handlers enqueue jobs in the same transaction as the
+	// state change (ADR 0006); the worker process runs them. The import endpoints use it (Phase 6).
+	jobClient, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{Logger: log, Workers: jobs.Workers(jobs.Deps{Sessions: authSvc})})
+	if err != nil {
+		return fmt.Errorf("river client: %w", err)
+	}
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
+		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient,
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
@@ -89,9 +99,10 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	}
 	defer c.close(ctx)
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
-		Logger:  log,
-		Queues:  map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
-		Workers: jobs.Workers(),
+		Logger:       log,
+		Queues:       map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
+		Workers:      jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg)}),
+		PeriodicJobs: jobs.PeriodicJobs(),
 	})
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)
@@ -216,4 +227,14 @@ func Healthcheck(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("healthz returned %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// NewAuth builds the auth service from the configuration.
+func NewAuth(st *store.Store, cfg config.Config) *auth.Service {
+	return auth.New(st, platform.SystemClock{}, auth.Config{
+		Params:         auth.Params{MemoryKiB: cfg.Argon2MemoryKiB, Time: cfg.Argon2Time, Threads: cfg.Argon2Threads},
+		SessionTTL:     cfg.SessionTTL,
+		SessionIdleTTL: cfg.SessionIdleTTL,
+		AllowSignup:    cfg.AllowSignup,
+	})
 }

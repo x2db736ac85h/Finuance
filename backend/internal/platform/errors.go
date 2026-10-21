@@ -3,7 +3,9 @@ package platform
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 )
 
 // Error kinds. Domain packages wrap them (fmt.Errorf("account %s: %w", id, platform.ErrNotFound))
@@ -19,6 +21,7 @@ var (
 	ErrRateLimited         = errors.New("rate limited")
 	ErrPayloadTooLarge     = errors.New("payload too large")
 	ErrUnsupportedFile     = errors.New("unsupported file")
+	ErrNotImplemented      = errors.New("not implemented")
 )
 
 // FieldError is one invalid input field.
@@ -51,4 +54,23 @@ func (v *ValidationError) Error() string {
 		parts = append(parts, f.Field+": "+f.Message)
 	}
 	return "validation failed: " + strings.Join(parts, "; ")
+}
+
+// RetryAfterError is a rate-limit rejection that knows when the client may retry. It wraps
+// ErrRateLimited (429); the problem writer turns After into a Retry-After header.
+type RetryAfterError struct {
+	After time.Duration
+}
+
+func (e *RetryAfterError) Error() string {
+	return fmt.Sprintf("rate limited; retry after %ds", e.Seconds())
+}
+
+// Unwrap maps the error to ErrRateLimited.
+func (e *RetryAfterError) Unwrap() error { return ErrRateLimited }
+
+// Seconds is After rounded up to whole seconds (at least 1), as Retry-After needs.
+func (e *RetryAfterError) Seconds() int {
+	s := int((e.After + time.Second - 1) / time.Second)
+	return max(s, 1)
 }
