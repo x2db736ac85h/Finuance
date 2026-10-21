@@ -63,6 +63,7 @@ var (
 	ForServe       = Requirement{"FINUANCE_PUBLIC_ORIGIN", "FINUANCE_DATABASE_URL"}
 	ForWorker      = Requirement{"FINUANCE_DATABASE_URL"}
 	ForMigrate     = Requirement{"FINUANCE_MIGRATE_DATABASE_URL"}
+	ForAdmin       = Requirement{"FINUANCE_DATABASE_URL"}
 	ForHealthcheck = Requirement{}
 )
 

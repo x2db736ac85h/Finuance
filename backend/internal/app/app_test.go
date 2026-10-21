@@ -1,7 +1,10 @@
 package app
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -10,12 +13,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/internal/store"
+	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 	"github.com/x2db736ac85h/finuance/backend/testutil"
 )
 
@@ -126,6 +134,48 @@ func TestWorkerRunsJobs(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+	// The hourly session cleanup: an expired session is deleted, a live one stays.
+	st := store.New(tdb.App)
+	user := platform.NewID()
+	expired, live := bytes.Repeat([]byte{0xE1}, 32), bytes.Repeat([]byte{0xA1}, 32)
+	if err := st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		if _, err := q.CreateUser(ctx, db.CreateUserParams{ID: user, Email: user.String() + "@worker.test", PasswordHash: "x"}); err != nil {
+			return err
+		}
+		long := time.Now().Add(-60 * 24 * time.Hour)
+		if err := q.CreateSession(ctx, db.CreateSessionParams{TokenHash: expired, UserID: user, Now: long, ExpiresAt: long.Add(time.Hour)}); err != nil {
+			return err
+		}
+		return q.CreateSession(ctx, db.CreateSessionParams{TokenHash: live, UserID: user, Now: time.Now(), ExpiresAt: time.Now().Add(time.Hour)})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	res, err = ins.Insert(ctx, jobs.CleanupExpiredSessionsArgs{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline = time.Now().Add(15 * time.Second)
+	for {
+		j, err := ins.JobGet(ctx, res.Job.ID)
+		if err == nil && j.State == rivertype.JobStateCompleted {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("cleanup job not completed: %+v %v", j, err)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	var left [][]byte
+	_ = st.WithoutUser(ctx, func(_ *db.Queries, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT token_hash FROM sessions WHERE user_id = $1`, user)
+		if err == nil {
+			left, err = pgx.CollectRows(rows, pgx.RowTo[[]byte])
+		}
+		return err
+	})
+	if len(left) != 1 || !bytes.Equal(left[0], live) {
+		t.Errorf("sessions after cleanup = %x", left)
+	}
 	stop()
 	if err := <-done; err != nil {
 		t.Fatalf("Worker: %v", err)
@@ -144,5 +194,46 @@ func TestMigrateCommands(t *testing.T) {
 	}
 	if err := Migrate(context.Background(), cfg, "sideways", log); err == nil {
 		t.Error("unknown command accepted")
+	}
+}
+
+func TestAdminCommands(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	cfg := testConfig(t, tdb)
+	cfg.AllowSignup = false // admin create-user works on closed instances
+	ctx := context.Background()
+	var out []string
+	log := func(f string, a ...any) { out = append(out, fmt.Sprintf(f, a...)) }
+	email := "admin-cli@example.test"
+	if err := Admin(ctx, cfg, AdminInput{Command: "create-user", Email: email, DisplayName: "Admin", Password: strings.NewReader("first password 123\n")}, log); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewAuth(store.New(tdb.App), cfg)
+	if _, _, err := svc.Login(ctx, email, "first password 123", "", auth.Client{}); err != nil {
+		t.Fatalf("login with the created password: %v", err)
+	}
+	_, token, _ := svc.Login(ctx, email, "first password 123", "", auth.Client{})
+	if err := Admin(ctx, cfg, AdminInput{Command: "set-password", Email: email, Password: strings.NewReader("second password 456\r\n")}, log); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Resolve(ctx, token); !errors.Is(err, platform.ErrUnauthenticated) {
+		t.Errorf("session survived set-password: %v", err)
+	}
+	if _, _, err := svc.Login(ctx, email, "second password 456", "", auth.Client{}); err != nil {
+		t.Errorf("login with the new password (CRLF stripped): %v", err)
+	}
+	for _, bad := range []AdminInput{
+		{Command: "create-user", Email: email, Password: strings.NewReader("another password\n")}, // taken
+		{Command: "create-user", Email: "x@example.test", Password: strings.NewReader("short\n")}, // too short
+		{Command: "set-password", Email: "nobody@example.test", Password: strings.NewReader("whatever password\n")},
+		{Command: "create-user", Email: "y@example.test", Password: strings.NewReader("\n")},
+		{Command: "rename-user", Email: "y@example.test", Password: strings.NewReader("whatever password\n")},
+	} {
+		if err := Admin(ctx, cfg, bad, log); err == nil {
+			t.Errorf("Admin(%s, %s) succeeded", bad.Command, bad.Email)
+		}
+	}
+	if len(out) != 2 || !strings.Contains(out[0], "created user "+email) || strings.Contains(strings.Join(out, " "), "password 123") {
+		t.Errorf("output = %q", out)
 	}
 }

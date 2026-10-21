@@ -1,9 +1,11 @@
 // Package jobs holds River job arguments, workers and periodic jobs (ADR 0006). Job args carry ids,
-// never user data. Real jobs start in Phase 6; Noop proves the queue end to end.
+// never user data. Noop proves the queue end to end; CleanupExpiredSessions is the first real job
+// (Phase 5); the import jobs arrive in Phase 6.
 package jobs
 
 import (
 	"context"
+	"time"
 
 	"github.com/riverqueue/river"
 
@@ -33,9 +35,26 @@ func (w *NoopWorker) Work(ctx context.Context, job *river.Job[NoopArgs]) error {
 	return nil
 }
 
-// Workers registers every worker. The worker process and the tests share it.
-func Workers() *river.Workers {
+// Deps are the services the workers need. The worker process builds them from the configuration;
+// tests pass fakes.
+type Deps struct {
+	Sessions SessionCleaner
+}
+
+// Workers registers every worker. The worker process, the api's insert-only client and the tests
+// share it, so an inserted job kind always has a worker.
+func Workers(d Deps) *river.Workers {
 	w := river.NewWorkers()
 	river.AddWorker(w, &NoopWorker{})
+	river.AddWorker(w, &CleanupExpiredSessionsWorker{Sessions: d.Sessions})
 	return w
+}
+
+// PeriodicJobs are scheduled by the elected leader among the worker processes.
+func PeriodicJobs() []*river.PeriodicJob {
+	return []*river.PeriodicJob{
+		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
+			func() (river.JobArgs, *river.InsertOpts) { return CleanupExpiredSessionsArgs{}, nil },
+			&river.PeriodicJobOpts{RunOnStart: true}),
+	}
 }

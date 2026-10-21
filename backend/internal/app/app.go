@@ -70,9 +70,16 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 		return err
 	}
 	defer c.close(ctx)
+	authSvc := NewAuth(c.store, cfg)
+	// Insert-only River client (no queues): handlers enqueue jobs in the same transaction as the
+	// state change (ADR 0006); the worker process runs them. The import endpoints use it (Phase 6).
+	jobClient, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{Logger: log, Workers: jobs.Workers(jobs.Deps{Sessions: authSvc})})
+	if err != nil {
+		return fmt.Errorf("river client: %w", err)
+	}
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: NewAuth(c.store, cfg), Clock: platform.SystemClock{},
+		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient,
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
@@ -92,9 +99,10 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	}
 	defer c.close(ctx)
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
-		Logger:  log,
-		Queues:  map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
-		Workers: jobs.Workers(),
+		Logger:       log,
+		Queues:       map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
+		Workers:      jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg)}),
+		PeriodicJobs: jobs.PeriodicJobs(),
 	})
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)

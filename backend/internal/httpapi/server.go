@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/jackc/pgx/v5"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
+	"github.com/riverqueue/river"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 
@@ -42,6 +44,8 @@ type Deps struct {
 	Auth *auth.Service
 	// Clock drives the rate limiters (platform.SystemClock in production).
 	Clock platform.Clock
+	// Jobs is the api's insert-only River client for transactional enqueue (used from Phase 6).
+	Jobs *river.Client[pgx.Tx]
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }

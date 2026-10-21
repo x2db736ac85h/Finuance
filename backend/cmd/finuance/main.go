@@ -33,7 +33,10 @@ commands:
   migrate up|down|status|version
                          apply / roll back one / list / show schema migrations (owner role)
   seed-demo -email=…     create demo data for a user
-  admin                  user administration
+  admin create-user -email=… [-display-name=…] -password-stdin
+                         create an account (works with signup disabled)
+  admin set-password -email=… -password-stdin
+                         reset a password and sign the user out everywhere
   healthcheck            exit 0 if the local API answers /healthz (container healthcheck)
   version                print build information
 
@@ -42,13 +45,13 @@ Configuration comes from FINUANCE_* environment variables (docs/PLAN.md §3.5).
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	code := run(ctx, os.Args[1:], os.Stdout, os.Stderr, os.LookupEnv)
+	code := run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr, os.LookupEnv)
 	stop()
 	os.Exit(code)
 }
 
 // run dispatches a subcommand and returns the process exit code (2 = usage error).
-func run(ctx context.Context, args []string, stdout, stderr io.Writer, env config.Lookup) int {
+func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, env config.Lookup) int {
 	if len(args) == 0 {
 		fmt.Fprint(stderr, usage)
 		return 2
@@ -122,9 +125,37 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, env confi
 		fmt.Fprintln(stderr, "finuance seed-demo: not yet implemented (Phase 9)")
 		return 1
 	case "admin":
-		fmt.Fprintln(stderr, "finuance admin: not yet implemented (Phase 5)")
-		return 1
+		return admin(ctx, fs.Args(), stdin, stdout, stderr, load, fail)
 	}
 	fmt.Fprintf(stderr, "finuance: unknown command %q\n\n%s", cmd, usage)
 	return 2
+}
+
+// admin parses `finuance admin <command> [flags]`; the flags follow the command.
+func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer,
+	load func(config.Requirement) (config.Config, bool), fail func(error) int) int {
+	const adminUsage = "usage: finuance admin create-user|set-password -email=… [-display-name=…] -password-stdin"
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, adminUsage)
+		return 2
+	}
+	fs := flag.NewFlagSet("admin "+args[0], flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	in := app.AdminInput{Command: args[0]}
+	fs.StringVar(&in.Email, "email", "", "the user's email")
+	fs.StringVar(&in.DisplayName, "display-name", "", "display name (create-user)")
+	fromStdin := fs.Bool("password-stdin", false, "read the password from the first line of stdin")
+	if err := fs.Parse(args[1:]); err != nil {
+		return 2
+	}
+	if in.Email == "" || !*fromStdin || fs.NArg() != 0 {
+		fmt.Fprintln(stderr, adminUsage)
+		return 2
+	}
+	in.Password = stdin
+	cfg, ok := load(config.ForAdmin)
+	if !ok {
+		return 1
+	}
+	return fail(app.Admin(ctx, cfg, in, func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
 }

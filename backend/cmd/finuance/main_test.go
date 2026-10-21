@@ -9,7 +9,7 @@ import (
 
 func runArgs(env map[string]string, args ...string) (int, string, string) {
 	var out, errb bytes.Buffer
-	code := run(context.Background(), args, &out, &errb, func(k string) (string, bool) { v, ok := env[k]; return v, ok })
+	code := run(context.Background(), args, strings.NewReader(""), &out, &errb, func(k string) (string, bool) { v, ok := env[k]; return v, ok })
 	return code, out.String(), errb.String()
 }
 
@@ -26,7 +26,11 @@ func TestDispatch(t *testing.T) {
 		{[]string{"bogus"}, 2, "", `unknown command "bogus"`},
 		{[]string{"migrate"}, 2, "", "usage: finuance migrate"},
 		{[]string{"seed-demo", "-email=a@b.c"}, 1, "", "not yet implemented (Phase 9)"},
-		{[]string{"admin"}, 1, "", "not yet implemented (Phase 5)"},
+		{[]string{"admin"}, 2, "", "usage: finuance admin"},
+		{[]string{"admin", "create-user"}, 2, "", "usage: finuance admin"},                          // no -email
+		{[]string{"admin", "create-user", "-email=a@b.c"}, 2, "", "usage: finuance admin"},          // no -password-stdin
+		{[]string{"admin", "set-password", "-email=a@b.c", "-password-stdin", "x"}, 2, "", "usage"}, // stray argument
+		{[]string{"admin", "create-user", "-email=a@b.c", "-password-stdin"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
 		{[]string{"serve", "-nope"}, 2, "", "flag provided but not defined"},
 	} {
 		code, out, errOut := runArgs(nil, tc.args...)
