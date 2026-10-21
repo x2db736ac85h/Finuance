@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 5 — Auth, users, preferences · **Branch:** phase/05-auth · **Status:** gate approved
+**Current phase:** 6 — Accounts and import pipeline · **Branch:** phase/06-imports · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -17,9 +17,27 @@
 - Phase 3: Claude writes all of `ingest`/`money`, with explanatory comments so Irwin can tweak it later (no hand-written parts). The ingest engine is a **strict port** of the legacy rules, including auto header detection; the mBank/PKO BP header fix moves to Phase 9 (import preview). The legacy demo generator is ported now (`internal/demo`) for the 100k-row benchmark.
 - Phase 4: RLS is **enabled and forced** on every user-owned table (ADR 0007; forced also binds the owner role). The `pl_natural` collation is applied in queries (`ORDER BY … COLLATE pl_natural`), not on columns. Phase 4 writes the set-based commit core (§4.4 steps 1, 1b, 2) and the delete-import orphan cleanup as `ledger` methods; Phase 6 adds the River job, category upsert, stats, profiles and `Rematerialize`. Investments get schema, RLS and queries now; the repository comes with their API.
 - Phase 5: `golang.org/x/crypto` (argon2id), `golang.org/x/time/rate` and `github.com/oapi-codegen/runtime` (the generator's support library, needed once the API has path parameters and uuid fields) approved as direct dependencies. `finuance admin set-password --email … --password-stdin` is added next to `create-user` (no email sending, so admins reset forgotten passwords; it revokes the user's sessions). The first preferences save must send `version: 0`; anything else is `409 stale_version`.
+- Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 6.1 Accounts CRUD (+ txCount, firstOn, lastOn)
+- [ ] 6.2 `POST /imports`: multipart, NUL sniff, SHA-256 / 409, parse (+ profile), roles, account suggestion (pre-filled), stage, duplicate estimate, preview
+- [ ] 6.3 `GET /imports`, `/imports/{id}`, `/rows` (onlyErrors, duplicate flag), `/file`
+- [ ] 6.4 `PATCH /imports/{id}` (re-parse, re-stage, validation)
+- [ ] 6.5 `POST /imports/{id}/commit` → 202, `InsertTx`
+- [ ] 6.6 `CommitImport` job (categories, commit SQL, overrides, stats, profile, retries → failed, metrics); worker in Compose
+- [ ] 6.7 `DELETE /imports/{id}` (orphans + re-materialise)
+- [ ] 6.8 `POST /imports/{id}/reprocess`
+- [ ] 6.9 `finuance seed-demo --email`
+- [ ] 6.10 v7 import settings end to end; `GET /imports/{id}/lines`; `headerAt`, `dropped`, `tailRows`
+- [ ] 6.11 fast path `autoCommit=true`
+- [ ] 6.12 source labels (`profileLabel`)
+- [ ] 6.13 duplicate review backend: `Rematerialize`, overrides, `RematerializeFingerprint` job, `duplicatesSkipped`, property test
+- [ ] Tests: overlap vs oracle, same-name, delete semantics, concurrent commits, reprocess keeps edits, profiles, errors, 409, job retry
+- [ ] `scripts/import-smoke.sh` against `make up`
+
+## Phase 5 tasks (done)
 - [x] 5.1 `auth/password.go`: argon2id PHC, `Verify`, `NeedsRehash`; benchmark + ADR 0010
 - [x] 5.2 `auth/sessions.go`: create, resolve (absolute + idle expiry, last-seen throttle), revoke, revoke others, rotate
 - [x] 5.3 middleware: `RequireSession`, `CSRF`, `RateLimit`, cookie helper; ADRs 0011 (sessions/CSRF), 0012 (rate limiting)
@@ -158,6 +176,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 6 planned and approved (pre-fill the suggested account). Branch `phase/06-imports`.
 - 2026-10-21 — Phase 5 gate approved; merged. Next: plan Phase 6.
 - 2026-10-21 — Phase 5 built on `phase/05-auth`: argon2id + ADR 0010, sessions (absolute + idle expiry, rotation, revoke), CSRF + ADR 0011, rate limits + ADR 0012, auth/me/sessions/preferences endpoints, `DELETE /me`, session cleanup job, insert-only River client, `admin create-user`/`set-password`, THREAT-MODEL v1, `auth-smoke.sh` (passes against `make up`). Next: Irwin's gate review.
 - 2026-10-21 — Phase 5 planned and approved (deps x/crypto + x/time, admin set-password, strict first preferences save). Branch `phase/05-auth`.
