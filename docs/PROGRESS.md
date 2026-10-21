@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 4 — Schema, store layer, RLS · **Branch:** phase/04-schema-store-rls · **Status:** gate approved
+**Current phase:** 5 — Auth, users, preferences · **Branch:** phase/05-auth · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -16,9 +16,22 @@
 - Phase 2 tooling: oapi-codegen and govulncheck as Go `tool` deps; sqlc and golangci-lint as pinned, checksum-verified binaries in `backend/bin/`. OTel over OTLP/HTTP. No `worker` Compose service until Phase 6.
 - Phase 3: Claude writes all of `ingest`/`money`, with explanatory comments so Irwin can tweak it later (no hand-written parts). The ingest engine is a **strict port** of the legacy rules, including auto header detection; the mBank/PKO BP header fix moves to Phase 9 (import preview). The legacy demo generator is ported now (`internal/demo`) for the 100k-row benchmark.
 - Phase 4: RLS is **enabled and forced** on every user-owned table (ADR 0007; forced also binds the owner role). The `pl_natural` collation is applied in queries (`ORDER BY … COLLATE pl_natural`), not on columns. Phase 4 writes the set-based commit core (§4.4 steps 1, 1b, 2) and the delete-import orphan cleanup as `ledger` methods; Phase 6 adds the River job, category upsert, stats, profiles and `Rematerialize`. Investments get schema, RLS and queries now; the repository comes with their API.
+- Phase 5: `golang.org/x/crypto` (argon2id) and `golang.org/x/time/rate` approved as direct dependencies. `finuance admin set-password --email … --password-stdin` is added next to `create-user` (no email sending, so admins reset forgotten passwords; it revokes the user's sessions). The first preferences save must send `version: 0`; anything else is `409 stale_version`.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 5.1 `auth/password.go`: argon2id PHC, `Verify`, `NeedsRehash`; benchmark + ADR 0010
+- [ ] 5.2 `auth/sessions.go`: create, resolve (absolute + idle expiry, last-seen throttle), revoke, revoke others, rotate
+- [ ] 5.3 middleware: `RequireSession`, `CSRF`, `RateLimit`, cookie helper; ADRs 0011 (sessions/CSRF), 0012 (rate limiting)
+- [ ] 5.4 OpenAPI + handlers: signup, login, logout, me, password, sessions, preferences
+- [ ] 5.5 `DELETE /me`; `GET /me/export` stub (501 until Phase 7)
+- [ ] 5.6 River: job registry with deps, hourly `CleanupExpiredSessions`, insert-only client in `serve`
+- [ ] 5.7 `finuance admin create-user` / `set-password` (`--password-stdin`)
+- [ ] 5.8 `docs/THREAT-MODEL.md` v1
+- [ ] 5.9 `scripts/auth-smoke.sh` against `make up`
+- [ ] Tests: HTTP flows, cookies dev/prod, CSRF, 429 + Retry-After, expiry (fake clock), rotation, stale prefs, delete-me counts every table, log redaction
+
+## Phase 4 tasks (done)
 - [x] 4.1 migrations `00002_core.sql` (§5.2 + collation) and `00003_rls.sql` (§5.3, forced), with Down sections
 - [x] 4.2 `store.Store`: `WithUser`, `WithUserReadOnly`; guard test against pool access outside `store`
 - [x] 4.3 sqlc queries (users, sessions, preferences, accounts, categories, groups, imports, import_files, import_rows, transactions, budgets, profiles, annotations, overrides, investments)
@@ -130,7 +143,6 @@
 
 - Phase 6: around `ledger.CommitImport`: the River job, the category upsert before step 1 (`EnsureCategories` exists), dedupe overrides in commit/delete (step 2b, `Rematerialize`), the profile upsert, re-staging on PATCH/reprocess (`DeleteImportRows` + `InsertImportRows`).
 - Later (optional): re-measure the staging insert on a dev machine; the schema options in `docs/perf.md` stay open if it matters.
-- Phase 5: ADRs 0010–0012 (password hashing, sessions/CSRF, rate limiting) and the first endpoints with parameters, which exercise the OpenAPI request validator beyond routing.
 - Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
 
 ## Backlog (ideas, not scheduled)
@@ -139,6 +151,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 5 planned and approved (deps x/crypto + x/time, admin set-password, strict first preferences save). Branch `phase/05-auth`.
 - 2026-10-20 — Phase 4 gate approved (benchmark accepted); merged. Next: plan Phase 5.
 - 2026-10-20 — Phase 4 built on `phase/04-schema-store-rls`: core schema + forced RLS, `store.Store` (`WithUser`, `WithUserReadOnly`, `WithoutUser`), the sqlc query set, the `unnest` staging insert, `ledger` repositories, commit core, annotations, RLS suite, `ARCHITECTURE.md`. Staging benchmark above target in the sandbox. Next: Irwin's gate review.
 - 2026-10-20 — Phase 4 planned and approved (FORCE RLS, query-time collation, commit core in `ledger`, investments repo later). Branch `phase/04-schema-store-rls`.
