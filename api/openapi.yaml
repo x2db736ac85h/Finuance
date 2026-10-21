@@ -765,6 +765,24 @@ paths:
                   $ref: "#/components/schemas/Category"
         default:
           $ref: "#/components/responses/Problem"
+  /demo-data:
+    post:
+      operationId: loadDemoData
+      summary: Create a demo account with the generated demo year
+      description: >-
+        Creates "Demo account" (isDemo) and commits the fictional demo year (the legacy demo
+        generator, dates shifted so the last day is yesterday) before answering. `409 conflict` when
+        the user already has a demo account; it can be deleted like any other account.
+      tags: [demo]
+      responses:
+        "201":
+          description: Created and committed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoData"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   parameters:
     Id:
@@ -1742,6 +1760,19 @@ components:
           type: integer
           minimum: 1
           maximum: 7
+    DemoData:
+      type: object
+      additionalProperties: false
+      required: [accountId, importId, transactions]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        importId:
+          type: string
+          format: uuid
+        transactions:
+          type: integer
     Money:
       type: object
       additionalProperties: false

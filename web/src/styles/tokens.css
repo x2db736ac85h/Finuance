@@ -1,0 +1,108 @@
+/* Ported from legacy/finuance.html <style> (PLAN §7.5). Keep in sync by porting, not redesigning. */
+:root {
+  --sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', system-ui, 'Segoe UI', Roboto,
+    sans-serif;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  --row-h: 1.875rem;
+}
+[data-theme='dark'] {
+  --bg: #1e1e1e;
+  --bg-2: #181818;
+  --panel: #232325;
+  --elev: #26262a;
+  --input: #141416;
+  --border: #2b2b2f;
+  --border-2: #3a3a40;
+  --line: rgba(255, 255, 255, 0.045);
+  --text: #d6d6d9;
+  --text-2: #a3a3aa;
+  --muted: #6e6e77;
+  --accent: #8b7cf6;
+  --accent-soft: rgba(139, 124, 246, 0.16);
+  --hover: rgba(255, 255, 255, 0.035);
+  --hover-strong: rgba(255, 255, 255, 0.07);
+  --sel: rgba(139, 124, 246, 0.17);
+  --neg: #f28b82;
+  --pos: #81c995;
+  --mark: rgba(250, 204, 21, 0.32);
+  --c-num: #4fc1ff;
+  --c-date: #dcdcaa;
+  --c-text: #ce9178;
+  --scroll: rgba(255, 255, 255, 0.13);
+  --shadow: 0 0.75rem 2.25rem rgba(0, 0, 0, 0.5);
+  /* chart tokens (validated categorical order, dark steps) */
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --s5: #d55181;
+  --s6: #008300;
+  --s7: #9085e9;
+  --g8: #e66767;
+  --c-other: #6b6b68;
+  --c-prev: #77756f;
+  --inc: #3987e5;
+  --exp: #e66767;
+  --gridl: #2c2c2e;
+  --axis: #3a3a3d;
+  --h0: #2a2a2e;
+  --h1: #184f95;
+  --h2: #256abf;
+  --h3: #3987e5;
+  --h4: #6da7ec;
+  --h5: #9ec5f4;
+  color-scheme: dark;
+}
+[data-theme='light'] {
+  --bg: #ffffff;
+  --bg-2: #f6f6f7;
+  --panel: #fafafb;
+  --elev: #ffffff;
+  --input: #ffffff;
+  --border: #e5e5e9;
+  --border-2: #d6d6dc;
+  --line: #f0f0f3;
+  --text: #1d1d21;
+  --text-2: #55555e;
+  --muted: #8e8e97;
+  --accent: #6d5ce7;
+  --accent-soft: rgba(109, 92, 231, 0.1);
+  --hover: rgba(0, 0, 0, 0.025);
+  --hover-strong: rgba(0, 0, 0, 0.05);
+  --sel: rgba(109, 92, 231, 0.1);
+  --neg: #c5372c;
+  --pos: #1e8e3e;
+  --mark: rgba(250, 204, 21, 0.45);
+  --c-num: #0070c1;
+  --c-date: #795e26;
+  --c-text: #a31515;
+  --scroll: rgba(0, 0, 0, 0.16);
+  --shadow: 0 0.75rem 2.25rem rgba(0, 0, 0, 0.13);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+  --s5: #e87ba4;
+  --s6: #008300;
+  --s7: #6250d6;
+  --g8: #e34948;
+  --c-other: #b4b3ad;
+  --c-prev: #a3a29c;
+  --inc: #2a78d6;
+  --exp: #e34948;
+  --gridl: #ececef;
+  --axis: #d4d4da;
+  --h0: #efeff2;
+  --h1: #b7d3f6;
+  --h2: #86b6ef;
+  --h3: #5598e7;
+  --h4: #2a78d6;
+  --h5: #1c5cab;
+  color-scheme: light;
+}
+:root {
+  --st-good: #0ca30c;
+  --st-warn: #fab219;
+  --st-crit: #d03b3b;
+}

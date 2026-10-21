@@ -57,21 +57,23 @@ coverage: ## Line coverage of ingest + money; fails below COVER_MIN (default 90 
 	  awk -v t="$$total" -v m="$(COVER_MIN)" 'BEGIN { exit !(t >= m) }'
 
 .PHONY: lint
-lint: $(GOLANGCI) ## golangci-lint (ESLint arrives in Phase 8)
+lint: $(GOLANGCI) web/node_modules ## golangci-lint + ESLint + Prettier check
 	cd backend && bin/golangci-lint run ./...
+	cd web && npm run --silent lint
 
 .PHONY: fmt
-fmt: $(GOLANGCI) ## gofmt + goimports (Prettier arrives in Phase 8)
+fmt: $(GOLANGCI) web/node_modules ## gofmt + goimports + Prettier
 	cd backend && bin/golangci-lint fmt ./...
+	cd web && npm run --silent format
 
 .PHONY: typecheck
-typecheck: ## tsc --noEmit
-	$(call todo,8)
+typecheck: web/node_modules ## tsc --noEmit
+	cd web && npm run --silent typecheck
 
 .PHONY: test
-test: ## Go unit tests (-short) + Vitest
+test: web/node_modules ## Go unit tests (-short) + Vitest
 	cd backend && go vet ./... && go test -short ./...
-	@echo "test: Vitest arrives in Phase 8"
+	cd web && npm run --silent test
 
 .PHONY: test-integration
 test-integration: ## All Go tests incl. testcontainers (Docker required)
@@ -107,11 +109,16 @@ $(SQLC) $(GOLANGCI): tools/bin-tools.sh
 	tools/bin-tools.sh $(notdir $@)
 
 .PHONY: gen
-gen: $(SQLC) ## oapi-codegen + sqlc (openapi-typescript arrives in Phase 8)
+gen: $(SQLC) web/node_modules ## oapi-codegen + sqlc + openapi-typescript
 	cd backend && go tool oapi-codegen -config oapi-codegen.yaml ../api/openapi.yaml
 	cd backend && bin/sqlc generate
+	cd web && npx openapi-typescript ../api/openapi.yaml -o src/api/schema.d.ts && npx prettier --log-level warn --write src/api/schema.d.ts
 
-GENERATED := backend/internal/httpapi/gen backend/internal/store/db
+web/node_modules: web/package-lock.json
+	cd web && npm ci --no-audit --no-fund
+	@touch web/node_modules
+
+GENERATED := backend/internal/httpapi/gen backend/internal/store/db web/src/api/schema.d.ts
 .PHONY: gen-check
 gen-check: gen ## Regenerate and fail if generated code differs from what is committed
 	@# Compares with the index, so generated code that is staged for the next commit counts as clean.
@@ -190,8 +197,8 @@ dev-api: $(ENV_FILE) ## Run the API on the host with .env (needs make db-up + mi
 	$(RUN_ENV) cd backend && go run ./cmd/finuance serve
 dev-worker: $(ENV_FILE) ## Run the worker on the host with .env
 	$(RUN_ENV) cd backend && go run ./cmd/finuance worker
-dev-web: ## Run the Vite dev server
-	$(call todo,8)
+dev-web: web/node_modules ## Run the Vite dev server (proxies /api to make dev-api on :8080)
+	cd web && npm run dev
 
 .PHONY: seed-demo
 seed-demo: $(ENV_FILE) ## Demo data for a user: make seed-demo email=…

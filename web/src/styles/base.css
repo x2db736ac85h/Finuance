@@ -1,0 +1,228 @@
+/* Ported from legacy/finuance.html <style> (PLAN §7.5). Keep in sync by porting, not redesigning. */
+/* Interface scale (PLAN §7.5): every rem follows --ui-scale, set by src/styles/scale.ts. */
+html {
+  font-size: calc(16px * var(--ui-scale, 1));
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 0.8125rem/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+::-webkit-scrollbar {
+  width: 0.6875rem;
+  height: 0.6875rem;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll);
+  border-radius: 0.625rem;
+  border: 0.1875rem solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.searchbox input::placeholder {
+  color: var(--muted);
+}
+.searchbox input:disabled {
+  cursor: not-allowed;
+}
+kbd {
+  font: 0.6562rem var(--mono);
+  color: var(--muted);
+  border: 1px solid var(--border-2);
+  border-radius: 0.25rem;
+  padding: 0 0.3125rem;
+  line-height: 1rem;
+  background: var(--bg-2);
+}
+
+.ico {
+  display: inline-grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.ico svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ib {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  flex: none;
+}
+.ib:hover {
+  background: var(--hover-strong);
+  color: var(--text);
+}
+.ib.sm {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.3125rem;
+}
+.ib.sm .ico {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.ib[hidden] {
+  display: none;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-2);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.7812rem;
+  white-space: nowrap;
+}
+.btn:hover {
+  border-color: var(--muted);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+.btn.primary:hover {
+  filter: brightness(1.08);
+}
+.btn.ghost {
+  background: transparent;
+}
+.btn .ico {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.link {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 0.25rem;
+}
+.link:hover {
+  text-decoration: underline;
+}
+.spacer {
+  flex: 1;
+}
+.muted {
+  color: var(--muted);
+}
+.mini-drop:hover {
+  border-color: var(--accent);
+  color: var(--text-2);
+  background: var(--accent-soft);
+}
+.mini-drop .ico {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-bottom: 0.25rem;
+}
+.opt {
+  display: grid;
+  gap: 0.3125rem;
+  padding: 0.25rem 0.5rem 0.625rem;
+}
+.opt > label {
+  font-size: 0.7188rem;
+  color: var(--text-2);
+}
+.sel,
+.inp {
+  height: 1.75rem;
+  border: 1px solid var(--border-2);
+  border-radius: 0.375rem;
+  background: var(--input);
+  padding: 0 0.5rem;
+  outline: 0;
+  font-size: 0.7812rem;
+  width: 100%;
+  color: var(--text);
+}
+.sel:focus,
+.inp:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 0.1875rem var(--accent-soft);
+}
+.inp.mono {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+.chk {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1.35;
+}
+.chk input {
+  margin-top: 2px;
+}
+mark {
+  background: var(--mark);
+  color: inherit;
+  border-radius: 2px;
+}
+.ib.on {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+/* Quality floor (PLAN §7.1): visible keyboard focus everywhere, reduced motion respected. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.inp:focus-visible,
+.sel:focus-visible,
+.searchbox input:focus-visible {
+  outline: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
