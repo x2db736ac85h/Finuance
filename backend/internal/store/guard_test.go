@@ -21,7 +21,7 @@ var dbCallNames = map[string]bool{
 // guardAllowed lists packages (relative to backend/) that may run SQL themselves, with the reason.
 // Keep it short: user data must go through store.WithUser (PLAN §5.3).
 var guardAllowed = map[string]string{
-	// Phase 7: query/sql.go executes the dynamic filter SQL it builds, inside WithUser.
+	filepath.Join("internal", "query"): "Phase 7: query/sql.go runs the dynamic filter SQL it builds, inside store.WithUser",
 }
 
 // TestNoDatabaseAccessOutsideStore fails when non-test code outside internal/store runs SQL on a

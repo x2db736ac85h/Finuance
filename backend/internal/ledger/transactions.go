@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -95,4 +96,53 @@ func (l *Ledger) TransactionProvenance(ctx context.Context, userID, id uuid.UUID
 		return nil
 	})
 	return out, dbErr("transaction provenance", err)
+}
+
+// TransactionPatch is a single-transaction edit (PATCH /transactions/{id}). Category: at most one of
+// CategoryID, CategoryName (created when missing) or ResetCategory (back to the bank's category).
+type TransactionPatch struct {
+	CategoryID    *uuid.UUID
+	CategoryName  *string
+	ResetCategory bool
+	Note          *string
+}
+
+// UpdateTransaction applies p as an annotation (so the edit survives a re-import) and returns the
+// transaction. A set category becomes a manual one.
+func (l *Ledger) UpdateTransaction(ctx context.Context, userID, id uuid.UUID, p TransactionPatch) (Transaction, error) {
+	n := 0
+	for _, set := range []bool{p.CategoryID != nil, p.CategoryName != nil, p.ResetCategory} {
+		if set {
+			n++
+		}
+	}
+	if n > 1 {
+		return Transaction{}, invalidf("set only one of categoryId, categoryName and resetCategory")
+	}
+	if n == 0 && p.Note == nil {
+		return Transaction{}, invalidf("nothing to change")
+	}
+	if _, err := l.GetTransaction(ctx, userID, id); err != nil {
+		return Transaction{}, err
+	}
+	patch := AnnotationPatch{SetCategory: n == 1, CategoryID: p.CategoryID}
+	if p.CategoryName != nil {
+		name, err := cleanName("category", *p.CategoryName, maxCategoryName)
+		if err != nil {
+			return Transaction{}, err
+		}
+		ids, err := l.EnsureCategories(ctx, userID, []string{name})
+		if err != nil {
+			return Transaction{}, err
+		}
+		cid := ids[nameKey(name)]
+		patch.CategoryID = &cid
+	}
+	if p.Note != nil {
+		patch.SetNote, patch.Note = true, strings.TrimSpace(*p.Note)
+	}
+	if _, err := l.Annotate(ctx, userID, []uuid.UUID{id}, patch); err != nil {
+		return Transaction{}, err
+	}
+	return l.GetTransaction(ctx, userID, id)
 }

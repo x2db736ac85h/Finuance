@@ -131,6 +131,9 @@ func cleanDisplayName(name string, ve *platform.ValidationError) string {
 	if utf8.RuneCountInString(name) > MaxDisplayName {
 		ve.Add("displayName", fmt.Sprintf("must be at most %d characters", MaxDisplayName))
 	}
+	if strings.ContainsRune(name, 0) { // PostgreSQL text can't hold NUL (JSON allows \u0000)
+		ve.Add("displayName", "must not contain NUL characters")
+	}
 	return name
 }
 

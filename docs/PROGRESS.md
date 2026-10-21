@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 6 — Accounts and import pipeline · **Branch:** phase/06-imports · **Status:** gate approved, merged
+**Current phase:** 7 — Transactions query API · **Branch:** phase/07-query · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -18,9 +18,27 @@
 - Phase 4: RLS is **enabled and forced** on every user-owned table (ADR 0007; forced also binds the owner role). The `pl_natural` collation is applied in queries (`ORDER BY … COLLATE pl_natural`), not on columns. Phase 4 writes the set-based commit core (§4.4 steps 1, 1b, 2) and the delete-import orphan cleanup as `ledger` methods; Phase 6 adds the River job, category upsert, stats, profiles and `Rematerialize`. Investments get schema, RLS and queries now; the repository comes with their API.
 - Phase 5: `golang.org/x/crypto` (argon2id), `golang.org/x/time/rate` and `github.com/oapi-codegen/runtime` (the generator's support library, needed once the API has path parameters and uuid fields) approved as direct dependencies. `finuance admin set-password --email … --password-stdin` is added next to `create-user` (no email sending, so admins reset forgotten passwords; it revokes the user's sessions). The first preferences save must send `version: 0`; anything else is `409 stale_version`.
 - Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
+- Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
+- Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 7.1 `query/dsl`: condition lexer + parser → AST, round-trip printer, `FuzzParseCond`
+- [x] 7.2 `query/columns.go` + `compile.go`: column registry (§4.5 whitelist), `Compile` → `{where, args}` (number/date/text semantics, `excluded`, search, accounts)
+- [x] 7.3 `query/period.go`: anchor, presets, `prevRange`, labels
+- [x] 7.4 `query/sql.go`: `base`/`scoped` builder, sorting (`pl_natural`, empties last, tie-break); store guard allowlist
+- [x] 7.5 `POST /transactions/query` (window, total, stats, duplicatesSkipped, dataRange, period, `locateId`)
+- [x] 7.6 `POST /transactions/distinct`
+- [x] 7.7 `GET`/`PATCH /transactions/{id}` (sources; category upsert, manual source, `resetCategory`, note, annotations)
+- [x] 7.8 `GET /categories?accountIds=` (`txCount`, `colorSlot`)
+- [x] 7.9 `POST /transactions/export` (streamed, BOM, delimiter, injection guard); ADR 0014
+- [x] 7.10 `GET /me/export` (zip: manifest, JSON per entity, preferences, transactions.csv, original files)
+- [x] 7.11 performance: 108k-row seed, `EXPLAIN (ANALYZE, BUFFERS)`, migration `00004_query_indexes.sql`, `docs/perf.md` + `docs/perf-phase7-plans.md`; after the gate decisions 6 of 7 first-window shapes ≤ 150 ms p95 in the sandbox, scrolling windows 12–48 ms (payee contains and collation sort above; see perf.md)
+- [x] 7.12 `group` column, `toolFilter` (port of `aiFilter`, oracle parity on every search/aggregate case), `POST /transactions/ids`
+- [x] Tests: filter parity (84 oracle cases, 1 allowed diff), injection, sort, paging + `locateId`, stats, distinct, export, zip, tenancy; nightly workflow with `FuzzQueryDB`
+- [x] `scripts/query-smoke.sh` (17 steps pass against `make up`); THREAT-MODEL T2/T4, ARCHITECTURE query section, ALLOWED_DIFFS row 12
+
+## Phase 6 tasks (done)
 - [x] 6.1 Accounts CRUD (+ txCount, firstOn, lastOn)
 - [x] 6.2 `POST /imports`: multipart, NUL sniff, SHA-256 / 409, parse (+ profile), roles, account suggestion (pre-filled), stage, duplicate estimate, preview
 - [x] 6.3 `GET /imports`, `/imports/{id}`, `/rows` (onlyErrors, duplicate flag), `/file`
@@ -101,6 +119,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 7 — Transactions query API: gate approved 2026-10-21 (option a: `textlike` LEAKPROOF; `includeTotals` added); `phase/07-query` merged with `--no-ff`.
 - Phase 6 — Accounts and import pipeline: gate approved 2026-10-21 (import smoke matches the oracle; Pekao preview reviewed); `phase/06-imports` merged with `--no-ff`.
 - Phase 5 — Auth, users, preferences: gate approved 2026-10-21; `phase/05-auth` merged with `--no-ff`.
 - Phase 4 — Schema, store layer, RLS: gate approved 2026-10-20 (staging benchmark 8.0–9.7 s accepted against the 3 s target); `phase/04-schema-store-rls` merged with `--no-ff`.
@@ -120,6 +139,16 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 7.2: SQL fragments live in `query/columns.go` (the registry) and `query/compile.go` as well as `query/sql.go`; the whole `internal/query` package is the SQL builder, and the store guard allows that package. The registry also gives each column a display text (`-79,99`, `dd.mm.yyyy`), used by the text fallback, the value checklist, `excluded` and exports (Irwin's decision).
+- 7.2: number conditions compare exact `numeric` values in major units (scaled per row by the currency's exponent), not `amount_minor` against a converted operand, so a mixed-currency view stays correct.
+- 7.2/7.7: text with a NUL character (JSON allows `\u0000`) is `422`. PostgreSQL rejects NUL in text, so before this fix a NUL character reached the database and gave a `500`. `FuzzQueryDB` found it. The ledger maps SQLSTATE 22021 to `ErrInvalid`, and display names are checked too.
+- 7.4: each statement compiles its own argument list (PostgreSQL/pgx reject unused arguments). Windows use a late row lookup: ids first, then the display columns.
+- 7.5: `duplicatesSkipped` is computed as "linked rows − distinct linked transactions" (equal to the §4.4 definition; `TestDuplicatesSkippedFormula`) so an index answers it.
+- 7.6: the value checklist is computed over the period-scoped rows of the context minus the column's own filter, ordered by count (plan); the legacy listed every value of the dataset in value order.
+- 7.7: `PATCH /transactions/{id}` has `resetCategory: true` (back to the bank's category), because the generated types can't tell an absent `categoryId` from `null`.
+- 7.8: the colour ranking includes uncategorised spending, as the legacy `catColorMap` did, so it can take a slot no category gets.
+- 7.12: `POST /transactions/ids` has the operationId `transactionRange` (the linter rejects the generated `TransactionIds`).
+- 7.11: `make fuzz` skips fuzz targets named `…DB`; `make fuzz-db` runs them (one Postgres container per fuzz worker), nightly in `.github/workflows/nightly.yml` together with 60 s of every pure target.
 - 6.2/6.4: the mapping references columns by index **and** header name (`{"index": 3, "header": "Kwota"}`; `ledger.MappingDoc`, bound to the OpenAPI schema with `x-go-type`). A mapping whose header names no longer match the shaped table (e.g. after changing `headerRow`) is a `422`, instead of silently reading the wrong column.
 - 6.2: the upload body limit is `FINUANCE_MAX_UPLOAD_BYTES` + 64 KiB for the multipart framing; the file itself is checked exactly. A request with a non-multipart `Content-Type` is `415`, and a body over the limit is `413`, also when the request validator is the one reading it.
 - 6.3: the per-row `duplicate` flag means "the account already has this identity" before the commit, and "this row's transaction takes its values from another import" after it.
@@ -176,6 +205,9 @@
 - Phase 9: fix auto header detection for mBank and PKO BP in the import preview (`ALLOWED_DIFFS.md` row 4; targets `ingest-cfg/banks/*/header-*.json`). Phase 3 ports the legacy rule as is.
 
 - Phase 8: `POST /demo-data` calls `ledger.SeedDemo` (the same path as `finuance seed-demo`).
+- Phase 8: the grid sends `includeTotals: false` for every window after the first.
+- Phase 16: the RUNBOOK repeats the `textlike` LEAKPROOF step for restores into a new cluster (bootstrap.sql, docs/perf.md).
+- Phase 13: the assistant tool layer converts loose model arguments into `query.ToolFilter` as `toolFilterOf` in `query/sql_test.go` does (numbers or strings; dates via `query.ParseToolDate`).
 - Later (optional): re-measure the staging insert on a dev machine; the schema options in `docs/perf.md` stay open if it matters.
 - Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
 
@@ -185,6 +217,9 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 7 gate approved with option (a) and `includeTotals`; both added (search p95 273 → 114 ms in the sandbox), merged. Next: plan Phase 8.
+- 2026-10-21 — Phase 7 built on `phase/07-query`: filter language + compiler + periods + engine (all 84 legacy filter cases, assistant filter parity), query/distinct/ids/detail/patch/categories endpoints, CSV export (ADR 0014), zip data export, query indexes (perf.md: 4 of 7 shapes within target in the sandbox; trigram index unusable under RLS), nightly DB fuzz, `query-smoke.sh`. Next: Irwin's gate review.
+- 2026-10-21 — Phase 7 planned and approved (collapsed-whitespace equality as an allowed diff; fixed `-79,99` / `dd.mm.yyyy` text form). Branch `phase/07-query`.
 - 2026-10-21 — Phase 6 gate approved; merged. Next: plan Phase 7.
 - 2026-10-21 — Phase 6 built on `phase/06-imports`: accounts and the full import lifecycle over HTTP (upload, preview, lines, PATCH, commit job, reprocess, delete, fast path, labels), Rematerialize + overrides with a property test, per-account writer lock (ADR 0013), seed-demo, worker in Compose, `import-smoke.sh` (matches the oracle). Next: Irwin's gate review.
 - 2026-10-21 — Phase 6 planned and approved (pre-fill the suggested account). Branch `phase/06-imports`.

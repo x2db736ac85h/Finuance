@@ -15,8 +15,8 @@ var testDB *testutil.DB
 func TestMain(m *testing.M) { testutil.Main(m, &testDB) }
 
 func TestExpectedVersion(t *testing.T) {
-	if v := store.ExpectedVersion(); v != 3 {
-		t.Errorf("ExpectedVersion = %d, want 3 (00003_rls.sql)", v)
+	if v := store.ExpectedVersion(); v != 4 {
+		t.Errorf("ExpectedVersion = %d, want 4 (00004_query_indexes.sql)", v)
 	}
 }
 
@@ -107,5 +107,16 @@ func TestDateRoundTrip(t *testing.T) {
 	var s string
 	if err := tdb.App.QueryRow(ctx, `SELECT ($1::date + 1)::text`, want).Scan(&s); err != nil || s != "2024-03-01" {
 		t.Errorf("SQL date arithmetic = %q, %v", s, err)
+	}
+}
+
+// TestLikeIsLeakproof: bootstrap.sql marks textlike LEAKPROOF (Phase 7 decision), so a LIKE on
+// search_text can be an index condition for the app role despite forced RLS. That the planner then
+// uses tx_search_trgm_idx on real data is asserted by TestQueryPerf (internal/query, 100k rows).
+func TestLikeIsLeakproof(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	var leakproof bool
+	if err := tdb.App.QueryRow(context.Background(), `SELECT proleakproof FROM pg_proc WHERE oid = 'pg_catalog.textlike(text, text)'::regprocedure`).Scan(&leakproof); err != nil || !leakproof {
+		t.Fatalf("textlike leakproof = %v, %v (deploy/db/bootstrap.sql)", leakproof, err)
 	}
 }

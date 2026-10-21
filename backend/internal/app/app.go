@@ -23,6 +23,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 )
 
@@ -81,7 +82,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	}
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led,
+		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {

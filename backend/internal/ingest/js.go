@@ -93,3 +93,11 @@ func hasNonSpace(s string) bool {
 	}
 	return false
 }
+
+// TrimJS is String.prototype.trim() for other packages that port legacy string handling (the
+// filter language in internal/query).
+func TrimJS(s string) string { return jsTrim(s) }
+
+// FieldsJS splits s at runs of JS whitespace and drops empty parts: the legacy
+// s.split(/\s+/).filter(Boolean), used for search tokens.
+func FieldsJS(s string) []string { return strings.FieldsFunc(s, isJSSpace) }

@@ -174,6 +174,25 @@ stateDiagram-v2
 - **Upload.** The api reads one multipart file (`FINUANCE_MAX_UPLOAD_BYTES`), rejects binary files (NUL in the first 8 KiB) and identical bytes (SHA-256 per user → `409` with `existingImportId`). It parses with the user's saved profile for this header layout if there is one, else with detection, stages every row, and pre-fills the account when the own-account column matches exactly one account's number hint.
 - **Commit job** (`jobs.CommitImportWorker`): upsert the bank categories, insert the new identities, re-apply annotations, link every staged row, mark the import committed, re-materialise overridden and re-sourced fingerprints, record the stats, and remember the mapping as the layout's profile.
 
+### Query engine (`internal/query`)
+
+Every transaction read — the table window, distinct values, id ranges, the CSV export, category colours, and later insights and the overview — goes through one compiler, so all views agree.
+
+```mermaid
+flowchart LR
+    ctx["QueryContext<br/>accounts · search · filters · period · toolFilter"] --> compile["Compile<br/>registry (§4.5 whitelist) + dsl.Parse"]
+    compile --> preds["predicates with $n placeholders<br/>+ args (all user values)"]
+    preds --> anchor["period anchor<br/>max(booked_on) of the accounts"]
+    anchor --> base["base = filters + search"]
+    base --> scoped["scoped = base ∩ period"]
+    scoped --> stmts["window (ids first, then rows) · totals · distinct · ids · export"]
+```
+
+- **The registry** (`columns.go`) holds each API column's typed value, display text (`-79,99`, `dd.mm.yyyy`), normalised text and sort expression. It is the only source of SQL fragments. User text is always an argument, and LIKE patterns are escaped.
+- **`base` and `scoped`.** Totals, stats and the data range are computed over `base` (filters, no period) in one pass. The window and the count use `scoped`. Comparisons (Phase 11) use `base` within the previous period.
+- **Statements join only what they need**, so the common unfiltered and period-only totals are index-only scans on `tx_user_booked_idx`. Windows find their ids first and then fetch the display columns (late row lookup). See `docs/perf.md` for the measurements, and for why the trigram index on `search_text` is unused under forced RLS.
+- **Execution** happens in `query/sql.go` inside `store.WithUser` (the store guard allows `internal/query`). The export streams one read-only query (ADR 0014).
+
 ## Tenant isolation
 
 Two independent layers keep users apart.
