@@ -6,7 +6,6 @@ package db
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,8 +24,9 @@ type Querier interface {
 	CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error)
 	CreateImport(ctx context.Context, arg CreateImportParams) (Import, error)
 	CreateInvestmentPosition(ctx context.Context, arg CreateInvestmentPositionParams) (InvestmentPosition, error)
-	// Sessions store only the SHA-256 of the cookie token (PLAN §5.2). Time comes from the caller
-	// (platform.Clock), so expiry is testable.
+	// Sessions store only the SHA-256 of the cookie token (PLAN §5.2). expires_at is the absolute
+	// expiry (created + FINUANCE_SESSION_TTL); the idle expiry is last_seen_at + FINUANCE_SESSION_IDLE_TTL,
+	// passed in as idle_cutoff. Time comes from the caller (platform.Clock), so both are testable.
 	CreateSession(ctx context.Context, arg CreateSessionParams) error
 	// users and sessions are outside RLS (PLAN §5.3); only the auth package uses these queries,
 	// through store.WithoutUser.
@@ -39,7 +39,8 @@ type Querier interface {
 	// An annotation with nothing left (no group, no manual category, no note, no transfer override)
 	// is deleted (PLAN §4.4 "explicit clear").
 	DeleteEmptyAnnotations(ctx context.Context, userID uuid.UUID) (int64, error)
-	DeleteExpiredSessions(ctx context.Context, now time.Time) (int64, error)
+	// Periodic cleanup: absolute expiry passed, or idle for longer than the idle timeout.
+	DeleteExpiredSessions(ctx context.Context, arg DeleteExpiredSessionsParams) (int64, error)
 	// Removes the group and its labels only (ON DELETE SET NULL on transactions and annotations).
 	DeleteGroup(ctx context.Context, arg DeleteGroupParams) (int64, error)
 	// Cascades to import_files and import_rows. Transactions are cleaned up by DeleteOrphanTransactions.
@@ -54,7 +55,9 @@ type Querier interface {
 	DeleteSession(ctx context.Context, tokenHash []byte) error
 	// Cascades to every user-owned table.
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
-	// Log out everywhere (password change), optionally keeping the current session.
+	// Revoke one session by its public id: the first 8 bytes of the token hash (PLAN §6.2).
+	DeleteUserSessionByPrefix(ctx context.Context, arg DeleteUserSessionByPrefixParams) (int64, error)
+	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
 	// Account suggestion (PLAN §4.4): last four digits of the own-account column.
 	FindAccountsByNumberHint(ctx context.Context, arg FindAccountsByNumberHintParams) ([]Account, error)
@@ -71,7 +74,7 @@ type Querier interface {
 	// Manual investment data (PLAN §4.9). The repository comes with the investments API.
 	GetInvestmentProfile(ctx context.Context, userID uuid.UUID) (InvestmentProfile, error)
 	GetPreferences(ctx context.Context, userID uuid.UUID) (UserPreference, error)
-	// A live session and its user; expired sessions are not returned.
+	// A live session and its user: not past the absolute expiry and seen after idle_cutoff.
 	GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error)
 	// Detail view: the transaction with its category and group names.
 	GetTransaction(ctx context.Context, arg GetTransactionParams) (GetTransactionRow, error)
@@ -99,13 +102,14 @@ type Querier interface {
 	ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ImportRow, error)
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
+	ListUserSessions(ctx context.Context, arg ListUserSessionsParams) ([]ListUserSessionsRow, error)
 	Ping(ctx context.Context) (int32, error)
 	RenameCategory(ctx context.Context, arg RenameCategoryParams) (Category, error)
 	// Optimistic concurrency as in SavePreferences.
 	SaveInvestmentProfile(ctx context.Context, arg SaveInvestmentProfileParams) (int32, error)
-	// Optimistic concurrency: the update applies only when the stored version is the one the client
-	// read (expected_version); otherwise no row is returned and the caller reports a conflict. The first
-	// save creates the row at version 1.
+	// Optimistic concurrency. expected_version is the version the client read: 0 means "there is no
+	// document yet" and creates it at version 1; n > 0 updates only when the stored version is n and
+	// bumps it. Any mismatch returns no row, which the caller reports as 409 stale_version.
 	SavePreferences(ctx context.Context, arg SavePreferencesParams) (int32, error)
 	// Highest applied goose migration (the readiness check compares it with the binary's expectation).
 	SchemaVersion(ctx context.Context) (int64, error)
@@ -119,7 +123,7 @@ type Querier interface {
 	SetUserDisplayName(ctx context.Context, arg SetUserDisplayNameParams) error
 	SetUserLastLogin(ctx context.Context, arg SetUserLastLoginParams) error
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
-	// Sliding expiry.
+	// Records activity (idle expiry). The caller throttles it to once every few minutes.
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
 	// The staged rows (one per import that contains this transaction), oldest import first.
 	TransactionProvenance(ctx context.Context, arg TransactionProvenanceParams) ([]TransactionProvenanceRow, error)

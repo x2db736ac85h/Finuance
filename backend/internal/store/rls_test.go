@@ -224,7 +224,7 @@ func TestRLSWithCheckRejectsOtherUserID(t *testing.T) {
 			return err
 		},
 		"user_preferences": func(q *db.Queries, _ pgx.Tx) error {
-			_, err := q.SavePreferences(ctx, db.SavePreferencesParams{UserID: b.user, Prefs: []byte(`{}`), Now: now, ExpectedVersion: 1})
+			_, err := q.SavePreferences(ctx, db.SavePreferencesParams{UserID: b.user, Prefs: []byte(`{}`), Now: now})
 			return err
 		},
 		"import_rows": func(_ *db.Queries, tx pgx.Tx) error {

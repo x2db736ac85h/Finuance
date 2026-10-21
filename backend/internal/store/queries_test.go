@@ -78,25 +78,49 @@ func TestSessionQueries(t *testing.T) {
 				return err
 			}
 		}
-		got, err := q.GetSession(ctx, db.GetSessionParams{TokenHash: tok, Now: t0.Add(time.Minute)})
+		idle := func(now time.Time) time.Time { return now.Add(-20 * time.Minute) } // a 20-minute idle timeout
+		get := func(now time.Time) error {
+			_, err := q.GetSession(ctx, db.GetSessionParams{TokenHash: tok, Now: now, IdleCutoff: idle(now)})
+			return err
+		}
+		got, err := q.GetSession(ctx, db.GetSessionParams{TokenHash: tok, Now: t0.Add(time.Minute), IdleCutoff: idle(t0.Add(time.Minute))})
 		if err != nil || got.UserID != u || got.Email == "" {
 			t.Errorf("live session = %+v, %v", got, err)
 		}
-		if _, err := q.GetSession(ctx, db.GetSessionParams{TokenHash: tok, Now: t0.Add(2 * time.Hour)}); !errors.Is(err, pgx.ErrNoRows) {
-			t.Errorf("expired session returned: %v", err)
+		// Idle for 25 minutes: gone.
+		if err := get(t0.Add(25 * time.Minute)); !errors.Is(err, pgx.ErrNoRows) {
+			t.Errorf("idle session returned: %v", err)
 		}
-		// Sliding expiry.
-		if err := q.TouchSession(ctx, db.TouchSessionParams{TokenHash: tok, Now: t0.Add(30 * time.Minute), ExpiresAt: t0.Add(3 * time.Hour)}); err != nil {
+		// Activity at minute 15 keeps it alive at minute 25 …
+		if err := q.TouchSession(ctx, db.TouchSessionParams{TokenHash: tok, Now: t0.Add(15 * time.Minute)}); err != nil {
 			return err
 		}
-		if _, err := q.GetSession(ctx, db.GetSessionParams{TokenHash: tok, Now: t0.Add(2 * time.Hour)}); err != nil {
+		if err := get(t0.Add(25 * time.Minute)); err != nil {
 			t.Errorf("touched session expired: %v", err)
+		}
+		// … but never past the absolute expiry.
+		if err := q.TouchSession(ctx, db.TouchSessionParams{TokenHash: tok, Now: t0.Add(55 * time.Minute)}); err != nil {
+			return err
+		}
+		if err := get(t0.Add(61 * time.Minute)); !errors.Is(err, pgx.ErrNoRows) {
+			t.Errorf("session past its absolute expiry returned: %v", err)
+		}
+		list, err := q.ListUserSessions(ctx, db.ListUserSessionsParams{UserID: u, Now: t0.Add(16 * time.Minute), IdleCutoff: idle(t0.Add(16 * time.Minute))})
+		if err != nil || len(list) != 2 {
+			t.Errorf("list = %d sessions, %v", len(list), err)
+		}
+		// Revoke by the public id (first 8 bytes of the hash).
+		if n, err := q.DeleteUserSessionByPrefix(ctx, db.DeleteUserSessionByPrefixParams{UserID: u, Prefix: other[:8]}); err != nil || n != 1 {
+			t.Errorf("revoke by prefix = %d, %v", n, err)
+		}
+		if err := q.CreateSession(ctx, db.CreateSessionParams{TokenHash: other, UserID: u, Now: t0, ExpiresAt: t0.Add(time.Hour), UserAgent: "test"}); err != nil {
+			return err
 		}
 		// Log out everywhere else.
 		if n, err := q.DeleteUserSessions(ctx, db.DeleteUserSessionsParams{UserID: u, KeepTokenHash: tok}); err != nil || n != 1 {
 			t.Errorf("delete other sessions = %d, %v", n, err)
 		}
-		if n, err := q.DeleteExpiredSessions(ctx, t0.Add(4*time.Hour)); err != nil || n != 1 {
+		if n, err := q.DeleteExpiredSessions(ctx, db.DeleteExpiredSessionsParams{Now: t0.Add(4 * time.Hour), IdleCutoff: idle(t0.Add(4 * time.Hour))}); err != nil || n != 1 {
 			t.Errorf("delete expired = %d, %v", n, err)
 		}
 		return q.DeleteSession(ctx, tok)
@@ -128,13 +152,24 @@ func TestPreferencesVersioning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A stale version changes nothing and returns no row.
-	err = s.WithUser(ctx, u, func(q *db.Queries, _ pgx.Tx) error {
-		_, err := q.SavePreferences(ctx, db.SavePreferencesParams{UserID: u, Prefs: []byte(`{}`), Now: t0, ExpectedVersion: 1})
+	// A stale version, or a second "first" save, changes nothing and returns no row.
+	for _, v := range []int32{1, 0, 3} {
+		err = s.WithUser(ctx, u, func(q *db.Queries, _ pgx.Tx) error {
+			_, err := q.SavePreferences(ctx, db.SavePreferencesParams{UserID: u, Prefs: []byte(`{}`), Now: t0, ExpectedVersion: v})
+			return err
+		})
+		if !errors.Is(err, pgx.ErrNoRows) {
+			t.Errorf("save with version %d over version 2: %v, want no rows (version conflict)", v, err)
+		}
+	}
+	// Without a document, only version 0 creates it.
+	other := newUser(t, s)
+	err = s.WithUser(ctx, other, func(q *db.Queries, _ pgx.Tx) error {
+		_, err := q.SavePreferences(ctx, db.SavePreferencesParams{UserID: other, Prefs: []byte(`{}`), Now: t0, ExpectedVersion: 4})
 		return err
 	})
 	if !errors.Is(err, pgx.ErrNoRows) {
-		t.Errorf("stale save: %v, want no rows (version conflict)", err)
+		t.Errorf("first save with version 4: %v, want no rows", err)
 	}
 }
 

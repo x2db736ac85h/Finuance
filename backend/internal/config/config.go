@@ -48,6 +48,11 @@ type Config struct {
 	AITimeout            time.Duration
 	AIMaxConcurrent      int
 	AIMaxChats           int
+	// Argon2id parameters for new password hashes (ADR 0010). Existing hashes keep theirs until
+	// the next successful login rehashes them.
+	Argon2MemoryKiB uint32
+	Argon2Time      uint32
+	Argon2Threads   uint8
 }
 
 // Requirement lists the variables a subcommand cannot run without.
@@ -115,6 +120,9 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		AITimeout:            p.duration("FINUANCE_AI_TIMEOUT", 120*time.Second),
 		AIMaxConcurrent:      p.int("FINUANCE_AI_MAX_CONCURRENT", 2, 1, 64),
 		AIMaxChats:           p.int("FINUANCE_AI_MAX_CHATS", 10, 1, 1000),
+		Argon2MemoryKiB:      uint32(p.int("FINUANCE_ARGON2_MEMORY_KIB", 19*1024, 8*1024, 1<<20)), //nolint:gosec // bounded by p.int
+		Argon2Time:           uint32(p.int("FINUANCE_ARGON2_TIME", 2, 1, 10)),                     //nolint:gosec // bounded by p.int
+		Argon2Threads:        uint8(p.int("FINUANCE_ARGON2_THREADS", 1, 1, 16)),                   //nolint:gosec // bounded by p.int
 	}
 	switch c.Env {
 	case EnvDev, EnvTest, EnvProd:
