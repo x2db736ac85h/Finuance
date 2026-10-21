@@ -11,7 +11,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi3filter"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
@@ -34,6 +37,11 @@ type Deps struct {
 	Metrics *observability.Metrics
 	Tracing *observability.Tracing
 	Ready   []Check
+	// Auth serves sessions and the /auth, /me and /preferences routes. Nil means every protected
+	// route answers 401 (tests of the bare server).
+	Auth *auth.Service
+	// Clock drives the rate limiters (platform.SystemClock in production).
+	Clock platform.Clock
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -51,6 +59,8 @@ func NewHandler(d Deps) (http.Handler, error) {
 	}
 	validator := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
 		SilenceServersWarning: true,
+		// The session layer (requireSession) authenticates; the validator only checks the shape.
+		Options: openapi3filter.Options{AuthenticationFunc: openapi3filter.NoopAuthenticationFunc},
 		ErrorHandlerWithOpts: func(_ context.Context, err error, w http.ResponseWriter, r *http.Request, opts nethttpmiddleware.ErrorHandlerOpts) {
 			ve := &platform.ValidationError{}
 			ve.Add("request", err.Error())
@@ -61,7 +71,12 @@ func NewHandler(d Deps) (http.Handler, error) {
 			WriteProblem(w, r, ve, prod)
 		},
 	})
-	strict := gen.NewStrictHandlerWithOptions(&api{cfg: d.Config, version: d.Version}, nil, gen.StrictHTTPServerOptions{
+	clock := d.Clock
+	if clock == nil {
+		clock = platform.SystemClock{}
+	}
+	impl := &api{cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, cookies: newCookies(d.Config), limits: newLimits(clock)}
+	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}
 			ve.Add("body", err.Error())
@@ -70,9 +85,16 @@ func NewHandler(d Deps) (http.Handler, error) {
 		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) { WriteProblem(w, r, err, prod) },
 	})
 	gen.HandlerWithOptions(strict, gen.StdHTTPServerOptions{
-		BaseURL:     "/api/v1",
-		BaseRouter:  mux,
-		Middlewares: []gen.MiddlewareFunc{validator},
+		BaseURL:    "/api/v1",
+		BaseRouter: mux,
+		// Per matched route; the last one runs first: CSRF → session → request validation → handler.
+		Middlewares: []gen.MiddlewareFunc{
+			validator,
+			requireSession(d.Auth, prod),
+			gen.MiddlewareFunc(mw.CSRF(d.Config.PublicOrigin, func(w http.ResponseWriter, r *http.Request, err error) {
+				WriteProblem(w, r, fmt.Errorf("%w: %w", platform.ErrForbidden, err), prod)
+			})),
+		},
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}
 			ve.Add("parameters", err.Error())

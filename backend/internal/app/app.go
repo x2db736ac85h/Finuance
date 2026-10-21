@@ -16,10 +16,12 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 )
 
@@ -70,6 +72,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	defer c.close(ctx)
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
+		Auth: NewAuth(c.store, cfg), Clock: platform.SystemClock{},
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
@@ -216,4 +219,14 @@ func Healthcheck(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("healthz returned %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// NewAuth builds the auth service from the configuration.
+func NewAuth(st *store.Store, cfg config.Config) *auth.Service {
+	return auth.New(st, platform.SystemClock{}, auth.Config{
+		Params:         auth.Params{MemoryKiB: cfg.Argon2MemoryKiB, Time: cfg.Argon2Time, Threads: cfg.Argon2Threads},
+		SessionTTL:     cfg.SessionTTL,
+		SessionIdleTTL: cfg.SessionIdleTTL,
+		AllowSignup:    cfg.AllowSignup,
+	})
 }

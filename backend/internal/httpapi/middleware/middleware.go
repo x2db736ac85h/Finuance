@@ -25,6 +25,7 @@ type Info struct {
 	ClientIP  string
 	Route     string // ServeMux pattern, e.g. "GET /api/v1/meta"; "unmatched" for 404s
 	TraceID   string
+	UserHash  string // hex of the first 8 bytes of SHA-256(user id); never the id itself (§8.2)
 }
 
 type infoKey struct{}
