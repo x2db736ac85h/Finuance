@@ -53,19 +53,36 @@ type Querier interface {
 	// references any more. Transactions another import also contains stay.
 	DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphanTransactionsParams) (int64, error)
 	DeleteSession(ctx context.Context, tokenHash []byte) error
+	DeleteTransactionsByID(ctx context.Context, arg DeleteTransactionsByIDParams) (int64, error)
 	// Cascades to every user-owned table.
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
 	// Revoke one session by its public id: the first 8 bytes of the token hash (PLAN §6.2).
 	DeleteUserSessionByPrefix(ctx context.Context, arg DeleteUserSessionByPrefixParams) (int64, error)
 	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
+	// "N duplicates skipped" for a set of accounts: linked staged rows − import-origin transactions.
+	DuplicatesSkipped(ctx context.Context, arg DuplicatesSkippedParams) (int64, error)
 	// Account suggestion (PLAN §4.4): last four digits of the own-account column.
 	FindAccountsByNumberHint(ctx context.Context, arg FindAccountsByNumberHintParams) ([]Account, error)
 	// Exact duplicate file check (PLAN §4.4): an earlier non-failed import with the same bytes.
 	FindImportBySHA(ctx context.Context, arg FindImportBySHAParams) (uuid.UUID, error)
+	// The non-errored staged rows of one fingerprint in the account's committed imports, earliest
+	// committed import first: the default value source is the first row of each occurrence here.
+	FingerprintRows(ctx context.Context, arg FingerprintRowsParams) ([]FingerprintRowsRow, error)
+	FingerprintTransactions(ctx context.Context, arg FingerprintTransactionsParams) ([]FingerprintTransactionsRow, error)
+	// Fingerprints whose transactions take their values from this import (delete / reprocess must move
+	// them to another source).
+	FingerprintsSourcedBy(ctx context.Context, arg FingerprintsSourcedByParams) ([][]byte, error)
+	// Fingerprints of this import whose transaction takes its values from an import committed after
+	// this one (or from none). After a reprocess this import may be the earliest source again; these
+	// fingerprints are re-materialised so the default rule ("earliest import wins") holds.
+	FingerprintsSourcedLater(ctx context.Context, arg FingerprintsSourcedLaterParams) ([][]byte, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
+	// Duplicate review (PLAN §4.4, "Duplicate review and overrides"). ledger.Rematerialize uses these to
+	// rebuild the transactions of one (account, fingerprint) from its staged rows and override.
+	GetDedupeOverride(ctx context.Context, arg GetDedupeOverrideParams) (DedupeOverride, error)
 	GetGroup(ctx context.Context, arg GetGroupParams) (Group, error)
 	GetImport(ctx context.Context, arg GetImportParams) (Import, error)
 	GetImportFile(ctx context.Context, arg GetImportFileParams) ([]byte, error)
@@ -81,7 +98,12 @@ type Querier interface {
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	// email is citext, so the lookup ignores case.
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// Distinct bank categories of an import's valid rows (the commit upserts them as categories).
+	ImportBankCategories(ctx context.Context, arg ImportBankCategoriesParams) ([]*string, error)
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
+	// One transaction from one staged row (its value source). The bank category resolves as in the
+	// commit; annotations are re-applied by the caller.
+	InsertTransactionFromRow(ctx context.Context, arg InsertTransactionFromRowParams) error
 	// Commit step 1 (PLAN §4.4): new transactions from the staged rows, in file order. Errored rows and
 	// fingerprints with a dedupe override are skipped (the override path re-materialises them). A row
 	// whose (fingerprint, occurrence) already exists in the account is a duplicate: ON CONFLICT skips
@@ -89,6 +111,7 @@ type Querier interface {
 	// rows are simply unused. The bank category is resolved by normalised name; the caller upserts the
 	// categories first. Returns the inserted ids (the "new" rows).
 	InsertTransactionsFromImport(ctx context.Context, arg InsertTransactionsFromImportParams) ([]uuid.UUID, error)
+	LinkImportRow(ctx context.Context, arg LinkImportRowParams) error
 	// Commit step 2: link every staged row to its transaction, new or pre-existing (provenance).
 	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
@@ -103,6 +126,11 @@ type Querier interface {
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
 	ListUserSessions(ctx context.Context, arg ListUserSessionsParams) ([]ListUserSessionsRow, error)
+	// Fingerprints of this import that have an override: the commit re-materialises them (step 2b).
+	OverriddenFingerprintsInImport(ctx context.Context, arg OverriddenFingerprintsInImportParams) ([][]byte, error)
+	// Overrides that prefer this import: deleting the import removes them (FK cascade), so their
+	// fingerprints are re-materialised.
+	OverridesPreferring(ctx context.Context, arg OverridesPreferringParams) ([][]byte, error)
 	Ping(ctx context.Context) (int32, error)
 	RenameCategory(ctx context.Context, arg RenameCategoryParams) (Category, error)
 	// Optimistic concurrency as in SavePreferences.
@@ -118,7 +146,8 @@ type Querier interface {
 	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
 	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
 	// Moves an import along previewed → committing → committed | failed. from_status guards the move,
-	// so two concurrent commits can't both start.
+	// so two concurrent commits can't both start. committed_at is the first commit time and survives a
+	// reprocess: it orders value sources ("the earliest import wins").
 	SetImportStatus(ctx context.Context, arg SetImportStatusParams) (Import, error)
 	SetUserDisplayName(ctx context.Context, arg SetUserDisplayNameParams) error
 	SetUserLastLogin(ctx context.Context, arg SetUserLastLoginParams) error
@@ -129,7 +158,8 @@ type Querier interface {
 	TransactionProvenance(ctx context.Context, arg TransactionProvenanceParams) ([]TransactionProvenanceRow, error)
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
 	UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group, error)
-	// PATCH while previewed: a new mapping/options and the re-parse results.
+	// A new mapping/options and the re-parse results: PATCH while previewed, reprocess when committed
+	// (expected_status guards which).
 	UpdateImportPreview(ctx context.Context, arg UpdateImportPreviewParams) (Import, error)
 	UpdateInvestmentPosition(ctx context.Context, arg UpdateInvestmentPositionParams) (InvestmentPosition, error)
 	// The user-editable fields of a set of transactions (ledger.Annotate). Each set_* flag says whether
@@ -137,6 +167,9 @@ type Querier interface {
 	// falls back to the bank category. Returns the dedupe identity and the new values, which the caller
 	// mirrors into tx_annotations.
 	UpdateTransactionAnnotations(ctx context.Context, arg UpdateTransactionAnnotationsParams) ([]UpdateTransactionAnnotationsRow, error)
+	// Re-point a kept transaction at a (possibly new) value source: every imported field comes from the
+	// row. User edits stay: a manual or rule category is kept, the bank category is re-resolved.
+	UpdateTransactionFromRow(ctx context.Context, arg UpdateTransactionFromRowParams) error
 	// User annotations keyed by dedupe identity (PLAN §4.4): they outlive the transaction row, so a
 	// label comes back when the same transaction is imported again.
 	UpsertAnnotation(ctx context.Context, arg UpsertAnnotationParams) error

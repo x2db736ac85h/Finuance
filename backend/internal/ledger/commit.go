@@ -20,16 +20,19 @@ type CommitResult struct {
 }
 
 // CommitImport turns the staged rows of a previewed (or committing) import into transactions, in
-// one database transaction — the set-based core of the commit algorithm, PLAN §4.4:
+// one database transaction (PLAN §4.4, commit algorithm):
 //
-//  1. insert new transactions; rows whose (fingerprint, occurrence) the account already has are
-//     duplicates and are skipped by the unique constraint. Then (step 1b) re-apply annotations to
-//     the inserted rows, so labels survive delete + re-import;
+//  0. upsert a category for every distinct bank category of the import;
+//  1. insert new transactions for fingerprints without an override; rows whose (fingerprint,
+//     occurrence) the account already has are duplicates, skipped by the unique constraint. Then
+//     (step 1b) re-apply annotations to the inserted rows, so labels survive delete + re-import;
 //  2. link every staged row to its transaction (provenance);
-//  3. record the stats and mark the import committed.
+//  3. mark the import committed (keeping the first commit time on a reprocess);
+//  4. re-materialise the fingerprints that have an override (the plan's step 2b), and those whose
+//     value source should now be this import (only after a reprocess: "the earliest import wins");
+//  5. record the stats.
 //
-// The import must have an account. Phase 6 wraps this in the CommitImport job and adds the
-// category upsert before step 1, the dedupe-override path (step 2b) and the profile upsert.
+// The import must have an account. The CommitImport job runs this; it also upserts the profile.
 func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (CommitResult, error) {
 	var res CommitResult
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
@@ -44,6 +47,19 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 			return fmt.Errorf("import has no account: %w", ErrState)
 		}
 		account := *imp.AccountID
+		now := l.clock.Now()
+
+		// 0.
+		cats, err := q.ImportBankCategories(ctx, db.ImportBankCategoriesParams{UserID: userID, ImportID: importID})
+		if err != nil {
+			return err
+		}
+		for _, cp := range cats {
+			c := deref(cp)
+			if _, err := q.UpsertCategory(ctx, db.UpsertCategoryParams{ID: platform.NewID(), UserID: userID, Name: truncate(c, maxCategoryName), NameN: nameKey(c)}); err != nil {
+				return err
+			}
+		}
 
 		// 1. One UUIDv7 per eligible row; ids of rows that turn out to be duplicates stay unused.
 		n, err := q.CountEligibleImportRows(ctx, db.CountEligibleImportRowsParams{UserID: userID, ImportID: importID, AccountID: account})
@@ -66,25 +82,50 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 			}
 		}
 		// 2.
-		linked, err := q.LinkImportRows(ctx, db.LinkImportRowsParams{UserID: userID, ImportID: importID, AccountID: account})
-		if err != nil {
+		if _, err := q.LinkImportRows(ctx, db.LinkImportRowsParams{UserID: userID, ImportID: importID, AccountID: account}); err != nil {
 			return err
 		}
 		// 3.
+		if _, err := q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: importID, FromStatus: imp.Status,
+			ToStatus: string(StatusCommitted), Now: now}); err != nil {
+			return err
+		}
+		// 4. (step 2b)
+		fps, err := q.OverriddenFingerprintsInImport(ctx, db.OverriddenFingerprintsInImportParams{UserID: userID, ImportID: importID, AccountID: account})
+		if err != nil {
+			return err
+		}
+		later, err := q.FingerprintsSourcedLater(ctx, db.FingerprintsSourcedLaterParams{UserID: userID, ImportID: importID})
+		if err != nil {
+			return err
+		}
+		added, err := rematerializeAll(ctx, q, userID, account, append(fps, later...), now)
+		if err != nil {
+			return err
+		}
+		// 5. new = rows inserted by 1 and 4; duplicates = linked rows that found an existing one.
 		counts, err := q.CountImportRows(ctx, db.CountImportRowsParams{UserID: userID, ImportID: importID})
 		if err != nil {
 			return err
 		}
-		res = CommitResult{New: len(inserted), Duplicates: linked - int64(len(inserted)), Errors: counts.Errors}
+		res = CommitResult{New: len(inserted) + added, Errors: counts.Errors}
+		res.Duplicates = counts.Linked - int64(res.New)
 		stats, err := mergeStats(imp.Stats, map[string]any{"rows": counts.Rows, "errors": res.Errors, "new": res.New, "duplicates": res.Duplicates})
 		if err != nil {
 			return err
 		}
-		_, err = q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: importID, FromStatus: imp.Status,
-			ToStatus: string(StatusCommitted), Stats: stats, Now: l.clock.Now()})
+		_, err = q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: importID, FromStatus: string(StatusCommitted),
+			ToStatus: string(StatusCommitted), Stats: stats, Now: now})
 		return err
 	})
 	return res, dbErr("commit import", err)
+}
+
+func truncate(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+	return s
 }
 
 // mergeStats sets keys in the import's stats object, keeping the preview's (headerAt, dropped, …).

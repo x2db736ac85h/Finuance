@@ -201,12 +201,14 @@ func TestImportRowsPageAndErrors(t *testing.T) {
 	}
 }
 
+// TestBankCategoryResolvedOnCommit: the commit upserts a category per bank category (PLAN 6.6 step
+// 1). An existing category with the same normalised name is reused and keeps its spelling.
 func TestBankCategoryResolvedOnCommit(t *testing.T) {
 	e := newEnv(t)
 	u := e.user()
 	a := e.account(u, "A")
-	in := staged(t, "c.csv", []byte("Data;Opis;Kwota;Kategoria\n02.01.2025;a;-1,00;Żywność\n03.01.2025;b;-2,00;Inne\n"), &a.ID)
-	if _, err := e.l.EnsureCategories(e.ctx, u, []string{"ŻYWNOŚĆ"}); err != nil { // the commit job does this in Phase 6
+	in := staged(t, "c.csv", []byte("Data;Opis;Kwota;Kategoria\n02.01.2025;a;-1,00;Żywność\n03.01.2025;b;-2,00;Inne\n04.01.2025;c;-3,00;\n"), &a.ID)
+	if _, err := e.l.EnsureCategories(e.ctx, u, []string{"ŻYWNOŚĆ"}); err != nil {
 		t.Fatal(err)
 	}
 	imp, err := e.l.CreateImport(e.ctx, u, in)
@@ -219,7 +221,13 @@ func TestBankCategoryResolvedOnCommit(t *testing.T) {
 	rows, _ := e.l.ImportRowsPage(e.ctx, u, imp.ID, false, 0, 10)
 	food, _ := e.l.GetTransaction(e.ctx, u, *rows[0].TransactionID)
 	other, _ := e.l.GetTransaction(e.ctx, u, *rows[1].TransactionID)
-	if food.CategoryName != "ŻYWNOŚĆ" || food.CategorySource != "bank" || other.CategoryID != nil || other.CategorySource != "none" {
-		t.Errorf("food = %q/%s, other = %v/%s", food.CategoryName, food.CategorySource, other.CategoryID, other.CategorySource)
+	none, _ := e.l.GetTransaction(e.ctx, u, *rows[2].TransactionID)
+	if food.CategoryName != "ŻYWNOŚĆ" || food.CategorySource != "bank" || other.CategoryName != "Inne" || other.CategorySource != "bank" ||
+		none.CategoryID != nil || none.CategorySource != "none" {
+		t.Errorf("food = %q/%s, other = %q/%s, blank = %v/%s", food.CategoryName, food.CategorySource, other.CategoryName,
+			other.CategorySource, none.CategoryID, none.CategorySource)
+	}
+	if cats, _ := e.l.ListCategories(e.ctx, u); len(cats) != 2 {
+		t.Errorf("categories = %+v, want ŻYWNOŚĆ and Inne", cats)
 	}
 }

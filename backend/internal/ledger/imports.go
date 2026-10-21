@@ -227,15 +227,25 @@ func deref(p *string) string {
 	return *p
 }
 
-// DeleteImport deletes an import, its file and its staged rows, then the transactions no other
-// import of the account contains (PLAN §4.4, delete import). Annotations stay, so re-importing the
-// file brings the labels back. Re-materialising fingerprints whose value source was this import
-// (duplicate review) arrives with Phase 6.
+// DeleteImport deletes an import, its file and its staged rows, then (PLAN §4.4, delete import):
+//
+//  1. the import-origin transactions no other import of the account contains (orphans);
+//  2. re-materialises the fingerprints whose value source was this import, or whose override
+//     preferred it (the FK cascade removes such overrides), so their values come from the
+//     remaining sources.
+//
+// Annotations stay, so re-importing the file brings the labels back.
 func (l *Ledger) DeleteImport(ctx context.Context, userID, id uuid.UUID) (orphansDeleted int64, err error) {
 	err = l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 		imp, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: id})
 		if err != nil {
 			return err
+		}
+		var fps [][]byte
+		if imp.AccountID != nil {
+			if fps, err = sourcedFingerprints(ctx, q, userID, *imp.AccountID, id); err != nil {
+				return err
+			}
 		}
 		if _, err := q.DeleteImportRows(ctx, db.DeleteImportRowsParams{UserID: userID, ImportID: id}); err != nil {
 			return err
@@ -246,10 +256,115 @@ func (l *Ledger) DeleteImport(ctx context.Context, userID, id uuid.UUID) (orphan
 		if imp.AccountID == nil {
 			return nil
 		}
-		orphansDeleted, err = q.DeleteOrphanTransactions(ctx, db.DeleteOrphanTransactionsParams{UserID: userID, AccountID: *imp.AccountID})
+		if orphansDeleted, err = q.DeleteOrphanTransactions(ctx, db.DeleteOrphanTransactionsParams{UserID: userID, AccountID: *imp.AccountID}); err != nil {
+			return err
+		}
+		_, err = rematerializeAll(ctx, q, userID, *imp.AccountID, fps, l.clock.Now())
 		return err
 	})
 	return orphansDeleted, dbErr("delete import", err)
+}
+
+// sourcedFingerprints are the fingerprints that must be re-materialised when import id goes away
+// or changes: those whose transactions take their values from it and those whose override prefers it.
+func sourcedFingerprints(ctx context.Context, q *db.Queries, userID, accountID, id uuid.UUID) ([][]byte, error) {
+	fps, err := q.FingerprintsSourcedBy(ctx, db.FingerprintsSourcedByParams{UserID: userID, AccountID: accountID, ImportID: &id})
+	if err != nil {
+		return nil, err
+	}
+	pref, err := q.OverridesPreferring(ctx, db.OverridesPreferringParams{UserID: userID, AccountID: accountID, ImportID: &id})
+	return append(fps, pref...), err
+}
+
+// Staging is a re-parse of an import's stored bytes with new options or a new mapping.
+type Staging struct {
+	AccountID       *uuid.UUID // previewed imports only
+	Encoding        string
+	Delimiter       string
+	Headers         []string
+	ColumnTypes     []string
+	Mapping         json.RawMessage
+	Options         json.RawMessage
+	MappingSource   string
+	HeaderSignature [32]byte
+	Stats           json.RawMessage
+	Rows            []ingest.StagedRow
+}
+
+// Restage replaces the staged rows of an import in one transaction.
+//
+//   - A previewed import (PATCH) gets the new rows, mapping, options and account.
+//   - A committed import (reprocess) keeps its account. Its old rows go, orphaned transactions are
+//     deleted, fingerprints it was the source of move to other sources, and the import returns to
+//     "committing": the CommitImport job then commits the new rows. Manual edits survive wherever
+//     the fingerprint is unchanged (annotations).
+func (l *Ledger) Restage(ctx context.Context, userID, id uuid.UUID, s Staging) (Import, error) {
+	headers, err := json.Marshal(nonNil(s.Headers))
+	if err != nil {
+		return Import{}, err
+	}
+	types, err := json.Marshal(nonNil(s.ColumnTypes))
+	if err != nil {
+		return Import{}, err
+	}
+	if s.Stats == nil {
+		s.Stats = json.RawMessage(`{}`)
+	}
+	rows := ImportRows(s.Rows)
+	var out Import
+	err = l.st.WithUser(ctx, userID, func(q *db.Queries, tx pgx.Tx) error {
+		imp, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: id})
+		if err != nil {
+			return err
+		}
+		status := ImportStatus(imp.Status)
+		account := s.AccountID
+		switch status {
+		case StatusPreviewed:
+			if account != nil {
+				if err := ownAccount(ctx, q, userID, *account); err != nil {
+					return err
+				}
+			}
+		case StatusCommitted:
+			account = imp.AccountID
+		default:
+			return fmt.Errorf("import is %s: %w", status, ErrState)
+		}
+		var fps [][]byte
+		if status == StatusCommitted {
+			if fps, err = sourcedFingerprints(ctx, q, userID, *account, id); err != nil {
+				return err
+			}
+		}
+		if _, err := q.DeleteImportRows(ctx, db.DeleteImportRowsParams{UserID: userID, ImportID: id}); err != nil {
+			return err
+		}
+		updated, err := q.UpdateImportPreview(ctx, db.UpdateImportPreviewParams{UserID: userID, ID: id, ExpectedStatus: string(status),
+			AccountID: account, Encoding: s.Encoding, Delimiter: s.Delimiter, Headers: headers, ColumnTypes: types,
+			Mapping: s.Mapping, Options: s.Options, MappingSource: s.MappingSource, HeaderSignature: s.HeaderSignature[:], Stats: s.Stats})
+		if err != nil {
+			return err
+		}
+		if _, err := store.InsertImportRows(ctx, tx, id, userID, rows); err != nil {
+			return err
+		}
+		if status == StatusCommitted {
+			if updated, err = q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: id, FromStatus: string(StatusCommitted),
+				ToStatus: string(StatusCommitting), Now: l.clock.Now()}); err != nil {
+				return err
+			}
+			if _, err := q.DeleteOrphanTransactions(ctx, db.DeleteOrphanTransactionsParams{UserID: userID, AccountID: *account}); err != nil {
+				return err
+			}
+			if _, err := rematerializeAll(ctx, q, userID, *account, fps, l.clock.Now()); err != nil {
+				return err
+			}
+		}
+		out, err = importOf(updated)
+		return err
+	})
+	return out, dbErr("restage import", err)
 }
 
 // rawField is the stored form of ingest.RawField: {"h": header, "v": value} (PLAN §5.2).
