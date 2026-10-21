@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 6 — Accounts and import pipeline · **Branch:** phase/06-imports · **Status:** gate approved, merged
+**Current phase:** 7 — Transactions query API · **Branch:** phase/07-query · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -18,9 +18,26 @@
 - Phase 4: RLS is **enabled and forced** on every user-owned table (ADR 0007; forced also binds the owner role). The `pl_natural` collation is applied in queries (`ORDER BY … COLLATE pl_natural`), not on columns. Phase 4 writes the set-based commit core (§4.4 steps 1, 1b, 2) and the delete-import orphan cleanup as `ledger` methods; Phase 6 adds the River job, category upsert, stats, profiles and `Rematerialize`. Investments get schema, RLS and queries now; the repository comes with their API.
 - Phase 5: `golang.org/x/crypto` (argon2id), `golang.org/x/time/rate` and `github.com/oapi-codegen/runtime` (the generator's support library, needed once the API has path parameters and uuid fields) approved as direct dependencies. `finuance admin set-password --email … --password-stdin` is added next to `create-user` (no email sending, so admins reset forgotten passwords; it revokes the user's sessions). The first preferences save must send `version: 0`; anything else is `409 stale_version`.
 - Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
+- Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 7.1 `query/dsl`: condition lexer + parser → AST, round-trip printer, `FuzzParseCond`
+- [ ] 7.2 `query/columns.go` + `compile.go`: column registry (§4.5 whitelist), `Compile` → `{where, args}` (number/date/text semantics, `excluded`, search, accounts)
+- [ ] 7.3 `query/period.go`: anchor, presets, `prevRange`, labels
+- [ ] 7.4 `query/sql.go`: `base`/`scoped` CTE builder, sorting (`pl_natural`, empties last, tie-break); store guard allowlist
+- [ ] 7.5 `POST /transactions/query` (window, total, stats, duplicatesSkipped, dataRange, period, `locateId`)
+- [ ] 7.6 `POST /transactions/distinct`
+- [ ] 7.7 `GET`/`PATCH /transactions/{id}` (sources; category upsert, manual source, note, annotations)
+- [ ] 7.8 `GET /categories?accountIds=` (`txCount`, `colorSlot`)
+- [ ] 7.9 `POST /transactions/export` (cursor stream, BOM, delimiter, injection guard); ADR 0014
+- [ ] 7.10 `GET /me/export` (zip: JSON per entity, transactions.csv, original files)
+- [ ] 7.11 performance: 100k-row seed, `EXPLAIN (ANALYZE, BUFFERS)`, indexes, `docs/perf.md`
+- [ ] 7.12 `group` column, `toolFilter` (port of `aiFilter`, oracle parity), `POST /transactions/ids`
+- [ ] Tests: filter parity (84 oracle cases), injection, sort, paging + `locateId`, stats, distinct, export, tenancy; nightly DB fuzz workflow
+- [ ] `scripts/query-smoke.sh`; THREAT-MODEL T2/T4, ARCHITECTURE, ALLOWED_DIFFS
+
+## Phase 6 tasks (done)
 - [x] 6.1 Accounts CRUD (+ txCount, firstOn, lastOn)
 - [x] 6.2 `POST /imports`: multipart, NUL sniff, SHA-256 / 409, parse (+ profile), roles, account suggestion (pre-filled), stage, duplicate estimate, preview
 - [x] 6.3 `GET /imports`, `/imports/{id}`, `/rows` (onlyErrors, duplicate flag), `/file`
@@ -185,6 +202,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 7 planned and approved (collapsed-whitespace equality as an allowed diff; fixed `-79,99` / `dd.mm.yyyy` text form). Branch `phase/07-query`.
 - 2026-10-21 — Phase 6 gate approved; merged. Next: plan Phase 7.
 - 2026-10-21 — Phase 6 built on `phase/06-imports`: accounts and the full import lifecycle over HTTP (upload, preview, lines, PATCH, commit job, reprocess, delete, fast path, labels), Rematerialize + overrides with a property test, per-account writer lock (ADR 0013), seed-demo, worker in Compose, `import-smoke.sh` (matches the oracle). Next: Irwin's gate review.
 - 2026-10-21 — Phase 6 planned and approved (pre-fill the suggested account). Branch `phase/06-imports`.
