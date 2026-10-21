@@ -91,6 +91,9 @@ type ErrDuplicateFile struct{ ExistingID uuid.UUID }
 
 func (e ErrDuplicateFile) Error() string { return fmt.Sprintf("duplicate of import %s", e.ExistingID) }
 
+// Unwrap maps the error to 409 duplicate_file.
+func (e ErrDuplicateFile) Unwrap() error { return platform.ErrDuplicateFile }
+
 // CreateImport stores the import, its file and its staged rows in one transaction (PLAN task 6.2
 // step 9). An identical file already imported is ErrDuplicateFile.
 func (l *Ledger) CreateImport(ctx context.Context, userID uuid.UUID, in NewImport) (Import, error) {
@@ -183,23 +186,13 @@ func (l *Ledger) ListImports(ctx context.Context, userID uuid.UUID, limit int) (
 	return out, dbErr("list imports", err)
 }
 
-// StoredRow is a staged row as read back for the preview.
-type StoredRow struct {
-	RowIndex      int
-	BookedOn      *platform.Date
-	AmountMinor   *int64
-	Currency      string
-	Payee         string
-	Description   string
-	Raw           []ingest.RawField
-	Error         string
-	TransactionID *uuid.UUID // set once the import is committed
-}
-
 // ImportRowsPage returns staged rows in file order; onlyErrors keeps the rows with a parse error.
-func (l *Ledger) ImportRowsPage(ctx context.Context, userID, importID uuid.UUID, onlyErrors bool, offset, limit int) ([]StoredRow, error) {
-	var out []StoredRow
+func (l *Ledger) ImportRowsPage(ctx context.Context, userID, importID uuid.UUID, onlyErrors bool, offset, limit int) ([]Row, error) {
+	var out []Row
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		if _, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: importID}); err != nil {
+			return err
+		}
 		rows, err := q.ListImportRows(ctx, db.ListImportRowsParams{UserID: userID, ImportID: importID, OnlyErrors: onlyErrors,
 			SkipRows: int32(max(offset, 0)), MaxRows: int32(min(max(limit, 1), 1000))}) //nolint:gosec // clamped
 		if err != nil {
@@ -207,13 +200,14 @@ func (l *Ledger) ImportRowsPage(ctx context.Context, userID, importID uuid.UUID,
 		}
 		for k := range rows {
 			r := &rows[k]
-			s := StoredRow{RowIndex: int(r.RowIndex), BookedOn: r.BookedOn, AmountMinor: r.AmountMinor,
-				Currency: deref(r.Currency), Payee: deref(r.Payee), Description: deref(r.Description),
-				Error: deref(r.ParseError), TransactionID: r.TransactionID}
-			if s.Raw, err = decodeRaw(r.Raw); err != nil {
+			row := Row{RowIndex: int(r.RowIndex), BookedOn: r.BookedOn, ValueOn: r.ValueOn, AmountMinor: r.AmountMinor,
+				Currency: deref(r.Currency), Payee: deref(r.Payee), Description: deref(r.Description), Reference: deref(r.Reference),
+				TxType: deref(r.TxType), BankCategory: deref(r.BankCategory), CounterpartyAccount: deref(r.CounterpartyAccount),
+				BalanceMinor: r.BalanceAfterMinor, Error: deref(r.ParseError), Duplicate: r.Duplicate, TransactionID: r.TransactionID}
+			if row.Raw, err = decodeRaw(r.Raw); err != nil {
 				return err
 			}
-			out = append(out, s)
+			out = append(out, row)
 		}
 		return nil
 	})
@@ -227,15 +221,28 @@ func deref(p *string) string {
 	return *p
 }
 
-// DeleteImport deletes an import, its file and its staged rows, then the transactions no other
-// import of the account contains (PLAN §4.4, delete import). Annotations stay, so re-importing the
-// file brings the labels back. Re-materialising fingerprints whose value source was this import
-// (duplicate review) arrives with Phase 6.
+// DeleteImport deletes an import, its file and its staged rows, then (PLAN §4.4, delete import):
+//
+//  1. the import-origin transactions no other import of the account contains (orphans);
+//  2. re-materialises the fingerprints whose value source was this import, or whose override
+//     preferred it (the FK cascade removes such overrides), so their values come from the
+//     remaining sources.
+//
+// Annotations stay, so re-importing the file brings the labels back.
 func (l *Ledger) DeleteImport(ctx context.Context, userID, id uuid.UUID) (orphansDeleted int64, err error) {
 	err = l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 		imp, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: id})
 		if err != nil {
 			return err
+		}
+		var fps [][]byte
+		if imp.AccountID != nil {
+			if err := lockAccount(ctx, q, userID, *imp.AccountID); err != nil {
+				return err
+			}
+			if fps, err = sourcedFingerprints(ctx, q, userID, *imp.AccountID, id); err != nil {
+				return err
+			}
 		}
 		if _, err := q.DeleteImportRows(ctx, db.DeleteImportRowsParams{UserID: userID, ImportID: id}); err != nil {
 			return err
@@ -246,10 +253,126 @@ func (l *Ledger) DeleteImport(ctx context.Context, userID, id uuid.UUID) (orphan
 		if imp.AccountID == nil {
 			return nil
 		}
-		orphansDeleted, err = q.DeleteOrphanTransactions(ctx, db.DeleteOrphanTransactionsParams{UserID: userID, AccountID: *imp.AccountID})
+		if orphansDeleted, err = q.DeleteOrphanTransactions(ctx, db.DeleteOrphanTransactionsParams{UserID: userID, AccountID: *imp.AccountID}); err != nil {
+			return err
+		}
+		_, err = rematerializeAll(ctx, q, userID, *imp.AccountID, fps, l.clock.Now())
 		return err
 	})
 	return orphansDeleted, dbErr("delete import", err)
+}
+
+// sourcedFingerprints are the fingerprints that must be re-materialised when import id goes away
+// or changes: those whose transactions take their values from it and those whose override prefers it.
+func sourcedFingerprints(ctx context.Context, q *db.Queries, userID, accountID, id uuid.UUID) ([][]byte, error) {
+	fps, err := q.FingerprintsSourcedBy(ctx, db.FingerprintsSourcedByParams{UserID: userID, AccountID: accountID, ImportID: &id})
+	if err != nil {
+		return nil, err
+	}
+	pref, err := q.OverridesPreferring(ctx, db.OverridesPreferringParams{UserID: userID, AccountID: accountID, ImportID: &id})
+	return append(fps, pref...), err
+}
+
+// Staging is a re-parse of an import's stored bytes with new options or a new mapping.
+type Staging struct {
+	AccountID       *uuid.UUID // previewed imports only
+	Encoding        string
+	Delimiter       string
+	Headers         []string
+	ColumnTypes     []string
+	Mapping         json.RawMessage
+	Options         json.RawMessage
+	MappingSource   string
+	HeaderSignature [32]byte
+	Stats           json.RawMessage
+	Rows            []ingest.StagedRow
+}
+
+// Restage replaces the staged rows of an import in one transaction.
+//
+//   - A previewed import (PATCH) gets the new rows, mapping, options and account.
+//   - A committed import (reprocess) keeps its account. Its old rows go, orphaned transactions are
+//     deleted, fingerprints it was the source of move to other sources, and the import returns to
+//     "committing": the CommitImport job then commits the new rows. Manual edits survive wherever
+//     the fingerprint is unchanged (annotations).
+//
+// enqueue, when not nil, runs in the same transaction after a reprocess restage (the handler inserts
+// the CommitImport job with River's InsertTx there, so the job exists exactly when the restage does).
+func (l *Ledger) Restage(ctx context.Context, userID, id uuid.UUID, s Staging, enqueue func(context.Context, pgx.Tx) error) (Import, error) {
+	headers, err := json.Marshal(nonNil(s.Headers))
+	if err != nil {
+		return Import{}, err
+	}
+	types, err := json.Marshal(nonNil(s.ColumnTypes))
+	if err != nil {
+		return Import{}, err
+	}
+	if s.Stats == nil {
+		s.Stats = json.RawMessage(`{}`)
+	}
+	rows := ImportRows(s.Rows)
+	var out Import
+	err = l.st.WithUser(ctx, userID, func(q *db.Queries, tx pgx.Tx) error {
+		imp, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: id})
+		if err != nil {
+			return err
+		}
+		status := ImportStatus(imp.Status)
+		account := s.AccountID
+		switch status {
+		case StatusPreviewed:
+			if account != nil {
+				if err := ownAccount(ctx, q, userID, *account); err != nil {
+					return err
+				}
+			}
+		case StatusCommitted:
+			account = imp.AccountID
+		default:
+			return fmt.Errorf("import is %s: %w", status, ErrState)
+		}
+		var fps [][]byte
+		if status == StatusCommitted {
+			if err := lockAccount(ctx, q, userID, *account); err != nil {
+				return err
+			}
+			if fps, err = sourcedFingerprints(ctx, q, userID, *account, id); err != nil {
+				return err
+			}
+		}
+		if _, err := q.DeleteImportRows(ctx, db.DeleteImportRowsParams{UserID: userID, ImportID: id}); err != nil {
+			return err
+		}
+		updated, err := q.UpdateImportPreview(ctx, db.UpdateImportPreviewParams{UserID: userID, ID: id, ExpectedStatus: string(status),
+			AccountID: account, Encoding: s.Encoding, Delimiter: s.Delimiter, Headers: headers, ColumnTypes: types,
+			Mapping: s.Mapping, Options: s.Options, MappingSource: s.MappingSource, HeaderSignature: s.HeaderSignature[:], Stats: s.Stats})
+		if err != nil {
+			return err
+		}
+		if _, err := store.InsertImportRows(ctx, tx, id, userID, rows); err != nil {
+			return err
+		}
+		if status == StatusCommitted {
+			if updated, err = q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: id, FromStatus: string(StatusCommitted),
+				ToStatus: string(StatusCommitting), Now: l.clock.Now()}); err != nil {
+				return err
+			}
+			if _, err := q.DeleteOrphanTransactions(ctx, db.DeleteOrphanTransactionsParams{UserID: userID, AccountID: *account}); err != nil {
+				return err
+			}
+			if _, err := rematerializeAll(ctx, q, userID, *account, fps, l.clock.Now()); err != nil {
+				return err
+			}
+			if enqueue != nil {
+				if err := enqueue(ctx, tx); err != nil {
+					return err
+				}
+			}
+		}
+		out, err = importOf(updated)
+		return err
+	})
+	return out, dbErr("restage import", err)
 }
 
 // rawField is the stored form of ingest.RawField: {"h": header, "v": value} (PLAN §5.2).
@@ -308,4 +431,23 @@ func ImportRows(rows []ingest.StagedRow) []store.ImportRow {
 		o.CounterpartyAccount, o.CounterpartyN = r.CounterpartyAccount, r.CounterpartyN
 	}
 	return out
+}
+
+// RowCounts are the staged rows of an import: all, with a parse error, and linked to a transaction.
+type RowCounts struct {
+	Rows, Errors, Linked int
+}
+
+// ImportRowCounts counts an import's staged rows.
+func (l *Ledger) ImportRowCounts(ctx context.Context, userID, importID uuid.UUID) (RowCounts, error) {
+	var out RowCounts
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		if _, err := q.GetImport(ctx, db.GetImportParams{UserID: userID, ID: importID}); err != nil {
+			return err
+		}
+		c, err := q.CountImportRows(ctx, db.CountImportRowsParams{UserID: userID, ImportID: importID})
+		out = RowCounts{Rows: int(c.Rows), Errors: int(c.Errors), Linked: int(c.Linked)}
+		return err
+	})
+	return out, dbErr("import row counts", err)
 }

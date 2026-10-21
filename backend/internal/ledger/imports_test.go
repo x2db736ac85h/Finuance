@@ -1,11 +1,21 @@
 package ledger_test
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
 
 // identities is the set of (fingerprint, occurrence) of the valid staged rows of the given files:
@@ -201,12 +211,14 @@ func TestImportRowsPageAndErrors(t *testing.T) {
 	}
 }
 
+// TestBankCategoryResolvedOnCommit: the commit upserts a category per bank category (PLAN 6.6 step
+// 1). An existing category with the same normalised name is reused and keeps its spelling.
 func TestBankCategoryResolvedOnCommit(t *testing.T) {
 	e := newEnv(t)
 	u := e.user()
 	a := e.account(u, "A")
-	in := staged(t, "c.csv", []byte("Data;Opis;Kwota;Kategoria\n02.01.2025;a;-1,00;Żywność\n03.01.2025;b;-2,00;Inne\n"), &a.ID)
-	if _, err := e.l.EnsureCategories(e.ctx, u, []string{"ŻYWNOŚĆ"}); err != nil { // the commit job does this in Phase 6
+	in := staged(t, "c.csv", []byte("Data;Opis;Kwota;Kategoria\n02.01.2025;a;-1,00;Żywność\n03.01.2025;b;-2,00;Inne\n04.01.2025;c;-3,00;\n"), &a.ID)
+	if _, err := e.l.EnsureCategories(e.ctx, u, []string{"ŻYWNOŚĆ"}); err != nil {
 		t.Fatal(err)
 	}
 	imp, err := e.l.CreateImport(e.ctx, u, in)
@@ -219,7 +231,103 @@ func TestBankCategoryResolvedOnCommit(t *testing.T) {
 	rows, _ := e.l.ImportRowsPage(e.ctx, u, imp.ID, false, 0, 10)
 	food, _ := e.l.GetTransaction(e.ctx, u, *rows[0].TransactionID)
 	other, _ := e.l.GetTransaction(e.ctx, u, *rows[1].TransactionID)
-	if food.CategoryName != "ŻYWNOŚĆ" || food.CategorySource != "bank" || other.CategoryID != nil || other.CategorySource != "none" {
-		t.Errorf("food = %q/%s, other = %v/%s", food.CategoryName, food.CategorySource, other.CategoryID, other.CategorySource)
+	none, _ := e.l.GetTransaction(e.ctx, u, *rows[2].TransactionID)
+	if food.CategoryName != "ŻYWNOŚĆ" || food.CategorySource != "bank" || other.CategoryName != "Inne" || other.CategorySource != "bank" ||
+		none.CategoryID != nil || none.CategorySource != "none" {
+		t.Errorf("food = %q/%s, other = %q/%s, blank = %v/%s", food.CategoryName, food.CategorySource, other.CategoryName,
+			other.CategorySource, none.CategoryID, none.CategorySource)
+	}
+	if cats, _ := e.l.ListCategories(e.ctx, u); len(cats) != 2 {
+		t.Errorf("categories = %+v, want ŻYWNOŚĆ and Inne", cats)
+	}
+}
+
+// TestConcurrentOverlappingCommits commits two overlapping imports at the same time, several times:
+// no duplicate transactions, and the stats add up (PLAN 6 tests, "concurrency").
+func TestConcurrentOverlappingCommits(t *testing.T) {
+	e := newEnv(t)
+	for round := range 5 {
+		u := e.user()
+		a := e.account(u, "A")
+		impA, err := e.l.CreateImport(e.ctx, u, staged(t, "a.csv", fixture(t, fileA), &a.ID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		impC, err := e.l.CreateImport(e.ctx, u, staged(t, "c.csv", fixture(t, fileC), &a.ID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var res [2]ledger.CommitResult
+		var errs [2]error
+		var wg sync.WaitGroup
+		for i, id := range []uuid.UUID{impA.ID, impC.ID} {
+			wg.Go(func() { res[i], errs[i] = e.l.CommitImport(e.ctx, u, id) })
+		}
+		wg.Wait()
+		if errs[0] != nil || errs[1] != nil {
+			t.Fatalf("round %d: %v / %v", round, errs[0], errs[1])
+		}
+		want := len(identities(t, fileA, fileC))
+		if got := e.countTransactions(u, a.ID); got != want {
+			t.Fatalf("round %d: %d transactions, want %d", round, got, want)
+		}
+		if res[0].New+res[1].New != want {
+			t.Errorf("round %d: new %d + %d ≠ %d transactions", round, res[0].New, res[1].New, want)
+		}
+		rows := len(staged(t, fileA, fixture(t, fileA), nil).Rows) + len(staged(t, fileC, fixture(t, fileC), nil).Rows)
+		if total := int64(res[0].New+res[1].New) + res[0].Duplicates + res[1].Duplicates + res[0].Errors + res[1].Errors; total != int64(rows) {
+			t.Errorf("round %d: stats %+v %+v don't add up to %d rows", round, res[0], res[1], rows)
+		}
+	}
+}
+
+// TestOverlapMatchesOracleRows: after A, B, C the account holds exactly the legacy merged rows,
+// with their multiplicity (the oracle's default result keeps three 03.01 coffees: two genuine ones
+// from A, plus the third that only C has).
+func TestOverlapMatchesOracleRows(t *testing.T) {
+	var oracle struct {
+		Default struct {
+			Rows [][]string `json:"rows"` // date, payee, title, amount, category, file
+		} `json:"default"`
+	}
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "oracle", "dedupe", "overlap-A-B-C.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &oracle); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]int{}
+	for _, r := range oracle.Default.Rows {
+		amount := strings.NewReplacer(" ", "", " ", "", ",", "").Replace(r[3]) // "-2 850,00" → "-285000"
+		want[strings.Join([]string{r[0], r[1], r[2], amount}, "|")]++
+	}
+
+	e := newEnv(t)
+	u := e.user()
+	a := e.account(u, "Overlap")
+	for _, f := range []string{fileA, fileB, fileC} {
+		e.importFile(u, a.ID, f)
+	}
+	got := map[string]int{}
+	if err := e.st.WithUser(e.ctx, u, func(_ *db.Queries, tx pgx.Tx) error {
+		rows, err := tx.Query(e.ctx, `SELECT to_char(booked_on, 'DD.MM.YYYY') || '|' || payee || '|' || description || '|' || amount_minor
+			FROM transactions WHERE user_id = $1 AND account_id = $2`, u, a.ID)
+		if err != nil {
+			return err
+		}
+		keys, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		for _, k := range keys {
+			got[k]++
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("transactions differ from the oracle's merged rows (-oracle +db):\n%s", diff)
+	}
+	if n := got["03.01.2025|KAWIARNIA BETA|Kawa|-1200"]; n != 3 {
+		t.Errorf("%d coffees on 03.01, want 3", n)
 	}
 }

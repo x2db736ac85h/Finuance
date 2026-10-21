@@ -249,7 +249,7 @@ func TestOverrideAndImportQueries(t *testing.T) {
 		if err != nil || string(f) != "a;b" {
 			t.Errorf("file = %q, %v", f, err)
 		}
-		imp, err := q.UpdateImportPreview(ctx, db.UpdateImportPreviewParams{UserID: u, ID: d.imp, AccountID: &d.account, Encoding: "windows-1250", Delimiter: ",",
+		imp, err := q.UpdateImportPreview(ctx, db.UpdateImportPreviewParams{UserID: u, ID: d.imp, ExpectedStatus: "previewed", AccountID: &d.account, Encoding: "windows-1250", Delimiter: ",",
 			Headers: []byte(`["A"]`), ColumnTypes: []byte(`["text"]`), Mapping: []byte(`{"x":1}`), Options: []byte(`{}`), MappingSource: "user", HeaderSignature: []byte{2}, Stats: []byte(`{}`)})
 		if err != nil || imp.Encoding != "windows-1250" || imp.MappingSource != "user" {
 			t.Errorf("update preview = %+v, %v", imp, err)
@@ -268,7 +268,7 @@ func TestOverrideAndImportQueries(t *testing.T) {
 			t.Errorf("failed import still counts as a duplicate: %v", err)
 		}
 		// Preview updates only apply while previewed.
-		if _, err := q.UpdateImportPreview(ctx, db.UpdateImportPreviewParams{UserID: u, ID: d.imp, Headers: []byte(`[]`), ColumnTypes: []byte(`[]`),
+		if _, err := q.UpdateImportPreview(ctx, db.UpdateImportPreviewParams{UserID: u, ID: d.imp, ExpectedStatus: "previewed", Headers: []byte(`[]`), ColumnTypes: []byte(`[]`),
 			Mapping: []byte(`{}`), Options: []byte(`{}`), MappingSource: "user", HeaderSignature: []byte{2}, Stats: []byte(`{}`)}); !errors.Is(err, pgx.ErrNoRows) {
 			t.Errorf("preview update on a failed import: %v", err)
 		}

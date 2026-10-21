@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 5 — Auth, users, preferences · **Branch:** phase/05-auth · **Status:** gate approved
+**Current phase:** 6 — Accounts and import pipeline · **Branch:** phase/06-imports · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -17,9 +17,27 @@
 - Phase 3: Claude writes all of `ingest`/`money`, with explanatory comments so Irwin can tweak it later (no hand-written parts). The ingest engine is a **strict port** of the legacy rules, including auto header detection; the mBank/PKO BP header fix moves to Phase 9 (import preview). The legacy demo generator is ported now (`internal/demo`) for the 100k-row benchmark.
 - Phase 4: RLS is **enabled and forced** on every user-owned table (ADR 0007; forced also binds the owner role). The `pl_natural` collation is applied in queries (`ORDER BY … COLLATE pl_natural`), not on columns. Phase 4 writes the set-based commit core (§4.4 steps 1, 1b, 2) and the delete-import orphan cleanup as `ledger` methods; Phase 6 adds the River job, category upsert, stats, profiles and `Rematerialize`. Investments get schema, RLS and queries now; the repository comes with their API.
 - Phase 5: `golang.org/x/crypto` (argon2id), `golang.org/x/time/rate` and `github.com/oapi-codegen/runtime` (the generator's support library, needed once the API has path parameters and uuid fields) approved as direct dependencies. `finuance admin set-password --email … --password-stdin` is added next to `create-user` (no email sending, so admins reset forgotten passwords; it revokes the user's sessions). The first preferences save must send `version: 0`; anything else is `409 stale_version`.
+- Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 6.1 Accounts CRUD (+ txCount, firstOn, lastOn)
+- [x] 6.2 `POST /imports`: multipart, NUL sniff, SHA-256 / 409, parse (+ profile), roles, account suggestion (pre-filled), stage, duplicate estimate, preview
+- [x] 6.3 `GET /imports`, `/imports/{id}`, `/rows` (onlyErrors, duplicate flag), `/file`
+- [x] 6.4 `PATCH /imports/{id}` (re-parse, re-stage, validation)
+- [x] 6.5 `POST /imports/{id}/commit` → 202, `InsertTx`
+- [x] 6.6 `CommitImport` job (categories, commit SQL, overrides, stats, profile, retries → failed, metrics); worker in Compose
+- [x] 6.7 `DELETE /imports/{id}` (orphans + re-materialise)
+- [x] 6.8 `POST /imports/{id}/reprocess`
+- [x] 6.9 `finuance seed-demo --email` (+ `make seed-demo email=…`)
+- [x] 6.10 v7 import settings end to end; `GET /imports/{id}/lines`; `headerAt`, `dropped`, `tailRows`
+- [x] 6.11 fast path `autoCommit=true`
+- [x] 6.12 source labels (`profileLabel`)
+- [x] 6.13 duplicate review backend: `Rematerialize`, overrides, `RematerializeFingerprint` job, `duplicatesSkipped`, property test
+- [x] Tests: overlap vs oracle (totals over HTTP, row multiset in the ledger), same-name, delete semantics, concurrent commits, reprocess keeps edits, profiles, errors, 409, job retry
+- [x] `scripts/import-smoke.sh` against `make up` (18 steps pass: 17 transactions after A+B+C, 16 after deleting C, as the oracle; worker metrics visible); ADR 0013 (per-account writer lock)
+
+## Phase 5 tasks (done)
 - [x] 5.1 `auth/password.go`: argon2id PHC, `Verify`, `NeedsRehash`; benchmark + ADR 0010
 - [x] 5.2 `auth/sessions.go`: create, resolve (absolute + idle expiry, last-seen throttle), revoke, revoke others, rotate
 - [x] 5.3 middleware: `RequireSession`, `CSRF`, `RateLimit`, cookie helper; ADRs 0011 (sessions/CSRF), 0012 (rate limiting)
@@ -83,6 +101,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 6 — Accounts and import pipeline: gate approved 2026-10-21 (import smoke matches the oracle; Pekao preview reviewed); `phase/06-imports` merged with `--no-ff`.
 - Phase 5 — Auth, users, preferences: gate approved 2026-10-21; `phase/05-auth` merged with `--no-ff`.
 - Phase 4 — Schema, store layer, RLS: gate approved 2026-10-20 (staging benchmark 8.0–9.7 s accepted against the 3 s target); `phase/04-schema-store-rls` merged with `--no-ff`.
 - Phase 3 — Ingest engine: gate approved 2026-10-20 (benchmark ≈ 563 ms accepted against the 500 ms target); `phase/03-ingest-engine` merged with `--no-ff`.
@@ -101,6 +120,14 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 6.2/6.4: the mapping references columns by index **and** header name (`{"index": 3, "header": "Kwota"}`; `ledger.MappingDoc`, bound to the OpenAPI schema with `x-go-type`). A mapping whose header names no longer match the shaped table (e.g. after changing `headerRow`) is a `422`, instead of silently reading the wrong column.
+- 6.2: the upload body limit is `FINUANCE_MAX_UPLOAD_BYTES` + 64 KiB for the multipart framing; the file itself is checked exactly. A request with a non-multipart `Content-Type` is `415`, and a body over the limit is `413`, also when the request validator is the one reading it.
+- 6.3: the per-row `duplicate` flag means "the account already has this identity" before the commit, and "this row's transaction takes its values from another import" after it.
+- 6.10: `GET /lines` is served by a new `ingest.Lines`, which decodes and classifies records (header, preamble, data, footer, blank, skipped) with the same rules as `Shape`. A test checks the two agree on every fixture and option set (241 pairs).
+- 6.12: `profileLabel` is assigned per distinct header layout among the user's imports (first-seen order), shown once there are two or more layouts. Counting layouts rather than saved profiles labels a new layout's preview straight away, before any profile exists for it.
+- 6.6: overlapping commits, deletes, reprocesses and override changes on one account are serialised by a row lock on the account (ADR 0013).
+- 6.9: `SeedDemo` lives in `ledger` (the CLI and Phase 8's `POST /demo-data` share it) and commits inline, without a job. If the import fails (e.g. the user already imported the same demo bytes), the new demo account is removed again.
+- Phase 6: ledger error kinds (`ErrNotFound`, `ErrConflict`, `ErrState`, `ErrInvalid`) now map to 404/409/409/422 in `problems.go`; before, they would have surfaced as `500`.
 - 5.1: argon2id parameters are configurable through `FINUANCE_ARGON2_MEMORY_KIB`, `FINUANCE_ARGON2_TIME` and `FINUANCE_ARGON2_THREADS` (new config variables; defaults are the OWASP baseline). At most 4 hashes run at once per process.
 - 5.2: the session queries changed: `expires_at` is now only the absolute expiry, and the idle expiry is checked against `last_seen_at` (an `idle_cutoff` parameter). `TouchSession` no longer slides `expires_at`. Revoking by public id and listing sessions are new queries.
 - 5.3: `requireSession` and `CSRF` run as per-route middlewares of the generated router, so unknown paths still answer `404`, and an unauthenticated request with a bad body gets `401`, not `422`. The OpenAPI validator's security check is a no-op; the session layer authenticates.
@@ -148,7 +175,7 @@
 - Anonymisation key: `testdata/private/anon.key` (gitignored, lost with the container). A new key only changes the fake values of future runs.
 - Phase 9: fix auto header detection for mBank and PKO BP in the import preview (`ALLOWED_DIFFS.md` row 4; targets `ingest-cfg/banks/*/header-*.json`). Phase 3 ports the legacy rule as is.
 
-- Phase 6: around `ledger.CommitImport`: the River job, the category upsert before step 1 (`EnsureCategories` exists), dedupe overrides in commit/delete (step 2b, `Rematerialize`), the profile upsert, re-staging on PATCH/reprocess (`DeleteImportRows` + `InsertImportRows`).
+- Phase 8: `POST /demo-data` calls `ledger.SeedDemo` (the same path as `finuance seed-demo`).
 - Later (optional): re-measure the staging insert on a dev machine; the schema options in `docs/perf.md` stay open if it matters.
 - Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
 
@@ -158,6 +185,9 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-21 — Phase 6 gate approved; merged. Next: plan Phase 7.
+- 2026-10-21 — Phase 6 built on `phase/06-imports`: accounts and the full import lifecycle over HTTP (upload, preview, lines, PATCH, commit job, reprocess, delete, fast path, labels), Rematerialize + overrides with a property test, per-account writer lock (ADR 0013), seed-demo, worker in Compose, `import-smoke.sh` (matches the oracle). Next: Irwin's gate review.
+- 2026-10-21 — Phase 6 planned and approved (pre-fill the suggested account). Branch `phase/06-imports`.
 - 2026-10-21 — Phase 5 gate approved; merged. Next: plan Phase 6.
 - 2026-10-21 — Phase 5 built on `phase/05-auth`: argon2id + ADR 0010, sessions (absolute + idle expiry, rotation, revoke), CSRF + ADR 0011, rate limits + ADR 0012, auth/me/sessions/preferences endpoints, `DELETE /me`, session cleanup job, insert-only River client, `admin create-user`/`set-password`, THREAT-MODEL v1, `auth-smoke.sh` (passes against `make up`). Next: Irwin's gate review.
 - 2026-10-21 — Phase 5 planned and approved (deps x/crypto + x/time, admin set-password, strict first preferences save). Branch `phase/05-auth`.

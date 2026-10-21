@@ -22,6 +22,9 @@ type Account struct {
 	IsDemo              bool
 	ArchivedAt          *time.Time
 	CreatedAt           time.Time
+	// Filled by ListAccounts and GetAccount: transactions and their date range (zero when empty).
+	TxCount         int64
+	FirstOn, LastOn *platform.Date
 }
 
 // AccountInput is what a user sets on create and update.
@@ -87,28 +90,57 @@ func (l *Ledger) CreateAccount(ctx context.Context, userID uuid.UUID, in Account
 	return out, dbErr("create account", err)
 }
 
-// GetAccount returns one account.
+// GetAccount returns one account with its transaction count and date range.
 func (l *Ledger) GetAccount(ctx context.Context, userID, id uuid.UUID) (Account, error) {
 	var out Account
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 		a, err := q.GetAccount(ctx, db.GetAccountParams{UserID: userID, ID: id})
+		if err != nil {
+			return err
+		}
 		out = accountOf(a)
-		return err
+		return withStats(ctx, q, userID, []*Account{&out})
 	})
 	return out, dbErr("get account", err)
 }
 
-// ListAccounts returns the user's accounts in natural Polish order of their names.
+// ListAccounts returns the user's accounts in natural Polish order of their names, with their
+// transaction counts and date ranges.
 func (l *Ledger) ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error) {
 	var out []Account
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 		rows, err := q.ListAccounts(ctx, userID)
-		for i := range rows {
-			out = append(out, accountOf(rows[i]))
+		if err != nil {
+			return err
 		}
-		return err
+		out = make([]Account, len(rows))
+		ptrs := make([]*Account, len(rows))
+		for i := range rows {
+			out[i] = accountOf(rows[i])
+			ptrs[i] = &out[i]
+		}
+		return withStats(ctx, q, userID, ptrs)
 	})
 	return out, dbErr("list accounts", err)
+}
+
+// withStats fills TxCount, FirstOn and LastOn from one aggregate query.
+func withStats(ctx context.Context, q *db.Queries, userID uuid.UUID, accounts []*Account) error {
+	stats, err := q.AccountStats(ctx, userID)
+	if err != nil {
+		return err
+	}
+	by := map[uuid.UUID]db.AccountStatsRow{}
+	for _, s := range stats {
+		by[s.AccountID] = s
+	}
+	for _, a := range accounts {
+		if s, ok := by[a.ID]; ok && s.TxCount > 0 {
+			first, last := s.FirstOn, s.LastOn
+			a.TxCount, a.FirstOn, a.LastOn = s.TxCount, &first, &last
+		}
+	}
+	return nil
 }
 
 // UpdateAccount replaces the editable fields. Archiving keeps an existing archive time.

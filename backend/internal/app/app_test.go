@@ -20,7 +20,9 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/demo"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
@@ -234,6 +236,46 @@ func TestAdminCommands(t *testing.T) {
 		}
 	}
 	if len(out) != 2 || !strings.Contains(out[0], "created user "+email) || strings.Contains(strings.Join(out, " "), "password 123") {
+		t.Errorf("output = %q", out)
+	}
+}
+
+func TestSeedDemo(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	cfg := testConfig(t, tdb)
+	ctx := context.Background()
+	var out []string
+	log := func(f string, a ...any) { out = append(out, fmt.Sprintf(f, a...)) }
+	email := "seed-demo@example.test"
+	if err := Admin(ctx, cfg, AdminInput{Command: "create-user", Email: email, Password: strings.NewReader("seed password 123\n")}, log); err != nil {
+		t.Fatal(err)
+	}
+	if err := SeedDemo(ctx, cfg, email, log); err != nil {
+		t.Fatal(err)
+	}
+	st := store.New(tdb.App)
+	u, err := NewAuth(st, cfg).UserByEmail(ctx, email)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounts, err := ledger.New(st, platform.SystemClock{}).ListAccounts(ctx, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Every demo row is distinct (unique DEMO references), so each one becomes a transaction.
+	rows := strings.Count(demo.Recent(time.Now()), "\n")
+	yesterday := platform.DateOf(time.Now().UTC().AddDate(0, 0, -1), time.UTC)
+	if len(accounts) != 1 || !accounts[0].IsDemo || accounts[0].Name != ledger.DemoAccountName || int(accounts[0].TxCount) != rows ||
+		accounts[0].LastOn == nil || *accounts[0].LastOn != yesterday {
+		t.Fatalf("accounts = %+v, want one demo account with %d transactions up to %s", accounts, rows, yesterday)
+	}
+	if err := SeedDemo(ctx, cfg, email, log); !errors.Is(err, ledger.ErrConflict) {
+		t.Errorf("second seed: %v, want a conflict", err)
+	}
+	if err := SeedDemo(ctx, cfg, "nobody@example.test", log); !errors.Is(err, platform.ErrNotFound) {
+		t.Errorf("unknown user: %v", err)
+	}
+	if len(out) != 2 || !strings.Contains(out[1], fmt.Sprintf("%d transactions", rows)) {
 		t.Errorf("output = %q", out)
 	}
 }

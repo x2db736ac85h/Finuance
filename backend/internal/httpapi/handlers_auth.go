@@ -15,6 +15,7 @@ type limits struct {
 	loginIP      *mw.Limiter // signup + login per client IP
 	loginIPEmail *mw.Limiter // signup + login per (IP, email)
 	password     *mw.Limiter // password checks per signed-in user
+	upload       *mw.Limiter // uploads per user
 }
 
 func newLimits(clock platform.Clock) limits {
@@ -22,6 +23,7 @@ func newLimits(clock platform.Clock) limits {
 		loginIP:      mw.NewLimiter(mw.LoginPerIP, clock, 0),
 		loginIPEmail: mw.NewLimiter(mw.LoginPerIPEmail, clock, 0),
 		password:     mw.NewLimiter(mw.PasswordPerUser, clock, 0),
+		upload:       mw.NewLimiter(mw.UploadPerUser, clock, 0),
 	}
 }
 

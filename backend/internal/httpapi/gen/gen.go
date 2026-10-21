@@ -11,8 +11,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"path"
@@ -22,7 +24,149 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 )
+
+// Defines values for ImportDetailColumnTypes.
+const (
+	Date   ImportDetailColumnTypes = "date"
+	Number ImportDetailColumnTypes = "number"
+	Text   ImportDetailColumnTypes = "text"
+)
+
+// Valid indicates whether the value is a known member of the ImportDetailColumnTypes enum.
+func (e ImportDetailColumnTypes) Valid() bool {
+	switch e {
+	case Date:
+		return true
+	case Number:
+		return true
+	case Text:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportDetailMappingSource.
+const (
+	ImportDetailMappingSourceDetected ImportDetailMappingSource = "detected"
+	ImportDetailMappingSourceProfile  ImportDetailMappingSource = "profile"
+	ImportDetailMappingSourceUser     ImportDetailMappingSource = "user"
+)
+
+// Valid indicates whether the value is a known member of the ImportDetailMappingSource enum.
+func (e ImportDetailMappingSource) Valid() bool {
+	switch e {
+	case ImportDetailMappingSourceDetected:
+		return true
+	case ImportDetailMappingSourceProfile:
+		return true
+	case ImportDetailMappingSourceUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportDetailStatus.
+const (
+	ImportDetailStatusCommitted  ImportDetailStatus = "committed"
+	ImportDetailStatusCommitting ImportDetailStatus = "committing"
+	ImportDetailStatusFailed     ImportDetailStatus = "failed"
+	ImportDetailStatusPreviewed  ImportDetailStatus = "previewed"
+)
+
+// Valid indicates whether the value is a known member of the ImportDetailStatus enum.
+func (e ImportDetailStatus) Valid() bool {
+	switch e {
+	case ImportDetailStatusCommitted:
+		return true
+	case ImportDetailStatusCommitting:
+		return true
+	case ImportDetailStatusFailed:
+		return true
+	case ImportDetailStatusPreviewed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportLinesLinesStatus.
+const (
+	Blank         ImportLinesLinesStatus = "blank"
+	Data          ImportLinesLinesStatus = "data"
+	FooterDropped ImportLinesLinesStatus = "footer_dropped"
+	Header        ImportLinesLinesStatus = "header"
+	Preamble      ImportLinesLinesStatus = "preamble"
+	Skipped       ImportLinesLinesStatus = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the ImportLinesLinesStatus enum.
+func (e ImportLinesLinesStatus) Valid() bool {
+	switch e {
+	case Blank:
+		return true
+	case Data:
+		return true
+	case FooterDropped:
+		return true
+	case Header:
+		return true
+	case Preamble:
+		return true
+	case Skipped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportSummaryMappingSource.
+const (
+	ImportSummaryMappingSourceDetected ImportSummaryMappingSource = "detected"
+	ImportSummaryMappingSourceProfile  ImportSummaryMappingSource = "profile"
+	ImportSummaryMappingSourceUser     ImportSummaryMappingSource = "user"
+)
+
+// Valid indicates whether the value is a known member of the ImportSummaryMappingSource enum.
+func (e ImportSummaryMappingSource) Valid() bool {
+	switch e {
+	case ImportSummaryMappingSourceDetected:
+		return true
+	case ImportSummaryMappingSourceProfile:
+		return true
+	case ImportSummaryMappingSourceUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportSummaryStatus.
+const (
+	ImportSummaryStatusCommitted  ImportSummaryStatus = "committed"
+	ImportSummaryStatusCommitting ImportSummaryStatus = "committing"
+	ImportSummaryStatusFailed     ImportSummaryStatus = "failed"
+	ImportSummaryStatusPreviewed  ImportSummaryStatus = "previewed"
+)
+
+// Valid indicates whether the value is a known member of the ImportSummaryStatus enum.
+func (e ImportSummaryStatus) Valid() bool {
+	switch e {
+	case ImportSummaryStatusCommitted:
+		return true
+	case ImportSummaryStatusCommitting:
+		return true
+	case ImportSummaryStatusFailed:
+		return true
+	case ImportSummaryStatusPreviewed:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for ProblemCode.
 const (
@@ -75,15 +219,79 @@ func (e ProblemCode) Valid() bool {
 	}
 }
 
+// Account defines model for Account.
+type Account struct {
+	Archived  bool                `json:"archived"`
+	CreatedAt time.Time           `json:"createdAt"`
+	Currency  string              `json:"currency"`
+	FirstOn   *openapi_types.Date `json:"firstOn,omitempty"`
+	Id        openapi_types.UUID  `json:"id"`
+	IsDemo    bool                `json:"isDemo"`
+	LastOn    *openapi_types.Date `json:"lastOn,omitempty"`
+	Name      string              `json:"name"`
+
+	// NumberHint Last four digits of the account number.
+	NumberHint     *string `json:"numberHint,omitempty"`
+	OpeningBalance Money   `json:"openingBalance"`
+	TxCount        int64   `json:"txCount"`
+}
+
+// AccountInput defines model for AccountInput.
+type AccountInput struct {
+	Archived *bool `json:"archived,omitempty"`
+
+	// Currency Default PLN.
+	Currency            *string `json:"currency,omitempty"`
+	Name                string  `json:"name"`
+	NumberHint          *string `json:"numberHint,omitempty"`
+	OpeningBalanceMinor *int64  `json:"openingBalanceMinor,omitempty"`
+}
+
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"currentPassword"`
 	NewPassword     string `json:"newPassword"`
 }
 
+// ColRef defines model for ColRef.
+type ColRef struct {
+	Header string `json:"header"`
+	Index  int    `json:"index"`
+}
+
+// CommitRequest defines model for CommitRequest.
+type CommitRequest struct {
+	// RememberMapping Save the mapping and options for files with the same layout.
+	RememberMapping *bool `json:"rememberMapping,omitempty"`
+}
+
 // DeleteMeRequest defines model for DeleteMeRequest.
 type DeleteMeRequest struct {
 	Password string `json:"password"`
+}
+
+// DuplicateFileProblem defines model for DuplicateFileProblem.
+type DuplicateFileProblem struct {
+	// Code Stable machine-readable error code.
+	Code             ProblemCode        `json:"code"`
+	Detail           *string            `json:"detail,omitempty"`
+	Errors           *[]FieldError      `json:"errors,omitempty"`
+	ExistingImportId openapi_types.UUID `json:"existingImportId"`
+
+	// Instance Request path.
+	Instance  *string `json:"instance,omitempty"`
+	RequestId *string `json:"requestId,omitempty"`
+
+	// Status Example: 422
+	Status int `json:"status"`
+
+	// Title Example: Validation failed
+	Title string `json:"title"`
+
+	// Type Relative URI reference `/problems/<code>`.
+	//
+	// Example: /problems/validation_failed
+	Type string `json:"type"`
 }
 
 // FieldError defines model for FieldError.
@@ -93,11 +301,159 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
+// ImportChanges defines model for ImportChanges.
+type ImportChanges struct {
+	AccountId *openapi_types.UUID `json:"accountId,omitempty"`
+
+	// Mapping Columns per canonical role (PLAN §4.3). An absent role is not mapped.
+	Mapping *Mapping `json:"mapping,omitempty"`
+
+	// Options How the file is read and staged (PLAN §4.3). headerRow is "auto", "none" or a 1-based record number.
+	Options *ImportOptions `json:"options,omitempty"`
+}
+
+// ImportDetail defines model for ImportDetail.
+type ImportDetail struct {
+	AccountId   *openapi_types.UUID       `json:"accountId,omitempty"`
+	ColumnTypes []ImportDetailColumnTypes `json:"columnTypes"`
+	CommittedAt *time.Time                `json:"committedAt,omitempty"`
+	CreatedAt   time.Time                 `json:"createdAt"`
+	Delimiter   string                    `json:"delimiter"`
+	Encoding    string                    `json:"encoding"`
+	Error       *string                   `json:"error,omitempty"`
+	Filename    string                    `json:"filename"`
+	Headers     []string                  `json:"headers"`
+	Id          openapi_types.UUID        `json:"id"`
+
+	// Mapping Columns per canonical role (PLAN §4.3). An absent role is not mapped.
+	Mapping       Mapping                   `json:"mapping"`
+	MappingSource ImportDetailMappingSource `json:"mappingSource"`
+
+	// Options How the file is read and staged (PLAN §4.3). headerRow is "auto", "none" or a 1-based record number.
+	Options ImportOptions `json:"options"`
+
+	// ProfileLabel Source label (b1, b2, …) of the file layout, when the user has more than one layout.
+	ProfileLabel *string `json:"profileLabel,omitempty"`
+	SizeBytes    int     `json:"sizeBytes"`
+
+	// Stats {rows, errors, headerAt, dropped, dateFrom, dateTo} and, once committed, {new, duplicates}.
+	Stats  map[string]interface{} `json:"stats"`
+	Status ImportDetailStatus     `json:"status"`
+}
+
+// ImportDetailColumnTypes defines model for ImportDetail.ColumnTypes.
+type ImportDetailColumnTypes string
+
+// ImportDetailMappingSource defines model for ImportDetail.MappingSource.
+type ImportDetailMappingSource string
+
+// ImportDetailStatus defines model for ImportDetail.Status.
+type ImportDetailStatus string
+
+// ImportLines defines model for ImportLines.
+type ImportLines struct {
+	Delimiter string `json:"delimiter"`
+	Encoding  string `json:"encoding"`
+	Lines     []struct {
+		Fields []string `json:"fields"`
+
+		// Record 1-based, as headerRow counts.
+		Record int                    `json:"record"`
+		Status ImportLinesLinesStatus `json:"status"`
+	} `json:"lines"`
+
+	// Total Records in the file.
+	Total int `json:"total"`
+}
+
+// ImportLinesLinesStatus defines model for ImportLines.Lines.Status.
+type ImportLinesLinesStatus string
+
+// ImportOptions How the file is read and staged (PLAN §4.3). headerRow is "auto", "none" or a 1-based record number.
+type ImportOptions = ledger.OptionsDoc
+
+// ImportPreview defines model for ImportPreview.
+type ImportPreview struct {
+	Import ImportDetail `json:"import"`
+
+	// Missing Required roles that are not mapped yet; the commit needs this empty.
+	Missing []string `json:"missing"`
+
+	// SampleRows The first 50 staged rows.
+	SampleRows []StagedRow `json:"sampleRows"`
+	Stats      ImportStats `json:"stats"`
+
+	// SuggestedAccount The account matching the file's own-account column (pre-filled when unique), or a name for a new one.
+	SuggestedAccount struct {
+		CreateName *string             `json:"createName,omitempty"`
+		Id         *openapi_types.UUID `json:"id,omitempty"`
+	} `json:"suggestedAccount"`
+
+	// TailRows The last 5 staged rows, when the file has more than 55.
+	TailRows []StagedRow `json:"tailRows"`
+	Warnings []struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"warnings"`
+}
+
+// ImportRowPage defines model for ImportRowPage.
+type ImportRowPage struct {
+	Rows []StagedRow `json:"rows"`
+
+	// Total Rows in the import (errored rows only, with onlyErrors).
+	Total int `json:"total"`
+}
+
+// ImportStats defines model for ImportStats.
+type ImportStats struct {
+	DateFrom *openapi_types.Date `json:"dateFrom,omitempty"`
+	DateTo   *openapi_types.Date `json:"dateTo,omitempty"`
+
+	// Dropped Short summary rows left out.
+	Dropped            int `json:"dropped"`
+	DuplicatesEstimate int `json:"duplicatesEstimate"`
+	Errors             int `json:"errors"`
+
+	// HeaderAt 1-based record of the header row; 0 = no header.
+	HeaderAt    int `json:"headerAt"`
+	NewEstimate int `json:"newEstimate"`
+	Rows        int `json:"rows"`
+}
+
+// ImportSummary defines model for ImportSummary.
+type ImportSummary struct {
+	AccountId     *openapi_types.UUID        `json:"accountId,omitempty"`
+	CommittedAt   *time.Time                 `json:"committedAt,omitempty"`
+	CreatedAt     time.Time                  `json:"createdAt"`
+	Error         *string                    `json:"error,omitempty"`
+	Filename      string                     `json:"filename"`
+	Id            openapi_types.UUID         `json:"id"`
+	MappingSource ImportSummaryMappingSource `json:"mappingSource"`
+
+	// ProfileLabel Source label (b1, b2, …) of the file layout, when the user has more than one layout.
+	ProfileLabel *string `json:"profileLabel,omitempty"`
+	SizeBytes    int     `json:"sizeBytes"`
+
+	// Stats {rows, errors, headerAt, dropped, dateFrom, dateTo} and, once committed, {new, duplicates}.
+	Stats  map[string]interface{} `json:"stats"`
+	Status ImportSummaryStatus    `json:"status"`
+}
+
+// ImportSummaryMappingSource defines model for ImportSummary.MappingSource.
+type ImportSummaryMappingSource string
+
+// ImportSummaryStatus defines model for ImportSummary.Status.
+type ImportSummaryStatus string
+
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+// Mapping Columns per canonical role (PLAN §4.3). An absent role is not mapped.
+type Mapping = ledger.MappingDoc
 
 // Meta defines model for Meta.
 type Meta struct {
@@ -159,6 +515,12 @@ type Problem struct {
 // ProblemCode Stable machine-readable error code.
 type ProblemCode string
 
+// RawField defines model for RawField.
+type RawField struct {
+	Header string `json:"header"`
+	Value  string `json:"value"`
+}
+
 // Session defines model for Session.
 type Session struct {
 	CreatedAt time.Time `json:"createdAt"`
@@ -187,6 +549,31 @@ type SignupRequest struct {
 
 	// Password At least 12 characters, at most 1024 bytes.
 	Password string `json:"password"`
+}
+
+// StagedRow defines model for StagedRow.
+type StagedRow struct {
+	Amount              *Money              `json:"amount,omitempty"`
+	Balance             *Money              `json:"balance,omitempty"`
+	BankCategory        string              `json:"bankCategory"`
+	BookedOn            *openapi_types.Date `json:"bookedOn,omitempty"`
+	CounterpartyAccount string              `json:"counterpartyAccount"`
+	Description         string              `json:"description"`
+
+	// Duplicate Before the commit, the account already has this transaction; after it, the row merged into another import's transaction.
+	Duplicate bool `json:"duplicate"`
+
+	// Error Why the row can't be imported (it is never committed).
+	Error     *string    `json:"error,omitempty"`
+	Payee     string     `json:"payee"`
+	Raw       []RawField `json:"raw"`
+	Reference string     `json:"reference"`
+
+	// RowIndex 0-based data row of the file.
+	RowIndex      int                 `json:"rowIndex"`
+	TransactionId *openapi_types.UUID `json:"transactionId,omitempty"`
+	TxType        string              `json:"txType"`
+	ValueOn       *openapi_types.Date `json:"valueOn,omitempty"`
 }
 
 // StalePreferencesProblem defines model for StalePreferencesProblem.
@@ -229,14 +616,63 @@ type User struct {
 	IsDemo bool               `json:"isDemo"`
 }
 
+// Id defines model for Id.
+type Id = openapi_types.UUID
+
 // TooManyRequests RFC 9457 problem details.
 type TooManyRequests = Problem
+
+// ListImportsParams defines parameters for ListImports.
+type ListImportsParams struct {
+	AccountId *openapi_types.UUID `form:"accountId,omitempty" json:"accountId,omitempty"`
+}
+
+// UploadImportMultipartBody defines parameters for UploadImport.
+type UploadImportMultipartBody struct {
+	AccountId *openapi_types.UUID `json:"accountId,omitempty"`
+	File      openapi_types.File  `json:"file"`
+}
+
+// UploadImportParams defines parameters for UploadImport.
+type UploadImportParams struct {
+	AutoCommit *bool `form:"autoCommit,omitempty" json:"autoCommit,omitempty"`
+}
+
+// ListImportLinesParams defines parameters for ListImportLines.
+type ListImportLinesParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListImportRowsParams defines parameters for ListImportRows.
+type ListImportRowsParams struct {
+	Offset     *int  `form:"offset,omitempty" json:"offset,omitempty"`
+	Limit      *int  `form:"limit,omitempty" json:"limit,omitempty"`
+	OnlyErrors *bool `form:"onlyErrors,omitempty" json:"onlyErrors,omitempty"`
+}
+
+// CreateAccountJSONRequestBody defines body for CreateAccount for application/json ContentType.
+type CreateAccountJSONRequestBody = AccountInput
+
+// UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
+type UpdateAccountJSONRequestBody = AccountInput
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
 // SignupJSONRequestBody defines body for Signup for application/json ContentType.
 type SignupJSONRequestBody = SignupRequest
+
+// UploadImportMultipartRequestBody defines body for UploadImport for multipart/form-data ContentType.
+type UploadImportMultipartRequestBody UploadImportMultipartBody
+
+// UpdateImportJSONRequestBody defines body for UpdateImport for application/json ContentType.
+type UpdateImportJSONRequestBody = ImportChanges
+
+// CommitImportJSONRequestBody defines body for CommitImport for application/json ContentType.
+type CommitImportJSONRequestBody = CommitRequest
+
+// ReprocessImportJSONRequestBody defines body for ReprocessImport for application/json ContentType.
+type ReprocessImportJSONRequestBody = ImportChanges
 
 // DeleteMeJSONRequestBody defines body for DeleteMe for application/json ContentType.
 type DeleteMeJSONRequestBody = DeleteMeRequest
@@ -252,6 +688,18 @@ type PutPreferencesJSONRequestBody = Preferences
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListAccounts The user's accounts
+	// (GET /accounts)
+	ListAccounts(w http.ResponseWriter, r *http.Request)
+	// CreateAccount Create an account
+	// (POST /accounts)
+	CreateAccount(w http.ResponseWriter, r *http.Request)
+	// DeleteAccount Delete an account with its imports and transactions
+	// (DELETE /accounts/{id})
+	DeleteAccount(w http.ResponseWriter, r *http.Request, id Id)
+	// UpdateAccount Change an account
+	// (PATCH /accounts/{id})
+	UpdateAccount(w http.ResponseWriter, r *http.Request, id Id)
 	// Login Sign in
 	// (POST /auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -261,6 +709,36 @@ type ServerInterface interface {
 	// Signup Create an account and sign in
 	// (POST /auth/signup)
 	Signup(w http.ResponseWriter, r *http.Request)
+	// ListImports Imports, newest first
+	// (GET /imports)
+	ListImports(w http.ResponseWriter, r *http.Request, params ListImportsParams)
+	// UploadImport Upload a bank export and get a preview
+	// (POST /imports)
+	UploadImport(w http.ResponseWriter, r *http.Request, params UploadImportParams)
+	// DeleteImport Delete an import (cancel a preview, or remove a committed import)
+	// (DELETE /imports/{id})
+	DeleteImport(w http.ResponseWriter, r *http.Request, id Id)
+	// GetImport One import
+	// (GET /imports/{id})
+	GetImport(w http.ResponseWriter, r *http.Request, id Id)
+	// UpdateImport Change the account, mapping or options of a previewed import
+	// (PATCH /imports/{id})
+	UpdateImport(w http.ResponseWriter, r *http.Request, id Id)
+	// CommitImport Commit a previewed import
+	// (POST /imports/{id}/commit)
+	CommitImport(w http.ResponseWriter, r *http.Request, id Id)
+	// GetImportFile The original file
+	// (GET /imports/{id}/file)
+	GetImportFile(w http.ResponseWriter, r *http.Request, id Id)
+	// ListImportLines Decoded records of the file with their status (header-row picker)
+	// (GET /imports/{id}/lines)
+	ListImportLines(w http.ResponseWriter, r *http.Request, id Id, params ListImportLinesParams)
+	// ReprocessImport Re-read a committed import with a new mapping or options
+	// (POST /imports/{id}/reprocess)
+	ReprocessImport(w http.ResponseWriter, r *http.Request, id Id)
+	// ListImportRows Staged rows of an import
+	// (GET /imports/{id}/rows)
+	ListImportRows(w http.ResponseWriter, r *http.Request, id Id, params ListImportRowsParams)
 	// DeleteMe Delete the account and all of its data
 	// (DELETE /me)
 	DeleteMe(w http.ResponseWriter, r *http.Request)
@@ -302,6 +780,86 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// ListAccounts operation middleware
+func (siw *ServerInterfaceWrapper) ListAccounts(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAccounts(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAccount operation middleware
+func (siw *ServerInterfaceWrapper) CreateAccount(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAccount(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAccount operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAccount(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAccount operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAccount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAccount(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // Login operation middleware
 func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
 
@@ -335,6 +893,338 @@ func (siw *ServerInterfaceWrapper) Signup(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Signup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListImports operation middleware
+func (siw *ServerInterfaceWrapper) ListImports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListImportsParams
+
+	// ------------- Optional query parameter "accountId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "accountId", r.URL.Query(), &params.AccountId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "accountId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accountId", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImports(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadImport operation middleware
+func (siw *ServerInterfaceWrapper) UploadImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadImportParams
+
+	// ------------- Optional query parameter "autoCommit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "autoCommit", r.URL.Query(), &params.AutoCommit, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "autoCommit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "autoCommit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadImport(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteImport operation middleware
+func (siw *ServerInterfaceWrapper) DeleteImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImport operation middleware
+func (siw *ServerInterfaceWrapper) GetImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateImport operation middleware
+func (siw *ServerInterfaceWrapper) UpdateImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CommitImport operation middleware
+func (siw *ServerInterfaceWrapper) CommitImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CommitImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImportFile operation middleware
+func (siw *ServerInterfaceWrapper) GetImportFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImportFile(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListImportLines operation middleware
+func (siw *ServerInterfaceWrapper) ListImportLines(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListImportLinesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImportLines(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReprocessImport operation middleware
+func (siw *ServerInterfaceWrapper) ReprocessImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReprocessImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListImportRows operation middleware
+func (siw *ServerInterfaceWrapper) ListImportRows(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListImportRowsParams
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "onlyErrors" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "onlyErrors", r.URL.Query(), &params.OnlyErrors, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "onlyErrors"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "onlyErrors", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImportRows(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -629,6 +1519,20 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/me/export", wrapper.ExportMe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/preferences", wrapper.GetPreferences)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/preferences", wrapper.PutPreferences)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/accounts", wrapper.ListAccounts)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/accounts", wrapper.CreateAccount)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/accounts/{id}", wrapper.DeleteAccount)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/accounts/{id}", wrapper.UpdateAccount)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports", wrapper.ListImports)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports", wrapper.UploadImport)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/imports/{id}", wrapper.DeleteImport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports/{id}", wrapper.GetImport)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/imports/{id}", wrapper.UpdateImport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports/{id}/rows", wrapper.ListImportRows)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports/{id}/lines", wrapper.ListImportLines)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/imports/{id}/file", wrapper.GetImportFile)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/commit", wrapper.CommitImport)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/imports/{id}/reprocess", wrapper.ReprocessImport)
 
 	return m
 }
@@ -642,6 +1546,156 @@ type TooManyRequestsApplicationProblemPlusJSONResponse struct {
 	Body Problem
 
 	Headers TooManyRequestsResponseHeaders
+}
+
+type ListAccountsRequestObject struct {
+}
+
+type ListAccountsResponseObject interface {
+	VisitListAccountsResponse(w http.ResponseWriter) error
+}
+
+type ListAccounts200JSONResponse []Account
+
+func (response ListAccounts200JSONResponse) VisitListAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAccountsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListAccountsdefaultApplicationProblemPlusJSONResponse) VisitListAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAccountRequestObject struct {
+	Body *CreateAccountJSONRequestBody
+}
+
+type CreateAccountResponseObject interface {
+	VisitCreateAccountResponse(w http.ResponseWriter) error
+}
+
+type CreateAccount201JSONResponse Account
+
+func (response CreateAccount201JSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAccountdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateAccountdefaultApplicationProblemPlusJSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAccountRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type DeleteAccountResponseObject interface {
+	VisitDeleteAccountResponse(w http.ResponseWriter) error
+}
+
+type DeleteAccount204Response struct {
+}
+
+func (response DeleteAccount204Response) VisitDeleteAccountResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAccountdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteAccountdefaultApplicationProblemPlusJSONResponse) VisitDeleteAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAccountRequestObject struct {
+	Id   Id `json:"id"`
+	Body *UpdateAccountJSONRequestBody
+}
+
+type UpdateAccountResponseObject interface {
+	VisitUpdateAccountResponse(w http.ResponseWriter) error
+}
+
+type UpdateAccount200JSONResponse Account
+
+func (response UpdateAccount200JSONResponse) VisitUpdateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAccountdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateAccountdefaultApplicationProblemPlusJSONResponse) VisitUpdateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type LoginRequestObject struct {
@@ -809,6 +1863,457 @@ type SignupdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response SignupdefaultApplicationProblemPlusJSONResponse) VisitSignupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportsRequestObject struct {
+	Params ListImportsParams
+}
+
+type ListImportsResponseObject interface {
+	VisitListImportsResponse(w http.ResponseWriter) error
+}
+
+type ListImports200JSONResponse []ImportSummary
+
+func (response ListImports200JSONResponse) VisitListImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListImportsdefaultApplicationProblemPlusJSONResponse) VisitListImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImportRequestObject struct {
+	Params UploadImportParams
+	Body   *multipart.Reader
+}
+
+type UploadImportResponseObject interface {
+	VisitUploadImportResponse(w http.ResponseWriter) error
+}
+
+type UploadImport201JSONResponse ImportPreview
+
+func (response UploadImport201JSONResponse) VisitUploadImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImport202JSONResponse ImportPreview
+
+func (response UploadImport202JSONResponse) VisitUploadImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImport409ApplicationProblemPlusJSONResponse DuplicateFileProblem
+
+func (response UploadImport409ApplicationProblemPlusJSONResponse) VisitUploadImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImport429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response UploadImport429ApplicationProblemPlusJSONResponse) VisitUploadImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UploadImportdefaultApplicationProblemPlusJSONResponse) VisitUploadImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteImportRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type DeleteImportResponseObject interface {
+	VisitDeleteImportResponse(w http.ResponseWriter) error
+}
+
+type DeleteImport204Response struct {
+}
+
+func (response DeleteImport204Response) VisitDeleteImportResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteImportdefaultApplicationProblemPlusJSONResponse) VisitDeleteImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetImportRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type GetImportResponseObject interface {
+	VisitGetImportResponse(w http.ResponseWriter) error
+}
+
+type GetImport200JSONResponse ImportDetail
+
+func (response GetImport200JSONResponse) VisitGetImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetImportdefaultApplicationProblemPlusJSONResponse) VisitGetImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportRequestObject struct {
+	Id   Id `json:"id"`
+	Body *UpdateImportJSONRequestBody
+}
+
+type UpdateImportResponseObject interface {
+	VisitUpdateImportResponse(w http.ResponseWriter) error
+}
+
+type UpdateImport200JSONResponse ImportPreview
+
+func (response UpdateImport200JSONResponse) VisitUpdateImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateImportdefaultApplicationProblemPlusJSONResponse) VisitUpdateImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CommitImportRequestObject struct {
+	Id   Id `json:"id"`
+	Body *CommitImportJSONRequestBody
+}
+
+type CommitImportResponseObject interface {
+	VisitCommitImportResponse(w http.ResponseWriter) error
+}
+
+type CommitImport202JSONResponse ImportDetail
+
+func (response CommitImport202JSONResponse) VisitCommitImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CommitImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CommitImportdefaultApplicationProblemPlusJSONResponse) VisitCommitImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetImportFileRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type GetImportFileResponseObject interface {
+	VisitGetImportFileResponse(w http.ResponseWriter) error
+}
+
+type GetImportFile200ResponseHeaders struct {
+	ContentDisposition *string
+}
+
+type GetImportFile200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	Headers       GetImportFile200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetImportFile200ApplicationoctetStreamResponse) VisitGetImportFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetImportFiledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetImportFiledefaultApplicationProblemPlusJSONResponse) VisitGetImportFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportLinesRequestObject struct {
+	Id     Id `json:"id"`
+	Params ListImportLinesParams
+}
+
+type ListImportLinesResponseObject interface {
+	VisitListImportLinesResponse(w http.ResponseWriter) error
+}
+
+type ListImportLines200JSONResponse ImportLines
+
+func (response ListImportLines200JSONResponse) VisitListImportLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportLinesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListImportLinesdefaultApplicationProblemPlusJSONResponse) VisitListImportLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReprocessImportRequestObject struct {
+	Id   Id `json:"id"`
+	Body *ReprocessImportJSONRequestBody
+}
+
+type ReprocessImportResponseObject interface {
+	VisitReprocessImportResponse(w http.ResponseWriter) error
+}
+
+type ReprocessImport202JSONResponse ImportDetail
+
+func (response ReprocessImport202JSONResponse) VisitReprocessImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReprocessImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ReprocessImportdefaultApplicationProblemPlusJSONResponse) VisitReprocessImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportRowsRequestObject struct {
+	Id     Id `json:"id"`
+	Params ListImportRowsParams
+}
+
+type ListImportRowsResponseObject interface {
+	VisitListImportRowsResponse(w http.ResponseWriter) error
+}
+
+type ListImportRows200JSONResponse ImportRowPage
+
+func (response ListImportRows200JSONResponse) VisitListImportRowsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportRowsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListImportRowsdefaultApplicationProblemPlusJSONResponse) VisitListImportRowsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1263,6 +2768,18 @@ func (response PutPreferencesdefaultApplicationProblemPlusJSONResponse) VisitPut
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListAccounts The user's accounts
+	// (GET /accounts)
+	ListAccounts(ctx context.Context, request ListAccountsRequestObject) (ListAccountsResponseObject, error)
+	// CreateAccount Create an account
+	// (POST /accounts)
+	CreateAccount(ctx context.Context, request CreateAccountRequestObject) (CreateAccountResponseObject, error)
+	// DeleteAccount Delete an account with its imports and transactions
+	// (DELETE /accounts/{id})
+	DeleteAccount(ctx context.Context, request DeleteAccountRequestObject) (DeleteAccountResponseObject, error)
+	// UpdateAccount Change an account
+	// (PATCH /accounts/{id})
+	UpdateAccount(ctx context.Context, request UpdateAccountRequestObject) (UpdateAccountResponseObject, error)
 	// Login Sign in
 	// (POST /auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
@@ -1272,6 +2789,36 @@ type StrictServerInterface interface {
 	// Signup Create an account and sign in
 	// (POST /auth/signup)
 	Signup(ctx context.Context, request SignupRequestObject) (SignupResponseObject, error)
+	// ListImports Imports, newest first
+	// (GET /imports)
+	ListImports(ctx context.Context, request ListImportsRequestObject) (ListImportsResponseObject, error)
+	// UploadImport Upload a bank export and get a preview
+	// (POST /imports)
+	UploadImport(ctx context.Context, request UploadImportRequestObject) (UploadImportResponseObject, error)
+	// DeleteImport Delete an import (cancel a preview, or remove a committed import)
+	// (DELETE /imports/{id})
+	DeleteImport(ctx context.Context, request DeleteImportRequestObject) (DeleteImportResponseObject, error)
+	// GetImport One import
+	// (GET /imports/{id})
+	GetImport(ctx context.Context, request GetImportRequestObject) (GetImportResponseObject, error)
+	// UpdateImport Change the account, mapping or options of a previewed import
+	// (PATCH /imports/{id})
+	UpdateImport(ctx context.Context, request UpdateImportRequestObject) (UpdateImportResponseObject, error)
+	// CommitImport Commit a previewed import
+	// (POST /imports/{id}/commit)
+	CommitImport(ctx context.Context, request CommitImportRequestObject) (CommitImportResponseObject, error)
+	// GetImportFile The original file
+	// (GET /imports/{id}/file)
+	GetImportFile(ctx context.Context, request GetImportFileRequestObject) (GetImportFileResponseObject, error)
+	// ListImportLines Decoded records of the file with their status (header-row picker)
+	// (GET /imports/{id}/lines)
+	ListImportLines(ctx context.Context, request ListImportLinesRequestObject) (ListImportLinesResponseObject, error)
+	// ReprocessImport Re-read a committed import with a new mapping or options
+	// (POST /imports/{id}/reprocess)
+	ReprocessImport(ctx context.Context, request ReprocessImportRequestObject) (ReprocessImportResponseObject, error)
+	// ListImportRows Staged rows of an import
+	// (GET /imports/{id}/rows)
+	ListImportRows(ctx context.Context, request ListImportRowsRequestObject) (ListImportRowsResponseObject, error)
 	// DeleteMe Delete the account and all of its data
 	// (DELETE /me)
 	DeleteMe(ctx context.Context, request DeleteMeRequestObject) (DeleteMeResponseObject, error)
@@ -1341,6 +2888,120 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListAccounts operation middleware
+func (sh *strictHandler) ListAccounts(w http.ResponseWriter, r *http.Request) {
+	var request ListAccountsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAccounts(ctx, request.(ListAccountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAccounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAccountsResponseObject); ok {
+		if err := validResponse.VisitListAccountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateAccount operation middleware
+func (sh *strictHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
+	var request CreateAccountRequestObject
+
+	var body CreateAccountJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAccount(ctx, request.(CreateAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAccount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAccountResponseObject); ok {
+		if err := validResponse.VisitCreateAccountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAccount operation middleware
+func (sh *strictHandler) DeleteAccount(w http.ResponseWriter, r *http.Request, id Id) {
+	var request DeleteAccountRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAccount(ctx, request.(DeleteAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAccount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAccountResponseObject); ok {
+		if err := validResponse.VisitDeleteAccountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateAccount operation middleware
+func (sh *strictHandler) UpdateAccount(w http.ResponseWriter, r *http.Request, id Id) {
+	var request UpdateAccountRequestObject
+
+	request.Id = id
+
+	var body UpdateAccountJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateAccount(ctx, request.(UpdateAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateAccount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateAccountResponseObject); ok {
+		if err := validResponse.VisitUpdateAccountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // Login operation middleware
@@ -1422,6 +3083,299 @@ func (sh *strictHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SignupResponseObject); ok {
 		if err := validResponse.VisitSignupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListImports operation middleware
+func (sh *strictHandler) ListImports(w http.ResponseWriter, r *http.Request, params ListImportsParams) {
+	var request ListImportsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListImports(ctx, request.(ListImportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListImports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListImportsResponseObject); ok {
+		if err := validResponse.VisitListImportsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadImport operation middleware
+func (sh *strictHandler) UploadImport(w http.ResponseWriter, r *http.Request, params UploadImportParams) {
+	var request UploadImportRequestObject
+
+	request.Params = params
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadImport(ctx, request.(UploadImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadImportResponseObject); ok {
+		if err := validResponse.VisitUploadImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteImport operation middleware
+func (sh *strictHandler) DeleteImport(w http.ResponseWriter, r *http.Request, id Id) {
+	var request DeleteImportRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteImport(ctx, request.(DeleteImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteImportResponseObject); ok {
+		if err := validResponse.VisitDeleteImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetImport operation middleware
+func (sh *strictHandler) GetImport(w http.ResponseWriter, r *http.Request, id Id) {
+	var request GetImportRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetImport(ctx, request.(GetImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetImportResponseObject); ok {
+		if err := validResponse.VisitGetImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateImport operation middleware
+func (sh *strictHandler) UpdateImport(w http.ResponseWriter, r *http.Request, id Id) {
+	var request UpdateImportRequestObject
+
+	request.Id = id
+
+	var body UpdateImportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateImport(ctx, request.(UpdateImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateImportResponseObject); ok {
+		if err := validResponse.VisitUpdateImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CommitImport operation middleware
+func (sh *strictHandler) CommitImport(w http.ResponseWriter, r *http.Request, id Id) {
+	var request CommitImportRequestObject
+
+	request.Id = id
+
+	var body CommitImportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CommitImport(ctx, request.(CommitImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CommitImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CommitImportResponseObject); ok {
+		if err := validResponse.VisitCommitImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetImportFile operation middleware
+func (sh *strictHandler) GetImportFile(w http.ResponseWriter, r *http.Request, id Id) {
+	var request GetImportFileRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetImportFile(ctx, request.(GetImportFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetImportFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetImportFileResponseObject); ok {
+		if err := validResponse.VisitGetImportFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListImportLines operation middleware
+func (sh *strictHandler) ListImportLines(w http.ResponseWriter, r *http.Request, id Id, params ListImportLinesParams) {
+	var request ListImportLinesRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListImportLines(ctx, request.(ListImportLinesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListImportLines")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListImportLinesResponseObject); ok {
+		if err := validResponse.VisitListImportLinesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReprocessImport operation middleware
+func (sh *strictHandler) ReprocessImport(w http.ResponseWriter, r *http.Request, id Id) {
+	var request ReprocessImportRequestObject
+
+	request.Id = id
+
+	var body ReprocessImportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReprocessImport(ctx, request.(ReprocessImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReprocessImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReprocessImportResponseObject); ok {
+		if err := validResponse.VisitReprocessImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListImportRows operation middleware
+func (sh *strictHandler) ListImportRows(w http.ResponseWriter, r *http.Request, id Id, params ListImportRowsParams) {
+	var request ListImportRowsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListImportRows(ctx, request.(ListImportRowsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListImportRows")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListImportRowsResponseObject); ok {
+		if err := validResponse.VisitListImportRowsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1704,61 +3658,111 @@ func (sh *strictHandler) PutPreferences(w http.ResponseWriter, r *http.Request) 
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -1,4 +1,4 @@
-# Development stack: db → migrate (one-shot) → api. The worker joins in Phase 6, web in Phase 8.
+# Development stack: db → migrate (one-shot) → api + worker. The web app joins in Phase 8.
 # Run through the Makefile (make up / down / logs, make db-up …), which passes --env-file .env.
 name: finuance
 
@@ -53,6 +53,32 @@ services:
     ports:
       - "127.0.0.1:8080:8080" # API
       - "127.0.0.1:9090:9090" # admin (/metrics, pprof) — published in dev only, never via an ingress
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/finuance", "healthcheck"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  worker:
+    image: finuance-backend:dev
+    command: ["worker"]
+    environment:
+      FINUANCE_ENV: ${FINUANCE_ENV:-dev}
+      FINUANCE_LOG_LEVEL: ${FINUANCE_LOG_LEVEL:-info}
+      FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
+      FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # The worker serves only the admin port; point the healthcheck subcommand at it.
+      FINUANCE_HTTP_ADDR: ":9090"
+    ports:
+      - "127.0.0.1:9091:9090" # admin (/metrics, /readyz) — dev only
     depends_on:
       migrate:
         condition: service_completed_successfully

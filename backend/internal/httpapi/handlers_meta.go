@@ -3,8 +3,12 @@ package httpapi
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
+
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
@@ -16,6 +20,8 @@ type api struct {
 	version string
 	prod    bool
 	auth    *auth.Service
+	ledger  *ledger.Ledger
+	jobs    *river.Client[pgx.Tx]
 	cookies cookies
 	limits  limits
 }

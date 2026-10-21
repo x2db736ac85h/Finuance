@@ -154,6 +154,39 @@ func (q *Queries) GetImport(ctx context.Context, arg GetImportParams) (Import, e
 	return i, err
 }
 
+const importLayoutLabels = `-- name: ImportLayoutLabels :many
+SELECT header_signature, row_number() OVER (ORDER BY min(created_at), header_signature) AS position
+FROM imports WHERE user_id = $1
+GROUP BY header_signature
+`
+
+type ImportLayoutLabelsRow struct {
+	HeaderSignature []byte
+	Position        int64
+}
+
+// Each distinct file layout (header signature) of the user's imports in first-seen order: the
+// sidebar source labels b1, b2, … (task 6.12).
+func (q *Queries) ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error) {
+	rows, err := q.db.Query(ctx, importLayoutLabels, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ImportLayoutLabelsRow
+	for rows.Next() {
+		var i ImportLayoutLabelsRow
+		if err := rows.Scan(&i.HeaderSignature, &i.Position); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listImports = `-- name: ListImports :many
 SELECT id, user_id, account_id, filename, size_bytes, sha256, status, encoding, delimiter, headers, column_types, mapping, options, mapping_source, header_signature, stats, error, created_at, committed_at FROM imports WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2
 `
@@ -206,7 +239,7 @@ func (q *Queries) ListImports(ctx context.Context, arg ListImportsParams) ([]Imp
 const setImportStatus = `-- name: SetImportStatus :one
 UPDATE imports
 SET status = $1, error = $2, stats = coalesce($3, stats),
-    committed_at = CASE WHEN $1::text = 'committed' THEN $4::timestamptz ELSE committed_at END
+    committed_at = CASE WHEN $1::text = 'committed' THEN coalesce(committed_at, $4::timestamptz) ELSE committed_at END
 WHERE user_id = $5 AND id = $6 AND status = $7
 RETURNING id, user_id, account_id, filename, size_bytes, sha256, status, encoding, delimiter, headers, column_types, mapping, options, mapping_source, header_signature, stats, error, created_at, committed_at
 `
@@ -222,7 +255,8 @@ type SetImportStatusParams struct {
 }
 
 // Moves an import along previewed → committing → committed | failed. from_status guards the move,
-// so two concurrent commits can't both start.
+// so two concurrent commits can't both start. committed_at is the first commit time and survives a
+// reprocess: it orders value sources ("the earliest import wins").
 func (q *Queries) SetImportStatus(ctx context.Context, arg SetImportStatusParams) (Import, error) {
 	row := q.db.QueryRow(ctx, setImportStatus,
 		arg.ToStatus,
@@ -263,7 +297,7 @@ UPDATE imports
 SET account_id = $1, encoding = $2, delimiter = $3, headers = $4,
     column_types = $5, mapping = $6, options = $7, mapping_source = $8,
     header_signature = $9, stats = $10
-WHERE user_id = $11 AND id = $12 AND status = 'previewed'
+WHERE user_id = $11 AND id = $12 AND status = $13
 RETURNING id, user_id, account_id, filename, size_bytes, sha256, status, encoding, delimiter, headers, column_types, mapping, options, mapping_source, header_signature, stats, error, created_at, committed_at
 `
 
@@ -280,9 +314,11 @@ type UpdateImportPreviewParams struct {
 	Stats           []byte
 	UserID          uuid.UUID
 	ID              uuid.UUID
+	ExpectedStatus  string
 }
 
-// PATCH while previewed: a new mapping/options and the re-parse results.
+// A new mapping/options and the re-parse results: PATCH while previewed, reprocess when committed
+// (expected_status guards which).
 func (q *Queries) UpdateImportPreview(ctx context.Context, arg UpdateImportPreviewParams) (Import, error) {
 	row := q.db.QueryRow(ctx, updateImportPreview,
 		arg.AccountID,
@@ -297,6 +333,7 @@ func (q *Queries) UpdateImportPreview(ctx context.Context, arg UpdateImportPrevi
 		arg.Stats,
 		arg.UserID,
 		arg.ID,
+		arg.ExpectedStatus,
 	)
 	var i Import
 	err := row.Scan(

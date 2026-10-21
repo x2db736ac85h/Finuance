@@ -20,6 +20,13 @@ var (
 	LegacyEnd   = time.Date(2025, 3, 18, 0, 0, 0, 0, time.UTC)
 )
 
+// Recent is the demo file shifted to end yesterday: the legacy range's length (442 days), up to
+// (excluding) today's date in UTC.
+func Recent(today time.Time) string {
+	end := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	return CSV(end.Add(-LegacyEnd.Sub(LegacyStart)), end)
+}
+
 type category struct {
 	name   string
 	payees []string

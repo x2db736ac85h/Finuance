@@ -151,6 +151,28 @@ Every table except `users` and `sessions` also has `user_id uuid NOT NULL REFERE
 - **Committing** inserts staged rows with `ON CONFLICT DO NOTHING`. A row the account already has is a duplicate, linked rather than inserted. A transaction is therefore kept `max(count in any single import)` times.
 - **`import_rows`** is both the staging area and the provenance record. Every committed row points at its transaction. Deleting an import deletes its rows, then the import-origin transactions that no row points at any more. A transaction that an overlapping export also contains survives.
 - **`tx_annotations`** stores user edits (group, manual category, note) under the same identity, not the transaction id. Deleting and re-importing a file creates new transaction rows, and the commit re-applies the annotations to them (`ledger.CommitImport`, step 1b).
+- **Value source and overrides.** Each transaction records the import its field values come from (`source_import_id`): by default the earliest committed import containing the identity. A `dedupe_overrides` row changes that per fingerprint: `prefer` takes the values from one import, `keep_both` gives each import its own copy (`split_scope` = the first 16 bytes of the file's SHA-256). `ledger.Rematerialize` recomputes one fingerprint from scratch and is the reference the incremental commit and delete paths are property-tested against.
+- **One writer per account.** Commit, delete, reprocess and override changes lock the account row (`FOR NO KEY UPDATE`) before touching its transactions (ADR 0013).
+
+### Import lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> previewed: POST /imports (parse, stage, 409 on a known file)
+    previewed --> previewed: PATCH (re-parse with new options / mapping)
+    previewed --> committing: POST /commit (job enqueued in the same tx)
+    previewed --> committing: POST /imports?autoCommit=true (profile + no errors + account)
+    committing --> committed: CommitImport job
+    committing --> failed: last of 3 attempts fails
+    committed --> committing: POST /reprocess (restage in one tx, job enqueued)
+    previewed --> [*]: DELETE
+    committing --> [*]: DELETE (the job then finds nothing and stops)
+    committed --> [*]: DELETE (orphans removed, sources re-materialised)
+    failed --> [*]: DELETE
+```
+
+- **Upload.** The api reads one multipart file (`FINUANCE_MAX_UPLOAD_BYTES`), rejects binary files (NUL in the first 8 KiB) and identical bytes (SHA-256 per user → `409` with `existingImportId`). It parses with the user's saved profile for this header layout if there is one, else with detection, stages every row, and pre-fills the account when the own-account column matches exactly one account's number hint.
+- **Commit job** (`jobs.CommitImportWorker`): upsert the bank categories, insert the new identities, re-apply annotations, link every staged row, mark the import committed, re-materialise overridden and re-sourced fingerprints, record the stats, and remember the mapping as the layout's profile.
 
 ## Tenant isolation
 

@@ -166,7 +166,7 @@ migrate-new: ## Create a migration: make migrate-new name=add_accounts
 ##@ Running
 
 .PHONY: up
-up: $(ENV_FILE) ## Full Compose stack: db, migrate, api on http://localhost:8080 (web joins in Phase 8)
+up: $(ENV_FILE) ## Full Compose stack: db, migrate, api (http://localhost:8080), worker (web joins in Phase 8)
 	VERSION=$(VERSION) $(COMPOSE) up -d $(UP_FLAGS) --wait
 
 .PHONY: down
@@ -186,8 +186,9 @@ dev-web: ## Run the Vite dev server
 	$(call todo,8)
 
 .PHONY: seed-demo
-seed-demo: ## Demo data for a user: make seed-demo email=…
-	$(call todo,9)
+seed-demo: $(ENV_FILE) ## Demo data for a user: make seed-demo email=…
+	@test -n "$(email)" || { echo "usage: make seed-demo email=you@example.com"; exit 2; }
+	$(RUN_ENV) cd backend && go run ./cmd/finuance seed-demo -email='$(email)'
 
 .PHONY: llmmock
 llmmock: ## Mock OpenAI-compatible server for local UI work
