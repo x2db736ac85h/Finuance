@@ -51,6 +51,12 @@ export type UiState = {
   setAiOpen: (open: boolean) => void;
   setKeysOpen: (open: boolean) => void;
   setImportFastPath: (on: boolean) => void;
+  /** Insight pane height as a CSS length ('' = the default 50vh). */
+  setPaneHeight: (h: string) => void;
+  setCards: (cards: string[]) => void;
+  setCardOrder: (order: string[]) => void;
+  setCatMode: (m: CatMode) => void;
+  setCfg: (change: Partial<ChartCfg>) => void;
   hydrate: (p: ParsedPrefs, narrow: boolean) => void;
 };
 
@@ -107,6 +113,21 @@ export const useUi = create<UiState>()((set) => ({
   },
   setImportFastPath: (importFastPath) => {
     set({ importFastPath });
+  },
+  setPaneHeight: (paneHeight) => {
+    set({ paneHeight });
+  },
+  setCards: (cards) => {
+    set({ cards });
+  },
+  setCardOrder: (cardOrder) => {
+    set({ cardOrder });
+  },
+  setCatMode: (catMode) => {
+    set({ catMode });
+  },
+  setCfg: (change) => {
+    set((s) => ({ cfg: { ...s.cfg, ...change } }));
   },
   hydrate: (p, narrow) => {
     set((s) => ({

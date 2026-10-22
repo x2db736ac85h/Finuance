@@ -192,5 +192,6 @@ export const cashflowChart: ChartDef = {
   key: 'flow',
   title: 'Cash flow by month',
   cfgControls: flowControls,
-  use: (q: ViewQuery, env: ChartEnv) => partsOf(useCashflow(q.context, q.ctxKey), (d) => cashflowParts(d, env)),
+  use: (q: ViewQuery, env: ChartEnv) =>
+    partsOf(useCashflow(q.context, q.ctxKey, env.ready), (d) => cashflowParts(d, env)),
 };

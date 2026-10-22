@@ -33,6 +33,7 @@ function env(over: Partial<ChartEnv> = {}): ChartEnv {
     period: 'all',
     filters: {},
     actions: { toggleFilter: vi.fn(), setPeriod: vi.fn(), locate: vi.fn(), setCatMode: vi.fn() },
+    ready: true,
     ...over,
   };
 }

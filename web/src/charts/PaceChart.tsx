@@ -197,5 +197,5 @@ export const paceChart: ChartDef = {
   title: 'Month pace',
   cfgControls: paceControls,
   use: (q: ViewQuery, env: ChartEnv) =>
-    partsOf(usePace(q.context, q.ctxKey, env.cfg.paceCmp), (p) => paceParts(p, env)),
+    partsOf(usePace(q.context, q.ctxKey, env.cfg.paceCmp, env.ready), (p) => paceParts(p, env)),
 };

@@ -17,35 +17,42 @@ export type InsightDaily = Schemas['InsightDaily'];
 
 const opts = { placeholderData: keepPreviousData, staleTime: 30_000 } as const;
 
-export function useSummary(context: QueryContext, ctxKey: string) {
+// `enabled` is false until the list's first window has arrived (the pane waits, so the table
+// paints first: browsers allow six parallel requests per host over HTTP/1.1).
+
+export function useSummary(context: QueryContext, ctxKey: string, enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'summary', ctxKey],
     queryFn: async () => data(await api.POST('/insights/summary', { body: { context } })),
     ...opts,
+    enabled,
   });
 }
 
-export function useCategorySpend(context: QueryContext, ctxKey: string) {
+export function useCategorySpend(context: QueryContext, ctxKey: string, enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'categories', ctxKey],
     queryFn: async () => data(await api.POST('/insights/categories', { body: { context } })),
     ...opts,
+    enabled,
   });
 }
 
-export function useCashflow(context: QueryContext, ctxKey: string) {
+export function useCashflow(context: QueryContext, ctxKey: string, enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'cashflow', ctxKey],
     queryFn: async () => data(await api.POST('/insights/cashflow', { body: { context } })),
     ...opts,
+    enabled,
   });
 }
 
-export function usePace(context: QueryContext, ctxKey: string, compare: ChartCfg['paceCmp']) {
+export function usePace(context: QueryContext, ctxKey: string, compare: ChartCfg['paceCmp'], enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'pace', ctxKey, compare],
     queryFn: async () => data(await api.POST('/insights/pace', { body: { context, compare } })),
     ...opts,
+    enabled,
   });
 }
 
@@ -54,13 +61,20 @@ const TOPS = [0, 10, 25, 50, 100] as const;
 type Top = (typeof TOPS)[number];
 export const payeeTop = (n: number): Top => TOPS.find((t) => t === n) ?? 25;
 
-export function usePayees(context: QueryContext, ctxKey: string, top: number, scope: ChartCfg['payeeScope']) {
+export function usePayees(
+  context: QueryContext,
+  ctxKey: string,
+  top: number,
+  scope: ChartCfg['payeeScope'],
+  enabled = true,
+) {
   const t = payeeTop(top);
   const s = scope === 'all' ? 'all' : 'period';
   return useQuery({
     queryKey: [...keys.insight, 'payees', ctxKey, t, s],
     queryFn: async () => data(await api.POST('/insights/payees', { body: { context, top: t, scope: s } })),
     ...opts,
+    enabled,
   });
 }
 
@@ -70,11 +84,12 @@ export function dailyRange(r: ChartCfg['heatRange']): Schemas['DailyRequest']['r
   return r === 'all' ? 'all' : 'period';
 }
 
-export function useDaily(context: QueryContext, ctxKey: string, heatRange: ChartCfg['heatRange']) {
+export function useDaily(context: QueryContext, ctxKey: string, heatRange: ChartCfg['heatRange'], enabled = true) {
   const range = dailyRange(heatRange);
   return useQuery({
     queryKey: [...keys.insight, 'daily', ctxKey, range],
     queryFn: async () => data(await api.POST('/insights/daily', { body: { context, range } })),
     ...opts,
+    enabled,
   });
 }

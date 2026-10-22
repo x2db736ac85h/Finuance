@@ -16,6 +16,8 @@ async function setup(page: Page) {
   const r = await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
   await page.goto(`/t/${r.accountId}`);
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
+  // the drags below need the grid's full height (the 720 px test window halves it with the pane)
+  await page.getByRole('button', { name: 'Hide insights' }).click();
   return r;
 }
 

@@ -101,5 +101,7 @@ export const payeesChart: ChartDef = {
   title: 'Top payees',
   cfgControls: payeeControls,
   use: (q: ViewQuery, env: ChartEnv) =>
-    partsOf(usePayees(q.context, q.ctxKey, payeeTop(env.cfg.payeeTop), env.cfg.payeeScope), (d) => payeesParts(d, env)),
+    partsOf(usePayees(q.context, q.ctxKey, payeeTop(env.cfg.payeeTop), env.cfg.payeeScope, env.ready), (d) =>
+      payeesParts(d, env),
+    ),
 };

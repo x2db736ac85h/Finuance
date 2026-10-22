@@ -182,5 +182,5 @@ export const dailyChart: ChartDef = {
   title: 'Daily spending',
   cfgControls: heatControls,
   use: (q: ViewQuery, env: ChartEnv) =>
-    partsOf(useDaily(q.context, q.ctxKey, env.cfg.heatRange), (d) => dailyParts(d, env)),
+    partsOf(useDaily(q.context, q.ctxKey, env.cfg.heatRange, env.ready), (d) => dailyParts(d, env)),
 };

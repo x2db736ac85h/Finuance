@@ -101,3 +101,8 @@ export function escapeSelection(): boolean {
   useViews.getState().patch(st.viewId, { selectedId: null, selectedIndex: null });
   return true;
 }
+
+/** Scrolls the table on screen to a position (a row located by id, PLAN §7.8). */
+export function scrollToRow(i: number): void {
+  active?.current.grid?.scrollToIndex(i);
+}

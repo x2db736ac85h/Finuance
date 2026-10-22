@@ -107,5 +107,6 @@ export function summaryParts(s: InsightSummary, env: Pick<ChartEnv, 'actions'>):
 export const summaryChart: ChartDef = {
   key: 'sum',
   title: 'Summary',
-  use: (q: ViewQuery, env: ChartEnv) => partsOf(useSummary(q.context, q.ctxKey), (s) => summaryParts(s, env)),
+  use: (q: ViewQuery, env: ChartEnv) =>
+    partsOf(useSummary(q.context, q.ctxKey, env.ready), (s) => summaryParts(s, env)),
 };

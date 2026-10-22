@@ -1,5 +1,7 @@
 # insights
 
-🚧 **Under construction — arrives in Phase 11.**
+The insight charts of the table view (PLAN §4.6, Phase 11): summary, spending by category, cash flow by month, month pace, top payees and daily spending, served by `POST /insights/*`.
 
-Insight aggregations for the charts pane: summary, spending by category, cash flow by month, month pace, top payees and daily spending. They run on the same filtered query as the table, so every chart agrees with the rows shown.
+The aggregations run in `internal/query` (`insights.go`) on the same compiled context as the table, so every chart agrees with the rows shown. This package holds the rules on top of them as pure functions: the days a period has, the previous-period delta, cumulative pace arrays, the heatmap's date range. `TestChartParity` checks every chart's table twin against the legacy app on the demo year.
+
+The overview (Phase 12) adds its month-centric cards here.

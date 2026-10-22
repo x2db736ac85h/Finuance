@@ -38,6 +38,8 @@ export type ChartEnv = {
   period: PeriodPref;
   filters: Partial<Record<string, FilterState>>;
   actions: ChartActions;
+  /** Whether to load data yet: the pane waits for the list's first window (it paints first). */
+  ready: boolean;
 };
 
 export type ChartParts = {

@@ -225,6 +225,52 @@ as many frames as the grid, because headless Chromium paints in software here (~
 per step). The grid's own work per step is about 4 ms of script plus 6 ms of layout and style.
 **The 60 fps check needs a real browser with a GPU** — part of the gate's hands-on session.
 
+Since Phase 11 the insights pane takes half the window above the grid; its own numbers (and the
+grid's with the pane open) are in "Insights" below.
+
 **What changed.** Rows are memoised (`DataRow`), so a scroll step renders only the rows that come
 into view; that cut script time by ~15 %. The grid scrolls in windows of 200 rows with 10 rows of
 overscan, as planned.
+
+## Insights: 100k rows (Phase 11)
+
+**Setup.** Server side, `TestInsightsPerf` (`internal/insights/perf_test.go`, opt-in with
+`FINUANCE_PERF=1`) seeds the same 108,098-transaction user as `TestQueryPerf` and times the six
+insight calls the pane makes, 20 runs each after a warm-up. In the browser, `tools/perf/grid.mjs`
+now also waits, for every filter, until each insight response is in and two frames have been drawn
+("filter-to-charts").
+
+### Results — 2026-10-22, cloud sandbox (4 vCPU, Postgres 18.6 in Docker)
+
+Server, p50 / p95 per call:
+
+| Shape | summary | categories | cashflow | pace | payees | daily | all six, one after another |
+|---|---|---|---|---|---|---|---|
+| all time, no filter | 67 / 98 ms | 85 / 107 ms | 41 / 67 ms | 20 / 25 ms | 43 / 58 ms | 43 / 57 ms | 300 ms |
+| last 12 months | 15 / 19 ms | 54 / 64 ms | 46 / 74 ms | 4 / 5 ms | 8 / 10 ms | 5 / 6 ms | 132 ms |
+| one month | 2 / 3 ms | 38 / 50 ms | 38 / 59 ms | 2 / 3 ms | 2 / 3 ms | 2 / 4 ms | 84 ms |
+| category = Transport, last 3 months | 5 / 6 ms | 43 / 104 ms | 83 / 122 ms | 4 / 7 ms | 2 / 5 ms | 3 / 4 ms | 141 ms |
+| search "blik warszawa" | 37 / 55 ms | 66 / 83 ms | 19 / 24 ms | 33 / 41 ms | 19 / 46 ms | 34 / 39 ms | 207 ms |
+
+Browser (100,870 rows, pane open; p50 / max of 5 runs):
+
+| Filter | list painted | charts painted |
+|---|---|---|
+| search "blik warszawa" | 170 / 173 ms | 202 / 204 ms |
+| payee contains "kawiarnia" | 85 / 104 ms | 118 / 137 ms |
+| amount < −100 | 93 / 100 ms | 126 / 133 ms |
+| date 2024 | 80 / 102 ms | 113 / 136 ms |
+| category =Transport | 86 / 95 ms | 119 / 136 ms |
+
+First paint of `/t/all` is 275 ms. The browser sends the six requests in parallel, so a filter
+change waits for the slowest one, not their sum.
+
+**Reading.** Every call is within the 150 ms p95 target, and the charts finish within the §7.12
+budget (≤ 300 ms) for every filter. The two calls that read every month of the base rows, categories
+(its colour ranking is all-time) and cash flow, are the slowest for short periods; both are aggregate
+scans that an index can't shortcut, and they stay well within the budget at this size.
+
+**What changed.** The first measurement had a first paint of 1,855 ms: the pane's six requests
+started before the list's own and, over HTTP/1.1, the browser allows six requests per host, so the
+list waited. The charts now load once the list's first window has arrived (`ChartEnv.ready`); later
+filter changes send all seven at once (above). Behind TLS (HTTP/2, Phase 16) the limit goes away.

@@ -307,5 +307,6 @@ export function categoriesParts(d: InsightCategories, env: ChartEnv): ChartParts
 export const categoriesChart: ChartDef = {
   key: 'cat',
   title: 'Spending by category',
-  use: (q: ViewQuery, env: ChartEnv) => partsOf(useCategorySpend(q.context, q.ctxKey), (d) => categoriesParts(d, env)),
+  use: (q: ViewQuery, env: ChartEnv) =>
+    partsOf(useCategorySpend(q.context, q.ctxKey, env.ready), (d) => categoriesParts(d, env)),
 };

@@ -86,19 +86,19 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Pane above the toolbar, default 50 vh, resizable 170 px … 75 vh, double-click reset, collapse | §13.1 | 11 | todo |
-| Period picker: all, l30, l3m, l12m, ytd, `m:YYYY-MM`, `y:YYYY`, custom; anchored to latest data date; prev/next stepping 🧪 | §9 `resolvePeriod`, §13.1 | 7, 11 | todo |
-| Charts menu: show/hide cards and **reorder** (drag + ↑/↓), persisted `cardOrder` | §32.2 `cardOrder` | 11 | todo |
-| `sum` Summary: spent, income, net (savings %), avg/day, largest expense, Δ vs previous period | §14 | 11 | todo |
-| `cat` Spending by category: donut (top 7 + Other) / bars; click → `=Category`; single-category ring | §14 | 11 | todo |
-| `flow` Cash flow by month; range `flowMonths` (fit / 6 / 12 / 24 / 36 / all) | §14 | 11 | todo |
-| `pace` Month pace with crosshair; range `paceCmp` (prev month / same month last year / avg 3 / avg 6 / none) | §14 | 11 | todo |
-| `payee` Top payees; ranges `payeeTop` (10/25/50/100/all), `payeeScope` (period / all time); click → payee filter | §14 | 11 | todo |
-| `heat` Daily spending calendar; range `heatRange` (follow / 3 / 6 / 12 months / all); click day → custom period | §14 | 11 | todo |
-| Expanded chart window: Chart/Table switch, range controls, prev/next, Esc / ← / →, backdrop click | §15 `renderModal` | 11 | todo |
-| Table twin for every chart (`c.table`) 🧪 (investment cards) | §13.2 | 11, 12 | todo |
-| Tooltips (`tip`) and click actions (`act`), chart → table filter toggle | §13.3 | 11 | todo |
-| Category colours stable by all-time rank (`catColorMap`); > 7 → Other | §19 | 11 | todo |
+| Pane above the toolbar, default 50 vh, resizable 170 px … 75 vh, double-click reset, collapse | §13.1 | 11 | ported |
+| Period picker: all, l30, l3m, l12m, ytd, `m:YYYY-MM`, `y:YYYY`, custom; anchored to latest data date; prev/next stepping 🧪 | §9 `resolvePeriod`, §13.1 | 7, 11 | ported |
+| Charts menu: show/hide cards and **reorder** (drag + ↑/↓), persisted `cardOrder` | §32.2 `cardOrder` | 11 | ported |
+| `sum` Summary: spent, income, net (savings %), avg/day, largest expense, Δ vs previous period | §14 | 11 | ported |
+| `cat` Spending by category: donut (top 7 + Other) / bars; click → `=Category`; single-category ring | §14 | 11 | ported |
+| `flow` Cash flow by month; range `flowMonths` (fit / 6 / 12 / 24 / 36 / all) | §14 | 11 | ported |
+| `pace` Month pace with crosshair; range `paceCmp` (prev month / same month last year / avg 3 / avg 6 / none) | §14 | 11 | ported |
+| `payee` Top payees; ranges `payeeTop` (10/25/50/100/all), `payeeScope` (period / all time); click → payee filter | §14 | 11 | ported |
+| `heat` Daily spending calendar; range `heatRange` (follow / 3 / 6 / 12 months / all); click day → custom period | §14 | 11 | ported |
+| Expanded chart window: Chart/Table switch, range controls, prev/next, Esc / ← / →, backdrop click | §15 `renderModal` | 11 | ported |
+| Table twin for every chart (`c.table`) 🧪: the six pane charts ported in 11 (`TestChartParity` matches every twin on the demo year); the overview cards follow in 12 | §13.2 | 11, 12 | todo |
+| Tooltips (`tip`) and click actions (`act`), chart → table filter toggle | §13.3 | 11 | ported |
+| Category colours stable by all-time rank (`catColorMap`); > 7 → Other | §19 | 11 | ported |
 
 ## 6. Overview
 
