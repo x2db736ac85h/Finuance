@@ -60,7 +60,7 @@ func (a *api) TransactionRange(ctx context.Context, req gen.TransactionRangeRequ
 	}
 	out := make(gen.TransactionRange200JSONResponse, len(ids))
 	for i, x := range ids {
-		out[i] = gen.IdAmount{Id: x.ID, AmountMinor: x.AmountMinor}
+		out[i] = gen.IdAmount{Id: x.ID, AmountMinor: x.AmountMinor, GroupId: x.GroupID}
 	}
 	return out, nil
 }

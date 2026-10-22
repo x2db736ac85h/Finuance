@@ -1761,6 +1761,9 @@ components:
         amountMinor:
           type: integer
           format: int64
+        groupId:
+          type: string
+          format: uuid
     ExportRequest:
       type: object
       additionalProperties: false

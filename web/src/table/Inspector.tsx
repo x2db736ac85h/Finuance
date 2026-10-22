@@ -1,5 +1,5 @@
 // The inspector (PLAN §7.6, legacy renderInspector): every field of the selected transaction with
-// type badges and per-field copy, the category picker (pick, create by name, or back to the bank's
+// type badges and per-field copy, the group pills, the category picker (pick, create by name, or back to the bank's
 // category) and the note, the original row with the bank's headers, the imports it came from, Copy
 // as JSON, and previous/next. Below 1100 px it overlays the table (CSS, as in the legacy app).
 
@@ -13,7 +13,11 @@ import {
   type TransactionDetail,
   type TransactionPatch,
 } from '../api/hooks/transactions';
+import { useAssignGroup, useGroups, type Group } from '../api/hooks/groups';
+import { GroupDots } from '../groups/GroupDots';
+import { GroupForm } from '../groups/GroupForm';
 import { fmtDateTime } from '../lib/dates';
+import { errorMessage } from '../lib/errors';
 import { fmtInt } from '../lib/format';
 import { norm, searchTokens } from '../lib/text';
 import { useViews, viewOf } from '../stores/viewStore';
@@ -56,6 +60,7 @@ export function Inspector({ viewId }: { viewId: string }) {
         <IconButton icon="down" title="Next row (↓)" onClick={() => moveSelection(1)} />
         <IconButton icon="x" title="Close (Esc)" onClick={() => escapeSelection()} />
       </div>
+      {d && <GroupRow d={d} />}
       <div className="ins-b">
         {d ? (
           <Details d={d} tokens={tokens} />
@@ -103,12 +108,12 @@ function Details({ d, tokens }: { d: TransactionDetail; tokens: readonly string[
         toast(done);
       },
       onError: (e) => {
-        toast(`Couldn't save: ${e.message}`, { kind: 'error' });
+        toast(errorMessage(e), { kind: 'error' });
       },
     });
   };
-  // Group and Balance after only when the transaction has them (the grid offers them the same way).
-  const fields = COLUMNS.filter((c) => (c.id !== 'group' || d.group) && (c.id !== 'balanceAfter' || d.balanceAfter));
+  // The group has its own row above; Balance after only when the transaction has one.
+  const fields = COLUMNS.filter((c) => c.id !== 'group' && (c.id !== 'balanceAfter' || d.balanceAfter));
   return (
     <>
       {fields.map((c) => {
@@ -178,6 +183,54 @@ function Details({ d, tokens }: { d: TransactionDetail; tokens: readonly string[
         )}
       </div>
     </>
+  );
+}
+
+/** The group pills (legacy inspector "Group" row): pick one, click the current one to remove it. */
+function GroupRow({ d }: { d: TransactionDetail }) {
+  const groups = useGroups().data ?? [];
+  const assign = useAssignGroup();
+  const [form, setForm] = useState<HTMLElement | null>(null);
+  const set = (g: Group | null) => {
+    assign.mutate(
+      { ids: [d.id], groupId: g?.id ?? null },
+      {
+        onSuccess: () => {
+          toast(g ? `Added to “${g.name}”` : 'Removed from its group');
+        },
+        onError: (e) => {
+          toast(errorMessage(e), { kind: 'error' });
+        },
+      },
+    );
+  };
+  return (
+    <div className="ins-grp">
+      <div className="fk">
+        <Icon name="tag" />
+        Group
+      </div>
+      <div className="gdots" role="group" aria-label="Group">
+        <GroupDots
+          groups={groups}
+          current={d.group?.id}
+          disabled={assign.isPending}
+          onPick={(g) => {
+            set(g.id === d.group?.id ? null : g);
+          }}
+          onNew={setForm}
+        />
+      </div>
+      {form && (
+        <GroupForm
+          anchor={form}
+          onClose={() => {
+            setForm(null);
+          }}
+          onDone={set}
+        />
+      )}
+    </div>
   );
 }
 

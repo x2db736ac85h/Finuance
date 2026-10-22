@@ -1061,6 +1061,8 @@ export interface components {
             id: string;
             /** Format: int64 */
             amountMinor: number;
+            /** Format: uuid */
+            groupId?: string;
         };
         ExportRequest: {
             context: components["schemas"]["QueryContext"];

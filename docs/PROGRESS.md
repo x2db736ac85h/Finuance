@@ -36,8 +36,8 @@
 - [x] 10.8 keyboard (selection across windows, Esc chain, double-click copy)
 - [x] 10.9 per-view state for `/t/all` and `/t/:accountId`; Account column only in `all`
 - [x] 10.10 groups backend: CRUD + stats, `POST /transactions/bulk` (ids), group in exports
-- [ ] 10.11 multi-selection + `QuickBar`
-- [ ] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
+- [x] 10.11 multi-selection + `QuickBar`
+- [x] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
 - [ ] 10.13 duplicates: `GET /duplicates`, `PUT`/`DELETE /duplicates/{accountId}/{fingerprint}`, `DuplicatesDialog`
 - [ ] 10.14 performance with a 100k-row user (Playwright trace, `docs/perf.md`)
 - [ ] Tests: stores, chips, ColumnMenu + Grid (MSW); E2E table (legacy §26), groups/selection, duplicates; PARITY rows `ported`
@@ -190,6 +190,8 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 10.11: `POST /transactions/ids` also returns each row's `groupId`, so a range selected across unloaded windows knows whether *Ungroup* applies. A range is capped at 5,000 rows (the bulk limit) with a toast. The selection lives in `stores/selectionStore` per view and is cleared when the result changes, on Esc (before the row selection), on a plain click and when the view closes.
+- 10.12: group delete asks in a window (the legacy used `confirm()`); after editing a group from the menu the menu opens again (legacy). The Group column is visible by default once a group exists.
 - 10.10: `POST /transactions/bulk` takes `set: {groupId}` with `groupId` required and nullable (`null` = ungroup), so the generated types can tell "ungroup" from "not sent"; category and transfer join in Phase 15. `PATCH /groups/{id}` keeps the colour when none is sent. Group stats count money out and in over all accounts with transfers included (legacy `groupStats`), in the most common currency of the group's transactions.
 - 10.2: grid amounts are formatted with `fmtMoney` in the browser locale (the legacy showed the CSV text as is), because amounts are stored as minor units now. Dates use `dd.mm.yyyy`.
 - 10.5/10.9: each view starts with the plan's default hidden columns (Account only in `all`); the "N hidden" chip counts only columns hidden beyond those defaults, and removing it restores them.

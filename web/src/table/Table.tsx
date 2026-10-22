@@ -3,7 +3,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useGroups } from '../api/hooks/groups';
+import { groupColor } from '../groups/colors';
+import { QuickBar } from '../groups/QuickBar';
 import { searchTokens } from '../lib/text';
+import { useSelection } from '../stores/selectionStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { availableColumns, hasBalance, type ColumnDef, type Row } from './columns';
 import { ColumnMenu } from './ColumnMenu';
@@ -24,7 +28,15 @@ export function Table({ viewId, title, icon }: Props) {
   const selectedId = useViews((s) => viewOf(s.views, viewId).selectedId);
   const patch = useViews((s) => s.patch);
   const head = useHead(q, statColumn);
-  const columns = availableColumns({ groups: false, balance: hasBalance(head.data?.rows) });
+  const groups = useGroups().data;
+  const columns = availableColumns({ groups: !!groups?.length, balance: hasBalance(head.data?.rows) });
+  const colorOf = useCallback(
+    (id: string) => {
+      const g = groups?.find((x) => x.id === id);
+      return g && groupColor(g.color);
+    },
+    [groups],
+  );
   const visible = columns.filter((c) => !hidden.includes(c.id));
   const [menu, setMenu] = useState<{ col: ColumnDef; anchor: HTMLElement } | null>(null);
   const ctl = useGridController(viewId);
@@ -35,8 +47,16 @@ export function Table({ viewId, title, icon }: Props) {
   useEffect(() => {
     if (lastKey.current === resultKey) return;
     lastKey.current = resultKey;
+    useSelection.getState().clear(viewId); // a new result drops the multi-selection (legacy refresh)
     if (viewOf(useViews.getState().views, viewId).selectedIndex !== null) patch(viewId, { selectedIndex: null });
   }, [resultKey, viewId, patch]);
+
+  useEffect(
+    () => () => {
+      useSelection.getState().clear(viewId);
+    },
+    [viewId],
+  );
 
   const onSelect = useCallback(
     (row: Row, index: number) => {
@@ -73,7 +93,9 @@ export function Table({ viewId, title, icon }: Props) {
         }}
         gridRef={ctl.setGrid}
         rowSource={ctl.setRowSource}
+        groupColor={colorOf}
       />
+      <QuickBar viewId={viewId} currency={head.data?.rows[0]?.amount.currency ?? 'PLN'} />
       {menu && (
         <ColumnMenu
           viewId={viewId}

@@ -91,6 +91,16 @@ func TestGroupsHTTP(t *testing.T) {
 		t.Errorf("stats = %v", italy)
 	}
 
+	// Range selection ids carry the group (the quick bar's Ungroup).
+	rg := b.do("POST", "/transactions/ids", map[string]any{"context": map[string]any{"filters": []any{
+		map[string]any{"column": "payee", "cond": "=OPERATOR INTERNETU"}}}, "limit": 50})
+	expect(t, rg, 200, "")
+	var ranged []map[string]any
+	_ = json.Unmarshal([]byte(rg.raw), &ranged)
+	if len(ranged) != 14 || ranged[0]["groupId"] != gid || num(ranged[0]["amountMinor"]) != -7999 {
+		t.Errorf("ids = %s", rg.raw)
+	}
+
 	// The Group column exports like any other.
 	ex := b.do("POST", "/transactions/export", map[string]any{
 		"context": map[string]any{"filters": []any{map[string]any{"column": "group", "cond": "=Italy trip"}}},

@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react';
 
+import { useGroups } from '../api/hooks/groups';
 import { fmtInt, fmtMoney } from '../lib/format';
 import { useViews, viewOf } from '../stores/viewStore';
 import { Icon } from '../ui/Icon';
@@ -26,7 +27,8 @@ export function TableStatus({ viewId, all }: Props) {
   const patch = useViews((s) => s.patch);
   const head = useHead(q, v.statColumn).data;
   const shown = head?.total;
-  const columns = availableColumns({ groups: false, balance: hasBalance(head?.rows) });
+  const groups = useGroups().data;
+  const columns = availableColumns({ groups: !!groups?.length, balance: hasBalance(head?.rows) });
   const visible = columns.filter((c) => !v.hidden.includes(c.id)).length;
   const filtered = shown !== undefined && shown !== all;
   const numbers = columns.filter((c) => c.type === 'number');

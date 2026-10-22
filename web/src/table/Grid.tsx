@@ -4,10 +4,21 @@
 // after the first rows render, so the interface size and fonts never break the scroll maths.
 
 import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
 
 import { without } from '../lib/objects';
 import { uiScale } from '../styles/scale';
+import { selectedIn, useSelection } from '../stores/selectionStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { Icon } from '../ui/Icon';
 import { toast } from '../ui/toastStore';
@@ -15,6 +26,7 @@ import { gutterWidth, type ColumnDef, type Row } from './columns';
 import { useRows, type Page, type RowSource } from './data';
 import type { ViewQuery } from './context';
 import { hl } from './highlight';
+import { useRowGestures } from './useRowGestures';
 
 export type GridHandle = {
   scrollToIndex: (i: number) => void;
@@ -37,14 +49,28 @@ type Props = {
   gridRef?: (h: GridHandle | null) => void;
   /** Reports the loaded rows (for keyboard moves). */
   rowSource?: (rows: RowSource) => void;
+  /** The colour of a group (the Group column's pills). */
+  groupColor: (id: string) => string | undefined;
 };
 
 const DEFAULT_ROW_PX = 30;
 const MIN_WIDTH = 48;
 
 export function Grid(props: Props) {
-  const { viewId, q, head, columns, tokens, selectedId, onSelect, onColumnMenu, onClearAll, gridRef, rowSource } =
-    props;
+  const {
+    viewId,
+    q,
+    head,
+    columns,
+    tokens,
+    selectedId,
+    onSelect,
+    onColumnMenu,
+    onClearAll,
+    gridRef,
+    rowSource,
+    groupColor,
+  } = props;
   const wrap = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLTableSectionElement>(null);
   const [rowH, setRowH] = useState(() => DEFAULT_ROW_PX * uiScale());
@@ -67,6 +93,16 @@ export function Grid(props: Props) {
   const last = items.at(-1)?.index ?? 0;
   const rows = useRows(q, head, first, last);
   const { rowAt } = rows;
+  const marked = useSelection((s) => selectedIn(s, viewId));
+  const gestures = useRowGestures({ viewId, q, rows, wrap, rowHeight: rowH });
+  const onRowClick = useCallback(
+    (e: MouseEvent, row: Row, index: number) => {
+      if (gestures.ignoreClick(e)) return;
+      useSelection.getState().clear(viewId); // a plain click ends the multi-selection (legacy)
+      onSelect(row, index);
+    },
+    [gestures, onSelect, viewId],
+  );
 
   useEffect(() => {
     rowSource?.(rows);
@@ -137,7 +173,7 @@ export function Grid(props: Props) {
             ))}
           </tr>
         </thead>
-        <tbody ref={body}>
+        <tbody ref={body} onMouseDown={gestures.onMouseDown}>
           {head && total === 0 ? (
             <tr>
               <td className="none" colSpan={ncol}>
@@ -166,7 +202,9 @@ export function Grid(props: Props) {
                     columns={columns}
                     tokens={tokens}
                     selected={row.id === selectedId}
-                    onSelect={onSelect}
+                    marked={marked.has(row.id)}
+                    onClick={onRowClick}
+                    groupColor={groupColor}
                   />
                 ) : (
                   <tr key={`s${String(it.index)}`} className="skel" aria-busy="true">
@@ -196,23 +234,27 @@ function DataRow({
   columns,
   tokens,
   selected,
-  onSelect,
+  marked,
+  onClick,
+  groupColor,
 }: {
   row: Row;
   index: number;
   columns: readonly ColumnDef[];
   tokens: readonly string[];
   selected: boolean;
-  onSelect: (row: Row, index: number) => void;
+  marked: boolean;
+  onClick: (e: MouseEvent, row: Row, index: number) => void;
+  groupColor: (id: string) => string | undefined;
 }) {
+  const cls = [selected && 'sel', marked && 'msel'].filter(Boolean).join(' ');
   return (
     <tr
       data-i={index}
-      className={selected ? 'sel' : undefined}
-      aria-selected={selected}
+      className={cls || undefined}
+      aria-selected={selected || marked}
       onClick={(e) => {
-        if (e.shiftKey || e.metaKey || e.ctrlKey) return; // multi-selection gestures (10.11)
-        onSelect(row, index);
+        onClick(e, row, index);
       }}
     >
       <td className="gutter">{index + 1}</td>
@@ -228,7 +270,7 @@ function DataRow({
               void copyText(text);
             }}
           >
-            {cell(c, text, tokens)}
+            {cell(c, text, tokens, row.group && groupColor(row.group.id))}
           </td>
         );
       })}
@@ -236,11 +278,11 @@ function DataRow({
   );
 }
 
-function cell(c: ColumnDef, text: string, tokens: readonly string[]): ReactNode {
+function cell(c: ColumnDef, text: string, tokens: readonly string[], color: string | undefined): ReactNode {
   if (c.id === 'group' && text) {
     return (
       <span className="gtag" title={text}>
-        <i />
+        <i style={{ background: color } satisfies CSSProperties} />
         <span>{hl(text, tokens)}</span>
       </span>
     );

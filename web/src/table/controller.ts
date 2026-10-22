@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { useSelection } from '../stores/selectionStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import type { RowSource } from './data';
 import type { GridHandle } from './Grid';
@@ -86,10 +87,15 @@ export function moveSelection(move: Move): boolean {
   return true;
 }
 
-/** Esc after popovers and search (legacy order): deselect the row. Multi-selection joins in 10.11. */
+/** Esc after popovers and search (legacy order): the multi-selection first, then the row. */
 export function escapeSelection(): boolean {
   const st = active?.current;
   if (!st) return false;
+  const sel = useSelection.getState();
+  if (sel.viewId === st.viewId && sel.rows.size) {
+    sel.clear(st.viewId);
+    return true;
+  }
   if (!viewState(st).selectedId) return false;
   st.pending = null;
   useViews.getState().patch(st.viewId, { selectedId: null, selectedIndex: null });

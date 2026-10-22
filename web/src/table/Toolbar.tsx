@@ -1,5 +1,5 @@
 // The toolbar above the grid (PLAN §7.6, legacy .toolbar): the view's title and size, removable
-// chips with Clear all, and the Columns and Export buttons.
+// chips with Clear all, and the Groups, Columns and Export buttons.
 
 import { useState } from 'react';
 
@@ -15,6 +15,7 @@ import { toast } from '../ui/toastStore';
 import { chipsOf, cleared, withoutChip } from './chips';
 import type { ColumnDef } from './columns';
 import { ColumnsMenu } from './ColumnsMenu';
+import { GroupsButton } from '../groups/GroupsMenu';
 import type { ViewQuery } from './context';
 
 type Props = {
@@ -107,6 +108,7 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
         )}
       </div>
       <div className="tools">
+        <GroupsButton viewId={viewId} />
         <Button icon="columns" onClick={cols.toggle} aria-expanded={cols.open}>
           Columns
         </Button>

@@ -76,3 +76,8 @@ export function useCategories() {
     staleTime: 60_000,
   });
 }
+
+/** POST /transactions/ids: ids, amounts and groups of a range of the ordered result. */
+export async function fetchRange(body: Schemas['IdsRequest']) {
+  return data(await api.POST('/transactions/ids', { body }));
+}
