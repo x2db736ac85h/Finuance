@@ -304,7 +304,9 @@ describe('upload queue', () => {
     fastPath = true;
     const user = userEvent.setup();
     renderApp('/');
-    await screen.findByRole('navigation', { name: 'Explorer', hidden: true }).catch(() => undefined);
+    await waitFor(() => {
+      expect(document.querySelector('.toolbar')).not.toBeNull();
+    });
     act(() => {
       importFiles([csv()]);
     });
@@ -337,5 +339,27 @@ describe('upload queue', () => {
     expect(await within(dlg).findByText(/file 1 of 2/)).toBeTruthy();
     await user.click(await within(dlg).findByRole('button', { name: 'Cancel' }));
     expect(await screen.findByText(/file 2 of 2/)).toBeTruthy();
+  });
+});
+
+describe('upload target', () => {
+  it('uploads into the account in view', async () => {
+    db.accounts = [account({ txCount: 3 })];
+    let sent: string | null = null;
+    server.use(
+      http.post(`${API}/imports`, async ({ request }) => {
+        sent = (await request.formData()).get('accountId') as string | null;
+        return HttpResponse.json(cur, { status: 201 });
+      }),
+    );
+    renderApp(`/t/${db.accounts[0]?.id ?? ''}`);
+    await waitFor(() => {
+      expect(document.querySelector('.toolbar')).not.toBeNull();
+    });
+    act(() => {
+      importFiles([csv()]);
+    });
+    await screen.findByRole('dialog', { name: 'Import' });
+    expect(sent).toBe(db.accounts[0]?.id);
   });
 });

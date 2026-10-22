@@ -27,13 +27,18 @@ export type QueueItem = { key: number; name: string; status: QueueStatus; import
 export const useImportQueue = create<{ items: QueueItem[] }>()(() => ({ items: [] }));
 
 export type QueueDeps = {
-  upload: (file: File, opts: { autoCommit: boolean }) => Promise<UploadResult>;
+  upload: (file: File, opts: { autoCommit: boolean; accountId?: string }) => Promise<UploadResult>;
   getImport: (id: string) => Promise<ImportDetail>;
   deleteImport: (id: string) => Promise<void>;
   navigate: (to: string) => void;
   /** Data changed (an import was committed or removed). */
   refresh: () => void;
   autoCommit: () => boolean;
+  /**
+   * The account in view, if any: files dropped while looking at an account go into it (the
+   * server still pre-fills one from the file's own account number otherwise).
+   */
+  account?: () => string | undefined;
   /** Poll interval and limit while waiting for a commit (PLAN: every 500 ms, at most 2 min). */
   pollMs?: number;
   pollLimitMs?: number;
@@ -127,7 +132,8 @@ async function uploadOne(d: QueueDeps, item: QueueItem): Promise<void> {
   setStatus(is, 'uploading');
   let res: UploadResult;
   try {
-    res = await d.upload(file, { autoCommit: d.autoCommit() });
+    const accountId = d.account?.();
+    res = await d.upload(file, { autoCommit: d.autoCommit(), ...(accountId ? { accountId } : {}) });
   } catch (e) {
     const existing = duplicateOf(e);
     if (existing) {

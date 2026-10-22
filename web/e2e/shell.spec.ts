@@ -1,18 +1,8 @@
 // First end-to-end flow (PLAN task 8.13): sign up → load demo data → the sidebar shows the demo
 // account with its count; settings persist across a reload; sign out and back in.
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-const password = 'e2e password long enough';
-
-async function signUp(page: Page): Promise<string> {
-  const email = `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
-  await page.goto('/signup');
-  await page.getByRole('textbox', { name: 'Email' }).fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('heading', { name: 'Drop CSV files here' })).toBeVisible();
-  return email;
-}
+import { PASSWORD as password, signUp } from './helpers';
 
 test('sign up, load demo data, see the demo account in the sidebar', async ({ page }) => {
   await signUp(page);

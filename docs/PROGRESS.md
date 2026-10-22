@@ -171,6 +171,9 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 9.2: an upload goes into the account in view (`/t/:accountId`) when there is one. Files without an own-account number (the overlap fixtures, most CSVs made by hand) could otherwise never use the fast path, which needs a resolved account; the server still pre-fills one from the file's account number on `/t/all`.
+- 9.3: opening `/imports/:id` for a previewed import re-reads it with `PATCH {}` (the API has no read-only full preview); after an upload the window starts from the upload's answer. `ImportPreview.detected` was added for the role menu's *auto* hints. A committed import opens with its stored rows; changes apply with *Reprocess*.
+- 9.4: `POST /imports/{id}/commit` accepts a failed import again (*Try again*).
 - 8.1: TypeScript 5.9.3 rather than the newest release: openapi-typescript 7.13 declares `typescript ^5` as a peer. The Icon parity test reads `legacy/finuance.html` with a Vite `?raw` import; `server.fs.allow: ['..']` is set only in test mode.
 - 8.8: the preferences document keeps the legacy `collectPrefs` key names (`theme`, `ui`, `vizH`, `noViz`, `sbOpen`, `cards`, `cardOrder`, `cfg`, `ai`, `views`), plus `importFastPath`, so a legacy backup's prefs map onto it directly in Phase 14. Every stored document goes through `parsePrefs`, which drops unknown values; keys this build doesn't know are kept on save. The sync is a plain class (`stores/prefsSync.ts`) started by `RequireAuth`, not a React hook, so it can be unit-tested with fake timers.
 - 8.6: until the import UX (Phase 9), ⌘O, Browse, the mini drop zone and drag & drop open the picker or the overlay and then show a toast that import isn't available yet. The assistant button toggles its (persisted) state; the panel is Phase 13. Table and overview routes show the toolbar and a placeholder.

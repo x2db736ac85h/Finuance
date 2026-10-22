@@ -35,6 +35,10 @@ export function AppShell({ user }: { user: User }) {
   const vizOpen = useUi((s) => s.vizOpen);
   const searchRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
+  const viewAccount = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    viewAccount.current = viewId === 'all' ? undefined : viewId;
+  }, [viewId]);
 
   // Every file entry point (drop, ⌘O, Browse, mini drop zone) feeds the upload queue.
   useEffect(() => {
@@ -44,6 +48,7 @@ export function AppShell({ user }: { user: User }) {
         invalidateData(qc);
       },
       autoCommit: () => useUi.getState().importFastPath,
+      account: () => viewAccount.current,
     });
   }, [navigate, qc]);
 
