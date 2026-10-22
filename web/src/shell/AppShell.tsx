@@ -8,6 +8,7 @@ import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 
 import { invalidateData, useAccounts } from '../api/hooks/accounts';
 import { configureImports } from '../import/queue';
+import { escapeSelection, moveSelection } from '../table/controller';
 import type { User } from '../api/hooks/me';
 import { sidebarShown, useUi } from '../stores/uiStore';
 import { TooltipLayer } from '../ui/Tooltip';
@@ -80,6 +81,8 @@ export function AppShell({ user }: { user: User }) {
     openShortcuts: () => {
       useUi.getState().setKeysOpen(true);
     },
+    move: moveSelection,
+    escape: escapeSelection,
   });
 
   const cls = [

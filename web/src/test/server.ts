@@ -16,6 +16,9 @@ export type Db = {
   accounts: Schemas['Account'][];
   sessions: Schemas['Session'][];
   imports: Schemas['ImportSummary'][];
+  /** Rows the fake query endpoint pages through (no filtering). */
+  transactions: Schemas['TransactionRow'][];
+  queries: Schemas['TransactionQuery'][];
   puts: Schemas['Preferences'][];
 };
 
@@ -33,6 +36,8 @@ export const freshDb = (): Db => ({
   accounts: [],
   sessions: [],
   imports: [],
+  transactions: [],
+  queries: [],
   puts: [],
 });
 
@@ -77,8 +82,42 @@ export const server = setupServer(
   http.get(`${API}/accounts`, () => authed(() => HttpResponse.json(db.accounts))),
   http.get(`${API}/me/sessions`, () => authed(() => HttpResponse.json(db.sessions))),
   http.get(`${API}/imports`, () => authed(() => HttpResponse.json(db.imports))),
+  http.post(`${API}/transactions/query`, async ({ request }) => {
+    const q = (await request.json()) as Schemas['TransactionQuery'];
+    db.queries.push(q);
+    const offset = q.offset;
+    const rows = db.transactions.slice(offset, offset + q.limit);
+    if (!q.includeTotals) return HttpResponse.json({ rows, offset });
+    const sum = db.transactions.reduce((n, r) => n + r.amount.amountMinor, 0);
+    return HttpResponse.json({
+      rows,
+      offset,
+      total: db.transactions.length,
+      duplicatesSkipped: 0,
+      ...(db.transactions.length ? { stats: { column: 'amount', sum } } : {}),
+    });
+  }),
   http.post(`${API}/auth/logout`, () => {
     db.signedIn = false;
     return new HttpResponse(null, { status: 204 });
   }),
 );
+
+/** A transaction row for the fake query endpoint. */
+export const txRow = (i: number, over: Partial<Schemas['TransactionRow']> = {}): Schemas['TransactionRow'] => ({
+  id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+  accountId: '00000000-0000-4000-8000-0000000000a1',
+  accountName: 'Konto',
+  bookedOn: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+  amount: { amountMinor: -(1000 + i), currency: 'PLN' },
+  payee: `Sklep ${String(i)}`,
+  description: `Zakup ${String(i)}`,
+  categorySource: 'bank',
+  bankCategory: 'Zakupy',
+  txType: 'Karta',
+  reference: '',
+  counterpartyAccount: '',
+  note: '',
+  isTransfer: false,
+  ...over,
+});

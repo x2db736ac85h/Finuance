@@ -15,11 +15,26 @@ export type ViewState = PersistedView & {
   ovMonth: string | null;
 };
 
-export const newView = (): ViewState => ({
+/**
+ * Columns hidden in a view nobody has customised yet (PLAN §7.7). The Account column shows only in
+ * the "all" view.
+ */
+export const DEFAULT_HIDDEN: readonly Column[] = [
+  'valueOn',
+  'balanceAfter',
+  'currency',
+  'bankCategory',
+  'txType',
+  'reference',
+  'counterpartyAccount',
+  'note',
+];
+
+export const newView = (id = 'all'): ViewState => ({
   sort: null,
   filters: {},
   search: '',
-  hidden: [],
+  hidden: id === 'all' ? [...DEFAULT_HIDDEN] : [...DEFAULT_HIDDEN, 'account'],
   widths: {},
   selectedId: null,
   statColumn: 'amount',
@@ -39,7 +54,7 @@ type ViewStore = {
 export const useViews = create<ViewStore>()((set) => ({
   views: {},
   patch: (id, change) => {
-    set((s) => ({ views: { ...s.views, [id]: { ...(s.views[id] ?? newView()), ...change } } }));
+    set((s) => ({ views: { ...s.views, [id]: { ...(s.views[id] ?? newView(id)), ...change } } }));
   },
   // Stored views replace the persisted fields; session-only fields of open views survive.
   hydrate: (p) => {
@@ -47,7 +62,7 @@ export const useViews = create<ViewStore>()((set) => ({
     const stored = p.views;
     set((s) => {
       const views = { ...s.views };
-      for (const [id, pv] of Object.entries(stored)) views[id] = { ...(views[id] ?? newView()), ...pv };
+      for (const [id, pv] of Object.entries(stored)) views[id] = { ...(views[id] ?? newView(id)), ...pv };
       return { views };
     });
   },
@@ -58,9 +73,10 @@ export const useViews = create<ViewStore>()((set) => ({
 
 /** A view's state, or the defaults for a view not opened yet (does not create it). */
 export function viewOf(views: Record<string, ViewState>, id: string): ViewState {
-  return views[id] ?? DEFAULT_VIEW;
+  return views[id] ?? (id === 'all' ? DEFAULT_ALL : DEFAULT_ACCOUNT);
 }
-const DEFAULT_VIEW = newView();
+const DEFAULT_ALL = newView('all');
+const DEFAULT_ACCOUNT = newView('account');
 
 /** The persisted view slices, in preferences-document form. */
 export function collectViews(views: Record<string, ViewState>): Record<string, PersistedView> {

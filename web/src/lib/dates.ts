@@ -15,3 +15,10 @@ export function fmtDay(iso: string | undefined): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
 }
+
+/** A YYYY-MM-DD date plus n days (calendar arithmetic in UTC, no time zone shifts). */
+export function addDays(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const t = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1) + n * 86_400_000);
+  return t.toISOString().slice(0, 10);
+}

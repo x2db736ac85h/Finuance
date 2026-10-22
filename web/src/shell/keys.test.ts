@@ -8,6 +8,8 @@ const actions = () =>
     openFiles: vi.fn(),
     toggleAssistant: vi.fn(),
     openShortcuts: vi.fn(),
+    move: vi.fn<KeyActions['move']>(() => true),
+    escape: vi.fn(() => true),
   }) satisfies KeyActions;
 
 const key = (k: string, init: KeyboardEventInit = {}) =>
@@ -70,5 +72,28 @@ describe('handleKey', () => {
     expect(a.focusSearch).not.toHaveBeenCalled();
     handleKey(key('o', { metaKey: true }), a, none);
     expect(a.openFiles).toHaveBeenCalled();
+  });
+});
+
+describe('table keys', () => {
+  it('moves the selection with arrows, j/k and pages, not while typing', () => {
+    const a = actions();
+    for (const k of ['ArrowDown', 'j', 'ArrowUp', 'k', 'PageDown', 'PageUp']) handleKey(key(k), a, none);
+    expect(a.move.mock.calls.map((c) => c[0])).toEqual([1, 1, -1, -1, 'pageDown', 'pageUp']);
+    const input = document.createElement('input');
+    document.body.append(input);
+    input.focus();
+    handleKey(key('j'), a, none);
+    expect(a.move).toHaveBeenCalledTimes(6);
+  });
+
+  it('Esc clears the selection unless a popover is open', () => {
+    const a = actions();
+    handleKey(key('Escape'), a, { modal: 0, pop: 1 });
+    expect(a.escape).not.toHaveBeenCalled();
+    const e = key('Escape');
+    handleKey(e, a, none);
+    expect(a.escape).toHaveBeenCalledTimes(1);
+    expect(e.defaultPrevented).toBe(true);
   });
 });
