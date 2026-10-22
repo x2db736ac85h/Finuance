@@ -33,7 +33,7 @@
 - [x] 9.5 sidebar import history folded out per account (status, `+new · dup`, source label) + menu (Download original, Re-map and reprocess, Delete with confirm); previews without an account under "Not imported yet"
 - [x] 9.6 legacy v7 window parts: raw lines + header picking (scrolled to the header), footer/date-order, role menu with *auto* hints + *Use detected meanings* (`ImportPreview.detected`), first 50 + ⋯ + last 5 rows, required-fields footer
 - [x] 9.7 fast path setting (settings popover → Import, saved in prefs), toast actions (*Review*, *Undo*), source labels
-- [ ] Tests: MSW per preview part; E2E import cases
+- [x] Tests: 152 Vitest (editor with fake timers, roles, queue, window parts with MSW, sidebar history, toasts); E2E `import.spec.ts` (8 cases: overlap A→B with the oracle's counts (16, 4 duplicates), delete A, duplicate file, Windows-1250, debit/credit signs via the API, headerless + skip rows, padded preamble, footer summary, month-first dates, fast path + Undo) — 13 specs pass against a fresh `compose.ci.yaml` stack
 
 ## Phase 8 tasks (done)
 - [x] 8.1 scaffold `web/` (Vite, React, TS strict, ESLint, Prettier, Vitest, Playwright config, `/api` proxy, `make dev-web`)
@@ -174,6 +174,8 @@
 - 9.2: an upload goes into the account in view (`/t/:accountId`) when there is one. Files without an own-account number (the overlap fixtures, most CSVs made by hand) could otherwise never use the fast path, which needs a resolved account; the server still pre-fills one from the file's account number on `/t/all`.
 - 9.3: opening `/imports/:id` for a previewed import re-reads it with `PATCH {}` (the API has no read-only full preview); after an upload the window starts from the upload's answer. `ImportPreview.detected` was added for the role menu's *auto* hints. A committed import opens with its stored rows; changes apply with *Reprocess*.
 - 9.4: `POST /imports/{id}/commit` accepts a failed import again (*Try again*).
+- 9.6: the raw-lines panel loads up to 4 records past the header (at least the legacy 18, at most 200) and scrolls to it, so mBank's header on record 26 is visible. The window body scrolls on short screens instead of squeezing the preview table, because the account picker and column meanings make it taller than the legacy window.
+- 9.7: when a toast is waiting, the one on screen is cut to 1.2 s (the legacy replaced it at once); toasts with actions otherwise stay 8 s.
 - 8.1: TypeScript 5.9.3 rather than the newest release: openapi-typescript 7.13 declares `typescript ^5` as a peer. The Icon parity test reads `legacy/finuance.html` with a Vite `?raw` import; `server.fs.allow: ['..']` is set only in test mode.
 - 8.8: the preferences document keeps the legacy `collectPrefs` key names (`theme`, `ui`, `vizH`, `noViz`, `sbOpen`, `cards`, `cardOrder`, `cfg`, `ai`, `views`), plus `importFastPath`, so a legacy backup's prefs map onto it directly in Phase 14. Every stored document goes through `parsePrefs`, which drops unknown values; keys this build doesn't know are kept on save. The sync is a plain class (`stores/prefsSync.ts`) started by `RequireAuth`, not a React hook, so it can be unit-tested with fake timers.
 - 8.6: until the import UX (Phase 9), ⌘O, Browse, the mini drop zone and drag & drop open the picker or the overlay and then show a toast that import isn't available yet. The assistant button toggles its (persisted) state; the panel is Phase 13. Table and overview routes show the toolbar and a placeholder.

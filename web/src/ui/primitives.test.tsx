@@ -139,7 +139,7 @@ describe('Modal', () => {
 });
 
 describe('Toast', () => {
-  it('shows queued toasts one after another', () => {
+  it('shows queued toasts one after another, cutting the shown one short', () => {
     vi.useFakeTimers();
     try {
       render(<Toaster />);
@@ -154,8 +154,13 @@ describe('Toast', () => {
       });
       expect(screen.getByRole('status').textContent).toBe('First');
       expect(screen.getByRole('status').className).toBe('toast on');
+      // a toast is waiting, so the first one is cut short (1.2 s instead of 2.2 s)
       act(() => {
-        vi.advanceTimersByTime(2200 + 180);
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.getByRole('status').textContent).toBe('First');
+      act(() => {
+        vi.advanceTimersByTime(200 + 180);
       });
       act(() => {
         vi.advanceTimersByTime(10);
@@ -163,6 +168,11 @@ describe('Toast', () => {
       const err = screen.getByRole('alert');
       expect(err.textContent).toBe('Second');
       expect(err.className).toBe('toast err on');
+      // the last one keeps its full time (errors: 5 s)
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.getByRole('alert').className).toBe('toast err on');
     } finally {
       vi.useRealTimers();
     }

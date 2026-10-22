@@ -395,3 +395,11 @@ button.mini-drop {
 .tag.st-previewed {
   color: var(--accent);
 }
+/* On short windows the import window's body scrolls instead of squeezing the preview table away
+   (the legacy window had no account picker or column meanings, so it fitted). */
+.imp-b {
+  overflow: auto;
+}
+.imp-sec.grow {
+  min-height: 14rem;
+}

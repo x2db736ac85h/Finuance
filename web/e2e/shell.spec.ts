@@ -15,7 +15,7 @@ test('sign up, load demo data, see the demo account in the sidebar', async ({ pa
   const explorer = page.getByRole('navigation', { name: 'Explorer' });
   const demo = explorer.getByRole('link', { name: /Demo account/ });
   await expect(demo).toBeVisible();
-  await expect(demo).toHaveClass(/\bon\b/);
+  await expect(demo.locator('xpath=..')).toHaveClass(/\bon\b/);
   await expect(demo.locator('.tag')).toHaveText('demo');
   await expect(demo.locator('.fc')).toHaveText(/^[1-9][\d\s,.  ]*$/);
 });
