@@ -1,0 +1,9 @@
+# gitleaks: the default rules, plus one allowlisted file.
+title = "Finuance"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated OpenAPI server: oapi-codegen embeds the spec as gzip+base64 chunks, which can look like API keys. Its source, api/openapi.yaml, is scanned as usual."
+paths = ['''^backend/internal/httpapi/gen/gen\.go$''']
