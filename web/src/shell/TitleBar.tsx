@@ -138,7 +138,11 @@ function initial(u: User): string {
   return (u.displayName || u.email).trim().charAt(0).toUpperCase() || '?';
 }
 
-/** Search box: writes the view's search (session-only) after a short pause. */
+/**
+ * Search box: writes the view's search (session-only) after a short pause, and follows changes made
+ * elsewhere (Clear all, the search chip). `sent` is the last value this box wrote, so its own
+ * debounced writes don't reset what the user typed since.
+ */
 function SearchBox({
   viewId,
   disabled,
@@ -150,6 +154,15 @@ function SearchBox({
 }) {
   const stored = useViews((s) => viewOf(s.views, viewId).search);
   const [value, setValue] = useState(stored);
+  const [seen, setSeen] = useState(stored);
+  const [sent, setSent] = useState(stored);
+  if (stored !== seen) {
+    setSeen(stored);
+    if (stored !== sent) {
+      setSent(stored);
+      setValue(stored);
+    }
+  }
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(
     () => () => {
@@ -161,6 +174,7 @@ function SearchBox({
     setValue(v);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
+      setSent(v);
       useViews.getState().patch(viewId, { search: v });
     }, delay);
   };

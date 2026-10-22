@@ -53,6 +53,28 @@ describe('table', () => {
     expect(lastQuery()?.context.accountIds).toBeUndefined();
   });
 
+  it('Clear all also empties the search box', async () => {
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    await screen.findByText('Apteka');
+    const search = screen.getByRole<HTMLInputElement>('textbox', { name: 'Search all columns' });
+    await user.type(search, 'kino');
+    await waitFor(() => {
+      expect(lastQuery()?.context.search).toBe('kino');
+    });
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
+    await waitFor(() => {
+      expect(search.value).toBe('');
+    });
+    expect(lastQuery()?.context.search).toBeUndefined();
+    // typing again still works and isn't reset by its own debounced write
+    await user.type(search, 'apt');
+    await waitFor(() => {
+      expect(lastQuery()?.context.search).toBe('apt');
+    });
+    expect(search.value).toBe('apt');
+  });
+
   it('cycles the sort on header clicks: ascending, descending, off', async () => {
     const user = userEvent.setup();
     renderApp('/t/all');
