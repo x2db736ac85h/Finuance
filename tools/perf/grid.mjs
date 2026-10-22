@@ -13,7 +13,7 @@
 //     response in, then two frames);
 //   - the same wheel steps over a static table without script (the machine's floor).
 // It uses the web/ workspace's Playwright (run `npm ci` in web/ first). The password of a new
-// user is "perf password long enough".
+// user is "perf password long enough". The result is printed and written to ./perf-grid.json.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
