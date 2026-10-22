@@ -35,7 +35,7 @@
 - [x] 10.7 `StatusBar` (shown/total, columns, period, Σ/avg/min/max, totals picker); the duplicates count becomes a link with 10.13
 - [x] 10.8 keyboard (selection across windows, Esc chain, double-click copy)
 - [x] 10.9 per-view state for `/t/all` and `/t/:accountId`; Account column only in `all`
-- [ ] 10.10 groups backend: CRUD + stats, `POST /transactions/bulk` (ids), group in exports
+- [x] 10.10 groups backend: CRUD + stats, `POST /transactions/bulk` (ids), group in exports
 - [ ] 10.11 multi-selection + `QuickBar`
 - [ ] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
 - [ ] 10.13 duplicates: `GET /duplicates`, `PUT`/`DELETE /duplicates/{accountId}/{fingerprint}`, `DuplicatesDialog`
@@ -190,6 +190,7 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 10.10: `POST /transactions/bulk` takes `set: {groupId}` with `groupId` required and nullable (`null` = ungroup), so the generated types can tell "ungroup" from "not sent"; category and transfer join in Phase 15. `PATCH /groups/{id}` keeps the colour when none is sent. Group stats count money out and in over all accounts with transfers included (legacy `groupStats`), in the most common currency of the group's transactions.
 - 10.2: grid amounts are formatted with `fmtMoney` in the browser locale (the legacy showed the CSV text as is), because amounts are stored as minor units now. Dates use `dd.mm.yyyy`.
 - 10.5/10.9: each view starts with the plan's default hidden columns (Account only in `all`); the "N hidden" chip counts only columns hidden beyond those defaults, and removing it restores them.
 - 10.6: the inspector lives in `table/` next to the grid it reads from (the plan lists `shell/Inspector`). Its "N / total" position shows only while the row is in a loaded window; Balance after and Group appear only when the transaction has them. The category picker is a combobox: pick, create by name, or "Use the bank's category" (`resetCategory`) for a category set by hand.

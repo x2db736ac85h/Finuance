@@ -65,6 +65,21 @@ func TestGroups(t *testing.T) {
 	if err != nil || up.Name != "Italy" || up.Color != 7 {
 		t.Errorf("update = %+v, %v", up, err)
 	}
+	// A negative colour keeps the current one.
+	up, err = e.l.UpdateGroup(e.ctx, u, gs[0].ID, "Italia", -1)
+	if err != nil || up.Name != "Italia" || up.Color != 7 {
+		t.Errorf("rename = %+v, %v", up, err)
+	}
+	// Stats of empty groups: zero sums in the default currency, no dates; natural order.
+	st, err := e.l.GroupStats(e.ctx, u)
+	if err != nil || len(st) != 3 || st[0].Name != "b" || st[2].Name != "Italia" {
+		t.Fatalf("stats = %+v, %v", st, err)
+	}
+	if s := st[2]; s.Count != 0 || s.SpentMinor != 0 || s.Currency != "PLN" || s.FirstOn != nil || s.Color != 7 {
+		t.Errorf("empty group stats = %+v", s)
+	}
+	_, err = e.l.GroupStatOf(e.ctx, e.user(), gs[0].ID) // another user
+	isErr(t, err, ledger.ErrNotFound)
 }
 
 func TestNextGroupColor(t *testing.T) {

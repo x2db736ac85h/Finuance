@@ -1,0 +1,82 @@
+package httpapi
+
+import (
+	"context"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+)
+
+// Groups and bulk labelling (PLAN task 10.10, §4.7).
+
+func groupDTO(g ledger.GroupStat) gen.Group {
+	return gen.Group{Id: g.ID, Name: g.Name, Color: g.Color, Count: g.Count,
+		Spent:   gen.Money{AmountMinor: g.SpentMinor, Currency: g.Currency},
+		Income:  gen.Money{AmountMinor: g.IncomeMinor, Currency: g.Currency},
+		FirstOn: dateDTO(g.FirstOn), LastOn: dateDTO(g.LastOn)}
+}
+
+// ListGroups returns every group with its stats.
+func (a *api) ListGroups(ctx context.Context, _ gen.ListGroupsRequestObject) (gen.ListGroupsResponseObject, error) {
+	groups, err := a.ledger.GroupStats(ctx, identity(ctx).User.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := make(gen.ListGroups200JSONResponse, len(groups))
+	for i, g := range groups {
+		out[i] = groupDTO(g)
+	}
+	return out, nil
+}
+
+// CreateGroup adds a group; without a colour it takes the first unused slot.
+func (a *api) CreateGroup(ctx context.Context, req gen.CreateGroupRequestObject) (gen.CreateGroupResponseObject, error) {
+	userID := identity(ctx).User.ID
+	color := -1
+	if req.Body.Color != nil {
+		color = *req.Body.Color
+	}
+	g, err := a.ledger.CreateGroup(ctx, userID, req.Body.Name, color)
+	if err != nil {
+		return nil, err
+	}
+	st, err := a.ledger.GroupStatOf(ctx, userID, g.ID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.CreateGroup201JSONResponse(groupDTO(st)), nil
+}
+
+// UpdateGroup renames and/or recolours a group.
+func (a *api) UpdateGroup(ctx context.Context, req gen.UpdateGroupRequestObject) (gen.UpdateGroupResponseObject, error) {
+	userID := identity(ctx).User.ID
+	color := -1
+	if req.Body.Color != nil {
+		color = *req.Body.Color
+	}
+	if _, err := a.ledger.UpdateGroup(ctx, userID, req.Id, req.Body.Name, color); err != nil {
+		return nil, err
+	}
+	st, err := a.ledger.GroupStatOf(ctx, userID, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateGroup200JSONResponse(groupDTO(st)), nil
+}
+
+// DeleteGroup removes a group and its labels, never transactions.
+func (a *api) DeleteGroup(ctx context.Context, req gen.DeleteGroupRequestObject) (gen.DeleteGroupResponseObject, error) {
+	if err := a.ledger.DeleteGroup(ctx, identity(ctx).User.ID, req.Id); err != nil {
+		return nil, err
+	}
+	return gen.DeleteGroup204Response{}, nil
+}
+
+// BulkUpdateTransactions sets or removes the group of many transactions (annotations included).
+func (a *api) BulkUpdateTransactions(ctx context.Context, req gen.BulkUpdateTransactionsRequestObject) (gen.BulkUpdateTransactionsResponseObject, error) {
+	n, err := a.ledger.Annotate(ctx, identity(ctx).User.ID, req.Body.Ids, ledger.AnnotationPatch{SetGroup: true, GroupID: req.Body.Set.GroupId})
+	if err != nil {
+		return nil, err
+	}
+	return gen.BulkUpdateTransactions200JSONResponse{Updated: n}, nil
+}

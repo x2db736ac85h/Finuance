@@ -108,6 +108,10 @@ type Querier interface {
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	// email is citext, so the lookup ignores case.
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// Every group with its transactions over all the user's accounts, ignoring filters (PLAN §4.7):
+	// count, money out and in (minor units, transfers included as in the legacy), first and last day.
+	// The currency is the most common one among the group's transactions.
+	GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStatsRow, error)
 	// Distinct bank categories of an import's valid rows (the commit upserts them as categories).
 	ImportBankCategories(ctx context.Context, arg ImportBankCategoriesParams) ([]*string, error)
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the

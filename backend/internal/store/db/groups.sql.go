@@ -7,8 +7,10 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
 const createGroup = `-- name: CreateGroup :one
@@ -84,6 +86,68 @@ func (q *Queries) GetGroup(ctx context.Context, arg GetGroupParams) (Group, erro
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const groupStats = `-- name: GroupStats :many
+SELECT g.id, g.name, g.color, g.created_at,
+       count(t.id)::bigint AS tx_count,
+       coalesce(sum(-t.amount_minor) FILTER (WHERE t.amount_minor < 0), 0)::bigint AS spent_minor,
+       coalesce(sum(t.amount_minor) FILTER (WHERE t.amount_minor > 0), 0)::bigint AS income_minor,
+       min(t.booked_on)::date AS first_on,
+       max(t.booked_on)::date AS last_on,
+       coalesce(mode() WITHIN GROUP (ORDER BY t.currency), '')::text AS currency
+FROM groups g
+LEFT JOIN transactions t ON t.group_id = g.id AND t.user_id = $1
+WHERE g.user_id = $1
+GROUP BY g.id
+ORDER BY g.name COLLATE pl_natural, g.id
+`
+
+type GroupStatsRow struct {
+	ID          uuid.UUID
+	Name        string
+	Color       int16
+	CreatedAt   time.Time
+	TxCount     int64
+	SpentMinor  int64
+	IncomeMinor int64
+	FirstOn     platform.Date
+	LastOn      platform.Date
+	Currency    string
+}
+
+// Every group with its transactions over all the user's accounts, ignoring filters (PLAN §4.7):
+// count, money out and in (minor units, transfers included as in the legacy), first and last day.
+// The currency is the most common one among the group's transactions.
+func (q *Queries) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStatsRow, error) {
+	rows, err := q.db.Query(ctx, groupStats, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupStatsRow
+	for rows.Next() {
+		var i GroupStatsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Color,
+			&i.CreatedAt,
+			&i.TxCount,
+			&i.SpentMinor,
+			&i.IncomeMinor,
+			&i.FirstOn,
+			&i.LastOn,
+			&i.Currency,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listGroups = `-- name: ListGroups :many

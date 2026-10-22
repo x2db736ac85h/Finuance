@@ -667,6 +667,30 @@ paths:
                   $ref: "#/components/schemas/IdAmount"
         default:
           $ref: "#/components/responses/Problem"
+  /transactions/bulk:
+    post:
+      operationId: bulkUpdateTransactions
+      summary: Set or remove the group of many transactions
+      description: >-
+        Applies `set` to the given transactions (at most 5,000) and keeps the change as annotations,
+        so it survives deleting and re-importing the file. `groupId: null` removes the label. Ids
+        that are not the user's are ignored; `updated` counts the transactions changed.
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUpdate"
+      responses:
+        "200":
+          description: How many transactions changed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkResult"
+        default:
+          $ref: "#/components/responses/Problem"
   /transactions/export:
     post:
       operationId: exportTransactions
@@ -764,6 +788,79 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Category"
+        default:
+          $ref: "#/components/responses/Problem"
+  /groups:
+    get:
+      operationId: listGroups
+      summary: Groups with their stats
+      description: >-
+        Every group in natural order with its transactions over all accounts, ignoring filters:
+        count, money out and in (transfers included), first and last day (PLAN §4.7).
+      tags: [groups]
+      responses:
+        "200":
+          description: The groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Group"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createGroup
+      summary: Create a group
+      description: >-
+        The name is unique per user (ignoring case and accents), at most 40 characters. Without
+        `color` the group takes the first unused colour slot. `409 conflict` when the name is taken.
+      tags: [groups]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupInput"
+      responses:
+        "201":
+          description: The new group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+        default:
+          $ref: "#/components/responses/Problem"
+  /groups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      operationId: updateGroup
+      summary: Rename or recolour a group
+      description: The client renames view filters that mention the old name.
+      tags: [groups]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupInput"
+      responses:
+        "200":
+          description: The group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteGroup
+      summary: Delete a group (its labels only, never transactions)
+      tags: [groups]
+      responses:
+        "204":
+          description: Deleted.
         default:
           $ref: "#/components/responses/Problem"
   /demo-data:
@@ -1764,6 +1861,73 @@ components:
           type: integer
           minimum: 1
           maximum: 7
+    Group:
+      type: object
+      additionalProperties: false
+      required: [id, name, color, count, spent, income]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: integer
+          minimum: 0
+          maximum: 7
+        count:
+          type: integer
+        spent:
+          $ref: "#/components/schemas/Money"
+        income:
+          $ref: "#/components/schemas/Money"
+        firstOn:
+          type: string
+          format: date
+        lastOn:
+          type: string
+          format: date
+    GroupInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        color:
+          type: integer
+          minimum: 0
+          maximum: 7
+    BulkUpdate:
+      type: object
+      additionalProperties: false
+      required: [ids, set]
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items:
+            type: string
+            format: uuid
+        set:
+          type: object
+          additionalProperties: false
+          required: [groupId]
+          properties:
+            groupId:
+              type: string
+              format: uuid
+              nullable: true
+    BulkResult:
+      type: object
+      additionalProperties: false
+      required: [updated]
+      properties:
+        updated:
+          type: integer
     DemoData:
       type: object
       additionalProperties: false
