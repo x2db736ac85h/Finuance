@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 8 — Frontend foundation · **Branch:** phase/08-frontend · **Status:** gate approved, merged
+**Current phase:** 9 — Import UX · **Branch:** phase/09-import · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -21,9 +21,21 @@
 - Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
 - Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
 - Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 5.9.3 (openapi-typescript 7 needs `typescript ^5`). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
+- Phase 9: the automatic header rule is fixed in the backend (the text-only row just before the first row with a date and a number; legacy rule otherwise), recorded in `ALLOWED_DIFFS.md` row 4. The import preview is a window over the app (legacy `.modal` look) with its own URL `/imports/:id`.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 9.0 header detection fix for mBank / PKO BP (`ingest`), `ALLOWED_DIFFS` row 4
+- [ ] 9.1 entry points: drag & drop, mini drop zone, ⌘/Ctrl O, Browse
+- [ ] 9.2 upload queue + "1 of N" stepper, `409 duplicate_file` toast with a link
+- [ ] 9.3 preview window `/imports/:id`: file facts, account picker, mapping editor, options, stats, sample grid, errors drawer, commit bar; debounced `PATCH`
+- [ ] 9.4 commit flow: poll, toast, navigate; inline failure + Try again
+- [ ] 9.5 sidebar import history + menu (download, reprocess, delete)
+- [ ] 9.6 legacy v7 window parts: raw lines + header picking, footer/date-order, role menu + *Use detected meanings*, first/last rows, required-fields footer
+- [ ] 9.7 fast path preference, toast actions (*Review*, *Undo*), source labels
+- [ ] Tests: MSW per preview part; E2E import cases
+
+## Phase 8 tasks (done)
 - [x] 8.1 scaffold `web/` (Vite, React, TS strict, ESLint, Prettier, Vitest, Playwright config, `/api` proxy, `make dev-web`)
 - [x] 8.2 API client: `openapi-typescript` in `make gen`, `openapi-fetch` client (CSRF header, Problem errors, 401 → `/login?next=`), hooks
 - [x] 8.3 styles: `tokens.css` (verbatim), `base.css` (rem), `scale.ts` (auto heuristic), `theme.ts`
@@ -244,6 +256,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 9 planned and approved (backend header fix; preview as a window with its own URL). Branch `phase/09-import`.
 - 2026-10-22 — Phase 8 gate approved; merged. Next: plan Phase 9.
 - 2026-10-22 — Phase 8 built on `phase/08-frontend`: scaffold, typed client, legacy styles/icons, UI primitives, shell, auth, stores + preferences sync, settings, demo data, web image + Compose, CI `web`/`e2e` jobs, 5 E2E specs. Legacy vs new screenshots match closely. Next: Irwin's gate review.
 - 2026-10-21 — Phase 8 planned and approved (3 dev type/lint deps; inline demo-data commit). Branch `phase/08-frontend`.
