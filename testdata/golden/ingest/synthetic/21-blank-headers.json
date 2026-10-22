@@ -2,13 +2,13 @@
   "fixture": "synthetic/21-blank-headers.csv",
   "encoding": "utf-8",
   "delimiter": ";",
-  "headerAt": 2,
+  "headerAt": 1,
   "dropped": 0,
   "headers": [
-    "02.01.2025",
-    "x",
-    "-10,00",
-    "y"
+    "Data",
+    "Column 2",
+    "Kwota",
+    "Column 4"
   ],
   "types": [
     "date",
@@ -17,36 +17,64 @@
     "text"
   ],
   "roles": {
-    "amount": "-10,00",
-    "bookedOn": "02.01.2025"
+    "amount": "Kwota",
+    "bookedOn": "Data"
   },
-  "headerSignature": "403653be7a57b75b50645d2d827b4408077d84ab1698ef540ff9be1570ae1a3a",
+  "headerSignature": "716de7141761055b073c619d814aba9f390128b4ed8a06252cad381f4da6010e",
   "stats": {
-    "rows": 1,
-    "valid": 1,
+    "rows": 2,
+    "valid": 2,
     "errors": 0
   },
   "rows": [
     {
       "rowIndex": 0,
+      "bookedOn": "2025-01-02",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "raw": [
+        {
+          "header": "Data",
+          "value": "02.01.2025"
+        },
+        {
+          "header": "Column 2",
+          "value": "x"
+        },
+        {
+          "header": "Kwota",
+          "value": "-10,00"
+        },
+        {
+          "header": "Column 4",
+          "value": "y"
+        }
+      ],
+      "searchText": "02.01.2025\u0001x\u0001-10,00\u0001y",
+      "payeeGroup": "(unknown)",
+      "occurrence": 1,
+      "fingerprint": "86c4440ac163af264a2aaed76b90ea6078521b70a80ae77080fd1e47ea0a6e83"
+    },
+    {
+      "rowIndex": 1,
       "bookedOn": "2025-01-03",
       "amountMinor": -2000,
       "currency": "PLN",
       "raw": [
         {
-          "header": "02.01.2025",
+          "header": "Data",
           "value": "03.01.2025"
         },
         {
-          "header": "x",
+          "header": "Column 2",
           "value": "z"
         },
         {
-          "header": "-10,00",
+          "header": "Kwota",
           "value": "-20,00"
         },
         {
-          "header": "y",
+          "header": "Column 4",
           "value": "w"
         }
       ],

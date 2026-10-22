@@ -2,14 +2,14 @@
   "fixture": "real/mbank/mbank_example.csv",
   "encoding": "utf-8",
   "delimiter": ";",
-  "headerAt": 27,
+  "headerAt": 26,
   "dropped": 0,
   "headers": [
-    "2025-09-23",
-    "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-    "Ykajybur 0000 ... 0003",
-    "Wypłata gotówki",
-    "-848,80 PLN"
+    "#Data operacji",
+    "#Opis operacji",
+    "#Rachunek",
+    "#Kategoria",
+    "#Kwota"
   ],
   "types": [
     "date",
@@ -19,751 +19,881 @@
     "number"
   ],
   "roles": {
-    "amount": "-848,80 PLN",
-    "bookedOn": "2025-09-23"
+    "amount": "#Kwota",
+    "bookedOn": "#Data operacji",
+    "category": "#Kategoria",
+    "payee": "#Opis operacji"
   },
-  "headerSignature": "1d6969b2e1b518a9079ad4af1b2087845fff9d1708db434b70f72feb321214a2",
+  "headerSignature": "ae75dcb36f9dc9841198af6b6ee9e2df06025993914f867d35342217e792907e",
   "stats": {
-    "rows": 23,
-    "valid": 23,
+    "rows": 24,
+    "valid": 24,
     "errors": 0
   },
   "rows": [
     {
       "rowIndex": 0,
       "bookedOn": "2025-09-23",
-      "amountMinor": -3335,
+      "amountMinor": -84880,
       "currency": "PLN",
+      "payee": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
+      "bankCategory": "Wypłata gotówki",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-23"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "YRIS YNASIZI (YPOGENUFOT)  ZAKUP PRZY UŻYCIU KARTY - MO/TO                                                     transakcja nierozliczona"
+          "header": "#Opis operacji",
+          "value": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
-          "value": "Bez kategorii"
+          "header": "#Kategoria",
+          "value": "Wypłata gotówki"
         },
         {
-          "header": "-848,80 PLN",
-          "value": "-33,35 PLN"
+          "header": "#Kwota",
+          "value": "-848,80 PLN"
         }
       ],
-      "searchText": "2025-09-23\u0001yris ynasizi (ypogenufot)  zakup przy uzyciu karty - mo/to                                                     transakcja nierozliczona\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-33,35 pln",
-      "payeeGroup": "(unknown)",
+      "searchText": "2025-09-23\u0001blik wyplata atm wlasny  juhojy cash                                                                                                                                  blik wyplata atm wlasny\u0001ykajybur 0000 ... 0003\u0001wyplata gotowki\u0001-848,80 pln",
+      "payeeN": "blik wyplata atm wlasny juhojy cash blik wyplata atm wlasny",
+      "bankCategoryN": "wyplata gotowki",
+      "payeeGroup": "BLIK WYPŁATA ATM WŁASNY",
       "occurrence": 1,
-      "fingerprint": "56dbfcfb12245374107094683aaa505b522256cb9a03f414d29f9bfdc3ef9b10"
+      "fingerprint": "6a044adb731f605f6d5a4ad6ecc0ac3351c0c835bd27aade86b9c4af6977431e"
     },
     {
       "rowIndex": 1,
       "bookedOn": "2025-09-23",
-      "amountMinor": 30164,
+      "amountMinor": -3335,
       "currency": "PLN",
+      "payee": "YRIS YNASIZI (YPOGENUFOT)  ZAKUP PRZY UŻYCIU KARTY - MO/TO                                                     transakcja nierozliczona",
+      "bankCategory": "Bez kategorii",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-23"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "GEGOTU ESU PEJ 5 ZAJASAR YSISAZUFE 09-01 YJYWAC YDAPO ONOH SG 704542, WYNOWYDUB PL, 1970528705549 /RFB/1970528705549  WYNOWYDUB PL                                                           PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000060295"
+          "header": "#Opis operacji",
+          "value": "YRIS YNASIZI (YPOGENUFOT)  ZAKUP PRZY UŻYCIU KARTY - MO/TO                                                     transakcja nierozliczona"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
+          "value": "Bez kategorii"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-33,35 PLN"
+        }
+      ],
+      "searchText": "2025-09-23\u0001yris ynasizi (ypogenufot)  zakup przy uzyciu karty - mo/to                                                     transakcja nierozliczona\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-33,35 pln",
+      "payeeN": "yris ynasizi (ypogenufot) zakup przy uzyciu karty - mo/to transakcja nierozliczona",
+      "bankCategoryN": "bez kategorii",
+      "payeeGroup": "YRIS YNASIZI (YPOGENUFOT)",
+      "occurrence": 1,
+      "fingerprint": "36522a407e1b0ada8f8ac41ea9e7abfc0e214e2486185e604a8e77def3f4073b"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2025-09-23",
+      "amountMinor": 30164,
+      "currency": "PLN",
+      "payee": "GEGOTU ESU PEJ 5 ZAJASAR YSISAZUFE 09-01 YJYWAC YDAPO ONOH SG 704542, WYNOWYDUB PL, 1970528705549 /RFB/1970528705549  WYNOWYDUB PL                                                           PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000060295",
+      "bankCategory": "Wpływy - inne",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2025-09-23"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "GEGOTU ESU PEJ 5 ZAJASAR YSISAZUFE 09-01 YJYWAC YDAPO ONOH SG 704542, WYNOWYDUB PL, 1970528705549 /RFB/1970528705549  WYNOWYDUB PL                                                           PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000060295"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Ykajybur 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
           "value": "Wpływy - inne"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "301,64 PLN"
         }
       ],
       "searchText": "2025-09-23\u0001gegotu esu pej 5 zajasar ysisazufe 09-01 yjywac ydapo onoh sg 704542, wynowydub pl, 1970528705549 /rfb/1970528705549  wynowydub pl                                                           przelew zewnetrzny przychodzacy                                                   00000000000000000000060295\u0001ykajybur 0000 ... 0003\u0001wplywy - inne\u0001301,64 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "gegotu esu pej 5 zajasar ysisazufe 09-01 yjywac ydapo onoh sg 704542, wynowydub pl, 1970528705549 /rfb/1970528705549 wynowydub pl przelew zewnetrzny przychodzacy 00000000000000000000060295",
+      "bankCategoryN": "wplywy - inne",
+      "payeeGroup": "GEGOTU ESU PEJ 5 ZAJASAR YSISAZUFE 09-01 YJYWAC YDAPO ONOH SG 704542, WYNOWYDUB PL, 1970528705549 /RFB/1970528705549",
       "occurrence": 1,
-      "fingerprint": "ea46d34da9e799efac956ed950db83abe220d0137feaff17c78d717df883eabe"
-    },
-    {
-      "rowIndex": 2,
-      "bookedOn": "2025-09-22",
-      "amountMinor": -8724,
-      "currency": "PLN",
-      "raw": [
-        {
-          "header": "2025-09-23",
-          "value": "2025-09-22"
-        },
-        {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "YBED GCJSJV09694655845  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona"
-        },
-        {
-          "header": "Ykajybur 0000 ... 0003",
-          "value": "Ykajybur 0000 ... 0003"
-        },
-        {
-          "header": "Wypłata gotówki",
-          "value": "Płatności - inne"
-        },
-        {
-          "header": "-848,80 PLN",
-          "value": "-87,24 PLN"
-        }
-      ],
-      "searchText": "2025-09-22\u0001ybed gcjsjv09694655845  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001ykajybur 0000 ... 0003\u0001platnosci - inne\u0001-87,24 pln",
-      "payeeGroup": "(unknown)",
-      "occurrence": 1,
-      "fingerprint": "02257496f60e1e838f8e8f0a41e54af4bdd574e07112e8bb47333afb24ecf9fb"
+      "fingerprint": "15d50244cdc7879c0ffe34abbc624c05d3ad89d4ca214a0baaf651aa6dcf31ee"
     },
     {
       "rowIndex": 3,
       "bookedOn": "2025-09-22",
       "amountMinor": -8724,
       "currency": "PLN",
+      "payee": "YBED GCJSJV09694655845  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona",
+      "bankCategory": "Płatności - inne",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-22"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "YBED GPZOAP43830537380  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona"
+          "header": "#Opis operacji",
+          "value": "YBED GCJSJV09694655845  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "Płatności - inne"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-87,24 PLN"
         }
       ],
-      "searchText": "2025-09-22\u0001ybed gpzoap43830537380  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001ykajybur 0000 ... 0003\u0001platnosci - inne\u0001-87,24 pln",
-      "payeeGroup": "(unknown)",
-      "occurrence": 2,
-      "fingerprint": "02257496f60e1e838f8e8f0a41e54af4bdd574e07112e8bb47333afb24ecf9fb"
+      "searchText": "2025-09-22\u0001ybed gcjsjv09694655845  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001ykajybur 0000 ... 0003\u0001platnosci - inne\u0001-87,24 pln",
+      "payeeN": "ybed gcjsjv09694655845 zakup przy uzyciu karty - internet transakcja nierozliczona",
+      "bankCategoryN": "platnosci - inne",
+      "payeeGroup": "YBED GCJSJV09694655845",
+      "occurrence": 1,
+      "fingerprint": "53d4cb08b94834de0a06fd0044a6fe593863cc95715a2599e8e3755b8dcf2a0c"
     },
     {
       "rowIndex": 4,
       "bookedOn": "2025-09-22",
-      "amountMinor": -42440,
+      "amountMinor": -8724,
       "currency": "PLN",
+      "payee": "YBED GPZOAP43830537380  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona",
+      "bankCategory": "Płatności - inne",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-22"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "mTransfer  PATUGE                                                                UL.JUMERUMUPE 15                   60-327 ZOHYSU POLSKA                PRZELEW MTRANSFER WYCHODZACY                                                      00000000000000000000019049"
+          "header": "#Opis operacji",
+          "value": "YBED GPZOAP43830537380  ZAKUP PRZY UŻYCIU KARTY - INTERNET                                                  transakcja nierozliczona"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
+          "value": "Płatności - inne"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-87,24 PLN"
+        }
+      ],
+      "searchText": "2025-09-22\u0001ybed gpzoap43830537380  zakup przy uzyciu karty - internet                                                  transakcja nierozliczona\u0001ykajybur 0000 ... 0003\u0001platnosci - inne\u0001-87,24 pln",
+      "payeeN": "ybed gpzoap43830537380 zakup przy uzyciu karty - internet transakcja nierozliczona",
+      "bankCategoryN": "platnosci - inne",
+      "payeeGroup": "YBED GPZOAP43830537380",
+      "occurrence": 1,
+      "fingerprint": "bc28d0fcd6da77a1b2f24f4ff2552f01ae2b1704e82537a5a99db8ea60c54c91"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2025-09-22",
+      "amountMinor": -42440,
+      "currency": "PLN",
+      "payee": "mTransfer  PATUGE                                                                UL.JUMERUMUPE 15                   60-327 ZOHYSU POLSKA                PRZELEW MTRANSFER WYCHODZACY                                                      00000000000000000000019049",
+      "bankCategory": "Bez kategorii",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2025-09-22"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "mTransfer  PATUGE                                                                UL.JUMERUMUPE 15                   60-327 ZOHYSU POLSKA                PRZELEW MTRANSFER WYCHODZACY                                                      00000000000000000000019049"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Ykajybur 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
           "value": "Bez kategorii"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-424,40 PLN"
         }
       ],
       "searchText": "2025-09-22\u0001mtransfer  patuge                                                                ul.jumerumupe 15                   60-327 zohysu polska                przelew mtransfer wychodzacy                                                      00000000000000000000019049\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-424,40 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "mtransfer patuge ul.jumerumupe 15 60-327 zohysu polska przelew mtransfer wychodzacy 00000000000000000000019049",
+      "bankCategoryN": "bez kategorii",
+      "payeeGroup": "mTransfer",
       "occurrence": 1,
-      "fingerprint": "d6871909e40920e8ae30c3ac9cb3410014255344a80ee0be18e88bb84b8cf159"
-    },
-    {
-      "rowIndex": 5,
-      "bookedOn": "2025-09-18",
-      "amountMinor": -2805,
-      "currency": "PLN",
-      "raw": [
-        {
-          "header": "2025-09-23",
-          "value": "2025-09-18"
-        },
-        {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "JUJARYL X  ZAKUP PRZY UŻYCIU KARTY - INTERNET"
-        },
-        {
-          "header": "Ykajybur 0000 ... 0003",
-          "value": "Ykajybur 0000 ... 0003"
-        },
-        {
-          "header": "Wypłata gotówki",
-          "value": "Multimedia, książki i prasa"
-        },
-        {
-          "header": "-848,80 PLN",
-          "value": "-28,05 PLN"
-        }
-      ],
-      "searchText": "2025-09-18\u0001jujaryl x  zakup przy uzyciu karty - internet\u0001ykajybur 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-28,05 pln",
-      "payeeGroup": "(unknown)",
-      "occurrence": 1,
-      "fingerprint": "1dd652b6024dfb03b041431aed87d812d1f7ccae6bf799eb6a4dd2c079b8d4e6"
+      "fingerprint": "5e16b28ffbd38ebfef6f64b1e040c8cd89b288f0f2a9edd277d8e2b7041ce016"
     },
     {
       "rowIndex": 6,
       "bookedOn": "2025-09-18",
-      "amountMinor": -10099,
+      "amountMinor": -2805,
       "currency": "PLN",
+      "payee": "JUJARYL X  ZAKUP PRZY UŻYCIU KARTY - INTERNET",
+      "bankCategory": "Multimedia, książki i prasa",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-18"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "JUJARYL X  ZAKUP PRZY UŻYCIU KARTY - MO/TO"
+          "header": "#Opis operacji",
+          "value": "JUJARYL X  ZAKUP PRZY UŻYCIU KARTY - INTERNET"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "Multimedia, książki i prasa"
         },
         {
-          "header": "-848,80 PLN",
-          "value": "-100,99 PLN"
+          "header": "#Kwota",
+          "value": "-28,05 PLN"
         }
       ],
-      "searchText": "2025-09-18\u0001jujaryl x  zakup przy uzyciu karty - mo/to\u0001ykajybur 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-100,99 pln",
-      "payeeGroup": "(unknown)",
+      "searchText": "2025-09-18\u0001jujaryl x  zakup przy uzyciu karty - internet\u0001ykajybur 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-28,05 pln",
+      "payeeN": "jujaryl x zakup przy uzyciu karty - internet",
+      "bankCategoryN": "multimedia, ksiazki i prasa",
+      "payeeGroup": "JUJARYL X",
       "occurrence": 1,
-      "fingerprint": "871dbf0ac625e362970b7671c57578647053c6fdd80bce907589312fae2c41a5"
+      "fingerprint": "ca847b9e440786765c9201ce95ab294377d87f04ffce20c9c42fa3cfdc27a82c"
     },
     {
       "rowIndex": 7,
       "bookedOn": "2025-09-18",
-      "amountMinor": -84880,
+      "amountMinor": -10099,
       "currency": "PLN",
+      "payee": "JUJARYL X  ZAKUP PRZY UŻYCIU KARTY - MO/TO",
+      "bankCategory": "Multimedia, książki i prasa",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-18"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "BLIK WYPŁATA ATM WŁASNY  HUKENE                                                                                                                                       BLIK WYPŁATA ATM WŁASNY"
+          "header": "#Opis operacji",
+          "value": "JUJARYL X  ZAKUP PRZY UŻYCIU KARTY - MO/TO"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
+          "value": "Multimedia, książki i prasa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-100,99 PLN"
+        }
+      ],
+      "searchText": "2025-09-18\u0001jujaryl x  zakup przy uzyciu karty - mo/to\u0001ykajybur 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-100,99 pln",
+      "payeeN": "jujaryl x zakup przy uzyciu karty - mo/to",
+      "bankCategoryN": "multimedia, ksiazki i prasa",
+      "payeeGroup": "JUJARYL X",
+      "occurrence": 1,
+      "fingerprint": "ccf13be1aeffbf82ed145ae12d68c316d390e5cc94aa3fd7a5dd251c83b964e8"
+    },
+    {
+      "rowIndex": 8,
+      "bookedOn": "2025-09-18",
+      "amountMinor": -84880,
+      "currency": "PLN",
+      "payee": "BLIK WYPŁATA ATM WŁASNY  HUKENE                                                                                                                                       BLIK WYPŁATA ATM WŁASNY",
+      "bankCategory": "Wypłata gotówki",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2025-09-18"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "BLIK WYPŁATA ATM WŁASNY  HUKENE                                                                                                                                       BLIK WYPŁATA ATM WŁASNY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Ykajybur 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
           "value": "Wypłata gotówki"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-848,80 PLN"
         }
       ],
       "searchText": "2025-09-18\u0001blik wyplata atm wlasny  hukene                                                                                                                                       blik wyplata atm wlasny\u0001ykajybur 0000 ... 0003\u0001wyplata gotowki\u0001-848,80 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "blik wyplata atm wlasny hukene blik wyplata atm wlasny",
+      "bankCategoryN": "wyplata gotowki",
+      "payeeGroup": "BLIK WYPŁATA ATM WŁASNY",
       "occurrence": 1,
-      "fingerprint": "239409fc7b6b9e6b373dcfe232f68d2dc36dfd928d63c91440811b1e8feaa6f6"
+      "fingerprint": "30343f3d025cc568bd4237b100835f1414f9a2ab233952717b5617b65d4e311d"
     },
     {
-      "rowIndex": 8,
+      "rowIndex": 9,
       "bookedOn": "2025-09-17",
       "amountMinor": -21220,
       "currency": "PLN",
+      "payee": "ZISENATO GATIWOH, DAROWIZNA NA CELE STATUTOWE                                                                         PRZELEW WEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000088306",
+      "bankCategory": "Bez kategorii",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-17"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
+          "header": "#Opis operacji",
           "value": "ZISENATO GATIWOH, DAROWIZNA NA CELE STATUTOWE                                                                         PRZELEW WEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000088306"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "Bez kategorii"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-212,20 PLN"
         }
       ],
       "searchText": "2025-09-17\u0001zisenato gatiwoh, darowizna na cele statutowe                                                                         przelew wewnetrzny wychodzacy                                                     00000000000000000000088306\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-212,20 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "zisenato gatiwoh, darowizna na cele statutowe przelew wewnetrzny wychodzacy 00000000000000000000088306",
+      "bankCategoryN": "bez kategorii",
+      "payeeGroup": "ZISENATO GATIWOH, DAROWIZNA NA CELE STATUTOWE",
       "occurrence": 1,
-      "fingerprint": "311fd7ff88c23a871bc08ef5810435199b148a70e2c2f49d5aed9b0d2d001e76"
-    },
-    {
-      "rowIndex": 9,
-      "bookedOn": "2025-09-16",
-      "amountMinor": -2439,
-      "currency": "PLN",
-      "raw": [
-        {
-          "header": "2025-09-23",
-          "value": "2025-09-16"
-        },
-        {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "Yrymag Cale Ygyb  ZAKUP PRZY UŻYCIU KARTY - INTERNET"
-        },
-        {
-          "header": "Ykajybur 0000 ... 0003",
-          "value": "Ykajybur 0000 ... 0003"
-        },
-        {
-          "header": "Wypłata gotówki",
-          "value": "Multimedia, książki i prasa"
-        },
-        {
-          "header": "-848,80 PLN",
-          "value": "-24,39 PLN"
-        }
-      ],
-      "searchText": "2025-09-16\u0001yrymag cale ygyb  zakup przy uzyciu karty - internet\u0001ykajybur 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-24,39 pln",
-      "payeeGroup": "(unknown)",
-      "occurrence": 1,
-      "fingerprint": "e8784fcccf1dbce0fd67b9d6c9c1e4e5a755c4955e32030c8473c4a76323fd85"
+      "fingerprint": "93d0042022b754e1978faeb13fb6281db8ad3df6f03b7c52d0304f6e6b4e2cf8"
     },
     {
       "rowIndex": 10,
       "bookedOn": "2025-09-16",
-      "amountMinor": 31830,
+      "amountMinor": -2439,
       "currency": "PLN",
+      "payee": "Yrymag Cale Ygyb  ZAKUP PRZY UŻYCIU KARTY - INTERNET",
+      "bankCategory": "Multimedia, książki i prasa",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-16"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "EROMECIJAH  UL.EMESEGIR 3                      60-123 ZOHYSU                       PRZELEW WEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000016142"
+          "header": "#Opis operacji",
+          "value": "Yrymag Cale Ygyb  ZAKUP PRZY UŻYCIU KARTY - INTERNET"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
+          "value": "Multimedia, książki i prasa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-24,39 PLN"
+        }
+      ],
+      "searchText": "2025-09-16\u0001yrymag cale ygyb  zakup przy uzyciu karty - internet\u0001ykajybur 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-24,39 pln",
+      "payeeN": "yrymag cale ygyb zakup przy uzyciu karty - internet",
+      "bankCategoryN": "multimedia, ksiazki i prasa",
+      "payeeGroup": "Yrymag Cale Ygyb",
+      "occurrence": 1,
+      "fingerprint": "2a20b687ab6ffaddaf9fc3445adb7359b51620ff0f2e0178bc75e586739a0f18"
+    },
+    {
+      "rowIndex": 11,
+      "bookedOn": "2025-09-16",
+      "amountMinor": 31830,
+      "currency": "PLN",
+      "payee": "EROMECIJAH  UL.EMESEGIR 3                      60-123 ZOHYSU                       PRZELEW WEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000016142",
+      "bankCategory": "Wpływy - inne",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2025-09-16"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "EROMECIJAH  UL.EMESEGIR 3                      60-123 ZOHYSU                       PRZELEW WEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000016142"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Ykajybur 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
           "value": "Wpływy - inne"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "318,30 PLN"
         }
       ],
       "searchText": "2025-09-16\u0001eromecijah  ul.emesegir 3                      60-123 zohysu                       przelew wewnetrzny przychodzacy                                                   00000000000000000000016142\u0001ykajybur 0000 ... 0003\u0001wplywy - inne\u0001318,30 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "eromecijah ul.emesegir 3 60-123 zohysu przelew wewnetrzny przychodzacy 00000000000000000000016142",
+      "bankCategoryN": "wplywy - inne",
+      "payeeGroup": "EROMECIJAH",
       "occurrence": 1,
-      "fingerprint": "d2661a28a3ddce5034930d9e09814da732a65cdaf81bdad2e3cacbf3523db78d"
+      "fingerprint": "baccef887975e02f4104ada5ced8722c151116c8524623f3758a1f8a5359bb9b"
     },
     {
-      "rowIndex": 11,
+      "rowIndex": 12,
       "bookedOn": "2025-09-12",
       "amountMinor": -2098,
       "currency": "PLN",
+      "payee": "YRIS YNASIZI ZAKUP PRZY UŻYCIU KARTY - MO/TO",
+      "bankCategory": "Bez kategorii",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-12"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
+          "header": "#Opis operacji",
           "value": "YRIS YNASIZI ZAKUP PRZY UŻYCIU KARTY - MO/TO"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "Bez kategorii"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-20,98 PLN"
         }
       ],
       "searchText": "2025-09-12\u0001yris ynasizi zakup przy uzyciu karty - mo/to\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-20,98 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "yris ynasizi zakup przy uzyciu karty - mo/to",
+      "bankCategoryN": "bez kategorii",
+      "payeeGroup": "YRIS YNASIZI ZAKUP PRZY UŻYCIU KARTY - MO/TO",
       "occurrence": 1,
-      "fingerprint": "eba3a765a522bf185a4e00fcacdfcf599378194b40323f746489ee4c66991502"
+      "fingerprint": "482103a6d0675d416ea36cc092363b8c1b13360f3ffd9e576e20b4e5e9c4e2eb"
     },
     {
-      "rowIndex": 12,
+      "rowIndex": 13,
       "bookedOn": "2025-09-11",
       "amountMinor": -84880,
       "currency": "PLN",
+      "payee": "BLIK WYPŁATA ATM WŁASNY  CH YZYJUT                                                                                                                                    BLIK WYPŁATA ATM WŁASNY",
+      "bankCategory": "Wypłata gotówki",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-11"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
+          "header": "#Opis operacji",
           "value": "BLIK WYPŁATA ATM WŁASNY  CH YZYJUT                                                                                                                                    BLIK WYPŁATA ATM WŁASNY"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "Wypłata gotówki"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-848,80 PLN"
         }
       ],
       "searchText": "2025-09-11\u0001blik wyplata atm wlasny  ch yzyjut                                                                                                                                    blik wyplata atm wlasny\u0001ykajybur 0000 ... 0003\u0001wyplata gotowki\u0001-848,80 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "blik wyplata atm wlasny ch yzyjut blik wyplata atm wlasny",
+      "bankCategoryN": "wyplata gotowki",
+      "payeeGroup": "BLIK WYPŁATA ATM WŁASNY",
       "occurrence": 1,
-      "fingerprint": "19261d3362cac3d07002567da4c2c3ab714b829b1b8e086ee699033225fc2031"
+      "fingerprint": "f23a0ee3040d3890706a7b79548e7305f6e2fba67e9c6d24e1ac10f8a7b82c8f"
     },
     {
-      "rowIndex": 13,
+      "rowIndex": 14,
       "bookedOn": "2025-09-05",
       "amountMinor": -84880,
       "currency": "PLN",
+      "payee": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
+      "bankCategory": "Wypłata gotówki",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-05"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
+          "header": "#Opis operacji",
           "value": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "Wypłata gotówki"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-848,80 PLN"
         }
       ],
       "searchText": "2025-09-05\u0001blik wyplata atm wlasny  juhojy cash                                                                                                                                  blik wyplata atm wlasny\u0001ykajybur 0000 ... 0003\u0001wyplata gotowki\u0001-848,80 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "blik wyplata atm wlasny juhojy cash blik wyplata atm wlasny",
+      "bankCategoryN": "wyplata gotowki",
+      "payeeGroup": "BLIK WYPŁATA ATM WŁASNY",
       "occurrence": 1,
-      "fingerprint": "43c5d7a7c8ae7b9a3caf8fd81d4f4b2472c06aa61e431810b3c045e37ec86d6d"
-    },
-    {
-      "rowIndex": 14,
-      "bookedOn": "2025-09-04",
-      "amountMinor": -2088,
-      "currency": "PLN",
-      "raw": [
-        {
-          "header": "2025-09-23",
-          "value": "2025-09-04"
-        },
-        {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "YRIS YNASIZI  ZAKUP PRZY UŻYCIU KARTY - MO/TO"
-        },
-        {
-          "header": "Ykajybur 0000 ... 0003",
-          "value": "Ykajybur 0000 ... 0003"
-        },
-        {
-          "header": "Wypłata gotówki",
-          "value": "Bez kategorii"
-        },
-        {
-          "header": "-848,80 PLN",
-          "value": "-20,88 PLN"
-        }
-      ],
-      "searchText": "2025-09-04\u0001yris ynasizi  zakup przy uzyciu karty - mo/to\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-20,88 pln",
-      "payeeGroup": "(unknown)",
-      "occurrence": 1,
-      "fingerprint": "7f6a8f1c94a0c9bac3e548788a7468b84c783c67ef6cd67aced4e581b4aca52a"
+      "fingerprint": "23f03bd7e5136c44f1148a1110f399057eeea26ff66f4a21ca9ecfb461058ca0"
     },
     {
       "rowIndex": 15,
       "bookedOn": "2025-09-04",
-      "amountMinor": -1061,
+      "amountMinor": -2088,
       "currency": "PLN",
+      "payee": "YRIS YNASIZI  ZAKUP PRZY UŻYCIU KARTY - MO/TO",
+      "bankCategory": "Bez kategorii",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-04"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "OPŁATA ZA KARTĘ"
+          "header": "#Opis operacji",
+          "value": "YRIS YNASIZI  ZAKUP PRZY UŻYCIU KARTY - MO/TO"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
+          "value": "Bez kategorii"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-20,88 PLN"
+        }
+      ],
+      "searchText": "2025-09-04\u0001yris ynasizi  zakup przy uzyciu karty - mo/to\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-20,88 pln",
+      "payeeN": "yris ynasizi zakup przy uzyciu karty - mo/to",
+      "bankCategoryN": "bez kategorii",
+      "payeeGroup": "YRIS YNASIZI",
+      "occurrence": 1,
+      "fingerprint": "3b994cf3283dbb577a963fc8f31157eefb31e2875736da6f73c23824a6ce0bcb"
+    },
+    {
+      "rowIndex": 16,
+      "bookedOn": "2025-09-04",
+      "amountMinor": -1061,
+      "currency": "PLN",
+      "payee": "OPŁATA ZA KARTĘ",
+      "bankCategory": "Opłaty i odsetki",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2025-09-04"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "OPŁATA ZA KARTĘ"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Ykajybur 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
           "value": "Opłaty i odsetki"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-10,61 PLN"
         }
       ],
       "searchText": "2025-09-04\u0001oplata za karte\u0001ykajybur 0000 ... 0003\u0001oplaty i odsetki\u0001-10,61 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "oplata za karte",
+      "bankCategoryN": "oplaty i odsetki",
+      "payeeGroup": "OPŁATA ZA KARTĘ",
       "occurrence": 1,
-      "fingerprint": "f4e6dc893a1c5e47d9cc0ab307481ee05a05d53912a774842f7b32bfd4c140ba"
-    },
-    {
-      "rowIndex": 16,
-      "bookedOn": "2025-09-02",
-      "amountMinor": -7638,
-      "currency": "PLN",
-      "raw": [
-        {
-          "header": "2025-09-23",
-          "value": "2025-09-02"
-        },
-        {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "JUJARYL Y, FAKTURA VAT NR FVT/0000000/00/2026-S000/E                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000003721"
-        },
-        {
-          "header": "Ykajybur 0000 ... 0003",
-          "value": "Ykajybur 0000 ... 0003"
-        },
-        {
-          "header": "Wypłata gotówki",
-          "value": "TV, internet, telefon"
-        },
-        {
-          "header": "-848,80 PLN",
-          "value": "-76,38 PLN"
-        }
-      ],
-      "searchText": "2025-09-02\u0001jujaryl y, faktura vat nr fvt/0000000/00/2026-s000/e                                                                         przelew zewnetrzny wychodzacy                                                     00000000000000000000003721\u0001ykajybur 0000 ... 0003\u0001tv, internet, telefon\u0001-76,38 pln",
-      "payeeGroup": "(unknown)",
-      "occurrence": 1,
-      "fingerprint": "67107b4c6dafc58308c52090fe3c01c5637cd2a13a531cc24804b1a423abe7a5"
+      "fingerprint": "23822934c0212a4b4be09fce9472f8988d6026de899608d6818a12aae13dd9c1"
     },
     {
       "rowIndex": 17,
       "bookedOn": "2025-09-02",
-      "amountMinor": -3298,
+      "amountMinor": -7638,
       "currency": "PLN",
+      "payee": "JUJARYL Y, FAKTURA VAT NR FVT/0000000/00/2026-S000/E                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000003721",
+      "bankCategory": "TV, internet, telefon",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-02"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "JUJARYL Z, FAKTURA NUMER F/00000000/03/26                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000079510"
+          "header": "#Opis operacji",
+          "value": "JUJARYL Y, FAKTURA VAT NR FVT/0000000/00/2026-S000/E                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000003721"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "TV, internet, telefon"
         },
         {
-          "header": "-848,80 PLN",
-          "value": "-32,98 PLN"
+          "header": "#Kwota",
+          "value": "-76,38 PLN"
         }
       ],
-      "searchText": "2025-09-02\u0001jujaryl z, faktura numer f/00000000/03/26                                                                         przelew zewnetrzny wychodzacy                                                     00000000000000000000079510\u0001ykajybur 0000 ... 0003\u0001tv, internet, telefon\u0001-32,98 pln",
-      "payeeGroup": "(unknown)",
+      "searchText": "2025-09-02\u0001jujaryl y, faktura vat nr fvt/0000000/00/2026-s000/e                                                                         przelew zewnetrzny wychodzacy                                                     00000000000000000000003721\u0001ykajybur 0000 ... 0003\u0001tv, internet, telefon\u0001-76,38 pln",
+      "payeeN": "jujaryl y, faktura vat nr fvt/0000000/00/2026-s000/e przelew zewnetrzny wychodzacy 00000000000000000000003721",
+      "bankCategoryN": "tv, internet, telefon",
+      "payeeGroup": "JUJARYL Y, FAKTURA VAT NR FVT/0000000/00/2026-S000/E",
       "occurrence": 1,
-      "fingerprint": "0b4e267ffcec8f447478029c9024c9f9cc2b20c49df390fd990a32e209ec2780"
+      "fingerprint": "b4615187fb2593c4aae318fb92a0aa03a99a1c6a89024e23e14ac4bd432b5f17"
     },
     {
       "rowIndex": 18,
       "bookedOn": "2025-09-02",
-      "amountMinor": -3178,
+      "amountMinor": -3298,
       "currency": "PLN",
+      "payee": "JUJARYL Z, FAKTURA NUMER F/00000000/03/26                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000079510",
+      "bankCategory": "TV, internet, telefon",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-09-02"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "YPIKOMU.PL                                                                         BLIK ZAKUP E-COMMERCE"
+          "header": "#Opis operacji",
+          "value": "JUJARYL Z, FAKTURA NUMER F/00000000/03/26                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000079510"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
+          "value": "TV, internet, telefon"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-32,98 PLN"
+        }
+      ],
+      "searchText": "2025-09-02\u0001jujaryl z, faktura numer f/00000000/03/26                                                                         przelew zewnetrzny wychodzacy                                                     00000000000000000000079510\u0001ykajybur 0000 ... 0003\u0001tv, internet, telefon\u0001-32,98 pln",
+      "payeeN": "jujaryl z, faktura numer f/00000000/03/26 przelew zewnetrzny wychodzacy 00000000000000000000079510",
+      "bankCategoryN": "tv, internet, telefon",
+      "payeeGroup": "JUJARYL Z, FAKTURA NUMER F/00000000/03/26",
+      "occurrence": 1,
+      "fingerprint": "970ac1e4724ee4d12ce510da0ed58ef07cd9f4cc660425b6c33d4531d6fd8100"
+    },
+    {
+      "rowIndex": 19,
+      "bookedOn": "2025-09-02",
+      "amountMinor": -3178,
+      "currency": "PLN",
+      "payee": "YPIKOMU.PL                                                                         BLIK ZAKUP E-COMMERCE",
+      "bankCategory": "Osobiste - inne",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2025-09-02"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "YPIKOMU.PL                                                                         BLIK ZAKUP E-COMMERCE"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Ykajybur 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
           "value": "Osobiste - inne"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-31,78 PLN"
         }
       ],
       "searchText": "2025-09-02\u0001ypikomu.pl                                                                         blik zakup e-commerce\u0001ykajybur 0000 ... 0003\u0001osobiste - inne\u0001-31,78 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "ypikomu.pl blik zakup e-commerce",
+      "bankCategoryN": "osobiste - inne",
+      "payeeGroup": "YPIKOMU.PL",
       "occurrence": 1,
-      "fingerprint": "80c62344b54cdd24112b6edbde52946d806364f4173b5c1b3450be7ded167e2f"
-    },
-    {
-      "rowIndex": 19,
-      "bookedOn": "2025-08-31",
-      "amountMinor": -89488,
-      "currency": "PLN",
-      "raw": [
-        {
-          "header": "2025-09-23",
-          "value": "2025-08-31"
-        },
-        {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "WWW.ESAW4.PL                                                                         BLIK ZAKUP E-COMMERCE"
-        },
-        {
-          "header": "Ykajybur 0000 ... 0003",
-          "value": "Ykajybur 0000 ... 0003"
-        },
-        {
-          "header": "Wypłata gotówki",
-          "value": "Ubezpieczenie domu"
-        },
-        {
-          "header": "-848,80 PLN",
-          "value": "-894,88 PLN"
-        }
-      ],
-      "searchText": "2025-08-31\u0001www.esaw4.pl                                                                         blik zakup e-commerce\u0001ykajybur 0000 ... 0003\u0001ubezpieczenie domu\u0001-894,88 pln",
-      "payeeGroup": "(unknown)",
-      "occurrence": 1,
-      "fingerprint": "c0a5a92aae6f4ff2984e0adf67b8813925d7f4b87c142b124ac1aec73b51d9db"
+      "fingerprint": "a064f2dee1edf65395660ddbaa8fa98f7b11c8d36f515de6e0442eb42586090f"
     },
     {
       "rowIndex": 20,
       "bookedOn": "2025-08-31",
-      "amountMinor": -3172,
+      "amountMinor": -89488,
       "currency": "PLN",
+      "payee": "WWW.ESAW4.PL                                                                         BLIK ZAKUP E-COMMERCE",
+      "bankCategory": "Ubezpieczenie domu",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-08-31"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "JUJARYL P - YKAJYBUR, NR F-RY: FV_359713/000000000/00000                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000027848"
+          "header": "#Opis operacji",
+          "value": "WWW.ESAW4.PL                                                                         BLIK ZAKUP E-COMMERCE"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
-          "value": "TV, internet, telefon"
+          "header": "#Kategoria",
+          "value": "Ubezpieczenie domu"
         },
         {
-          "header": "-848,80 PLN",
-          "value": "-31,72 PLN"
+          "header": "#Kwota",
+          "value": "-894,88 PLN"
         }
       ],
-      "searchText": "2025-08-31\u0001jujaryl p - ykajybur, nr f-ry: fv_359713/000000000/00000                                                                         przelew zewnetrzny wychodzacy                                                     00000000000000000000027848\u0001ykajybur 0000 ... 0003\u0001tv, internet, telefon\u0001-31,72 pln",
-      "payeeGroup": "(unknown)",
+      "searchText": "2025-08-31\u0001www.esaw4.pl                                                                         blik zakup e-commerce\u0001ykajybur 0000 ... 0003\u0001ubezpieczenie domu\u0001-894,88 pln",
+      "payeeN": "www.esaw4.pl blik zakup e-commerce",
+      "bankCategoryN": "ubezpieczenie domu",
+      "payeeGroup": "WWW.ESAW4.PL",
       "occurrence": 1,
-      "fingerprint": "7dfc378e46f7db0498468ded44ad6a065b00536beb9c0c06aea28829f784a6b8"
+      "fingerprint": "194b3084778d2e8967ded5e4df4b641c538496e29b3f5b67597b20ca7add3a51"
     },
     {
       "rowIndex": 21,
       "bookedOn": "2025-08-31",
-      "amountMinor": -14324,
+      "amountMinor": -3172,
       "currency": "PLN",
+      "payee": "JUJARYL P - YKAJYBUR, NR F-RY: FV_359713/000000000/00000                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000027848",
+      "bankCategory": "TV, internet, telefon",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-08-31"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
-          "value": "JUJARYL Q, PD2026/0000                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000040610"
+          "header": "#Opis operacji",
+          "value": "JUJARYL P - YKAJYBUR, NR F-RY: FV_359713/000000000/00000                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000027848"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
+          "value": "TV, internet, telefon"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-31,72 PLN"
+        }
+      ],
+      "searchText": "2025-08-31\u0001jujaryl p - ykajybur, nr f-ry: fv_359713/000000000/00000                                                                         przelew zewnetrzny wychodzacy                                                     00000000000000000000027848\u0001ykajybur 0000 ... 0003\u0001tv, internet, telefon\u0001-31,72 pln",
+      "payeeN": "jujaryl p - ykajybur, nr f-ry: fv_359713/000000000/00000 przelew zewnetrzny wychodzacy 00000000000000000000027848",
+      "bankCategoryN": "tv, internet, telefon",
+      "payeeGroup": "JUJARYL P - YKAJYBUR, NR F-RY: FV_359713/000000000/00000",
+      "occurrence": 1,
+      "fingerprint": "72b29d85f3f79f707280b30d4360f4285828f99538bce7d4823a3af1c892c30e"
+    },
+    {
+      "rowIndex": 22,
+      "bookedOn": "2025-08-31",
+      "amountMinor": -14324,
+      "currency": "PLN",
+      "payee": "JUJARYL Q, PD2026/0000                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000040610",
+      "bankCategory": "Bez kategorii",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2025-08-31"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "JUJARYL Q, PD2026/0000                                                                         PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000040610"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Ykajybur 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
           "value": "Bez kategorii"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-143,24 PLN"
         }
       ],
       "searchText": "2025-08-31\u0001jujaryl q, pd2026/0000                                                                         przelew zewnetrzny wychodzacy                                                     00000000000000000000040610\u0001ykajybur 0000 ... 0003\u0001bez kategorii\u0001-143,24 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "jujaryl q, pd2026/0000 przelew zewnetrzny wychodzacy 00000000000000000000040610",
+      "bankCategoryN": "bez kategorii",
+      "payeeGroup": "JUJARYL Q, PD2026/0000",
       "occurrence": 1,
-      "fingerprint": "a98e7ebbc6a36a3056595cb0e7b1f42f6ea529fbe0b05d617d95260888cbb851"
+      "fingerprint": "51468df53283a08a30d78a6891b545a2047f2cd88c12c778dc8b02561fca94a7"
     },
     {
-      "rowIndex": 22,
+      "rowIndex": 23,
       "bookedOn": "2025-08-30",
       "amountMinor": -20159,
       "currency": "PLN",
+      "payee": "JUJARYL R                                                                         BLIK ZAKUP E-COMMERCE",
+      "bankCategory": "Zajęcia dodatkowe",
       "raw": [
         {
-          "header": "2025-09-23",
+          "header": "#Data operacji",
           "value": "2025-08-30"
         },
         {
-          "header": "BLIK WYPŁATA ATM WŁASNY  JUHOJY CASH                                                                                                                                  BLIK WYPŁATA ATM WŁASNY",
+          "header": "#Opis operacji",
           "value": "JUJARYL R                                                                         BLIK ZAKUP E-COMMERCE"
         },
         {
-          "header": "Ykajybur 0000 ... 0003",
+          "header": "#Rachunek",
           "value": "Ykajybur 0000 ... 0003"
         },
         {
-          "header": "Wypłata gotówki",
+          "header": "#Kategoria",
           "value": "Zajęcia dodatkowe"
         },
         {
-          "header": "-848,80 PLN",
+          "header": "#Kwota",
           "value": "-201,59 PLN"
         }
       ],
       "searchText": "2025-08-30\u0001jujaryl r                                                                         blik zakup e-commerce\u0001ykajybur 0000 ... 0003\u0001zajecia dodatkowe\u0001-201,59 pln",
-      "payeeGroup": "(unknown)",
+      "payeeN": "jujaryl r blik zakup e-commerce",
+      "bankCategoryN": "zajecia dodatkowe",
+      "payeeGroup": "JUJARYL R",
       "occurrence": 1,
-      "fingerprint": "37167153278e33d94b43ba0ae8955dde3282daf7642f99183380d858218af329"
+      "fingerprint": "add49f75f5ff4756e133bc1592f7a5bea296a4cf40684a3c8ac177a54ba3ce55"
     }
   ]
 }

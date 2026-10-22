@@ -25,7 +25,7 @@
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
-- [ ] 9.0 header detection fix for mBank / PKO BP (`ingest`), `ALLOWED_DIFFS` row 4
+- [x] 9.0 header detection fix (`ingest.findHeader`): mBank → record 26, PKO BP → 1; also fixes `06-bank-preamble` and `21-blank-headers`. `ALLOWED_DIFFS` row 4 with a strict oracle check; every other fixture keeps the legacy header
 - [ ] 9.1 entry points: drag & drop, mini drop zone, ⌘/Ctrl O, Browse
 - [ ] 9.2 upload queue + "1 of N" stepper, `409 duplicate_file` toast with a link
 - [ ] 9.3 preview window `/imports/:id`: file facts, account picker, mapping editor, options, stats, sample grid, errors drawer, commit bar; debounced `PATCH`

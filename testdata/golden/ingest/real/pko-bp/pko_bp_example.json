@@ -2,20 +2,20 @@
   "fixture": "real/pko-bp/pko_bp_example.csv",
   "encoding": "windows-1250",
   "delimiter": ",",
-  "headerAt": 2,
+  "headerAt": 1,
   "dropped": 0,
   "headers": [
-    "2025-09-19",
-    "2025-09-18",
-    "Płatność kartą",
-    "-46.17",
-    "PLN",
-    "Tytuł: 020598153 00000000000000000000000",
-    "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
-    "Data wykonania operacji: 2025-09-18 07:21",
-    "Kwota Cash Back:  0.00",
-    "Oryginalna kwota operacji: 46.17",
-    "Numer karty: 480101******3596"
+    "Data operacji",
+    "Data waluty",
+    "Typ transakcji",
+    "Kwota",
+    "Waluta",
+    "Opis transakcji",
+    "Column 7",
+    "Column 8",
+    "Column 9",
+    "Column 10",
+    "Column 11"
   ],
   "types": [
     "date",
@@ -31,593 +31,688 @@
     "text"
   ],
   "roles": {
-    "amount": "-46.17",
-    "bookedOn": "2025-09-19",
-    "payee": "Tytuł: 020598153 00000000000000000000000"
+    "amount": "Kwota",
+    "bookedOn": "Data operacji",
+    "currency": "Waluta",
+    "payee": "Opis transakcji",
+    "txType": "Typ transakcji",
+    "valueOn": "Data waluty"
   },
-  "headerSignature": "67a9630c28b736eb96188fbeb46021fa424eba440df9513ccbb9049f13e24e81",
+  "currency": "PLN",
+  "headerSignature": "ac401414ae75485475b6ddbe95e798d0ece93dd46c09485a686133fd14411d40",
   "stats": {
-    "rows": 10,
-    "valid": 10,
+    "rows": 11,
+    "valid": 11,
     "errors": 0
   },
   "rows": [
     {
       "rowIndex": 0,
       "bookedOn": "2025-09-19",
-      "amountMinor": -1100,
+      "valueOn": "2025-09-18",
+      "amountMinor": -4617,
       "currency": "PLN",
-      "payee": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 28.02-28.03",
+      "payee": "Tytuł: 020598153 00000000000000000000000",
+      "txType": "Płatność kartą",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-09-19"
         },
         {
-          "header": "2025-09-18",
-          "value": "2025-09-19"
+          "header": "Data waluty",
+          "value": "2025-09-18"
         },
         {
-          "header": "Płatność kartą",
-          "value": "Opłata za użytkowanie karty"
+          "header": "Typ transakcji",
+          "value": "Płatność kartą"
         },
         {
-          "header": "-46.17",
-          "value": "-11"
+          "header": "Kwota",
+          "value": "-46.17"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
+          "value": "Tytuł: 020598153 00000000000000000000000"
+        },
+        {
+          "header": "Column 7",
+          "value": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA"
+        },
+        {
+          "header": "Column 8",
+          "value": "Data wykonania operacji: 2025-09-18 07:21"
+        },
+        {
+          "header": "Column 9",
+          "value": "Kwota Cash Back:  0.00"
+        },
+        {
+          "header": "Column 10",
+          "value": "Oryginalna kwota operacji: 46.17"
+        },
+        {
+          "header": "Column 11",
+          "value": "Numer karty: 480101******3596"
+        }
+      ],
+      "searchText": "2025-09-19\u00012025-09-18\u0001platnosc karta\u0001-46.17\u0001pln\u0001tytul: 020598153 00000000000000000000000\u0001lokalizacja: adres: maku kityz miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-18 07:21\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 46.17\u0001numer karty: 480101******3596",
+      "payeeN": "tytul: 020598153 00000000000000000000000",
+      "txTypeN": "platnosc karta",
+      "payeeGroup": "Tytuł: 020598153 00000000000000000000000",
+      "occurrence": 1,
+      "fingerprint": "89eb362c84ce250069e250bd1f2c623c4764de07956aa293de86a07ce920d040"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2025-09-19",
+      "valueOn": "2025-09-19",
+      "amountMinor": -1100,
+      "currency": "PLN",
+      "payee": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 28.02-28.03",
+      "txType": "Opłata za użytkowanie karty",
+      "raw": [
+        {
+          "header": "Data operacji",
+          "value": "2025-09-19"
+        },
+        {
+          "header": "Data waluty",
+          "value": "2025-09-19"
+        },
+        {
+          "header": "Typ transakcji",
+          "value": "Opłata za użytkowanie karty"
+        },
+        {
+          "header": "Kwota",
+          "value": "-11"
+        },
+        {
+          "header": "Waluta",
+          "value": "PLN"
+        },
+        {
+          "header": "Opis transakcji",
           "value": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 28.02-28.03"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": ""
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": ""
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": ""
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": ""
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": ""
         }
       ],
       "searchText": "2025-09-19\u00012025-09-19\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******3596, 28.02-28.03\u0001\u0001\u0001\u0001\u0001",
       "payeeN": "tytul: oplata miesieczna za karte 480101******3596, 28.02-28.03",
+      "txTypeN": "oplata za uzytkowanie karty",
       "payeeGroup": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 28.02-28.03",
       "occurrence": 1,
       "fingerprint": "27a4e75cd3122096981199b24540c33b145caca510e1880203fb4bc5158c765e"
     },
     {
-      "rowIndex": 1,
+      "rowIndex": 2,
       "bookedOn": "2025-09-19",
+      "valueOn": "2025-09-19",
       "amountMinor": -1100,
       "currency": "PLN",
       "payee": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 28.02-28.03",
+      "txType": "Opłata za użytkowanie karty",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-09-19"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-09-19"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Opłata za użytkowanie karty"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-11"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 28.02-28.03"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": ""
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": ""
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": ""
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": ""
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": ""
         }
       ],
       "searchText": "2025-09-19\u00012025-09-19\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******2990, 28.02-28.03\u0001\u0001\u0001\u0001\u0001",
       "payeeN": "tytul: oplata miesieczna za karte 480101******2990, 28.02-28.03",
+      "txTypeN": "oplata za uzytkowanie karty",
       "payeeGroup": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 28.02-28.03",
       "occurrence": 1,
       "fingerprint": "f60b4f7622d137c0b2fbd2a41ed059b791e3fa89a27907b9884e0856b59c2a04"
     },
     {
-      "rowIndex": 2,
+      "rowIndex": 3,
       "bookedOn": "2025-09-17",
+      "valueOn": "2025-09-15",
       "amountMinor": -28130,
       "currency": "PLN",
       "payee": "Tytuł: 022634812 00000000000000000000849",
+      "txType": "Płatność kartą",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-09-17"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-09-15"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Płatność kartą"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-281.30"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: 022634812 00000000000000000000849"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": "Lokalizacja: Adres: BP CESUBU BEDUT Miasto: ZOHYSU Kraj: POLSKA"
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": "Data wykonania operacji: 2025-09-15"
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": "Kwota Cash Back:  0.00"
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": "Oryginalna kwota operacji: 281.30"
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": "Numer karty: 480101******3596"
         }
       ],
       "searchText": "2025-09-17\u00012025-09-15\u0001platnosc karta\u0001-281.30\u0001pln\u0001tytul: 022634812 00000000000000000000849\u0001lokalizacja: adres: bp cesubu bedut miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-15\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 281.30\u0001numer karty: 480101******3596",
       "payeeN": "tytul: 022634812 00000000000000000000849",
+      "txTypeN": "platnosc karta",
       "payeeGroup": "Tytuł: 022634812 00000000000000000000849",
       "occurrence": 1,
       "fingerprint": "07f43055ba2d13c2e4bf76ae10caef2cf0170ee411e98bc79dcf816cf97a0839"
     },
     {
-      "rowIndex": 3,
+      "rowIndex": 4,
       "bookedOn": "2025-09-15",
+      "valueOn": "2025-09-14",
       "amountMinor": -599,
       "currency": "PLN",
       "payee": "Tytuł: 020598153 00000000000000000000933",
+      "txType": "Płatność kartą",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-09-15"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-09-14"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Płatność kartą"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-5.99"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: 020598153 00000000000000000000933"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA"
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": "Data wykonania operacji: 2025-09-14 16:40"
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": "Kwota Cash Back:  0.00"
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": "Oryginalna kwota operacji: 5.99"
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": "Numer karty: 480101******3596"
         }
       ],
       "searchText": "2025-09-15\u00012025-09-14\u0001platnosc karta\u0001-5.99\u0001pln\u0001tytul: 020598153 00000000000000000000933\u0001lokalizacja: adres: maku kityz miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-14 16:40\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 5.99\u0001numer karty: 480101******3596",
       "payeeN": "tytul: 020598153 00000000000000000000933",
+      "txTypeN": "platnosc karta",
       "payeeGroup": "Tytuł: 020598153 00000000000000000000933",
       "occurrence": 1,
       "fingerprint": "4d53a35b6ffc2bab86730ffe49634272b0fab37a4ea1e9861ae459c11af44ab4"
     },
     {
-      "rowIndex": 4,
+      "rowIndex": 5,
       "bookedOn": "2025-09-13",
+      "valueOn": "2025-09-12",
       "amountMinor": -4842,
       "currency": "PLN",
       "payee": "Tytuł: 020598153 00000000000000000000552",
+      "txType": "Płatność kartą",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-09-13"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-09-12"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Płatność kartą"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-48.42"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: 020598153 00000000000000000000552"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA"
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": "Data wykonania operacji: 2025-09-12 18:26"
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": "Kwota Cash Back:  0.00"
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": "Oryginalna kwota operacji: 48.42"
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": "Numer karty: 480101******3596"
         }
       ],
       "searchText": "2025-09-13\u00012025-09-12\u0001platnosc karta\u0001-48.42\u0001pln\u0001tytul: 020598153 00000000000000000000552\u0001lokalizacja: adres: maku kityz miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-12 18:26\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 48.42\u0001numer karty: 480101******3596",
       "payeeN": "tytul: 020598153 00000000000000000000552",
+      "txTypeN": "platnosc karta",
       "payeeGroup": "Tytuł: 020598153 00000000000000000000552",
       "occurrence": 1,
       "fingerprint": "2065f3fa885d1897f53b19ef49be5c401b626b9bb40a3f125cd38a05ed450e1d"
     },
     {
-      "rowIndex": 5,
+      "rowIndex": 6,
       "bookedOn": "2025-09-04",
+      "valueOn": "2025-09-03",
       "amountMinor": -2015,
       "currency": "PLN",
       "payee": "Tytuł: 020598153 00000000000000000000194",
+      "txType": "Płatność kartą",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-09-04"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-09-03"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Płatność kartą"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-20.15"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: 020598153 00000000000000000000194"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": "Lokalizacja: Adres: PL ESU ZOHYSU Fogydo Miasto: ZOHYSU Kraj: POLSKA"
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": "Data wykonania operacji: 2025-09-03 10:36"
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": "Kwota Cash Back:  0.00"
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": "Oryginalna kwota operacji: 20.15"
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": "Numer karty: 480101******3596"
         }
       ],
       "searchText": "2025-09-04\u00012025-09-03\u0001platnosc karta\u0001-20.15\u0001pln\u0001tytul: 020598153 00000000000000000000194\u0001lokalizacja: adres: pl esu zohysu fogydo miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-09-03 10:36\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 20.15\u0001numer karty: 480101******3596",
       "payeeN": "tytul: 020598153 00000000000000000000194",
+      "txTypeN": "platnosc karta",
       "payeeGroup": "Tytuł: 020598153 00000000000000000000194",
       "occurrence": 1,
       "fingerprint": "107b4af46bdc3d15932a468116c12e754514a2234fddd6cbb5ce8cf6e9effbe2"
     },
     {
-      "rowIndex": 6,
+      "rowIndex": 7,
       "bookedOn": "2025-08-28",
+      "valueOn": "2025-08-27",
       "amountMinor": -2700,
       "currency": "PLN",
       "payee": "Tytuł: 020598153 00000000000000000000394",
+      "txType": "Płatność kartą",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-08-28"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-08-27"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Płatność kartą"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-27"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: 020598153 00000000000000000000394"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": "Lokalizacja: Adres: OcEpuwycy 1337, Zohysu 1 Miasto: Zohysu Kraj: POLSKA"
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": "Data wykonania operacji: 2025-08-27 13:03"
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": "Kwota Cash Back:  0.00"
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": "Oryginalna kwota operacji: 26.53"
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": "Numer karty: 480101******3596"
         }
       ],
       "searchText": "2025-08-28\u00012025-08-27\u0001platnosc karta\u0001-27\u0001pln\u0001tytul: 020598153 00000000000000000000394\u0001lokalizacja: adres: ocepuwycy 1337, zohysu 1 miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-08-27 13:03\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 26.53\u0001numer karty: 480101******3596",
       "payeeN": "tytul: 020598153 00000000000000000000394",
+      "txTypeN": "platnosc karta",
       "payeeGroup": "Tytuł: 020598153 00000000000000000000394",
       "occurrence": 1,
       "fingerprint": "88469eeb7c6ed8c70da8ebd6494de9245672ccdc86028ccbac5f4238ed7b8cff"
     },
     {
-      "rowIndex": 7,
+      "rowIndex": 8,
       "bookedOn": "2025-08-21",
+      "valueOn": "2025-08-21",
       "amountMinor": -1100,
       "currency": "PLN",
       "payee": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 29.01-27.02",
+      "txType": "Opłata za użytkowanie karty",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-08-21"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-08-21"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Opłata za użytkowanie karty"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-11"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 29.01-27.02"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": ""
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": ""
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": ""
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": ""
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": ""
         }
       ],
       "searchText": "2025-08-21\u00012025-08-21\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******3596, 29.01-27.02\u0001\u0001\u0001\u0001\u0001",
       "payeeN": "tytul: oplata miesieczna za karte 480101******3596, 29.01-27.02",
+      "txTypeN": "oplata za uzytkowanie karty",
       "payeeGroup": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******3596, 29.01-27.02",
       "occurrence": 1,
       "fingerprint": "853e80367e9e4f27987227825483e23a756f521f032e3e4555c7b3e35e81932e"
     },
     {
-      "rowIndex": 8,
+      "rowIndex": 9,
       "bookedOn": "2025-08-21",
+      "valueOn": "2025-08-21",
       "amountMinor": -1100,
       "currency": "PLN",
       "payee": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 29.01-27.02",
+      "txType": "Opłata za użytkowanie karty",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-08-21"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-08-21"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Opłata za użytkowanie karty"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-11"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 29.01-27.02"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": ""
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": ""
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": ""
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": ""
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": ""
         }
       ],
       "searchText": "2025-08-21\u00012025-08-21\u0001oplata za uzytkowanie karty\u0001-11\u0001pln\u0001tytul: oplata miesieczna za karte 480101******2990, 29.01-27.02\u0001\u0001\u0001\u0001\u0001",
       "payeeN": "tytul: oplata miesieczna za karte 480101******2990, 29.01-27.02",
+      "txTypeN": "oplata za uzytkowanie karty",
       "payeeGroup": "Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 480101******2990, 29.01-27.02",
       "occurrence": 1,
       "fingerprint": "e885876e2c95c1044e245d3b0f782101feb402d9171be1b11cda1d4a43c444c9"
     },
     {
-      "rowIndex": 9,
+      "rowIndex": 10,
       "bookedOn": "2025-08-07",
+      "valueOn": "2025-08-06",
       "amountMinor": -169800,
       "currency": "PLN",
       "payee": "Tytuł: DYG BP 51399008L9EW8423R4177V4952",
+      "txType": "Wypłata z bankomatu",
       "raw": [
         {
-          "header": "2025-09-19",
+          "header": "Data operacji",
           "value": "2025-08-07"
         },
         {
-          "header": "2025-09-18",
+          "header": "Data waluty",
           "value": "2025-08-06"
         },
         {
-          "header": "Płatność kartą",
+          "header": "Typ transakcji",
           "value": "Wypłata z bankomatu"
         },
         {
-          "header": "-46.17",
+          "header": "Kwota",
           "value": "-1698"
         },
         {
-          "header": "PLN",
+          "header": "Waluta",
           "value": "PLN"
         },
         {
-          "header": "Tytuł: 020598153 00000000000000000000000",
+          "header": "Opis transakcji",
           "value": "Tytuł: DYG BP 51399008L9EW8423R4177V4952"
         },
         {
-          "header": "Lokalizacja: Adres: MAKU Kityz Miasto: Zohysu Kraj: POLSKA",
+          "header": "Column 7",
           "value": "Lokalizacja: Adres: Jugogoj 67 Miasto: ZOHYSU Kraj: POLSKA"
         },
         {
-          "header": "Data wykonania operacji: 2025-09-18 07:21",
+          "header": "Column 8",
           "value": "Data wykonania operacji: 2025-08-06 17:57"
         },
         {
-          "header": "Kwota Cash Back:  0.00",
+          "header": "Column 9",
           "value": "Kwota Cash Back:  0.00"
         },
         {
-          "header": "Oryginalna kwota operacji: 46.17",
+          "header": "Column 10",
           "value": "Oryginalna kwota operacji: 1697.60"
         },
         {
-          "header": "Numer karty: 480101******3596",
+          "header": "Column 11",
           "value": "Numer karty: 480101******3596"
         }
       ],
       "searchText": "2025-08-07\u00012025-08-06\u0001wyplata z bankomatu\u0001-1698\u0001pln\u0001tytul: dyg bp 51399008l9ew8423r4177v4952\u0001lokalizacja: adres: jugogoj 67 miasto: zohysu kraj: polska\u0001data wykonania operacji: 2025-08-06 17:57\u0001kwota cash back:  0.00\u0001oryginalna kwota operacji: 1697.60\u0001numer karty: 480101******3596",
       "payeeN": "tytul: dyg bp 51399008l9ew8423r4177v4952",
+      "txTypeN": "wyplata z bankomatu",
       "payeeGroup": "Tytuł: DYG BP 51399008L9EW8423R4177V4952",
       "occurrence": 1,
       "fingerprint": "eff4673b37741811936513d6a5794c4e6b38781c02a14ac8eb5e67f7bd7a8e0a"

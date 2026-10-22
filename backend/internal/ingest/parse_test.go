@@ -110,3 +110,36 @@ func TestShapeRules(t *testing.T) {
 		t.Errorf("headerless = %+v", none)
 	}
 }
+
+// TestFindHeaderBeforeData covers the Phase 9 header rule (ALLOWED_DIFFS.md row 4) on small tables;
+// the oracle suite covers the bank fixtures.
+func TestFindHeaderBeforeData(t *testing.T) {
+	rec := func(s string) []string { return strings.Split(s, ";") }
+	tests := []struct {
+		name string
+		rows []string
+		want int // 0-based index into the non-blank records
+	}{
+		{"plain header", []string{"Data;Opis;Kwota", "02.01.2025;Sklep;-10,00"}, 0},
+		{"unpadded preamble", []string{"Wyciąg", "Okres: 01.01.2025 - 31.01.2025", "Data;Opis;Kwota", "02.01.2025;Sklep;-10,00"}, 2},
+		{"header fewer fields than data", []string{"#Data;#Opis;#Kwota;", "2025-01-02;Sklep;-10,00 PLN;;", "2025-01-03;Kino;-20,00 PLN;;"}, 0},
+		{"blank-named header columns", []string{"Data;;Kwota;", "02.01.2025;x;-10,00;y", "03.01.2025;z;-20,00;w"}, 0},
+		// preamble rows with numbers or dates but not both are neither header nor data
+		{"summary table in the preamble", []string{"#Waluta;#Wpływy;#Wydatki", "PLN;584,30;-2 132,22", "#Data;#Opis;#Kwota", "2025-01-02;Sklep;-10,00"}, 2},
+		// no text-only record before the first data record: the legacy rule decides (record 0)
+		{"headerless", []string{"02.01.2025;Sklep;-10,00", "03.01.2025;Kino;-20,00"}, 0},
+		{"single-name record before data", []string{"Operacje", "02.01.2025;Sklep;-10,00"}, 1},
+		{"numbers in the record before data", []string{"Nr;Data;Kwota", "1;02.01.2025;-10,00", "2;03.01.2025;-20,00"}, 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rows := make([][]string, len(tc.rows))
+			for i, r := range tc.rows {
+				rows[i] = rec(r)
+			}
+			if got := findHeader(rows); got != tc.want {
+				t.Errorf("findHeader = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}

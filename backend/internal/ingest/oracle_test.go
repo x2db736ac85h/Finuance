@@ -153,7 +153,21 @@ func legacyViewOf(t *testing.T, o oracleIngest, ours legacyView) legacyView {
 	return v
 }
 
-// TestOracleIngest: every fixture through Parse with default options equals the legacy pipeline.
+// headerFixes are the fixtures whose automatic header differs from the legacy on purpose
+// (ALLOWED_DIFFS.md row 4): the legacy rule takes a preamble line or a data row as the header. The
+// value is the real header record. For these, the automatic result must equal Parse with that
+// header row set explicitly, which the cfg parity suite checks against the legacy.
+var headerFixes = map[string]int{
+	"synthetic/06-bank-preamble.csv":  6,
+	"synthetic/21-blank-headers.csv":  1,
+	"synthetic/banks/mbank-like.csv":  26,
+	"synthetic/banks/pko-bp-like.csv": 1,
+	"real/mbank/mbank_example.csv":    26,
+	"real/pko-bp/pko_bp_example.csv":  1,
+}
+
+// TestOracleIngest: every fixture through Parse with default options equals the legacy pipeline,
+// except the header fixes, which must equal the legacy pipeline with the real header row.
 func TestOracleIngest(t *testing.T) {
 	cases := loadOracleIngest(t, "ingest")
 	if len(cases) < 60 {
@@ -170,6 +184,22 @@ func TestOracleIngest(t *testing.T) {
 				t.Fatal(err)
 			}
 			ours := viewOf(res, err)
+			if at, fixed := headerFixes[o.Fixture]; fixed {
+				explicit, err := Parse(context.Background(), raw, Options{Shape: ShapeOptions{Header: HeaderRow, HeaderRow: at}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if res.Table.HeaderAt != at {
+					t.Fatalf("header at record %d, want %d", res.Table.HeaderAt, at)
+				}
+				if diff := cmp.Diff(viewOf(explicit, nil), ours, cmpopts.EquateEmpty()); diff != "" {
+					t.Errorf("%s: automatic header differs from header row %d (-explicit +auto):\n%s", o.Fixture, at, diff)
+				}
+				if legacyViewOf(t, o, ours).HeaderAt == at {
+					t.Errorf("%s: the legacy already finds header row %d; remove it from headerFixes", o.Fixture, at)
+				}
+				return
+			}
 			if diff := cmp.Diff(legacyViewOf(t, o, ours), ours, cmpopts.EquateEmpty()); diff != "" {
 				t.Errorf("%s differs from the legacy (-legacy +ours):\n%s", o.Fixture, diff)
 			}
