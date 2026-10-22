@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 10 — Table view, groups and multi-selection · **Branch:** phase/10-table · **Status:** in progress
+**Current phase:** 10 — Table view, groups and multi-selection · **Branch:** phase/10-table · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -168,6 +168,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 10 — Table view, groups and multi-selection: gate approved 2026-10-22; `phase/10-table` merged with `--no-ff`.
 - Phase 9 — Import UX: gate approved 2026-10-22; `phase/09-import` merged with `--no-ff`.
 - Phase 8 — Frontend foundation: gate approved 2026-10-22; `phase/08-frontend` merged with `--no-ff`.
 - Phase 7 — Transactions query API: gate approved 2026-10-21 (option a: `textlike` LEAKPROOF; `includeTotals` added); `phase/07-query` merged with `--no-ff`.
@@ -289,6 +290,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 10 gate approved; merged. Next: plan Phase 11.
 - 2026-10-22 — Phase 10 built on `phase/10-table`: grid (windows, menus, chips, export, keyboard), inspector (category picker, note, sources), status bar, groups (API, menu, quick bar, pills), multi-selection, duplicates window, delete-import perf fix (migration 00005), 100k-row measurements (`tools/perf/grid.mjs`); 196 Vitest + 25 Playwright specs, integration tests and CI green. Next: Irwin's gate review (hands-on legacy vs new table on the same demo data; 60 fps on real hardware).
 - 2026-10-22 — Phase 10 planned and approved (one phase, two halves; bulk by ids). Branch `phase/10-table`.
 - 2026-10-22 — Phase 9 gate approved; merged. Next: plan Phase 10.
