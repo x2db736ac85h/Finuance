@@ -15,10 +15,11 @@ import {
   useInteractions,
   useRole,
 } from '@floating-ui/react';
-import { useCallback, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { useCallback, useContext, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 
 import { uiScale } from '../styles/scale';
 import { useLayer } from './layers';
+import { PortalRoot } from './portal';
 
 type Props = {
   open: boolean;
@@ -74,10 +75,13 @@ export function Popover({
     [refs],
   );
   useLayer('pop', open);
+  const root = useContext(PortalRoot);
   if (!open) return null;
   const w = Math.min(width * uiScale(), window.innerWidth - 16);
   return (
-    <FloatingPortal>
+    // preserveTabOrder off: its focus guards would be inserted next to the anchor (inside a table row
+    // they become cells); the focus manager returns focus to the anchor anyway.
+    <FloatingPortal preserveTabOrder={false} {...(root ? { root } : {})}>
       <FloatingFocusManager context={context} modal={false} initialFocus={role === 'menu' ? 0 : -1}>
         <div
           ref={setFloating}

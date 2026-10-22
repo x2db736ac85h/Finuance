@@ -53,6 +53,15 @@ button.mini-drop {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.toast.act {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.toast.act .link {
+  font-weight: 600;
+}
 .toast.err {
   border-color: var(--neg);
 }
@@ -240,4 +249,96 @@ button.mini-drop {
   display: flex;
   align-items: center;
   gap: 0.375rem;
+}
+
+/* import window additions (legacy #imp has no account picker, mapping editor or result column) */
+.imp-acc .row2 {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.imp-acc .inp {
+  width: 13rem;
+}
+.imp-t th.res,
+.imp-t td.res {
+  cursor: default;
+  max-width: 22rem;
+  border-left: 1px solid var(--border-2);
+}
+.imp-t td.res .tag {
+  margin-left: 0.375rem;
+}
+.imp-t td.res .ico {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.25rem;
+  vertical-align: -0.1rem;
+}
+.imp-t tr.err td {
+  background: var(--hover);
+}
+.imp-t tr.err td.ln {
+  color: var(--neg);
+}
+.imp-t .tt {
+  font: 0.6rem var(--mono);
+  color: var(--muted);
+}
+.imp-more {
+  padding: 0.5rem;
+  text-align: center;
+}
+.imp-sec .lbl .link[aria-expanded] {
+  padding-left: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.6562rem;
+  color: var(--muted);
+}
+.map-ed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 0.375rem 1rem;
+  padding: 0.25rem 0 0.25rem;
+}
+.map-r {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+.map-r .sel {
+  height: 1.625rem;
+}
+.map-r .req {
+  color: var(--neg);
+  margin-left: 0.125rem;
+}
+.map-r.miss .map-l {
+  color: var(--neg);
+}
+.map-err {
+  grid-column: 2 / -1;
+  color: var(--neg);
+  font-size: 0.6875rem;
+}
+.imp-raw {
+  position: relative; /* the header line is scrolled into view by its offsetTop */
+}
+.imp-t th > .mc {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.imp-t th > .mc:disabled {
+  cursor: default;
 }

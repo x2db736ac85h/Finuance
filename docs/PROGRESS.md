@@ -26,12 +26,12 @@
 
 ## Current phase tasks
 - [x] 9.0 header detection fix (`ingest.findHeader`): mBank → record 26, PKO BP → 1; also fixes `06-bank-preamble` and `21-blank-headers`. `ALLOWED_DIFFS` row 4 with a strict oracle check; every other fixture keeps the legacy header
-- [ ] 9.1 entry points: drag & drop, mini drop zone, ⌘/Ctrl O, Browse
-- [ ] 9.2 upload queue + "1 of N" stepper, `409 duplicate_file` toast with a link
-- [ ] 9.3 preview window `/imports/:id`: file facts, account picker, mapping editor, options, stats, sample grid, errors drawer, commit bar; debounced `PATCH`
-- [ ] 9.4 commit flow: poll, toast, navigate; inline failure + Try again
+- [x] 9.1 entry points: drag & drop, mini drop zone, ⌘/Ctrl O, Browse → `import/queue.ts` (non-CSV files refused with a toast)
+- [x] 9.2 upload queue + "file 1 of N" in the window title, `409 duplicate_file` toast "… was already imported on <date>" with *Open*
+- [x] 9.3 preview window `/imports/:id`: settings bar with account picker (suggested / existing / create), column meanings, options, stats, sample table with an "Imported as" column, rows-with-errors list, footer; 300 ms debounced `PATCH` (`import/editor.ts`)
+- [x] 9.4 commit flow: poll every 500 ms, toast "Imported N transactions · M duplicates skipped", open the account; inline failure + *Try again* (a failed import can be committed again)
 - [ ] 9.5 sidebar import history + menu (download, reprocess, delete)
-- [ ] 9.6 legacy v7 window parts: raw lines + header picking, footer/date-order, role menu + *Use detected meanings*, first/last rows, required-fields footer
+- [x] 9.6 legacy v7 window parts: raw lines + header picking (scrolled to the header), footer/date-order, role menu with *auto* hints + *Use detected meanings* (`ImportPreview.detected`), first 50 + ⋯ + last 5 rows, required-fields footer
 - [ ] 9.7 fast path preference, toast actions (*Review*, *Undo*), source labels
 - [ ] Tests: MSW per preview part; E2E import cases
 

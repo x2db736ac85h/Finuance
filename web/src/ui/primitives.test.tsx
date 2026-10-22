@@ -176,3 +176,21 @@ describe('IconButton', () => {
     expect(b.className).toBe('ib on');
   });
 });
+
+describe('Toast actions', () => {
+  it('runs an action and closes the toast', async () => {
+    const undo = vi.fn();
+    const user = userEvent.setup();
+    render(<Toaster />);
+    act(() => {
+      toast('Imported 12 transactions', { actions: [{ label: 'Undo', run: undo }] });
+    });
+    const btn = await screen.findByRole('button', { name: 'Undo' });
+    expect(screen.getByRole('status').className).toContain('act');
+    await user.click(btn);
+    expect(undo).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(useToasts.getState().queue).toHaveLength(0);
+    });
+  });
+});

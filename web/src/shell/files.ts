@@ -1,7 +1,7 @@
-// Entry points for opening CSV files: ⌘/Ctrl O, the empty state's Browse button, the sidebar's mini
-// drop zone and drag & drop all end in importFiles. The upload itself is Phase 9 (import preview).
+// Entry points for opening CSV files (PLAN task 9.1): ⌘/Ctrl O, the empty state's Browse button,
+// the sidebar's mini drop zone and drag & drop all end in importFiles (import/queue.ts).
 
-import { toast } from '../ui/toastStore';
+export { importFiles } from '../import/queue';
 
 let picker: HTMLInputElement | null = null;
 
@@ -15,8 +15,3 @@ export function openFilePicker(): void {
 }
 
 export const FILE_ACCEPT = '.csv,.tsv,.txt,text/csv,text/plain';
-
-export function importFiles(files: FileList | readonly File[]): void {
-  if (!files.length) return;
-  toast("Importing files isn't available yet; it arrives with the import preview.");
-}

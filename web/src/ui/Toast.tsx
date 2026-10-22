@@ -29,11 +29,27 @@ export function Toaster() {
 
   return (
     <div
-      className={['toast', head?.kind === 'error' && 'err', head && shown && 'on'].filter(Boolean).join(' ')}
+      className={['toast', head?.kind === 'error' && 'err', head?.actions.length && 'act', head && shown && 'on']
+        .filter(Boolean)
+        .join(' ')}
       role={head?.kind === 'error' ? 'alert' : 'status'}
       aria-live={head?.kind === 'error' ? 'assertive' : 'polite'}
     >
       {head?.msg}
+      {head?.actions.map((a) => (
+        <button
+          key={a.label}
+          type="button"
+          className="link"
+          onClick={() => {
+            a.run();
+            setShown(false);
+            setTimeout(shift, FADE_MS);
+          }}
+        >
+          {a.label}
+        </button>
+      ))}
     </div>
   );
 }

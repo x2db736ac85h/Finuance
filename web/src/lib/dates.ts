@@ -8,3 +8,10 @@ export function fmtDateTime(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : dateTime.format(d);
 }
+
+/** A date-only value (YYYY-MM-DD) as dd.mm.yyyy, the fixed display form (Phase 7 decision). */
+export function fmtDay(iso: string | undefined): string {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
+}

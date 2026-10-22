@@ -26,3 +26,12 @@ export function useLoadDemo() {
     },
   });
 }
+
+/** POST /accounts with a name (the import preview's "Create account"). */
+export function useCreateAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => data(await api.POST('/accounts', { body: { name } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.accounts }),
+  });
+}

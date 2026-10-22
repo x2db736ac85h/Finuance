@@ -13,13 +13,16 @@ type MenuProps = {
   anchor: Element | null;
   label: string;
   width?: number;
+  /** Shown above the items (a `.pop-h`). */
+  header?: ReactNode;
   children: ReactNode;
 };
 
-export function Menu({ children, ...rest }: MenuProps) {
+export function Menu({ children, header, ...rest }: MenuProps) {
   return (
     <Popover {...rest} role="menu" onKeyDown={moveFocus}>
-      <div className="pop-s">{children}</div>
+      {header}
+      <div className="pop-s pop-scroll">{children}</div>
     </Popover>
   );
 }

@@ -17,3 +17,55 @@ export function plural(n: number, one: string, many = `${one}s`): string {
 export function fmtPct(x: number): string {
   return `${Math.round(x * 100)}%`;
 }
+
+/** A money amount in minor units with its ISO 4217 code (the API's Money). */
+export type Money = { amountMinor: number; currency: string };
+
+const exponents = new Map<string, number>();
+
+/** Minor-unit digits of a currency (2 for PLN, 0 for JPY), from Intl; 2 for unknown codes. */
+export function currencyExponent(currency: string): number {
+  let e = exponents.get(currency);
+  if (e === undefined) {
+    try {
+      e = new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    } catch {
+      e = 2;
+    }
+    exponents.set(currency, e);
+  }
+  return e;
+}
+
+/**
+ * Minor units as an exact decimal string ("-1234.56"), built from the digits so no float rounding
+ * is involved (CLAUDE.md: no float for money).
+ */
+export function minorToDecimal(minor: number, exponent: number): `${number}` {
+  const neg = minor < 0;
+  const digits = String(Math.abs(Math.trunc(minor))).padStart(exponent + 1, '0');
+  const whole = digits.slice(0, digits.length - exponent);
+  const frac = exponent ? `.${digits.slice(digits.length - exponent)}` : '';
+  return `${neg ? '-' : ''}${whole}${frac}` as `${number}`;
+}
+
+const moneyFormats = new Map<number, Intl.NumberFormat>();
+
+/** "-1 234,56" in the browser locale; with currency: "-1 234,56 PLN" (legacy money()). */
+export function fmtMoney(m: Money, opts: { currency?: boolean } = {}): string {
+  const exp = currencyExponent(m.currency);
+  let nf = moneyFormats.get(exp);
+  if (!nf) {
+    nf = new Intl.NumberFormat(undefined, { minimumFractionDigits: exp, maximumFractionDigits: exp });
+    moneyFormats.set(exp, nf);
+  }
+  const s = nf.format(minorToDecimal(m.amountMinor, exp));
+  return opts.currency ? `${s} ${m.currency}` : s;
+}
+
+/** "1.2 MB" (legacy fmtSize). */
+export function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${fmtInt(bytes)} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
