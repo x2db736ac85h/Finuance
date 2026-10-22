@@ -5,6 +5,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 
 import { loginPath, setUnauthenticatedHandler } from './api/client';
 import { Login } from './auth/Login';
+import { ImportRoute } from './import/ImportWindow';
 import { RequireAuth } from './auth/RequireAuth';
 import { Signup } from './auth/Signup';
 import { SettingsPage } from './settings/SettingsPage';
@@ -28,6 +29,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Start /> },
       { path: '/t/:viewId', element: <TableView /> },
       { path: '/o/:viewId', element: <OverviewView /> },
+      { path: '/imports/:importId', element: <ImportRoute /> },
       { path: '/settings', element: <Navigate to="/settings/appearance" replace /> },
       { path: '/settings/:section', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },

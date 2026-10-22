@@ -54,7 +54,7 @@ describe('shell', () => {
     await user.click(screen.getByRole('button', { name: 'Toggle sidebar' }));
     const nav = screen.getByRole('navigation', { name: 'Explorer' });
     const link = within(nav).getByRole('link', { name: /Demo account/ });
-    expect(link.className).toBe('fi on');
+    expect(link.parentElement?.className).toBe('fi acc on');
     expect(within(link).getByText('demo')).toBeTruthy();
     expect(within(link).getByText((412).toLocaleString())).toBeTruthy();
     expect(within(nav).getByRole('link', { name: /All accounts/ })).toBeTruthy();
@@ -178,5 +178,88 @@ describe('shell', () => {
     await waitFor(() => {
       expect(db.signedIn).toBe(false);
     });
+  });
+});
+
+describe('sidebar import history', () => {
+  type Summary = import('../api/client').Schemas['ImportSummary'];
+  const imp = (over: Partial<Summary>, withAccount = true): Summary => ({
+    id: '00000000-0000-4000-8000-0000000000c1',
+    ...(withAccount ? { accountId: '00000000-0000-4000-8000-0000000000a1' } : {}),
+    filename: 'styczen.csv',
+    sizeBytes: 100,
+    status: 'committed' as const,
+    mappingSource: 'detected' as const,
+    createdAt: '2026-10-20T10:00:00Z',
+    committedAt: '2026-10-20T10:00:05Z',
+    stats: { rows: 12, new: 10, duplicates: 2 },
+    ...over,
+  });
+
+  it('folds out an account’s imports with counts, labels and a menu', async () => {
+    db.prefs = { version: 1, prefs: { sbOpen: true } };
+    db.accounts = [account({ txCount: 10 })];
+    db.imports = [
+      imp({ profileLabel: 'b2' }),
+      imp({
+        id: '00000000-0000-4000-8000-0000000000c2',
+        filename: 'luty.csv',
+        status: 'failed',
+        error: 'Database error',
+        stats: { rows: 3 },
+      }),
+      imp(
+        { id: '00000000-0000-4000-8000-0000000000c3', filename: 'draft.csv', status: 'previewed', stats: { rows: 4 } },
+        false,
+      ),
+    ];
+    let deleted = '';
+    server.use(
+      http.delete(`${API}/imports/:id`, ({ params }) => {
+        deleted = String(params['id']);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/');
+    const nav = await screen.findByRole('navigation', { name: 'Explorer' });
+    // previews without an account are listed on their own
+    expect(await within(nav).findByText('Not imported yet')).toBeTruthy();
+    expect(within(nav).getByText('draft.csv')).toBeTruthy();
+
+    await user.click(within(nav).getByRole('button', { name: 'Show imports' }));
+    const row = within(nav).getByText('styczen.csv').closest('.fi') as HTMLElement;
+    expect(within(row).getByText('b2').className).toBe('tag src');
+    expect(within(row).getByText('+10 · 2 dup')).toBeTruthy();
+    expect(within(nav).getByText('luty.csv').closest('.fi')?.className).toContain('err');
+
+    await user.click(within(row).getByRole('button', { name: 'Actions for styczen.csv' }));
+    const menu = await screen.findByRole('menu', { name: 'Actions for styczen.csv' });
+    expect(within(menu).getByRole('menuitem', { name: 'Re-map and reprocess' })).toBeTruthy();
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete…' }));
+    const dlg = await screen.findByRole('dialog', { name: 'Delete import' });
+    expect(dlg.textContent).toContain('another import of this account also contains');
+    await user.click(within(dlg).getByRole('button', { name: 'Delete import' }));
+    await waitFor(() => {
+      expect(deleted).toBe('00000000-0000-4000-8000-0000000000c1');
+    });
+    expect(await screen.findByText('Deleted the import of styczen.csv')).toBeTruthy();
+  });
+});
+
+describe('import settings', () => {
+  it('turns the fast path off and saves it', async () => {
+    const user = userEvent.setup();
+    renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Settings' }));
+    const box = screen.getByRole('checkbox', { name: 'Import known layouts without review' });
+    expect((box as HTMLInputElement).checked).toBe(true);
+    await user.click(box);
+    await waitFor(
+      () => {
+        expect(db.puts.at(-1)?.prefs).toMatchObject({ importFastPath: false });
+      },
+      { timeout: 2000 },
+    );
   });
 });

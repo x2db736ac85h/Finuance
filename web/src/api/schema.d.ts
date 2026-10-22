@@ -369,7 +369,8 @@ export interface paths {
         /**
          * Commit a previewed import
          * @description Needs an account, the required columns and at least one valid row. The commit runs as a job;
-         *     poll `GET /imports/{id}` until `committed` or `failed`. A second call gets `409 import_not_committable`.
+         *     poll `GET /imports/{id}` until `committed` or `failed`. A failed import can be committed again;
+         *     one that is committing or committed gets `409 import_not_committable`.
          */
         post: operations["commitImport"];
         delete?: never;
@@ -773,6 +774,8 @@ export interface components {
             tailRows: components["schemas"]["StagedRow"][];
             /** @description Required roles that are not mapped yet; the commit needs this empty. */
             missing: string[];
+            /** @description What automatic detection maps for the current options (the preview's "auto" hints and "Use detected meanings"). */
+            detected: components["schemas"]["Mapping"];
             warnings: {
                 code: string;
                 message: string;

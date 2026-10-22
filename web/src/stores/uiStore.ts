@@ -50,6 +50,7 @@ export type UiState = {
   toggleViz: () => void;
   setAiOpen: (open: boolean) => void;
   setKeysOpen: (open: boolean) => void;
+  setImportFastPath: (on: boolean) => void;
   hydrate: (p: ParsedPrefs, narrow: boolean) => void;
 };
 
@@ -103,6 +104,9 @@ export const useUi = create<UiState>()((set) => ({
   },
   setKeysOpen: (keysOpen) => {
     set({ keysOpen });
+  },
+  setImportFastPath: (importFastPath) => {
+    set({ importFastPath });
   },
   hydrate: (p, narrow) => {
     set((s) => ({

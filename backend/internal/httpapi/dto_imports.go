@@ -127,6 +127,10 @@ func previewDTO(p ledger.Preview, labels map[[32]byte]string) gen.ImportPreview 
 	if out.Import.Mapping.Ignore == nil {
 		out.Import.Mapping.Ignore = []ledger.ColRef{}
 	}
+	out.Detected = p.Detected
+	if out.Detected.Ignore == nil {
+		out.Detected.Ignore = []ledger.ColRef{}
+	}
 	s := p.Stats
 	out.Stats = gen.ImportStats{Rows: s.Rows, Errors: s.Errors, DuplicatesEstimate: s.DuplicatesEstimate, NewEstimate: s.NewEstimate,
 		DateFrom: dateDTO(s.DateFrom), DateTo: dateDTO(s.DateTo), HeaderAt: s.HeaderAt, Dropped: s.Dropped}

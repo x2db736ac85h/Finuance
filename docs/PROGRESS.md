@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 8 — Frontend foundation · **Branch:** phase/08-frontend · **Status:** gate approved, merged
+**Current phase:** 9 — Import UX · **Branch:** phase/09-import · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -21,9 +21,21 @@
 - Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
 - Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
 - Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 5.9.3 (openapi-typescript 7 needs `typescript ^5`). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
+- Phase 9: the automatic header rule is fixed in the backend (the text-only row just before the first row with a date and a number; legacy rule otherwise), recorded in `ALLOWED_DIFFS.md` row 4. The import preview is a window over the app (legacy `.modal` look) with its own URL `/imports/:id`.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 9.0 header detection fix (`ingest.findHeader`): mBank → record 26, PKO BP → 1; also fixes `06-bank-preamble` and `21-blank-headers`. `ALLOWED_DIFFS` row 4 with a strict oracle check; every other fixture keeps the legacy header
+- [x] 9.1 entry points: drag & drop, mini drop zone, ⌘/Ctrl O, Browse → `import/queue.ts` (non-CSV files refused with a toast)
+- [x] 9.2 upload queue + "file 1 of N" in the window title, `409 duplicate_file` toast "… was already imported on <date>" with *Open*
+- [x] 9.3 preview window `/imports/:id`: settings bar with account picker (suggested / existing / create), column meanings, options, stats, sample table with an "Imported as" column, rows-with-errors list, footer; 300 ms debounced `PATCH` (`import/editor.ts`)
+- [x] 9.4 commit flow: poll every 500 ms, toast "Imported N transactions · M duplicates skipped", open the account; inline failure + *Try again* (a failed import can be committed again)
+- [x] 9.5 sidebar import history folded out per account (status, `+new · dup`, source label) + menu (Download original, Re-map and reprocess, Delete with confirm); previews without an account under "Not imported yet"
+- [x] 9.6 legacy v7 window parts: raw lines + header picking (scrolled to the header), footer/date-order, role menu with *auto* hints + *Use detected meanings* (`ImportPreview.detected`), first 50 + ⋯ + last 5 rows, required-fields footer
+- [x] 9.7 fast path setting (settings popover → Import, saved in prefs), toast actions (*Review*, *Undo*), source labels
+- [x] Tests: 152 Vitest (editor with fake timers, roles, queue, window parts with MSW, sidebar history, toasts); E2E `import.spec.ts` (8 cases: overlap A→B with the oracle's counts (16, 4 duplicates), delete A, duplicate file, Windows-1250, debit/credit signs via the API, headerless + skip rows, padded preamble, footer summary, month-first dates, fast path + Undo) — 13 specs pass against a fresh `compose.ci.yaml` stack
+
+## Phase 8 tasks (done)
 - [x] 8.1 scaffold `web/` (Vite, React, TS strict, ESLint, Prettier, Vitest, Playwright config, `/api` proxy, `make dev-web`)
 - [x] 8.2 API client: `openapi-typescript` in `make gen`, `openapi-fetch` client (CSRF header, Problem errors, 401 → `/login?next=`), hooks
 - [x] 8.3 styles: `tokens.css` (verbatim), `base.css` (rem), `scale.ts` (auto heuristic), `theme.ts`
@@ -138,6 +150,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 9 — Import UX: gate approved 2026-10-22; `phase/09-import` merged with `--no-ff`.
 - Phase 8 — Frontend foundation: gate approved 2026-10-22; `phase/08-frontend` merged with `--no-ff`.
 - Phase 7 — Transactions query API: gate approved 2026-10-21 (option a: `textlike` LEAKPROOF; `includeTotals` added); `phase/07-query` merged with `--no-ff`.
 - Phase 6 — Accounts and import pipeline: gate approved 2026-10-21 (import smoke matches the oracle; Pekao preview reviewed); `phase/06-imports` merged with `--no-ff`.
@@ -159,6 +172,12 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 9.2: an upload goes into the account in view (`/t/:accountId`) when there is one. Files without an own-account number (the overlap fixtures, most CSVs made by hand) could otherwise never use the fast path, which needs a resolved account; the server still pre-fills one from the file's account number on `/t/all`.
+- 9.3: opening `/imports/:id` for a previewed import re-reads it with `PATCH {}` (the API has no read-only full preview); after an upload the window starts from the upload's answer. `ImportPreview.detected` was added for the role menu's *auto* hints. A committed import opens with its stored rows; changes apply with *Reprocess*.
+- 9.4: `POST /imports/{id}/commit` accepts a failed import again (*Try again*).
+- 9.6: the raw-lines panel loads up to 4 records past the header (at least the legacy 18, at most 200) and scrolls to it, so mBank's header on record 26 is visible. The window body scrolls on short screens instead of squeezing the preview table, because the account picker and column meanings make it taller than the legacy window.
+- CI: gitleaks flagged one base64 chunk of the spec that oapi-codegen embeds in `httpapi/gen/gen.go` (a false positive after the `detected` change). `.gitleaks.toml` keeps the default rules and allowlists only that generated file; `api/openapi.yaml` is still scanned.
+- 9.7: when a toast is waiting, the one on screen is cut to 1.2 s (the legacy replaced it at once); toasts with actions otherwise stay 8 s.
 - 8.1: TypeScript 5.9.3 rather than the newest release: openapi-typescript 7.13 declares `typescript ^5` as a peer. The Icon parity test reads `legacy/finuance.html` with a Vite `?raw` import; `server.fs.allow: ['..']` is set only in test mode.
 - 8.8: the preferences document keeps the legacy `collectPrefs` key names (`theme`, `ui`, `vizH`, `noViz`, `sbOpen`, `cards`, `cardOrder`, `cfg`, `ai`, `views`), plus `importFastPath`, so a legacy backup's prefs map onto it directly in Phase 14. Every stored document goes through `parsePrefs`, which drops unknown values; keys this build doesn't know are kept on save. The sync is a plain class (`stores/prefsSync.ts`) started by `RequireAuth`, not a React hook, so it can be unit-tested with fake timers.
 - 8.6: until the import UX (Phase 9), ⌘O, Browse, the mini drop zone and drag & drop open the picker or the overlay and then show a toast that import isn't available yet. The assistant button toggles its (persisted) state; the panel is Phase 13. Table and overview routes show the toolbar and a placeholder.
@@ -229,7 +248,6 @@
   - **mBank**: UTF-8 with BOM, CRLF, `;`. A ~25-line preamble holds the client name, period and account summary. The header is `#Data operacji;#Opis operacji;…` with `#`-prefixed names. Amounts carry the currency suffix (`-800,00 PLN`), rows end in a trailing `;;`, and descriptions are quoted and padded with runs of spaces.
 
 - Anonymisation key: `testdata/private/anon.key` (gitignored, lost with the container). A new key only changes the fake values of future runs.
-- Phase 9: fix auto header detection for mBank and PKO BP in the import preview (`ALLOWED_DIFFS.md` row 4; targets `ingest-cfg/banks/*/header-*.json`). Phase 3 ports the legacy rule as is.
 
 - Phase 8: `POST /demo-data` calls `ledger.SeedDemo` (the same path as `finuance seed-demo`).
 - Phase 8: the grid sends `includeTotals: false` for every window after the first.
@@ -244,6 +262,9 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 9 gate approved; merged. Next: plan Phase 10.
+- 2026-10-22 — Phase 9 built on `phase/09-import`: header fix for mBank/PKO BP, upload queue, import window (legacy v7 parts, debounced PATCH, commit/reprocess/retry), sidebar import history, fast path with Undo, account-in-view uploads; 152 Vitest + 13 Playwright specs, integration tests and CI green. Next: Irwin's gate review (import the anonymised real files through the UI).
+- 2026-10-22 — Phase 9 planned and approved (backend header fix; preview as a window with its own URL). Branch `phase/09-import`.
 - 2026-10-22 — Phase 8 gate approved; merged. Next: plan Phase 9.
 - 2026-10-22 — Phase 8 built on `phase/08-frontend`: scaffold, typed client, legacy styles/icons, UI primitives, shell, auth, stores + preferences sync, settings, demo data, web image + Compose, CI `web`/`e2e` jobs, 5 E2E specs. Legacy vs new screenshots match closely. Next: Irwin's gate review.
 - 2026-10-21 — Phase 8 planned and approved (3 dev type/lint deps; inline demo-data commit). Branch `phase/08-frontend`.

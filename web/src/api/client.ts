@@ -7,6 +7,7 @@ import type { components, paths } from './schema';
 
 export type Problem = components['schemas']['Problem'];
 export type Schemas = components['schemas'];
+export type FieldError = components['schemas']['FieldError'];
 
 /** A failed request, carrying the server's RFC 9457 problem (or one made up for network errors). */
 export class ApiError extends Error {

@@ -15,6 +15,7 @@ export type Db = {
   prefs: Schemas['Preferences'];
   accounts: Schemas['Account'][];
   sessions: Schemas['Session'][];
+  imports: Schemas['ImportSummary'][];
   puts: Schemas['Preferences'][];
 };
 
@@ -31,6 +32,7 @@ export const freshDb = (): Db => ({
   prefs: { version: 0, prefs: {} },
   accounts: [],
   sessions: [],
+  imports: [],
   puts: [],
 });
 
@@ -74,6 +76,7 @@ export const server = setupServer(
   }),
   http.get(`${API}/accounts`, () => authed(() => HttpResponse.json(db.accounts))),
   http.get(`${API}/me/sessions`, () => authed(() => HttpResponse.json(db.sessions))),
+  http.get(`${API}/imports`, () => authed(() => HttpResponse.json(db.imports))),
   http.post(`${API}/auth/logout`, () => {
     db.signedIn = false;
     return new HttpResponse(null, { status: 204 });

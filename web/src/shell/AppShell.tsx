@@ -2,10 +2,12 @@
 // / status bar, on a grid whose middle row is minmax(0, 1fr) so wide content never overflows the
 // page. Routes render into the content area.
 
-import { useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 
-import { useAccounts } from '../api/hooks/accounts';
+import { invalidateData, useAccounts } from '../api/hooks/accounts';
+import { configureImports } from '../import/queue';
 import type { User } from '../api/hooks/me';
 import { sidebarShown, useUi } from '../stores/uiStore';
 import { TooltipLayer } from '../ui/Tooltip';
@@ -32,6 +34,23 @@ export function AppShell({ user }: { user: User }) {
   const mode = useUi((s) => s.mode);
   const vizOpen = useUi((s) => s.vizOpen);
   const searchRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
+  const viewAccount = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    viewAccount.current = viewId === 'all' ? undefined : viewId;
+  }, [viewId]);
+
+  // Every file entry point (drop, ⌘O, Browse, mini drop zone) feeds the upload queue.
+  useEffect(() => {
+    configureImports({
+      navigate: (to) => void navigate(to),
+      refresh: () => {
+        invalidateData(qc);
+      },
+      autoCommit: () => useUi.getState().importFastPath,
+      account: () => viewAccount.current,
+    });
+  }, [navigate, qc]);
 
   const accounts = useAccounts();
   const list = accounts.data ?? [];

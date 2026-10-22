@@ -9,6 +9,7 @@ import { AppearanceControls } from '../settings/Appearance';
 import { useUi } from '../stores/uiStore';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
+import { Checkbox } from '../ui/inputs';
 import { MenuItem } from '../ui/Menu';
 import { Popover } from '../ui/Popover';
 import { SECTIONS } from '../settings/sections';
@@ -20,6 +21,7 @@ export function SettingsPopover({ open, anchor, onClose }: Props) {
   const navigate = useNavigate();
   const signOut = useSignOut();
   const me = useMe();
+  const fastPath = useUi((s) => s.importFastPath);
   return (
     <Popover open={open} anchor={anchor} onClose={onClose} label="Settings" width={350}>
       <div className="pop-h">
@@ -30,6 +32,19 @@ export function SettingsPopover({ open, anchor, onClose }: Props) {
         <div className="pop-s">
           <div className="lbl">Appearance</div>
           <AppearanceControls />
+        </div>
+        <div className="pop-s">
+          <div className="lbl">Import</div>
+          <Checkbox
+            checked={fastPath}
+            onChange={(on) => {
+              useUi.getState().setImportFastPath(on);
+            }}
+            label="Import known layouts without review"
+          />
+          <div className="hint">
+            Files laid out like one you imported before go straight in; the toast offers Review and Undo.
+          </div>
         </div>
         <div className="pop-s">
           <div className="lbl">Account</div>

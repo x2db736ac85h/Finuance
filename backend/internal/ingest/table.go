@@ -159,7 +159,77 @@ func shape(raw [][]string, o ShapeOptions, owned bool) (*Table, error) {
 	return &Table{Headers: uniqueNames(headers), Rows: cells, HeaderAt: headerAt, Dropped: dropped}, nil
 }
 
-// findHeader is the automatic header rule. It skips bank preambles:
+// findHeader is the automatic header rule (PLAN Phase 9, ALLOWED_DIFFS.md row 4):
+//
+//  1. headerBeforeData: the record just before the first record that holds both a date and a
+//     number, when that record is text only (≥ 2 non-empty cells, none a date or a number). This
+//     finds the real header in bank layouts where the legacy rule fails: PKO BP (descriptions spill
+//     into unnamed columns, so data rows are fuller than the header) and mBank (a long preamble and
+//     rows ending in ";;", so the modal width belongs to the data rows and the address lines).
+//  2. Otherwise the legacy rule, legacyHeader.
+//
+// For a file with a plain header on top, or a preamble the legacy rule already skips, both rules
+// pick the same record; the oracle suite checks that only the bank layouts change.
+func findHeader(rows [][]string) int {
+	if h := headerBeforeData(rows); h >= 0 {
+		return h
+	}
+	return legacyHeader(rows)
+}
+
+// headerBeforeData returns the index of the text-only record right before the first data record
+// among the first 50, or -1.
+func headerBeforeData(rows [][]string) int {
+	top := rows[:min(len(rows), 50)]
+	for i, r := range top {
+		if !looksLikeData(r) {
+			continue
+		}
+		if i > 0 && looksLikeHeader(top[i-1]) {
+			return i - 1
+		}
+		return -1
+	}
+	return -1
+}
+
+// looksLikeData: at least one cell is a date and another one a number.
+func looksLikeData(r []string) bool {
+	date, num := false, false
+	for _, v := range r {
+		t := jsTrim(v)
+		if t == "" {
+			continue
+		}
+		if _, ok := ParseDate(t); ok {
+			date = true
+		} else if _, ok := ParseNumber(t); ok {
+			num = true
+		}
+	}
+	return date && num
+}
+
+// looksLikeHeader: at least two non-empty cells and none of them a date or a number.
+func looksLikeHeader(r []string) bool {
+	n := 0
+	for _, v := range r {
+		t := jsTrim(v)
+		if t == "" {
+			continue
+		}
+		if _, ok := ParseDate(t); ok {
+			return false
+		}
+		if _, ok := ParseNumber(t); ok {
+			return false
+		}
+		n++
+	}
+	return n >= 2
+}
+
+// legacyHeader is the legacy automatic header rule (`buildTable`). It skips bank preambles:
 //
 //  1. the modal field count among non-blank records (ties: the wider count);
 //  2. among the first 50 records, the first one with that count whose number of non-empty cells is
@@ -168,10 +238,9 @@ func shape(raw [][]string, o ShapeOptions, owned bool) (*Table, error) {
 //     empty;
 //  3. record 0 if nothing qualifies.
 //
-// Known limitation, ported on purpose (fix planned for Phase 9): when data rows have more filled
-// cells than the header (PKO BP spills descriptions into unnamed columns) or more fields (mBank
-// rows end in ";;"), a data row or a preamble line is chosen. See ALLOWED_DIFFS.md row 4.
-func findHeader(rows [][]string) int {
+// It picks a data row or a preamble line when data rows have more filled cells than the header
+// (PKO BP) or more fields (mBank); findHeader tries headerBeforeData first for that reason.
+func legacyHeader(rows [][]string) int {
 	mode := modalWidth(rows, true)
 	top := rows[:min(len(rows), 50)]
 	maxFilled := 0
