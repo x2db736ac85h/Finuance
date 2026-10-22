@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 8 — Frontend foundation · **Branch:** phase/08-frontend · **Status:** in progress
+**Current phase:** 8 — Frontend foundation · **Branch:** phase/08-frontend · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -38,7 +38,7 @@
 - [x] 8.12 CI `web` job (lint, typecheck, test, build, bundle size summary + 250 KB gzip budget); image job also builds, smoke-tests and scans the web image
 - [x] 8.13 E2E: `compose.ci.yaml`, `make test-e2e`, CI `e2e` job; 5 specs (signup → demo data → sidebar; prefs survive a reload; sign out/in with `next`; `?` window; no CSP violations), passing against a fresh stack
 - [x] 8.14 SettingsPopover, KeyboardShortcuts dialog
-- [ ] Gate: legacy vs new screenshots (dark/light) — taken, for Irwin's review
+- [x] Gate: legacy vs new screenshots (dark/light), reviewed by Irwin
 - [x] Tests: 118 Vitest (stores, sync with fake timers, client, primitives, shell, auth, settings, keyboard), 5 Playwright
 
 ## Phase 7 tasks (done)
@@ -138,6 +138,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 8 — Frontend foundation: gate approved 2026-10-22; `phase/08-frontend` merged with `--no-ff`.
 - Phase 7 — Transactions query API: gate approved 2026-10-21 (option a: `textlike` LEAKPROOF; `includeTotals` added); `phase/07-query` merged with `--no-ff`.
 - Phase 6 — Accounts and import pipeline: gate approved 2026-10-21 (import smoke matches the oracle; Pekao preview reviewed); `phase/06-imports` merged with `--no-ff`.
 - Phase 5 — Auth, users, preferences: gate approved 2026-10-21; `phase/05-auth` merged with `--no-ff`.
@@ -243,6 +244,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 8 gate approved; merged. Next: plan Phase 9.
 - 2026-10-22 — Phase 8 built on `phase/08-frontend`: scaffold, typed client, legacy styles/icons, UI primitives, shell, auth, stores + preferences sync, settings, demo data, web image + Compose, CI `web`/`e2e` jobs, 5 E2E specs. Legacy vs new screenshots match closely. Next: Irwin's gate review.
 - 2026-10-21 — Phase 8 planned and approved (3 dev type/lint deps; inline demo-data commit). Branch `phase/08-frontend`.
 - 2026-10-21 — Phase 7 gate approved with option (a) and `includeTotals`; both added (search p95 273 → 114 ms in the sandbox), merged. Next: plan Phase 8.
