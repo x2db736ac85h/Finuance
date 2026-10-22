@@ -30,9 +30,9 @@
 - [x] 9.2 upload queue + "file 1 of N" in the window title, `409 duplicate_file` toast "… was already imported on <date>" with *Open*
 - [x] 9.3 preview window `/imports/:id`: settings bar with account picker (suggested / existing / create), column meanings, options, stats, sample table with an "Imported as" column, rows-with-errors list, footer; 300 ms debounced `PATCH` (`import/editor.ts`)
 - [x] 9.4 commit flow: poll every 500 ms, toast "Imported N transactions · M duplicates skipped", open the account; inline failure + *Try again* (a failed import can be committed again)
-- [ ] 9.5 sidebar import history + menu (download, reprocess, delete)
+- [x] 9.5 sidebar import history folded out per account (status, `+new · dup`, source label) + menu (Download original, Re-map and reprocess, Delete with confirm); previews without an account under "Not imported yet"
 - [x] 9.6 legacy v7 window parts: raw lines + header picking (scrolled to the header), footer/date-order, role menu with *auto* hints + *Use detected meanings* (`ImportPreview.detected`), first 50 + ⋯ + last 5 rows, required-fields footer
-- [ ] 9.7 fast path preference, toast actions (*Review*, *Undo*), source labels
+- [x] 9.7 fast path setting (settings popover → Import, saved in prefs), toast actions (*Review*, *Undo*), source labels
 - [ ] Tests: MSW per preview part; E2E import cases
 
 ## Phase 8 tasks (done)

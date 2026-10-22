@@ -342,3 +342,56 @@ button.mini-drop {
 .imp-t th > .mc:disabled {
   cursor: default;
 }
+
+/* sidebar: accounts with their import history (Phase 9) */
+.fi.acc {
+  padding-left: 0;
+  gap: 0.125rem;
+}
+.fi.acc .ib.fold {
+  opacity: 1;
+  color: var(--muted);
+}
+.fi-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+.fi-link > .ico {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.fi.acc.on .fi-link > .ico {
+  color: var(--accent);
+}
+.fi.imp {
+  padding-left: 1.75rem;
+  height: 1.625rem;
+  font-size: 0.75rem;
+}
+.fi.imp > .ico {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.fi-empty.imp {
+  padding-left: 1.75rem;
+  font-size: 0.7188rem;
+}
+.fi-sub {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+.tag.st-failed {
+  color: var(--neg);
+  border-color: var(--neg);
+}
+.tag.st-committing,
+.tag.st-previewed {
+  color: var(--accent);
+}
