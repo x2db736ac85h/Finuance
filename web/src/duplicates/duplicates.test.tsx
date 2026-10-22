@@ -121,7 +121,7 @@ afterEach(() => {
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {
   renderApp(`/t/${ACC}`);
-  const link = await screen.findByRole('button', { name: '4 duplicates skipped' });
+  const link = await screen.findByRole('button', { name: '4 duplicates skipped' }, { timeout: 5000 }); // the app boots first
   await user.click(link);
   return within(await screen.findByRole('dialog', { name: 'Duplicates' }));
 }

@@ -41,46 +41,46 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Dedupe key: `ref + amount`, else `date + amount + payee + title`, else normalised row 🧪 | §8 `getDataset('merged')` | 4, 6 | todo |
 | Multiset rule: keep max(count in any single file) 🧪 | §8 | 6 | todo |
 | *All data* merged view with `Source file` column | §8 | 7 | retired: replaced by *All accounts*; dedupe is per account (PLAN §1.3 [CHANGE]); provenance is the import history |
-| "N duplicates skipped" status link → Duplicates window | §32.3 | 10 | todo |
-| Duplicates window: groups newest first, 60 per page + *Show more*, text filter, versions side by side, differing cells highlighted, ✓ kept marker 🧪 | §32.3 `renderDups` | 10 | todo |
-| *Use this version* (`dupPick`) 🧪 | §32.3 | 6, 10 | todo |
-| *Keep both* / *Merge again* (`dupKeep`) 🧪 | §32.3 | 6, 10 | todo |
+| "N duplicates skipped" status link → Duplicates window | §32.3 | 10 | ported |
+| Duplicates window: groups newest first, 60 per page + *Show more*, text filter, versions side by side, differing cells highlighted, ✓ kept marker 🧪 | §32.3 `renderDups` | 10 | ported |
+| *Use this version* (`dupPick`) 🧪 | §32.3 | 6, 10 | ported |
+| *Keep both* / *Merge again* (`dupKeep`) 🧪 | §32.3 | 6, 10 | ported |
 
 ## 3. Table view
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Virtualised grid, sticky header and row-number gutter, measured row height | §10 `renderBody` | 10 | todo |
-| Cell rendering: numbers right-aligned mono, negatives red, dates mono, search highlight `<mark>` | §10 `hl()` | 10 | todo |
-| Header: type badge, sort arrow, funnel, resize handle (drag; double-click resets) | §10 `renderHead` | 10 | todo |
-| Sort cycle asc → desc → off; collator numeric/base; empties last; stable | §9 `sortOrder` | 7, 10 | todo |
-| Row click → inspector; double-click cell → copy; ↑/↓, j/k, PgUp/PgDn | §10, §22 | 10 | todo |
-| Empty result row "No rows match … Clear all" | §10 | 10 | todo |
-| Global search: all tokens, accent-insensitive (`platnosc` → `PŁATNOŚĆ`) 🧪 | §9 | 7, 10 | todo |
+| Virtualised grid, sticky header and row-number gutter, measured row height | §10 `renderBody` | 10 | ported |
+| Cell rendering: numbers right-aligned mono, negatives red, dates mono, search highlight `<mark>` | §10 `hl()` | 10 | ported |
+| Header: type badge, sort arrow, funnel, resize handle (drag; double-click resets) | §10 `renderHead` | 10 | ported |
+| Sort cycle asc → desc → off; collator numeric/base; empties last; stable | §9 `sortOrder` | 7, 10 | ported |
+| Row click → inspector; double-click cell → copy; ↑/↓, j/k, PgUp/PgDn | §10, §22 | 10 | ported |
+| Empty result row "No rows match … Clear all" | §10 | 10 | ported |
+| Global search: all tokens, accent-insensitive (`platnosc` → `PŁATNOŚĆ`) 🧪 | §9 | 7, 10 | ported |
 | Column filter language: `!x`, `=x`, `=`, `!=`, `> >= < <= =` for numbers and dates, `a..b`, `looseDate` intervals, contains fallback 🧪 | §9 `compileCond` | 7 | todo |
-| Value checklist (Excel-style): counts, search, All/None on shown values, cap 600 | §12 `openColMenu` | 10 | todo |
-| Column menu: sort, condition with type-specific help, checklist, hide, clear | §12 | 10 | todo |
-| Columns menu: show/hide each column; single *Hide all* / *Show all* toggle | §32.2 `openColsMenu` | 10 | todo |
-| Toolbar chips (period, search, sort, each condition, excluded count, hidden columns), each removable, *Clear all* | §11 `renderToolbar` | 10 | todo |
-| Export CSV: filtered + sorted + visible columns, original delimiter, UTF-8 BOM | §11 | 7, 10 | todo |
-| Status bar: rows shown/total, columns, delimiter, encoding, selected row | §11 `renderStatus` | 10 | todo |
-| Status bar Σ / avg / min / max; column picker only with 2+ number columns, else a tooltip names the column | §11, §32.2 | 10 | todo |
-| Inspector: all fields with type badges, per-field copy, *Copy row as JSON*, prev/next | §11 `renderInspector` | 10 | todo |
+| Value checklist (Excel-style): counts, search, All/None on shown values, cap 600 | §12 `openColMenu` | 10 | ported |
+| Column menu: sort, condition with type-specific help, checklist, hide, clear | §12 | 10 | ported |
+| Columns menu: show/hide each column; single *Hide all* / *Show all* toggle | §32.2 `openColsMenu` | 10 | ported |
+| Toolbar chips (period, search, sort, each condition, excluded count, hidden columns), each removable, *Clear all* | §11 `renderToolbar` | 10 | ported |
+| Export CSV: filtered + sorted + visible columns, original delimiter, UTF-8 BOM | §11 | 7, 10 | ported (`;` by default, ADR 0014) |
+| Status bar: rows shown/total, columns, delimiter, encoding, selected row | §11 `renderStatus` | 10 | ported (delimiter and encoding are per import now: import window and history) |
+| Status bar Σ / avg / min / max; column picker only with 2+ number columns, else a tooltip names the column | §11, §32.2 | 10 | ported |
+| Inspector: all fields with type badges, per-field copy, *Copy row as JSON*, prev/next | §11 `renderInspector` | 10 | ported |
 | Fields menu (role overrides per view) | §7.3 `openFieldsMenu` | — | retired: roles are mapped per import in the preview (PLAN §7.6) |
 
 ## 4. Groups and multi-selection
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Groups `{id, name, color 0–7}`; one group per transaction; identity survives re-import 🧪 | §30.2 `txKeys` | 4, 10 | todo |
-| Virtual Grouping column (`Grouping` / `App grouping`), hidden until a group exists, coloured pills | §30.2 | 10 | todo |
-| Groups menu: colour, name, count · spent; click toggles `Grouping =Name` filter | §30.3 `openGroupsMenu` | 10 | todo |
-| Rename / recolour (filters referencing the old name are renamed); delete removes labels only | §30.3 `openGroupForm` | 10 | todo |
-| Group form: unique name ≤ 40 chars, 8-colour palette, Enter submits | §30.3 | 10 | todo |
-| Inspector group row: pill per group, active outlined, click active removes, + New | §30.3 | 10 | todo |
-| Multi-selection: drag across rows (auto-scroll), Shift-click range, ⌘/Ctrl-click toggle; cleared by filter/sort change, Esc, plain click | §30.3 | 10 | todo |
-| Quick bar: count, Σ amount, group dots (assign), + (new and assign), Ungroup, close; toasts move up | §30.3 `renderQbar` | 10 | todo |
-| Groups in assistant tools, charts and export | §30.4 | 10, 13 | todo |
+| Groups `{id, name, color 0–7}`; one group per transaction; identity survives re-import 🧪 | §30.2 `txKeys` | 4, 10 | ported |
+| Virtual Grouping column (`Grouping` / `App grouping`), hidden until a group exists, coloured pills | §30.2 | 10 | ported (the Group column) |
+| Groups menu: colour, name, count · spent; click toggles `Grouping =Name` filter | §30.3 `openGroupsMenu` | 10 | ported |
+| Rename / recolour (filters referencing the old name are renamed); delete removes labels only | §30.3 `openGroupForm` | 10 | ported |
+| Group form: unique name ≤ 40 chars, 8-colour palette, Enter submits | §30.3 | 10 | ported |
+| Inspector group row: pill per group, active outlined, click active removes, + New | §30.3 | 10 | ported |
+| Multi-selection: drag across rows (auto-scroll), Shift-click range, ⌘/Ctrl-click toggle; cleared by filter/sort change, Esc, plain click | §30.3 | 10 | ported |
+| Quick bar: count, Σ amount, group dots (assign), + (new and assign), Ungroup, close; toasts move up | §30.3 `renderQbar` | 10 | ported |
+| Groups in assistant tools, charts and export | §30.4 | 10, 13 | ported |
 
 ## 5. Insights pane and charts
 
@@ -151,13 +151,13 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Settings → Appearance: theme System/Dark/Light, interface size incl. Auto | §32.2 | 8 | todo |
 | Dark/light design tokens, chart palette, status tokens | §19 | 8 | todo |
 | Interface scaling: rem-based, `S.ui`, Auto zoom compensation | §20 | 8 | todo |
-| Responsiveness: inspector overlay < 1100 px, labels hidden ≤ 860 px | §21 | 8, 10 | todo |
+| Responsiveness: inspector overlay < 1100 px, labels hidden ≤ 860 px | §21 | 8, 10 | ported |
 | Popovers that re-anchor on resize/scroll; outside-click/Esc close | §12 `placePop` | 8 | todo |
 | Toasts | §11 | 8 | todo |
 | Drag & drop anywhere with overlay (files only) | §22 | 9 | todo |
 | ⌘/Ctrl O file dialog | §22 | 9 | todo |
 | Keyboard shortcuts window (`?`, from Settings; ⌘ on Mac / Ctrl elsewhere) | §32.2 `KEYS` | 8 | todo |
-| Esc order: modal → popover → search → selection | §22 | 8, 10 | todo |
+| Esc order: modal → popover → search → selection | §22 | 8, 10 | ported |
 | Empty state: drop zone, Browse | §11 | 9 | todo |
 | *Load demo year* (fictional, ~14 months) 🧪 (`demo-legacy.csv`) | §11 `demoCSV` | 9, 18 | todo |
 | *Load sample* (7-row sample statement) | §11 `SAMPLE` | — | retired: the demo year covers previews; the scrubbed sample becomes a fixture |

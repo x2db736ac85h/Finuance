@@ -39,8 +39,8 @@
 - [x] 10.11 multi-selection + `QuickBar`
 - [x] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
 - [x] 10.13 duplicates: `GET /duplicates`, `PUT`/`DELETE /duplicates/{accountId}/{fingerprint}`, `DuplicatesDialog`
-- [ ] 10.14 performance with a 100k-row user (Playwright trace, `docs/perf.md`)
-- [ ] Tests: stores, chips, ColumnMenu + Grid (MSW); E2E table (legacy §26), groups/selection, duplicates; PARITY rows `ported`
+- [x] 10.14 performance with a 100k-row user (`tools/perf/grid.mjs`, Playwright trace, `docs/perf.md`): filter-to-paint 88–175 ms; scrolling frames match a plain HTML table in the sandbox (software rendering), 60 fps to be checked on real hardware at the gate
+- [x] Tests: 196 Vitest (stores, chips, Grid/ColumnMenu/inspector/status/groups/selection/duplicates with MSW); E2E `table.spec.ts` (8, legacy §26 + oracle counts), `groups.spec.ts` (3), `duplicates.spec.ts` (1); Go HTTP tests for groups/bulk and duplicates; 30 PARITY rows `ported`
 
 ## Phase 9 tasks (done)
 - [x] 9.0 header detection fix (`ingest.findHeader`): mBank → record 26, PKO BP → 1; also fixes `06-bank-preamble` and `21-blank-headers`. `ALLOWED_DIFFS` row 4 with a strict oracle check; every other fixture keeps the legacy header

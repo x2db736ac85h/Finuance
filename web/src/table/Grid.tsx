@@ -5,6 +5,7 @@
 
 import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual';
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -230,7 +231,11 @@ export function Grid(props: Props) {
   );
 }
 
-function DataRow({
+/**
+ * One row. Memoised: the grid re-renders on every scroll step (the virtualiser's range), and most
+ * rows on screen stay the same, so only the rows that scroll in render (Phase 10 perf, docs/perf.md).
+ */
+const DataRow = memo(function DataRow({
   row,
   index,
   columns,
@@ -278,7 +283,7 @@ function DataRow({
       })}
     </tr>
   );
-}
+});
 
 function cell(c: ColumnDef, text: string, tokens: readonly string[], color: string | undefined): ReactNode {
   if (c.id === 'group' && text) {

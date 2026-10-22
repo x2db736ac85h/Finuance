@@ -5,7 +5,7 @@
 // After a drag, clicks are ignored for a moment (legacy suppressUntil): re-rendering on mousedown
 // can swallow the click, so a time window is used instead of a flag.
 
-import { useCallback, useEffect, useRef, type MouseEvent, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type MouseEvent, type RefObject } from 'react';
 
 import { fetchRange } from '../api/hooks/transactions';
 import { fmtInt } from '../lib/format';
@@ -186,5 +186,5 @@ export function useRowGestures(opts: {
     [],
   );
 
-  return { onMouseDown, ignoreClick };
+  return useMemo(() => ({ onMouseDown, ignoreClick }), [onMouseDown, ignoreClick]);
 }
