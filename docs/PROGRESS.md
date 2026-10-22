@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 9 — Import UX · **Branch:** phase/09-import · **Status:** gate approved, merged
+**Current phase:** 10 — Table view, groups and multi-selection · **Branch:** phase/10-table · **Status:** in progress
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -22,9 +22,27 @@
 - Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
 - Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 5.9.3 (openapi-typescript 7 needs `typescript ^5`). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
 - Phase 9: the automatic header rule is fixed in the backend (the text-only row just before the first row with a date and a number; legacy rule otherwise), recorded in `ALLOWED_DIFFS.md` row 4. The import preview is a window over the app (legacy `.modal` look) with its own URL `/imports/:id`.
+- Phase 10: one phase with one gate, pushed in two halves (table first, then groups, selection and duplicates). `POST /transactions/bulk` takes explicit ids only (the selection; ranges resolved through `/transactions/ids`).
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 10.1 `useQueryContext(viewId)` (debounced search 120 ms / conditions 160 ms, `ctxKey`)
+- [ ] 10.2 `Grid` (§7.7: 200-row windows, skeletons, measured row height, sticky header + gutter, widths × uiScale, resize, sort cycle, badges, empty row); `includeTotals: false` after the first window
+- [ ] 10.3 `hl()` port (`table/highlight.tsx`)
+- [ ] 10.4 `ColumnMenu`, `ColumnsMenu`, legacy `HELP`, value checklist
+- [ ] 10.5 `Toolbar` + `Chips`, Clear all, Export
+- [ ] 10.6 `Inspector` (fields, raw, sources, category combobox, note, Copy as JSON, prev/next, overlay < 1100 px)
+- [ ] 10.7 `StatusBar` (shown/total, columns, period, Σ/avg/min/max, totals picker, duplicates link)
+- [ ] 10.8 keyboard (selection across windows, Esc chain, double-click copy)
+- [ ] 10.9 per-view state for `/t/all` and `/t/:accountId`; Account column only in `all`
+- [ ] 10.10 groups backend: CRUD + stats, `POST /transactions/bulk` (ids), group in exports
+- [ ] 10.11 multi-selection + `QuickBar`
+- [ ] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
+- [ ] 10.13 duplicates: `GET /duplicates`, `PUT`/`DELETE /duplicates/{accountId}/{fingerprint}`, `DuplicatesDialog`
+- [ ] 10.14 performance with a 100k-row user (Playwright trace, `docs/perf.md`)
+- [ ] Tests: stores, chips, ColumnMenu + Grid (MSW); E2E table (legacy §26), groups/selection, duplicates; PARITY rows `ported`
+
+## Phase 9 tasks (done)
 - [x] 9.0 header detection fix (`ingest.findHeader`): mBank → record 26, PKO BP → 1; also fixes `06-bank-preamble` and `21-blank-headers`. `ALLOWED_DIFFS` row 4 with a strict oracle check; every other fixture keeps the legacy header
 - [x] 9.1 entry points: drag & drop, mini drop zone, ⌘/Ctrl O, Browse → `import/queue.ts` (non-CSV files refused with a toast)
 - [x] 9.2 upload queue + "file 1 of N" in the window title, `409 duplicate_file` toast "… was already imported on <date>" with *Open*
@@ -262,6 +280,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 10 planned and approved (one phase, two halves; bulk by ids). Branch `phase/10-table`.
 - 2026-10-22 — Phase 9 gate approved; merged. Next: plan Phase 10.
 - 2026-10-22 — Phase 9 built on `phase/09-import`: header fix for mBank/PKO BP, upload queue, import window (legacy v7 parts, debounced PATCH, commit/reprocess/retry), sidebar import history, fast path with Undo, account-in-view uploads; 152 Vitest + 13 Playwright specs, integration tests and CI green. Next: Irwin's gate review (import the anonymised real files through the UI).
 - 2026-10-22 — Phase 9 planned and approved (backend header fix; preview as a window with its own URL). Branch `phase/09-import`.
