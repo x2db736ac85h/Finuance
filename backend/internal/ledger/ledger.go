@@ -28,6 +28,9 @@ var (
 	ErrState = errors.New("ledger: wrong state")
 )
 
+// defaultCurrency is the currency of an account created without one, and of empty group totals.
+const defaultCurrency = "PLN"
+
 // Ledger is the entry point; it is safe for concurrent use.
 type Ledger struct {
 	st    *store.Store

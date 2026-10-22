@@ -461,6 +461,7 @@ func (e *Engine) Distinct(ctx context.Context, userID uuid.UUID, c Context, colu
 type IDAmount struct {
 	ID          uuid.UUID
 	AmountMinor int64
+	GroupID     *uuid.UUID // the selection's quick bar offers Ungroup when any row has one
 }
 
 // IDs returns ids and amounts of a range of the ordered result (range selection across windows
@@ -490,14 +491,14 @@ func (e *Engine) IDs(ctx context.Context, userID uuid.UUID, c Context, s *Sort, 
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, "SELECT t.id, t.amount_minor FROM "+source(c.joins(order.join)...)+" WHERE "+scoped+" ORDER BY "+order.sql+
+		rows, err := tx.Query(ctx, "SELECT t.id, t.amount_minor, t.group_id FROM "+source(c.joins(order.join)...)+" WHERE "+scoped+" ORDER BY "+order.sql+
 			" OFFSET "+c.Add(offset)+" LIMIT "+c.Add(limit), c.Args...)
 		if err != nil {
 			return err
 		}
 		out, err = pgx.CollectRows(rows, func(rw pgx.CollectableRow) (IDAmount, error) {
 			var x IDAmount
-			return x, rw.Scan(&x.ID, &x.AmountMinor)
+			return x, rw.Scan(&x.ID, &x.AmountMinor, &x.GroupID)
 		})
 		return err
 	})

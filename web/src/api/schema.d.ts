@@ -458,6 +458,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/transactions/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set or remove the group of many transactions
+         * @description Applies `set` to the given transactions (at most 5,000) and keeps the change as annotations, so it survives deleting and re-importing the file. `groupId: null` removes the label. Ids that are not the user's are ignored; `updated` counts the transactions changed.
+         */
+        post: operations["bulkUpdateTransactions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions/export": {
         parameters: {
             query?: never;
@@ -516,6 +536,98 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Groups with their stats
+         * @description Every group in natural order with its transactions over all accounts, ignoring filters: count, money out and in (transfers included), first and last day (PLAN §4.7).
+         */
+        get: operations["listGroups"];
+        put?: never;
+        /**
+         * Create a group
+         * @description The name is unique per user (ignoring case and accents), at most 40 characters. Without `color` the group takes the first unused colour slot. `409 conflict` when the name is taken.
+         */
+        post: operations["createGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a group (its labels only, never transactions) */
+        delete: operations["deleteGroup"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename or recolour a group
+         * @description The client renames view filters that mention the old name.
+         */
+        patch: operations["updateGroup"];
+        trace?: never;
+    };
+    "/duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Duplicate groups with every version (the duplicates window)
+         * @description Fingerprints whose rows come from two or more committed imports of an account where rows were merged, or where the user decided (an override), newest first. Duplicates are found per account. `q` keeps the groups where a row contains every word (accent- and case-insensitive).
+         */
+        get: operations["listDuplicates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/duplicates/{accountId}/{fingerprint}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+                /** @description The de-dupe key, as 64 lower-case hex digits. */
+                fingerprint: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Use one version, or keep both
+         * @description `prefer` shows the given import's version of every occurrence it contains; `keep_both` stops merging, so each import's rows become their own transactions. The transactions are rebuilt before the answer, which is the group as it is now.
+         */
+        put: operations["decideDuplicate"];
+        post?: never;
+        /** Back to the default merge ("Merge again") */
+        delete: operations["resetDuplicate"];
         options?: never;
         head?: never;
         patch?: never;
@@ -994,6 +1106,8 @@ export interface components {
             id: string;
             /** Format: int64 */
             amountMinor: number;
+            /** Format: uuid */
+            groupId?: string;
         };
         ExportRequest: {
             context: components["schemas"]["QueryContext"];
@@ -1041,6 +1155,87 @@ export interface components {
             name: string;
             txCount: number;
             colorSlot?: number;
+        };
+        Group: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            color: number;
+            count: number;
+            spent: components["schemas"]["Money"];
+            income: components["schemas"]["Money"];
+            /** Format: date */
+            firstOn?: string;
+            /** Format: date */
+            lastOn?: string;
+        };
+        GroupInput: {
+            name: string;
+            color?: number;
+        };
+        BulkUpdate: {
+            ids: string[];
+            set: {
+                /** Format: uuid */
+                groupId: string | null;
+            };
+        };
+        BulkResult: {
+            updated: number;
+        };
+        DuplicatePage: {
+            total: number;
+            groups: components["schemas"]["DuplicateGroup"][];
+        };
+        DuplicateGroup: {
+            /** Format: uuid */
+            accountId: string;
+            /** @description 64 lower-case hex digits. */
+            fingerprint: string;
+            override?: components["schemas"]["DuplicateDecision"];
+            keyFields: components["schemas"]["DuplicateFields"];
+            /** @description Fields whose values differ between the versions. */
+            differingFields: ("bookedOn" | "valueOn" | "amount" | "balanceAfter" | "payee" | "description" | "reference" | "txType" | "bankCategory" | "counterpartyAccount")[];
+            /** @description Earliest-committed import first. */
+            versions: components["schemas"]["DuplicateVersion"][];
+        };
+        DuplicateVersion: {
+            /** Format: uuid */
+            importId: string;
+            filename: string;
+            /** Format: date-time */
+            committedAt?: string;
+            rows: components["schemas"]["DuplicateRow"][];
+        };
+        DuplicateRow: {
+            occurrence: number;
+            fields: components["schemas"]["DuplicateFields"];
+            raw: components["schemas"]["RawField"][];
+            /** @description This row is the version the data shows. */
+            inData: boolean;
+        };
+        DuplicateFields: {
+            /** Format: date */
+            bookedOn?: string;
+            /** Format: date */
+            valueOn?: string;
+            amount?: components["schemas"]["Money"];
+            balanceAfter?: components["schemas"]["Money"];
+            payee: string;
+            description: string;
+            reference: string;
+            txType: string;
+            bankCategory: string;
+            counterpartyAccount: string;
+        };
+        DuplicateDecision: {
+            /** @enum {string} */
+            mode: "prefer" | "keep_both";
+            /**
+             * Format: uuid
+             * @description The import to use (prefer only).
+             */
+            importId?: string;
         };
         DemoData: {
             /** Format: uuid */
@@ -1881,6 +2076,31 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    bulkUpdateTransactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkUpdate"];
+            };
+        };
+        responses: {
+            /** @description How many transactions changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     exportTransactions: {
         parameters: {
             query?: never;
@@ -1975,6 +2195,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Category"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The groups. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupInput"];
+            };
+        };
+        responses: {
+            /** @description The new group. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupInput"];
+            };
+        };
+        responses: {
+            /** @description The group. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listDuplicates: {
+        parameters: {
+            query?: {
+                accountIds?: string[];
+                q?: string;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of groups. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicatePage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    decideDuplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+                /** @description The de-dupe key, as 64 lower-case hex digits. */
+                fingerprint: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateDecision"];
+            };
+        };
+        responses: {
+            /** @description The group after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateGroup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    resetDuplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+                /** @description The de-dupe key, as 64 lower-case hex digits. */
+                fingerprint: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The group after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateGroup"];
                 };
             };
             default: components["responses"]["Problem"];

@@ -65,6 +65,15 @@ type Querier interface {
 	DeleteUserSessionByPrefix(ctx context.Context, arg DeleteUserSessionByPrefixParams) (int64, error)
 	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
+	// The duplicate groups of the given accounts (PLAN §7.14, legacy §32.3): fingerprints with staged
+	// rows in two or more committed imports where something was merged (more linked rows than
+	// transactions) or the user decided (an override). Every token must appear in one of the rows'
+	// search text. Newest first; `total` counts every group that matches.
+	DuplicateGroupKeys(ctx context.Context, arg DuplicateGroupKeysParams) ([]DuplicateGroupKeysRow, error)
+	// Every version of the given (account, fingerprint) pairs: the staged rows of committed imports
+	// with their file, and whether each row is the one the data shows (its transaction's source).
+	// pair_keys are "<account id>:<hex fingerprint>"; the ANY filters narrow the scan first.
+	DuplicateGroupRows(ctx context.Context, arg DuplicateGroupRowsParams) ([]DuplicateGroupRowsRow, error)
 	// "N duplicates skipped" for a set of accounts: linked staged rows − import-origin transactions.
 	DuplicatesSkipped(ctx context.Context, arg DuplicatesSkippedParams) (int64, error)
 	// Queries for the personal data export (GET /me/export, PLAN task 7.10).
@@ -87,6 +96,9 @@ type Querier interface {
 	// this one (or from none). After a reprocess this import may be the earliest source again; these
 	// fingerprints are re-materialised so the default rule ("earliest import wins") holds.
 	FingerprintsSourcedLater(ctx context.Context, arg FingerprintsSourcedLaterParams) ([][]byte, error)
+	// The fingerprints, among the given ones, that still have rows in a committed import of the
+	// account (delete-import: the others have nothing left to rebuild).
+	FingerprintsWithRows(ctx context.Context, arg FingerprintsWithRowsParams) ([][]byte, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
@@ -108,6 +120,10 @@ type Querier interface {
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	// email is citext, so the lookup ignores case.
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// Every group with its transactions over all the user's accounts, ignoring filters (PLAN §4.7):
+	// count, money out and in (minor units, transfers included as in the legacy), first and last day.
+	// The currency is the most common one among the group's transactions.
+	GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStatsRow, error)
 	// Distinct bank categories of an import's valid rows (the commit upserts them as categories).
 	ImportBankCategories(ctx context.Context, arg ImportBankCategoriesParams) ([]*string, error)
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
@@ -131,6 +147,8 @@ type Querier interface {
 	ListBudgets(ctx context.Context, userID uuid.UUID) ([]ListBudgetsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
 	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
+	// The overrides of the given (account, fingerprint) pairs.
+	ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error)
 	ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, error)
 	ListImportProfiles(ctx context.Context, userID uuid.UUID) ([]ImportProfile, error)
 	// Staged rows are inserted by store.InsertImportRows (hand-written unnest, see importrows.go).

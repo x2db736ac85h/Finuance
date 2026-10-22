@@ -71,3 +71,52 @@ func TestUsersTableOutsideRLS(t *testing.T) {
 		t.Errorf("users relrowsecurity = %v, %v", enabled, err)
 	}
 }
+
+// unindexedForeignKeys may lack an index on their columns: the referenced rows are deleted one at
+// a time (a user, a category, a group, an import), so the check PostgreSQL runs on delete costs at
+// most one scan. A foreign key whose referenced rows are deleted in bulk needs an index:
+// transactions.transfer_peer_id without one made deleting a 917-row import take ~27 s
+// (migration 00005).
+var unindexedForeignKeys = []string{
+	"budgets_category_id_fkey",
+	"dedupe_overrides_preferred_import_id_fkey",
+	"dedupe_overrides_user_id_fkey",
+	"import_files_user_id_fkey",
+	"transactions_category_id_fkey",
+	"transactions_group_id_fkey",
+	"tx_annotations_category_id_fkey",
+	"tx_annotations_group_id_fkey",
+	"tx_annotations_user_id_fkey",
+}
+
+// TestEveryForeignKeyIsIndexed reads the catalog: a new foreign key fails here until it has an index
+// that starts with its columns, or a reason in unindexedForeignKeys.
+func TestEveryForeignKeyIsIndexed(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	rows, err := tdb.Owner.Query(context.Background(), `
+		SELECT c.conname
+		FROM pg_constraint c
+		WHERE c.contype = 'f' AND c.connamespace = 'public'::regnamespace
+		  AND NOT EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = c.conrelid
+		    AND (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] @> c.conkey
+		    AND (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] <@ c.conkey)
+		ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var missing []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			t.Fatal(err)
+		}
+		missing = append(missing, name)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(missing, unindexedForeignKeys) {
+		t.Errorf("foreign keys without an index:\n got  %v\n want %v", missing, unindexedForeignKeys)
+	}
+}

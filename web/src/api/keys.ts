@@ -10,7 +10,11 @@ export const keys = {
   importLines: (id: string, optionsKey: string) => ['importLines', id, optionsKey] as const,
   importRows: (id: string, onlyErrors: boolean) => ['importRows', id, onlyErrors] as const,
   categories: ['categories'] as const,
+  groups: ['groups'] as const,
+  duplicates: ['duplicates'] as const,
   tx: ['tx'] as const,
+  distinct: (ctxKey: string, column: string, search: string) => ['distinct', ctxKey, column, search] as const,
+  transaction: (id: string) => ['transaction', id] as const,
   insight: ['insight'] as const,
   overview: ['overview'] as const,
 };

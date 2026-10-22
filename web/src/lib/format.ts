@@ -51,13 +51,17 @@ export function minorToDecimal(minor: number, exponent: number): `${number}` {
 
 const moneyFormats = new Map<number, Intl.NumberFormat>();
 
-/** "-1 234,56" in the browser locale; with currency: "-1 234,56 PLN" (legacy money()). */
-export function fmtMoney(m: Money, opts: { currency?: boolean } = {}): string {
+/**
+ * "-1 234,56" in the browser locale; with currency: "-1 234,56 PLN" (legacy money()). `whole`
+ * rounds to whole units ("-1 235", legacy nf0), from the exact decimal string.
+ */
+export function fmtMoney(m: Money, opts: { currency?: boolean; whole?: boolean } = {}): string {
   const exp = currencyExponent(m.currency);
-  let nf = moneyFormats.get(exp);
+  const digits = opts.whole ? 0 : exp;
+  let nf = moneyFormats.get(digits);
   if (!nf) {
-    nf = new Intl.NumberFormat(undefined, { minimumFractionDigits: exp, maximumFractionDigits: exp });
-    moneyFormats.set(exp, nf);
+    nf = new Intl.NumberFormat(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    moneyFormats.set(digits, nf);
   }
   const s = nf.format(minorToDecimal(m.amountMinor, exp));
   return opts.currency ? `${s} ${m.currency}` : s;

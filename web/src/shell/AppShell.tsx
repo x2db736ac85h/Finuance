@@ -1,4 +1,4 @@
-// The app frame (legacy `.app`): title bar / main (sidebar, content, later inspector and assistant)
+// The app frame (legacy `.app`): title bar / main (sidebar, content, inspector, later the assistant)
 // / status bar, on a grid whose middle row is minmax(0, 1fr) so wide content never overflows the
 // page. Routes render into the content area.
 
@@ -7,9 +7,14 @@ import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 
 import { invalidateData, useAccounts } from '../api/hooks/accounts';
+import { DuplicatesDialog } from '../duplicates/DuplicatesDialog';
 import { configureImports } from '../import/queue';
+import { escapeSelection, moveSelection } from '../table/controller';
+import { Inspector } from '../table/Inspector';
+import { TableStatus } from '../table/TableStatus';
 import type { User } from '../api/hooks/me';
 import { sidebarShown, useUi } from '../stores/uiStore';
+import { useViews, viewOf } from '../stores/viewStore';
 import { TooltipLayer } from '../ui/Tooltip';
 import { Toaster } from '../ui/Toast';
 import { DropOverlay } from './DropOverlay';
@@ -58,6 +63,10 @@ export function AppShell({ user }: { user: User }) {
   const hasData = total > 0;
   const rows = viewId === 'all' ? total : (list.find((a) => a.id === viewId)?.txCount ?? 0);
   const inSettings = location.pathname.startsWith('/settings');
+  // The table's inspector and status bar, for a view that exists (Views redirects the others).
+  const tableShown =
+    mode === 'table' && hasData && !inSettings && (viewId === 'all' || list.some((a) => a.id === viewId));
+  const selected = useViews((s) => viewOf(s.views, viewId).selectedId);
 
   const setMode = (m: 'table' | 'ov') => {
     useUi.getState().setMode(m);
@@ -80,6 +89,8 @@ export function AppShell({ user }: { user: User }) {
     openShortcuts: () => {
       useUi.getState().setKeysOpen(true);
     },
+    move: moveSelection,
+    escape: escapeSelection,
   });
 
   const cls = [
@@ -88,6 +99,7 @@ export function AppShell({ user }: { user: User }) {
     !vizOpen && 'no-viz',
     mode === 'ov' && !inSettings && 'mode-ov',
     accounts.isSuccess && !hasData && !inSettings && 'is-empty',
+    tableShown && selected && 'has-insp',
   ]
     .filter(Boolean)
     .join(' ');
@@ -100,10 +112,14 @@ export function AppShell({ user }: { user: User }) {
         <section className="content">
           <Outlet context={{ hasData } satisfies ShellContext} />
         </section>
+        {tableShown && <Inspector key={viewId} viewId={viewId} />}
       </div>
-      <StatusBar hasData={hasData} rows={rows} accounts={list.length} />
+      <StatusBar hasData={hasData} rows={rows} accounts={list.length}>
+        {tableShown ? <TableStatus key={viewId} viewId={viewId} all={rows} /> : null}
+      </StatusBar>
       <DropOverlay onFiles={importFiles} />
       <KeyboardShortcuts />
+      <DuplicatesDialog />
       <Toaster />
       <TooltipLayer />
       <input

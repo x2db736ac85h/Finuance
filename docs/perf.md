@@ -168,3 +168,63 @@ Target: p95 ≤ 150 ms on a dev machine. In the sandbox, the first request of si
 
 - The payee/description/… "contains" filters scan the user's rows: only `search_text` has a trigram index. Indexes on the most-used `_n` columns are an option if real data needs them.
 - **Collation sorts** (any text column) sort all of the user's rows. An expression index per sortable text column would serve them. That is 9 indexes, so it's not worth it at this scale.
+
+## Deleting an import (Phase 10, found by the groups E2E)
+
+Deleting the 917-row demo import took **~27 s** in the E2E stack (about 40k transactions across
+all users). With `log_min_duration_statement` the time was all in `DeleteOrphanTransactions`.
+`transactions.transfer_peer_id` references `transactions` with `ON DELETE SET NULL`, so PostgreSQL
+looks for rows pointing at every deleted transaction, and without an index each look-up scanned the
+whole table.
+
+Changes:
+- migration `00005_fingerprint_index.sql`: `tx_transfer_peer_idx` (partial, `transfer_peer_id IS
+  NOT NULL`) → the same delete takes **164 ms**; and `import_rows_fp_idx` `(user_id, fingerprint)`
+  for the per-fingerprint look-ups of re-materialisation and the duplicates window;
+- `ledger.DeleteImport` re-materialises only the fingerprints other committed imports still contain
+  (`FingerprintsWithRows`): the rest lost their transactions in the orphan clean-up. Deleting the only
+  import of an account rebuilds nothing;
+- `TestEveryForeignKeyIsIndexed` (store) fails for a new foreign key without an index on its columns,
+  unless it is listed with the reason it doesn't need one.
+
+## Table view: 100k rows (Phase 10, task 10.14)
+
+**Setup.** `node tools/perf/grid.mjs` (against `make up`) signs up a user and imports 100,870
+transactions: the legacy demo file copied 110 times, each copy a month earlier with its own
+references, in 10 files (import ≈ 3 min in the sandbox). Headless Chromium at 1440×900 then scrolls
+the grid, jumps around and applies filters; `--trace out.zip` records a Playwright trace (with
+screenshots) of the measured part. Frame intervals come from `requestAnimationFrame`; script, layout
+and style times from Chrome's `Performance.getMetrics`.
+
+### Results — 2026-10-22, cloud sandbox (4 vCPU, software rendering)
+
+| Measurement | Result |
+|---|---|
+| first paint of `/t/all` (100,870 rows) | 381 ms |
+| idle frames | p50 16.7 ms, none over budget |
+| wheel scrolling, 120 × 500 px, top | p50 16.7 / p95 33.4 ms; 114 of 264 frames > 17.5 ms |
+| wheel scrolling, middle of the data | p50 16.7 / p95 33.4 ms; 115 of 262 frames > 17.5 ms |
+| **same wheel steps over a static 5,000-row HTML table (no script)** | p50 16.7 / p95 66.7 ms; 113 of 319 frames > 17.5 ms |
+| main-thread time per wheel step: script / layout / style / total | ≈ 4 / 3 / 3 / 21 ms |
+| jump to the bottom / middle / top until no skeleton row | 15 / 79 / 19 ms (windows cached after the first visit; 303 ms cold) |
+
+Filter-to-paint (Enter or the last keystroke → new count and first rows painted; 5 runs after a
+warm-up; search includes its 120 ms debounce):
+
+| Filter | p50 | max |
+|---|---|---|
+| search "blik warszawa" | 167 ms | 175 ms |
+| payee contains "kawiarnia" | 100 ms | 140 ms |
+| amount < −100 | 101 ms | 128 ms |
+| date 2024 | 102 ms | 129 ms |
+| category =Transport | 88 ms | 116 ms |
+
+**Reading.** Filter-to-paint is within the §7.12 budget (≤ 300 ms p95) for every shape. For
+scrolling, the sandbox can't show 60 fps for any page: a static table with no script at all drops
+as many frames as the grid, because headless Chromium paints in software here (~10 ms of the 21 ms
+per step). The grid's own work per step is about 4 ms of script plus 6 ms of layout and style.
+**The 60 fps check needs a real browser with a GPU** — part of the gate's hands-on session.
+
+**What changed.** Rows are memoised (`DataRow`), so a scroll step renders only the rows that come
+into view; that cut script time by ~15 %. The grid scrolls in windows of 200 rows with 10 rows of
+overscan, as planned.

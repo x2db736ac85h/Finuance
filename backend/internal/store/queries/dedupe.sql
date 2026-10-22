@@ -105,3 +105,59 @@ SELECT ((SELECT count(*) FROM import_rows ir JOIN imports i ON i.id = ir.import_
         WHERE ir.user_id = @user_id AND i.account_id = ANY(@account_ids::uuid[]) AND ir.transaction_id IS NOT NULL)
      - (SELECT count(*) FROM transactions t
         WHERE t.user_id = @user_id AND t.account_id = ANY(@account_ids::uuid[]) AND t.origin = 'import'))::bigint AS skipped;
+
+-- name: DuplicateGroupKeys :many
+-- The duplicate groups of the given accounts (PLAN §7.14, legacy §32.3): fingerprints with staged
+-- rows in two or more committed imports where something was merged (more linked rows than
+-- transactions) or the user decided (an override). Every token must appear in one of the rows'
+-- search text. Newest first; `total` counts every group that matches.
+WITH fp AS (
+  SELECT i.account_id, ir.fingerprint,
+         count(DISTINCT ir.import_id) AS imports,
+         count(ir.transaction_id) AS linked,
+         count(DISTINCT ir.transaction_id) AS txs,
+         max(ir.booked_on) AS last_on,
+         bool_or(NOT EXISTS (SELECT 1 FROM unnest(@tokens::text[]) tok WHERE strpos(coalesce(ir.search_text, ''), tok) = 0)) AS hit
+  FROM import_rows ir
+  JOIN imports i ON i.id = ir.import_id
+  WHERE ir.user_id = @user_id AND i.user_id = @user_id AND i.status = 'committed' AND ir.parse_error IS NULL
+    AND ir.fingerprint IS NOT NULL AND i.account_id = ANY(@account_ids::uuid[])
+  GROUP BY i.account_id, ir.fingerprint
+)
+SELECT fp.account_id::uuid AS account_id, fp.fingerprint::bytea AS fingerprint, count(*) OVER ()::bigint AS total
+FROM fp
+LEFT JOIN dedupe_overrides d ON d.user_id = @user_id AND d.account_id = fp.account_id AND d.fingerprint = fp.fingerprint
+WHERE fp.imports >= 2 AND (fp.linked > fp.txs OR d.fingerprint IS NOT NULL) AND fp.hit
+ORDER BY fp.last_on DESC NULLS LAST, fp.account_id, fp.fingerprint
+OFFSET @row_offset LIMIT @row_limit;
+
+-- name: DuplicateGroupRows :many
+-- Every version of the given (account, fingerprint) pairs: the staged rows of committed imports
+-- with their file, and whether each row is the one the data shows (its transaction's source).
+-- pair_keys are "<account id>:<hex fingerprint>"; the ANY filters narrow the scan first.
+SELECT i.account_id::uuid AS account_id, ir.fingerprint::bytea AS fingerprint, ir.import_id, i.filename, i.committed_at,
+       ir.row_index, ir.occurrence, ir.booked_on, ir.value_on, ir.amount_minor, ir.currency, ir.balance_after_minor,
+       ir.payee, ir.description, ir.reference, ir.tx_type, ir.bank_category, ir.counterparty_account, ir.raw,
+       (t.id IS NOT NULL AND t.source_import_id = ir.import_id)::boolean AS in_data
+FROM import_rows ir
+JOIN imports i ON i.id = ir.import_id
+LEFT JOIN transactions t ON t.id = ir.transaction_id AND t.user_id = @user_id
+WHERE ir.user_id = @user_id AND i.user_id = @user_id AND i.status = 'committed' AND ir.parse_error IS NULL
+  AND ir.fingerprint = ANY(@fingerprints::bytea[]) AND i.account_id = ANY(@account_ids::uuid[])
+  AND (i.account_id::text || ':' || encode(ir.fingerprint, 'hex')) = ANY(@pair_keys::text[])
+ORDER BY i.committed_at, i.id, ir.row_index;
+
+-- name: ListDedupeOverridesFor :many
+-- The overrides of the given (account, fingerprint) pairs.
+SELECT d.* FROM dedupe_overrides d
+WHERE d.user_id = @user_id AND d.fingerprint = ANY(@fingerprints::bytea[])
+  AND (d.account_id::text || ':' || encode(d.fingerprint, 'hex')) = ANY(@pair_keys::text[]);
+
+-- name: FingerprintsWithRows :many
+-- The fingerprints, among the given ones, that still have rows in a committed import of the
+-- account (delete-import: the others have nothing left to rebuild).
+SELECT DISTINCT ir.fingerprint::bytea AS fingerprint
+FROM import_rows ir
+JOIN imports i ON i.id = ir.import_id
+WHERE ir.user_id = @user_id AND i.user_id = @user_id AND i.account_id = @account_id AND i.status = 'committed'
+  AND ir.parse_error IS NULL AND ir.fingerprint = ANY(@fingerprints::bytea[]);

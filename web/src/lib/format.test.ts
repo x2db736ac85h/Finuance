@@ -24,6 +24,14 @@ describe('money', () => {
     expect(plain.replace(/[^\d,.-]/g, '')).toMatch(/^-1[,.]?234[.,]56$/);
     expect(fmtMoney({ amountMinor: 1000, currency: 'JPY' }, { currency: true })).toMatch(/1[,. ]?000 JPY$/);
   });
+
+  it('rounds to whole units from the exact decimal', () => {
+    const whole = (minor: number) =>
+      fmtMoney({ amountMinor: minor, currency: 'PLN' }, { whole: true }).replace(/[^\d-]/g, '');
+    expect(whole(-123456)).toBe('-1235');
+    expect(whole(123449)).toBe('1234');
+    expect(whole(50)).toBe('1');
+  });
 });
 
 describe('fmtDay / fmtSize', () => {

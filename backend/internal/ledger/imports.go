@@ -256,6 +256,13 @@ func (l *Ledger) DeleteImport(ctx context.Context, userID, id uuid.UUID) (orphan
 		if orphansDeleted, err = q.DeleteOrphanTransactions(ctx, db.DeleteOrphanTransactionsParams{UserID: userID, AccountID: *imp.AccountID}); err != nil {
 			return err
 		}
+		// A fingerprint with no rows left has no transactions left either (the orphans just went),
+		// so only the ones other imports still contain need rebuilding.
+		if len(fps) > 0 {
+			if fps, err = q.FingerprintsWithRows(ctx, db.FingerprintsWithRowsParams{UserID: userID, AccountID: imp.AccountID, Fingerprints: fps}); err != nil {
+				return err
+			}
+		}
 		_, err = rematerializeAll(ctx, q, userID, *imp.AccountID, fps, l.clock.Now())
 		return err
 	})

@@ -45,7 +45,7 @@ func (in AccountInput) clean() (AccountInput, error) {
 		return in, err
 	}
 	if in.Currency == "" {
-		in.Currency = "PLN"
+		in.Currency = defaultCurrency
 	}
 	if _, ok := money.Exponent(in.Currency); !ok {
 		return in, invalidf("unknown currency %q", in.Currency)

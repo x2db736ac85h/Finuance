@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,18 +86,25 @@ func (l *Ledger) ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, err
 	return out, dbErr("list groups", err)
 }
 
-// UpdateGroup renames and/or recolours a group. (The client renames view filters that mention the
-// old name, legacy renameGroupFilters.)
+// UpdateGroup renames and/or recolours a group; color < 0 keeps the colour. (The client renames view
+// filters that mention the old name, legacy renameGroupFilters.)
 func (l *Ledger) UpdateGroup(ctx context.Context, userID, id uuid.UUID, name string, color int) (Group, error) {
 	name, err := cleanName("group", name, maxGroupName)
 	if err != nil {
 		return Group{}, err
 	}
-	if color < 0 || color >= GroupColors {
+	if color >= GroupColors {
 		return Group{}, invalidf("group colour must be 0–%d", GroupColors-1)
 	}
 	var out Group
 	err = l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		if color < 0 {
+			cur, err := q.GetGroup(ctx, db.GetGroupParams{UserID: userID, ID: id})
+			if err != nil {
+				return err
+			}
+			color = int(cur.Color)
+		}
 		g, err := q.UpdateGroup(ctx, db.UpdateGroupParams{UserID: userID, ID: id, Name: name, NameN: nameKey(name), Color: int16(color)}) //nolint:gosec // 0…7, checked above
 		out = groupOf(g)
 		return err
@@ -116,4 +124,57 @@ func (l *Ledger) DeleteGroup(ctx context.Context, userID, id uuid.UUID) error {
 		return err
 	})
 	return notFound("delete group", n, err)
+}
+
+// GroupStat is a group with its transactions over all the user's accounts, ignoring filters
+// (PLAN §4.7). SpentMinor and IncomeMinor are positive sums of money out and in (transfers
+// included, legacy groupStats); FirstOn/LastOn are nil for an empty group.
+type GroupStat struct {
+	Group
+	Count       int
+	SpentMinor  int64
+	IncomeMinor int64
+	Currency    string
+	FirstOn     *platform.Date
+	LastOn      *platform.Date
+}
+
+// GroupStats returns every group with its stats, in natural Polish order.
+func (l *Ledger) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStat, error) {
+	var out []GroupStat
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		rows, err := q.GroupStats(ctx, userID)
+		for i := range rows {
+			r := &rows[i]
+			st := GroupStat{
+				Group:      Group{ID: r.ID, Name: r.Name, Color: int(r.Color), CreatedAt: r.CreatedAt},
+				Count:      int(r.TxCount),
+				SpentMinor: r.SpentMinor, IncomeMinor: r.IncomeMinor, Currency: r.Currency,
+			}
+			if st.Currency == "" {
+				st.Currency = defaultCurrency
+			}
+			if !r.FirstOn.IsZero() {
+				first, last := r.FirstOn, r.LastOn
+				st.FirstOn, st.LastOn = &first, &last
+			}
+			out = append(out, st)
+		}
+		return err
+	})
+	return out, dbErr("group stats", err)
+}
+
+// GroupStatOf returns one group's stats (after a create or an update).
+func (l *Ledger) GroupStatOf(ctx context.Context, userID, id uuid.UUID) (GroupStat, error) {
+	all, err := l.GroupStats(ctx, userID)
+	if err != nil {
+		return GroupStat{}, err
+	}
+	for _, g := range all {
+		if g.ID == id {
+			return g, nil
+		}
+	}
+	return GroupStat{}, fmt.Errorf("group %s: %w", id, ErrNotFound)
 }

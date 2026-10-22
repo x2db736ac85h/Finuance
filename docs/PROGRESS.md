@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 9 — Import UX · **Branch:** phase/09-import · **Status:** gate approved, merged
+**Current phase:** 10 — Table view, groups and multi-selection · **Branch:** phase/10-table · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -22,9 +22,27 @@
 - Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
 - Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 5.9.3 (openapi-typescript 7 needs `typescript ^5`). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
 - Phase 9: the automatic header rule is fixed in the backend (the text-only row just before the first row with a date and a number; legacy rule otherwise), recorded in `ALLOWED_DIFFS.md` row 4. The import preview is a window over the app (legacy `.modal` look) with its own URL `/imports/:id`.
+- Phase 10: one phase with one gate, pushed in two halves (table first, then groups, selection and duplicates). `POST /transactions/bulk` takes explicit ids only (the selection; ranges resolved through `/transactions/ids`).
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 10.1 `useQueryContext(viewId)` (debounced search 120 ms / conditions 160 ms, `ctxKey`)
+- [x] 10.2 `Grid` (§7.7: 200-row windows, skeletons, measured row height, sticky header + gutter, widths × uiScale, resize, sort cycle, badges, empty row); `includeTotals: false` after the first window
+- [x] 10.3 `hl()` port (`table/highlight.tsx`)
+- [x] 10.4 `ColumnMenu`, `ColumnsMenu`, legacy `HELP`, value checklist
+- [x] 10.5 `Toolbar` + `Chips`, Clear all, Export
+- [x] 10.6 `Inspector` (fields, raw, sources, category combobox, note, Copy as JSON, prev/next, overlay < 1100 px)
+- [x] 10.7 `StatusBar` (shown/total, columns, period, Σ/avg/min/max, totals picker, duplicates link)
+- [x] 10.8 keyboard (selection across windows, Esc chain, double-click copy)
+- [x] 10.9 per-view state for `/t/all` and `/t/:accountId`; Account column only in `all`
+- [x] 10.10 groups backend: CRUD + stats, `POST /transactions/bulk` (ids), group in exports
+- [x] 10.11 multi-selection + `QuickBar`
+- [x] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
+- [x] 10.13 duplicates: `GET /duplicates`, `PUT`/`DELETE /duplicates/{accountId}/{fingerprint}`, `DuplicatesDialog`
+- [x] 10.14 performance with a 100k-row user (`tools/perf/grid.mjs`, Playwright trace, `docs/perf.md`): filter-to-paint 88–175 ms; scrolling frames match a plain HTML table in the sandbox (software rendering), 60 fps to be checked on real hardware at the gate
+- [x] Tests: 196 Vitest (stores, chips, Grid/ColumnMenu/inspector/status/groups/selection/duplicates with MSW); E2E `table.spec.ts` (8, legacy §26 + oracle counts), `groups.spec.ts` (3), `duplicates.spec.ts` (1); Go HTTP tests for groups/bulk and duplicates; 30 PARITY rows `ported`
+
+## Phase 9 tasks (done)
 - [x] 9.0 header detection fix (`ingest.findHeader`): mBank → record 26, PKO BP → 1; also fixes `06-bank-preamble` and `21-blank-headers`. `ALLOWED_DIFFS` row 4 with a strict oracle check; every other fixture keeps the legacy header
 - [x] 9.1 entry points: drag & drop, mini drop zone, ⌘/Ctrl O, Browse → `import/queue.ts` (non-CSV files refused with a toast)
 - [x] 9.2 upload queue + "file 1 of N" in the window title, `409 duplicate_file` toast "… was already imported on <date>" with *Open*
@@ -150,6 +168,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 10 — Table view, groups and multi-selection: gate approved 2026-10-22; `phase/10-table` merged with `--no-ff`.
 - Phase 9 — Import UX: gate approved 2026-10-22; `phase/09-import` merged with `--no-ff`.
 - Phase 8 — Frontend foundation: gate approved 2026-10-22; `phase/08-frontend` merged with `--no-ff`.
 - Phase 7 — Transactions query API: gate approved 2026-10-21 (option a: `textlike` LEAKPROOF; `includeTotals` added); `phase/07-query` merged with `--no-ff`.
@@ -172,6 +191,15 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 10.14 (found by the E2E): deleting a 917-row import took ~27 s because `transactions.transfer_peer_id` (self-reference, `ON DELETE SET NULL`) had no index. Migration `00005_fingerprint_index.sql` adds it plus `import_rows (user_id, fingerprint)`; delete now re-materialises only fingerprints other imports still contain; a store test requires an index for every foreign key (or a listed reason). docs/perf.md "Deleting an import".
+- 10.13: `PUT` and `DELETE /duplicates/{accountId}/{fingerprint}` rebuild the fingerprint's transactions in the request (`ledger.SetOverride`/`ClearOverride` already did this in one transaction) and answer `200` with the group as it is now, instead of `202` and a `RematerializeFingerprint` job: one fingerprint is a handful of rows, and the window needs no polling. The job stays for later bulk use. A decision on a key the account has no versions of is `404` (no stray overrides). The window shows the canonical fields (Date, Amount, Payee, Description + every field that differs) with the app's column names, not the bank's headers; versions are listed per import. *Reset choice* undoes *Use this version*. With nothing skipped, the status bar keeps a "duplicates reviewed" link while decided groups exist (legacy), asked only for views with two or more imports.
+- 10.11: `POST /transactions/ids` also returns each row's `groupId`, so a range selected across unloaded windows knows whether *Ungroup* applies. A range is capped at 5,000 rows (the bulk limit) with a toast. The selection lives in `stores/selectionStore` per view and is cleared when the result changes, on Esc (before the row selection), on a plain click and when the view closes.
+- 10.12: group delete asks in a window (the legacy used `confirm()`); after editing a group from the menu the menu opens again (legacy). The Group column is visible by default once a group exists.
+- 10.10: `POST /transactions/bulk` takes `set: {groupId}` with `groupId` required and nullable (`null` = ungroup), so the generated types can tell "ungroup" from "not sent"; category and transfer join in Phase 15. `PATCH /groups/{id}` keeps the colour when none is sent. Group stats count money out and in over all accounts with transfers included (legacy `groupStats`), in the most common currency of the group's transactions.
+- 10.2: grid amounts are formatted with `fmtMoney` in the browser locale (the legacy showed the CSV text as is), because amounts are stored as minor units now. Dates use `dd.mm.yyyy`.
+- 10.5/10.9: each view starts with the plan's default hidden columns (Account only in `all`); the "N hidden" chip counts only columns hidden beyond those defaults, and removing it restores them.
+- 10.6: the inspector lives in `table/` next to the grid it reads from (the plan lists `shell/Inspector`). Its "N / total" position shows only while the row is in a loaded window; Balance after and Group appear only when the transaction has them. The category picker is a combobox: pick, create by name, or "Use the bank's category" (`resetCategory`) for a category set by hand.
+- 10.7: totals are shown in the currency of the view's first row; the server sums minor units, so a mixed-currency "all" view adds them as they are (as the legacy summed numbers). A stored *Balance after* totals column falls back to Amount when the view has no balances (legacy).
 - 9.2: an upload goes into the account in view (`/t/:accountId`) when there is one. Files without an own-account number (the overlap fixtures, most CSVs made by hand) could otherwise never use the fast path, which needs a resolved account; the server still pre-fills one from the file's account number on `/t/all`.
 - 9.3: opening `/imports/:id` for a previewed import re-reads it with `PATCH {}` (the API has no read-only full preview); after an upload the window starts from the upload's answer. `ImportPreview.detected` was added for the role menu's *auto* hints. A committed import opens with its stored rows; changes apply with *Reprocess*.
 - 9.4: `POST /imports/{id}/commit` accepts a failed import again (*Try again*).
@@ -262,6 +290,9 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 10 gate approved; merged. Next: plan Phase 11.
+- 2026-10-22 — Phase 10 built on `phase/10-table`: grid (windows, menus, chips, export, keyboard), inspector (category picker, note, sources), status bar, groups (API, menu, quick bar, pills), multi-selection, duplicates window, delete-import perf fix (migration 00005), 100k-row measurements (`tools/perf/grid.mjs`); 196 Vitest + 25 Playwright specs, integration tests and CI green. Next: Irwin's gate review (hands-on legacy vs new table on the same demo data; 60 fps on real hardware).
+- 2026-10-22 — Phase 10 planned and approved (one phase, two halves; bulk by ids). Branch `phase/10-table`.
 - 2026-10-22 — Phase 9 gate approved; merged. Next: plan Phase 10.
 - 2026-10-22 — Phase 9 built on `phase/09-import`: header fix for mBank/PKO BP, upload queue, import window (legacy v7 parts, debounced PATCH, commit/reprocess/retry), sidebar import history, fast path with Undo, account-in-view uploads; 152 Vitest + 13 Playwright specs, integration tests and CI green. Next: Irwin's gate review (import the anonymised real files through the UI).
 - 2026-10-22 — Phase 9 planned and approved (backend header fix; preview as a window with its own URL). Branch `phase/09-import`.
