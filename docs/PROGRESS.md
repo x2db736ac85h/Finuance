@@ -2,19 +2,19 @@
 
 **Current phase:** 10 — Table view, groups and multi-selection · **Branch:** phase/10-table · **Status:** gate approved, merged
 
-## Decisions from Irwin
+## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
 - Git workflow: one branch per phase (`phase/NN-name`), merged into `main` with a merge commit so every phase stays visible in history. `main` may be rewritten once, to drop the unscrubbed legacy commit.
 - Banks for fixtures (Phase 1): **Pekao**, **PKO BP**, **mBank**. Pekao worked best with the MVP. Samples sit in `testdata/private/` (gitignored, never committed).
 - Demo hosting: TBD (ask in Phase 18)
 - Homelab (ingress, cert-manager issuer, storage class, backup bucket): TBD (ask in Phase 16)
 - Assistant LLM endpoint and model: TBD (ask in Phase 13)
-- Test data policy (Phase 1): committed fixtures are synthetic and must cover the edge cases. Real exports are only ever used through the anonymiser; Claude runs it on the samples in `testdata/private/`, and Irwin reviews the output before anything goes into `testdata/fixtures/real/`.
+- Test data policy (Phase 1): committed fixtures are synthetic and must cover the edge cases. Real exports are only ever used through the anonymiser; Claude runs it on the samples in `testdata/private/`, and our Product Engineer reviews the output before anything goes into `testdata/fixtures/real/`.
 - Anonymiser keeps category, currency and operation-type columns verbatim. Amounts keep their original number of decimals.
 - Legacy oracle pins Playwright 1.56.1 (matches the Chromium in cloud sessions; CI installs the same build).
 - Phase 2: `/readyz` returns 503 when the DB is reachable but migrations are behind. `X-Request-ID` is accepted from any client when it is ≤ 64 chars of `[A-Za-z0-9_-]`, otherwise generated.
 - Phase 2 tooling: oapi-codegen and govulncheck as Go `tool` deps; sqlc and golangci-lint as pinned, checksum-verified binaries in `backend/bin/`. OTel over OTLP/HTTP. No `worker` Compose service until Phase 6.
-- Phase 3: Claude writes all of `ingest`/`money`, with explanatory comments so Irwin can tweak it later (no hand-written parts). The ingest engine is a **strict port** of the legacy rules, including auto header detection; the mBank/PKO BP header fix moves to Phase 9 (import preview). The legacy demo generator is ported now (`internal/demo`) for the 100k-row benchmark.
+- Phase 3: Claude writes all of `ingest`/`money`, with explanatory comments so our Product Engineer can tweak it later (no hand-written parts). The ingest engine is a **strict port** of the legacy rules, including auto header detection; the mBank/PKO BP header fix moves to Phase 9 (import preview). The legacy demo generator is ported now (`internal/demo`) for the 100k-row benchmark.
 - Phase 4: RLS is **enabled and forced** on every user-owned table (ADR 0007; forced also binds the owner role). The `pl_natural` collation is applied in queries (`ORDER BY … COLLATE pl_natural`), not on columns. Phase 4 writes the set-based commit core (§4.4 steps 1, 1b, 2) and the delete-import orphan cleanup as `ledger` methods; Phase 6 adds the River job, category upsert, stats, profiles and `Rematerialize`. Investments get schema, RLS and queries now; the repository comes with their API.
 - Phase 5: `golang.org/x/crypto` (argon2id), `golang.org/x/time/rate` and `github.com/oapi-codegen/runtime` (the generator's support library, needed once the API has path parameters and uuid fields) approved as direct dependencies. `finuance admin set-password --email … --password-stdin` is added next to `create-user` (no email sending, so admins reset forgotten passwords; it revokes the user's sessions). The first preferences save must send `version: 0`; anything else is `409 stale_version`.
 - Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
@@ -23,6 +23,7 @@
 - Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 5.9.3 (openapi-typescript 7 needs `typescript ^5`). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
 - Phase 9: the automatic header rule is fixed in the backend (the text-only row just before the first row with a date and a number; legacy rule otherwise), recorded in `ALLOWED_DIFFS.md` row 4. The import preview is a window over the app (legacy `.modal` look) with its own URL `/imports/:id`.
 - Phase 10: one phase with one gate, pushed in two halves (table first, then groups, selection and duplicates). `POST /transactions/bulk` takes explicit ids only (the selection; ranges resolved through `/transactions/ids`).
+- Public repository (2026-10-22): docs and code comments refer to "our Product Engineer"; test data uses a neutral sample user ("Alex", `alex@example.com`); git history is left as it is. README with screenshots, `SECURITY.md` (private vulnerability reporting), `CONTRIBUTING.md` (issues welcome, no pull requests yet), `docs/README.md` index, and a README in every placeholder folder.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
@@ -68,7 +69,7 @@
 - [x] 8.12 CI `web` job (lint, typecheck, test, build, bundle size summary + 250 KB gzip budget); image job also builds, smoke-tests and scans the web image
 - [x] 8.13 E2E: `compose.ci.yaml`, `make test-e2e`, CI `e2e` job; 5 specs (signup → demo data → sidebar; prefs survive a reload; sign out/in with `next`; `?` window; no CSP violations), passing against a fresh stack
 - [x] 8.14 SettingsPopover, KeyboardShortcuts dialog
-- [x] Gate: legacy vs new screenshots (dark/light), reviewed by Irwin
+- [x] Gate: legacy vs new screenshots (dark/light), reviewed by our Product Engineer
 - [x] Tests: 118 Vitest (stores, sync with fake timers, client, primitives, shell, auth, settings, keyboard), 5 Playwright
 
 ## Phase 7 tasks (done)
@@ -120,7 +121,7 @@
 - [x] 4.1 migrations `00002_core.sql` (§5.2 + collation) and `00003_rls.sql` (§5.3, forced), with Down sections
 - [x] 4.2 `store.Store`: `WithUser`, `WithUserReadOnly`; guard test against pool access outside `store`
 - [x] 4.3 sqlc queries (users, sessions, preferences, accounts, categories, groups, imports, import_files, import_rows, transactions, budgets, profiles, annotations, overrides, investments)
-- [x] 4.4 `InsertImportRows` via `unnest`, 5,000 rows per statement; 100k-row benchmark: 8.0–9.7 s in the sandbox, above the 3 s target; **accepted by Irwin at the gate** (see perf.md)
+- [x] 4.4 `InsertImportRows` via `unnest`, 5,000 rows per statement; 100k-row benchmark: 8.0–9.7 s in the sandbox, above the 3 s target; **accepted by our Product Engineer at the gate** (see perf.md)
 - [x] 4.5 `ledger` repositories returning domain types
 - [x] 4.6 tests: migrate up/down/up, every query, RLS suite, collation sort
 - [x] 4.7 `docs/ARCHITECTURE.md` (components, ERD, RLS)
@@ -141,7 +142,7 @@
 - [x] 3.11 oracle differential suite (62 ingest fixtures, 5 corpora, 7 dedupe sets)
 - [x] 3.12 fuzz targets (5 min each, no crash: Tokenize 2.9 M, ParseNumber 8.7 M, ParseMinor 9.7 M, ParseDate 10.3 M, Parse 0.97 M execs)
 - [x] 3.13 golden files (61, `-update` to regenerate)
-- [x] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port): median ≈ 563 ms on the 4-vCPU sandbox, above the 500 ms target; **accepted by Irwin at the gate**, see perf.md
+- [x] 3.14 benchmark + `docs/perf.md` (+ `internal/demo` port): median ≈ 563 ms on the 4-vCPU sandbox, above the 500 ms target; **accepted by our Product Engineer at the gate**, see perf.md
 - [x] 3.15 v7 import-settings parity (27 recorded cfg variants)
 - [x] CI: coverage gate (`make coverage`, ingest + money 96.7 %), no-float check (`make check-no-float`), fuzz smoke (`make fuzz FUZZTIME=10s`), benchmark in the job summary
 
@@ -162,7 +163,7 @@
 ## Phase 1 tasks (done)
 - [x] 1.1 `docs/PARITY.md` (≈ 140 rows; MVP failures and §27 limitations with decisions)
 - [x] 1.2 58 synthetic fixtures (48 edge cases + Pekao/PKO BP/mBank look-alikes + overlap, same-name, duplicate-versions sets), generated by `make fixtures`
-- [x] 1.3 Anonymiser `backend/cmd/anonymize` with tests; the three private samples anonymised, reviewed by Irwin and committed to `testdata/fixtures/real/`
+- [x] 1.3 Anonymiser `backend/cmd/anonymize` with tests; the three private samples anonymised, reviewed by our Product Engineer and committed to `testdata/fixtures/real/`
 - [x] 1.4 `tools/legacy-oracle` and `make oracle`: deterministic (two runs, zero diff)
 - [x] 1.5 `testdata/oracle/ALLOWED_DIFFS.md`
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
@@ -213,7 +214,7 @@
 - 8.11: like `backend/vendor`, a host-built `web/dist` in the build context is used as is, so the image builds without network access; `make up` and `make test-e2e` rebuild it first (`make web-dist`), and CI image builds have no `dist/` and build from source. nginx runs read-only with tmpfs for its rendered config and temp files. The API trusts `X-Forwarded-For` from `172.16.0.0/12` (the Compose network; `FINUANCE_TRUSTED_PROXIES`) so rate limits see the client address behind nginx.
 - 8.11: initial JS is 144 KB gzip (budget 250 KB).
 - 8.10: `ledger.SeedDemo` returns a `DemoSeed` (account, import id, commit result) so `POST /demo-data` can answer with the ids and the transaction count.
-- 7.2: SQL fragments live in `query/columns.go` (the registry) and `query/compile.go` as well as `query/sql.go`; the whole `internal/query` package is the SQL builder, and the store guard allows that package. The registry also gives each column a display text (`-79,99`, `dd.mm.yyyy`), used by the text fallback, the value checklist, `excluded` and exports (Irwin's decision).
+- 7.2: SQL fragments live in `query/columns.go` (the registry) and `query/compile.go` as well as `query/sql.go`; the whole `internal/query` package is the SQL builder, and the store guard allows that package. The registry also gives each column a display text (`-79,99`, `dd.mm.yyyy`), used by the text fallback, the value checklist, `excluded` and exports (our Product Engineer's decision).
 - 7.2: number conditions compare exact `numeric` values in major units (scaled per row by the currency's exponent), not `amount_minor` against a converted operand, so a mixed-currency view stays correct.
 - 7.2/7.7: text with a NUL character (JSON allows `\u0000`) is `422`. PostgreSQL rejects NUL in text, so before this fix a NUL character reached the database and gave a `500`. `FuzzQueryDB` found it. The ledger maps SQLSTATE 22021 to `ErrInvalid`, and display names are checked too.
 - 7.4: each statement compiles its own argument list (PostgreSQL/pgx reject unused arguments). Windows use a late row lookup: ids first, then the display columns.
@@ -240,7 +241,7 @@
 - 4.3: queries beyond the plan's list: `groups.sql`, `annotations.sql`, `overrides.sql`, `investments.sql`, `import_rows.sql`. `timestamptz` maps to `time.Time` (sqlc override), not `pgtype.Timestamptz`. Times that matter to logic (session expiry, `updated_at`, `committed_at`) are parameters from `platform.Clock`, not `now()`.
 - 4.3: `make gen-check` compares the working tree with the index (plus untracked files) instead of `git status`, so regenerated code that is staged for the next commit counts as clean. A fresh CI checkout still catches drift.
 - 4.4: `InsertImportRows` is hand-written in `store/importrows.go`, not sqlc: the arrays carry NULL elements (errored rows), which sqlc can't type. It is the only hand-written statement and is tested against the generated model.
-- 4.4: the 100k-row staging insert takes 8.0–9.7 s in the sandbox (target ≤ 3 s on a dev machine). About 75 % is server time. Half of that is parsing the `{"h","v"}` raw JSON, and a third is per-row FK triggers. Even a constraint-free server-side copy takes 2.1 s here. Options (both schema changes) are in `docs/perf.md`. **Irwin's decision at the gate:** accepted as is; no schema change.
+- 4.4: the 100k-row staging insert takes 8.0–9.7 s in the sandbox (target ≤ 3 s on a dev machine). About 75 % is server time. Half of that is parsing the `{"h","v"}` raw JSON, and a third is per-row FK triggers. Even a constraint-free server-side copy takes 2.1 s here. Options (both schema changes) are in `docs/perf.md`. **Our Product Engineer's decision at the gate:** accepted as is; no schema change.
 - 4.5: foreign keys are checked without RLS, so a reference to another user's account, group or category would pass the FK. The ledger checks ownership in the same transaction (`ledger/owned.go`, tested). Composite FKs on `(user_id, id)` would move this into the schema; that is left for an ADR.
 - 4.5/4.8: the ledger also has `CreateImport` (file + staged rows in one transaction), `ImportRowsPage`, `TransactionProvenance` and `EnsureCategories`, which Phase 6 needs and which the 4.8 test uses. `CommitImport` records the stats and marks the import committed.
 - 4.7: `docs/ARCHITECTURE.md` uses Mermaid for the component diagram, the ERD and the request sequence (GitHub renders it).
@@ -249,7 +250,7 @@
 - 3.8: `Stage(ctx, table, mapping, opts) ([]StagedRow, Stats, error)`: the account currency is a field of `StageOptions`, and `ctx` + `error` were added so cancellation works on large files (PLAN §3.10). `Parse` takes `ctx` too.
 - 3.8: in debit/credit mode a side that is not a number counts as 0, and the row is an error only when neither side is a number. Legacy rule; an earlier draft was stricter.
 - 3.6: `ParseNumber` and column typing use `float64`, as in the legacy (typing and role heuristics only). Every stored amount goes through `money.ParseMinor`, and `check-no-float` covers `internal/money` and the fingerprint path.
-- 3.14: `BenchmarkParse_100k` median ≈ 563 ms on the shared 4-vCPU sandbox (best 509 ms) vs the 500 ms target. **Irwin's decision at the gate:** accepted; further optimisation can go into a later phase that touches ingest (options in `docs/perf.md`).
+- 3.14: `BenchmarkParse_100k` median ≈ 563 ms on the shared 4-vCPU sandbox (best 509 ms) vs the 500 ms target. **Our Product Engineer's decision at the gate:** accepted; further optimisation can go into a later phase that touches ingest (options in `docs/perf.md`).
 - 3.6/3.11: dates with a time, years 0–99 and query dates with a time differ from the legacy on purpose: `ALLOWED_DIFFS.md` rows 9–11, each checked by a strict classifier in the tests.
 - 0.2: the scrub also replaced digit runs of 6–7 digits in `SAMPLE` (card fragments `*********0229197`, reference parts), not only runs of 8 or more, plus the P24 reference and merchant addresses. 26-digit account numbers became the allowlisted all-zero form (`'00000000000000000000000001`), so `check-private.sh` stays strict. One example id in `legacy/DESIGN.md` §7.1 (`0229197`) became `0123456`.
 - 0.2: `check-private.sh` also catches the spaced IBAN form (`PL61 1090 1014 …`), and scans untracked, non-ignored files too, so it fails before a commit, not after.
@@ -258,7 +259,7 @@
 - 0.1: the Go module path is `github.com/x2db736ac85h/finuance/backend`, not `…/finuance`, because `go.mod` lives in `backend/` (§3.3). A module path should match its directory so `go` tooling and imports resolve. Recorded in ADR 0001.
 - 2.7: the baseline migration is `00001_baseline.sql`, not `00000_…`, because goose rejects version 0. Phase 4's migrations therefore become `00002_core.sql` and `00003_rls.sql`.
 - 2.1: `worker` needs at least one River worker to start, so `internal/jobs` has a `noop` job kind (also used by the end-to-end test that proves a job inserted by another connection is processed). `seed-demo` and `admin` print "not yet implemented (Phase 9 / Phase 5)".
-- 2.10: image size is 32.3 MB uncompressed (9.8 MiB compressed). The OTLP/HTTP trace exporter alone adds ~10 MiB (it links protobuf and gRPC even over HTTP). **Irwin's decision at the gate:** the target is now ≤ 35 MB uncompressed / ≤ 15 MB compressed, enforced by the CI `image` job.
+- 2.10: image size is 32.3 MB uncompressed (9.8 MiB compressed). The OTLP/HTTP trace exporter alone adds ~10 MiB (it links protobuf and gRPC even over HTTP). **Our Product Engineer's decision at the gate:** the target is now ≤ 35 MB uncompressed / ≤ 15 MB compressed, enforced by the CI `image` job.
 - 2.10: the Dockerfile also builds from a `backend/vendor/` directory when one is in the build context (gitignored), for builds without network access to the module proxy; CI downloads modules normally.
 - 2.12: images are scanned with Trivy in a separate CI job (`image`); CI also runs on pushes to `phase/**` so a phase can be verified before it is merged.
 - 2.12: `govulncheck` can't run in the cloud session (`vuln.go.dev` is blocked there); it runs in CI. Its first run flagged `moby/go-archive` v0.2.0 (pinned by testcontainers v0.44.0, reached through `testutil`); it was bumped to v0.3.3 and CI is green.
@@ -290,32 +291,33 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Paused before Phase 11 for public-repository readiness (`chore/public-readiness`): README rewrite with screenshots, docs index, SECURITY/CONTRIBUTING, placeholder READMEs, naming clean-up; fixed the search box not emptying after *Clear all*. Next: plan Phase 11 (the plan proposed earlier still stands).
 - 2026-10-22 — Phase 10 gate approved; merged. Next: plan Phase 11.
-- 2026-10-22 — Phase 10 built on `phase/10-table`: grid (windows, menus, chips, export, keyboard), inspector (category picker, note, sources), status bar, groups (API, menu, quick bar, pills), multi-selection, duplicates window, delete-import perf fix (migration 00005), 100k-row measurements (`tools/perf/grid.mjs`); 196 Vitest + 25 Playwright specs, integration tests and CI green. Next: Irwin's gate review (hands-on legacy vs new table on the same demo data; 60 fps on real hardware).
+- 2026-10-22 — Phase 10 built on `phase/10-table`: grid (windows, menus, chips, export, keyboard), inspector (category picker, note, sources), status bar, groups (API, menu, quick bar, pills), multi-selection, duplicates window, delete-import perf fix (migration 00005), 100k-row measurements (`tools/perf/grid.mjs`); 196 Vitest + 25 Playwright specs, integration tests and CI green. Next: our Product Engineer's gate review (hands-on legacy vs new table on the same demo data; 60 fps on real hardware).
 - 2026-10-22 — Phase 10 planned and approved (one phase, two halves; bulk by ids). Branch `phase/10-table`.
 - 2026-10-22 — Phase 9 gate approved; merged. Next: plan Phase 10.
-- 2026-10-22 — Phase 9 built on `phase/09-import`: header fix for mBank/PKO BP, upload queue, import window (legacy v7 parts, debounced PATCH, commit/reprocess/retry), sidebar import history, fast path with Undo, account-in-view uploads; 152 Vitest + 13 Playwright specs, integration tests and CI green. Next: Irwin's gate review (import the anonymised real files through the UI).
+- 2026-10-22 — Phase 9 built on `phase/09-import`: header fix for mBank/PKO BP, upload queue, import window (legacy v7 parts, debounced PATCH, commit/reprocess/retry), sidebar import history, fast path with Undo, account-in-view uploads; 152 Vitest + 13 Playwright specs, integration tests and CI green. Next: our Product Engineer's gate review (import the anonymised real files through the UI).
 - 2026-10-22 — Phase 9 planned and approved (backend header fix; preview as a window with its own URL). Branch `phase/09-import`.
 - 2026-10-22 — Phase 8 gate approved; merged. Next: plan Phase 9.
-- 2026-10-22 — Phase 8 built on `phase/08-frontend`: scaffold, typed client, legacy styles/icons, UI primitives, shell, auth, stores + preferences sync, settings, demo data, web image + Compose, CI `web`/`e2e` jobs, 5 E2E specs. Legacy vs new screenshots match closely. Next: Irwin's gate review.
+- 2026-10-22 — Phase 8 built on `phase/08-frontend`: scaffold, typed client, legacy styles/icons, UI primitives, shell, auth, stores + preferences sync, settings, demo data, web image + Compose, CI `web`/`e2e` jobs, 5 E2E specs. Legacy vs new screenshots match closely. Next: our Product Engineer's gate review.
 - 2026-10-21 — Phase 8 planned and approved (3 dev type/lint deps; inline demo-data commit). Branch `phase/08-frontend`.
 - 2026-10-21 — Phase 7 gate approved with option (a) and `includeTotals`; both added (search p95 273 → 114 ms in the sandbox), merged. Next: plan Phase 8.
-- 2026-10-21 — Phase 7 built on `phase/07-query`: filter language + compiler + periods + engine (all 84 legacy filter cases, assistant filter parity), query/distinct/ids/detail/patch/categories endpoints, CSV export (ADR 0014), zip data export, query indexes (perf.md: 4 of 7 shapes within target in the sandbox; trigram index unusable under RLS), nightly DB fuzz, `query-smoke.sh`. Next: Irwin's gate review.
+- 2026-10-21 — Phase 7 built on `phase/07-query`: filter language + compiler + periods + engine (all 84 legacy filter cases, assistant filter parity), query/distinct/ids/detail/patch/categories endpoints, CSV export (ADR 0014), zip data export, query indexes (perf.md: 4 of 7 shapes within target in the sandbox; trigram index unusable under RLS), nightly DB fuzz, `query-smoke.sh`. Next: our Product Engineer's gate review.
 - 2026-10-21 — Phase 7 planned and approved (collapsed-whitespace equality as an allowed diff; fixed `-79,99` / `dd.mm.yyyy` text form). Branch `phase/07-query`.
 - 2026-10-21 — Phase 6 gate approved; merged. Next: plan Phase 7.
-- 2026-10-21 — Phase 6 built on `phase/06-imports`: accounts and the full import lifecycle over HTTP (upload, preview, lines, PATCH, commit job, reprocess, delete, fast path, labels), Rematerialize + overrides with a property test, per-account writer lock (ADR 0013), seed-demo, worker in Compose, `import-smoke.sh` (matches the oracle). Next: Irwin's gate review.
+- 2026-10-21 — Phase 6 built on `phase/06-imports`: accounts and the full import lifecycle over HTTP (upload, preview, lines, PATCH, commit job, reprocess, delete, fast path, labels), Rematerialize + overrides with a property test, per-account writer lock (ADR 0013), seed-demo, worker in Compose, `import-smoke.sh` (matches the oracle). Next: our Product Engineer's gate review.
 - 2026-10-21 — Phase 6 planned and approved (pre-fill the suggested account). Branch `phase/06-imports`.
 - 2026-10-21 — Phase 5 gate approved; merged. Next: plan Phase 6.
-- 2026-10-21 — Phase 5 built on `phase/05-auth`: argon2id + ADR 0010, sessions (absolute + idle expiry, rotation, revoke), CSRF + ADR 0011, rate limits + ADR 0012, auth/me/sessions/preferences endpoints, `DELETE /me`, session cleanup job, insert-only River client, `admin create-user`/`set-password`, THREAT-MODEL v1, `auth-smoke.sh` (passes against `make up`). Next: Irwin's gate review.
+- 2026-10-21 — Phase 5 built on `phase/05-auth`: argon2id + ADR 0010, sessions (absolute + idle expiry, rotation, revoke), CSRF + ADR 0011, rate limits + ADR 0012, auth/me/sessions/preferences endpoints, `DELETE /me`, session cleanup job, insert-only River client, `admin create-user`/`set-password`, THREAT-MODEL v1, `auth-smoke.sh` (passes against `make up`). Next: our Product Engineer's gate review.
 - 2026-10-21 — Phase 5 planned and approved (deps x/crypto + x/time, admin set-password, strict first preferences save). Branch `phase/05-auth`.
 - 2026-10-20 — Phase 4 gate approved (benchmark accepted); merged. Next: plan Phase 5.
-- 2026-10-20 — Phase 4 built on `phase/04-schema-store-rls`: core schema + forced RLS, `store.Store` (`WithUser`, `WithUserReadOnly`, `WithoutUser`), the sqlc query set, the `unnest` staging insert, `ledger` repositories, commit core, annotations, RLS suite, `ARCHITECTURE.md`. Staging benchmark above target in the sandbox. Next: Irwin's gate review.
+- 2026-10-20 — Phase 4 built on `phase/04-schema-store-rls`: core schema + forced RLS, `store.Store` (`WithUser`, `WithUserReadOnly`, `WithoutUser`), the sqlc query set, the `unnest` staging insert, `ledger` repositories, commit core, annotations, RLS suite, `ARCHITECTURE.md`. Staging benchmark above target in the sandbox. Next: our Product Engineer's gate review.
 - 2026-10-20 — Phase 4 planned and approved (FORCE RLS, query-time collation, commit core in `ledger`, investments repo later). Branch `phase/04-schema-store-rls`.
 - 2026-10-20 — Phase 3 gate approved (benchmark accepted); merged. Next: plan Phase 4.
-- 2026-10-20 — Phase 3 built on `phase/03-ingest-engine`: decode, delimiter, tokenizer, shape, value parsers, exact money parsing, column typing and roles, staging, fingerprints, `Parse`. Oracle differential suite + cfg parity pass. 61 golden files, 5 fuzz targets (5 min each, clean), coverage 96.7 %, demo generator port. Benchmark ≈ 563 ms median (target 500 ms, not met in the sandbox). CI green. Next: Irwin's gate review.
+- 2026-10-20 — Phase 3 built on `phase/03-ingest-engine`: decode, delimiter, tokenizer, shape, value parsers, exact money parsing, column typing and roles, staging, fingerprints, `Parse`. Oracle differential suite + cfg parity pass. 61 golden files, 5 fuzz targets (5 min each, clean), coverage 96.7 %, demo generator port. Benchmark ≈ 563 ms median (target 500 ms, not met in the sandbox). CI green. Next: our Product Engineer's gate review.
 - 2026-10-20 — Phase 2 gate approved (image limits ≤ 35 MB / ≤ 15 MB compressed); merged. Next: plan Phase 3.
-- 2026-10-20 — Phase 2 built on `phase/02-backend-skeleton`: binary + subcommands, config, observability, middleware, problems, OpenAPI v0 + codegen, store + migrations + sqlc, testcontainers harness, image, Compose, CI. `make up` verified locally. Next: Irwin's gate review.
+- 2026-10-20 — Phase 2 built on `phase/02-backend-skeleton`: binary + subcommands, config, observability, middleware, problems, OpenAPI v0 + codegen, store + migrations + sqlc, testcontainers harness, image, Compose, CI. `make up` verified locally. Next: our Product Engineer's gate review.
 - 2026-10-20 — Phase 1 gate approved; real fixtures committed, oracle regenerated (62 ingest outputs), branch merged. Next: Phase 2 (backend skeleton).
-- 2026-10-20 — Phase 1 built on `phase/01-legacy-extraction`: parity checklist, 58 synthetic fixtures, anonymiser, legacy oracle (deterministic), allowed diffs, CI. Next: Irwin reviews the anonymised samples and the gate; then Phase 2.
+- 2026-10-20 — Phase 1 built on `phase/01-legacy-extraction`: parity checklist, 58 synthetic fixtures, anonymiser, legacy oracle (deterministic), allowed diffs, CI. Next: our Product Engineer reviews the anonymised samples and the gate; then Phase 2.
 - 2026-10-20 — Phase 0 gate approved; main rewritten and phase/00-bootstrap merged. Next: plan Phase 1.
-- 2026-10-20 — Phase 0 built on `phase/00-bootstrap` (clean orphan root, legacy scrub, guardrails, docs, ADRs, Makefile, local DB, CI). Next: Irwin reviews the gate; then Phase 1 (legacy extraction).
+- 2026-10-20 — Phase 0 built on `phase/00-bootstrap` (clean orphan root, legacy scrub, guardrails, docs, ADRs, Makefile, local DB, CI). Next: our Product Engineer reviews the gate; then Phase 1 (legacy extraction).

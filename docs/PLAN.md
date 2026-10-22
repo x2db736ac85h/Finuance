@@ -1,6 +1,6 @@
 # Finuance — rebuild plan: single-file app → Go + PostgreSQL + React
 
-> **Audience:** Claude Code (primary executor) and Irwin (owner, reviewer).
+> **Audience:** Claude Code (primary executor) and our Product Engineer (owner, reviewer).
 > **Purpose:** rebuild the single-file `finuance.html` MVP (formerly CSV Inspector) as a separated frontend/backend, multi-user, self-hostable personal-finance application that is production-grade and portfolio-worthy.
 > **Scope:** web app only. **No desktop app** in this plan (see §1.4).
 > **Name:** **Finuance** (formerly CSV Inspector; purple book-with-$ logo). Code identifiers, env vars and DB roles use `finuance` / `FINUANCE_`.
@@ -109,7 +109,7 @@
 
 ### 0.1 For Claude Code — working agreement
 
-1. **One phase at a time.** Phases are in §9 and are strictly ordered. Do not start phase N+1 until phase N's acceptance criteria are met and Irwin has approved the phase gate.
+1. **One phase at a time.** Phases are in §9 and are strictly ordered. Do not start phase N+1 until phase N's acceptance criteria are met and our Product Engineer has approved the phase gate.
 2. **Start every phase in plan mode.** Read the phase section, every "Read first" reference it lists, and `docs/PROGRESS.md`. Then propose a task breakdown (files to touch, tests to write, open questions) and wait for approval before editing code.
 3. **Branch per phase:** `phase/NN-short-name`. Small commits using Conventional Commits (`feat(ingest): …`, `test(api): …`, `chore(ci): …`). Open a PR per phase (or per large task) with a summary, checklist and screenshots where UI changed.
 4. **Tests are part of the task, not a follow-up.** A task is done only when its tests exist and pass. Never delete, skip or weaken a failing test to make CI green. If a test reveals that the spec is wrong, stop and ask.
@@ -122,10 +122,10 @@
    * a dependency must be added that §2 does not list;
    * a schema or API change breaks a previously merged contract;
    * the work would take noticeably longer than the phase's size estimate.
-10. **Privacy rule:** never print, commit or paste the contents of `testdata/private/` (Irwin's real bank exports). Only anonymised fixtures in `testdata/fixtures/` may be committed or inspected.
+10. **Privacy rule:** never print, commit or paste the contents of `testdata/private/` (our Product Engineer's real bank exports). Only anonymised fixtures in `testdata/fixtures/` may be committed or inspected.
 11. **No scope creep.** Ideas that are not in the current phase go to the "Backlog" list in `docs/PROGRESS.md`.
 
-### 0.2 For Irwin — review gates
+### 0.2 For our Product Engineer — review gates
 
 Each phase ends with a **Gate** block listing what to check (a demo command, a URL, test output, screenshots). Approve in the PR, or reply with changes, before Claude Code continues. Phase sizes (S ≈ 1–2 sessions, M ≈ 3–5, L ≈ 6+) are rough.
 
@@ -198,7 +198,7 @@ It is in the same category as Firefly III or Actual Budget. Its differentiators 
 ### 1.5 Definition of "done" for the whole project
 
 * Every item in `docs/PARITY.md` is ported or explicitly retired with a reason.
-* Deployed on Irwin's k3s homelab via GitOps, with backups, a tested restore, dashboards and alerts.
+* Deployed on our Product Engineer's k3s homelab via GitOps, with backups, a tested restore, dashboards and alerts.
 * A public demo instance with synthetic data.
 * A README a recruiter can understand in 2 minutes. ADRs explain the key decisions.
 * CI green: lint, unit, integration, E2E, security scans, signed images.
@@ -207,7 +207,7 @@ It is in the same category as Firefly III or Actual Budget. Its differentiators 
 
 ## 2. Locked decisions
 
-Do not relitigate these without an ADR and Irwin's approval.
+Do not relitigate these without an ADR and our Product Engineer's approval.
 
 | Area | Decision | Rationale (one line) |
 |---|---|---|
@@ -248,11 +248,11 @@ Do not relitigate these without an ADR and Irwin's approval.
 | Assistant transport | **Server-Sent Events** from `POST /assistant/chats/{id}/messages` | One-way token stream; works through nginx and the ingress with buffering off; simpler than WebSockets |
 | Markdown in answers | Port the legacy `md()` to a React-node renderer; no markdown library | Keeps the no-`innerHTML` rule; small surface |
 
-### 2.1 Open questions to ask Irwin in Phase 0
+### 2.1 Open questions to ask our Product Engineer in Phase 0
 
 1. GitHub owner (the name **Finuance** is decided). It determines the Go module path `github.com/<owner>/finuance`.
 2. License (suggest MIT or AGPL-3.0 for a self-hosted app).
-3. Which banks' exports he can provide as private fixtures. These get anonymised by the tool from Phase 1.
+3. Which banks' exports they can provide as private fixtures. These get anonymised by the tool from Phase 1.
 4. Public demo hosting preference: Tailscale Funnel from the homelab, Cloudflare Tunnel, or a small VPS.
 5. Homelab specifics needed in Phase 16:
    * k3s ingress controller (Traefik default?);
@@ -1056,7 +1056,7 @@ A one-time import of a legacy backup into the current user. Supported files:
 * `finuance-backup-*.json` (key `finuanceBackup`);
 * old `csvInspectorBackup` files.
 
-The goal: Irwin's real data, labels and settings move over without re-doing any work.
+The goal: our Product Engineer's real data, labels and settings move over without re-doing any work.
 
 **In the browser:**
 
@@ -2078,7 +2078,7 @@ Each phase below lists: **Goal · Size · Read first · Tasks · Acceptance crit
 
 **Tasks**
 
-0.1 **Ask Irwin the open questions** in §2.1. Record the answers in `docs/PROGRESS.md`, and the name and license in `docs/adr/0001-project-foundations.md`.
+0.1 **Ask our Product Engineer the open questions** in §2.1. Record the answers in `docs/PROGRESS.md`, and the name and license in `docs/adr/0001-project-foundations.md`.
 
 0.2 **Create the repo layout** from §3.3 (directories with `.gitkeep` where empty).
 * Copy `finuance.html` → `legacy/finuance.html` and `Finuance-DESIGN.md` → `legacy/DESIGN.md`. Always copy the latest versions.
@@ -2118,7 +2118,7 @@ Each phase below lists: **Goal · Size · Read first · Tasks · Acceptance crit
 - [ ] `tools/check-private.sh` passes, and fails when a fake 26-digit number is added (prove it in the PR description).
 - [ ] The ADRs read well on their own.
 
-**Gate (Irwin):** review the layout, `CLAUDE.md` and ADRs; confirm the GitHub owner and license; confirm the legacy scrub.
+**Gate (our Product Engineer):** review the layout, `CLAUDE.md` and ADRs; confirm the GitHub owner and license; confirm the legacy scrub.
 
 ---
 
@@ -2191,7 +2191,7 @@ Cover:
 * **overlap set** `overlap/A_jan-mar.csv`, `B_mar-may.csv` (overlapping March), `C_q1_again.csv` (same rows as A plus one genuine identical second purchase);
 * **same-name set**: two different files both named `export.csv` in subfolders (legacy bug).
 
-1.3 **Anonymiser** (Go CLI in the backend module: `backend/cmd/anonymize`). It anonymises Irwin's real exports from `testdata/private/` into `testdata/fixtures/real/<bank>/`. Requirements:
+1.3 **Anonymiser** (Go CLI in the backend module: `backend/cmd/anonymize`). It anonymises our Product Engineer's real exports from `testdata/private/` into `testdata/fixtures/real/<bank>/`. Requirements:
 * Preserve bytes structurally: encoding, delimiter, quoting style, line endings, preamble line count, column count, and the "NAME    CITY" multi-space padding pattern.
 * **Deterministic and consistent across files in one run:** HMAC-SHA256 with a key from `--key` or `FINUANCE_ANON_KEY`. The same original value maps to the same fake value in every file, so overlap/dedupe behaviour is preserved.
 * Rules:
@@ -2202,7 +2202,7 @@ Cover:
   * amounts multiplied by a constant factor in [0.7, 1.3] chosen by key, rounded to 2 dp, preserving the sign and number format;
   * category values kept (they are not personal).
 * Tests run on synthetic "realistic" inputs and assert: consistent mapping across two files, round-trip encoding, no original token survives (search output for every original token), the same delimiter/line-ending/quote layout.
-* **Claude Code builds and tests the tool on synthetic data only. Irwin runs it on real data** and reviews the output before committing.
+* **Claude Code builds and tests the tool on synthetic data only. Our Product Engineer runs it on real data** and reviews the output before committing.
 
 1.4 **`tools/legacy-oracle`** (Node + Playwright; its own `package.json`):
 * Copy `legacy/finuance.html` to a temp file. Inject `window.__legacy = { decode, detectDelim, parseCSV, buildTable, fileOpts, applyMapping, parseEntry, parseNum, parseDate, looseDate, analyzeCol, makeDataset, detectRoles, norm, payeeName, compileCond, getDataset, dupChanged, txKeys, applyGroupsAll, cardOrder, exportBackup, ser, deser, findRecurring, resolvePeriod, roundNice, demoCSV, aiData, aiFilter, execTool, sysPrompt, S };` **immediately before** the final `updateToggles();` statement of the IIFE. Assert the anchor exists exactly once and fail loudly otherwise.
@@ -2248,12 +2248,12 @@ Cover:
 1.5 Write `testdata/oracle/ALLOWED_DIFFS.md`. It starts with the known **[CHANGE]** items from §4: invalid dates, per-import dedupe buckets, ISO dates instead of epoch ms. Every future allowed difference needs a line here with a reason.
 
 **Acceptance criteria**
-- [ ] `docs/PARITY.md` covers all legacy capabilities (Irwin spot-checks against the legacy UI).
+- [ ] `docs/PARITY.md` covers all legacy capabilities (our Product Engineer spot-checks against the legacy UI).
 - [ ] ≥ 35 synthetic fixtures; the overlap and same-name sets exist.
 - [ ] `make oracle` runs headless, is deterministic (two runs, zero diff) and produces all the outputs above.
 - [ ] The anonymiser's tests pass; the tool documents its usage in `backend/cmd/anonymize/README.md`.
 
-**Gate (Irwin):**
+**Gate (our Product Engineer):**
 1. Run the anonymiser on real exports from each bank.
 2. Manually check that no real names or numbers remain.
 3. Commit the `real/` fixtures.
@@ -2335,7 +2335,7 @@ Cover:
 - [ ] The image is ≤ 30 MB, runs as non-root, and the Trivy scan shows no HIGH/CRITICAL.
 - [ ] `make check` and `make test-integration` are green locally and in CI.
 
-**Gate (Irwin):** run `make up`, hit the endpoints, read the middleware chain and `Makefile`.
+**Gate (our Product Engineer):** run `make up`, hit the endpoints, read the middleware chain and `Makefile`.
 
 ---
 
@@ -2410,7 +2410,7 @@ Each is differential-tested against the Phase 1 per-file-settings oracle outputs
 - [ ] No `float64` in `money` or in the fingerprint path (`grep` check in CI).
 - [ ] Benchmark numbers are in `docs/perf.md`.
 
-**Gate (Irwin):** review `ALLOWED_DIFFS.md`, the fingerprint code, and a sample golden file for a real bank fixture.
+**Gate (our Product Engineer):** review `ALLOWED_DIFFS.md`, the fingerprint code, and a sample golden file for a real bank fixture.
 
 ---
 
@@ -2459,7 +2459,7 @@ Integration test: annotate → delete the import (orphan cleanup) → re-import 
 - [ ] `make gen-check` clean.
 - [ ] Inserting 100k staged rows takes ≤ 3 s on a dev machine (recorded in `docs/perf.md`).
 
-**Gate (Irwin):** read the migrations and the RLS tests.
+**Gate (our Product Engineer):** read the migrations and the RLS tests.
 
 ---
 
@@ -2520,7 +2520,7 @@ Integration test: annotate → delete the import (orphan cleanup) → re-import 
 - [ ] All tests green; `auth-smoke.sh` passes against `make up`.
 - [ ] THREAT-MODEL v1 committed.
 
-**Gate (Irwin):** run the smoke script; skim the threat model.
+**Gate (our Product Engineer):** run the smoke script; skim the threat model.
 
 ---
 
@@ -2620,7 +2620,7 @@ The HTTP endpoints and the dialog come in Phase 10. **Property test (§8.3).** U
 - [ ] `scripts/import-smoke.sh` uploads the overlap fixtures, commits, prints the stats, deletes one import and prints the remaining count. The numbers match the oracle.
 - [ ] All tests green; metrics visible.
 
-**Gate (Irwin):** run the smoke script; inspect a preview JSON for a real-bank fixture.
+**Gate (our Product Engineer):** run the smoke script; inspect a preview JSON for a real-bank fixture.
 
 ---
 
@@ -2705,7 +2705,7 @@ Tests for each, including oracle parity for `aiFilter` semantics.
 - [ ] `docs/perf.md` updated with the plans.
 - [ ] `make check` and integration tests green.
 
-**Gate (Irwin):**
+**Gate (our Product Engineer):**
 * run `scripts/query-smoke.sh`: a few curl queries with filters and search;
 * look at one `EXPLAIN` plan;
 * open an exported CSV in Excel or LibreOffice.
@@ -2794,7 +2794,7 @@ Compose service `web` on `localhost:8000`. `make up` now serves the full app. Th
 - [ ] Side-by-side screenshots (legacy vs new) of the empty shell in dark and light themes are attached to the PR.
 - [ ] `make check` green, including the web lint/type/test steps.
 
-**Gate (Irwin):** click through the shell and compare it with the legacy app.
+**Gate (our Product Engineer):** click through the shell and compare it with the legacy app.
 
 ---
 
@@ -2861,7 +2861,7 @@ Popovers stay inside the viewport and above the dialog.
 - [ ] All the above E2E cases green.
 - [ ] Preview interactions feel instant: edit → re-render ≤ 300 ms locally.
 
-**Gate (Irwin):** import his own anonymised real fixtures through the UI.
+**Gate (our Product Engineer):** import their own anonymised real fixtures through the UI.
 
 ---
 
@@ -2938,7 +2938,7 @@ Popovers stay inside the viewport and above the dialog.
 - [ ] PARITY rows for table features marked `ported`.
 - [ ] Perf numbers recorded and within §7.12.
 
-**Gate (Irwin):** a hands-on session comparing the legacy and new tables on the same demo data.
+**Gate (our Product Engineer):** a hands-on session comparing the legacy and new tables on the same demo data.
 
 ---
 
@@ -2983,7 +2983,7 @@ Popovers stay inside the viewport and above the dialog.
 - [ ] All six charts render correctly in both themes at UI scale 90 %, 100 % and 130 % (screenshots in the PR).
 - [ ] PARITY rows marked.
 
-**Gate (Irwin):** a visual comparison against the legacy pane on the same demo data.
+**Gate (our Product Engineer):** a visual comparison against the legacy pane on the same demo data.
 
 ---
 
@@ -3033,7 +3033,7 @@ Oracle comparison on the Phase 1 portfolios.
 - [ ] Screenshots of the overview in both themes at 3 container widths (≥ 1100, 1100–640, < 640).
 - [ ] PARITY rows marked.
 
-**Gate (Irwin):** a hands-on overview review with his own fixtures.
+**Gate (our Product Engineer):** a hands-on overview review with their own fixtures.
 
 ---
 
@@ -3048,7 +3048,7 @@ Oracle comparison on the Phase 1 portfolios.
 * §4.8, §6.2 (Assistant), §6.3 (`ToolFilter`, `AssistantEvent`), §7.13, §8.1 (assistant rows);
 * `legacy/DESIGN.md` §29;
 * legacy `sysPrompt`, `AI_TOOLS`, `FILTERS`, `aiFilter`, `execTool`, `complete`, `sse`, `runTools`, `runPlan`, `trimHistory`, `md`, `renderChat`;
-* Irwin's answer to §2.1 Q6.
+* Our Product Engineer's answer to §2.1 Q6.
 
 **Tasks**
 
@@ -3144,11 +3144,11 @@ Each question has expected tool calls, argument constraints and expected numbers
 **Acceptance criteria**
 - [ ] Tool outputs match the oracle on demo data (allowed differences listed).
 - [ ] Mock-server integration and E2E tests green in CI. No real model is needed in CI.
-- [ ] `docs/evals.md` with results from a real local model: tool-choice and numeric correctness ≥ 90 % with the chosen default model. Adjust the targets with Irwin if the hardware forces a small model.
+- [ ] `docs/evals.md` with results from a real local model: tool-choice and numeric correctness ≥ 90 % with the chosen default model. Adjust the targets with our Product Engineer if the hardware forces a small model.
 - [ ] Browser CSP unchanged (`connect-src 'self'`). The api reaches nothing but the configured LLM host (documented here; enforced in Phase 16).
 
-**Gate (Irwin):**
-* ask his own questions about his anonymised real data via the homelab model;
+**Gate (our Product Engineer):**
+* ask their own questions about their anonymised real data via the homelab model;
 * review the eval report and three step transcripts.
 
 ---
@@ -3211,7 +3211,7 @@ Tests:
 - [ ] CI green on `main`, including E2E and the parity harness.
 - [ ] Signed images for `v0.1.0` in GHCR, with an SBOM attached.
 
-**Gate (Irwin):** migrate his real legacy backup and check the report; read the parity report; try `docker compose -f deploy/compose/compose.prod.yaml up` using the released images on a clean machine or VM.
+**Gate (our Product Engineer):** migrate their real legacy backup and check the report; read the parity report; try `docker compose -f deploy/compose/compose.prod.yaml up` using the released images on a clean machine or VM.
 
 ---
 
@@ -3274,15 +3274,15 @@ Tests:
 - [ ] All the above green.
 - [ ] ADRs for rule precedence and the transfer defaults.
 
-**Gate (Irwin):** create rules for his real categories and check the transfer pairs between his accounts.
+**Gate (our Product Engineer):** create rules for their real categories and check the transfer pairs between their accounts.
 
 ---
 
 ### Phase 16 — Production deployment: Helm, CloudNativePG, Argo CD, LLM endpoint · Size L
 
-**Goal:** a GitOps deployment on Irwin's k3s homelab with HA-ish API, managed Postgres, backups and a tested restore.
+**Goal:** a GitOps deployment on our Product Engineer's k3s homelab with HA-ish API, managed Postgres, backups and a tested restore.
 
-**Read first:** §2 (deploy rows), §3.1, §8.1, §8.5; Irwin's answers to §2.1 Q5. **Before writing manifests, check the current docs** of CloudNativePG (backup method), Argo CD (Helm hook handling) and Sealed Secrets, because these projects evolve.
+**Read first:** §2 (deploy rows), §3.1, §8.1, §8.5; our Product Engineer's answers to §2.1 Q5. **Before writing manifests, check the current docs** of CloudNativePG (backup method), Argo CD (Helm hook handling) and Sealed Secrets, because these projects evolve.
 
 **Tasks**
 
@@ -3344,7 +3344,7 @@ Then:
 - [ ] The restore drill was executed and its timings recorded.
 - [ ] The CI helm job is green.
 
-**Gate (Irwin):** watch a deploy via PR merge, perform a rollback via revert, read the restore drill notes.
+**Gate (our Product Engineer):** watch a deploy via PR merge, perform a rollback via revert, read the restore drill notes.
 
 ---
 
@@ -3354,7 +3354,7 @@ Then:
 
 **Tasks**
 
-17.1 **Observability stack** via Argo CD apps, with resource-light homelab values (ask Irwin which pieces he already runs and reuse those):
+17.1 **Observability stack** via Argo CD apps, with resource-light homelab values (ask our Product Engineer which pieces they already run and reuse those):
 * kube-prometheus-stack (Prometheus, Alertmanager, Grafana);
 * Loki + Grafana Alloy for logs (Promtail is deprecated);
 * Tempo for traces;
@@ -3377,7 +3377,7 @@ Then:
 * latency: p95 < 300 ms for `/transactions/query` and `/insights/*`;
 * `PrometheusRule` multi-window burn-rate alerts;
 * other alerts: import job failure rate, last successful backup > 26 h, CrashLoopBackOff, Postgres not ready.
-* Alertmanager receiver per Irwin's preference (e.g. ntfy, email, Discord).
+* Alertmanager receiver per our Product Engineer's preference (e.g. ntfy, email, Discord).
 
 17.5 **Load testing** (`loadtest/`, k6):
 * seeding: `finuance seed-demo` for 50 users × 20k rows;
@@ -3400,7 +3400,7 @@ Record the results with Grafana screenshots in `docs/perf.md`. **Find, fix and d
 - [ ] Load-test report with SLO compliance and the bottleneck write-up.
 - [ ] Audit events visible.
 
-**Gate (Irwin):** a Grafana walkthrough; read the perf write-up.
+**Gate (our Product Engineer):** a Grafana walkthrough; read the perf write-up.
 
 ---
 
@@ -3421,7 +3421,7 @@ Record the results with Grafana screenshots in `docs/perf.md`. **Find, fix and d
 * **assistant in the demo:** off by default. Turn it on only if the homelab can serve a small model, with 10 messages per visitor and `maxRows` 25. Otherwise the README shows a recorded GIF of a real session.
 * **legacy import:** disabled in demo mode. Demo users are ephemeral, and the endpoint accepts large uploads.
 
-18.2 **Demo environment:** `deploy/environments/demo/values.yaml` (separate namespace and DB cluster, smaller resources), exposed per Irwin's choice (§2.1 Q4). Run a basic DoS sanity check: a rate limit at the ingress as well.
+18.2 **Demo environment:** `deploy/environments/demo/values.yaml` (separate namespace and DB cluster, smaller resources), exposed per our Product Engineer's choice (§2.1 Q4). Run a basic DoS sanity check: a rate limit at the ingress as well.
 
 18.3 **Documentation:**
 * `README.md` final:
@@ -3447,10 +3447,10 @@ Record the results with Grafana screenshots in `docs/perf.md`. **Find, fix and d
 
 **Acceptance criteria**
 - [ ] The public demo works from a phone and a laptop; the 24 h cleanup is verified.
-- [ ] README reviewed by Irwin; all write-ups present.
+- [ ] README reviewed by our Product Engineer; all write-ups present.
 - [ ] `v1.0.0` released with signed images and deployed via GitOps.
 
-**Gate (Irwin):** final review, then share the link.
+**Gate (our Product Engineer):** final review, then share the link.
 
 ---
 
@@ -3613,7 +3613,7 @@ Template `docs/adr/0000-template.md`:
 
 **Current phase:** 0 — Repository bootstrap · **Branch:** phase/00-bootstrap · **Status:** in progress
 
-## Decisions from Irwin
+## Decisions from our Product Engineer
 - Name: … · GitHub owner: … · License: … · Demo hosting: … · Homelab: ingress …, issuer …, storage class …, backup bucket …
 
 ## Current phase tasks
@@ -3692,10 +3692,10 @@ Template `docs/adr/0000-template.md`:
 | Scope creep / never finishing | Strict phases and gates; backlog; M3 (`v0.1.0`) is a shippable parity product on its own |
 | Silent behaviour drift from the legacy app | Legacy oracle (Phase 1), differential tests (Phase 3), parity harness (Phase 14), `ALLOWED_DIFFS.md` |
 | Server round-trips make the UI feel slower than the in-browser legacy app | Windows + `keepPreviousData`, debounces, indexes and `EXPLAIN` reviews, perf budgets. Fallback (ADR if needed): small views fetch all rows once and filter client-side. |
-| Real financial data leaks into git or prompts | Anonymiser run by Irwin, `.gitignore`, `check-private.sh`, gitleaks, the CLAUDE.md rule |
+| Real financial data leaks into git or prompts | Anonymiser run by our Product Engineer, `.gitignore`, `check-private.sh`, gitleaks, the CLAUDE.md rule |
 | `COPY` into RLS tables fails | Use `INSERT … SELECT FROM unnest(…)` (Phase 4, task 4.4) |
 | `unaccent`/collation differences between Go and SQL | Normalisation only in Go (shadow `_n` columns); ICU collation only for sorting |
-| Homelab resources too small for the full observability stack | Light values; reuse what Irwin already runs; Tempo/Loki optional |
+| Homelab resources too small for the full observability stack | Light values; reuse what our Product Engineer already runs; Tempo/Loki optional |
 | Tooling changes (CNPG backups, Argo CD hooks, library majors) | Check current docs at the start of Phases 16–17; pin versions; Renovate |
 | Agent sessions lose context in long phases | `PROGRESS.md` hand-off, small tasks, directory-level CLAUDE.md files |
 | Owner doesn't learn Go because the agent writes everything | Appendix I |
@@ -3705,7 +3705,7 @@ Template `docs/adr/0000-template.md`:
 | Legacy backup format drifts (the single-file app keeps changing) | Migration tests run on backups that the oracle generates from the current legacy file; unknown keys are reported, never fatal |
 | Duplicate overrides make the dedupe model hard to reason about | One reference implementation (`Rematerialize`) plus a property test against it |
 
-### Appendix I — Learning Go with this project (for Irwin)
+### Appendix I — Learning Go with this project (for our Product Engineer)
 
 * **Phase 3 is the best place to write Go yourself.** Let Claude Code write the failing tests first: oracle-driven table tests for `Norm`, `ParseNumber`, `DetectDelimiter`, the tokenizer and `Shape`. Then implement them yourself, and ask Claude Code to review rather than write.
 * At each gate, ask Claude Code to explain one package top-down: types, data flow, why the errors are shaped the way they are. Then write the explanation in your own words in the PR.

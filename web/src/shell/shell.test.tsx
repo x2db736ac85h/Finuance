@@ -160,7 +160,7 @@ describe('shell', () => {
         return HttpResponse.json(db.user);
       }),
     );
-    await user.type(screen.getByRole('textbox', { name: 'Email' }), 'irwin@example.com');
+    await user.type(screen.getByRole('textbox', { name: 'Email' }), 'alex@example.com');
     await user.type(screen.getByLabelText('Password'), 'correct horse battery');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('heading', { name: 'Profile' })).toBeTruthy();

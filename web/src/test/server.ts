@@ -32,8 +32,8 @@ export const freshDb = (): Db => ({
   signupEnabled: true,
   user: {
     id: '00000000-0000-4000-8000-000000000001',
-    email: 'irwin@example.com',
-    displayName: 'Irwin',
+    email: 'alex@example.com',
+    displayName: 'Alex',
     isDemo: false,
     createdAt: '2026-10-01T10:00:00Z',
   },

@@ -186,7 +186,7 @@ func TestFilterParity(t *testing.T) {
 	}
 	all := len(demo.refs)
 	// ALLOWED_DIFFS row 12: "=" compares whitespace-collapsed values, so a single-spaced name finds
-	// the bank's padded one (Irwin's decision, Phase 7). The value is what the 3-space form finds.
+	// the bank's padded one (our Product Engineer's decision, Phase 7). The value is what the 3-space form finds.
 	allowed := map[string]int{"payee\x00=KINO POD GWIAZDAMI WARSZAWA": 10}
 	for _, c := range oracle.Cases {
 		col, ok := legacyColumns[c.Column]

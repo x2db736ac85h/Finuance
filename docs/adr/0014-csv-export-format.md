@@ -10,7 +10,7 @@
 ## Decision
 
 - **Encoding and layout:** UTF-8 with a BOM, the chosen delimiter (`;` by default; `,`, tab or `|` on request), CRLF between lines, no trailing line break (as the legacy). The header row uses the grid's English column labels; the columns come in the order the client sends them.
-- **Values:** the same fixed text form as the value checklist and the text filters (Irwin's Phase 7 decision):
+- **Values:** the same fixed text form as the value checklist and the text filters (our Product Engineer's Phase 7 decision):
   - amounts as `-1234,56`: a comma decimal mark, no thousands separator, the currency's number of decimals (Excel with a Polish locale reads them as numbers);
   - dates as `dd.mm.yyyy`.
 - **Quoting:** a cell is quoted when it contains the delimiter, a double quote or a line break; quotes are doubled.

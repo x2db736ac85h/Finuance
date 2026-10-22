@@ -1,6 +1,6 @@
 # Anonymised real exports
 
-Real bank exports run through `backend/cmd/anonymize` and reviewed by Irwin before commit (2026-10-20).
+Real bank exports run through `backend/cmd/anonymize` and reviewed by our Product Engineer before commit (2026-10-20).
 Structure (encoding, BOM, delimiter, quoting, line endings, preamble, padding) is the bank's; every
 name, number, place and amount is replaced. Category, currency and operation-type columns are kept.
 

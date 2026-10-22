@@ -135,7 +135,7 @@ Neither is done. The recommendation is to measure on a dev machine first (`make 
 
 ### Results — 2026-10-21, cloud sandbox (4 vCPU, Postgres 18.6 in Docker, default settings)
 
-| Shape | Rows | First version p50 / p95 | After tuning p50 / p95 | With Irwin's decisions p50 / p95 |
+| Shape | Rows | First version p50 / p95 | After tuning p50 / p95 | With our Product Engineer's decisions p50 / p95 |
 |---|---|---|---|---|
 | default sort, no filter | 108,098 | 255 / 296 ms | 77 / 101 ms | **76 / 102 ms** |
 | default sort, deep window (offset 90,000) | 108,098 | 496 / 571 ms | 98 / 125 ms | **89 / 130 ms** |
@@ -157,7 +157,7 @@ Target: p95 ≤ 150 ms on a dev machine. In the sandbox, the first request of si
 4. **`duplicatesSkipped` without the `import_rows` heap.** It was "linked rows − import-origin transactions", two full scans (about 240 ms, mostly reading the wide `import_rows` table). It is now "linked rows − distinct linked transactions", from the partial index `import_rows_linked_idx (user_id, import_id) INCLUDE (transaction_id) WHERE transaction_id IS NOT NULL` (30–65 ms). The two are equal because every import-origin transaction keeps at least one linked row; `TestDuplicatesSkippedFormula` checks that through commits, an override and a delete.
 5. Fresh statistics matter: before `ANALYZE` the planner estimated 527 rows instead of 108,098 and chose nested loops (the first version's numbers above are already after `ANALYZE`; without it they were 1.3–2× worse).
 
-### Decisions (Irwin, Phase 7 gate)
+### Decisions (our Product Engineer, Phase 7 gate)
 
 - **`LIKE` may use the trigram index under RLS: option (a).** On a table with row-level security, PostgreSQL only uses *leakproof* operators as index conditions, because a non-leakproof one might reveal other users' rows before the policy filters them. `LIKE` (`textlike`) is not leakproof by default, so the `search_text` trigram index was unused. `deploy/db/bootstrap.sql` now runs `ALTER FUNCTION pg_catalog.textlike(text, text) LEAKPROOF` as superuser. `LIKE` errors only on a malformed pattern, never because of a row's value. `TestLikeIsLeakproof` checks the flag, and `TestQueryPerf` checks that search plans use `tx_search_trgm_idx`.
   - **A database bootstrapped before this change** needs it once, as superuser: `ALTER FUNCTION pg_catalog.textlike(text, text) LEAKPROOF;` in the `finuance` database (Compose: `docker compose exec db psql -U postgres -d finuance -c '…'`).

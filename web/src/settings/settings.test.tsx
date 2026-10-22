@@ -101,10 +101,10 @@ describe('settings', () => {
     renderApp('/settings/profile');
     const name = await screen.findByLabelText('Name');
     await user.clear(name);
-    await user.type(name, 'Irwin K.');
+    await user.type(name, 'Alex K.');
     await user.click(screen.getByRole('button', { name: 'Save name' }));
     expect(await screen.findByText('Saved your name')).toBeTruthy();
-    expect(db.user.displayName).toBe('Irwin K.');
+    expect(db.user.displayName).toBe('Alex K.');
   });
 
   it('deletes the account after the password and returns to sign-in', async () => {
