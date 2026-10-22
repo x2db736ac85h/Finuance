@@ -151,6 +151,24 @@ func TestImportFlowHTTP(t *testing.T) {
 	if m := up.body["missing"].([]any); len(m) != 0 {
 		t.Errorf("missing = %v", m)
 	}
+	// The detected mapping (the preview's auto hints) equals the mapping of a fresh detection …
+	detected := obj(t, up.body, "detected")
+	if fmt.Sprint(detected["bookedOn"]) != fmt.Sprint(obj(t, imp, "mapping")["bookedOn"]) || detected["amount"] == nil {
+		t.Errorf("detected = %v, mapping = %v", detected, imp["mapping"])
+	}
+	// … and stays the detection after the user remaps a role.
+	remap := obj(t, imp, "mapping")
+	remapped := map[string]any{"bookedOn": remap["valueOn"], "amount": remap["amount"], "ignore": []any{}}
+	if remap["valueOn"] != nil {
+		rm := b.do("PATCH", "/imports/"+id, map[string]any{"mapping": remapped})
+		expect(t, rm, 200, "")
+		if fmt.Sprint(obj(t, rm.body, "detected")["bookedOn"]) != fmt.Sprint(detected["bookedOn"]) {
+			t.Errorf("detected changed with the user's mapping: %v", rm.body["detected"])
+		}
+		expect(t, b.do("PATCH", "/imports/"+id, map[string]any{"mapping": remap}), 200, "")
+	} else {
+		t.Error("the Pekao fixture should map a value date")
+	}
 
 	// Lines: the header is record 1, data follows.
 	ln := b.do("GET", "/imports/"+id+"/lines?limit=3", nil)

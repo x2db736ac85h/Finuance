@@ -94,6 +94,7 @@ type Preview struct {
 	TailRows   []Row
 	Missing    []string // required roles not mapped yet; commit needs this empty
 	Warnings   []Warning
+	Detected   MappingDoc // what detection maps for the current options (the preview's "auto" hints)
 }
 
 // reading is one read of a file: the parse, the settings used and the staged rows.
@@ -426,7 +427,7 @@ func columnTypes(res *ingest.Result) []string {
 // database (the account's existing transactions), the missing roles and warnings.
 func (l *Ledger) preview(ctx context.Context, userID uuid.UUID, imp Import, rd reading, stats PreviewStats, suggested SuggestedAccount) (Preview, error) {
 	p := Preview{Import: imp, Mapping: rd.mapping, Options: rd.options, Stats: stats, Suggested: suggested,
-		Missing: Missing(rd.mapping, rd.options)}
+		Missing: Missing(rd.mapping, rd.options), Detected: MappingFromRoles(rd.res.Roles, rd.res.Table.Headers)}
 	if imp.AccountID != nil {
 		err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 			n, err := q.CountDuplicateEstimate(ctx, db.CountDuplicateEstimateParams{UserID: userID, ImportID: imp.ID, AccountID: *imp.AccountID})
@@ -491,8 +492,9 @@ func notCommittable(format string, args ...any) error {
 type Enqueue func(ctx context.Context, tx pgx.Tx) error
 
 // StartCommit validates a previewed import and moves it to "committing", calling enqueue in the same
-// transaction (task 6.5). It needs an account, the required roles and at least one valid row; an
-// import that is committing, committed or failed is import_not_committable.
+// transaction (task 6.5). It needs an account, the required roles and at least one valid row. A
+// failed import can be committed again (the preview's "Try again", Phase 9); one that is committing
+// or committed is import_not_committable.
 func (l *Ledger) StartCommit(ctx context.Context, userID, id uuid.UUID, enqueue Enqueue) (Import, error) {
 	var out Import
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, tx pgx.Tx) error {
@@ -504,7 +506,7 @@ func (l *Ledger) StartCommit(ctx context.Context, userID, id uuid.UUID, enqueue 
 		if err != nil {
 			return err
 		}
-		if imp.Status != StatusPreviewed {
+		if imp.Status != StatusPreviewed && imp.Status != StatusFailed {
 			return notCommittable("the import is %s", imp.Status)
 		}
 		opts, mapping, err := storedDocs(imp)
@@ -528,7 +530,7 @@ func (l *Ledger) StartCommit(ctx context.Context, userID, id uuid.UUID, enqueue 
 		if counts.Rows-counts.Errors == 0 {
 			return notCommittable("no row can be imported")
 		}
-		updated, err := q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: id, FromStatus: string(StatusPreviewed),
+		updated, err := q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: id, FromStatus: string(imp.Status),
 			ToStatus: string(StatusCommitting), Now: l.clock.Now()})
 		if err != nil {
 			return err

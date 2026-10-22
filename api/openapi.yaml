@@ -558,7 +558,8 @@ paths:
       summary: Commit a previewed import
       description: |
         Needs an account, the required columns and at least one valid row. The commit runs as a job;
-        poll `GET /imports/{id}` until `committed` or `failed`. A second call gets `409 import_not_committable`.
+        poll `GET /imports/{id}` until `committed` or `failed`. A failed import can be committed again;
+        one that is committing or committed gets `409 import_not_committable`.
       tags: [imports]
       requestBody:
         content:
@@ -1218,7 +1219,7 @@ components:
     ImportPreview:
       type: object
       additionalProperties: false
-      required: [import, stats, suggestedAccount, sampleRows, tailRows, missing, warnings]
+      required: [import, stats, suggestedAccount, sampleRows, tailRows, missing, warnings, detected]
       properties:
         import:
           $ref: "#/components/schemas/ImportDetail"
@@ -1247,6 +1248,9 @@ components:
           items:
             type: string
           description: Required roles that are not mapped yet; the commit needs this empty.
+        detected:
+          $ref: "#/components/schemas/Mapping"
+          description: What automatic detection maps for the current options (the preview's "auto" hints and "Use detected meanings").
         warnings:
           type: array
           items:
