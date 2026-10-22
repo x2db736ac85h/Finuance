@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1.7
+# Web image (PLAN task 8.11): the Vite build of web/ served by unprivileged nginx, which also proxies
+# /api/ to the API. Build from the repository root:  make images
+# Build context: deploy/docker/Dockerfile.web.dockerignore (web/ only, without node_modules).
+
+FROM node:22.22.0-alpine@sha256:e4bf2a82ad0a4037d28035ae71529873c069b13eb0455466ae0bc13363826e34 AS build
+WORKDIR /web
+COPY web/ ./
+# A web/dist built on the host is used as is (offline builds, like backend/vendor); otherwise the
+# app is built here. CI checkouts have no dist/, so CI always builds from source.
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f dist/index.html ]; then echo "using the prebuilt web/dist"; \
+    else npm ci --no-audit --no-fund && npm run build; fi \
+    && find dist -name '*.map' -delete
+
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+LABEL org.opencontainers.image.source="https://github.com/x2db736ac85h/Finuance" \
+      org.opencontainers.image.title="finuance-web" \
+      org.opencontainers.image.licenses="MIT"
+# Only FINUANCE_* variables are substituted into the template, so nginx's own $variables stay.
+ENV NGINX_ENVSUBST_FILTER=FINUANCE_ \
+    FINUANCE_API_UPSTREAM=api:8080 \
+    FINUANCE_MAX_BODY=21m
+COPY deploy/docker/nginx.conf /etc/nginx/templates/default.conf.template
+COPY --from=build /web/dist /usr/share/nginx/html
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1

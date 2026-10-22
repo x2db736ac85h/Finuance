@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 7 — Transactions query API · **Branch:** phase/07-query · **Status:** gate approved, merged
+**Current phase:** 8 — Frontend foundation · **Branch:** phase/08-frontend · **Status:** gate approved, merged
 
 ## Decisions from Irwin
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -20,9 +20,28 @@
 - Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
 - Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
 - Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
+- Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 5.9.3 (openapi-typescript 7 needs `typescript ^5`). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 8.1 scaffold `web/` (Vite, React, TS strict, ESLint, Prettier, Vitest, Playwright config, `/api` proxy, `make dev-web`)
+- [x] 8.2 API client: `openapi-typescript` in `make gen`, `openapi-fetch` client (CSRF header, Problem errors, 401 → `/login?next=`), hooks
+- [x] 8.3 styles: `tokens.css` (verbatim), `base.css` (rem), `scale.ts` (auto heuristic), `theme.ts`
+- [x] 8.4 `Icon` (legacy SVG set), `Logo`, favicon
+- [x] 8.5 UI primitives (Popover, Menu, Modal, Toast queue, Tooltip, Button, IconButton, inputs, Kbd) + dev-only `/__ui` (not in production builds)
+- [x] 8.6 shell: TitleBar, Sidebar (accounts, auto-collapse), StatusBar, EmptyState, DropOverlay, keyboard manager
+- [x] 8.7 auth pages, user menu, `RequireAuth` with the prefs gate
+- [x] 8.8 `uiStore`, `viewStore`, preferences sync (hydrate, 500 ms debounce, 409: server wins + local changes re-applied, one retry)
+- [x] 8.9 settings pages: appearance, profile, sessions, data
+- [x] 8.10 `POST /demo-data` + "Load demo data"
+- [x] 8.11 web image (unprivileged nginx 1.30.6, CSP + security headers, caching, gzip, `/api` proxy without buffering), Compose `web` on :8000, `compose.prod.yaml` (only web published), `make web-dist`
+- [x] 8.12 CI `web` job (lint, typecheck, test, build, bundle size summary + 250 KB gzip budget); image job also builds, smoke-tests and scans the web image
+- [x] 8.13 E2E: `compose.ci.yaml`, `make test-e2e`, CI `e2e` job; 5 specs (signup → demo data → sidebar; prefs survive a reload; sign out/in with `next`; `?` window; no CSP violations), passing against a fresh stack
+- [x] 8.14 SettingsPopover, KeyboardShortcuts dialog
+- [x] Gate: legacy vs new screenshots (dark/light), reviewed by Irwin
+- [x] Tests: 118 Vitest (stores, sync with fake timers, client, primitives, shell, auth, settings, keyboard), 5 Playwright
+
+## Phase 7 tasks (done)
 - [x] 7.1 `query/dsl`: condition lexer + parser → AST, round-trip printer, `FuzzParseCond`
 - [x] 7.2 `query/columns.go` + `compile.go`: column registry (§4.5 whitelist), `Compile` → `{where, args}` (number/date/text semantics, `excluded`, search, accounts)
 - [x] 7.3 `query/period.go`: anchor, presets, `prevRange`, labels
@@ -119,6 +138,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 8 — Frontend foundation: gate approved 2026-10-22; `phase/08-frontend` merged with `--no-ff`.
 - Phase 7 — Transactions query API: gate approved 2026-10-21 (option a: `textlike` LEAKPROOF; `includeTotals` added); `phase/07-query` merged with `--no-ff`.
 - Phase 6 — Accounts and import pipeline: gate approved 2026-10-21 (import smoke matches the oracle; Pekao preview reviewed); `phase/06-imports` merged with `--no-ff`.
 - Phase 5 — Auth, users, preferences: gate approved 2026-10-21; `phase/05-auth` merged with `--no-ff`.
@@ -139,6 +159,13 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 8.1: TypeScript 5.9.3 rather than the newest release: openapi-typescript 7.13 declares `typescript ^5` as a peer. The Icon parity test reads `legacy/finuance.html` with a Vite `?raw` import; `server.fs.allow: ['..']` is set only in test mode.
+- 8.8: the preferences document keeps the legacy `collectPrefs` key names (`theme`, `ui`, `vizH`, `noViz`, `sbOpen`, `cards`, `cardOrder`, `cfg`, `ai`, `views`), plus `importFastPath`, so a legacy backup's prefs map onto it directly in Phase 14. Every stored document goes through `parsePrefs`, which drops unknown values; keys this build doesn't know are kept on save. The sync is a plain class (`stores/prefsSync.ts`) started by `RequireAuth`, not a React hook, so it can be unit-tested with fake timers.
+- 8.6: until the import UX (Phase 9), ⌘O, Browse, the mini drop zone and drag & drop open the picker or the overlay and then show a toast that import isn't available yet. The assistant button toggles its (persisted) state; the panel is Phase 13. Table and overview routes show the toolbar and a placeholder.
+- 8.6: the title bar has an account button (initial of the name) that opens Profile, Sessions and Sign out; the legacy app had no user menu. Its styles, the sign-in card, the settings pages and the gallery live in `styles/finuance.css`, built from the legacy tokens.
+- 8.11: like `backend/vendor`, a host-built `web/dist` in the build context is used as is, so the image builds without network access; `make up` and `make test-e2e` rebuild it first (`make web-dist`), and CI image builds have no `dist/` and build from source. nginx runs read-only with tmpfs for its rendered config and temp files. The API trusts `X-Forwarded-For` from `172.16.0.0/12` (the Compose network; `FINUANCE_TRUSTED_PROXIES`) so rate limits see the client address behind nginx.
+- 8.11: initial JS is 144 KB gzip (budget 250 KB).
+- 8.10: `ledger.SeedDemo` returns a `DemoSeed` (account, import id, commit result) so `POST /demo-data` can answer with the ids and the transaction count.
 - 7.2: SQL fragments live in `query/columns.go` (the registry) and `query/compile.go` as well as `query/sql.go`; the whole `internal/query` package is the SQL builder, and the store guard allows that package. The registry also gives each column a display text (`-79,99`, `dd.mm.yyyy`), used by the text fallback, the value checklist, `excluded` and exports (Irwin's decision).
 - 7.2: number conditions compare exact `numeric` values in major units (scaled per row by the currency's exponent), not `amount_minor` against a converted operand, so a mixed-currency view stays correct.
 - 7.2/7.7: text with a NUL character (JSON allows `\u0000`) is `422`. PostgreSQL rejects NUL in text, so before this fix a NUL character reached the database and gave a `500`. `FuzzQueryDB` found it. The ledger maps SQLSTATE 22021 to `ErrInvalid`, and display names are checked too.
@@ -217,6 +244,9 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 8 gate approved; merged. Next: plan Phase 9.
+- 2026-10-22 — Phase 8 built on `phase/08-frontend`: scaffold, typed client, legacy styles/icons, UI primitives, shell, auth, stores + preferences sync, settings, demo data, web image + Compose, CI `web`/`e2e` jobs, 5 E2E specs. Legacy vs new screenshots match closely. Next: Irwin's gate review.
+- 2026-10-21 — Phase 8 planned and approved (3 dev type/lint deps; inline demo-data commit). Branch `phase/08-frontend`.
 - 2026-10-21 — Phase 7 gate approved with option (a) and `includeTotals`; both added (search p95 273 → 114 ms in the sandbox), merged. Next: plan Phase 8.
 - 2026-10-21 — Phase 7 built on `phase/07-query`: filter language + compiler + periods + engine (all 84 legacy filter cases, assistant filter parity), query/distinct/ids/detail/patch/categories endpoints, CSV export (ADR 0014), zip data export, query indexes (perf.md: 4 of 7 shapes within target in the sandbox; trigram index unusable under RLS), nightly DB fuzz, `query-smoke.sh`. Next: Irwin's gate review.
 - 2026-10-21 — Phase 7 planned and approved (collapsed-whitespace equality as an allowed diff; fixed `-79,99` / `dd.mm.yyyy` text form). Branch `phase/07-query`.

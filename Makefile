@@ -9,6 +9,7 @@ MAKEFLAGS += --no-print-directory
 ENV_FILE ?= .env
 ORACLE   := tools/legacy-oracle
 COMPOSE  := docker compose --env-file $(ENV_FILE) -f deploy/compose/compose.yaml
+COMPOSE_CI := $(COMPOSE) -f deploy/compose/compose.ci.yaml
 FUZZTIME ?= 30s
 BIN      := backend/bin
 SQLC     := $(BIN)/sqlc
@@ -57,29 +58,33 @@ coverage: ## Line coverage of ingest + money; fails below COVER_MIN (default 90 
 	  awk -v t="$$total" -v m="$(COVER_MIN)" 'BEGIN { exit !(t >= m) }'
 
 .PHONY: lint
-lint: $(GOLANGCI) ## golangci-lint (ESLint arrives in Phase 8)
+lint: $(GOLANGCI) web/node_modules ## golangci-lint + ESLint + Prettier check
 	cd backend && bin/golangci-lint run ./...
+	cd web && npm run --silent lint
 
 .PHONY: fmt
-fmt: $(GOLANGCI) ## gofmt + goimports (Prettier arrives in Phase 8)
+fmt: $(GOLANGCI) web/node_modules ## gofmt + goimports + Prettier
 	cd backend && bin/golangci-lint fmt ./...
+	cd web && npm run --silent format
 
 .PHONY: typecheck
-typecheck: ## tsc --noEmit
-	$(call todo,8)
+typecheck: web/node_modules ## tsc --noEmit
+	cd web && npm run --silent typecheck
 
 .PHONY: test
-test: ## Go unit tests (-short) + Vitest
+test: web/node_modules ## Go unit tests (-short) + Vitest
 	cd backend && go vet ./... && go test -short ./...
-	@echo "test: Vitest arrives in Phase 8"
+	cd web && npm run --silent test
 
 .PHONY: test-integration
 test-integration: ## All Go tests incl. testcontainers (Docker required)
 	cd backend && go test ./...
 
 .PHONY: test-e2e
-test-e2e: ## Playwright against compose.ci.yaml
-	$(call todo,9)
+test-e2e: $(ENV_FILE) web-dist ## Playwright against a fresh compose.ci.yaml stack on :8000 (KEEP=1 leaves it running)
+	VERSION=$(VERSION) $(COMPOSE_CI) up -d --build --wait
+	status=0; (cd web && E2E_BASE_URL=http://localhost:8000 npx playwright test) || status=$$?; \
+	  $(if $(KEEP),,$(COMPOSE_CI) down -v;) exit $$status
 
 .PHONY: fuzz
 fuzz: ## All pure fuzz targets for FUZZTIME (default 30s each); *DB targets run in the nightly workflow
@@ -107,11 +112,16 @@ $(SQLC) $(GOLANGCI): tools/bin-tools.sh
 	tools/bin-tools.sh $(notdir $@)
 
 .PHONY: gen
-gen: $(SQLC) ## oapi-codegen + sqlc (openapi-typescript arrives in Phase 8)
+gen: $(SQLC) web/node_modules ## oapi-codegen + sqlc + openapi-typescript
 	cd backend && go tool oapi-codegen -config oapi-codegen.yaml ../api/openapi.yaml
 	cd backend && bin/sqlc generate
+	cd web && npx openapi-typescript ../api/openapi.yaml -o src/api/schema.d.ts && npx prettier --log-level warn --write src/api/schema.d.ts
 
-GENERATED := backend/internal/httpapi/gen backend/internal/store/db
+web/node_modules: web/package-lock.json
+	cd web && npm ci --no-audit --no-fund
+	@touch web/node_modules
+
+GENERATED := backend/internal/httpapi/gen backend/internal/store/db web/src/api/schema.d.ts
 .PHONY: gen-check
 gen-check: gen ## Regenerate and fail if generated code differs from what is committed
 	@# Compares with the index, so generated code that is staged for the next commit counts as clean.
@@ -174,8 +184,12 @@ migrate-new: ## Create a migration: make migrate-new name=add_accounts
 ##@ Running
 
 .PHONY: up
-up: $(ENV_FILE) ## Full Compose stack: db, migrate, api (http://localhost:8080), worker (web joins in Phase 8)
+up: $(ENV_FILE) web-dist ## Full Compose stack: db, migrate, api, worker, web (app on http://localhost:8000)
 	VERSION=$(VERSION) $(COMPOSE) up -d $(UP_FLAGS) --wait
+
+.PHONY: web-dist
+web-dist: web/node_modules ## Build web/dist on the host; the web image uses it instead of building in Docker
+	cd web && npm run --silent build
 
 .PHONY: down
 down: $(ENV_FILE) ## Stop the full Compose stack (keeps the database volume)
@@ -190,8 +204,8 @@ dev-api: $(ENV_FILE) ## Run the API on the host with .env (needs make db-up + mi
 	$(RUN_ENV) cd backend && go run ./cmd/finuance serve
 dev-worker: $(ENV_FILE) ## Run the worker on the host with .env
 	$(RUN_ENV) cd backend && go run ./cmd/finuance worker
-dev-web: ## Run the Vite dev server
-	$(call todo,8)
+dev-web: web/node_modules ## Run the Vite dev server (proxies /api to make dev-api on :8080)
+	cd web && npm run dev
 
 .PHONY: seed-demo
 seed-demo: $(ENV_FILE) ## Demo data for a user: make seed-demo email=…
@@ -209,9 +223,10 @@ eval-assistant: ## Assistant evals against FINUANCE_AI_BASE_URL (MODEL= optional
 ##@ Build and deploy
 
 .PHONY: images
-images: ## Build the images locally (backend now; web arrives in Phase 8)
+images: ## Build the backend and web images locally (web uses web/dist when present: make web-dist)
 	docker build -f deploy/docker/Dockerfile.backend --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
 	  --build-arg DATE=$(DATE) -t finuance-backend:dev .
+	docker build -f deploy/docker/Dockerfile.web -t finuance-web:dev .
 
 .PHONY: helm-lint
 helm-lint: ## helm lint + kubeconform

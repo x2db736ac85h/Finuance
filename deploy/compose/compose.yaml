@@ -1,5 +1,7 @@
-# Development stack: db → migrate (one-shot) → api + worker. The web app joins in Phase 8.
+# Development stack: db → migrate (one-shot) → api + worker → web (http://localhost:8000).
 # Run through the Makefile (make up / down / logs, make db-up …), which passes --env-file .env.
+# The api (:8080) and admin (:9090, :9091) ports are published on localhost for debugging;
+# compose.prod.yaml publishes only web.
 name: finuance
 
 services:
@@ -50,6 +52,8 @@ services:
       FINUANCE_COOKIE_SECURE: ${FINUANCE_COOKIE_SECURE:-false}
       FINUANCE_ALLOW_SIGNUP: ${FINUANCE_ALLOW_SIGNUP:-true}
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # web (nginx) forwards the client address; trust it from the Compose network only.
+      FINUANCE_TRUSTED_PROXIES: ${FINUANCE_TRUSTED_PROXIES:-172.16.0.0/12}
     ports:
       - "127.0.0.1:8080:8080" # API
       - "127.0.0.1:9090:9090" # admin (/metrics, pprof) — published in dev only, never via an ingress
@@ -90,6 +94,31 @@ services:
       start_period: 5s
     restart: unless-stopped
     read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  web:
+    image: finuance-web:dev
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+    environment:
+      FINUANCE_API_UPSTREAM: api:8080
+    ports:
+      - "127.0.0.1:${FINUANCE_WEB_PORT:-8000}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    restart: unless-stopped
+    read_only: true
+    # nginx writes its config (from the template), pid file and temp files here
+    tmpfs: ["/etc/nginx/conf.d:uid=101,gid=101", "/tmp:uid=101,gid=101"]
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
 

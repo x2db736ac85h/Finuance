@@ -91,10 +91,11 @@ func SeedDemo(ctx context.Context, cfg config.Config, email string, out func(for
 	if err != nil {
 		return err
 	}
-	acc, res, err := ledger.New(st, platform.SystemClock{}).SeedDemo(ctx, u.ID)
+	seed, err := ledger.New(st, platform.SystemClock{}).SeedDemo(ctx, u.ID)
 	if err != nil {
 		return err
 	}
+	acc, res := seed.Account, seed.Result
 	out("seeded %q for %s: %d transactions (%s – %s)", acc.Name, u.Email, res.New, acc.FirstOn, acc.LastOn)
 	return nil
 }

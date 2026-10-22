@@ -1,0 +1,19 @@
+# Production overlay: only web is reachable from outside; the database, the API and the admin
+# ports stay on the Compose network. Put TLS (and HSTS) in front of web, e.g. a reverse proxy.
+#
+#   docker compose --env-file .env -f deploy/compose/compose.yaml -f deploy/compose/compose.prod.yaml up -d
+services:
+  db:
+    ports: !reset []
+  api:
+    ports: !reset []
+    environment:
+      FINUANCE_ENV: prod
+      FINUANCE_COOKIE_SECURE: "true"
+  worker:
+    ports: !reset []
+    environment:
+      FINUANCE_ENV: prod
+  web:
+    ports: !override
+      - "${FINUANCE_WEB_BIND:-0.0.0.0}:${FINUANCE_WEB_PORT:-8000}:8080"

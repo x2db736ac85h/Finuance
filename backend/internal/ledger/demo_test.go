@@ -17,7 +17,7 @@ func TestSeedDemoRollsBack(t *testing.T) {
 	if _, err := e.l.CreatePreview(e.ctx, u, ledger.Upload{Filename: "mine.csv", Content: []byte(demo.Recent(clock.Now())), AccountID: &a.ID}); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err := e.l.SeedDemo(e.ctx, u)
+	_, err := e.l.SeedDemo(e.ctx, u)
 	isErr(t, err, platform.ErrDuplicateFile)
 	accounts, err := e.l.ListAccounts(e.ctx, u)
 	if err != nil {
