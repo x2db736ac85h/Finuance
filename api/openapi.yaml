@@ -1047,7 +1047,7 @@ components:
           format: uuid
         email:
           type: string
-          example: irwin@example.com
+          example: alex@example.com
         displayName:
           type: string
           maxLength: 80

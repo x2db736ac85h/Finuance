@@ -50,7 +50,7 @@ const pw = "correct horse battery"
 
 func signup(t *testing.T, s *auth.Service) (auth.User, string) {
 	t.Helper()
-	u, tok, err := s.Signup(context.Background(), auth.SignupInput{Email: email(t), Password: pw, DisplayName: " Irwin "}, client)
+	u, tok, err := s.Signup(context.Background(), auth.SignupInput{Email: email(t), Password: pw, DisplayName: " Alex "}, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestSignupValidation(t *testing.T) {
 	for _, in := range []auth.SignupInput{
 		{Email: "", Password: pw},
 		{Email: "not-an-email", Password: pw},
-		{Email: "Irwin <irwin@example.test>", Password: pw},
+		{Email: "Alex <alex@example.test>", Password: pw},
 		{Email: "a@example.test", Password: "short"},
 		{Email: "a@example.test", Password: strings.Repeat("x", auth.MaxPasswordBytes+1)},
 		{Email: "a@example.test", Password: pw, DisplayName: strings.Repeat("ż", 81)},
@@ -84,7 +84,7 @@ func TestSignupAndResolve(t *testing.T) {
 	s, _, _ := newService(t)
 	ctx := context.Background()
 	u, tok := signup(t, s)
-	if u.DisplayName != "Irwin" || u.Email != email(t) {
+	if u.DisplayName != "Alex" || u.Email != email(t) {
 		t.Errorf("user = %+v", u)
 	}
 	id, err := s.Resolve(ctx, tok)

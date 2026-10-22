@@ -27,14 +27,14 @@ func TestUserQueries(t *testing.T) {
 	s := store.New(tdb.App)
 	ctx := context.Background()
 	id := platform.NewID()
-	email := "Irwin." + id.String()[:8] + "@Example.test"
+	email := "Alex." + id.String()[:8] + "@Example.test"
 	err := s.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if _, err := q.CreateUser(ctx, db.CreateUserParams{ID: id, Email: email, PasswordHash: "$argon2id$x", DisplayName: "Irwin"}); err != nil {
+		if _, err := q.CreateUser(ctx, db.CreateUserParams{ID: id, Email: email, PasswordHash: "$argon2id$x", DisplayName: "Alex"}); err != nil {
 			return err
 		}
 		// citext: the lookup ignores case.
-		got, err := q.GetUserByEmail(ctx, "irwin."+id.String()[:8]+"@example.TEST")
-		if err != nil || got.ID != id || got.DisplayName != "Irwin" || got.LastLoginAt != nil {
+		got, err := q.GetUserByEmail(ctx, "alex."+id.String()[:8]+"@example.TEST")
+		if err != nil || got.ID != id || got.DisplayName != "Alex" || got.LastLoginAt != nil {
 			t.Errorf("by email = %+v, %v", got, err)
 		}
 		if err := q.SetUserLastLogin(ctx, db.SetUserLastLoginParams{ID: id, At: &t0}); err != nil {
@@ -57,7 +57,7 @@ func TestUserQueries(t *testing.T) {
 	}
 	// The same address in another case is the same user (citext UNIQUE).
 	err = s.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		_, err := q.CreateUser(ctx, db.CreateUserParams{ID: platform.NewID(), Email: "IRWIN." + id.String()[:8] + "@example.test", PasswordHash: "x"})
+		_, err := q.CreateUser(ctx, db.CreateUserParams{ID: platform.NewID(), Email: "ALEX." + id.String()[:8] + "@example.test", PasswordHash: "x"})
 		return err
 	})
 	if !isPgCode(err, "23505") {

@@ -2,6 +2,8 @@
 
 How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation; Phase 8 the web app.
 
+> 🚧 This describes the system after Phase 10. Parts that come later (the `insights` and `rules` packages, the AI assistant and its LLM server, the Kubernetes deployment) appear in the diagrams where they will fit, and are marked as planned in the text.
+
 ## Components
 
 ```mermaid
@@ -33,6 +35,8 @@ flowchart TB
 ```
 cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {store, ingest, money, platform}
 ```
+
+`insights` (Phase 11) and `rules` (Phase 15) are planned; the other packages exist.
 
 | Package | Role |
 |---|---|

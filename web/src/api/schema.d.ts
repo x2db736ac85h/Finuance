@@ -671,7 +671,7 @@ export interface components {
         User: {
             /** Format: uuid */
             id: string;
-            /** @example irwin@example.com */
+            /** @example alex@example.com */
             email: string;
             displayName: string;
             isDemo: boolean;

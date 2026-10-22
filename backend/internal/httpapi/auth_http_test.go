@@ -202,9 +202,9 @@ func TestAuthFlow(t *testing.T) {
 	email := testEmail(t)
 
 	expect(t, b.do("GET", "/me", nil), 401, "unauthenticated")
-	r := b.do("POST", "/auth/signup", map[string]any{"email": email, "password": password, "displayName": "Irwin"})
+	r := b.do("POST", "/auth/signup", map[string]any{"email": email, "password": password, "displayName": "Alex"})
 	expect(t, r, 201, "")
-	if r.body["email"] != email || r.body["displayName"] != "Irwin" {
+	if r.body["email"] != email || r.body["displayName"] != "Alex" {
 		t.Errorf("signup body = %v", r.body)
 	}
 	first := b.cookie()
@@ -212,9 +212,9 @@ func TestAuthFlow(t *testing.T) {
 		t.Fatal("no session cookie after signup")
 	}
 	expect(t, b.do("GET", "/me", nil), 200, "")
-	r = b.do("PATCH", "/me", map[string]any{"displayName": "Irwin K."})
+	r = b.do("PATCH", "/me", map[string]any{"displayName": "Alex K."})
 	expect(t, r, 200, "")
-	if r.body["displayName"] != "Irwin K." {
+	if r.body["displayName"] != "Alex K." {
 		t.Errorf("patch me = %v", r.body)
 	}
 	expect(t, b.do("POST", "/auth/signup", map[string]any{"email": strings.ToUpper(email), "password": password}), 409, "conflict")
