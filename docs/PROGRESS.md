@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 10 — Table view, groups and multi-selection · **Branch:** phase/10-table · **Status:** gate approved, merged
+**Current phase:** 11 — Insights: API, pane, modal · **Branch:** phase/11-insights · **Status:** in progress
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -24,9 +24,21 @@
 - Phase 9: the automatic header rule is fixed in the backend (the text-only row just before the first row with a date and a number; legacy rule otherwise), recorded in `ALLOWED_DIFFS.md` row 4. The import preview is a window over the app (legacy `.modal` look) with its own URL `/imports/:id`.
 - Phase 10: one phase with one gate, pushed in two halves (table first, then groups, selection and duplicates). `POST /transactions/bulk` takes explicit ids only (the selection; ranges resolved through `/transactions/ids`).
 - Public repository (2026-10-22): docs and code comments refer to "our Product Engineer"; test data uses a neutral sample user ("Alex", `alex@example.com`); git history is left as it is. README with screenshots, `SECURITY.md` (private vulnerability reporting), `CONTRIBUTING.md` (issues welcome, no pull requests yet), `docs/README.md` index, and a README in every placeholder folder.
+- Phase 11: the aggregation SQL lives in `internal/query/insights.go` (reusing the compiled `base`/`scoped` CTEs; no change to the store guard), and `internal/insights` holds only the pure rules. Cash flow returns every month of `base`; the client cuts it to fit/6/12/24/36/all. The legacy oracle records each chart's table twin on the demo file, and Go tests compare the API against it. One gate, two pushes (backend + chart library + charts; then pane, modal and actions).
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 11.1 backend: aggregation queries in `query/insights.go` (summary, categories, cashflow, pace, payees, daily) + pure rules in `internal/insights` (days clipping, prev-period delta, savings rate, pace arrays and comparisons, category shares and colour slots, top-N payees, heatmap ranges)
+- [x] 11.2 OpenAPI + handlers `POST /insights/{summary,categories,cashflow,pace,payees,daily}`, HTTP + tenancy tests
+- [ ] 11.3 `web/src/charts/lib` ports (`barPath`, `arc`, `spark`, compact numbers, `roundNice`, `<Svg w h>`, tooltip) with geometry tests
+- [ ] 11.4 chart registry (`ChartDef` + `toTable`) and the six charts: Summary, Categories, Cash flow, Pace, Payees, Daily heatmap
+- [ ] 11.5 `InsightsPane` (resize, collapse, Charts menu with reorder, scroll-snap cards) + `PeriodPicker`
+- [ ] 11.6 `ChartModal` (chart/table switch, range controls, ←/→, Esc, backdrop, resize)
+- [ ] 11.7 `useChartActions` (category, month, payee, day; toggling as legacy `toggleFilter`)
+- [x] Legacy oracle: chart table twins on the demo file (16 cases); `TestChartParity` matches all six charts, ALLOWED_DIFFS row 13 (half-cent ties in averages)
+- [ ] Tests: component tests per chart, E2E (category → chip + count, month → period, modal table = API), perf with the pane open, screenshots (both themes, 90/100/130 %), PARITY rows
+
+## Phase 10 tasks (done)
 - [x] 10.1 `useQueryContext(viewId)` (debounced search 120 ms / conditions 160 ms, `ctxKey`)
 - [x] 10.2 `Grid` (§7.7: 200-row windows, skeletons, measured row height, sticky header + gutter, widths × uiScale, resize, sort cycle, badges, empty row); `includeTotals: false` after the first window
 - [x] 10.3 `hl()` port (`table/highlight.tsx`)
@@ -291,6 +303,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 11 planned and approved (aggregation SQL in `query`, all cash-flow months, oracle chart twins, two pushes). Branch `phase/11-insights`.
 - 2026-10-22 — Paused before Phase 11 for public-repository readiness (`chore/public-readiness`): README rewrite with screenshots, docs index, SECURITY/CONTRIBUTING, placeholder READMEs, naming clean-up; fixed the search box not emptying after *Clear all*. Next: plan Phase 11 (the plan proposed earlier still stands).
 - 2026-10-22 — Phase 10 gate approved; merged. Next: plan Phase 11.
 - 2026-10-22 — Phase 10 built on `phase/10-table`: grid (windows, menus, chips, export, keyboard), inspector (category picker, note, sources), status bar, groups (API, menu, quick bar, pills), multi-selection, duplicates window, delete-import perf fix (migration 00005), 100k-row measurements (`tools/perf/grid.mjs`); 196 Vitest + 25 Playwright specs, integration tests and CI green. Next: our Product Engineer's gate review (hands-on legacy vs new table on the same demo data; 60 fps on real hardware).

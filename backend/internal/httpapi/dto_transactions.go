@@ -73,9 +73,7 @@ func pageDTO(p *query.Page) gen.TransactionPage {
 	for i := range p.Rows {
 		out.Rows[i] = txRowDTO(&p.Rows[i])
 	}
-	if r := p.Period; r != nil {
-		out.Period = &gen.ResolvedPeriod{Kind: gen.ResolvedPeriodKind(r.Kind), From: *dateDTO(&r.From), To: *dateDTO(&r.To), Label: r.Label}
-	}
+	out.Period = periodDTO(p.Period)
 	if !p.TotalsIncluded {
 		return out
 	}

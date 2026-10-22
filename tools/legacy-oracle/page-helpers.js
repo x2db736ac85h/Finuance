@@ -140,5 +140,31 @@
     return out;
   }
 
-  window.__oracle = {iso, ingest, corpus, dedupe, txKeysOf, filters, recurringAndPeriods, assistant, investments, assignDemoGroups, load, entry, bytes};
+
+  // Every pane chart on the demo dataset under each case's view and range settings: the table twin
+  // (strings as the legacy formats them), the subtitle and, for the summary, the KPI captions.
+  function charts(b64, cases){
+    demoDataset(b64);
+    let el = document.getElementById('oracle-chart');
+    if (!el){ el = document.createElement('div'); el.id = 'oracle-chart'; el.style.cssText = 'position:fixed;left:0;top:0;width:900px;height:420px;z-index:99999;background:#000'; document.body.appendChild(el); }
+    const defaults = {...S.cfg};
+    return cases.map(cs => {
+      const v = L.view();
+      v.period = cs.period; v.custom = cs.custom ? {from: Date.parse(cs.custom[0]), to: Date.parse(cs.custom[1])} : null;
+      v.search = cs.search || '';
+      v.filters = Object.fromEntries(Object.entries(cs.filters || {}).map(([k, cond]) => [k, {cond, excluded: new Set()}]));
+      S.cfg = {...defaults, flowMonths: 'all', ...cs.cfg};
+      L.compute();
+      const ctx = L.vizCtx(), out = {};
+      for (const k of ['sum', 'cat', 'flow', 'pace', 'payee', 'heat']){
+        const sub = document.createElement('span'), cx = document.createElement('span'), cfg = document.createElement('div');
+        const c = L.drawChart(k, el, ctx, {sub, cx, cfg, big: true});
+        out[k] = {sub: sub.textContent, table: c.table};
+        if (k === 'sum') out[k].captions = [...el.querySelectorAll('.kpi .d')].map(d => d.textContent);
+      }
+      return {name: cs.name, period: S.period ? {...S.period, from: iso(S.period.from), to: iso(S.period.to)} : null, rows: S.order.length, charts: out};
+    });
+  }
+
+  window.__oracle = {iso, ingest, corpus, dedupe, txKeysOf, filters, recurringAndPeriods, assistant, investments, charts, assignDemoGroups, load, entry, bytes};
 })();

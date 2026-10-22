@@ -961,6 +961,142 @@ paths:
                 $ref: "#/components/schemas/DuplicateGroup"
         default:
           $ref: "#/components/responses/Problem"
+  /insights/summary:
+    post:
+      operationId: insightSummary
+      summary: Summary card (spent, income, net, average per day, largest expense)
+      description: >-
+        Over the period-scoped rows of the context. `days` is the period clipped to the data range
+        (the context's accounts, ignoring filters); the spending delta compares with the previous
+        period (`prevSpentMinor`, read without the period). PLAN §4.6, legacy CHARTS.sum.
+      tags: [insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightRequest"
+      responses:
+        "200":
+          description: The summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightSummary"
+        default:
+          $ref: "#/components/responses/Problem"
+  /insights/categories:
+    post:
+      operationId: insightCategories
+      summary: Spending by category, largest first
+      description: Expenses of the period-scoped rows per category with shares and colour slots (the same ranking as `GET /categories`).
+      tags: [insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightRequest"
+      responses:
+        "200":
+          description: Categories.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightCategories"
+        default:
+          $ref: "#/components/responses/Problem"
+  /insights/cashflow:
+    post:
+      operationId: insightCashflow
+      summary: Money in and out per month
+      description: >-
+        Every month from the first to the last with data in the context without its period (empty
+        months included); months inside the period are marked. The client cuts the list to its
+        range setting.
+      tags: [insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightRequest"
+      responses:
+        "200":
+          description: Months, oldest first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightCashflow"
+        default:
+          $ref: "#/components/responses/Problem"
+  /insights/pace:
+    post:
+      operationId: insightPace
+      summary: Cumulative spending through a month vs a comparison
+      description: >-
+        The target month is the period's month, else the month of the latest row shown. The
+        comparison reads the context without its period. `target` is absent when there is no data.
+      tags: [insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaceRequest"
+      responses:
+        "200":
+          description: The pace.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightPace"
+        default:
+          $ref: "#/components/responses/Problem"
+  /insights/payees:
+    post:
+      operationId: insightPayees
+      summary: Top payees by spending
+      tags: [insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayeesRequest"
+      responses:
+        "200":
+          description: Payees, largest first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightPayees"
+        default:
+          $ref: "#/components/responses/Problem"
+  /insights/daily:
+    post:
+      operationId: insightDaily
+      summary: Spending per day for the calendar
+      description: >-
+        Days with spending in the calendar's range (`period` follows the period; `3m`/`6m`/`12m` are
+        the last calendar months of the data; `all` the whole data). `from`/`to` are absent when there
+        is nothing to show.
+      tags: [insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DailyRequest"
+      responses:
+        "200":
+          description: Days.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightDaily"
+        default:
+          $ref: "#/components/responses/Problem"
   /demo-data:
     post:
       operationId: loadDemoData
@@ -2151,6 +2287,280 @@ components:
           format: uuid
         transactions:
           type: integer
+    InsightRequest:
+      type: object
+      additionalProperties: false
+      required: [context]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+    PaceRequest:
+      type: object
+      additionalProperties: false
+      required: [context, compare]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        compare:
+          type: string
+          enum: [prev, yoy, avg3, avg6, none]
+    PayeesRequest:
+      type: object
+      additionalProperties: false
+      required: [context, top, scope]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        top:
+          type: integer
+          enum: [0, 10, 25, 50, 100]
+          description: How many payees; 0 = all.
+        scope:
+          type: string
+          enum: [period, all]
+          description: "`period`: the rows shown; `all`: all time (filters still apply)."
+    DailyRequest:
+      type: object
+      additionalProperties: false
+      required: [context, range]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        range:
+          type: string
+          enum: [period, 3m, 6m, 12m, all]
+    LargestExpense:
+      type: object
+      additionalProperties: false
+      required: [id, bookedOn, amountMinor, payee]
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookedOn:
+          type: string
+          format: date
+        amountMinor:
+          type: integer
+          format: int64
+          description: Negative.
+        payee:
+          type: string
+          description: The payee group.
+    InsightSummary:
+      type: object
+      additionalProperties: false
+      required: [currency, count, spentMinor, incomeMinor, netMinor, days, avgPerDayMinor]
+      properties:
+        period:
+          $ref: "#/components/schemas/ResolvedPeriod"
+        currency:
+          type: string
+          description: The most common currency of the context's accounts (empty without accounts).
+        count:
+          type: integer
+          format: int64
+        spentMinor:
+          type: integer
+          format: int64
+          description: Sum of −amount over expenses (≥ 0).
+        incomeMinor:
+          type: integer
+          format: int64
+        netMinor:
+          type: integer
+          format: int64
+        savingsRate:
+          type: number
+          format: double
+          description: max(0, net / income); absent without income.
+        days:
+          type: integer
+        avgPerDayMinor:
+          type: integer
+          format: int64
+        largestExpense:
+          $ref: "#/components/schemas/LargestExpense"
+        prevSpentMinor:
+          type: integer
+          format: int64
+          description: The previous period's spending; absent without a period.
+        spentDelta:
+          type: number
+          format: double
+          description: (spent − prev) / prev; absent without a period or previous spending.
+    CategorySpend:
+      type: object
+      additionalProperties: false
+      required: [spentMinor, share]
+      properties:
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        spentMinor:
+          type: integer
+          format: int64
+        share:
+          type: number
+          format: double
+        colorSlot:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: Absent for categories beyond the 7 largest all-time spenders.
+    InsightCategories:
+      type: object
+      additionalProperties: false
+      required: [currency, totalMinor, categories]
+      properties:
+        currency:
+          type: string
+        totalMinor:
+          type: integer
+          format: int64
+        categories:
+          type: array
+          description: Largest first; an entry without `category` is the uncategorised spending.
+          items:
+            $ref: "#/components/schemas/CategorySpend"
+    MonthFlow:
+      type: object
+      additionalProperties: false
+      required: [month, incomeMinor, expenseMinor, count, inPeriod]
+      properties:
+        month:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        incomeMinor:
+          type: integer
+          format: int64
+        expenseMinor:
+          type: integer
+          format: int64
+          description: Money out as a positive number.
+        count:
+          type: integer
+          format: int64
+        inPeriod:
+          type: boolean
+    InsightCashflow:
+      type: object
+      additionalProperties: false
+      required: [currency, months]
+      properties:
+        currency:
+          type: string
+        period:
+          $ref: "#/components/schemas/ResolvedPeriod"
+        months:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthFlow"
+    PaceCompare:
+      type: object
+      additionalProperties: false
+      required: [mode, days, values]
+      properties:
+        mode:
+          type: string
+          enum: [prev, yoy, avg3, avg6]
+        month:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+          description: prev and yoy only.
+        months:
+          type: integer
+          description: avg3 and avg6 only; how many months the average has.
+        days:
+          type: integer
+          description: Draw values up to this day.
+        values:
+          type: array
+          minItems: 31
+          maxItems: 31
+          items:
+            type: integer
+            format: int64
+    InsightPace:
+      type: object
+      additionalProperties: false
+      required: [currency, current]
+      properties:
+        currency:
+          type: string
+        target:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        daysInMonth:
+          type: integer
+        lastDay:
+          type: integer
+        current:
+          type: array
+          description: Cumulative spending by day of month (31 entries; empty without a target).
+          items:
+            type: integer
+            format: int64
+        compare:
+          $ref: "#/components/schemas/PaceCompare"
+    PayeeSpend:
+      type: object
+      additionalProperties: false
+      required: [payee, spentMinor, count]
+      properties:
+        payee:
+          type: string
+        spentMinor:
+          type: integer
+          format: int64
+        count:
+          type: integer
+          format: int64
+    InsightPayees:
+      type: object
+      additionalProperties: false
+      required: [currency, total, payees]
+      properties:
+        currency:
+          type: string
+        total:
+          type: integer
+          description: Payees with spending before the top-N cut.
+        payees:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayeeSpend"
+    DaySpend:
+      type: object
+      additionalProperties: false
+      required: [date, spentMinor, count]
+      properties:
+        date:
+          type: string
+          format: date
+        spentMinor:
+          type: integer
+          format: int64
+        count:
+          type: integer
+          format: int64
+    InsightDaily:
+      type: object
+      additionalProperties: false
+      required: [currency, days]
+      properties:
+        currency:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+          description: Exclusive.
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DaySpend"
     Money:
       type: object
       additionalProperties: false
