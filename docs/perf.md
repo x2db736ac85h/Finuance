@@ -168,3 +168,21 @@ Target: p95 ≤ 150 ms on a dev machine. In the sandbox, the first request of si
 
 - The payee/description/… "contains" filters scan the user's rows: only `search_text` has a trigram index. Indexes on the most-used `_n` columns are an option if real data needs them.
 - **Collation sorts** (any text column) sort all of the user's rows. An expression index per sortable text column would serve them. That is 9 indexes, so it's not worth it at this scale.
+
+## Deleting an import (Phase 10, found by the groups E2E)
+
+Deleting the 917-row demo import took **~27 s** in the E2E stack (about 40k transactions across
+all users). With `log_min_duration_statement` the time was all in `DeleteOrphanTransactions`.
+`transactions.transfer_peer_id` references `transactions` with `ON DELETE SET NULL`, so PostgreSQL
+looks for rows pointing at every deleted transaction, and without an index each look-up scanned the
+whole table.
+
+Changes:
+- migration `00005_fingerprint_index.sql`: `tx_transfer_peer_idx` (partial, `transfer_peer_id IS
+  NOT NULL`) → the same delete takes **164 ms**; and `import_rows_fp_idx` `(user_id, fingerprint)`
+  for the per-fingerprint look-ups of re-materialisation and the duplicates window;
+- `ledger.DeleteImport` re-materialises only the fingerprints other committed imports still contain
+  (`FingerprintsWithRows`): the rest lost their transactions in the orphan clean-up. Deleting the only
+  import of an account rebuilds nothing;
+- `TestEveryForeignKeyIsIndexed` (store) fails for a new foreign key without an index on its columns,
+  unless it is listed with the reason it doesn't need one.

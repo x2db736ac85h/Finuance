@@ -65,29 +65,23 @@ export function GroupsButton({ viewId }: { viewId: string }) {
           <div className="pop-s">
             {groups.length ? (
               groups.map((g) => (
-                <div
-                  key={g.id}
-                  className={active === g.name ? 'gr on' : 'gr'}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={active === g.name}
-                  title={active === g.name ? 'Show all transactions' : 'Show only this group'}
-                  onClick={() => {
-                    toggleGroupFilter(viewId, g.name);
-                    setOpen(false);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
-                    e.preventDefault();
-                    toggleGroupFilter(viewId, g.name);
-                    setOpen(false);
-                  }}
-                >
-                  <i className="gdot-i" style={{ background: groupColor(g.color) }} />
-                  <span className="gn">{g.name}</span>
-                  <span className="gc">
-                    {fmtInt(g.count)} · {fmtMoney(g.spent, { whole: true })}
-                  </span>
+                <div key={g.id} className={active === g.name ? 'gr on' : 'gr'}>
+                  <button
+                    type="button"
+                    className="gr-main"
+                    aria-pressed={active === g.name}
+                    title={active === g.name ? 'Show all transactions' : 'Show only this group'}
+                    onClick={() => {
+                      toggleGroupFilter(viewId, g.name);
+                      setOpen(false);
+                    }}
+                  >
+                    <i className="gdot-i" style={{ background: groupColor(g.color) }} />
+                    <span className="gn">{g.name}</span>
+                    <span className="gc">
+                      {fmtInt(g.count)} · {fmtMoney(g.spent, { whole: true })}
+                    </span>
+                  </button>
                   <IconButton
                     icon="pen"
                     size="sm"

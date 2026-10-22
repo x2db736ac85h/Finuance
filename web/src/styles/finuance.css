@@ -514,3 +514,21 @@ textarea.inp.ins-note {
 .dg-h .tag {
   flex: none;
 }
+/* groups menu: the row's main part is its own button (the legacy row was one click target) */
+.gr-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gr:focus-within .ib {
+  opacity: 1;
+}

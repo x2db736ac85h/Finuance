@@ -373,6 +373,42 @@ func (q *Queries) FingerprintsSourcedLater(ctx context.Context, arg Fingerprints
 	return items, nil
 }
 
+const fingerprintsWithRows = `-- name: FingerprintsWithRows :many
+SELECT DISTINCT ir.fingerprint::bytea AS fingerprint
+FROM import_rows ir
+JOIN imports i ON i.id = ir.import_id
+WHERE ir.user_id = $1 AND i.user_id = $1 AND i.account_id = $2 AND i.status = 'committed'
+  AND ir.parse_error IS NULL AND ir.fingerprint = ANY($3::bytea[])
+`
+
+type FingerprintsWithRowsParams struct {
+	UserID       uuid.UUID
+	AccountID    *uuid.UUID
+	Fingerprints [][]byte
+}
+
+// The fingerprints, among the given ones, that still have rows in a committed import of the
+// account (delete-import: the others have nothing left to rebuild).
+func (q *Queries) FingerprintsWithRows(ctx context.Context, arg FingerprintsWithRowsParams) ([][]byte, error) {
+	rows, err := q.db.Query(ctx, fingerprintsWithRows, arg.UserID, arg.AccountID, arg.Fingerprints)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items [][]byte
+	for rows.Next() {
+		var fingerprint []byte
+		if err := rows.Scan(&fingerprint); err != nil {
+			return nil, err
+		}
+		items = append(items, fingerprint)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDedupeOverride = `-- name: GetDedupeOverride :one
 
 SELECT account_id, fingerprint, user_id, mode, preferred_import_id, updated_at FROM dedupe_overrides WHERE user_id = $1 AND account_id = $2 AND fingerprint = $3

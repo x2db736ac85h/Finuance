@@ -24,7 +24,7 @@ export async function openFiles(page: Page, ...rel: string[]): Promise<void> {
   await page.locator('input[type=file]').setInputFiles(rel.map(fixture));
 }
 
-const API_HEADERS = { 'X-Finuance-Client': 'web' };
+export const API_HEADERS = { 'X-Finuance-Client': 'web' };
 
 /**
  * Creates an account and imports fixture files into it through the API (faster than the import
@@ -38,6 +38,11 @@ export async function importViaApi(
   const acc = await page.request.post('/api/v1/accounts', { headers: API_HEADERS, data: { name: account } });
   expect(acc.status()).toBe(201);
   const accountId = ((await acc.json()) as { id: string }).id;
+  return { accountId, importIds: await importInto(page, accountId, ...rel) };
+}
+
+/** Imports fixture files into an existing account and waits until they are committed. */
+export async function importInto(page: Page, accountId: string, ...rel: string[]): Promise<string[]> {
   const importIds: string[] = [];
   for (const f of rel) {
     const up = await page.request.post('/api/v1/imports', {
@@ -57,5 +62,5 @@ export async function importViaApi(
       .toBe('committed');
     importIds.push(id);
   }
-  return { accountId, importIds };
+  return importIds;
 }

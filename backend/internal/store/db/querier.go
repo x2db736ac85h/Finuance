@@ -96,6 +96,9 @@ type Querier interface {
 	// this one (or from none). After a reprocess this import may be the earliest source again; these
 	// fingerprints are re-materialised so the default rule ("earliest import wins") holds.
 	FingerprintsSourcedLater(ctx context.Context, arg FingerprintsSourcedLaterParams) ([][]byte, error)
+	// The fingerprints, among the given ones, that still have rows in a committed import of the
+	// account (delete-import: the others have nothing left to rebuild).
+	FingerprintsWithRows(ctx context.Context, arg FingerprintsWithRowsParams) ([][]byte, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)

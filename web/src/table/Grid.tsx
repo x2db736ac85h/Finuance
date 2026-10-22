@@ -159,7 +159,9 @@ export function Grid(props: Props) {
         </colgroup>
         <thead>
           <tr>
-            <th className="gutter">#</th>
+            <th className="gutter" scope="col">
+              #
+            </th>
             {columns.map((c) => (
               <HeaderCell
                 key={c.id}
@@ -348,6 +350,7 @@ function HeaderCell({
   };
   return (
     <th
+      scope="col"
       className={[filtered && 'filtered', sorted && 'sorted'].filter(Boolean).join(' ') || undefined}
       aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'}
       title={`${col.label} — click to sort, right-click for options`}

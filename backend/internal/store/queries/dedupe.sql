@@ -152,3 +152,12 @@ ORDER BY i.committed_at, i.id, ir.row_index;
 SELECT d.* FROM dedupe_overrides d
 WHERE d.user_id = @user_id AND d.fingerprint = ANY(@fingerprints::bytea[])
   AND (d.account_id::text || ':' || encode(d.fingerprint, 'hex')) = ANY(@pair_keys::text[]);
+
+-- name: FingerprintsWithRows :many
+-- The fingerprints, among the given ones, that still have rows in a committed import of the
+-- account (delete-import: the others have nothing left to rebuild).
+SELECT DISTINCT ir.fingerprint::bytea AS fingerprint
+FROM import_rows ir
+JOIN imports i ON i.id = ir.import_id
+WHERE ir.user_id = @user_id AND i.user_id = @user_id AND i.account_id = @account_id AND i.status = 'committed'
+  AND ir.parse_error IS NULL AND ir.fingerprint = ANY(@fingerprints::bytea[]);
