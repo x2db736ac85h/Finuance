@@ -1,6 +1,6 @@
 # Architecture
 
-How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation.
+How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation; Phase 8 the web app.
 
 ## Components
 
@@ -42,6 +42,20 @@ cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {
 | `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. |
 
 A guard test (`store/guard_test.go`) parses every non-test file outside `internal/store`. It fails on direct `Query`/`Exec`/`Begin` calls, and on building a sqlc querier (`db.New`) that would bypass `WithUser`.
+
+### Web app (`web/`)
+
+A Vite + React + TypeScript single-page app that recreates the legacy `finuance.html` UI: the legacy CSS is ported verbatim (`src/styles/`), and components reuse the legacy class names.
+
+| Folder | Role |
+|---|---|
+| `api/` | `openapi-fetch` client typed from `api/openapi.yaml` (`schema.d.ts` is generated). Errors become `ApiError` with the RFC 9457 problem; a `401` sends the router to `/login?next=…`. TanStack Query hooks per resource in `api/hooks/`. |
+| `stores/` | Zustand: `uiStore` (toggles, theme, size, chart and assistant settings), `viewStore` (per-view sort, columns, period; search and filters are session-only). `prefsSync.ts` saves the persisted slices with a 500 ms debounce and the document version; on `409` the server's document wins and local changes are laid back on top, once. |
+| `auth/` | Sign-in, sign-up and `RequireAuth`, which loads `/me` and `/preferences` and hydrates the stores before the app renders. |
+| `shell/` | Title bar, sidebar, status bar, empty state, drop overlay, settings popover, keyboard manager. |
+| `ui/` | Primitives: Popover and Menu (Floating UI), Modal, Toast queue, Tooltip, buttons, inputs. Open modals and popovers register as layers, so the global keyboard manager leaves their keys alone. |
+
+The production image (`deploy/docker/Dockerfile.web`) is unprivileged nginx: static files with a strict CSP (`script-src 'self'; style-src 'self'; connect-src 'self'`), immutable hashed assets, `no-cache` for `index.html`, and `/api/` proxied to the API without buffering (exports stream through). No HTML is ever built from strings (an ESLint rule bans `innerHTML` and `dangerouslySetInnerHTML`), which is what makes that CSP possible.
 
 ## Data model
 

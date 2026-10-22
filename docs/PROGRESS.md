@@ -33,12 +33,13 @@
 - [x] 8.7 auth pages, user menu, `RequireAuth` with the prefs gate
 - [x] 8.8 `uiStore`, `viewStore`, preferences sync (hydrate, 500 ms debounce, 409: server wins + local changes re-applied, one retry)
 - [x] 8.9 settings pages: appearance, profile, sessions, data
-- [ ] 8.10 `POST /demo-data` + "Load demo data"
-- [ ] 8.11 web image (nginx, CSP, caching, `/api` proxy), Compose `web`, `compose.prod.yaml`
-- [ ] 8.12 CI `web` job (lint, typecheck, test, build, bundle size)
-- [ ] 8.13 E2E: `compose.ci.yaml`, CI `e2e` job, first spec
+- [x] 8.10 `POST /demo-data` + "Load demo data"
+- [x] 8.11 web image (unprivileged nginx 1.30.6, CSP + security headers, caching, gzip, `/api` proxy without buffering), Compose `web` on :8000, `compose.prod.yaml` (only web published), `make web-dist`
+- [x] 8.12 CI `web` job (lint, typecheck, test, build, bundle size summary + 250 KB gzip budget); image job also builds, smoke-tests and scans the web image
+- [x] 8.13 E2E: `compose.ci.yaml`, `make test-e2e`, CI `e2e` job; 5 specs (signup → demo data → sidebar; prefs survive a reload; sign out/in with `next`; `?` window; no CSP violations), passing against a fresh stack
 - [x] 8.14 SettingsPopover, KeyboardShortcuts dialog
-- [ ] Gate: legacy vs new screenshots (dark/light)
+- [ ] Gate: legacy vs new screenshots (dark/light) — taken, for Irwin's review
+- [x] Tests: 118 Vitest (stores, sync with fake timers, client, primitives, shell, auth, settings, keyboard), 5 Playwright
 
 ## Phase 7 tasks (done)
 - [x] 7.1 `query/dsl`: condition lexer + parser → AST, round-trip printer, `FuzzParseCond`
@@ -161,6 +162,8 @@
 - 8.8: the preferences document keeps the legacy `collectPrefs` key names (`theme`, `ui`, `vizH`, `noViz`, `sbOpen`, `cards`, `cardOrder`, `cfg`, `ai`, `views`), plus `importFastPath`, so a legacy backup's prefs map onto it directly in Phase 14. Every stored document goes through `parsePrefs`, which drops unknown values; keys this build doesn't know are kept on save. The sync is a plain class (`stores/prefsSync.ts`) started by `RequireAuth`, not a React hook, so it can be unit-tested with fake timers.
 - 8.6: until the import UX (Phase 9), ⌘O, Browse, the mini drop zone and drag & drop open the picker or the overlay and then show a toast that import isn't available yet. The assistant button toggles its (persisted) state; the panel is Phase 13. Table and overview routes show the toolbar and a placeholder.
 - 8.6: the title bar has an account button (initial of the name) that opens Profile, Sessions and Sign out; the legacy app had no user menu. Its styles, the sign-in card, the settings pages and the gallery live in `styles/finuance.css`, built from the legacy tokens.
+- 8.11: like `backend/vendor`, a host-built `web/dist` in the build context is used as is, so the image builds without network access; `make up` and `make test-e2e` rebuild it first (`make web-dist`), and CI image builds have no `dist/` and build from source. nginx runs read-only with tmpfs for its rendered config and temp files. The API trusts `X-Forwarded-For` from `172.16.0.0/12` (the Compose network; `FINUANCE_TRUSTED_PROXIES`) so rate limits see the client address behind nginx.
+- 8.11: initial JS is 144 KB gzip (budget 250 KB).
 - 8.10: `ledger.SeedDemo` returns a `DemoSeed` (account, import id, commit result) so `POST /demo-data` can answer with the ids and the transaction count.
 - 7.2: SQL fragments live in `query/columns.go` (the registry) and `query/compile.go` as well as `query/sql.go`; the whole `internal/query` package is the SQL builder, and the store guard allows that package. The registry also gives each column a display text (`-79,99`, `dd.mm.yyyy`), used by the text fallback, the value checklist, `excluded` and exports (Irwin's decision).
 - 7.2: number conditions compare exact `numeric` values in major units (scaled per row by the currency's exponent), not `amount_minor` against a converted operand, so a mixed-currency view stays correct.
@@ -240,6 +243,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-22 — Phase 8 built on `phase/08-frontend`: scaffold, typed client, legacy styles/icons, UI primitives, shell, auth, stores + preferences sync, settings, demo data, web image + Compose, CI `web`/`e2e` jobs, 5 E2E specs. Legacy vs new screenshots match closely. Next: Irwin's gate review.
 - 2026-10-21 — Phase 8 planned and approved (3 dev type/lint deps; inline demo-data commit). Branch `phase/08-frontend`.
 - 2026-10-21 — Phase 7 gate approved with option (a) and `includeTotals`; both added (search p95 273 → 114 ms in the sandbox), merged. Next: plan Phase 8.
 - 2026-10-21 — Phase 7 built on `phase/07-query`: filter language + compiler + periods + engine (all 84 legacy filter cases, assistant filter parity), query/distinct/ids/detail/patch/categories endpoints, CSV export (ADR 0014), zip data export, query indexes (perf.md: 4 of 7 shapes within target in the sandbox; trigram index unusable under RLS), nightly DB fuzz, `query-smoke.sh`. Next: Irwin's gate review.

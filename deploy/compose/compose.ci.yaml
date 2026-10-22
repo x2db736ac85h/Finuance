@@ -1,0 +1,22 @@
+# CI / E2E overlay (PLAN task 8.13): images built from this checkout, a throwaway database volume,
+# FINUANCE_ENV=test, web on :8000. Used by `make test-e2e` and the CI e2e job.
+name: finuance-ci
+services:
+  db:
+    ports: !reset []
+    volumes: !override
+      - ../db/bootstrap.sql:/finuance/bootstrap.sql:ro
+      - ../db/initdb:/docker-entrypoint-initdb.d:ro
+    tmpfs: [/var/lib/postgresql]
+  api:
+    ports: !reset []
+    environment:
+      FINUANCE_ENV: test
+      FINUANCE_ALLOW_SIGNUP: "true"
+  worker:
+    ports: !reset []
+    environment:
+      FINUANCE_ENV: test
+  web:
+    ports: !override
+      - "127.0.0.1:8000:8080"

@@ -8,7 +8,7 @@ import { errorMessage } from '../lib/errors';
 import { plural } from '../lib/format';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
-import { MOD } from '../ui/Kbd';
+import { modKey } from '../ui/Kbd';
 import { toast } from '../ui/toastStore';
 import { openFilePicker } from './files';
 
@@ -54,7 +54,7 @@ export function EmptyState() {
         </div>
         <div className="tips">
           <div className="tip">
-            <b>Search</b>Every column, accent-insensitive. <kbd>{MOD}F</kbd>
+            <b>Search</b>Every column, accent-insensitive. <kbd>{modKey('F')}</kbd>
           </div>
           <div className="tip">
             <b>Sort &amp; filter</b>Click a header to sort, use its funnel to filter.

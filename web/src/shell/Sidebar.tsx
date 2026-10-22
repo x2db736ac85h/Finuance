@@ -49,7 +49,9 @@ export function Sidebar({ accounts, total, email }: Props) {
           </span>
         </button>
       </nav>
-      <div className="sb-foot">Stored on your Finuance server · {email}</div>
+      <div className="sb-foot" title={`Signed in as ${email}`}>
+        Stored on your Finuance server.
+      </div>
     </aside>
   );
 }

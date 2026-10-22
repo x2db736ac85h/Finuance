@@ -10,7 +10,7 @@ import { sidebarShown, useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
-import { MOD } from '../ui/Kbd';
+import { modKey } from '../ui/Kbd';
 import { Logo } from '../ui/Logo';
 import { Menu, MenuItem } from '../ui/Menu';
 import { usePopover } from '../ui/Popover';
@@ -76,7 +76,7 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
       <button
         type="button"
         className={aiOpen ? 'btn sm aibtn on' : 'btn sm aibtn'}
-        title={`AI assistant (${MOD}J)`}
+        title={`AI assistant (${modKey('J')})`}
         aria-pressed={aiOpen}
         onClick={() => {
           setAiOpen(!aiOpen);
@@ -85,13 +85,7 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
         <Icon name="ai" />
         <span className="bl">Assistant</span>
       </button>
-      <IconButton
-        icon="cog"
-        title="Settings"
-        on={settings.open}
-        aria-expanded={settings.open}
-        onClick={settings.toggle}
-      />
+      <IconButton icon="cog" title="Settings" aria-expanded={settings.open} onClick={settings.toggle} />
       <button
         type="button"
         className={account.open ? 'avatar on' : 'avatar'}
@@ -205,7 +199,7 @@ function SearchBox({
           }}
         />
       )}
-      <kbd>{MOD}F</kbd>
+      <kbd>{modKey('F')}</kbd>
     </label>
   );
 }

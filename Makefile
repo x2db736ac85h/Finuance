@@ -9,6 +9,7 @@ MAKEFLAGS += --no-print-directory
 ENV_FILE ?= .env
 ORACLE   := tools/legacy-oracle
 COMPOSE  := docker compose --env-file $(ENV_FILE) -f deploy/compose/compose.yaml
+COMPOSE_CI := $(COMPOSE) -f deploy/compose/compose.ci.yaml
 FUZZTIME ?= 30s
 BIN      := backend/bin
 SQLC     := $(BIN)/sqlc
@@ -80,8 +81,10 @@ test-integration: ## All Go tests incl. testcontainers (Docker required)
 	cd backend && go test ./...
 
 .PHONY: test-e2e
-test-e2e: ## Playwright against compose.ci.yaml
-	$(call todo,9)
+test-e2e: $(ENV_FILE) web-dist ## Playwright against a fresh compose.ci.yaml stack on :8000 (KEEP=1 leaves it running)
+	VERSION=$(VERSION) $(COMPOSE_CI) up -d --build --wait
+	status=0; (cd web && E2E_BASE_URL=http://localhost:8000 npx playwright test) || status=$$?; \
+	  $(if $(KEEP),,$(COMPOSE_CI) down -v;) exit $$status
 
 .PHONY: fuzz
 fuzz: ## All pure fuzz targets for FUZZTIME (default 30s each); *DB targets run in the nightly workflow
@@ -181,8 +184,12 @@ migrate-new: ## Create a migration: make migrate-new name=add_accounts
 ##@ Running
 
 .PHONY: up
-up: $(ENV_FILE) ## Full Compose stack: db, migrate, api (http://localhost:8080), worker (web joins in Phase 8)
+up: $(ENV_FILE) web-dist ## Full Compose stack: db, migrate, api, worker, web (app on http://localhost:8000)
 	VERSION=$(VERSION) $(COMPOSE) up -d $(UP_FLAGS) --wait
+
+.PHONY: web-dist
+web-dist: web/node_modules ## Build web/dist on the host; the web image uses it instead of building in Docker
+	cd web && npm run --silent build
 
 .PHONY: down
 down: $(ENV_FILE) ## Stop the full Compose stack (keeps the database volume)
@@ -216,9 +223,10 @@ eval-assistant: ## Assistant evals against FINUANCE_AI_BASE_URL (MODEL= optional
 ##@ Build and deploy
 
 .PHONY: images
-images: ## Build the images locally (backend now; web arrives in Phase 8)
+images: ## Build the backend and web images locally (web uses web/dist when present: make web-dist)
 	docker build -f deploy/docker/Dockerfile.backend --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
 	  --build-arg DATE=$(DATE) -t finuance-backend:dev .
+	docker build -f deploy/docker/Dockerfile.web -t finuance-web:dev .
 
 .PHONY: helm-lint
 helm-lint: ## helm lint + kubeconform

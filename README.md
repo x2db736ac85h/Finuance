@@ -11,10 +11,11 @@ Go (stdlib `net/http`, spec-first OpenAPI) · PostgreSQL (pgx, sqlc, goose, Rive
 
 ## Getting started (development)
 
-Requirements: Docker (with Compose), Go 1.27, Node 22 (for the legacy oracle and, from Phase 8, the web app).
+Requirements: Docker (with Compose), Go 1.27, Node 22 (web app and legacy oracle).
 
 ```sh
-make up                       # db → migrate → api (creates .env from .env.example on first run)
+make up                       # db → migrate → api + worker → web (creates .env from .env.example on first run)
+open http://localhost:8000    # the app: sign up, then "Load demo data"
 curl -s localhost:8080/api/v1/meta
 curl -s localhost:8080/readyz
 curl -s localhost:9090/metrics | head   # admin port: metrics + pprof (dev only)
@@ -25,7 +26,9 @@ make down                     # stop (the database volume is kept; make db-reset
 Day to day:
 
 ```sh
-make check              # lint, unit tests, codegen drift, fixture drift, private-data guard
+make check              # lint, unit tests (Go + web), codegen drift, fixture drift, private-data guard
+make dev-api & make dev-web   # API on :8080 and the Vite dev server on :5173 (proxies /api)
+make test-e2e           # Playwright against a fresh Compose stack on :8000
 make test-integration   # all Go tests, incl. Postgres via testcontainers
 make gen                # regenerate code after editing api/openapi.yaml or store/queries/*.sql
 make db-up migrate-up dev-api   # run the API on the host against the Compose database

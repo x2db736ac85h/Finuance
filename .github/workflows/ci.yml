@@ -45,6 +45,11 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
       - name: make check
         run: make check
@@ -83,7 +88,12 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - name: golangci-lint
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: golangci-lint (+ web lint)
         run: make lint
       - name: Generated code is up to date
         run: make gen-check
@@ -109,7 +119,7 @@ jobs:
           { echo '### BenchmarkParse_100k'; echo; echo '```'; grep -E '^(Benchmark|cpu:)' bench.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   image:
-    name: backend image
+    name: images (backend + web)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -133,6 +143,21 @@ jobs:
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.0 \
             image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-backend:dev
+      - name: Web image runs as non-root and serves the app with the CSP
+        run: |
+          set -euo pipefail
+          test "$(docker image inspect finuance-web:dev --format '{{.Config.User}}')" = "101"
+          docker image ls finuance-web:dev
+          docker run -d --name web-smoke -p 127.0.0.1:8001:8080 -e FINUANCE_API_UPSTREAM=127.0.0.1:9 finuance-web:dev
+          for i in $(seq 20); do curl -fsS http://127.0.0.1:8001/healthz && break; sleep 0.5; done
+          curl -fsS -D headers.txt -o index.html http://127.0.0.1:8001/t/all
+          grep -qi "^content-security-policy: default-src 'self'" headers.txt
+          grep -q '<div id="root">' index.html
+          docker rm -f web-smoke
+      - name: Trivy web image (HIGH/CRITICAL fail the build)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.0 \
+            image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
 
   oracle-fresh:
     name: legacy oracle is fresh
@@ -158,8 +183,71 @@ jobs:
           git diff --exit-code --stat -- testdata || { echo "::error::make oracle changed testdata/ — run it locally and commit the result"; exit 1; }
 
   web:
-    name: web (placeholder)
+    name: web (React)
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
     steps:
-      - run: echo "Web lint, typecheck and tests arrive in Phase 8."
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Lint (ESLint + Prettier)
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit and component tests (Vitest)
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Bundle size (initial JS ≤ 250 KB gzip, PLAN §7.12)
+        run: |
+          set -euo pipefail
+          {
+            echo '### Web bundle'; echo
+            echo '| file | raw | gzip |'; echo '|---|---:|---:|'
+            for f in dist/assets/*.js dist/assets/*.css; do
+              echo "| $(basename "$f") | $(wc -c < "$f") | $(gzip -9c "$f" | wc -c) |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+          initial=0
+          for f in $(grep -o 'assets/[^"]*\.js' dist/index.html); do
+            initial=$((initial + $(gzip -9c "dist/$f" | wc -c)))
+          done
+          echo "initial JS: $initial bytes gzip" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$initial" -le 256000 || { echo "::error::initial JS exceeds 250 KB gzip"; exit 1; }
+
+  e2e:
+    name: e2e (Playwright on Compose)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies and Chromium
+        working-directory: web
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Build, start compose.ci.yaml, run Playwright
+        env:
+          CI: "true"
+        run: make test-e2e KEEP=1
+      - name: Compose logs
+        if: failure()
+        run: docker compose --env-file .env -f deploy/compose/compose.yaml -f deploy/compose/compose.ci.yaml logs --tail=200
+      - uses: actions/upload-artifact@v4.6.2
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 7
