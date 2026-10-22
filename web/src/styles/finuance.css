@@ -506,3 +506,11 @@ textarea.inp.ins-note {
   width: 0.75rem;
   height: 0.75rem;
 }
+
+/* duplicates window (Phase 10): Show more, the account of a group in an all-accounts view */
+.dup-more {
+  text-align: center;
+}
+.dg-h .tag {
+  flex: none;
+}

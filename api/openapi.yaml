@@ -863,6 +863,104 @@ paths:
           description: Deleted.
         default:
           $ref: "#/components/responses/Problem"
+  /duplicates:
+    get:
+      operationId: listDuplicates
+      summary: Duplicate groups with every version (the duplicates window)
+      description: >-
+        Fingerprints whose rows come from two or more committed imports of an account where rows
+        were merged, or where the user decided (an override), newest first. Duplicates are found per
+        account. `q` keeps the groups where a row contains every word (accent- and case-insensitive).
+      tags: [duplicates]
+      parameters:
+        - name: accountIds
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            maxItems: 100
+            items:
+              type: string
+              format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 60
+            default: 60
+      responses:
+        "200":
+          description: One page of groups.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicatePage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /duplicates/{accountId}/{fingerprint}:
+    parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: fingerprint
+        in: path
+        required: true
+        description: The de-dupe key, as 64 lower-case hex digits.
+        schema:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+    put:
+      operationId: decideDuplicate
+      summary: Use one version, or keep both
+      description: >-
+        `prefer` shows the given import's version of every occurrence it contains; `keep_both` stops
+        merging, so each import's rows become their own transactions. The transactions are rebuilt
+        before the answer, which is the group as it is now.
+      tags: [duplicates]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DuplicateDecision"
+      responses:
+        "200":
+          description: The group after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateGroup"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: resetDuplicate
+      summary: Back to the default merge ("Merge again")
+      tags: [duplicates]
+      responses:
+        "200":
+          description: The group after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateGroup"
+        default:
+          $ref: "#/components/responses/Problem"
   /demo-data:
     post:
       operationId: loadDemoData
@@ -1931,6 +2029,115 @@ components:
       properties:
         updated:
           type: integer
+    DuplicatePage:
+      type: object
+      additionalProperties: false
+      required: [total, groups]
+      properties:
+        total:
+          type: integer
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/DuplicateGroup"
+    DuplicateGroup:
+      type: object
+      additionalProperties: false
+      required: [accountId, fingerprint, keyFields, differingFields, versions]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
+          description: 64 lower-case hex digits.
+        override:
+          $ref: "#/components/schemas/DuplicateDecision"
+        keyFields:
+          $ref: "#/components/schemas/DuplicateFields"
+        differingFields:
+          type: array
+          description: Fields whose values differ between the versions.
+          items:
+            type: string
+            enum: [bookedOn, valueOn, amount, balanceAfter, payee, description, reference, txType, bankCategory, counterpartyAccount]
+        versions:
+          type: array
+          description: Earliest-committed import first.
+          items:
+            $ref: "#/components/schemas/DuplicateVersion"
+    DuplicateVersion:
+      type: object
+      additionalProperties: false
+      required: [importId, filename, rows]
+      properties:
+        importId:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        committedAt:
+          type: string
+          format: date-time
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/DuplicateRow"
+    DuplicateRow:
+      type: object
+      additionalProperties: false
+      required: [occurrence, fields, raw, inData]
+      properties:
+        occurrence:
+          type: integer
+        fields:
+          $ref: "#/components/schemas/DuplicateFields"
+        raw:
+          type: array
+          items:
+            $ref: "#/components/schemas/RawField"
+        inData:
+          type: boolean
+          description: This row is the version the data shows.
+    DuplicateFields:
+      type: object
+      additionalProperties: false
+      required: [payee, description, reference, txType, bankCategory, counterpartyAccount]
+      properties:
+        bookedOn:
+          type: string
+          format: date
+        valueOn:
+          type: string
+          format: date
+        amount:
+          $ref: "#/components/schemas/Money"
+        balanceAfter:
+          $ref: "#/components/schemas/Money"
+        payee:
+          type: string
+        description:
+          type: string
+        reference:
+          type: string
+        txType:
+          type: string
+        bankCategory:
+          type: string
+        counterpartyAccount:
+          type: string
+    DuplicateDecision:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [prefer, keep_both]
+        importId:
+          type: string
+          format: uuid
+          description: The import to use (prefer only).
     DemoData:
       type: object
       additionalProperties: false

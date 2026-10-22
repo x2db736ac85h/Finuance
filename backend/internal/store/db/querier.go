@@ -65,6 +65,15 @@ type Querier interface {
 	DeleteUserSessionByPrefix(ctx context.Context, arg DeleteUserSessionByPrefixParams) (int64, error)
 	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
+	// The duplicate groups of the given accounts (PLAN §7.14, legacy §32.3): fingerprints with staged
+	// rows in two or more committed imports where something was merged (more linked rows than
+	// transactions) or the user decided (an override). Every token must appear in one of the rows'
+	// search text. Newest first; `total` counts every group that matches.
+	DuplicateGroupKeys(ctx context.Context, arg DuplicateGroupKeysParams) ([]DuplicateGroupKeysRow, error)
+	// Every version of the given (account, fingerprint) pairs: the staged rows of committed imports
+	// with their file, and whether each row is the one the data shows (its transaction's source).
+	// pair_keys are "<account id>:<hex fingerprint>"; the ANY filters narrow the scan first.
+	DuplicateGroupRows(ctx context.Context, arg DuplicateGroupRowsParams) ([]DuplicateGroupRowsRow, error)
 	// "N duplicates skipped" for a set of accounts: linked staged rows − import-origin transactions.
 	DuplicatesSkipped(ctx context.Context, arg DuplicatesSkippedParams) (int64, error)
 	// Queries for the personal data export (GET /me/export, PLAN task 7.10).
@@ -135,6 +144,8 @@ type Querier interface {
 	ListBudgets(ctx context.Context, userID uuid.UUID) ([]ListBudgetsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
 	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
+	// The overrides of the given (account, fingerprint) pairs.
+	ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error)
 	ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, error)
 	ListImportProfiles(ctx context.Context, userID uuid.UUID) ([]ImportProfile, error)
 	// Staged rows are inserted by store.InsertImportRows (hand-written unnest, see importrows.go).

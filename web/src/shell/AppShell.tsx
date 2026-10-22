@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 
 import { invalidateData, useAccounts } from '../api/hooks/accounts';
+import { DuplicatesDialog } from '../duplicates/DuplicatesDialog';
 import { configureImports } from '../import/queue';
 import { escapeSelection, moveSelection } from '../table/controller';
 import { Inspector } from '../table/Inspector';
@@ -118,6 +119,7 @@ export function AppShell({ user }: { user: User }) {
       </StatusBar>
       <DropOverlay onFiles={importFiles} />
       <KeyboardShortcuts />
+      <DuplicatesDialog />
       <Toaster />
       <TooltipLayer />
       <input

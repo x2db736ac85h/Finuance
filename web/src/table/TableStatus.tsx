@@ -1,11 +1,15 @@
 // The status bar of the table mode (PLAN §7.6 StatusBar, legacy renderStatus): rows shown of the
-// view's total (accent when filtered), visible columns, the period, the skipped duplicates and the
+// view's total (accent when filtered), visible columns, the period, the skipped duplicates (a link
+// to the duplicates window) and the
 // selected row on the left; the totals picker and Σ / avg / min / max on the right. It reads the
 // same head query as the grid (same key), so it costs no extra request.
 
 import { useEffect } from 'react';
 
+import { useHasDuplicates } from '../api/hooks/duplicates';
 import { useGroups } from '../api/hooks/groups';
+import { useImports } from '../api/hooks/imports';
+import { useDupDialog } from '../duplicates/store';
 import { fmtInt, fmtMoney } from '../lib/format';
 import { useViews, viewOf } from '../stores/viewStore';
 import { Icon } from '../ui/Icon';
@@ -44,6 +48,18 @@ export function TableStatus({ viewId, all }: Props) {
   const currency = head?.rows[0]?.amount.currency ?? 'PLN';
   const money = (n: number | undefined) => (n === undefined ? '–' : fmtMoney({ amountMinor: n, currency }));
   const dupes = head?.duplicatesSkipped ?? 0;
+  // With nothing skipped the link stays while decided groups exist (legacy "duplicates reviewed");
+  // that needs two imports in the view, so other views never ask.
+  const imports = useImports().data ?? [];
+  const twoImports =
+    imports.filter((i) => i.status === 'committed' && (viewId === 'all' || i.accountId === viewId)).length > 1;
+  // An open duplicates window shows the current count as decisions change it.
+  useEffect(() => {
+    const d = useDupDialog.getState();
+    if (d.target && d.target.skipped !== dupes && head) d.open({ ...d.target, skipped: dupes });
+  }, [dupes, head]);
+  const reviewed =
+    useHasDuplicates(viewId === 'all' ? undefined : [viewId], !!head && dupes === 0 && twoImports).data === true;
 
   return (
     <>
@@ -56,9 +72,18 @@ export function TableStatus({ viewId, all }: Props) {
           {visible} / {columns.length} columns
         </span>
         {head?.period && v.period !== 'all' && <span className="st">{head.period.label}</span>}
-        {dupes > 0 && (
+        {(dupes > 0 || reviewed) && (
           <span className="st">
-            {fmtInt(dupes)} duplicate{dupes === 1 ? '' : 's'} skipped
+            <button
+              type="button"
+              className="st-link"
+              title="Review, compare and un-merge duplicates"
+              onClick={() => {
+                useDupDialog.getState().open({ accountIds: viewId === 'all' ? undefined : [viewId], skipped: dupes });
+              }}
+            >
+              {dupes > 0 ? `${fmtInt(dupes)} duplicate${dupes === 1 ? '' : 's'} skipped` : 'duplicates reviewed'}
+            </button>
           </span>
         )}
         {v.selectedId && v.selectedIndex !== null && <span className="st">Row {fmtInt(v.selectedIndex + 1)}</span>}

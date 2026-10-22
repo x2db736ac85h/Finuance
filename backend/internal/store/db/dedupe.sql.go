@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
 const deleteTransactionsByID = `-- name: DeleteTransactionsByID :execrows
@@ -27,6 +28,165 @@ func (q *Queries) DeleteTransactionsByID(ctx context.Context, arg DeleteTransact
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const duplicateGroupKeys = `-- name: DuplicateGroupKeys :many
+WITH fp AS (
+  SELECT i.account_id, ir.fingerprint,
+         count(DISTINCT ir.import_id) AS imports,
+         count(ir.transaction_id) AS linked,
+         count(DISTINCT ir.transaction_id) AS txs,
+         max(ir.booked_on) AS last_on,
+         bool_or(NOT EXISTS (SELECT 1 FROM unnest($4::text[]) tok WHERE strpos(coalesce(ir.search_text, ''), tok) = 0)) AS hit
+  FROM import_rows ir
+  JOIN imports i ON i.id = ir.import_id
+  WHERE ir.user_id = $1 AND i.user_id = $1 AND i.status = 'committed' AND ir.parse_error IS NULL
+    AND ir.fingerprint IS NOT NULL AND i.account_id = ANY($5::uuid[])
+  GROUP BY i.account_id, ir.fingerprint
+)
+SELECT fp.account_id::uuid AS account_id, fp.fingerprint::bytea AS fingerprint, count(*) OVER ()::bigint AS total
+FROM fp
+LEFT JOIN dedupe_overrides d ON d.user_id = $1 AND d.account_id = fp.account_id AND d.fingerprint = fp.fingerprint
+WHERE fp.imports >= 2 AND (fp.linked > fp.txs OR d.fingerprint IS NOT NULL) AND fp.hit
+ORDER BY fp.last_on DESC NULLS LAST, fp.account_id, fp.fingerprint
+OFFSET $2 LIMIT $3
+`
+
+type DuplicateGroupKeysParams struct {
+	UserID     uuid.UUID
+	RowOffset  int32
+	RowLimit   int32
+	Tokens     []string
+	AccountIds []uuid.UUID
+}
+
+type DuplicateGroupKeysRow struct {
+	AccountID   uuid.UUID
+	Fingerprint []byte
+	Total       int64
+}
+
+// The duplicate groups of the given accounts (PLAN §7.14, legacy §32.3): fingerprints with staged
+// rows in two or more committed imports where something was merged (more linked rows than
+// transactions) or the user decided (an override). Every token must appear in one of the rows'
+// search text. Newest first; `total` counts every group that matches.
+func (q *Queries) DuplicateGroupKeys(ctx context.Context, arg DuplicateGroupKeysParams) ([]DuplicateGroupKeysRow, error) {
+	rows, err := q.db.Query(ctx, duplicateGroupKeys,
+		arg.UserID,
+		arg.RowOffset,
+		arg.RowLimit,
+		arg.Tokens,
+		arg.AccountIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DuplicateGroupKeysRow
+	for rows.Next() {
+		var i DuplicateGroupKeysRow
+		if err := rows.Scan(&i.AccountID, &i.Fingerprint, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const duplicateGroupRows = `-- name: DuplicateGroupRows :many
+SELECT i.account_id::uuid AS account_id, ir.fingerprint::bytea AS fingerprint, ir.import_id, i.filename, i.committed_at,
+       ir.row_index, ir.occurrence, ir.booked_on, ir.value_on, ir.amount_minor, ir.currency, ir.balance_after_minor,
+       ir.payee, ir.description, ir.reference, ir.tx_type, ir.bank_category, ir.counterparty_account, ir.raw,
+       (t.id IS NOT NULL AND t.source_import_id = ir.import_id)::boolean AS in_data
+FROM import_rows ir
+JOIN imports i ON i.id = ir.import_id
+LEFT JOIN transactions t ON t.id = ir.transaction_id AND t.user_id = $1
+WHERE ir.user_id = $1 AND i.user_id = $1 AND i.status = 'committed' AND ir.parse_error IS NULL
+  AND ir.fingerprint = ANY($2::bytea[]) AND i.account_id = ANY($3::uuid[])
+  AND (i.account_id::text || ':' || encode(ir.fingerprint, 'hex')) = ANY($4::text[])
+ORDER BY i.committed_at, i.id, ir.row_index
+`
+
+type DuplicateGroupRowsParams struct {
+	UserID       uuid.UUID
+	Fingerprints [][]byte
+	AccountIds   []uuid.UUID
+	PairKeys     []string
+}
+
+type DuplicateGroupRowsRow struct {
+	AccountID           uuid.UUID
+	Fingerprint         []byte
+	ImportID            uuid.UUID
+	Filename            string
+	CommittedAt         *time.Time
+	RowIndex            int32
+	Occurrence          *int32
+	BookedOn            *platform.Date
+	ValueOn             *platform.Date
+	AmountMinor         *int64
+	Currency            *string
+	BalanceAfterMinor   *int64
+	Payee               *string
+	Description         *string
+	Reference           *string
+	TxType              *string
+	BankCategory        *string
+	CounterpartyAccount *string
+	Raw                 []byte
+	InData              bool
+}
+
+// Every version of the given (account, fingerprint) pairs: the staged rows of committed imports
+// with their file, and whether each row is the one the data shows (its transaction's source).
+// pair_keys are "<account id>:<hex fingerprint>"; the ANY filters narrow the scan first.
+func (q *Queries) DuplicateGroupRows(ctx context.Context, arg DuplicateGroupRowsParams) ([]DuplicateGroupRowsRow, error) {
+	rows, err := q.db.Query(ctx, duplicateGroupRows,
+		arg.UserID,
+		arg.Fingerprints,
+		arg.AccountIds,
+		arg.PairKeys,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DuplicateGroupRowsRow
+	for rows.Next() {
+		var i DuplicateGroupRowsRow
+		if err := rows.Scan(
+			&i.AccountID,
+			&i.Fingerprint,
+			&i.ImportID,
+			&i.Filename,
+			&i.CommittedAt,
+			&i.RowIndex,
+			&i.Occurrence,
+			&i.BookedOn,
+			&i.ValueOn,
+			&i.AmountMinor,
+			&i.Currency,
+			&i.BalanceAfterMinor,
+			&i.Payee,
+			&i.Description,
+			&i.Reference,
+			&i.TxType,
+			&i.BankCategory,
+			&i.CounterpartyAccount,
+			&i.Raw,
+			&i.InData,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const duplicatesSkipped = `-- name: DuplicatesSkipped :one
@@ -333,6 +493,46 @@ func (q *Queries) LinkImportRow(ctx context.Context, arg LinkImportRowParams) er
 		arg.RowIndex,
 	)
 	return err
+}
+
+const listDedupeOverridesFor = `-- name: ListDedupeOverridesFor :many
+SELECT d.account_id, d.fingerprint, d.user_id, d.mode, d.preferred_import_id, d.updated_at FROM dedupe_overrides d
+WHERE d.user_id = $1 AND d.fingerprint = ANY($2::bytea[])
+  AND (d.account_id::text || ':' || encode(d.fingerprint, 'hex')) = ANY($3::text[])
+`
+
+type ListDedupeOverridesForParams struct {
+	UserID       uuid.UUID
+	Fingerprints [][]byte
+	PairKeys     []string
+}
+
+// The overrides of the given (account, fingerprint) pairs.
+func (q *Queries) ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error) {
+	rows, err := q.db.Query(ctx, listDedupeOverridesFor, arg.UserID, arg.Fingerprints, arg.PairKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DedupeOverride
+	for rows.Next() {
+		var i DedupeOverride
+		if err := rows.Scan(
+			&i.AccountID,
+			&i.Fingerprint,
+			&i.UserID,
+			&i.Mode,
+			&i.PreferredImportID,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const overriddenFingerprintsInImport = `-- name: OverriddenFingerprintsInImport :many

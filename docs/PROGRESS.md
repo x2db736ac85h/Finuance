@@ -32,13 +32,13 @@
 - [x] 10.4 `ColumnMenu`, `ColumnsMenu`, legacy `HELP`, value checklist
 - [x] 10.5 `Toolbar` + `Chips`, Clear all, Export
 - [x] 10.6 `Inspector` (fields, raw, sources, category combobox, note, Copy as JSON, prev/next, overlay < 1100 px)
-- [x] 10.7 `StatusBar` (shown/total, columns, period, Σ/avg/min/max, totals picker); the duplicates count becomes a link with 10.13
+- [x] 10.7 `StatusBar` (shown/total, columns, period, Σ/avg/min/max, totals picker, duplicates link)
 - [x] 10.8 keyboard (selection across windows, Esc chain, double-click copy)
 - [x] 10.9 per-view state for `/t/all` and `/t/:accountId`; Account column only in `all`
 - [x] 10.10 groups backend: CRUD + stats, `POST /transactions/bulk` (ids), group in exports
 - [x] 10.11 multi-selection + `QuickBar`
 - [x] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
-- [ ] 10.13 duplicates: `GET /duplicates`, `PUT`/`DELETE /duplicates/{accountId}/{fingerprint}`, `DuplicatesDialog`
+- [x] 10.13 duplicates: `GET /duplicates`, `PUT`/`DELETE /duplicates/{accountId}/{fingerprint}`, `DuplicatesDialog`
 - [ ] 10.14 performance with a 100k-row user (Playwright trace, `docs/perf.md`)
 - [ ] Tests: stores, chips, ColumnMenu + Grid (MSW); E2E table (legacy §26), groups/selection, duplicates; PARITY rows `ported`
 
@@ -190,6 +190,7 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 10.13: `PUT` and `DELETE /duplicates/{accountId}/{fingerprint}` rebuild the fingerprint's transactions in the request (`ledger.SetOverride`/`ClearOverride` already did this in one transaction) and answer `200` with the group as it is now, instead of `202` and a `RematerializeFingerprint` job: one fingerprint is a handful of rows, and the window needs no polling. The job stays for later bulk use. A decision on a key the account has no versions of is `404` (no stray overrides). The window shows the canonical fields (Date, Amount, Payee, Description + every field that differs) with the app's column names, not the bank's headers; versions are listed per import. *Reset choice* undoes *Use this version*. With nothing skipped, the status bar keeps a "duplicates reviewed" link while decided groups exist (legacy), asked only for views with two or more imports.
 - 10.11: `POST /transactions/ids` also returns each row's `groupId`, so a range selected across unloaded windows knows whether *Ungroup* applies. A range is capped at 5,000 rows (the bulk limit) with a toast. The selection lives in `stores/selectionStore` per view and is cleared when the result changes, on Esc (before the row selection), on a plain click and when the view closes.
 - 10.12: group delete asks in a window (the legacy used `confirm()`); after editing a group from the menu the menu opens again (legacy). The Group column is visible by default once a group exists.
 - 10.10: `POST /transactions/bulk` takes `set: {groupId}` with `groupId` required and nullable (`null` = ungroup), so the generated types can tell "ungroup" from "not sent"; category and transfer join in Phase 15. `PATCH /groups/{id}` keeps the colour when none is sent. Group stats count money out and in over all accounts with transfers included (legacy `groupStats`), in the most common currency of the group's transactions.
