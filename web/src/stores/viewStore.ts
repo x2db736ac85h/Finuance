@@ -12,6 +12,8 @@ export type ViewState = PersistedView & {
   filters: Partial<Record<Column, FilterState>>;
   search: string;
   selectedId: string | null;
+  /** The selected row's position in the result, when known (status bar, inspector). */
+  selectedIndex: number | null;
   ovMonth: string | null;
 };
 
@@ -37,6 +39,7 @@ export const newView = (id = 'all'): ViewState => ({
   hidden: id === 'all' ? [...DEFAULT_HIDDEN] : [...DEFAULT_HIDDEN, 'account'],
   widths: {},
   selectedId: null,
+  selectedIndex: null,
   statColumn: 'amount',
   period: 'all',
   custom: null,

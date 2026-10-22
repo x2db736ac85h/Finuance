@@ -18,6 +18,7 @@ export type Db = {
   imports: Schemas['ImportSummary'][];
   /** Rows the fake query endpoint pages through (no filtering). */
   transactions: Schemas['TransactionRow'][];
+  duplicatesSkipped: number;
   queries: Schemas['TransactionQuery'][];
   puts: Schemas['Preferences'][];
 };
@@ -37,6 +38,7 @@ export const freshDb = (): Db => ({
   sessions: [],
   imports: [],
   transactions: [],
+  duplicatesSkipped: 0,
   queries: [],
   puts: [],
 });
@@ -88,13 +90,21 @@ export const server = setupServer(
     const offset = q.offset;
     const rows = db.transactions.slice(offset, offset + q.limit);
     if (!q.includeTotals) return HttpResponse.json({ rows, offset });
-    const sum = db.transactions.reduce((n, r) => n + r.amount.amountMinor, 0);
+    const column = q.statColumn ?? 'amount';
+    const xs = db.transactions.flatMap((r) => {
+      const m = column === 'amount' ? r.amount : r.balanceAfter;
+      return m ? [m.amountMinor] : [];
+    });
+    const sum = xs.reduce((n, x) => n + x, 0);
+    const stats = xs.length
+      ? { column, sum, avg: Math.round(sum / xs.length), min: Math.min(...xs), max: Math.max(...xs) }
+      : { column };
     return HttpResponse.json({
       rows,
       offset,
       total: db.transactions.length,
-      duplicatesSkipped: 0,
-      ...(db.transactions.length ? { stats: { column: 'amount', sum } } : {}),
+      duplicatesSkipped: db.duplicatesSkipped,
+      stats,
     });
   }),
   http.post(`${API}/auth/logout`, () => {

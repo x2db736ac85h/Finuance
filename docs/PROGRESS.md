@@ -26,15 +26,15 @@
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
-- [ ] 10.1 `useQueryContext(viewId)` (debounced search 120 ms / conditions 160 ms, `ctxKey`)
-- [ ] 10.2 `Grid` (§7.7: 200-row windows, skeletons, measured row height, sticky header + gutter, widths × uiScale, resize, sort cycle, badges, empty row); `includeTotals: false` after the first window
-- [ ] 10.3 `hl()` port (`table/highlight.tsx`)
-- [ ] 10.4 `ColumnMenu`, `ColumnsMenu`, legacy `HELP`, value checklist
-- [ ] 10.5 `Toolbar` + `Chips`, Clear all, Export
-- [ ] 10.6 `Inspector` (fields, raw, sources, category combobox, note, Copy as JSON, prev/next, overlay < 1100 px)
-- [ ] 10.7 `StatusBar` (shown/total, columns, period, Σ/avg/min/max, totals picker, duplicates link)
-- [ ] 10.8 keyboard (selection across windows, Esc chain, double-click copy)
-- [ ] 10.9 per-view state for `/t/all` and `/t/:accountId`; Account column only in `all`
+- [x] 10.1 `useQueryContext(viewId)` (debounced search 120 ms / conditions 160 ms, `ctxKey`)
+- [x] 10.2 `Grid` (§7.7: 200-row windows, skeletons, measured row height, sticky header + gutter, widths × uiScale, resize, sort cycle, badges, empty row); `includeTotals: false` after the first window
+- [x] 10.3 `hl()` port (`table/highlight.tsx`)
+- [x] 10.4 `ColumnMenu`, `ColumnsMenu`, legacy `HELP`, value checklist
+- [x] 10.5 `Toolbar` + `Chips`, Clear all, Export
+- [x] 10.6 `Inspector` (fields, raw, sources, category combobox, note, Copy as JSON, prev/next, overlay < 1100 px)
+- [x] 10.7 `StatusBar` (shown/total, columns, period, Σ/avg/min/max, totals picker); the duplicates count becomes a link with 10.13
+- [x] 10.8 keyboard (selection across windows, Esc chain, double-click copy)
+- [x] 10.9 per-view state for `/t/all` and `/t/:accountId`; Account column only in `all`
 - [ ] 10.10 groups backend: CRUD + stats, `POST /transactions/bulk` (ids), group in exports
 - [ ] 10.11 multi-selection + `QuickBar`
 - [ ] 10.12 groups UI (menu, form, inspector pills, Group column, rename follows filters)
@@ -190,6 +190,10 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 10.2: grid amounts are formatted with `fmtMoney` in the browser locale (the legacy showed the CSV text as is), because amounts are stored as minor units now. Dates use `dd.mm.yyyy`.
+- 10.5/10.9: each view starts with the plan's default hidden columns (Account only in `all`); the "N hidden" chip counts only columns hidden beyond those defaults, and removing it restores them.
+- 10.6: the inspector lives in `table/` next to the grid it reads from (the plan lists `shell/Inspector`). Its "N / total" position shows only while the row is in a loaded window; Balance after and Group appear only when the transaction has them. The category picker is a combobox: pick, create by name, or "Use the bank's category" (`resetCategory`) for a category set by hand.
+- 10.7: totals are shown in the currency of the view's first row; the server sums minor units, so a mixed-currency "all" view adds them as they are (as the legacy summed numbers). A stored *Balance after* totals column falls back to Amount when the view has no balances (legacy).
 - 9.2: an upload goes into the account in view (`/t/:accountId`) when there is one. Files without an own-account number (the overlap fixtures, most CSVs made by hand) could otherwise never use the fast path, which needs a resolved account; the server still pre-fills one from the file's account number on `/t/all`.
 - 9.3: opening `/imports/:id` for a previewed import re-reads it with `PATCH {}` (the API has no read-only full preview); after an upload the window starts from the upload's answer. `ImportPreview.detected` was added for the role menu's *auto* hints. A committed import opens with its stored rows; changes apply with *Reprocess*.
 - 9.4: `POST /imports/{id}/commit` accepts a failed import again (*Try again*).

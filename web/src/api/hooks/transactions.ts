@@ -1,6 +1,7 @@
-// Transactions beyond the grid windows (table/data.ts): value checklists, export.
+// Transactions beyond the grid windows (table/data.ts): value checklists, export, the inspector's
+// detail and edits, categories.
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, data, type Schemas } from '../client';
 import { keys } from '../keys';
@@ -35,4 +36,43 @@ export async function exportCsv(body: ExportRequest): Promise<{ blob: Blob; file
   const cd = r.response.headers.get('Content-Disposition') ?? '';
   const m = /filename="?([^";]+)"?/i.exec(cd);
   return { blob, filename: m?.[1] ?? 'transactions.csv' };
+}
+
+export type TransactionDetail = Schemas['TransactionDetail'];
+export type TransactionPatch = Schemas['TransactionPatch'];
+export type Category = Schemas['Category'];
+
+/** GET /transactions/{id}: every field, the original row and its sources (the inspector). */
+export function useTransaction(id: string | null) {
+  return useQuery({
+    queryKey: keys.transaction(id ?? ''),
+    queryFn: async () => data(await api.GET('/transactions/{id}', { params: { path: { id: id ?? '' } } })),
+    enabled: !!id,
+  });
+}
+
+/**
+ * PATCH /transactions/{id}: category (pick, create by name, or back to the bank's) and note. The
+ * answer replaces the cached detail; grid windows and categories refetch.
+ */
+export function usePatchTransaction(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: TransactionPatch) =>
+      data(await api.PATCH('/transactions/{id}', { params: { path: { id } }, body })),
+    onSuccess: (detail) => {
+      qc.setQueryData(keys.transaction(id), detail);
+      for (const k of [keys.tx, keys.categories, keys.insight, keys.overview])
+        void qc.invalidateQueries({ queryKey: k });
+    },
+  });
+}
+
+/** GET /categories (all accounts): names for the inspector's category picker. */
+export function useCategories() {
+  return useQuery({
+    queryKey: keys.categories,
+    queryFn: async () => data(await api.GET('/categories')),
+    staleTime: 60_000,
+  });
 }

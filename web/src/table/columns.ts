@@ -83,6 +83,11 @@ export const HELP: Record<ColumnType, { codes: string[]; text?: string }[]> = {
   date: [{ codes: ['>=01.03.2025', '2025-03', '2024', '01.2025..03.2025', '<2025'] }],
 };
 
+/** Whether a view's rows carry balances (Balance after is offered only then, legacy rule). */
+export function hasBalance(rows: readonly Row[] | undefined): boolean {
+  return !!rows?.some((r) => r.balanceAfter !== undefined);
+}
+
 export type Availability = { groups: boolean; balance: boolean };
 
 /**

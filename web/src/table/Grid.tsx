@@ -248,11 +248,11 @@ function cell(c: ColumnDef, text: string, tokens: readonly string[]): ReactNode 
   return hl(text, tokens);
 }
 
-/** Double-click a cell: copy its value (legacy). */
-export async function copyText(text: string): Promise<void> {
+/** Double-click a cell: copy its value (legacy). `done` replaces the toast text. */
+export async function copyText(text: string, done?: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
-    toast(text ? `Copied “${text.length > 40 ? `${text.slice(0, 40)}…` : text}”` : 'Copied an empty value');
+    toast(done ?? (text ? `Copied “${text.length > 40 ? `${text.slice(0, 40)}…` : text}”` : 'Copied an empty value'));
   } catch {
     toast("Couldn't copy: the browser blocked the clipboard.", { kind: 'error' });
   }
