@@ -1,0 +1,54 @@
+// The auth gate (PLAN §7.3): loads GET /me, then GET /preferences, hydrates the stores and starts
+// the preferences sync before the app renders, so defaults never overwrite saved preferences
+// (legacy S.booted). A 401 is sent to /login?next=… by the API client.
+
+import { useEffect, type ReactNode } from 'react';
+
+import { ApiError } from '../api/client';
+import { useMe, type User } from '../api/hooks/me';
+import { usePrefs } from '../api/hooks/prefs';
+import { errorMessage } from '../lib/errors';
+import { startPrefsSync, usePrefsReady } from '../stores/persist';
+import { useAppearance } from '../shell/effects';
+import { Button } from '../ui/Button';
+import { toast } from '../ui/toastStore';
+
+export function RequireAuth({ children }: { children: (user: User) => ReactNode }) {
+  const me = useMe();
+  const prefs = usePrefs(me.isSuccess);
+  const readyFor = usePrefsReady((s) => s.userId);
+  const userId = me.data?.id;
+  const doc = prefs.data;
+
+  useEffect(() => {
+    if (!userId || !doc) return;
+    return startPrefsSync(userId, doc, () => {
+      toast("Your settings couldn't be saved. They'll be saved with your next change.", { kind: 'error' });
+    });
+  }, [userId, doc]);
+
+  const failed = me.error ?? prefs.error;
+  if (failed && !(failed instanceof ApiError && failed.status === 401)) return <BootError error={failed} />;
+  if (!me.data || readyFor !== me.data.id) return <div className="app booting" />;
+  return children(me.data);
+}
+
+function BootError({ error }: { error: Error }) {
+  useAppearance();
+  return (
+    <main className="auth">
+      <div className="dz lockcard" role="alert">
+        <h2>Finuance couldn't start</h2>
+        <p>{errorMessage(error)}</p>
+        <Button
+          variant="primary"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
+          Try again
+        </Button>
+      </div>
+    </main>
+  );
+}

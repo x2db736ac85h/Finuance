@@ -20,24 +20,24 @@
 - Phase 6: `POST /imports` **pre-fills `accountId`** when the own-account column matches exactly one account by its last 4 digits (the user can change it; the fast path relies on it). Defaults: `seed-demo` refuses if the user already has a demo account; deleting an account's last import keeps the account; only `POST /imports` gets the `FINUANCE_MAX_UPLOAD_BYTES` body limit, everything else stays at 1 MiB.
 - Phase 7: exact-match text filters (`=v`) compare whitespace-collapsed normalised values, so `=KINO POD GWIAZDAMI WARSZAWA` matches the padded bank value (legacy: no match; ALLOWED_DIFFS row 12). Amounts and dates read as text (the text fallback on number/date columns, the value checklist, `excluded`, export) use one fixed format: `-79,99` (comma decimals, no thousands separator) and `dd.mm.yyyy`.
 - Phase 7 gate: **`textlike` is marked LEAKPROOF** in `bootstrap.sql` (option a), so search uses the trigram index under RLS; existing databases need the one-line `ALTER FUNCTION` once (docs/perf.md). **`includeTotals: false`** added to `POST /transactions/query` for scrolling windows.
-- Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 6.0.x (typescript-eslint supports < 6.1). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
+- Phase 8: dev dependencies `@types/react`, `@types/react-dom` and `@eslint/js` approved (beyond §7.2). TypeScript is pinned to 5.9.3 (openapi-typescript 7 needs `typescript ^5`). `POST /demo-data` commits inline through `ledger.SeedDemo` (no job), so the account is ready when the request returns.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
-- [ ] 8.1 scaffold `web/` (Vite, React, TS strict, ESLint, Prettier, Vitest, Playwright config, `/api` proxy, `make dev-web`)
-- [ ] 8.2 API client: `openapi-typescript` in `make gen`, `openapi-fetch` client (CSRF header, Problem errors, 401 → `/login?next=`), hooks
-- [ ] 8.3 styles: `tokens.css` (verbatim), `base.css` (rem), `scale.ts` (auto heuristic), `theme.ts`
-- [ ] 8.4 `Icon` (legacy SVG set), `Logo`, favicon
-- [ ] 8.5 UI primitives + dev-only `/__ui`
-- [ ] 8.6 shell: TitleBar, Sidebar (accounts, auto-collapse), StatusBar, EmptyState, DropOverlay, keyboard manager
-- [ ] 8.7 auth pages, user menu, `RequireAuth` with the prefs gate
-- [ ] 8.8 `uiStore`, `viewStore`, `usePreferencesSync` (hydrate, debounce, 409 merge)
-- [ ] 8.9 settings pages: appearance, profile, sessions, data
+- [x] 8.1 scaffold `web/` (Vite, React, TS strict, ESLint, Prettier, Vitest, Playwright config, `/api` proxy, `make dev-web`)
+- [x] 8.2 API client: `openapi-typescript` in `make gen`, `openapi-fetch` client (CSRF header, Problem errors, 401 → `/login?next=`), hooks
+- [x] 8.3 styles: `tokens.css` (verbatim), `base.css` (rem), `scale.ts` (auto heuristic), `theme.ts`
+- [x] 8.4 `Icon` (legacy SVG set), `Logo`, favicon
+- [x] 8.5 UI primitives (Popover, Menu, Modal, Toast queue, Tooltip, Button, IconButton, inputs, Kbd) + dev-only `/__ui` (not in production builds)
+- [x] 8.6 shell: TitleBar, Sidebar (accounts, auto-collapse), StatusBar, EmptyState, DropOverlay, keyboard manager
+- [x] 8.7 auth pages, user menu, `RequireAuth` with the prefs gate
+- [x] 8.8 `uiStore`, `viewStore`, preferences sync (hydrate, 500 ms debounce, 409: server wins + local changes re-applied, one retry)
+- [x] 8.9 settings pages: appearance, profile, sessions, data
 - [ ] 8.10 `POST /demo-data` + "Load demo data"
 - [ ] 8.11 web image (nginx, CSP, caching, `/api` proxy), Compose `web`, `compose.prod.yaml`
 - [ ] 8.12 CI `web` job (lint, typecheck, test, build, bundle size)
 - [ ] 8.13 E2E: `compose.ci.yaml`, CI `e2e` job, first spec
-- [ ] 8.14 SettingsPopover, KeyboardShortcuts dialog
+- [x] 8.14 SettingsPopover, KeyboardShortcuts dialog
 - [ ] Gate: legacy vs new screenshots (dark/light)
 
 ## Phase 7 tasks (done)
@@ -157,6 +157,11 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 8.1: TypeScript 5.9.3 rather than the newest release: openapi-typescript 7.13 declares `typescript ^5` as a peer. The Icon parity test reads `legacy/finuance.html` with a Vite `?raw` import; `server.fs.allow: ['..']` is set only in test mode.
+- 8.8: the preferences document keeps the legacy `collectPrefs` key names (`theme`, `ui`, `vizH`, `noViz`, `sbOpen`, `cards`, `cardOrder`, `cfg`, `ai`, `views`), plus `importFastPath`, so a legacy backup's prefs map onto it directly in Phase 14. Every stored document goes through `parsePrefs`, which drops unknown values; keys this build doesn't know are kept on save. The sync is a plain class (`stores/prefsSync.ts`) started by `RequireAuth`, not a React hook, so it can be unit-tested with fake timers.
+- 8.6: until the import UX (Phase 9), ⌘O, Browse, the mini drop zone and drag & drop open the picker or the overlay and then show a toast that import isn't available yet. The assistant button toggles its (persisted) state; the panel is Phase 13. Table and overview routes show the toolbar and a placeholder.
+- 8.6: the title bar has an account button (initial of the name) that opens Profile, Sessions and Sign out; the legacy app had no user menu. Its styles, the sign-in card, the settings pages and the gallery live in `styles/finuance.css`, built from the legacy tokens.
+- 8.10: `ledger.SeedDemo` returns a `DemoSeed` (account, import id, commit result) so `POST /demo-data` can answer with the ids and the transaction count.
 - 7.2: SQL fragments live in `query/columns.go` (the registry) and `query/compile.go` as well as `query/sql.go`; the whole `internal/query` package is the SQL builder, and the store guard allows that package. The registry also gives each column a display text (`-79,99`, `dd.mm.yyyy`), used by the text fallback, the value checklist, `excluded` and exports (Irwin's decision).
 - 7.2: number conditions compare exact `numeric` values in major units (scaled per row by the currency's exponent), not `amount_minor` against a converted operand, so a mixed-currency view stays correct.
 - 7.2/7.7: text with a NUL character (JSON allows `\u0000`) is `422`. PostgreSQL rejects NUL in text, so before this fix a NUL character reached the database and gave a `500`. `FuzzQueryDB` found it. The ledger maps SQLSTATE 22021 to `ErrInvalid`, and display names are checked too.

@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { api, ApiError, data, setUnauthenticatedHandler } from './client';
+import { api, ApiError, data, loginPath, setUnauthenticatedHandler } from './client';
 
 const base = `${window.location.origin}/api/v1`;
 const server = setupServer();
@@ -48,13 +48,18 @@ describe('api client', () => {
     expect(err.status).toBe(502);
   });
 
-  it('routes 401 to the login page with next', async () => {
+  it('routes 401 to the unauthenticated handler', async () => {
     const go = vi.fn();
     setUnauthenticatedHandler(go);
-    window.history.pushState({}, '', '/t/all?x=1');
     server.use(http.get(`${base}/me`, () => problem(401, 'unauthenticated')));
     await expect(api.GET('/me')).rejects.toBeInstanceOf(ApiError);
-    expect(go).toHaveBeenCalledWith('/t/all?x=1');
+    expect(go).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds the login path with next, except on the auth pages', () => {
+    expect(loginPath('/t/all?x=1')).toBe('/login?next=%2Ft%2Fall%3Fx%3D1');
+    expect(loginPath('/login?next=%2F')).toBeNull();
+    expect(loginPath('/signup')).toBeNull();
   });
 
   it('does not redirect for a failed login', async () => {

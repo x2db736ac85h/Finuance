@@ -27,12 +27,19 @@ export class ApiError extends Error {
 /** Routes that answer 401 as part of their own flow (wrong credentials), not "signed out". */
 const OWN_401 = ['/auth/login', '/auth/signup'];
 
-let onUnauthenticated: (next: string) => void = (next) => {
-  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+/** The sign-in page, coming back to `here` afterwards; null when already on an auth page. */
+export function loginPath(here: string): string | null {
+  if (here.startsWith('/login') || here.startsWith('/signup')) return null;
+  return `/login?next=${encodeURIComponent(here)}`;
+}
+
+let onUnauthenticated: () => void = () => {
+  const to = loginPath(window.location.pathname + window.location.search);
+  if (to) window.location.assign(to);
 };
 
 /** The router replaces the default full-page redirect with a client-side navigation. */
-export function setUnauthenticatedHandler(fn: (next: string) => void): void {
+export function setUnauthenticatedHandler(fn: () => void): void {
   onUnauthenticated = fn;
 }
 
@@ -57,10 +64,7 @@ export const errorMiddleware: Middleware = {
   async onResponse({ response, schemaPath }) {
     if (response.ok) return response;
     const problem = await toProblem(response);
-    if (response.status === 401 && !OWN_401.includes(schemaPath)) {
-      const here = window.location.pathname + window.location.search;
-      if (!here.startsWith('/login') && !here.startsWith('/signup')) onUnauthenticated(here);
-    }
+    if (response.status === 401 && !OWN_401.includes(schemaPath)) onUnauthenticated();
     throw new ApiError(problem);
   },
 };
