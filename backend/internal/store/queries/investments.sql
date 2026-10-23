@@ -33,3 +33,7 @@ RETURNING *;
 
 -- name: DeleteInvestmentPosition :execrows
 DELETE FROM investment_positions WHERE user_id = @user_id AND id = @id;
+
+-- name: DeleteInvestmentPositions :exec
+-- PUT /investments replaces the whole list in one transaction.
+DELETE FROM investment_positions WHERE user_id = @user_id;

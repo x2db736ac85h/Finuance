@@ -54,6 +54,8 @@ type Querier interface {
 	// Re-staging (PATCH / reprocess) and the first step of deleting an import.
 	DeleteImportRows(ctx context.Context, arg DeleteImportRowsParams) (int64, error)
 	DeleteInvestmentPosition(ctx context.Context, arg DeleteInvestmentPositionParams) (int64, error)
+	// PUT /investments replaces the whole list in one transaction.
+	DeleteInvestmentPositions(ctx context.Context, userID uuid.UUID) error
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
 	DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphanTransactionsParams) (int64, error)

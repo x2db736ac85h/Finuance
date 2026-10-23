@@ -75,6 +75,16 @@ func (q *Queries) DeleteInvestmentPosition(ctx context.Context, arg DeleteInvest
 	return result.RowsAffected(), nil
 }
 
+const deleteInvestmentPositions = `-- name: DeleteInvestmentPositions :exec
+DELETE FROM investment_positions WHERE user_id = $1
+`
+
+// PUT /investments replaces the whole list in one transaction.
+func (q *Queries) DeleteInvestmentPositions(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteInvestmentPositions, userID)
+	return err
+}
+
 const getInvestmentProfile = `-- name: GetInvestmentProfile :one
 
 SELECT user_id, ppk_employee_minor, ppk_employer_minor, ppk_state_minor, ppk_value_minor, swr_bp, real_return_bp, version, updated_at FROM investment_profile WHERE user_id = $1

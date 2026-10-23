@@ -166,5 +166,49 @@
     });
   }
 
-  window.__oracle = {iso, ingest, corpus, dedupe, txKeysOf, filters, recurringAndPeriods, assistant, investments, charts, assignDemoGroups, load, entry, bytes};
+
+  // The overview on the demo dataset for each case: the context behind the KPIs, every card's
+  // table twin and subtitle in the card (big = false) and in the window (big = true), and the
+  // highlight sentences. Investment cards are recorded separately (investments()).
+  function overview(b64, cases){
+    demoDataset(b64);
+    let el = document.getElementById('oracle-chart');
+    if (!el){ el = document.createElement('div'); el.id = 'oracle-chart'; el.style.cssText = 'position:fixed;left:0;top:0;width:900px;height:420px;z-index:99999;background:#000'; document.body.appendChild(el); }
+    const defaults = {...S.cfg};
+    const ym = t => iso(t).slice(0, 7);
+    const mOf = (o) => ({inc: o.inc, exp: o.exp, n: o.n});
+    return cases.map(cs => {
+      const v = L.view();
+      v.period = 'all'; v.custom = null;
+      v.search = cs.search || '';
+      v.filters = Object.fromEntries(Object.entries(cs.filters || {}).map(([k, cond]) => [k, {cond, excluded: new Set()}]));
+      v.ovMonth = cs.month ? Date.parse(cs.month + '-01T00:00:00Z') : null;
+      S.cfg = {...defaults, ovMonths: cs.ovMonths};
+      S.budgets = {...(cs.budgets || {})};
+      S.opening = cs.opening || 0;
+      L.compute();
+      const c = L.ovCtx();
+      const ctx = {M: ym(c.M), P: ym(c.P), fm: ym(c.fm), lm: ym(c.lm), dmax: iso(c.dmax), partial: !!c.partial, elapsed: c.elapsed, dim: c.dim,
+        prevToDate: c.prevToDate, nAvg: c.nAvg, avgExp: c.avgExp, avgInc: c.avgInc, cur: mOf(c.cur), prev: mOf(c.prev),
+        avg3: Object.fromEntries([...c.avg3.entries()].sort()), last12: c.last12.map(t => ({month: ym(t), ...mOf(c.get(t))})),
+        cats: Object.fromEntries([...c.cur.cats.entries()].sort()), src: Object.fromEntries([...c.cur.src.entries()].sort()),
+        colors: Object.fromEntries([...c.colors.entries()].sort()),
+        recurring: c.recurring.map(r => ({...r, last: iso(r.last), next: iso(r.next)}))};
+      const cards = {};
+      for (const k of ['o_high', 'o_flow', 'o_budget', 'o_recur', 'o_sankey', 'o_top', 'o_savings', 'o_week', 'o_balance']){
+        const out = {};
+        for (const big of [false, true]){
+          const sub = document.createElement('span'), cx = document.createElement('span'), cfg = document.createElement('div');
+          const r = L.drawChart(k, el, c, {sub, cx, cfg, big});
+          const o = {sub: sub.textContent, table: r.table};
+          if (k === 'o_high') o.lines = [...el.querySelectorAll('li.hl')].map(li => ({kind: li.className.replace('hl ', ''), text: li.textContent.slice(1)}));
+          out[big ? 'big' : 'card'] = o;
+        }
+        cards[k] = out;
+      }
+      return {name: cs.name, ctx, cards};
+    });
+  }
+
+  window.__oracle = {iso, ingest, corpus, dedupe, txKeysOf, filters, recurringAndPeriods, assistant, investments, charts, overview, assignDemoGroups, load, entry, bytes};
 })();

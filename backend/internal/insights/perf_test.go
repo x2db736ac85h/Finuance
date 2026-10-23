@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	demogen "github.com/x2db736ac85h/finuance/backend/internal/demo"
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
+	"github.com/x2db736ac85h/finuance/backend/internal/investments"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 )
 
@@ -21,18 +24,7 @@ func TestInsightsPerf(t *testing.T) {
 	if os.Getenv("FINUANCE_PERF") == "" {
 		t.Skip("set FINUANCE_PERF=1")
 	}
-	e := newEnv(t)
-	e.u = e.user()
-	total := 0
-	for k := range 14 {
-		start := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, 7*k)
-		csv := demogen.CSV(start, start.AddDate(10, 0, 0))
-		total += strings.Count(csv, "\n")
-		e.importFile(e.u, fmt.Sprintf("Account %02d", k+1), []byte(csv))
-	}
-	if _, err := testDB.Owner.Exec(e.ctx, "VACUUM ANALYZE"); err != nil {
-		t.Fatal(err)
-	}
+	e, total := perfEnv(t)
 
 	shapes := []struct {
 		name string
@@ -91,6 +83,69 @@ func TestInsightsPerf(t *testing.T) {
 		}
 		slices.Sort(sums)
 		fmt.Fprintf(&out, " %s |\n", ms(sums[len(sums)/2]))
+	}
+	t.Log("\n" + out.String())
+	if p := os.Getenv("FINUANCE_PERF_OUT"); p != "" {
+		if err := os.WriteFile(p, []byte(out.String()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// perfEnv seeds a user with 14 accounts of 10 years of demo data each (~108k transactions).
+func perfEnv(t *testing.T) (*env, int) {
+	e := newEnv(t)
+	e.u = e.user()
+	total := 0
+	for k := range 14 {
+		start := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, 7*k)
+		csv := demogen.CSV(start, start.AddDate(10, 0, 0))
+		total += strings.Count(csv, "\n")
+		e.importFile(e.u, fmt.Sprintf("Account %02d", k+1), []byte(csv))
+	}
+	if _, err := testDB.Owner.Exec(e.ctx, "VACUUM ANALYZE"); err != nil {
+		t.Fatal(err)
+	}
+	return e, total
+}
+
+// TestOverviewPerf (PLAN Phase 12, docs/perf.md "Overview") times POST /overview's service call
+// on the same user for each view shape. Opt-in as TestInsightsPerf.
+func TestOverviewPerf(t *testing.T) {
+	if os.Getenv("FINUANCE_PERF") == "" {
+		t.Skip("set FINUANCE_PERF=1")
+	}
+	e, total := perfEnv(t)
+	accs, err := e.l.ListAccounts(e.ctx, e.u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shapes := []struct {
+		name   string
+		c      query.Context
+		months int
+	}{
+		{"all accounts, latest month, 12 months", query.Context{}, 12},
+		{"all accounts, 36 months", query.Context{}, 36},
+		{"one account", query.Context{AccountIDs: []uuid.UUID{accs[0].ID}}, 12},
+		{"category != Mieszkanie", query.Context{Filters: []query.Filter{{Column: "category", Cond: "!Mieszkanie"}}}, 12},
+		{"search \"blik warszawa\"", query.Context{Search: "blik warszawa"}, 12},
+	}
+	var out strings.Builder
+	fmt.Fprintf(&out, "%d transactions in 14 accounts; p50 / p95 of 20 runs (first discarded)\n\n| Shape | overview |\n|---|---|\n", total)
+	for _, s := range shapes {
+		var times []time.Duration
+		for i := range 21 {
+			t0 := time.Now()
+			if _, err := e.svc.Overview(e.ctx, e.u, s.c, nil, s.months, investments.Empty()); err != nil {
+				t.Fatal(err)
+			}
+			if i > 0 {
+				times = append(times, time.Since(t0))
+			}
+		}
+		slices.Sort(times)
+		fmt.Fprintf(&out, "| %s | %s / %s |\n", s.name, ms(times[len(times)/2]), ms(times[len(times)*95/100]))
 	}
 	t.Log("\n" + out.String())
 	if p := os.Getenv("FINUANCE_PERF_OUT"); p != "" {

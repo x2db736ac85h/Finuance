@@ -750,6 +750,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Everything the overview page shows for one month
+         * @description One call per screen (PLAN §4.6, legacy ovCtx and the o_* cards). The overview reads the context's filters and search but never its period. Lists are complete (e.g. every budget row, up to 40 largest expenses); the client cuts them for the card and the window. Without dated rows `data` is absent.
+         */
+        post: operations["overview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/budgets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The budgets set by hand
+         * @description Monthly limits per category (global per category, legacy). Categories without one use the default budget.
+         */
+        get: operations["listBudgets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/budgets/{categoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set or reset a category's budget
+         * @description `amountMinor: null` removes the budget (back to the default); removing a budget that isn't set is not an error.
+         */
+        put: operations["putBudget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/investments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The manual investment data
+         * @description PPK, positions, safe withdrawal rate and expected real return (PLAN §4.9); version 0 and the defaults before the first save.
+         */
+        get: operations["getInvestments"];
+        /**
+         * Replace the investment data
+         * @description Optimistic concurrency as preferences: send the version you read (0 for the first save). A
+         *     mismatch returns `409 stale_version` with the current document in `current`. Position ids
+         *     come from the client and must be unique.
+         */
+        put: operations["putInvestments"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/demo-data": {
         parameters: {
             query?: never;
@@ -1520,6 +1606,335 @@ export interface components {
              */
             to?: string;
             days: components["schemas"]["DaySpend"][];
+        };
+        OverviewRequest: {
+            context: components["schemas"]["QueryContext"];
+            /** @description The month to show; absent = the latest month with data. A month outside the data is clamped to it. */
+            month?: string;
+            /**
+             * @description How many months the cash-flow, savings-rate and balance cards cover (legacy ovMonths).
+             * @enum {integer}
+             */
+            months: 6 | 12 | 24 | 36;
+        };
+        Overview: {
+            /** @description The most common currency of the context's accounts. */
+            currency: string;
+            data?: components["schemas"]["OverviewData"];
+        };
+        MonthTotals: {
+            month: string;
+            /** Format: int64 */
+            incomeMinor: number;
+            /**
+             * Format: int64
+             * @description Money out as a positive number.
+             */
+            expenseMinor: number;
+            /** Format: int64 */
+            count: number;
+        };
+        OverviewData: {
+            month: string;
+            prevMonth: string;
+            /** @description The first month with data (for the month selector). */
+            firstMonth: string;
+            lastMonth: string;
+            /**
+             * Format: date
+             * @description The latest booking date of the context's accounts.
+             */
+            dataMax: string;
+            /** @description The month is the data's last and not complete (the month-in-progress flag). */
+            partial: boolean;
+            /** @description Days of the month with data (all of them unless partial). */
+            elapsedDays: number;
+            daysInMonth: number;
+            current: components["schemas"]["MonthTotals"];
+            previous: components["schemas"]["MonthTotals"];
+            /**
+             * Format: int64
+             * @description The previous month's spending up to the same day of month.
+             */
+            prevToDateMinor: number;
+            /**
+             * Format: int64
+             * @description Partial months only - spending projected to the month's end.
+             */
+            projectedMinor?: number;
+            /** @description How many earlier months (up to 3) the averages and default budgets use. */
+            avgMonths: number;
+            /** @description The `months` setting's range ending at `month` (from the first month with data on), oldest first, every month listed. */
+            months: components["schemas"]["MonthTotals"][];
+            /** @description Budget rows in the card's order (budget, then spending, largest first). */
+            categories: components["schemas"]["BudgetRow"][];
+            /** @description The month's income per payee group, largest first. */
+            incomeSources: components["schemas"]["PayeeSpend"][];
+            /** @description The categories owning a colour (the 7 largest all-time spenders); no `category` = uncategorised. */
+            colorSlots: components["schemas"]["ColorSlot"][];
+            highlights: components["schemas"]["Highlight"][];
+            /** @description Detected recurring payments, active first, then by yearly cost. */
+            recurring: components["schemas"]["RecurringPayment"][];
+            /** @description The month's largest expenses, largest first. */
+            largest: components["schemas"]["OverviewExpense"][];
+            /** @description Spending per weekday over the month and the two before it, Monday first. */
+            weekday: components["schemas"]["WeekdaySpend"][];
+            balance: components["schemas"]["BalanceSeries"];
+            investment: components["schemas"]["InvestmentSummary"];
+            yieldOnCost: components["schemas"]["YieldOnCost"];
+            fire: components["schemas"]["Fire"];
+        };
+        BudgetRow: {
+            category?: components["schemas"]["NamedRef"];
+            /** @description The category's name, or "(uncategorized)" (its budget is always the default). */
+            name: string;
+            /** Format: int64 */
+            curMinor: number;
+            /** Format: int64 */
+            prevMinor: number;
+            /**
+             * Format: int64
+             * @description Average spending of up to three earlier months.
+             */
+            avg3Minor: number;
+            /** Format: int64 */
+            budgetMinor: number;
+            /** @description No budget set by hand; the default is the rounded 3-month average. */
+            budgetIsDefault: boolean;
+            /** @enum {string} */
+            status: "ok" | "ahead" | "over" | "none";
+        };
+        ColorSlot: {
+            category?: components["schemas"]["NamedRef"];
+            slot: number;
+        };
+        /** @description One highlight sentence's facts; the client writes the sentence. Fields a kind doesn't use are 0 or empty. */
+        Highlight: {
+            /** @enum {string} */
+            kind: "projection" | "vsPrev" | "vsAverage" | "topCategory" | "categoryUp" | "categoryDown" | "savings" | "overspend" | "noIncome" | "noSpendDays" | "recurring" | "largest";
+            /** @enum {string} */
+            tone: "info" | "up" | "down" | "good" | "warn";
+            /** Format: int64 */
+            amountMinor: number;
+            /** Format: int64 */
+            otherMinor: number;
+            /** Format: double */
+            pct: number;
+            /** Format: double */
+            avgPct: number;
+            days: number;
+            of: number;
+            months: number;
+            count: number;
+            category: string;
+            payee: string;
+            /** @description vsPrev only - the month compared with. */
+            month?: string;
+            /** @description vsPrev only - compared over the same days of month (partial months). */
+            sameDays: boolean;
+        };
+        RecurringPayment: {
+            /** @description The payee group. */
+            payee: string;
+            /** @description The most frequent category; absent when uncategorised. */
+            category?: string;
+            /**
+             * Format: int64
+             * @description The typical amount, positive.
+             */
+            medianMinor: number;
+            /** Format: date */
+            last: string;
+            /** Format: date */
+            next: string;
+            active: boolean;
+            /** Format: int64 */
+            yearlyMinor: number;
+            count: number;
+        };
+        OverviewExpense: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            bookedOn: string;
+            /** @description As the bank wrote it. */
+            payee: string;
+            payeeGroup: string;
+            category?: components["schemas"]["NamedRef"];
+            /**
+             * Format: int64
+             * @description Negative.
+             */
+            amountMinor: number;
+        };
+        WeekdaySpend: {
+            /** Format: int64 */
+            totalMinor: number;
+            /** @description How many of these weekdays the window has (for the average). */
+            days: number;
+        };
+        /** @description The accounts' balance (opening balances plus every transaction, filters ignored). */
+        BalanceSeries: {
+            /** Format: int64 */
+            openingMinor: number;
+            /**
+             * Format: int64
+             * @description After the last transaction.
+             */
+            nowMinor: number;
+            /** @description The balance at the end of each day with transactions in the months' range. */
+            points: components["schemas"]["BalancePoint"][];
+        };
+        BalancePoint: {
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            balanceMinor: number;
+        };
+        InvestmentRow: {
+            /**
+             * Format: uuid
+             * @description Absent for the PPK row.
+             */
+            id?: string;
+            name: string;
+            type: string;
+            ppk: boolean;
+            /** Format: int64 */
+            investedMinor: number;
+            /** Format: int64 */
+            valueMinor: number;
+            /** Format: int64 */
+            incomeMinor: number;
+            /**
+             * Format: double
+             * @description (value − invested) / invested; absent without money invested.
+             */
+            gainPercent?: number;
+            /** Format: double */
+            allocationShare: number;
+        };
+        InvestmentSummary: {
+            /** @description PPK first, then the positions. */
+            rows: components["schemas"]["InvestmentRow"][];
+            /** Format: int64 */
+            investedMinor: number;
+            /** Format: int64 */
+            valueMinor: number;
+            /** Format: int64 */
+            incomeMinor: number;
+            /** Format: int64 */
+            ppkPaidInMinor: number;
+            /** Format: int64 */
+            ppkGainMinor: number;
+            /**
+             * Format: double
+             * @description (value − own contributions) / own contributions; absent without own contributions.
+             */
+            ppkReturnOnOwn?: number;
+            /** Format: double */
+            gainPercent?: number;
+            /** @description Positions (PPK not counted). */
+            count: number;
+        };
+        YieldRow: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int64 */
+            investedMinor: number;
+            /** Format: int64 */
+            incomeMinor: number;
+            /** Format: double */
+            yield: number;
+        };
+        YieldOnCost: {
+            positions: components["schemas"]["YieldRow"][];
+            /** Format: int64 */
+            investedMinor: number;
+            /** Format: int64 */
+            incomeMinor: number;
+            /**
+             * Format: int64
+             * @description Dividends and interest found in the transactions of the 12 months up to the month.
+             */
+            detectedMinor: number;
+            /** @description No income entered by hand, so the detected income is used. */
+            usesDetected: boolean;
+            /** Format: double */
+            total?: number;
+        };
+        Fire: {
+            /** @description How many months (up to 12) the annual figures come from. */
+            months: number;
+            /** Format: int64 */
+            annualExpensesMinor: number;
+            /** Format: int64 */
+            yearlySavingsMinor: number;
+            /** Format: int64 */
+            fiNumberMinor: number;
+            /** Format: int64 */
+            assetsMinor: number;
+            swrBp: number;
+            realReturnBp: number;
+            /** Format: double */
+            progress: number;
+            /** @description Years to FI; 0 when reached. */
+            years: number;
+            /** @description False when FI isn't reached within 100 years. */
+            reachable: boolean;
+        };
+        Budget: {
+            category: components["schemas"]["NamedRef"];
+            /** Format: int64 */
+            amountMinor: number;
+        };
+        BudgetList: {
+            budgets: components["schemas"]["Budget"][];
+        };
+        BudgetInput: {
+            /**
+             * Format: int64
+             * @description The monthly limit; null resets to the default budget.
+             */
+            amountMinor: number | null;
+        };
+        /** @description Pracownicze Plany Kapitałowe (the Polish employee capital plan). */
+        PPK: {
+            /** Format: int64 */
+            employeeMinor: number;
+            /** Format: int64 */
+            employerMinor: number;
+            /** Format: int64 */
+            stateMinor: number;
+            /** Format: int64 */
+            valueMinor: number;
+        };
+        InvestmentPosition: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Free text (suggestions ETF, stock, bond, deposit, crypto, other). */
+            type: string;
+            /** Format: int64 */
+            investedMinor: number;
+            /** Format: int64 */
+            valueMinor: number;
+            /** Format: int64 */
+            annualIncomeMinor: number;
+        };
+        Investments: {
+            /** Format: int32 */
+            version: number;
+            ppk: components["schemas"]["PPK"];
+            /** @description Safe withdrawal rate in basis points (400 = 4 %). */
+            swrBp: number;
+            /** @description Expected real return in basis points. */
+            realReturnBp: number;
+            positions: components["schemas"]["InvestmentPosition"][];
+        };
+        StaleInvestmentsProblem: components["schemas"]["Problem"] & {
+            current: components["schemas"]["Investments"];
         };
         Money: {
             /**
@@ -2796,6 +3211,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsightDaily"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The overview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listBudgets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Budgets, by category name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    putBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BudgetInput"];
+            };
+        };
+        responses: {
+            /** @description Saved. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getInvestments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Investments"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    putInvestments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Investments"];
+            };
+        };
+        responses: {
+            /** @description Saved; `version` is the new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Investments"];
+                };
+            };
+            /** @description The stored version is not the one sent. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["StaleInvestmentsProblem"];
                 };
             };
             default: components["responses"]["Problem"];

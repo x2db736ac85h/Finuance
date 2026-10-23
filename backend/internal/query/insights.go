@@ -153,7 +153,7 @@ func (in *Insight) Months() ([]MonthFlow, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := in.tx.Query(in.ctx, "SELECT date_trunc('month', t.booked_on)::date AS m,"+
+	rows, err := in.tx.Query(in.ctx, "SELECT date_trunc('month', t.booked_on::timestamp)::date AS m,"+
 		" coalesce(sum(t.amount_minor) FILTER (WHERE t.amount_minor > 0), 0)::bigint,"+
 		" coalesce(sum(-t.amount_minor) FILTER (WHERE t.amount_minor < 0), 0)::bigint, count(*) FROM "+
 		source(c.joins()...)+" WHERE "+w+" GROUP BY 1 ORDER BY 1", c.Args...)

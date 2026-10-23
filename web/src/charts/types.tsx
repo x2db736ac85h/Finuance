@@ -9,7 +9,23 @@ import type { CatMode, ChartCfg, CustomRange, PeriodPref } from '../stores/prefs
 import type { FilterState } from '../stores/viewStore';
 import type { ViewQuery } from '../table/context';
 
-export type ChartKey = 'sum' | 'cat' | 'flow' | 'pace' | 'payee' | 'heat';
+/** The insights pane's charts. */
+export type PaneKey = 'sum' | 'cat' | 'flow' | 'pace' | 'payee' | 'heat';
+/** The overview's cards (legacy OV_DEFS). */
+export type OvKey =
+  | 'o_high'
+  | 'o_flow'
+  | 'o_budget'
+  | 'o_recur'
+  | 'o_fire'
+  | 'o_yoc'
+  | 'o_inv'
+  | 'o_sankey'
+  | 'o_top'
+  | 'o_savings'
+  | 'o_week'
+  | 'o_balance';
+export type ChartKey = PaneKey | OvKey;
 
 /** The table twin: column titles, which columns are numeric (right-aligned) and the rows as text. */
 export type Twin = { cols: string[]; num: boolean[]; rows: string[][] };
@@ -24,10 +40,15 @@ export type ChartActions = {
   /** Selects a transaction in the table, scrolling to it. */
   locate: (id: string) => void;
   setCatMode: (m: CatMode) => void;
+  /** The overview's month (legacy view().ovMonth); null = the latest month with data. */
+  setOvMonth: (month: string | null) => void;
+  /** Switches the view to the table (legacy setMode('table')). */
+  showTable: () => void;
 };
 
 /** Everything a chart needs besides its data. */
 export type ChartEnv = {
+  viewId: string;
   w: number;
   h: number;
   /** In the modal (larger sizes, more months). */
@@ -37,6 +58,8 @@ export type ChartEnv = {
   /** The view's period preference and filters (highlighting and toggles). */
   period: PeriodPref;
   filters: Partial<Record<string, FilterState>>;
+  /** The overview's selected month (YYYY-MM), null for the latest. */
+  ovMonth: string | null;
   actions: ChartActions;
   /** Whether to load data yet: the pane waits for the list's first window (it paints first). */
   ready: boolean;
@@ -65,6 +88,8 @@ export type ChartDef = {
   key: ChartKey;
   title: string;
   cfgControls?: readonly CfgControl[];
+  /** False: the card has no larger view (the overview's highlights). */
+  expandable?: false;
   use: (q: ViewQuery, env: ChartEnv) => ChartParts;
 };
 

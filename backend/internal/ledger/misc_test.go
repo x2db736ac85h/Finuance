@@ -123,6 +123,19 @@ func TestBudgets(t *testing.T) {
 		t.Fatal(err)
 	}
 	isErr(t, e.l.DeleteBudget(e.ctx, u, c.ID), ledger.ErrNotFound)
+	// ClearBudget is idempotent for the owner and not found for anyone else.
+	if err := e.l.SetBudget(e.ctx, u, c.ID, 300); err != nil {
+		t.Fatal(err)
+	}
+	isErr(t, e.l.ClearBudget(e.ctx, other, c.ID), ledger.ErrNotFound)
+	for range 2 {
+		if err := e.l.ClearBudget(e.ctx, u, c.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if b, _ := e.l.ListBudgets(e.ctx, u); len(b) != 0 {
+		t.Errorf("budgets after clear = %+v", b)
+	}
 }
 
 func TestProfiles(t *testing.T) {

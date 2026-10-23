@@ -85,3 +85,31 @@ export function fmtCompact(m: Money): string {
 export function fmtShare(x: number, digits = 0): string {
   return `${(x * 100).toFixed(digits)}%`;
 }
+
+/**
+ * A typed amount as minor units (legacy parseNum for inputs): spaces and a currency code or sign
+ * are ignored, and "1 234,56", "1,234.56", "1234.5" and "-80" all read; extra decimals round half
+ * away from zero. null for anything else (also empty text). Exact: the digits are moved, never
+ * multiplied as floats.
+ */
+export function parseMoneyInput(text: string, currency: string): number | null {
+  let s = text
+    .trim()
+    .replace(/[\s\u00a0\u202f']/g, '')
+    .replace(/^(PLN|EUR|USD|GBP|CHF|zł|\$|€|£)|(PLN|EUR|USD|GBP|CHF|zł|\$|€|£)$/i, '');
+  if (!/^[-+]?[\d.,]+$/.test(s) || !/\d/.test(s)) return null;
+  const lc = s.lastIndexOf(',');
+  const ld = s.lastIndexOf('.');
+  if (lc > -1 && ld > -1) s = lc > ld ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (lc > -1) s = s.split(',').length > 2 ? s.replace(/,/g, '') : s.replace(',', '.');
+  else if (ld > -1 && s.split('.').length > 2) s = s.replace(/\./g, '');
+  const m = /^([-+]?)(\d*)(?:\.(\d*))?$/.exec(s);
+  if (!m) return null;
+  const exp = currencyExponent(currency);
+  const frac = m[3] ?? '';
+  const digits = (m[2] ?? '') + frac.slice(0, exp).padEnd(exp, '0');
+  if (digits.replace(/^0+/, '').length > 15) return null;
+  let v = Number(digits || '0');
+  if ((frac[exp] ?? '0') >= '5') v += 1;
+  return m[1] === '-' && v !== 0 ? -v : v;
+}

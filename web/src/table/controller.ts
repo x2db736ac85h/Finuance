@@ -20,6 +20,8 @@ type State = {
 };
 
 let active: { current: State } | null = null;
+/** A scroll asked for while no table was on screen (a row located from the overview). */
+let pendingScroll: number | null = null;
 
 const viewState = (st: State) => viewOf(useViews.getState().views, st.viewId);
 
@@ -47,6 +49,10 @@ export function useGridController(viewId: string) {
   const setRowSource = useCallback((rows: RowSource) => {
     const st = ref.current;
     st.rows = rows;
+    if (pendingScroll !== null && st.grid && rows.total) {
+      st.grid.scrollToIndex(pendingScroll);
+      pendingScroll = null;
+    }
     if (st.pending !== null) {
       selectAt(st, st.pending);
       return;
@@ -102,7 +108,13 @@ export function escapeSelection(): boolean {
   return true;
 }
 
-/** Scrolls the table on screen to a position (a row located by id, PLAN §7.8). */
+/**
+ * Scrolls the table on screen to a position (a row located by id, PLAN §7.8). Without one, or
+ * before its first window (the overview is switching to the table), the table scrolls there once
+ * its rows arrive.
+ */
 export function scrollToRow(i: number): void {
-  active?.current.grid?.scrollToIndex(i);
+  const st = active?.current;
+  if (st?.grid && st.rows?.total) st.grid.scrollToIndex(i);
+  else pendingScroll = i;
 }

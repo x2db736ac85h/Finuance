@@ -274,3 +274,52 @@ scans that an index can't shortcut, and they stay well within the budget at this
 started before the list's own and, over HTTP/1.1, the browser allows six requests per host, so the
 list waited. The charts now load once the list's first window has arrived (`ChartEnv.ready`); later
 filter changes send all seven at once (above). Behind TLS (HTTP/2, Phase 16) the limit goes away.
+
+## Overview: 100k rows (Phase 12)
+
+**Setup.** `TestOverviewPerf` (`internal/insights/perf_test.go`, opt-in with `FINUANCE_PERF=1`)
+seeds the same 108,098-transaction user and times `insights.Overview` (everything
+`POST /overview` returns, one read-only transaction), 20 runs after a warm-up.
+
+### Results — 2026-10-23, cloud sandbox (4 vCPU, Postgres 18.6 in Docker)
+
+| Shape | p50 / p95 |
+|---|---|
+| all accounts, latest month, 12 months | 192 / 216 ms |
+| all accounts, 36 months | 198 / 218 ms |
+| one account | 55 / 68 ms |
+| category != Mieszkanie | 296 / 317 ms |
+| search "blik warszawa" | 164 / 198 ms |
+
+**Reading.** One call stands in for the twelve cards, so it is compared with the §7.12 budget for a
+screen (≤ 300 ms) rather than with the 150 ms per insight call. The service call meets it except with
+the negated category filter (317 ms p95); in the browser, through nginx and the Compose database, a
+month step takes 428 ms p50, nearly all of it the server (drawing is ~41 ms). Both are above the
+budget in this sandbox and need the homelab measurement. Four statements read every base row
+(months, colour slots, recurring candidates, balance); in this sandbox the transactions table
+(≈ 140 MB) doesn't fit the container's 128 MB of shared buffers, so each of them is a ~65 ms
+sequential read. The negated category filter is the slowest shape because nearly every row passes
+it. A larger `shared_buffers` on the homelab (Phase 16) is the first lever; the four scans could
+also be folded into fewer statements if a real data set needs it.
+
+Browser (`node tools/perf/overview.mjs --email …`, the 100,870-row user of `tools/perf/grid.mjs`,
+`make up`, headless Chromium at 1440×900; p50 / p95):
+
+| Step | Time |
+|---|---|
+| `POST /overview` through nginx (20 runs) | 310 / 366 ms |
+| table → overview drawn (title-bar button to the balance card painted) | 463 / 481 ms |
+| … of which before the overview request starts | 78 / 81 ms |
+| month step (← to the page idle again) | 428 / 446 ms |
+| … of which drawing after the response | 41 / 50 ms |
+
+The overview's code is a separate chunk (12 KB gzip, PLAN §7.12) loaded 1.5 s after the app starts;
+the overview request starts from the route's small entry component, in parallel with mounting the
+page. A first version loaded the page with `React.lazy`: React holds a resolved Suspense boundary
+back for ~300 ms, and the request only started after it (table → overview 810–1,120 ms).
+
+**What changed.** The first measurement was 315 ms p95 unfiltered and 417 ms with the category
+filter. Recurring detection took 180 ms: it counted months with `count(DISTINCT date_trunc(…))`,
+which sorts per payee. It now counts them with two hash aggregates, and every month truncation
+(`Months`, the per-month categories, recurring) truncates a `timestamp` instead of a `timestamptz`,
+which skips the time-zone conversion per row.

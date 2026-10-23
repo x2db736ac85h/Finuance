@@ -1524,6 +1524,10 @@ table.mt {
   flex: none;
   height: 15rem;
 }
+.ov-empty {
+  grid-column: 1 / -1;
+  padding: 3.75rem 0;
+}
 .ovk {
   grid-column: span 3;
   background: var(--panel);

@@ -13,9 +13,10 @@ export function useChartEnv(viewId: string, w: number, h: number, big: boolean, 
   const catMode = useUi((s) => s.catMode);
   const period = useViews((s) => viewOf(s.views, viewId).period);
   const filters = useViews((s) => viewOf(s.views, viewId).filters);
+  const ovMonth = useViews((s) => viewOf(s.views, viewId).ovMonth);
   const actions = useChartActions(viewId);
   return useMemo(
-    () => ({ w, h, big, cfg, catMode, period, filters, actions, ready }),
-    [w, h, big, cfg, catMode, period, filters, actions, ready],
+    () => ({ viewId, w, h, big, cfg, catMode, period, filters, ovMonth, actions, ready }),
+    [viewId, w, h, big, cfg, catMode, period, filters, ovMonth, actions, ready],
   );
 }

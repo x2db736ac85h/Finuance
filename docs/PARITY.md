@@ -96,7 +96,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | `payee` Top payees; ranges `payeeTop` (10/25/50/100/all), `payeeScope` (period / all time); click → payee filter | §14 | 11 | ported |
 | `heat` Daily spending calendar; range `heatRange` (follow / 3 / 6 / 12 months / all); click day → custom period | §14 | 11 | ported |
 | Expanded chart window: Chart/Table switch, range controls, prev/next, Esc / ← / →, backdrop click | §15 `renderModal` | 11 | ported |
-| Table twin for every chart (`c.table`) 🧪: the six pane charts ported in 11 (`TestChartParity` matches every twin on the demo year); the overview cards follow in 12 | §13.2 | 11, 12 | todo |
+| Table twin for every chart (`c.table`) 🧪: the six pane charts ported in 11 (`TestChartParity` matches every twin on the demo year); the overview cards in 12 (`TestOverviewParity`, 11 views; `overview.spec.ts` compares the window tables) | §13.2 | 11, 12 | ported |
 | Tooltips (`tip`) and click actions (`act`), chart → table filter toggle | §13.3 | 11 | ported |
 | Category colours stable by all-time rank (`catColorMap`); > 7 → Other | §19 | 11 | ported |
 
@@ -104,21 +104,21 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Month-centric overview: respects search + column filters but not the table period; "N filters applied · Clear"; month-in-progress flag | §16 | 12 | todo |
-| KPI row: income, spending, net saved + savings rate, avg/day or projected spend; Δ vs previous month; sparklines | §16.2 | 12 | todo |
-| `o_high` Highlights | §16.3 | 12 | todo |
-| `o_flow` Cash flow (range `ovMonths`) | §16.3 | 12 | todo |
-| `o_budget` Budgets: default `roundNice(3-month avg)` 🧪, pace marker, status icons, editable input, total row | §16.3 | 12 | todo |
-| `o_recur` Recurring payments (`findRecurring`) 🧪 | §16.3 | 12 | todo |
-| `o_sankey` Money flow | §16.3 | 12 | todo |
-| `o_top` Largest expenses (12, 40 in modal); click → go to row | §16.3 | 12 | todo |
-| `o_savings` Savings rate (range `ovMonths`) | §16.3 | 12 | todo |
-| `o_week` Spending by weekday | §16.3 | 12 | todo |
-| `o_balance` Account balance = opening + cumulative sum; "Opening" input (range `ovMonths`) | §16.3 | 12 | todo |
-| `o_inv` Investment: allocation bar, PPK (employee, employer, state, value), positions (add/remove); editing in large view 🧪 | §32.4 | 12 | todo |
-| `o_yoc` Yield on cost (PLN), with dividend/interest fallback from transactions 🧪 | §32.4 | 12 | todo |
-| `o_fire` FI/RE number: annual expenses / SWR, progress, years to FI; SWR and real return editable 🧪 | §32.4 | 12 | todo |
-| Layout: 12-column grid, container queries (6/12 ≤ 1100 px, full ≤ 640 px); investment row 3 + 3 + 6 | §16.3, §32.4 | 12 | todo |
+| Month-centric overview: respects search + column filters but not the table period; "N filters applied · Clear"; month-in-progress flag 🧪 | §16 | 12 | ported |
+| KPI row: income, spending, net saved + savings rate, avg/day or projected spend; Δ vs previous month; sparklines | §16.2 | 12 | ported |
+| `o_high` Highlights 🧪 (the server picks the facts, the browser writes the sentences) | §16.3 | 12 | ported |
+| `o_flow` Cash flow (range `ovMonths`) | §16.3 | 12 | ported |
+| `o_budget` Budgets: default `roundNice(3-month avg)` 🧪, pace marker, status icons, editable input, total row. Uncategorised spending keeps its default budget (budgets are stored per category) | §16.3 | 12 | ported |
+| `o_recur` Recurring payments (`findRecurring`) 🧪 | §16.3 | 12 | ported |
+| `o_sankey` Money flow | §16.3 | 12 | ported |
+| `o_top` Largest expenses (12, 40 in modal); click → go to row | §16.3 | 12 | ported |
+| `o_savings` Savings rate (range `ovMonths`) | §16.3 | 12 | ported |
+| `o_week` Spending by weekday | §16.3 | 12 | ported |
+| `o_balance` Account balance = opening + cumulative sum; "Opening" input (range `ovMonths`) 🧪. **[CHANGE]** the opening balance belongs to an account: editable in a single-account view, the read-only sum in "All accounts" | §16.3 | 12 | ported |
+| `o_inv` Investment: allocation bar, PPK (employee, employer, state, value), positions (add/remove, with *Undo* instead of a confirm); editing in large view 🧪 | §32.4 | 12 | ported |
+| `o_yoc` Yield on cost (PLN), with dividend/interest fallback from transactions 🧪 | §32.4 | 12 | ported |
+| `o_fire` FI/RE number: annual expenses / SWR, progress, years to FI; SWR and real return editable 🧪 | §32.4 | 12 | ported |
+| Layout: 12-column grid, container queries (6/12 ≤ 1100 px, full ≤ 640 px); investment row 3 + 3 + 6 | §16.3, §32.4 | 12 | ported |
 
 ## 7. AI assistant
 

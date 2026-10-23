@@ -22,6 +22,7 @@ import { useAppearance, useSidebarAutoCollapse } from './effects';
 import { FILE_ACCEPT, importFiles, openFilePicker, registerPicker } from './files';
 import { useGlobalKeys } from './keys';
 import { KeyboardShortcuts } from './KeyboardShortcuts';
+import { loadOverview } from '../overview/Overview';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
@@ -44,6 +45,14 @@ export function AppShell({ user }: { user: User }) {
   useEffect(() => {
     viewAccount.current = viewId === 'all' ? undefined : viewId;
   }, [viewId]);
+
+  // The overview's chunk loads once the app is idle, so switching to it doesn't wait (PLAN §7.12).
+  useEffect(() => {
+    const t = setTimeout(() => void loadOverview(), 1500);
+    return () => {
+      clearTimeout(t);
+    };
+  }, []);
 
   // Every file entry point (drop, ⌘O, Browse, mini drop zone) feeds the upload queue.
   useEffect(() => {
