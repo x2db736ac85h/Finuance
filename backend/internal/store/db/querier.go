@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	// Transaction count and date range per account (GET /accounts).
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
+	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
 	// Commit step 1b: re-apply user annotations (group, manual category, note) to freshly inserted
 	// transactions, so labels survive delete + re-import.
 	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
@@ -30,6 +31,8 @@ type Querier interface {
 	CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error)
 	CreateImport(ctx context.Context, arg CreateImportParams) (Import, error)
 	CreateInvestmentPosition(ctx context.Context, arg CreateInvestmentPositionParams) (InvestmentPosition, error)
+	// Legacy migrations (PLAN §4.10; migration 00007).
+	CreateLegacyImport(ctx context.Context, arg CreateLegacyImportParams) (CreateLegacyImportRow, error)
 	// Sessions store only the SHA-256 of the cookie token (PLAN §5.2). expires_at is the absolute
 	// expiry (created + FINUANCE_SESSION_TTL); the idle expiry is last_seen_at + FINUANCE_SESSION_IDLE_TTL,
 	// passed in as idle_cutoff. Time comes from the caller (platform.Clock), so both are testable.
@@ -60,6 +63,7 @@ type Querier interface {
 	DeleteInvestmentPosition(ctx context.Context, arg DeleteInvestmentPositionParams) (int64, error)
 	// PUT /investments replaces the whole list in one transaction.
 	DeleteInvestmentPositions(ctx context.Context, userID uuid.UUID) error
+	DeleteLegacyImportFiles(ctx context.Context, arg DeleteLegacyImportFilesParams) error
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
 	DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphanTransactionsParams) (int64, error)
@@ -105,6 +109,8 @@ type Querier interface {
 	// The fingerprints, among the given ones, that still have rows in a committed import of the
 	// account (delete-import: the others have nothing left to rebuild).
 	FingerprintsWithRows(ctx context.Context, arg FingerprintsWithRowsParams) ([][]byte, error)
+	// The end of a run: the report (or the error), and the manifest and files are no longer needed.
+	FinishLegacyImport(ctx context.Context, arg FinishLegacyImportParams) error
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
@@ -121,6 +127,9 @@ type Querier interface {
 	GetImportProfile(ctx context.Context, arg GetImportProfileParams) (ImportProfile, error)
 	// Manual investment data (PLAN §4.9). The repository comes with the investments API.
 	GetInvestmentProfile(ctx context.Context, userID uuid.UUID) (InvestmentProfile, error)
+	// Without the manifest (the job reads it with GetLegacyImportManifest).
+	GetLegacyImport(ctx context.Context, arg GetLegacyImportParams) (GetLegacyImportRow, error)
+	GetLegacyImportManifest(ctx context.Context, arg GetLegacyImportManifestParams) ([]byte, error)
 	GetPreferences(ctx context.Context, userID uuid.UUID) (UserPreference, error)
 	// A live session and its user: not past the absolute expiry and seen after idle_cutoff.
 	GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error)
@@ -150,6 +159,7 @@ type Querier interface {
 	// rows are simply unused. The bank category is resolved by normalised name; the caller upserts the
 	// categories first. Returns the inserted ids (the "new" rows).
 	InsertTransactionsFromImport(ctx context.Context, arg InsertTransactionsFromImportParams) ([]uuid.UUID, error)
+	LegacyImportFile(ctx context.Context, arg LegacyImportFileParams) ([]byte, error)
 	LinkImportRow(ctx context.Context, arg LinkImportRowParams) error
 	// Commit step 2: link every staged row to its transaction, new or pre-existing (provenance).
 	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
@@ -171,6 +181,7 @@ type Querier interface {
 	ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ListImportRowsRow, error)
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
+	ListLegacyImports(ctx context.Context, userID uuid.UUID) ([]ListLegacyImportsRow, error)
 	// Users in id order, a page at a time (the retention job visits every user under its own RLS
 	// context; users is not under RLS).
 	ListUserIDsAfter(ctx context.Context, arg ListUserIDsAfterParams) ([]uuid.UUID, error)
@@ -202,6 +213,7 @@ type Querier interface {
 	// so two concurrent commits can't both start. committed_at is the first commit time and survives a
 	// reprocess: it orders value sources ("the earliest import wins").
 	SetImportStatus(ctx context.Context, arg SetImportStatusParams) (Import, error)
+	SetLegacyImportProgress(ctx context.Context, arg SetLegacyImportProgressParams) error
 	SetUserDisplayName(ctx context.Context, arg SetUserDisplayNameParams) error
 	SetUserLastLogin(ctx context.Context, arg SetUserLastLoginParams) error
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error

@@ -240,6 +240,73 @@ paths:
                 format: binary
         default:
           $ref: "#/components/responses/Problem"
+  /legacy-imports:
+    get:
+      operationId: listLegacyImports
+      summary: The user's latest migrations from the single-file app, newest first
+      tags: [legacy]
+      responses:
+        "200":
+          description: At most 10 runs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LegacyImport"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createLegacyImport
+      summary: Migrate a backup of the single-file app
+      description: |
+        The browser reads the backup (and decrypts it; the passphrase never leaves the browser) and
+        sends a `manifest` part (JSON, at most 16 MiB) plus one `file` part per legacy file, in the
+        manifest's order, each at most `FINUANCE_MAX_UPLOAD_BYTES`. The run happens in the
+        background (`202`); poll `GET /legacy-imports/{id}`. One run per user at a time
+        (`409 migration_running`). Running the same backup again creates nothing new.
+      tags: [legacy]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [manifest]
+              properties:
+                manifest:
+                  type: string
+                  description: JSON document (PLAN §4.10).
+                file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "202":
+          description: Queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegacyImport"
+        default:
+          $ref: "#/components/responses/Problem"
+  /legacy-imports/{id}:
+    get:
+      operationId: getLegacyImport
+      summary: A migration's progress and report
+      tags: [legacy]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: The run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegacyImport"
+        default:
+          $ref: "#/components/responses/Problem"
   /preferences:
     get:
       operationId: getPreferences
@@ -3770,6 +3837,127 @@ components:
           pattern: "^[A-Z]{3}$"
           description: ISO 4217 code.
           example: PLN
+    LegacyImport:
+      type: object
+      additionalProperties: false
+      required: [id, status, progress, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [queued, running, done, failed]
+        progress:
+          type: object
+          additionalProperties: false
+          required: [filesDone, filesTotal, step]
+          x-go-type: legacyimport.Progress
+          x-go-type-import:
+            path: github.com/x2db736ac85h/finuance/backend/internal/legacyimport
+          properties:
+            filesDone: {type: integer}
+            filesTotal: {type: integer}
+            step: {type: string, description: "files | labels | settings | chats"}
+            current: {type: string, description: The file being imported.}
+        report: {$ref: "#/components/schemas/LegacyImportReport"}
+        error: {type: string, description: Why a failed run stopped.}
+        createdAt: {type: string, format: date-time}
+        finishedAt: {type: string, format: date-time}
+    LegacyImportReport:
+      type: object
+      additionalProperties: false
+      description: What a finished run did (PLAN §4.10 step 5).
+      x-go-type: legacyimport.Report
+      x-go-type-import:
+        path: github.com/x2db736ac85h/finuance/backend/internal/legacyimport
+      required: [files, accounts, transactions, groups, labels, overrides, budgets, investments, chats, unknownKeys]
+      properties:
+        files:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [legacyId, name, status, accountName, rows, new, duplicates, errors]
+            properties:
+              legacyId: {type: string}
+              name: {type: string}
+              status: {type: string, enum: [imported, reused, failed]}
+              importId: {type: string, format: uuid}
+              accountId: {type: string, format: uuid}
+              accountName: {type: string}
+              rows: {type: integer}
+              new: {type: integer}
+              duplicates: {type: integer, format: int64}
+              errors: {type: integer, format: int64}
+              message: {type: string}
+        accounts:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, created]
+            properties:
+              id: {type: string, format: uuid}
+              name: {type: string}
+              created: {type: boolean}
+        transactions:
+          type: object
+          additionalProperties: false
+          required: [new, duplicates, errors]
+          properties:
+            new: {type: integer}
+            duplicates: {type: integer, format: int64}
+            errors: {type: integer, format: int64}
+        groups:
+          type: object
+          additionalProperties: false
+          required: [created, reused]
+          properties:
+            created: {type: integer}
+            reused: {type: integer}
+        labels: {$ref: "#/components/schemas/LegacyMatchReport"}
+        overrides: {$ref: "#/components/schemas/LegacyMatchReport"}
+        budgets:
+          type: object
+          additionalProperties: false
+          required: [set, skipped]
+          properties:
+            set: {type: integer}
+            skipped: {type: array, items: {type: string}}
+        opening:
+          type: object
+          additionalProperties: false
+          required: [accountId, accountName, amountMinor]
+          properties:
+            accountId: {type: string, format: uuid}
+            accountName: {type: string}
+            amountMinor: {type: integer, format: int64}
+        investments: {type: string, enum: [imported, kept, none]}
+        chats:
+          type: object
+          additionalProperties: false
+          required: [imported, skipped]
+          properties:
+            imported: {type: integer}
+            skipped: {type: integer}
+        unknownKeys: {type: array, items: {type: string}}
+    LegacyMatchReport:
+      type: object
+      additionalProperties: false
+      required: [matched, unmatched, examples]
+      properties:
+        matched: {type: integer}
+        unmatched: {type: integer}
+        examples:
+          type: array
+          description: The first 50 legacy keys that found no transaction.
+          items:
+            type: object
+            additionalProperties: false
+            required: [what, key, reason]
+            properties:
+              what: {type: string, description: The group, or "keep both" / "use this version".}
+              key: {type: string, description: The legacy key with its date as yyyy-mm-dd.}
+              reason: {type: string}
     ProblemCode:
       type: string
       description: Stable machine-readable error code.
@@ -3790,6 +3978,7 @@ components:
         - run_in_progress
         - assistant_busy
         - assistant_unavailable
+        - migration_running
         - internal
     FieldError:
       type: object

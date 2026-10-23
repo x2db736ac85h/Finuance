@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import { useLegacyImport, useLegacyImports } from '../api/hooks/legacy';
 import { useDeleteMe } from '../api/hooks/me';
+import { LegacyWizard, Running } from '../legacy/LegacyWizard';
+import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
 import { resetStores } from '../stores/persist';
 import { Button } from '../ui/Button';
@@ -12,10 +15,78 @@ import { toast } from '../ui/toastStore';
 /** GET /me/export is a plain download: same-origin cookie, no CSRF header needed for GET. */
 export const EXPORT_URL = '/api/v1/me/export';
 
+const RUN_STATUS = {
+  queued: 'waiting to start',
+  running: 'running',
+  done: 'finished',
+  failed: 'stopped with an error',
+};
+
 export function DataSettings() {
   const [confirming, setConfirming] = useState(false);
+  const [backup, setBackup] = useState<File | null>(null);
+  const [shown, setShown] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const runs = useLegacyImports();
+  const last = runs.data?.[0];
   return (
     <>
+      <div className="set-card">
+        <div className="lbl">Import from the single-file app</div>
+        <p className="hint">
+          Moves everything from a backup of the old single-file Finuance (finuance-backup-….json): the imported files,
+          groups and labels, budgets, the opening balance, duplicate decisions, investments and chats. A locked backup
+          is unlocked here in your browser; the passphrase is never sent.
+        </p>
+        {last && (
+          <p className="st-line">
+            Last migration {fmtDateTime(last.createdAt)}: {RUN_STATUS[last.status]}.{' '}
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                setShown(last.id);
+              }}
+            >
+              {last.status === 'done' || last.status === 'failed' ? 'View report' : 'Show progress'}
+            </button>
+          </p>
+        )}
+        <div className="set-actions">
+          <input
+            ref={picker}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            aria-label="Backup file"
+            onChange={(e) => {
+              setBackup(e.target.files?.[0] ?? null);
+              e.target.value = '';
+            }}
+          />
+          <Button
+            size="sm"
+            icon="upload"
+            onClick={() => {
+              picker.current?.click();
+            }}
+          >
+            Choose backup…
+          </Button>
+        </div>
+      </div>
+      <LegacyWizard
+        file={backup}
+        onClose={() => {
+          setBackup(null);
+        }}
+      />
+      <RunWindow
+        id={shown}
+        onClose={() => {
+          setShown(null);
+        }}
+      />
       <div className="set-card">
         <div className="lbl">Download your data</div>
         <p className="hint">
@@ -52,6 +123,17 @@ export function DataSettings() {
         }}
       />
     </>
+  );
+}
+
+function RunWindow({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const run = useLegacyImport(id);
+  return (
+    <Modal open={id !== null} onClose={onClose} title="Migration from the single-file app" size="md">
+      <div className="legacy">
+        <Running run={run.data} error={run.error} onClose={onClose} />
+      </div>
+    </Modal>
   );
 }
 

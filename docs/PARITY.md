@@ -171,7 +171,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Preferences persisted (theme, ui, pane, cards, chart cfg, per-view sort/widths/hidden/period) | §17.2 `collectPrefs` | 5, 8 | todo |
 | Passphrase lock (PBKDF2 310k → AES-256-GCM), lock screen | §17.4 | — | retired: replaced by server auth (PLAN §7.6) |
 | Backup download / restore | §17.5 | 14 | todo (export via `GET /me/export`; restore of new exports in backlog) |
-| **Legacy backup migration**, plain and encrypted (browser-side decryption) 🧪 (`legacy-backup/`) | §17.5, PLAN §4.10 | 14 | todo |
+| **Legacy backup migration**, plain and encrypted (browser-side decryption) 🧪 (`legacy-backup/`) | §17.5, PLAN §4.10 | 14 | ported (Settings → Data wizard, `POST /legacy-imports`, ADR 0016; `TestMigratePlainAndLockedBackups`, e2e `legacy.spec.ts`) |
 | Erase all | §17.3 | 5 | todo (delete account / data) |
 | Strict CSP, all output escaped | §18 | 8 | todo (no `innerHTML`, `connect-src 'self'`) |
 | Rename migration `csv-inspector` → `finuance` | §32.1 | — | retired: one-time browser storage migration; the backup importer accepts `csvInspectorBackup` |

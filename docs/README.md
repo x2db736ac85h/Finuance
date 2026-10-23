@@ -10,6 +10,7 @@
 | [adr/](adr/) | Architecture decision records: why Go + PostgreSQL, money in minor units, row-level security, sessions and CSRF, the CSV export format, … |
 | [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3) |
 | [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities, limits, retention, the probe and the evals |
+| [migration.md](migration.md) | Moving a backup of the single-file app into Finuance |
 | [evals.md](evals.md) | Assistant quality per model on the 46 golden questions |
 | [perf.md](perf.md) | Performance measurements: parsing, staging, queries, the table with 100k rows |
 

@@ -14,7 +14,8 @@ type Props = {
   onClose: () => void;
   title: string;
   sub?: ReactNode;
-  size?: 'sm';
+  /** sm: a dialog; md: a window sized to its content (at most 50 rem wide); none: the big window. */
+  size?: 'sm' | 'md';
   /** Extra header controls, before the close button. */
   actions?: ReactNode;
   dismissOnBackdrop?: boolean;

@@ -556,3 +556,112 @@ textarea.inp.ins-note {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Legacy migration wizard (Settings → Data, Phase 14) */
+.modal-card.md {
+  width: min(50rem, 100%);
+  height: auto;
+  max-height: 100%;
+}
+.legacy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: auto;
+  padding: 1rem 1.25rem 1.25rem;
+  font-size: 0.7812rem;
+}
+.legacy .modal-form {
+  padding: 0;
+}
+.legacy-review,
+.legacy-report,
+.legacy-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.legacy p {
+  margin: 0;
+  color: var(--text-2);
+}
+.legacy-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.legacy-names .lbl {
+  padding: 0;
+  margin-right: 0.25rem;
+}
+.legacy-names .inp {
+  width: 12rem;
+}
+.legacy-files {
+  width: 100%;
+  border-collapse: collapse;
+}
+.legacy-files th,
+.legacy-files td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.legacy-files th {
+  color: var(--muted);
+  font-weight: 500;
+}
+.legacy-files .r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.legacy-files tr.neg td:first-child {
+  color: var(--neg);
+}
+.legacy-files .hint {
+  margin-top: 0.15rem;
+  color: var(--muted);
+}
+.legacy-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.legacy-row select {
+  width: auto;
+  max-width: 20rem;
+}
+.legacy-progress .bar {
+  height: 0.375rem;
+  border-radius: 0.25rem;
+  background: var(--border);
+  overflow: hidden;
+}
+.legacy-progress .bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+.legacy-lines {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.legacy-misses summary {
+  cursor: pointer;
+  color: var(--text-2);
+}
+.legacy-misses ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+.legacy-misses .mono {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+}

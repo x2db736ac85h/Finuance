@@ -11,6 +11,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -42,6 +43,8 @@ var problemTable = []problemKind{
 	{assistant.ErrBusy, gen.AssistantBusy, http.StatusServiceUnavailable, "The assistant is busy"},
 	{assistant.ErrDisabled, gen.AssistantUnavailable, http.StatusServiceUnavailable, "The assistant is unavailable"},
 	{assistant.ErrUnavailable, gen.AssistantUnavailable, http.StatusServiceUnavailable, "The assistant is unavailable"},
+	{legacyimport.ErrRunning, gen.MigrationRunning, http.StatusConflict, "A migration is already running"},
+	{legacyimport.ErrNotFound, gen.NotFound, http.StatusNotFound, "Not found"},
 	{ledger.ErrNotFound, gen.NotFound, http.StatusNotFound, "Not found"},
 	{ledger.ErrConflict, gen.Conflict, http.StatusConflict, "Conflict"},
 	{ledger.ErrState, gen.Conflict, http.StatusConflict, "Conflict"},

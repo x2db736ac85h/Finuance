@@ -21,4 +21,6 @@ export const keys = {
   assistantSettings: ['assistantSettings'] as const,
   chats: ['chats'] as const,
   chat: (id: string) => ['chat', id] as const,
+  legacyImports: ['legacyImports'] as const,
+  legacyImport: (id: string) => ['legacyImport', id] as const,
 };

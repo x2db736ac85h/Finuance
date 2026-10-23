@@ -11,6 +11,7 @@ import (
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
@@ -24,6 +25,7 @@ type api struct {
 	prod     bool
 	auth     *auth.Service
 	ledger   *ledger.Ledger
+	legacy   *legacyimport.Migrator
 	query    *query.Engine
 	insights *insights.Service
 	ai       *assistant.Assistant

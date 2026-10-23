@@ -25,6 +25,9 @@ type ShapeOptions struct {
 	SkipRows  int  // with HeaderNone: 1-based record where data starts (0 or 1 = the first)
 	KeepShort bool // disable the footer drop (legacy dropShort:false)
 	KeepQuote bool // keep a leading ' in data cells (legacy strip:false)
+	// LegacyHeader uses only the legacy automatic header rule (legacyHeader), not findHeader's
+	// improvement. The legacy migration needs it to rebuild the tables the legacy app labelled.
+	LegacyHeader bool
 }
 
 // Table is a shaped file: unique, non-empty headers and rectangular rows of trimmed cells.
@@ -88,6 +91,9 @@ func shape(raw [][]string, o ShapeOptions, owned bool) (*Table, error) {
 			return nil, ErrEmptyFile
 		}
 		h := findHeader(rows)
+		if o.LegacyHeader {
+			h = legacyHeader(rows)
+		}
 		headers = trimAll(rows[h])
 		data = rows[h+1:]
 		headerAt = rowAt[h] + 1
