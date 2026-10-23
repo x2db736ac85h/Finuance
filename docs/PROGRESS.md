@@ -39,8 +39,8 @@
 - [x] 13.8 mock server (both protocols) + `cmd/llmmock` + Compose `ai-mock` profile; HTTP + tenancy tests
 - [x] 13.10 metrics, spans, one log line per run (no prompt text)
 - [x] 13.9 eval harness (≥ 40 questions, Polish and English), `make eval-assistant`, mock self-test in CI
-- [ ] 13.7 frontend: panel, chat menu, connection/model picker, settings (thinking, retention with warning), cloud consent and badge, steps with Show in table, `md()` port, ⌘/Ctrl J, resize/maximise, stop, error states
-- [ ] E2E against the mock (legacy §29.6), screenshots, PARITY rows
+- [x] 13.7 frontend: panel, chat menu, connection/model picker, settings (thinking, retention with warning), cloud consent and badge, steps with Show in table, `md()` port, ⌘/Ctrl J, resize/maximise, stop, error states
+- [x] E2E against the mock (legacy §29.6): `assistant.spec.ts` (4: a tool call streamed in pieces is assembled and run, its result goes back, the markdown table renders, Show in table filters to the 10 rows, the chat survives a reload, no request to another origin, no page errors; plan-mode fallback; stop; not configured); 37 Playwright specs pass on a fresh `compose.ci.yaml` stack; 286 Vitest (+19: SSE reader, `md()`, panel streaming and Show in table, view scope, error fixes, 409, stop, recent chats, not set up, retention warning, cloud consent, model/thinking, store events, prefs migration, chip); screenshots in both themes at 1440 px; 12 PARITY rows `ported`; the panel is an 8.6 KB gzip chunk (initial JS 192 KB)
 - [x] Backend tests: `internal/llm` on 11 recorded streams (LM Studio, Ollama, gpt-oss, `<think>`, Qwen text calls, CRLF, non-streaming, Anthropic thinking + tool use, overloaded) + errors, timeouts, request bodies, caps, splitter; config (file, shorthand, every problem at once); `TestToolsParity` (all 67 oracle cases, results and summaries), `TestSystemPromptParity` (ALLOWED_DIFFS rows 7 and 14), run loop against `testutil/llmmock` (tools, plan fallback, text calls, Anthropic, stop, errors, rounds, retry without temperature, `/no_think`, limits, consent, retention); HTTP + tenancy (status, settings, chats, SSE, stop, 409/429/403/503, export, delete-me); `llm-probe`; eval harness self-test
 - [x] Docs: ADR 0015, `docs/assistant.md`, THREAT-MODEL (B4, A7, I5, I7, I8, D5), ALLOWED_DIFFS rows 7 and 14, `evals/assistant/README.md`, `docs/evals.md` (filled by the gate runs)
 
@@ -241,6 +241,7 @@
 - 13.4: the prompt lists the canonical columns with a value (not the file's), says "self-hosted", and adds two rules after the legacy ones (ALLOWED_DIFFS row 14). "Today" uses the browser's time zone sent with each question (`timeZone`, default Europe/Warsaw), as the legacy used the browser's clock; there is no server-side time zone setting.
 - 13.5: messages are stored one row per model message (§5.2 layout) with `replay` (Anthropic thinking blocks) and `error` columns, plus `assistant_settings` (retention, cloud consent). A turn that failed is stored with its error and left out of later requests (legacy dropped it). Auto mode's switch to plan mode is remembered only when plan mode then works: a server that answers 500 to everything doesn't switch the chat for good (the legacy did). A server that rejects the temperature or the reasoning setting is asked again without it, once.
 - 13.6: the run settings travel with each question (`settings: {connection, model, mode, think, maxRows, temperature, toolset}`); the panel keeps them in the preferences' `ai` key as the legacy did. Stopping applies to the user's run whatever chat id is in the path (one run per user). New problem codes: `consent_required` (403), `run_in_progress` (409), `assistant_busy` (503), `assistant_unavailable` (503).
+- 13.7: the panel's settings pick a connection and a model (the address is server config); thinking has five levels instead of the legacy checkbox (a stored `think: true` reads as *auto*, `false` as *off*); *Keep chats* is the server retention (1–7 days or *until I delete them*, with a warning) instead of the legacy on/off; temperature stays at the legacy 0.2 without a control (the legacy had none). Choosing a cloud connection, or a `403 consent_required`, opens a consent window; a cloud connection shows a *cloud* badge next to the model. *Show in table* sets a session-only `toolFilter` on the view (the "✦" chip, cleared by *Clear all*) in the view the lookup ran in. The panel is its own chunk, loaded when it first opens.
 - 13.8: the mock server also speaks Anthropic Messages and has a rule-based answer mode for E2E and local work, besides scripted replies for Go tests. Its image is a separate Dockerfile target (`llmmock`), never in the production image.
 - 12.1: `POST /overview` answers `{currency, data?}` (no `data` without dated rows) with every card's facts in one document (`OverviewData`), not the §4.6 field list one by one. Highlights are facts (`kind`, `tone`, amounts, percentages); the browser writes the sentences, so the wording lives next to the other UI text. The income sources reuse `PayeeSpend` (`spentMinor` is the money received). A `month` outside the data is clamped to the latest month (legacy).
 - 12.2: `PUT /budgets/{categoryId}` answers `204`; `null` removes the budget and is idempotent, but a category the user doesn't own is `404` either way.
@@ -344,16 +345,16 @@
 - Phase 8: `POST /demo-data` calls `ledger.SeedDemo` (the same path as `finuance seed-demo`).
 - Phase 8: the grid sends `includeTotals: false` for every window after the first.
 - Phase 16: the RUNBOOK repeats the `textlike` LEAKPROOF step for restores into a new cluster (bootstrap.sql, docs/perf.md).
-- Phase 13: the assistant tool layer converts loose model arguments into `query.ToolFilter` as `toolFilterOf` in `query/sql_test.go` does (numbers or strings; dates via `query.ParseToolDate`).
 - Later (optional): re-measure the staging insert on a dev machine; the schema options in `docs/perf.md` stay open if it matters.
-- Phase 13: the `FINUANCE_AI_BASE_URL` private-address check (config currently validates the URL shape only).
 
 ## Backlog (ideas, not scheduled)
+- Per-user model API keys for the assistant (ADR 0015; connections are instance config for now).
 - Recurring detection for weekly/yearly cadence (legacy §27).
 - Per-month budgets with rollover.
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 13 built on `phase/13-assistant` (second push): the assistant panel (streaming answers, lookups with Show in table, recent chats, settings with connection/model, thinking, retention and cloud consent), E2E against the mock, PARITY. Next: our Product Engineer's gate review (llm-probe and `make eval-assistant` on the homelab model, questions on the real data).
 - 2026-10-23 — Phase 13 backend built on `phase/13-assistant` (first push): `internal/llm` adapters, connections config and status, oracle-equal tools and prompt, run loop, chat storage with retention, SSE endpoints, `testutil/llmmock`, `llm-probe`, eval harness (46 questions), ADR 0015, `docs/assistant.md`. Next: the panel and E2E.
 - 2026-10-23 — Phase 13 planned and approved (provider-agnostic assistant: instance connections, OpenAI + Anthropic adapters, cloud consent, five tools, 48 h retention with 1–7 days or forever, 25 chats, rate limit setting, two pushes). Branch `phase/13-assistant`.
 - 2026-10-23 — Phase 12 gate approved; merged. Next: plan Phase 13.

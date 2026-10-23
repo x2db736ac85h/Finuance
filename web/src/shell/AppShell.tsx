@@ -3,7 +3,7 @@
 // page. Routes render into the content area.
 
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 
 import { invalidateData, useAccounts } from '../api/hooks/accounts';
@@ -29,6 +29,9 @@ import { TitleBar } from './TitleBar';
 
 export type ShellContext = { hasData: boolean };
 
+// The assistant panel is its own chunk, loaded the first time it opens.
+const ChatPanel = lazy(async () => ({ default: (await import('../assistant/ChatPanel')).ChatPanel }));
+
 export function AppShell({ user }: { user: User }) {
   useAppearance();
   useSidebarAutoCollapse();
@@ -39,6 +42,8 @@ export function AppShell({ user }: { user: User }) {
   const sbShown = useUi(sidebarShown);
   const mode = useUi((s) => s.mode);
   const vizOpen = useUi((s) => s.vizOpen);
+  const aiOpen = useUi((s) => s.ai.open);
+  const aiMax = useUi((s) => s.ai.max);
   const searchRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const viewAccount = useRef<string | undefined>(undefined);
@@ -109,6 +114,8 @@ export function AppShell({ user }: { user: User }) {
     mode === 'ov' && !inSettings && 'mode-ov',
     accounts.isSuccess && !hasData && !inSettings && 'is-empty',
     tableShown && selected && 'has-insp',
+    aiOpen && 'has-chat',
+    aiOpen && aiMax && 'chat-max',
   ]
     .filter(Boolean)
     .join(' ');
@@ -122,6 +129,11 @@ export function AppShell({ user }: { user: User }) {
           <Outlet context={{ hasData } satisfies ShellContext} />
         </section>
         {tableShown && <Inspector key={viewId} viewId={viewId} />}
+        {aiOpen && (
+          <Suspense fallback={null}>
+            <ChatPanel viewId={viewId} />
+          </Suspense>
+        )}
       </div>
       <StatusBar hasData={hasData} rows={rows} accounts={list.length}>
         {tableShown ? <TableStatus key={viewId} viewId={viewId} all={rows} /> : null}

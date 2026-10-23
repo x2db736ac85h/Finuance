@@ -17,4 +17,8 @@ export const keys = {
   transaction: (id: string) => ['transaction', id] as const,
   insight: ['insight'] as const,
   overview: ['overview'] as const,
+  assistantStatus: ['assistantStatus'] as const,
+  assistantSettings: ['assistantSettings'] as const,
+  chats: ['chats'] as const,
+  chat: (id: string) => ['chat', id] as const,
 };
