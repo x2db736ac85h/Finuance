@@ -24,6 +24,7 @@ type Facts struct {
 	Categories []query.Counted // at most 60, most rows first
 	Payees     []query.Counted // at most 40
 	Groups     []string
+	Accounts   int // accounts with rows in scope
 }
 
 // Vocabulary sizes (legacy).
@@ -42,6 +43,9 @@ func (t *Tools) Facts(ctx context.Context, userID uuid.UUID, sc Scope) (*Facts, 
 			return err
 		}
 		f = &Facts{Rows: tot.Count, Min: tot.Range.Min, Max: tot.Range.Max}
+		if f.Accounts, err = in.AccountCount(); err != nil {
+			return err
+		}
 		if f.Currency, err = in.Currency(); err != nil {
 			return err
 		}

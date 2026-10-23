@@ -59,8 +59,8 @@ type Deps struct {
 	Ledger *ledger.Ledger
 	// Query runs the transaction reads (query, distinct, export). Nil in tests of the bare server.
 	Query *query.Engine
-	// Assistant holds the model connections; nil or empty means the assistant is off.
-	Assistant *assistant.Connections
+	// Assistant is the assistant (connections, chats, runner); nil or without connections it is off.
+	Assistant *assistant.Assistant
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -96,7 +96,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{insights: ins, conns: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
+	impl := &api{insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

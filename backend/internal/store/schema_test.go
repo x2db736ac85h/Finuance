@@ -56,7 +56,7 @@ func TestEveryUserTableHasForcedRLS(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"accounts", "budgets", "categories", "dedupe_overrides", "groups", "import_files", "import_profiles",
+	want := []string{"accounts", "assistant_chats", "assistant_messages", "assistant_settings", "budgets", "categories", "dedupe_overrides", "groups", "import_files", "import_profiles",
 		"import_rows", "imports", "investment_positions", "investment_profile", "transactions", "tx_annotations", "user_preferences"}
 	if !slices.Equal(tenant, want) {
 		t.Errorf("tenant tables = %v, want %v", tenant, want)

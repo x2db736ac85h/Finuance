@@ -1229,6 +1229,155 @@ paths:
                 $ref: "#/components/schemas/AssistantStatus"
         default:
           $ref: "#/components/responses/Problem"
+  /assistant/settings:
+    get:
+      operationId: getAssistantSettings
+      summary: The user's assistant settings
+      description: How long chats are kept and which cloud connections the user agreed to (defaults before the first save).
+      tags: [assistant]
+      responses:
+        "200":
+          description: The settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantSettings"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: putAssistantSettings
+      summary: Save the assistant settings
+      description: A shorter retention deletes the chats past it at once. `retentionDays` null keeps chats until they are deleted.
+      tags: [assistant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantSettings"
+      responses:
+        "200":
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantSettings"
+        default:
+          $ref: "#/components/responses/Problem"
+  /assistant/chats:
+    get:
+      operationId: listAssistantChats
+      summary: The user's chats, newest first
+      tags: [assistant]
+      responses:
+        "200":
+          description: Chats (expired ones are removed first).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantChatList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createAssistantChat
+      summary: Start a chat
+      description: The oldest chats beyond `FINUANCE_AI_MAX_CHATS` are deleted.
+      tags: [assistant]
+      responses:
+        "201":
+          description: The new chat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantChat"
+        default:
+          $ref: "#/components/responses/Problem"
+  /assistant/chats/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getAssistantChat
+      summary: A chat with its turns
+      tags: [assistant]
+      responses:
+        "200":
+          description: The chat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantChatDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteAssistantChat
+      summary: Delete a chat
+      tags: [assistant]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /assistant/chats/{id}/messages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: sendAssistantMessage
+      summary: Ask a question; the answer streams back
+      description: |
+        Answers `text/event-stream` (PLAN §6.3): `step`, `reasoning`, `content`, `mode`, then `done` or
+        `error`, as `event:`/`data:` pairs whose data is JSON (`AssistantStepEvent`, `AssistantDeltaEvent`,
+        `AssistantModeEvent`, `AssistantDoneEvent`, `AssistantErrorEvent`). A comment line every 15 s
+        keeps proxies from closing the stream. Closing the connection stops the run. Problems that keep
+        a run from starting are answered as usual: `run_in_progress` (another reply is being written),
+        `assistant_busy` (the server is at its limit), `consent_required` (a cloud connection the user
+        hasn't agreed to), `assistant_unavailable` (no connection, or the model server can't be used),
+        `rate_limited`.
+      tags: [assistant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantMessageRequest"
+      responses:
+        "200":
+          description: The run's events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /assistant/chats/{id}/stop:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: stopAssistant
+      summary: Stop the reply being written
+      description: Cancels the user's run (the model request too); nothing running is not an error.
+      tags: [assistant]
+      responses:
+        "204":
+          description: Stopped (or nothing was running).
+        default:
+          $ref: "#/components/responses/Problem"
   /demo-data:
     post:
       operationId: loadDemoData
@@ -3305,6 +3454,273 @@ components:
         message:
           type: string
           description: A short explanation (the server's own message, clipped).
+    AssistantSettings:
+      type: object
+      additionalProperties: false
+      required: [retentionDays, cloudConsent]
+      properties:
+        retentionDays:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 7
+          description: Days a chat is kept after its last message; null keeps chats until they are deleted.
+        cloudConsent:
+          type: array
+          maxItems: 32
+          items:
+            type: string
+            maxLength: 40
+          description: Names of the cloud connections the user agreed to send their data to.
+    AssistantChat:
+      type: object
+      additionalProperties: false
+      required: [id, title, connection, model, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          description: The first question ("" before it).
+        connection:
+          type: string
+        model:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AssistantChatList:
+      type: object
+      additionalProperties: false
+      required: [chats, maxChats]
+      properties:
+        chats:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssistantChat"
+        maxChats:
+          type: integer
+    AssistantChatDetail:
+      type: object
+      additionalProperties: false
+      required: [id, title, connection, model, createdAt, updatedAt, noTools, turns]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        connection:
+          type: string
+        model:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        noTools:
+          type: boolean
+          description: Auto mode switched this chat to plan mode.
+        turns:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssistantTurn"
+    AssistantTurn:
+      type: object
+      additionalProperties: false
+      required: [role, seq, content, createdAt]
+      description: A question (`user`) or an answer (`assistant`) with its lookups.
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        seq:
+          type: integer
+          description: The sequence number of the turn's last message.
+        content:
+          type: string
+        reasoning:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssistantStep"
+        meta:
+          $ref: "#/components/schemas/AssistantMeta"
+        error:
+          $ref: "#/components/schemas/AssistantTurnError"
+        createdAt:
+          type: string
+          format: date-time
+    AssistantStep:
+      type: object
+      additionalProperties: false
+      required: [tool, args, summary, result]
+      properties:
+        tool:
+          type: string
+        args:
+          type: object
+          additionalProperties: true
+          description: The arguments as the model sent them.
+        summary:
+          type: string
+        result:
+          type: string
+          description: The JSON the model received (cut at 6,000 characters for display).
+        truncated:
+          type: boolean
+        matched:
+          type: integer
+        toolFilter:
+          $ref: "#/components/schemas/ToolFilter"
+    AssistantMeta:
+      type: object
+      additionalProperties: false
+      required: [durationMs, approxTokensSent, lookups, rounds, connection, model, mode, scope]
+      properties:
+        durationMs:
+          type: integer
+          format: int64
+        approxTokensSent:
+          type: integer
+        lookups:
+          type: integer
+        rounds:
+          type: integer
+        connection:
+          type: string
+        model:
+          type: string
+        mode:
+          type: string
+          enum: [tools, plan]
+        fallback:
+          type: boolean
+          description: Auto mode switched to plan mode during this turn.
+        stopped:
+          type: boolean
+        scope:
+          type: string
+          enum: [all, view]
+        accountIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+    AssistantTurnError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: An assistant error kind (`unreachable`, `auth`, `tools_rejected`, `context_too_long`, `rate_limited`, `model_not_found`, `timeout`, `bad_response`, `upstream`) or `internal`.
+        message:
+          type: string
+    AssistantMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        scope:
+          type: string
+          enum: [all, view]
+          default: all
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        timeZone:
+          type: string
+          maxLength: 64
+          description: The browser's IANA time zone, for "today" (default Europe/Warsaw).
+          example: Europe/Warsaw
+        settings:
+          $ref: "#/components/schemas/AssistantRunSettings"
+    AssistantRunSettings:
+      type: object
+      additionalProperties: false
+      properties:
+        connection:
+          type: string
+          maxLength: 40
+          description: Default the chat's connection, else the first one.
+        model:
+          type: string
+          maxLength: 200
+          description: Default the chat's model, else the connection's default.
+        mode:
+          type: string
+          enum: [auto, tools, plan]
+        think:
+          type: string
+          enum: [off, auto, low, medium, high]
+        maxRows:
+          type: integer
+          minimum: 1
+          maximum: 50
+        temperature:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 2
+        toolset:
+          type: string
+          enum: [full, compact]
+    AssistantDeltaEvent:
+      type: object
+      required: [delta]
+      properties:
+        delta:
+          type: string
+    AssistantStepEvent:
+      allOf:
+        - $ref: "#/components/schemas/AssistantStep"
+        - type: object
+          required: [index]
+          properties:
+            index:
+              type: integer
+    AssistantModeEvent:
+      type: object
+      required: [mode, reason]
+      properties:
+        mode:
+          type: string
+          enum: [plan]
+        reason:
+          type: string
+    AssistantDoneEvent:
+      type: object
+      required: [messageSeq, meta]
+      properties:
+        messageSeq:
+          type: integer
+        meta:
+          $ref: "#/components/schemas/AssistantMeta"
+    AssistantErrorEvent:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        messageSeq:
+          type: integer
     Investments:
       type: object
       additionalProperties: false
@@ -3370,6 +3786,10 @@ components:
         - payload_too_large
         - unsupported_file
         - not_implemented
+        - consent_required
+        - run_in_progress
+        - assistant_busy
+        - assistant_unavailable
         - internal
     FieldError:
       type: object

@@ -189,3 +189,15 @@ func (in *Insight) GroupNames() ([]string, error) {
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
+
+// AccountCount is the number of accounts with scoped rows (search results name the account when
+// there are several).
+func (in *Insight) AccountCount() (int, error) {
+	c, w, err := in.r.fresh(true)
+	if err != nil {
+		return 0, err
+	}
+	var n int
+	err = in.tx.QueryRow(in.ctx, "SELECT count(DISTINCT t.account_id) FROM "+source(c.joins()...)+" WHERE "+w, c.Args...).Scan(&n)
+	return n, err
+}

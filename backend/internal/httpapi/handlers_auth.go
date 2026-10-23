@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
@@ -16,14 +17,19 @@ type limits struct {
 	loginIPEmail *mw.Limiter // signup + login per (IP, email)
 	password     *mw.Limiter // password checks per signed-in user
 	upload       *mw.Limiter // uploads per user
+	assistant    *mw.Limiter // assistant questions per user (FINUANCE_AI_RATE_PER_HOUR)
 }
 
-func newLimits(clock platform.Clock) limits {
+func newLimits(clock platform.Clock, aiPerHour int) limits {
+	if aiPerHour < 1 {
+		aiPerHour = 30
+	}
 	return limits{
 		loginIP:      mw.NewLimiter(mw.LoginPerIP, clock, 0),
 		loginIPEmail: mw.NewLimiter(mw.LoginPerIPEmail, clock, 0),
 		password:     mw.NewLimiter(mw.PasswordPerUser, clock, 0),
 		upload:       mw.NewLimiter(mw.UploadPerUser, clock, 0),
+		assistant:    mw.NewLimiter(mw.Policy{Events: aiPerHour, Per: time.Hour}, clock, 0),
 	}
 }
 

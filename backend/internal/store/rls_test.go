@@ -108,6 +108,16 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if _, err := q.CreateInvestmentPosition(ctx, db.CreateInvestmentPositionParams{ID: platform.NewID(), UserID: u, Name: "ETF", Now: now}); err != nil {
 			return fmt.Errorf("investment position: %w", err)
 		}
+		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: u, CloudConsent: []string{}, Now: now}); err != nil {
+			return fmt.Errorf("assistant settings: %w", err)
+		}
+		chat, err := q.CreateAssistantChat(ctx, db.CreateAssistantChatParams{ID: platform.NewID(), UserID: u, Title: "Q", Now: now})
+		if err != nil {
+			return fmt.Errorf("assistant chat: %w", err)
+		}
+		if _, err := q.InsertAssistantMessage(ctx, db.InsertAssistantMessageParams{ChatID: chat.ID, UserID: u, Role: "user", Content: "Q", Now: now}); err != nil {
+			return fmt.Errorf("assistant message: %w", err)
+		}
 		return nil
 	})
 	if err != nil {

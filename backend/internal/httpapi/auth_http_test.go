@@ -29,6 +29,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -116,7 +117,8 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
 		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc,
-		Assistant: assistant.NewConnections(cfg.AIConnections, time.Minute, clk, nil)})
+		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
+			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, clk, nil)})})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -538,6 +540,17 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		return nil
 	})
 	if err != nil {
+		t.Fatal(err)
+	}
+	chats := assistant.NewChats(st, platform.SystemClock{}, 25)
+	if _, err := chats.SaveSettings(ctx, u, assistant.Settings{CloudConsent: []string{"cloud"}}); err != nil {
+		t.Fatal(err)
+	}
+	chat, err := chats.Create(ctx, u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := chats.Append(ctx, u, chat.ID, []assistant.Message{{Role: llm.RoleUser, Content: "Q"}}, assistant.ChatUpdate{Title: "Q"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(txIDs) == 0 {

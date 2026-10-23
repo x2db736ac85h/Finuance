@@ -27,7 +27,8 @@ const ExportFormatVersion = 1
 //
 //	manifest.json           format version, export time, the user
 //	<entity>.json           accounts, categories, groups, budgets, annotations, dedupe overrides,
-//	                        imports (metadata), investments, preferences
+//	                        imports (metadata), investments, preferences, assistant (settings and
+//	                        chats with their turns)
 //	transactions.csv        every transaction of every account (the CSV export format, all columns)
 //	imports/<id>/<filename> the original files
 //
@@ -44,6 +45,13 @@ func (a *api) ExportMe(ctx context.Context, _ gen.ExportMeRequestObject) (gen.Ex
 	if err != nil {
 		return nil, err
 	}
+	if a.ai != nil {
+		doc, err := a.assistantExport(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		docs["assistant.json"] = doc
+	}
 	now := time.Now().UTC()
 	docs["preferences.json"] = map[string]any{"version": prefs.Version, "prefs": prefs.Prefs}
 	docs["manifest.json"] = map[string]any{"format": "finuance-export", "version": ExportFormatVersion, "exportedAt": now,
@@ -59,6 +67,28 @@ func (a *api) ExportMe(ctx context.Context, _ gen.ExportMeRequestObject) (gen.Ex
 	}()
 	cd := mime.FormatMediaType("attachment", map[string]string{"filename": "finuance-export-" + now.Format("2006-01-02") + ".zip"})
 	return gen.ExportMe200ApplicationzipResponse{Body: pr, Headers: gen.ExportMe200ResponseHeaders{ContentDisposition: &cd}}, nil
+}
+
+// assistantExport is the assistant's settings and every chat as the panel shows it.
+func (a *api) assistantExport(ctx context.Context, u uuid.UUID) (map[string]any, error) {
+	s, err := a.ai.Chats.Settings(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	list, err := a.ai.Chats.List(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	chats := make([]gen.AssistantChatDetail, 0, len(list))
+	for _, c := range list {
+		ch, msgs, err := a.ai.Chats.Get(ctx, u, c.ID)
+		if err != nil {
+			return nil, err
+		}
+		chats = append(chats, gen.AssistantChatDetail{Id: ch.ID, Title: ch.Title, Connection: ch.Connection, Model: ch.Model,
+			CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs)})
+	}
+	return map[string]any{"settings": settingsDTO(s), "chats": chats}, nil
 }
 
 func (a *api) writeExportZip(ctx context.Context, w io.Writer, userID uuid.UUID, docs map[string]any, now time.Time) error {

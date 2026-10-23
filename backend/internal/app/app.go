@@ -92,8 +92,10 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
 		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
-		Assistant: conns,
-		Ready:     []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
+		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
+			MaxChats: cfg.AIMaxChats, MaxConcurrent: cfg.AIMaxConcurrent, Metrics: assistant.NewMetrics(c.metrics.Registry),
+			Tracer: c.tracing.Provider, Logger: log}),
+		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
 		return err
@@ -115,6 +117,7 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 		Logger: log,
 		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
 		Workers: jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg), Ledger: ledger.New(c.store, platform.SystemClock{}),
+			Chats:   assistant.NewChats(c.store, platform.SystemClock{}, cfg.AIMaxChats),
 			Metrics: jobs.NewImportMetrics(c.metrics.Registry)}),
 		PeriodicJobs: jobs.PeriodicJobs(),
 	})

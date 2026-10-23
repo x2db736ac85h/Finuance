@@ -24,6 +24,7 @@ type Querier interface {
 	CountEligibleImportRows(ctx context.Context, arg CountEligibleImportRowsParams) (int64, error)
 	CountImportRows(ctx context.Context, arg CountImportRowsParams) (CountImportRowsRow, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
+	CreateAssistantChat(ctx context.Context, arg CreateAssistantChatParams) (AssistantChat, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	// Transaction groups (PLAN §4.7).
 	CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error)
@@ -38,6 +39,9 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	// Cascades to the account's imports, transactions, annotations and overrides.
 	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
+	DeleteAssistantChat(ctx context.Context, arg DeleteAssistantChatParams) (int64, error)
+	// Retention: chats whose last message is older than the cutoff.
+	DeleteAssistantChatsBefore(ctx context.Context, arg DeleteAssistantChatsBeforeParams) (int64, error)
 	DeleteBudget(ctx context.Context, arg DeleteBudgetParams) (int64, error)
 	// Transactions keep existing with category_id NULL; budgets of the category go with it.
 	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error)
@@ -103,6 +107,9 @@ type Querier interface {
 	FingerprintsWithRows(ctx context.Context, arg FingerprintsWithRowsParams) ([][]byte, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
+	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
+	// The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
+	GetAssistantSettings(ctx context.Context, userID uuid.UUID) (AssistantSetting, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
 	// Duplicate review (PLAN §4.4, "Duplicate review and overrides"). ledger.Rematerialize uses these to
 	// rebuild the transactions of one (account, fingerprint) from its staged rows and override.
@@ -131,6 +138,7 @@ type Querier interface {
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
 	// sidebar source labels b1, b2, … (task 6.12).
 	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
+	InsertAssistantMessage(ctx context.Context, arg InsertAssistantMessageParams) (InsertAssistantMessageRow, error)
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
@@ -146,6 +154,8 @@ type Querier interface {
 	// Commit step 2: link every staged row to its transaction, new or pre-existing (provenance).
 	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
+	ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]AssistantChat, error)
+	ListAssistantMessages(ctx context.Context, arg ListAssistantMessagesParams) ([]AssistantMessage, error)
 	ListBudgets(ctx context.Context, userID uuid.UUID) ([]ListBudgetsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
 	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
@@ -161,6 +171,9 @@ type Querier interface {
 	ListImportRows(ctx context.Context, arg ListImportRowsParams) ([]ListImportRowsRow, error)
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
+	// Users in id order, a page at a time (the retention job visits every user under its own RLS
+	// context; users is not under RLS).
+	ListUserIDsAfter(ctx context.Context, arg ListUserIDsAfterParams) ([]uuid.UUID, error)
 	ListUserSessions(ctx context.Context, arg ListUserSessionsParams) ([]ListUserSessionsRow, error)
 	// Serialises the writers of one account's transactions (commit, delete import, reprocess,
 	// overrides): concurrent commits of overlapping files would otherwise insert the same identities in
@@ -196,7 +209,12 @@ type Querier interface {
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
 	// The staged rows (one per import that contains this transaction), oldest import first.
 	TransactionProvenance(ctx context.Context, arg TransactionProvenanceParams) ([]TransactionProvenanceRow, error)
+	// Keeps the newest @keep chats (FINUANCE_AI_MAX_CHATS).
+	TrimAssistantChats(ctx context.Context, arg TrimAssistantChatsParams) (int64, error)
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
+	// After a turn: the last activity, the connection and model used, and the title (the first
+	// question) when the chat had none.
+	UpdateAssistantChat(ctx context.Context, arg UpdateAssistantChatParams) error
 	UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group, error)
 	// A new mapping/options and the re-parse results: PATCH while previewed, reprocess when committed
 	// (expected_status guards which).
@@ -213,6 +231,8 @@ type Querier interface {
 	// User annotations keyed by dedupe identity (PLAN §4.4): they outlive the transaction row, so a
 	// label comes back when the same transaction is imported again.
 	UpsertAnnotation(ctx context.Context, arg UpsertAnnotationParams) error
+	// retention_days NULL keeps chats until the user deletes them.
+	UpsertAssistantSettings(ctx context.Context, arg UpsertAssistantSettingsParams) (AssistantSetting, error)
 	// Returns the id of the category with this normalised name, creating it if needed. The no-op
 	// update makes RETURNING work for an existing row; the first spelling of the name is kept.
 	UpsertCategory(ctx context.Context, arg UpsertCategoryParams) (uuid.UUID, error)

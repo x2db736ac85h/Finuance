@@ -39,6 +39,7 @@ func (w *NoopWorker) Work(ctx context.Context, job *river.Job[NoopArgs]) error {
 // tests pass fakes.
 type Deps struct {
 	Sessions SessionCleaner
+	Chats    ChatCleaner
 	Ledger   Ledger
 	Metrics  *ImportMetrics // nil: unregistered metrics
 }
@@ -49,6 +50,7 @@ func Workers(d Deps) *river.Workers {
 	w := river.NewWorkers()
 	river.AddWorker(w, &NoopWorker{})
 	river.AddWorker(w, &CleanupExpiredSessionsWorker{Sessions: d.Sessions})
+	river.AddWorker(w, &CleanupAssistantChatsWorker{Chats: d.Chats})
 	m := d.Metrics
 	if m == nil {
 		m = NewImportMetrics(nil)
@@ -63,6 +65,9 @@ func PeriodicJobs() []*river.PeriodicJob {
 	return []*river.PeriodicJob{
 		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
 			func() (river.JobArgs, *river.InsertOpts) { return CleanupExpiredSessionsArgs{}, nil },
+			&river.PeriodicJobOpts{RunOnStart: true}),
+		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
+			func() (river.JobArgs, *river.InsertOpts) { return CleanupAssistantChatsArgs{}, nil },
 			&river.PeriodicJobOpts{RunOnStart: true}),
 	}
 }
