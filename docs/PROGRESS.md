@@ -247,6 +247,7 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 14.5 (found by the E2E on a fresh database): the table's window statement could run its `ORDER BY … LIMIT` subquery once per row when the statistics predated the user (2.5–5 s for a 917-row account until autoanalyze). The window is now a `MATERIALIZED` CTE (`query.windowFirst`, also the assistant's row lookup); `TestWindowWithStaleStatistics` recreates the stale statistics. docs/perf.md "Phase 14".
 - 14.4: the legacy palette fails WCAG AA contrast in places (muted text, accent links, white text on the accent button, green in the light theme). The tokens were raised just enough for 4.5:1 (each change commented with its legacy value in `tokens.css`) and a new `--accent-solid` sits behind white button text; the look is otherwise unchanged. Scrollable chart and overview lists are focusable (`tabindex="0"`) and labelled "…, list".
 - 14.2: the screenshot artifact also carries `docs/parity-report.md`; the Playwright `github` reporter turns E2E failures into annotations (job logs and artifacts can't be read from the cloud session).
 - 14.7: cosign and syft are installed in `release.yml` with `go install …@version` (the Go checksum database verifies them) rather than downloaded release binaries, because GitHub release downloads can't be reached from the cloud session to record checksums. `compose.prod.yaml` has no plain-HTTP cookie switch: production cookies are always `Secure`; trying it locally works on `http://localhost` (browsers treat it as secure), otherwise behind TLS or an SSH tunnel. `make check` runs `tools/check-compose-prod.sh`, which keeps the inline bootstrap equal to `deploy/db/`.
@@ -374,6 +375,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 14 second and third pushes on `phase/14-quality-gate`: E2E completion, parity harness (30/30 equal), axe on every screen (zero violations after contrast and focus fixes), Phase 14 perf, PARITY settled; release workflow, standalone `compose.prod.yaml`, CHANGELOG, README v0.1. The fresh-database E2E found the window statement running once per row with stale statistics (fixed with a materialised CTE). Next: tag `v0.1.0-rc.1`, then our Product Engineer's gate review.
 - 2026-10-23 — Phase 14 first push on `phase/14-quality-gate`: legacy migration (key replay checked against the oracle, job, API, wizard with browser-side decryption, report), ADR 0016. Next: E2E completion, parity harness, accessibility, performance, PARITY audit.
 - 2026-10-23 — Phase 14 planned and approved (axe dev dependency, release without third-party actions, rc tag for the gate, migrated chats active from migration, standalone prod Compose, three pushes). Branch `phase/14-quality-gate`.
 - 2026-10-23 — Phase 13 gate approved by our Product Engineer, who will test against real models later (follow-up recorded); merged. Next: plan Phase 14.

@@ -343,14 +343,14 @@ alone on the machine; a first run next to an image build was 20–50 % slower an
 
 | Call | Shape | Phase 7/11/12 | Phase 14 |
 |---|---|---|---|
-| `POST /transactions/query` | default sort, no filter | 102 ms | 68 ms |
-| | deep window (offset 90,000) | 130 ms | 80 ms |
-| | payee contains "kawiarnia" | 233 ms | 200 ms |
-| | search "blik warszawa" | 114 ms | 69 ms |
-| | category = Transport, last 3 months | 138 ms | 103 ms |
-| | sort by payee (collation) | 181 ms | 128 ms |
-| | amount < −100, sorted by amount | 139 ms | 89 ms |
-| | scrolling window without totals | 12 / 48 ms | 5 / 20 ms |
+| `POST /transactions/query` | default sort, no filter | 102 ms | 61 ms |
+| | deep window (offset 90,000) | 130 ms | 74 ms |
+| | payee contains "kawiarnia" | 233 ms | 166 ms |
+| | search "blik warszawa" | 114 ms | 85 ms |
+| | category = Transport, last 3 months | 138 ms | 89 ms |
+| | sort by payee (collation) | 181 ms | 116 ms |
+| | amount < −100, sorted by amount | 139 ms | 74 ms |
+| | scrolling window without totals | 12 / 48 ms | 5 / 27 ms |
 | insights (six calls) | slowest call, all time | 107 ms (categories) | 138 ms (categories) |
 | | all six one after another, all time | 300 ms | 327 ms |
 | `POST /overview` | all accounts, 12 months | 216 ms | 237 ms |
@@ -368,3 +368,13 @@ alone on the machine; a first run next to an image build was 20–50 % slower an
   here; the levers are unchanged (a larger `shared_buffers` on the homelab, Phase 16).
 - Grid scrolling at 60 fps and filter-to-paint on the homelab remain the gate's hands-on checks
   (software rendering in the sandbox, see "Table view").
+
+**Found by the E2E: a window run once per row.** On a fresh database (as in CI), a filtered
+window of a 917-row account took 2.5–5 s. The table statistics dated from before the user's
+import, so the planner estimated the user at 1 row and ran the window subquery
+(`t.id IN (SELECT … ORDER BY … LIMIT 200)`) once per row of the user: 917 × 917 index reads. The
+statistics were just stale until autoanalyze ran, so a real instance would hit this after the
+first import of a new user. The window is now a `MATERIALIZED` CTE that runs once
+(`query.windowFirst`, also used by the assistant's row lookup). `TestWindowWithStaleStatistics`
+recreates the stale statistics (analyze, then a new user imports) and checks that the window
+runs once; it fails on the old statement. The query rows above are measured with the CTE.
