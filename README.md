@@ -109,7 +109,7 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (components, data mode
 ```sh
 mkdir finuance && cd finuance
 curl -fsSLO https://github.com/x2db736ac85h/Finuance/releases/latest/download/compose.prod.yaml
-curl -fsSL -o .env https://github.com/x2db736ac85h/Finuance/releases/latest/download/.env.prod.example
+curl -fsSL -o .env https://github.com/x2db736ac85h/Finuance/releases/latest/download/finuance.env.example
 $EDITOR .env                  # passwords; FINUANCE_PUBLIC_ORIGIN=http://localhost:8000 to try it locally
 docker compose --env-file .env -f compose.prod.yaml up -d
 docker compose --env-file .env -f compose.prod.yaml exec -T api /finuance admin create-user --email you@example.com --password-stdin
@@ -139,7 +139,7 @@ make dev-api & make dev-web               # API on :8080 and the Vite dev server
 
 ## Deploying
 
-**Docker Compose.** [`deploy/compose/compose.prod.yaml`](deploy/compose/compose.prod.yaml) runs the released images (`ghcr.io/x2db736ac85h/finuance-api` and `finuance-web`, amd64 and arm64, signed with cosign). It needs only itself and a `.env` ([`.env.prod.example`](deploy/compose/.env.prod.example)); both are attached to every [release](https://github.com/x2db736ac85h/Finuance/releases). Only the web container is published, on `127.0.0.1:8000` by default; the database, the API and the admin ports stay on the internal Compose network.
+**Docker Compose.** [`deploy/compose/compose.prod.yaml`](deploy/compose/compose.prod.yaml) runs the released images (`ghcr.io/x2db736ac85h/finuance-api` and `finuance-web`, amd64 and arm64, signed with cosign). It needs only itself and a `.env` ([`.env.prod.example`](deploy/compose/.env.prod.example), attached to every [release](https://github.com/x2db736ac85h/Finuance/releases) as `finuance.env.example`). Only the web container is published, on `127.0.0.1:8000` by default; the database, the API and the admin ports stay on the internal Compose network.
 
 - Put a reverse proxy with TLS in front of port 8000 (Caddy, Traefik, nginx) and set `FINUANCE_PUBLIC_ORIGIN` to its URL. Production mode sends secure cookies only, so the app works over HTTPS, or over plain http on `localhost` (e.g. through an ssh tunnel to a server).
 - Sign-up is off by default. Create accounts with the admin CLI: `docker compose … exec -T api /finuance admin create-user --email you@example.com --password-stdin` (it reads the password from standard input), or set `FINUANCE_ALLOW_SIGNUP=true`.
@@ -180,8 +180,8 @@ Performance notes and measurements: [docs/perf.md](docs/perf.md).
 | 11 | Insights: charts, period picker, chart windows | ✅ done |
 | 12 | Monthly overview: KPIs, budgets, recurring payments, money flow | ✅ done |
 | 13 | AI assistant with read-only tools on your own model | ✅ done |
-| 14 | Migration from the prototype's backups, accessibility, v0.1.0 | 🔍 in review (v0.1.0-rc.1) |
-| 15 | Category rules, transfer detection, group reports | 🚧 planned |
+| 14 | Migration from the prototype's backups, accessibility, v0.1.0 | ✅ done |
+| 15 | Category rules, transfer detection, group reports | 🚧 next |
 | 16–17 | Kubernetes deployment, observability, load tests, hardening | 🚧 planned |
 | 18 | Public demo, documentation, v1.0.0 | 🚧 planned |
 

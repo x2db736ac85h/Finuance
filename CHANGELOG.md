@@ -48,4 +48,4 @@ with every feature of the prototype and a way to move its backups over.
 
 - Images `ghcr.io/x2db736ac85h/finuance-api` and `ghcr.io/x2db736ac85h/finuance-web` for linux/amd64 and
   linux/arm64, signed with cosign (keyless), with SPDX SBOM attestations.
-- `compose.prod.yaml` and `.env.prod.example`: everything needed to run it with Docker Compose.
+- `compose.prod.yaml` and `finuance.env.example` (copy it to `.env`): everything needed to run it with Docker Compose.

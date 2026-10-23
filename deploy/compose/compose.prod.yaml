@@ -1,5 +1,5 @@
 # Production stack with the released images (PLAN task 14.7). It needs only this file and a .env
-# next to it (see .env.prod.example in the release):
+# next to it (see finuance.env.example in the release):
 #
 #   docker compose --env-file .env -f compose.prod.yaml up -d
 #

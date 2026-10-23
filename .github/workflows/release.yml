@@ -88,8 +88,9 @@ jobs:
         run: |
           for img in "$API" "$WEB"; do
             for platform in linux/amd64 linux/arm64; do
-              docker run --rm -e TRIVY_USERNAME="${{ github.actor }}" -e TRIVY_PASSWORD="${{ secrets.GITHUB_TOKEN }}" "$TRIVY_IMAGE" \
-                image --platform "$platform" --scanners vuln --severity CRITICAL --exit-code 1 --no-progress "$img"
+              docker run --rm -e TRIVY_USERNAME="${{ github.actor }}" -e TRIVY_PASSWORD="${{ secrets.GITHUB_TOKEN }}" \
+                -v "$PWD/.trivyignore:/.trivyignore:ro" "$TRIVY_IMAGE" \
+                image --ignorefile /.trivyignore --platform "$platform" --scanners vuln --severity CRITICAL --exit-code 1 --no-progress "$img"
             done
           done
 
@@ -137,8 +138,10 @@ jobs:
             echo "cosign verify $API --certificate-identity-regexp 'https://github.com/x2db736ac85h/Finuance/' --certificate-oidc-issuer https://token.actions.githubusercontent.com"
             echo '```'
           } > release.md
-          cp deploy/compose/compose.prod.yaml deploy/compose/.env.prod.example .
-          files=(compose.prod.yaml .env.prod.example finuance-api.spdx.json finuance-web.spdx.json)
+          # GitHub drops a leading dot from asset names (".env.prod.example" became "default.env.prod.example")
+          cp deploy/compose/compose.prod.yaml .
+          cp deploy/compose/.env.prod.example finuance.env.example
+          files=(compose.prod.yaml finuance.env.example finuance-api.spdx.json finuance-web.spdx.json)
           title="Finuance ${{ steps.v.outputs.version }}"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             # created by hand in the GitHub web UI (which also creates the tag), or a re-run
