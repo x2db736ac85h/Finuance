@@ -583,6 +583,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/categories/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every category with its counts (Settings → Categories)
+         * @description Transactions over all accounts, how many were categorised by hand and by rules, and the other bank category names that map to the category (left by renames and merges).
+         */
+        get: operations["categoryStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a category
+         * @description At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new category takes over its name: bank rows of that name come to it on the next import.
+         */
+        post: operations["createCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a category (its transactions become uncategorised)
+         * @description Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports.
+         */
+        delete: operations["deleteCategory"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename a category
+         * @description The bank's rows of the old name keep coming to it. A name another category has is `409 conflict`: merge the two instead.
+         */
+        patch: operations["renameCategory"];
+        trace?: never;
+    };
+    "/categories/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a category into another one and delete it
+         * @description Its transactions, manual categories, rules, bank names and (when the target has none) its budget move to `intoId`.
+         */
+        post: operations["mergeCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The rules in the order they apply */
+        get: operations["listRules"];
+        put?: never;
+        /**
+         * Create a rule (it goes last)
+         * @description A rule matches with the table's filter language and needs a search or a column filter, and an action. Every change to the rules re-applies all of them in the background (ADR 0017).
+         */
+        post: operations["createRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the order the rules apply in
+         * @description Every rule's id exactly once, first applies first (the last match wins).
+         */
+        put: operations["reorderRules"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What a match selects now
+         * @description The number of matching transactions (all accounts, all time, transfers included), how many of them have a manual category (a category action leaves those alone), and the newest 10.
+         */
+        post: operations["previewRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-apply every rule and look for transfers again
+         * @description Queues the reclassification job; the table shows the result when it has run.
+         */
+        post: operations["applyRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a rule (its position stays) */
+        put: operations["updateRule"];
+        post?: never;
+        /**
+         * Delete a rule
+         * @description Its categories go back to the bank's, or to another matching rule's.
+         */
+        delete: operations["deleteRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups": {
         parameters: {
             query?: never;
@@ -1523,6 +1715,22 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /**
+             * @description Why isTransfer is what it is (ADR 0018).
+             * @enum {string}
+             */
+            transferSource?: "none" | "pair" | "rule" | "manual";
+            transferPeer?: components["schemas"]["TransferPeer"];
+            categoryRule?: components["schemas"]["NamedRef"];
+        };
+        /** @description The other half of a detected transfer pair. */
+        TransferPeer: {
+            /** Format: uuid */
+            id: string;
+            accountName: string;
+            /** Format: date */
+            bookedOn: string;
+            amount: components["schemas"]["Money"];
         };
         TransactionPatch: {
             /** Format: uuid */
@@ -1531,6 +1739,11 @@ export interface components {
             /** @description Back to the bank's category (or none). */
             resetCategory?: boolean;
             note?: string;
+            /**
+             * @description The user's transfer decision: `yes` marks it, `no` says it isn't one (a detected pair is unpaired on both sides), `auto` hands it back to the rules and the detection.
+             * @enum {string}
+             */
+            transfer?: "yes" | "no" | "auto";
         };
         Category: {
             /** Format: uuid */
@@ -1538,6 +1751,58 @@ export interface components {
             name: string;
             txCount: number;
             colorSlot?: number;
+        };
+        CategoryInput: {
+            name: string;
+        };
+        CategoryStat: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int64 */
+            txCount: number;
+            /** Format: int64 */
+            manualCount: number;
+            /** Format: int64 */
+            ruleCount: number;
+            /** @description Other bank category names (normalised) that map to this category. */
+            aliases: string[];
+        };
+        RuleMatch: {
+            search?: string;
+            filters?: components["schemas"]["ColumnFilter"][];
+        };
+        RuleInput: {
+            name: string;
+            /** @default true */
+            enabled: boolean;
+            match: components["schemas"]["RuleMatch"];
+            /**
+             * Format: uuid
+             * @description The category to set; omit for no category action.
+             */
+            setCategoryId?: string;
+            /** @default false */
+            markTransfer: boolean;
+        };
+        Rule: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            enabled: boolean;
+            position: number;
+            match: components["schemas"]["RuleMatch"];
+            setCategory?: components["schemas"]["NamedRef"];
+            markTransfer: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        RulePreview: {
+            /** Format: int64 */
+            matched: number;
+            /** Format: int64 */
+            manual: number;
+            sample: components["schemas"]["TransactionRow"][];
         };
         Group: {
             /** Format: uuid */
@@ -3411,6 +3676,300 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Category"][];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    categoryStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories in natural order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStat"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryInput"];
+            };
+        };
+        responses: {
+            /** @description The new category. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedRef"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    renameCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryInput"];
+            };
+        };
+        responses: {
+            /** @description The category. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedRef"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    mergeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    intoId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description How many transactions moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: int64 */
+                        moved: number;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description The new rule. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    reorderRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    ids: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description The rules in their new order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    previewRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    match: components["schemas"]["RuleMatch"];
+                };
+            };
+        };
+        responses: {
+            /** @description The preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulePreview"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    applyRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description The rule. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

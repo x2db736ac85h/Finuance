@@ -11,6 +11,75 @@ import (
 	"github.com/google/uuid"
 )
 
+const categoryNameTaken = `-- name: CategoryNameTaken :one
+SELECT EXISTS (SELECT 1 FROM categories WHERE user_id = $1 AND name_n = $2 AND id <> $3)
+`
+
+type CategoryNameTakenParams struct {
+	UserID uuid.UUID
+	NameN  string
+	ID     uuid.UUID
+}
+
+func (q *Queries) CategoryNameTaken(ctx context.Context, arg CategoryNameTakenParams) (bool, error) {
+	row := q.db.QueryRow(ctx, categoryNameTaken, arg.UserID, arg.NameN, arg.ID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const categoryStats = `-- name: CategoryStats :many
+SELECT c.id, c.name,
+       count(t.id)::bigint AS tx_count,
+       count(t.id) FILTER (WHERE t.category_source = 'manual')::bigint AS manual_count,
+       count(t.id) FILTER (WHERE t.category_source = 'rule')::bigint AS rule_count,
+       coalesce((SELECT array_agg(a.name_n ORDER BY a.name_n) FROM category_aliases a
+                 WHERE a.user_id = c.user_id AND a.category_id = c.id), '{}')::text[] AS aliases
+FROM categories c
+LEFT JOIN transactions t ON t.user_id = c.user_id AND t.category_id = c.id
+WHERE c.user_id = $1
+GROUP BY c.id
+ORDER BY c.name COLLATE pl_natural, c.id
+`
+
+type CategoryStatsRow struct {
+	ID          uuid.UUID
+	Name        string
+	TxCount     int64
+	ManualCount int64
+	RuleCount   int64
+	Aliases     []string
+}
+
+// Settings → Categories: every category with its transaction count, how many were set by hand and
+// by rules, and the bank names that map to it (its own name excluded).
+func (q *Queries) CategoryStats(ctx context.Context, userID uuid.UUID) ([]CategoryStatsRow, error) {
+	rows, err := q.db.Query(ctx, categoryStats, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CategoryStatsRow
+	for rows.Next() {
+		var i CategoryStatsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.TxCount,
+			&i.ManualCount,
+			&i.RuleCount,
+			&i.Aliases,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createCategory = `-- name: CreateCategory :one
 INSERT INTO categories (id, user_id, name, name_n) VALUES ($1, $2, $3, $4) RETURNING id, user_id, name, name_n, created_at
 `
@@ -58,6 +127,20 @@ func (q *Queries) DeleteCategory(ctx context.Context, arg DeleteCategoryParams) 
 	return result.RowsAffected(), nil
 }
 
+const deleteCategoryAlias = `-- name: DeleteCategoryAlias :exec
+DELETE FROM category_aliases WHERE user_id = $1 AND name_n = $2
+`
+
+type DeleteCategoryAliasParams struct {
+	UserID uuid.UUID
+	NameN  string
+}
+
+func (q *Queries) DeleteCategoryAlias(ctx context.Context, arg DeleteCategoryAliasParams) error {
+	_, err := q.db.Exec(ctx, deleteCategoryAlias, arg.UserID, arg.NameN)
+	return err
+}
+
 const getCategory = `-- name: GetCategory :one
 SELECT id, user_id, name, name_n, created_at FROM categories WHERE user_id = $1 AND id = $2
 `
@@ -78,6 +161,22 @@ func (q *Queries) GetCategory(ctx context.Context, arg GetCategoryParams) (Categ
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getCategoryAlias = `-- name: GetCategoryAlias :one
+SELECT category_id FROM category_aliases WHERE user_id = $1 AND name_n = $2
+`
+
+type GetCategoryAliasParams struct {
+	UserID uuid.UUID
+	NameN  string
+}
+
+func (q *Queries) GetCategoryAlias(ctx context.Context, arg GetCategoryAliasParams) (*uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getCategoryAlias, arg.UserID, arg.NameN)
+	var category_id *uuid.UUID
+	err := row.Scan(&category_id)
+	return category_id, err
 }
 
 const listCategories = `-- name: ListCategories :many
@@ -110,6 +209,88 @@ func (q *Queries) ListCategories(ctx context.Context, userID uuid.UUID) ([]Categ
 	return items, nil
 }
 
+const mergeCategoryAnnotations = `-- name: MergeCategoryAnnotations :exec
+UPDATE tx_annotations SET category_id = $1::uuid WHERE user_id = $2 AND category_id = $3::uuid
+`
+
+type MergeCategoryAnnotationsParams struct {
+	IntoID uuid.UUID
+	UserID uuid.UUID
+	FromID uuid.UUID
+}
+
+func (q *Queries) MergeCategoryAnnotations(ctx context.Context, arg MergeCategoryAnnotationsParams) error {
+	_, err := q.db.Exec(ctx, mergeCategoryAnnotations, arg.IntoID, arg.UserID, arg.FromID)
+	return err
+}
+
+const mergeCategoryBudget = `-- name: MergeCategoryBudget :exec
+UPDATE budgets b SET category_id = $1::uuid
+WHERE b.user_id = $2 AND b.category_id = $3::uuid
+  AND NOT EXISTS (SELECT 1 FROM budgets x WHERE x.user_id = $2 AND x.category_id = $1::uuid)
+`
+
+type MergeCategoryBudgetParams struct {
+	IntoID uuid.UUID
+	UserID uuid.UUID
+	FromID uuid.UUID
+}
+
+// The merged category's budget moves over when the target has none (else the target's stays).
+func (q *Queries) MergeCategoryBudget(ctx context.Context, arg MergeCategoryBudgetParams) error {
+	_, err := q.db.Exec(ctx, mergeCategoryBudget, arg.IntoID, arg.UserID, arg.FromID)
+	return err
+}
+
+const mergeCategoryRules = `-- name: MergeCategoryRules :exec
+UPDATE rules SET set_category_id = $1::uuid WHERE user_id = $2 AND set_category_id = $3::uuid
+`
+
+type MergeCategoryRulesParams struct {
+	IntoID uuid.UUID
+	UserID uuid.UUID
+	FromID uuid.UUID
+}
+
+func (q *Queries) MergeCategoryRules(ctx context.Context, arg MergeCategoryRulesParams) error {
+	_, err := q.db.Exec(ctx, mergeCategoryRules, arg.IntoID, arg.UserID, arg.FromID)
+	return err
+}
+
+const mergeCategoryTransactions = `-- name: MergeCategoryTransactions :execrows
+UPDATE transactions SET category_id = $1::uuid WHERE user_id = $2 AND category_id = $3::uuid
+`
+
+type MergeCategoryTransactionsParams struct {
+	IntoID uuid.UUID
+	UserID uuid.UUID
+	FromID uuid.UUID
+}
+
+// Merging: the transactions keep how their category was set (bank, rule, manual).
+func (q *Queries) MergeCategoryTransactions(ctx context.Context, arg MergeCategoryTransactionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, mergeCategoryTransactions, arg.IntoID, arg.UserID, arg.FromID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const moveCategoryAliases = `-- name: MoveCategoryAliases :exec
+UPDATE category_aliases SET category_id = $1::uuid WHERE user_id = $2 AND category_id = $3::uuid
+`
+
+type MoveCategoryAliasesParams struct {
+	IntoID uuid.UUID
+	UserID uuid.UUID
+	FromID uuid.UUID
+}
+
+func (q *Queries) MoveCategoryAliases(ctx context.Context, arg MoveCategoryAliasesParams) error {
+	_, err := q.db.Exec(ctx, moveCategoryAliases, arg.IntoID, arg.UserID, arg.FromID)
+	return err
+}
+
 const renameCategory = `-- name: RenameCategory :one
 UPDATE categories SET name = $1, name_n = $2 WHERE user_id = $3 AND id = $4 RETURNING id, user_id, name, name_n, created_at
 `
@@ -139,6 +320,68 @@ func (q *Queries) RenameCategory(ctx context.Context, arg RenameCategoryParams) 
 	return i, err
 }
 
+const setCategoryAlias = `-- name: SetCategoryAlias :exec
+INSERT INTO category_aliases (user_id, name_n, category_id) VALUES ($1, $2, $3)
+ON CONFLICT (user_id, name_n) DO UPDATE SET category_id = excluded.category_id
+`
+
+type SetCategoryAliasParams struct {
+	UserID     uuid.UUID
+	NameN      string
+	CategoryID *uuid.UUID
+}
+
+// name_n now means category_id (NULL: uncategorised).
+func (q *Queries) SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error {
+	_, err := q.db.Exec(ctx, setCategoryAlias, arg.UserID, arg.NameN, arg.CategoryID)
+	return err
+}
+
+const uncategoriseCategoryTransactions = `-- name: UncategoriseCategoryTransactions :execrows
+UPDATE transactions SET category_id = NULL, category_source = 'none', category_rule_id = NULL
+WHERE user_id = $1 AND category_id = $2::uuid
+`
+
+type UncategoriseCategoryTransactionsParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// Deleting a category: its transactions become uncategorised, however their category was set.
+func (q *Queries) UncategoriseCategoryTransactions(ctx context.Context, arg UncategoriseCategoryTransactionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, uncategoriseCategoryTransactions, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const upsertBankCategory = `-- name: UpsertBankCategory :exec
+INSERT INTO categories (id, user_id, name, name_n)
+SELECT $1, $2, $3, $4
+WHERE NOT EXISTS (SELECT 1 FROM category_aliases a WHERE a.user_id = $2 AND a.name_n = $4)
+ON CONFLICT (user_id, name_n) DO NOTHING
+`
+
+type UpsertBankCategoryParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+	Name   string
+	NameN  string
+}
+
+// A bank category of an import becomes a category, unless the name has an alias (the user renamed,
+// merged or deleted that category: the alias decides).
+func (q *Queries) UpsertBankCategory(ctx context.Context, arg UpsertBankCategoryParams) error {
+	_, err := q.db.Exec(ctx, upsertBankCategory,
+		arg.ID,
+		arg.UserID,
+		arg.Name,
+		arg.NameN,
+	)
+	return err
+}
+
 const upsertCategory = `-- name: UpsertCategory :one
 INSERT INTO categories AS c (id, user_id, name, name_n) VALUES ($1, $2, $3, $4)
 ON CONFLICT (user_id, name_n) DO UPDATE SET name = c.name
@@ -153,7 +396,8 @@ type UpsertCategoryParams struct {
 }
 
 // Returns the id of the category with this normalised name, creating it if needed. The no-op
-// update makes RETURNING work for an existing row; the first spelling of the name is kept.
+// update makes RETURNING work for an existing row; the first spelling of the name is kept. Callers
+// check category_aliases first (ResolveBankCategory).
 func (q *Queries) UpsertCategory(ctx context.Context, arg UpsertCategoryParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, upsertCategory,
 		arg.ID,

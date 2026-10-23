@@ -212,7 +212,7 @@ describe('ChatPanel', () => {
       expect(st.sent).toHaveLength(1);
     });
     expect(st.sent[0]?.scope).toBe('view');
-    expect(st.sent[0]?.context).toEqual({ filters: [{ column: 'payee', cond: 'kino' }] });
+    expect(st.sent[0]?.context).toEqual({ filters: [{ column: 'payee', cond: 'kino' }], includeTransfers: false });
   });
 
   it('explains how to fix an error', async () => {

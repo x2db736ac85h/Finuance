@@ -1,5 +1,5 @@
 // The columns menu (legacy openColsMenu): show/hide each column, one toggle (Hide all when every
-// column is visible, otherwise Show all) and Reset widths.
+// column is visible, otherwise Show all) and Reset widths; plus whether the list shows transfers.
 
 import { useViews, viewOf } from '../stores/viewStore';
 import { Button } from '../ui/Button';
@@ -11,6 +11,7 @@ type Props = { viewId: string; columns: readonly ColumnDef[]; anchor: HTMLElemen
 
 export function ColumnsMenu({ viewId, columns, anchor, onClose }: Props) {
   const hidden = useViews((s) => viewOf(s.views, viewId).hidden);
+  const hideTransfers = useViews((s) => viewOf(s.views, viewId).hideTransfers);
   const patch = useViews((s) => s.patch);
   const visible = columns.filter((c) => !hidden.includes(c.id)).length;
   const allOn = visible === columns.length;
@@ -42,6 +43,16 @@ export function ColumnsMenu({ viewId, columns, anchor, onClose }: Props) {
             </label>
           ))}
         </div>
+        <label className="vi rows-opt">
+          <input
+            type="checkbox"
+            checked={!hideTransfers}
+            onChange={(e) => {
+              patch(viewId, { hideTransfers: !e.target.checked });
+            }}
+          />
+          <span className="vt">Show transfers between my accounts</span>
+        </label>
       </div>
       <div className="pop-f">
         <Button

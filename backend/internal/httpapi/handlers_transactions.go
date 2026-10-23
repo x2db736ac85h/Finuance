@@ -77,9 +77,27 @@ func (a *api) GetTransaction(ctx context.Context, req gen.GetTransactionRequestO
 // UpdateTransaction sets the category or the note of one transaction.
 func (a *api) UpdateTransaction(ctx context.Context, req gen.UpdateTransactionRequestObject) (gen.UpdateTransactionResponseObject, error) {
 	u, b := identity(ctx).User.ID, req.Body
-	if _, err := a.ledger.UpdateTransaction(ctx, u, req.Id, ledger.TransactionPatch{CategoryID: b.CategoryId, CategoryName: b.CategoryName,
-		ResetCategory: deref(b.ResetCategory), Note: b.Note}); err != nil {
-		return nil, err
+	if b.CategoryId != nil || b.CategoryName != nil || deref(b.ResetCategory) || b.Note != nil || b.Transfer == nil {
+		if _, err := a.ledger.UpdateTransaction(ctx, u, req.Id, ledger.TransactionPatch{CategoryID: b.CategoryId, CategoryName: b.CategoryName,
+			ResetCategory: deref(b.ResetCategory), Note: b.Note}); err != nil {
+			return nil, err
+		}
+	}
+	if b.Transfer != nil {
+		if _, err := a.ledger.GetTransaction(ctx, u, req.Id); err != nil {
+			return nil, err
+		}
+		var v *bool
+		if *b.Transfer != gen.TransactionPatchTransferAuto {
+			yes := *b.Transfer == gen.TransactionPatchTransferYes
+			v = &yes
+		}
+		if _, err := a.ledger.SetTransfer(ctx, u, []uuid.UUID{req.Id}, v); err != nil {
+			return nil, err
+		}
+		if v == nil {
+			a.reclassifyAfter(ctx, u) // automatic again: the rules and the detection decide
+		}
 	}
 	d, err := a.transactionDetail(ctx, u, req.Id)
 	if err != nil {

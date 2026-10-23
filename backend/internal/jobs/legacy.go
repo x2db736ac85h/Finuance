@@ -52,6 +52,9 @@ func (w *LegacyImportWorker) Work(ctx context.Context, job *river.Job[LegacyImpo
 	switch {
 	case err == nil:
 		log.InfoContext(ctx, "legacy migration done", "run", a.ID)
+		if err := enqueueReclassify(ctx, a.UserID); err != nil {
+			log.ErrorContext(ctx, "enqueue reclassify", "run", a.ID, "error", err)
+		}
 		return nil
 	case errors.Is(err, legacyimport.ErrNotFound):
 		log.WarnContext(ctx, "legacy migration skipped", "run", a.ID, "error", err)

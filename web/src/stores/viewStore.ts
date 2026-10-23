@@ -18,6 +18,8 @@ export type ViewState = PersistedView & {
   ovMonth: string | null;
   /** An assistant lookup applied with "Show in table" (the "✦" chip); session-only. */
   toolFilter: Schemas['ToolFilter'] | null;
+  /** Transfers between own accounts left out of the list (PLAN task 15.3); session-only. */
+  hideTransfers: boolean;
 };
 
 /**
@@ -48,6 +50,7 @@ export const newView = (id = 'all'): ViewState => ({
   custom: null,
   ovMonth: null,
   toolFilter: null,
+  hideTransfers: false,
 });
 
 type ViewStore = {

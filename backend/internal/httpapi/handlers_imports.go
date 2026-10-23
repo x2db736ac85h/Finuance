@@ -226,9 +226,11 @@ func (a *api) UpdateImport(ctx context.Context, req gen.UpdateImportRequestObjec
 
 // DeleteImport cancels a preview or removes a committed import (orphan-safe).
 func (a *api) DeleteImport(ctx context.Context, req gen.DeleteImportRequestObject) (gen.DeleteImportResponseObject, error) {
-	if _, err := a.ledger.DeleteImport(ctx, identity(ctx).User.ID, req.Id); err != nil {
+	u := identity(ctx).User.ID
+	if _, err := a.ledger.DeleteImport(ctx, u, req.Id); err != nil {
 		return nil, err
 	}
+	a.reclassifyAfter(ctx, u) // re-materialised rows and broken transfer pairs
 	return gen.DeleteImport204Response{}, nil
 }
 

@@ -277,7 +277,7 @@ const DataRow = memo(function DataRow({
               void copyText(text);
             }}
           >
-            {cell(c, text, tokens, row.group && groupColor(row.group.id))}
+            {cell(c, text, tokens, row.group && groupColor(row.group.id), row.isTransfer)}
           </td>
         );
       })}
@@ -285,7 +285,23 @@ const DataRow = memo(function DataRow({
   );
 });
 
-function cell(c: ColumnDef, text: string, tokens: readonly string[], color: string | undefined): ReactNode {
+function cell(
+  c: ColumnDef,
+  text: string,
+  tokens: readonly string[],
+  color: string | undefined,
+  transfer: boolean,
+): ReactNode {
+  if (c.id === 'payee' && transfer) {
+    return (
+      <>
+        <span className="tag xfer" title="A transfer between your own accounts: left out of charts and the overview">
+          Transfer
+        </span>{' '}
+        {hl(text, tokens)}
+      </>
+    );
+  }
   if (c.id === 'group' && text) {
     return (
       <span className="gtag" title={text}>

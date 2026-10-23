@@ -76,3 +76,7 @@ func notFound(what string, n int64, err error) error {
 func invalidf(format string, args ...any) error {
 	return fmt.Errorf("%s: %w", fmt.Sprintf(format, args...), ErrInvalid)
 }
+
+// DBError maps database errors to the package's sentinel errors (for packages that run their own
+// statements next to the ledger's, like internal/rules).
+func DBError(what string, err error) error { return dbErr(what, err) }

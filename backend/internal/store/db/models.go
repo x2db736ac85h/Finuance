@@ -61,6 +61,12 @@ type AssistantSetting struct {
 	UpdatedAt     time.Time
 }
 
+type BankCategoryMap struct {
+	UserID     uuid.UUID
+	NameN      string
+	CategoryID *uuid.UUID
+}
+
 type Budget struct {
 	UserID      uuid.UUID
 	CategoryID  uuid.UUID
@@ -74,6 +80,12 @@ type Category struct {
 	Name      string
 	NameN     string
 	CreatedAt time.Time
+}
+
+type CategoryAlias struct {
+	UserID     uuid.UUID
+	NameN      string
+	CategoryID *uuid.UUID
 }
 
 type DedupeOverride struct {
@@ -213,6 +225,19 @@ type LegacyImportFile struct {
 	Content        []byte
 }
 
+type Rule struct {
+	ID            uuid.UUID
+	UserID        uuid.UUID
+	Name          string
+	Enabled       bool
+	Position      int32
+	Match         []byte
+	SetCategoryID *uuid.UUID
+	MarkTransfer  bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
 type Session struct {
 	TokenHash  []byte
 	UserID     uuid.UUID
@@ -262,6 +287,8 @@ type Transaction struct {
 	SearchText          string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	CategoryRuleID      *uuid.UUID
+	TransferSource      string
 }
 
 type TxAnnotation struct {

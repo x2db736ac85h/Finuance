@@ -3,7 +3,9 @@
 import { Navigate, NavLink, useParams } from 'react-router';
 
 import { Icon } from '../ui/Icon';
+import { RulesSettings } from '../rules/RulesSettings';
 import { AppearanceControls } from './Appearance';
+import { CategoriesSettings } from './Categories';
 import { DataSettings } from './Data';
 import { ProfileSettings } from './Profile';
 import { SECTIONS, type SectionId } from './sections';
@@ -18,6 +20,8 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
   ),
   profile: ProfileSettings,
   sessions: SessionsSettings,
+  categories: CategoriesSettings,
+  rules: RulesSettings,
   data: DataSettings,
 };
 

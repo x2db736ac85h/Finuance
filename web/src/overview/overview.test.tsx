@@ -245,7 +245,7 @@ describe('overview page', () => {
   it('asks for the view without its period and shows the KPIs and the twelve cards', async () => {
     renderApp('/o/all');
     await screen.findByText('Projected spend · PLN');
-    expect(db.overviewRequests.at(-1)).toEqual({ context: {}, months: 12 });
+    expect(db.overviewRequests.at(-1)).toEqual({ context: { includeTransfers: false }, months: 12 });
     act(() => {
       useViews.getState().patch('all', { period: 'm:2025-01' });
     });
@@ -253,7 +253,7 @@ describe('overview page', () => {
       useViews.getState().patch('all', { search: 'kino' });
     });
     await waitFor(() => {
-      expect(db.overviewRequests.at(-1)).toEqual({ context: { search: 'kino' }, months: 12 });
+      expect(db.overviewRequests.at(-1)).toEqual({ context: { search: 'kino', includeTransfers: false }, months: 12 });
     });
     // the period alone never asks again
     expect(db.overviewRequests.filter((r) => !r.context.search)).toHaveLength(1);
@@ -415,7 +415,7 @@ describe('overview page', () => {
         },
       ]);
     });
-    expect(db.overviewRequests.at(-1)?.context).toEqual({ accountIds: [ACC] });
+    expect(db.overviewRequests.at(-1)?.context).toEqual({ accountIds: [ACC], includeTransfers: false });
   });
 
   it('edits investments in the larger view and saves them after a pause', async () => {

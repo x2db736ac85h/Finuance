@@ -857,6 +857,263 @@ paths:
                   $ref: "#/components/schemas/Category"
         default:
           $ref: "#/components/responses/Problem"
+  /categories/stats:
+    get:
+      operationId: categoryStats
+      summary: Every category with its counts (Settings → Categories)
+      description: >-
+        Transactions over all accounts, how many were categorised by hand and by rules, and the
+        other bank category names that map to the category (left by renames and merges).
+      tags: [categories]
+      responses:
+        "200":
+          description: Categories in natural order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryStat"
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/new:
+    post:
+      operationId: createCategory
+      summary: Create a category
+      description: >-
+        At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new
+        category takes over its name: bank rows of that name come to it on the next import.
+      tags: [categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: The new category.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NamedRef"
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      operationId: renameCategory
+      summary: Rename a category
+      description: >-
+        The bank's rows of the old name keep coming to it. A name another category has is
+        `409 conflict`: merge the two instead.
+      tags: [categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "200":
+          description: The category.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NamedRef"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteCategory
+      summary: Delete a category (its transactions become uncategorised)
+      description: >-
+        Its transactions become uncategorised however they were categorised, its budget goes, rules
+        that set it lose that action, and its bank name stays uncategorised on later imports.
+      tags: [categories]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/{id}/merge:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: mergeCategory
+      summary: Merge a category into another one and delete it
+      description: >-
+        Its transactions, manual categories, rules, bank names and (when the target has none) its
+        budget move to `intoId`.
+      tags: [categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [intoId]
+              properties:
+                intoId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: How many transactions moved.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [moved]
+                properties:
+                  moved:
+                    type: integer
+                    format: int64
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules:
+    get:
+      operationId: listRules
+      summary: The rules in the order they apply
+      tags: [rules]
+      responses:
+        "200":
+          description: The rules.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createRule
+      summary: Create a rule (it goes last)
+      description: >-
+        A rule matches with the table's filter language and needs a search or a column filter, and
+        an action. Every change to the rules re-applies all of them in the background (ADR 0017).
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleInput"
+      responses:
+        "201":
+          description: The new rule.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/order:
+    put:
+      operationId: reorderRules
+      summary: Set the order the rules apply in
+      description: Every rule's id exactly once, first applies first (the last match wins).
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: The rules in their new order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/preview:
+    post:
+      operationId: previewRule
+      summary: What a match selects now
+      description: >-
+        The number of matching transactions (all accounts, all time, transfers included), how many
+        of them have a manual category (a category action leaves those alone), and the newest 10.
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [match]
+              properties:
+                match:
+                  $ref: "#/components/schemas/RuleMatch"
+      responses:
+        "200":
+          description: The preview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RulePreview"
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/apply:
+    post:
+      operationId: applyRules
+      summary: Re-apply every rule and look for transfers again
+      description: Queues the reclassification job; the table shows the result when it has run.
+      tags: [rules]
+      responses:
+        "202":
+          description: Queued.
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
+      operationId: updateRule
+      summary: Replace a rule (its position stays)
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleInput"
+      responses:
+        "200":
+          description: The rule.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteRule
+      summary: Delete a rule
+      description: Its categories go back to the bank's, or to another matching rule's.
+      tags: [rules]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
   /groups:
     get:
       operationId: listGroups
@@ -2416,6 +2673,30 @@ components:
             updatedAt:
               type: string
               format: date-time
+            transferSource:
+              type: string
+              enum: [none, pair, rule, manual]
+              description: Why isTransfer is what it is (ADR 0018).
+            transferPeer:
+              $ref: "#/components/schemas/TransferPeer"
+            categoryRule:
+              $ref: "#/components/schemas/NamedRef"
+    TransferPeer:
+      type: object
+      additionalProperties: false
+      required: [id, accountName, bookedOn, amount]
+      description: The other half of a detected transfer pair.
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountName:
+          type: string
+        bookedOn:
+          type: string
+          format: date
+        amount:
+          $ref: "#/components/schemas/Money"
     TransactionPatch:
       type: object
       additionalProperties: false
@@ -2433,6 +2714,12 @@ components:
         note:
           type: string
           maxLength: 2000
+        transfer:
+          type: string
+          enum: ["yes", "no", auto]
+          description: >-
+            The user's transfer decision: `yes` marks it, `no` says it isn't one (a detected pair is
+            unpaired on both sides), `auto` hands it back to the rules and the detection.
     Category:
       type: object
       additionalProperties: false
@@ -2449,6 +2736,110 @@ components:
           type: integer
           minimum: 1
           maximum: 7
+    CategoryInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+    CategoryStat:
+      type: object
+      additionalProperties: false
+      required: [id, name, txCount, manualCount, ruleCount, aliases]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        txCount:
+          type: integer
+          format: int64
+        manualCount:
+          type: integer
+          format: int64
+        ruleCount:
+          type: integer
+          format: int64
+        aliases:
+          type: array
+          description: Other bank category names (normalised) that map to this category.
+          items:
+            type: string
+    RuleMatch:
+      type: object
+      additionalProperties: false
+      properties:
+        search:
+          type: string
+          maxLength: 200
+        filters:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ColumnFilter"
+    RuleInput:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        enabled:
+          type: boolean
+          default: true
+        match:
+          $ref: "#/components/schemas/RuleMatch"
+        setCategoryId:
+          type: string
+          format: uuid
+          description: The category to set; omit for no category action.
+        markTransfer:
+          type: boolean
+          default: false
+    Rule:
+      type: object
+      additionalProperties: false
+      required: [id, name, enabled, position, match, markTransfer, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+        position:
+          type: integer
+        match:
+          $ref: "#/components/schemas/RuleMatch"
+        setCategory:
+          $ref: "#/components/schemas/NamedRef"
+        markTransfer:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+    RulePreview:
+      type: object
+      additionalProperties: false
+      required: [matched, manual, sample]
+      properties:
+        matched:
+          type: integer
+          format: int64
+        manual:
+          type: integer
+          format: int64
+        sample:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionRow"
     Group:
       type: object
       additionalProperties: false

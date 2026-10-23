@@ -101,6 +101,10 @@ func (w *CommitImportWorker) Work(ctx context.Context, job *river.Job[CommitImpo
 		w.Metrics.Imports.WithLabelValues("retried").Inc()
 		return err
 	}
+	if err := enqueueReclassify(ctx, a.UserID); err != nil {
+		// the commit stands; the next change reclassifies (or the user's "Apply rules")
+		log.ErrorContext(ctx, "enqueue reclassify", "import", a.ImportID, "error", err)
+	}
 	w.Metrics.Imports.WithLabelValues("committed").Inc()
 	w.Metrics.Rows.WithLabelValues("new").Add(float64(res.New))
 	w.Metrics.Rows.WithLabelValues("duplicate").Add(float64(res.Duplicates))

@@ -6,6 +6,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, ApiError, data, type Schemas } from '../client';
+import { withoutTransfers } from '../../table/context';
 import { keys } from '../keys';
 import { toast } from '../../ui/toastStore';
 import type { Account } from './accounts';
@@ -30,7 +31,11 @@ export function useOverview(
   return useQuery({
     queryKey: [...keys.overview, ctxKey, month, n],
     queryFn: async () =>
-      data(await api.POST('/overview', { body: { context, months: n, ...(month ? { month } : {}) } })),
+      data(
+        await api.POST('/overview', {
+          body: { context: withoutTransfers(context), months: n, ...(month ? { month } : {}) },
+        }),
+      ),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
     enabled,

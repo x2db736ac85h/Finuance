@@ -1,9 +1,14 @@
 -- name: GetTransaction :one
--- Detail view: the transaction with its category and group names.
-SELECT t.*, c.name AS category_name, g.name AS group_name, g.color AS group_color
+-- Detail view: the transaction with its category and group names, the rule that set the category
+-- and the other half of a transfer pair.
+SELECT t.*, c.name AS category_name, g.name AS group_name, g.color AS group_color, r.name AS rule_name,
+       p.booked_on AS peer_booked_on, p.amount_minor AS peer_amount_minor, pa.name AS peer_account_name
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 LEFT JOIN groups g ON g.id = t.group_id
+LEFT JOIN rules r ON r.id = t.category_rule_id
+LEFT JOIN transactions p ON p.id = t.transfer_peer_id
+LEFT JOIN accounts pa ON pa.id = p.account_id
 WHERE t.user_id = @user_id AND t.id = @id;
 
 -- name: TransactionProvenance :many
@@ -25,8 +30,8 @@ WHERE ir.user_id = @user_id AND ir.import_id = @import_id AND ir.parse_error IS 
 -- fingerprints with a dedupe override are skipped (the override path re-materialises them). A row
 -- whose (fingerprint, occurrence) already exists in the account is a duplicate: ON CONFLICT skips
 -- it. ids holds one pre-generated UUIDv7 per eligible row (CountEligibleImportRows); ids of skipped
--- rows are simply unused. The bank category is resolved by normalised name; the caller upserts the
--- categories first. Returns the inserted ids (the "new" rows).
+-- rows are simply unused. The bank category is resolved through bank_category_map (aliases first); the
+-- caller upserts the categories first. Returns the inserted ids (the "new" rows).
 WITH src AS (
   SELECT ir.*, row_number() OVER (ORDER BY ir.row_index) AS rn
   FROM import_rows ir
@@ -44,23 +49,25 @@ SELECT ids.id, src.user_id, @account_id, 'import', src.fingerprint, src.occurren
        src.booked_on, src.value_on, src.amount_minor, src.currency, src.payee, src.payee_n, src.payee_group,
        src.description, src.description_n, src.reference, src.reference_n, src.tx_type, src.tx_type_n,
        src.bank_category, src.bank_category_n, src.counterparty_account, src.counterparty_n,
-       src.balance_after_minor, c.id, CASE WHEN c.id IS NULL THEN 'none' ELSE 'bank' END, src.raw, src.search_text
+       src.balance_after_minor, m.category_id, CASE WHEN m.category_id IS NULL THEN 'none' ELSE 'bank' END, src.raw, src.search_text
 FROM src
 JOIN ids ON ids.ord = src.rn
-LEFT JOIN categories c ON c.user_id = src.user_id AND c.name_n = src.bank_category_n AND src.bank_category_n <> ''
+LEFT JOIN bank_category_map m ON m.user_id = src.user_id AND m.name_n = src.bank_category_n AND src.bank_category_n <> ''
 ORDER BY src.row_index
 ON CONFLICT (account_id, fingerprint, occurrence, split_scope) DO NOTHING
 RETURNING id;
 
 -- name: ApplyAnnotations :execrows
--- Commit step 1b: re-apply user annotations (group, manual category, note) to freshly inserted
--- transactions, so labels survive delete + re-import.
+-- Commit step 1b: re-apply user annotations (group, manual category, note, manual transfer mark)
+-- to freshly inserted transactions, so labels survive delete + re-import.
 UPDATE transactions t
 SET group_id = a.group_id,
     category_id = coalesce(a.category_id, t.category_id),
     category_source = CASE WHEN a.category_id IS NOT NULL THEN 'manual' ELSE t.category_source END,
     note = a.note,
-    note_n = a.note_n
+    note_n = a.note_n,
+    is_transfer = coalesce(a.transfer_override, t.is_transfer),
+    transfer_source = CASE WHEN a.transfer_override IS NOT NULL THEN 'manual' ELSE t.transfer_source END
 FROM tx_annotations a
 WHERE t.user_id = @user_id AND t.id = ANY(@ids::uuid[])
   AND a.user_id = @user_id
@@ -90,10 +97,10 @@ UPDATE transactions t
 SET group_id = CASE WHEN @set_group::bool THEN sqlc.narg(group_id)::uuid ELSE t.group_id END,
     category_id = CASE WHEN NOT @set_category::bool THEN t.category_id
                        WHEN sqlc.narg(category_id)::uuid IS NOT NULL THEN sqlc.narg(category_id)::uuid
-                       ELSE (SELECT c.id FROM categories c WHERE c.user_id = t.user_id AND c.name_n = t.bank_category_n AND t.bank_category_n <> '') END,
+                       ELSE (SELECT m.category_id FROM bank_category_map m WHERE m.user_id = t.user_id AND m.name_n = t.bank_category_n AND t.bank_category_n <> '') END,
     category_source = CASE WHEN NOT @set_category::bool THEN t.category_source
                            WHEN sqlc.narg(category_id)::uuid IS NOT NULL THEN 'manual'
-                           WHEN EXISTS (SELECT 1 FROM categories c WHERE c.user_id = t.user_id AND c.name_n = t.bank_category_n AND t.bank_category_n <> '') THEN 'bank'
+                           WHEN EXISTS (SELECT 1 FROM bank_category_map m WHERE m.user_id = t.user_id AND m.name_n = t.bank_category_n AND t.bank_category_n <> '' AND m.category_id IS NOT NULL) THEN 'bank'
                            ELSE 'none' END,
     note = CASE WHEN @set_note::bool THEN @note::text ELSE t.note END,
     note_n = CASE WHEN @set_note::bool THEN @note_n::text ELSE t.note_n END,

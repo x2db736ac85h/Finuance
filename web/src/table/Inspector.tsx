@@ -16,9 +16,9 @@ import {
 import { useAssignGroup, useGroups, type Group } from '../api/hooks/groups';
 import { GroupDots } from '../groups/GroupDots';
 import { GroupForm } from '../groups/GroupForm';
-import { fmtDateTime } from '../lib/dates';
+import { fmtDateTime, fmtDay } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
-import { fmtInt } from '../lib/format';
+import { fmtInt, fmtMoney } from '../lib/format';
 import { norm, searchTokens } from '../lib/text';
 import { useViews, viewOf } from '../stores/viewStore';
 import { Button } from '../ui/Button';
@@ -116,10 +116,22 @@ function Details({ d, tokens }: { d: TransactionDetail; tokens: readonly string[
   const fields = COLUMNS.filter((c) => c.id !== 'group' && (c.id !== 'balanceAfter' || d.balanceAfter));
   return (
     <>
+      <TransferRow d={d} busy={patch.isPending} save={save} />
       {fields.map((c) => {
         if (c.id === 'category') {
           return (
-            <Field key={c.id} col={c} text={c.text(d)} hint={d.category ? SOURCE_LABEL[d.categorySource] : ''}>
+            <Field
+              key={c.id}
+              col={c}
+              text={c.text(d)}
+              hint={
+                d.categorySource === 'rule' && d.categoryRule
+                  ? `by the rule “${d.categoryRule.name}”`
+                  : d.category
+                    ? SOURCE_LABEL[d.categorySource]
+                    : ''
+              }
+            >
               <CategoryPicker key={`${d.id}:${d.category?.id ?? ''}`} d={d} busy={patch.isPending} save={save} />
             </Field>
           );
@@ -183,6 +195,81 @@ function Details({ d, tokens }: { d: TransactionDetail; tokens: readonly string[
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Whether the transaction is a transfer between the user's accounts (PLAN task 15.3, ADR 0018):
+ * why (a detected pair, a rule, the user) and the decision buttons. "Not a transfer" unpairs both
+ * sides; "Automatic" hands it back to the rules and the detection.
+ */
+function TransferRow({
+  d,
+  busy,
+  save,
+}: {
+  d: TransactionDetail;
+  busy: boolean;
+  save: (body: TransactionPatch, done: string) => void;
+}) {
+  const src = d.transferSource ?? 'none';
+  const peer = d.transferPeer;
+  const status = d.isTransfer
+    ? src === 'pair' && peer
+      ? `Transfer · paired with ${peer.accountName}, ${fmtDay(peer.bookedOn)} (${fmtMoney(peer.amount)})`
+      : src === 'rule'
+        ? 'Transfer · marked by a rule'
+        : 'Transfer · marked by you'
+    : src === 'manual'
+      ? 'Not a transfer · decided by you'
+      : 'Not a transfer';
+  const no = d.isTransfer && (
+    <Button
+      size="sm"
+      disabled={busy}
+      onClick={() => {
+        save({ transfer: 'no' }, peer ? 'Unpaired: not a transfer' : 'Not a transfer');
+      }}
+    >
+      Not a transfer
+    </Button>
+  );
+  const yes = !d.isTransfer && src !== 'manual' && (
+    <Button
+      size="sm"
+      disabled={busy}
+      onClick={() => {
+        save({ transfer: 'yes' }, 'Marked as a transfer');
+      }}
+    >
+      Mark as transfer
+    </Button>
+  );
+  const auto = src === 'manual' && (
+    <Button
+      size="sm"
+      variant="ghost"
+      disabled={busy}
+      onClick={() => {
+        save({ transfer: 'auto' }, 'Back to automatic');
+      }}
+    >
+      Automatic
+    </Button>
+  );
+  return (
+    <div className="fld ins-xfer" role="group" aria-label="Transfer">
+      <div className="fk">
+        <Icon name="right" />
+        Transfer
+      </div>
+      <div className="fv">
+        <span className={d.isTransfer ? 'tag xfer' : 'muted'}>{status}</span>
+        {no}
+        {yes}
+        {auto}
+      </div>
+    </div>
   );
 }
 

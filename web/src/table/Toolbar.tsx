@@ -1,21 +1,22 @@
 // The toolbar above the grid (PLAN §7.6, legacy .toolbar): the view's title and size, removable
-// chips with Clear all, and the Groups, Columns and Export buttons.
+// chips with Clear all, Save filters as rule, and the Groups, Columns and Export buttons.
 
 import { useState } from 'react';
 
 import { exportCsv } from '../api/hooks/transactions';
 import { errorMessage } from '../lib/errors';
 import { fmtInt, plural } from '../lib/format';
-import { useViews, viewOf } from '../stores/viewStore';
+import { useViews, viewOf, type ViewState } from '../stores/viewStore';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
 import { usePopover } from '../ui/Popover';
 import { toast } from '../ui/toastStore';
 import { chipsOf, cleared, withoutChip } from './chips';
-import type { ColumnDef } from './columns';
+import { columnById, type ColumnDef, type ColumnId } from './columns';
 import { ColumnsMenu } from './ColumnsMenu';
 import { GroupsButton } from '../groups/GroupsMenu';
+import { RuleEditor, type RuleDraft } from '../rules/RuleEditor';
 import type { ViewQuery } from './context';
 
 type Props = {
@@ -47,7 +48,9 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
   const patch = useViews((s) => s.patch);
   const cols = usePopover();
   const [exporting, setExporting] = useState(false);
+  const [ruleDraft, setRuleDraft] = useState<RuleDraft | null>(null);
   const chips = chipsOf(viewId, v, periodLabel);
+  const draft = ruleDraftOf(v);
 
   const doExport = async () => {
     setExporting(true);
@@ -108,6 +111,17 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
         )}
       </div>
       <div className="tools">
+        {draft && (
+          <Button
+            icon="sliders"
+            title="Turn this view's search and filters into a rule that sets a category"
+            onClick={() => {
+              setRuleDraft(draft);
+            }}
+          >
+            Save filters as rule…
+          </Button>
+        )}
         <GroupsButton viewId={viewId} />
         <Button icon="columns" onClick={cols.toggle} aria-expanded={cols.open}>
           Columns
@@ -122,6 +136,30 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
         </Button>
       </div>
       {cols.anchor && <ColumnsMenu viewId={viewId} columns={columns} anchor={cols.anchor} onClose={cols.close} />}
+      {ruleDraft && (
+        <RuleEditor
+          title="New rule from filters"
+          initial={ruleDraft}
+          onClose={() => {
+            setRuleDraft(null);
+          }}
+        />
+      )}
     </div>
   );
+}
+
+/**
+ * A rule draft from the view's search and column filters (the period, sort and accounts don't go
+ * into rules: a rule applies to every account, all time); null when there is nothing to match.
+ */
+export function ruleDraftOf(v: Pick<ViewState, 'search' | 'filters'>): RuleDraft | null {
+  const filters = Object.entries(v.filters)
+    .filter(([, f]) => f && (f.cond.trim() || f.excluded.length))
+    .map(([column, f]) => ({ column: column as ColumnId, cond: f?.cond.trim() ?? '', excluded: f?.excluded ?? [] }));
+  const search = v.search.trim();
+  if (!search && !filters.length) return null;
+  const first = filters.find((f) => f.cond);
+  const name = first ? `${columnById(first.column)?.label ?? first.column} ${first.cond}` : search;
+  return { name: name.slice(0, 80), enabled: true, search, filters, setCategoryId: '', markTransfer: false };
 }
