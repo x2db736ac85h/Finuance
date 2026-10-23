@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 12 — Overview: API and UI · **Branch:** phase/12-overview · **Status:** built, awaiting gate review
+**Current phase:** 12 — Overview: API and UI · **Branch:** phase/12-overview · **Status:** gate approved, merged
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -195,6 +195,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 12 — Overview: API and UI: gate approved 2026-10-23; `phase/12-overview` merged with `--no-ff`.
 - Phase 11 — Insights: API, pane, modal: gate approved 2026-10-23; `phase/11-insights` merged with `--no-ff`.
 - Phase 10 — Table view, groups and multi-selection: gate approved 2026-10-22; `phase/10-table` merged with `--no-ff`.
 - Phase 9 — Import UX: gate approved 2026-10-22; `phase/09-import` merged with `--no-ff`.
@@ -331,6 +332,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 12 gate approved; merged. Next: plan Phase 13.
 - 2026-10-23 — Phase 12 built on `phase/12-overview`: overview API (one document per screen), budgets, investments, legacy oracle overview twins with Go parity tests, the overview page with KPIs and twelve cards, budget/opening/investment editors, actions, perf at 100k rows; 267 Vitest + 33 Playwright specs, integration tests green. Next: our Product Engineer's hands-on gate review.
 - 2026-10-23 — Phase 12 planned and approved (one overview request, oracle overview twins, uncategorised budget default-only, two pushes). Branch `phase/12-overview`.
 - 2026-10-23 — Phase 11 gate approved; merged. Next: plan Phase 12.
