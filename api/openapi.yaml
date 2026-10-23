@@ -1097,6 +1097,114 @@ paths:
                 $ref: "#/components/schemas/InsightDaily"
         default:
           $ref: "#/components/responses/Problem"
+  /overview:
+    post:
+      operationId: overview
+      summary: Everything the overview page shows for one month
+      description: >-
+        One call per screen (PLAN §4.6, legacy ovCtx and the o_* cards). The overview reads the
+        context's filters and search but never its period. Lists are complete (e.g. every budget
+        row, up to 40 largest expenses); the client cuts them for the card and the window. Without
+        dated rows `data` is absent.
+      tags: [overview]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OverviewRequest"
+      responses:
+        "200":
+          description: The overview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Overview"
+        default:
+          $ref: "#/components/responses/Problem"
+  /budgets:
+    get:
+      operationId: listBudgets
+      summary: The budgets set by hand
+      description: Monthly limits per category (global per category, legacy). Categories without one use the default budget.
+      tags: [overview]
+      responses:
+        "200":
+          description: Budgets, by category name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetList"
+        default:
+          $ref: "#/components/responses/Problem"
+  /budgets/{categoryId}:
+    put:
+      operationId: putBudget
+      summary: Set or reset a category's budget
+      description: "`amountMinor: null` removes the budget (back to the default); removing a budget that isn't set is not an error."
+      tags: [overview]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetInput"
+      responses:
+        "204":
+          description: Saved.
+        default:
+          $ref: "#/components/responses/Problem"
+  /investments:
+    get:
+      operationId: getInvestments
+      summary: The manual investment data
+      description: PPK, positions, safe withdrawal rate and expected real return (PLAN §4.9); version 0 and the defaults before the first save.
+      tags: [overview]
+      responses:
+        "200":
+          description: The document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Investments"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: putInvestments
+      summary: Replace the investment data
+      description: |
+        Optimistic concurrency as preferences: send the version you read (0 for the first save). A
+        mismatch returns `409 stale_version` with the current document in `current`. Position ids
+        come from the client and must be unique.
+      tags: [overview]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Investments"
+      responses:
+        "200":
+          description: Saved; `version` is the new version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Investments"
+        "409":
+          description: The stored version is not the one sent.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/StaleInvestmentsProblem"
+        default:
+          $ref: "#/components/responses/Problem"
   /demo-data:
     post:
       operationId: loadDemoData
@@ -2561,6 +2669,577 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DaySpend"
+    OverviewRequest:
+      type: object
+      additionalProperties: false
+      required: [context, months]
+      properties:
+        context:
+          $ref: "#/components/schemas/QueryContext"
+        month:
+          type: string
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+          description: The month to show; absent = the latest month with data. A month outside the data is clamped to it.
+        months:
+          type: integer
+          enum: [6, 12, 24, 36]
+          description: How many months the cash-flow, savings-rate and balance cards cover (legacy ovMonths).
+    Overview:
+      type: object
+      additionalProperties: false
+      required: [currency]
+      properties:
+        currency:
+          type: string
+          description: The most common currency of the context's accounts.
+        data:
+          $ref: "#/components/schemas/OverviewData"
+    MonthTotals:
+      type: object
+      additionalProperties: false
+      required: [month, incomeMinor, expenseMinor, count]
+      properties:
+        month:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        incomeMinor:
+          type: integer
+          format: int64
+        expenseMinor:
+          type: integer
+          format: int64
+          description: Money out as a positive number.
+        count:
+          type: integer
+          format: int64
+    OverviewData:
+      type: object
+      additionalProperties: false
+      required: [month, prevMonth, firstMonth, lastMonth, dataMax, partial, elapsedDays, daysInMonth, current, previous,
+        prevToDateMinor, avgMonths, months, categories, incomeSources, colorSlots, highlights, recurring, largest, weekday,
+        balance, investment, yieldOnCost, fire]
+      properties:
+        month:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        prevMonth:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        firstMonth:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+          description: The first month with data (for the month selector).
+        lastMonth:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        dataMax:
+          type: string
+          format: date
+          description: The latest booking date of the context's accounts.
+        partial:
+          type: boolean
+          description: The month is the data's last and not complete (the month-in-progress flag).
+        elapsedDays:
+          type: integer
+          description: Days of the month with data (all of them unless partial).
+        daysInMonth:
+          type: integer
+        current:
+          $ref: "#/components/schemas/MonthTotals"
+        previous:
+          $ref: "#/components/schemas/MonthTotals"
+        prevToDateMinor:
+          type: integer
+          format: int64
+          description: The previous month's spending up to the same day of month.
+        projectedMinor:
+          type: integer
+          format: int64
+          description: Partial months only - spending projected to the month's end.
+        avgMonths:
+          type: integer
+          description: How many earlier months (up to 3) the averages and default budgets use.
+        months:
+          type: array
+          description: The `months` setting's range ending at `month` (from the first month with data on), oldest first, every month listed.
+          items:
+            $ref: "#/components/schemas/MonthTotals"
+        categories:
+          type: array
+          description: Budget rows in the card's order (budget, then spending, largest first).
+          items:
+            $ref: "#/components/schemas/BudgetRow"
+        incomeSources:
+          type: array
+          description: The month's income per payee group, largest first.
+          items:
+            $ref: "#/components/schemas/PayeeSpend"
+        colorSlots:
+          type: array
+          description: The categories owning a colour (the 7 largest all-time spenders); no `category` = uncategorised.
+          items:
+            $ref: "#/components/schemas/ColorSlot"
+        highlights:
+          type: array
+          items:
+            $ref: "#/components/schemas/Highlight"
+        recurring:
+          type: array
+          description: Detected recurring payments, active first, then by yearly cost.
+          items:
+            $ref: "#/components/schemas/RecurringPayment"
+        largest:
+          type: array
+          maxItems: 40
+          description: The month's largest expenses, largest first.
+          items:
+            $ref: "#/components/schemas/OverviewExpense"
+        weekday:
+          type: array
+          minItems: 7
+          maxItems: 7
+          description: Spending per weekday over the month and the two before it, Monday first.
+          items:
+            $ref: "#/components/schemas/WeekdaySpend"
+        balance:
+          $ref: "#/components/schemas/BalanceSeries"
+        investment:
+          $ref: "#/components/schemas/InvestmentSummary"
+        yieldOnCost:
+          $ref: "#/components/schemas/YieldOnCost"
+        fire:
+          $ref: "#/components/schemas/Fire"
+    BudgetRow:
+      type: object
+      additionalProperties: false
+      required: [name, curMinor, prevMinor, avg3Minor, budgetMinor, budgetIsDefault, status]
+      properties:
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        name:
+          type: string
+          description: The category's name, or "(uncategorized)" (its budget is always the default).
+        curMinor:
+          type: integer
+          format: int64
+        prevMinor:
+          type: integer
+          format: int64
+        avg3Minor:
+          type: integer
+          format: int64
+          description: Average spending of up to three earlier months.
+        budgetMinor:
+          type: integer
+          format: int64
+        budgetIsDefault:
+          type: boolean
+          description: No budget set by hand; the default is the rounded 3-month average.
+        status:
+          type: string
+          enum: [ok, ahead, over, none]
+    ColorSlot:
+      type: object
+      additionalProperties: false
+      required: [slot]
+      properties:
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        slot:
+          type: integer
+          minimum: 1
+          maximum: 7
+    Highlight:
+      type: object
+      additionalProperties: false
+      required: [kind, tone, amountMinor, otherMinor, pct, avgPct, days, of, months, count, category, payee, sameDays]
+      description: One highlight sentence's facts; the client writes the sentence. Fields a kind doesn't use are 0 or empty.
+      properties:
+        kind:
+          type: string
+          enum: [projection, vsPrev, vsAverage, topCategory, categoryUp, categoryDown, savings, overspend, noIncome, noSpendDays,
+            recurring, largest]
+        tone:
+          type: string
+          enum: [info, up, down, good, warn]
+        amountMinor:
+          type: integer
+          format: int64
+        otherMinor:
+          type: integer
+          format: int64
+        pct:
+          type: number
+          format: double
+        avgPct:
+          type: number
+          format: double
+        days:
+          type: integer
+        of:
+          type: integer
+        months:
+          type: integer
+        count:
+          type: integer
+        category:
+          type: string
+        payee:
+          type: string
+        month:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+          description: vsPrev only - the month compared with.
+        sameDays:
+          type: boolean
+          description: vsPrev only - compared over the same days of month (partial months).
+    RecurringPayment:
+      type: object
+      additionalProperties: false
+      required: [payee, medianMinor, last, next, active, yearlyMinor, count]
+      properties:
+        payee:
+          type: string
+          description: The payee group.
+        category:
+          type: string
+          description: The most frequent category; absent when uncategorised.
+        medianMinor:
+          type: integer
+          format: int64
+          description: The typical amount, positive.
+        last:
+          type: string
+          format: date
+        next:
+          type: string
+          format: date
+        active:
+          type: boolean
+        yearlyMinor:
+          type: integer
+          format: int64
+        count:
+          type: integer
+    OverviewExpense:
+      type: object
+      additionalProperties: false
+      required: [id, bookedOn, payee, payeeGroup, amountMinor]
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookedOn:
+          type: string
+          format: date
+        payee:
+          type: string
+          description: As the bank wrote it.
+        payeeGroup:
+          type: string
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        amountMinor:
+          type: integer
+          format: int64
+          description: Negative.
+    WeekdaySpend:
+      type: object
+      additionalProperties: false
+      required: [totalMinor, days]
+      properties:
+        totalMinor:
+          type: integer
+          format: int64
+        days:
+          type: integer
+          description: How many of these weekdays the window has (for the average).
+    BalanceSeries:
+      type: object
+      additionalProperties: false
+      required: [openingMinor, nowMinor, points]
+      description: The accounts' balance (opening balances plus every transaction, filters ignored).
+      properties:
+        openingMinor:
+          type: integer
+          format: int64
+        nowMinor:
+          type: integer
+          format: int64
+          description: After the last transaction.
+        points:
+          type: array
+          description: The balance at the end of each day with transactions in the months' range.
+          items:
+            $ref: "#/components/schemas/BalancePoint"
+    BalancePoint:
+      type: object
+      additionalProperties: false
+      required: [date, balanceMinor]
+      properties:
+        date:
+          type: string
+          format: date
+        balanceMinor:
+          type: integer
+          format: int64
+    InvestmentRow:
+      type: object
+      additionalProperties: false
+      required: [name, type, ppk, investedMinor, valueMinor, incomeMinor, allocationShare]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Absent for the PPK row.
+        name:
+          type: string
+        type:
+          type: string
+        ppk:
+          type: boolean
+        investedMinor:
+          type: integer
+          format: int64
+        valueMinor:
+          type: integer
+          format: int64
+        incomeMinor:
+          type: integer
+          format: int64
+        gainPercent:
+          type: number
+          format: double
+          description: (value − invested) / invested; absent without money invested.
+        allocationShare:
+          type: number
+          format: double
+    InvestmentSummary:
+      type: object
+      additionalProperties: false
+      required: [rows, investedMinor, valueMinor, incomeMinor, ppkPaidInMinor, ppkGainMinor, count]
+      properties:
+        rows:
+          type: array
+          description: PPK first, then the positions.
+          items:
+            $ref: "#/components/schemas/InvestmentRow"
+        investedMinor:
+          type: integer
+          format: int64
+        valueMinor:
+          type: integer
+          format: int64
+        incomeMinor:
+          type: integer
+          format: int64
+        ppkPaidInMinor:
+          type: integer
+          format: int64
+        ppkGainMinor:
+          type: integer
+          format: int64
+        ppkReturnOnOwn:
+          type: number
+          format: double
+          description: (value − own contributions) / own contributions; absent without own contributions.
+        gainPercent:
+          type: number
+          format: double
+        count:
+          type: integer
+          description: Positions (PPK not counted).
+    YieldRow:
+      type: object
+      additionalProperties: false
+      required: [id, name, investedMinor, incomeMinor, yield]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        investedMinor:
+          type: integer
+          format: int64
+        incomeMinor:
+          type: integer
+          format: int64
+        yield:
+          type: number
+          format: double
+    YieldOnCost:
+      type: object
+      additionalProperties: false
+      required: [positions, investedMinor, incomeMinor, detectedMinor, usesDetected]
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: "#/components/schemas/YieldRow"
+        investedMinor:
+          type: integer
+          format: int64
+        incomeMinor:
+          type: integer
+          format: int64
+        detectedMinor:
+          type: integer
+          format: int64
+          description: Dividends and interest found in the transactions of the 12 months up to the month.
+        usesDetected:
+          type: boolean
+          description: No income entered by hand, so the detected income is used.
+        total:
+          type: number
+          format: double
+    Fire:
+      type: object
+      additionalProperties: false
+      required: [months, annualExpensesMinor, yearlySavingsMinor, fiNumberMinor, assetsMinor, swrBp, realReturnBp, progress, years, reachable]
+      properties:
+        months:
+          type: integer
+          description: How many months (up to 12) the annual figures come from.
+        annualExpensesMinor:
+          type: integer
+          format: int64
+        yearlySavingsMinor:
+          type: integer
+          format: int64
+        fiNumberMinor:
+          type: integer
+          format: int64
+        assetsMinor:
+          type: integer
+          format: int64
+        swrBp:
+          type: integer
+        realReturnBp:
+          type: integer
+        progress:
+          type: number
+          format: double
+        years:
+          type: integer
+          description: Years to FI; 0 when reached.
+        reachable:
+          type: boolean
+          description: False when FI isn't reached within 100 years.
+    Budget:
+      type: object
+      additionalProperties: false
+      required: [category, amountMinor]
+      properties:
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        amountMinor:
+          type: integer
+          format: int64
+    BudgetList:
+      type: object
+      additionalProperties: false
+      required: [budgets]
+      properties:
+        budgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Budget"
+    BudgetInput:
+      type: object
+      additionalProperties: false
+      required: [amountMinor]
+      properties:
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          description: The monthly limit; null resets to the default budget.
+    PPK:
+      type: object
+      additionalProperties: false
+      required: [employeeMinor, employerMinor, stateMinor, valueMinor]
+      description: Pracownicze Plany Kapitałowe (the Polish employee capital plan).
+      properties:
+        employeeMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        employerMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        stateMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        valueMinor:
+          type: integer
+          format: int64
+          minimum: 0
+    InvestmentPosition:
+      type: object
+      additionalProperties: false
+      required: [id, name, type, investedMinor, valueMinor, annualIncomeMinor]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        type:
+          type: string
+          maxLength: 30
+          description: Free text (suggestions ETF, stock, bond, deposit, crypto, other).
+        investedMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        valueMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        annualIncomeMinor:
+          type: integer
+          format: int64
+          minimum: 0
+    Investments:
+      type: object
+      additionalProperties: false
+      required: [version, ppk, swrBp, realReturnBp, positions]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 0
+        ppk:
+          $ref: "#/components/schemas/PPK"
+        swrBp:
+          type: integer
+          minimum: 50
+          maximum: 1000
+          description: Safe withdrawal rate in basis points (400 = 4 %).
+        realReturnBp:
+          type: integer
+          minimum: -1000
+          maximum: 2000
+          description: Expected real return in basis points.
+        positions:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/InvestmentPosition"
+    StaleInvestmentsProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          required: [current]
+          properties:
+            current:
+              $ref: "#/components/schemas/Investments"
     Money:
       type: object
       additionalProperties: false

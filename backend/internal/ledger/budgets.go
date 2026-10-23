@@ -52,3 +52,16 @@ func (l *Ledger) DeleteBudget(ctx context.Context, userID, categoryID uuid.UUID)
 	})
 	return notFound("delete budget", n, err)
 }
+
+// ClearBudget removes the budget of a category the user owns, if it has one (PUT with null:
+// back to the default budget; idempotent).
+func (l *Ledger) ClearBudget(ctx context.Context, userID, categoryID uuid.UUID) error {
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		if err := ownCategory(ctx, q, userID, categoryID); err != nil {
+			return err
+		}
+		_, err := q.DeleteBudget(ctx, db.DeleteBudgetParams{UserID: userID, CategoryID: categoryID})
+		return err
+	})
+	return dbErr("clear budget", err)
+}

@@ -274,3 +274,33 @@ scans that an index can't shortcut, and they stay well within the budget at this
 started before the list's own and, over HTTP/1.1, the browser allows six requests per host, so the
 list waited. The charts now load once the list's first window has arrived (`ChartEnv.ready`); later
 filter changes send all seven at once (above). Behind TLS (HTTP/2, Phase 16) the limit goes away.
+
+## Overview: 100k rows (Phase 12)
+
+**Setup.** `TestOverviewPerf` (`internal/insights/perf_test.go`, opt-in with `FINUANCE_PERF=1`)
+seeds the same 108,098-transaction user and times `insights.Overview` (everything
+`POST /overview` returns, one read-only transaction), 20 runs after a warm-up.
+
+### Results — 2026-10-23, cloud sandbox (4 vCPU, Postgres 18.6 in Docker)
+
+| Shape | p50 / p95 |
+|---|---|
+| all accounts, latest month, 12 months | 192 / 216 ms |
+| all accounts, 36 months | 198 / 218 ms |
+| one account | 55 / 68 ms |
+| category != Mieszkanie | 296 / 317 ms |
+| search "blik warszawa" | 164 / 198 ms |
+
+**Reading.** One call stands in for the twelve cards, so it is compared with the §7.12 budget for a
+screen (≤ 300 ms) rather than with the 150 ms per insight call. Four statements read every base row
+(months, colour slots, recurring candidates, balance); in this sandbox the transactions table
+(≈ 140 MB) doesn't fit the container's 128 MB of shared buffers, so each of them is a ~65 ms
+sequential read. The negated category filter is the slowest shape because nearly every row passes
+it. A larger `shared_buffers` on the homelab (Phase 16) is the first lever; the four scans could
+also be folded into fewer statements if a real data set needs it.
+
+**What changed.** The first measurement was 315 ms p95 unfiltered and 417 ms with the category
+filter. Recurring detection took 180 ms: it counted months with `count(DISTINCT date_trunc(…))`,
+which sorts per payee. It now counts them with two hash aggregates, and every month truncation
+(`Months`, the per-month categories, recurring) truncates a `timestamp` instead of a `timestamptz`,
+which skips the time-zone conversion per row.

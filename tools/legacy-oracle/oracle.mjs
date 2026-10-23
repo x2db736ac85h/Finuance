@@ -16,6 +16,7 @@ import toolCases from './cases/tools.mjs';
 import cfgCases from './cases/cfg.mjs';
 import portfolios from './cases/investments.mjs';
 import chartCases from './cases/charts.mjs';
+import overviewCases from './cases/overview.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -24,7 +25,7 @@ const FIX = join(ROOT, 'testdata', 'fixtures');
 const OUT = join(ROOT, 'testdata', 'oracle');
 const FROZEN_NOW = '2025-03-20T10:00:00Z';   // a Thursday, three days after the demo data ends
 const BACKUP_PASSPHRASE = 'oracle-test-passphrase';
-const GENERATED = ['ingest', 'ingest-cfg', 'corpus', 'dedupe', 'txkeys', 'filters', 'recurring-periods', 'assistant', 'investments', 'charts'];
+const GENERATED = ['ingest', 'ingest-cfg', 'corpus', 'dedupe', 'txkeys', 'filters', 'recurring-periods', 'assistant', 'investments', 'charts', 'overview'];
 
 // Names exposed from the legacy IIFE. The first block is the list in docs/PLAN.md Phase 1 task 1.4; the
 // second is what the overview, duplicates and backup outputs additionally need.
@@ -182,6 +183,11 @@ async function main(){
   put(join(OUT, 'charts', 'demo.json'), {dataset: 'demo/demo-legacy.csv', columnMap: 'tools/legacy-oracle/column-map.json',
     cases: await withPage('charts', page => call(page, 'charts', demoB64, chartCases))});
   count('chart cases', chartCases.length);
+
+  /* overview: context, card twins and highlight sentences */
+  put(join(OUT, 'overview', 'demo.json'), {dataset: 'demo/demo-legacy.csv', columnMap: 'tools/legacy-oracle/column-map.json',
+    cases: await withPage('overview', page => call(page, 'overview', demoB64, overviewCases))});
+  count('overview cases', overviewCases.length);
 
   /* legacy backups (plain and passphrase-locked) */
   await withPage('backup', page => backups(page, demoB64));

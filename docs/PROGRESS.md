@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 11 — Insights: API, pane, modal · **Branch:** phase/11-insights · **Status:** gate approved, merged
+**Current phase:** 12 — Overview: API and UI · **Branch:** phase/12-overview · **Status:** in progress
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -25,9 +25,20 @@
 - Phase 10: one phase with one gate, pushed in two halves (table first, then groups, selection and duplicates). `POST /transactions/bulk` takes explicit ids only (the selection; ranges resolved through `/transactions/ids`).
 - Public repository (2026-10-22): docs and code comments refer to "our Product Engineer"; test data uses a neutral sample user ("Alex", `alex@example.com`); git history is left as it is. README with screenshots, `SECURITY.md` (private vulnerability reporting), `CONTRIBUTING.md` (issues welcome, no pull requests yet), `docs/README.md` index, and a README in every placeholder folder.
 - Phase 11: the aggregation SQL lives in `internal/query/insights.go` (reusing the compiled `base`/`scoped` CTEs; no change to the store guard), and `internal/insights` holds only the pure rules. Cash flow returns every month of `base`; the client cuts it to fit/6/12/24/36/all. The legacy oracle records each chart's table twin on the demo file, and Go tests compare the API against it. One gate, two pushes (backend + chart library + charts; then pane, modal and actions).
+- Phase 12: one `POST /overview {context, month, months}` per screen with full lists (the browser cuts top-N for the small and large card sizes). The legacy oracle records every overview card's table twin and the highlight sentences on the demo year (several months and one filtered view), and Go tests compare against it. Uncategorised spending shows its default budget only (budgets are stored per category). One gate, two pushes (backend: overview, budgets, investments; then the page and cards).
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 12.1 overview backend: month aggregates in `query` (month totals, month × category, income by payee, weekday window, largest expenses, recurring candidates, balance series) + rules in `internal/insights/overview.go` (M/P, partial, prevToDate, projection, KPIs and sparklines, default budgets and status, savings rate, weekday, balance, `findRecurring`, highlights)
+- [x] 12.2 budgets: `GET /budgets`, `PUT /budgets/{categoryId}` (`null` = default)
+- [ ] 12.3 opening balance input on the balance card (single-account views; sum read-only in "All accounts")
+- [x] 12.6 investments: `GET`/`PUT /investments` (versioned), calculators in `internal/investments`, oracle portfolios
+- [x] Legacy oracle: overview card twins + highlight sentences on the demo year (11 views); `TestOverviewParity` matches every card and sentence (2 weekday half-cent ties, ALLOWED_DIFFS row 13); `TestInvestmentCardsParity` (5 portfolios × 2 months)
+- [ ] 12.4 `OverviewPage`: header, KPIs, the twelve cards, 12-column container grid, chart window with table and `ovMonths`, investment editors
+- [ ] 12.5 actions: Sankey category → filter + table, largest expense → row, cash-flow/savings bar → month
+- [ ] Tests, E2E, perf at 100k rows (server side done: `TestOverviewPerf`, 216 ms p95 unfiltered, docs/perf.md "Overview"), screenshots (both themes, 3 widths), PARITY rows
+
+## Phase 11 tasks (done)
 - [x] 11.1 backend: aggregation queries in `query/insights.go` (summary, categories, cashflow, pace, payees, daily) + pure rules in `internal/insights` (days clipping, prev-period delta, savings rate, pace arrays and comparisons, category shares and colour slots, top-N payees, heatmap ranges)
 - [x] 11.2 OpenAPI + handlers `POST /insights/{summary,categories,cashflow,pace,payees,daily}`, HTTP + tenancy tests
 - [x] 11.3 `web/src/charts/lib` ports (`barPath`, `arc`, `spark`, compact numbers, `roundNice`, heat quintiles, `<Svg w h>`, tooltip) with geometry tests
@@ -206,6 +217,9 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 12.1: `POST /overview` answers `{currency, data?}` (no `data` without dated rows) with every card's facts in one document (`OverviewData`), not the §4.6 field list one by one. Highlights are facts (`kind`, `tone`, amounts, percentages); the browser writes the sentences, so the wording lives next to the other UI text. The income sources reuse `PayeeSpend` (`spentMinor` is the money received). A `month` outside the data is clamped to the latest month (legacy).
+- 12.2: `PUT /budgets/{categoryId}` answers `204`; `null` removes the budget and is idempotent, but a category the user doesn't own is `404` either way.
+- 12.6: position ids are client-generated uuids (stable keys while editing). They are primary keys, so an id another user already has is `409 conflict` (nothing is revealed about the other document).
 - 11.4: a `ChartDef` is `{key, title, cfgControls, use(q, env)}`; `use` reads the data and returns the card's parts (subtitle, legend, drawing, table twin). The plan's sketch split these into `useData`, `Component`, `Subtitle`, `Legend` and `toTable`; one hook keeps them together because the cash-flow subtitle and table depend on the measured width (the months that fit).
 - 11.4: the "(uncategorized)" slice filters with `=` (an empty category) instead of the legacy `=(uncategorized)`, which matched nothing (planned at the Phase 11 plan). The largest expense on the summary card is a button that selects and scrolls to its row (PLAN §7.8; the legacy tile was plain text).
 - 11.4: insight amounts are in the most common currency of the view's accounts; a mixed-currency view adds minor units as they are (like the status bar, 10.7). The API's payee `top` accepts 0/10/25/50/100; another stored value reads as 25.
@@ -312,6 +326,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 12 planned and approved (one overview request, oracle overview twins, uncategorised budget default-only, two pushes). Branch `phase/12-overview`.
 - 2026-10-23 — Phase 11 gate approved; merged. Next: plan Phase 12.
 - 2026-10-22 — Phase 11 built on `phase/11-insights`: insight endpoints (aggregations in `query`, rules in `insights`), oracle chart twins with a parity test over 16 views, chart library and the six charts, pane with period picker and Charts menu, chart window, chart → table actions, perf at 100k rows; 245 Vitest + 29 Playwright specs, integration tests green. Next: our Product Engineer's gate review (legacy vs new pane on the same demo data).
 - 2026-10-22 — Phase 11 planned and approved (aggregation SQL in `query`, all cash-flow months, oracle chart twins, two pushes). Branch `phase/11-insights`.
