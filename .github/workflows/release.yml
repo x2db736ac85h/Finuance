@@ -138,5 +138,13 @@ jobs:
             echo '```'
           } > release.md
           cp deploy/compose/compose.prod.yaml deploy/compose/.env.prod.example .
-          gh release create "$GITHUB_REF_NAME" "${pre[@]}" --title "Finuance ${{ steps.v.outputs.version }}" --notes-file release.md \
-            compose.prod.yaml .env.prod.example finuance-api.spdx.json finuance-web.spdx.json
+          files=(compose.prod.yaml .env.prod.example finuance-api.spdx.json finuance-web.spdx.json)
+          title="Finuance ${{ steps.v.outputs.version }}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            # created by hand in the GitHub web UI (which also creates the tag), or a re-run
+            gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file release.md \
+              --prerelease="${{ steps.v.outputs.prerelease }}" --draft=false
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${pre[@]}" --title "$title" --notes-file release.md "${files[@]}"
+          fi
