@@ -53,8 +53,8 @@ func TestAmountAndKeys(t *testing.T) {
 			t.Errorf("groupKey(%s, %q) = %q", c.by, c.key, got)
 		}
 	}
-	if MaskDigits("ACC 12345678901234567890123456 card *****0229 ref 123456") != "ACC 12… card *****0229 ref 12…" {
-		t.Error(MaskDigits("ACC 12345678901234567890123456 card *****0229 ref 123456"))
+	if MaskDigits("ACC 00000000000000000000000001 card *****0229 ref 123456") != "ACC 00… card *****0229 ref 12…" {
+		t.Error(MaskDigits("ACC 00000000000000000000000001 card *****0229 ref 123456"))
 	}
 	if clip("zażółć gęślą", 6) != "zażółć" {
 		t.Error(clip("zażółć gęślą", 6))

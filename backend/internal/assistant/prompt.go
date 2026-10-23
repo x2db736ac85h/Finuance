@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	_ "time/tzdata" // "today" in the user's zone even in an image without a zone database
 
 	"github.com/google/uuid"
 

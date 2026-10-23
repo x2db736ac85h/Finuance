@@ -37,6 +37,8 @@ commands:
                          create an account (works with signup disabled)
   admin set-password -email=… -password-stdin
                          reset a password and sign the user out everywhere
+  admin llm-probe [-connection=…] [-model=…] [-out=dir]
+                         list the assistant's models and test one with made-up data
   healthcheck            exit 0 if the local API answers /healthz (container healthcheck)
   version                print build information
 
@@ -141,10 +143,28 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 // admin parses `finuance admin <command> [flags]`; the flags follow the command.
 func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer,
 	load func(config.Requirement) (config.Config, bool), fail func(error) int) int {
-	const adminUsage = "usage: finuance admin create-user|set-password -email=… [-display-name=…] -password-stdin"
+	const adminUsage = "usage: finuance admin create-user|set-password -email=… [-display-name=…] -password-stdin\n" +
+		"       finuance admin llm-probe [-connection=…] [-model=…] [-out=dir]"
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, adminUsage)
 		return 2
+	}
+	if args[0] == "llm-probe" {
+		fs := flag.NewFlagSet("admin llm-probe", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		var in app.ProbeInput
+		fs.StringVar(&in.Connection, "connection", "", "connection name (default: the first)")
+		fs.StringVar(&in.Model, "model", "", "model id (default: the connection's default)")
+		fs.StringVar(&in.OutDir, "out", "", "write each request and raw response to this directory")
+		if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 0 {
+			fmt.Fprintln(stderr, adminUsage)
+			return 2
+		}
+		cfg, ok := load(config.ForHealthcheck)
+		if !ok {
+			return 1
+		}
+		return fail(app.Probe(ctx, cfg, in, func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
 	}
 	fs := flag.NewFlagSet("admin "+args[0], flag.ContinueOnError)
 	fs.SetOutput(stderr)

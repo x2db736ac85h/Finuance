@@ -213,12 +213,14 @@ seed-demo: $(ENV_FILE) ## Demo data for a user: make seed-demo email=…
 	$(RUN_ENV) cd backend && go run ./cmd/finuance seed-demo -email='$(email)'
 
 .PHONY: llmmock
-llmmock: ## Mock OpenAI-compatible server for local UI work
-	$(call todo,13)
+llmmock: ## Mock model server on :11434 for local UI work (OpenAI and Anthropic protocols)
+	cd backend && go run ./cmd/llmmock -addr :11434
 
 .PHONY: eval-assistant
-eval-assistant: ## Assistant evals against FINUANCE_AI_BASE_URL (MODEL= optional)
-	$(call todo,13)
+eval-assistant: ## Assistant evals against a real model: CONNECTION= MODEL= THINK= (Docker for the DB; docs/evals.md)
+	cd backend && FINUANCE_EVAL_CONNECTION=$(CONNECTION) FINUANCE_EVAL_MODEL=$(MODEL) FINUANCE_EVAL_THINK=$(THINK) \
+	  FINUANCE_EVAL_MODE=$(MODE) FINUANCE_EVAL_TOOLSET=$(TOOLSET) \
+	  go test -tags eval -run TestEvalAssistant -count=1 -timeout 3h -v ./internal/assistant/eval
 
 ##@ Build and deploy
 

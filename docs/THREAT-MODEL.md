@@ -1,6 +1,6 @@
 # Threat model (v1)
 
-Version 1 was written in Phase 5, when accounts, sessions and the first protected endpoints arrived. Phase 16 revises it for the Kubernetes deployment. The baseline controls come from PLAN §8.1. This document states which of them exist today, where they live, and which test proves them.
+Version 1 was written in Phase 5 and extended in Phase 13 (the assistant: B4, A7, I5, I7, I8, D5), when accounts, sessions and the first protected endpoints arrived. Phase 16 revises it for the Kubernetes deployment. The baseline controls come from PLAN §8.1. This document states which of them exist today, where they live, and which test proves them.
 
 **Status legend:** ✅ implemented and tested · 🟡 partly in place · ⏳ planned (phase noted).
 
@@ -14,7 +14,7 @@ Version 1 was written in Phase 5, when accounts, sessions and the first protecte
 | **A4. Account identity** | `users.email`, `display_name` | Personal data; reveals that someone uses the instance |
 | **A5. Availability** | api, worker, Postgres on a small homelab node | One user's misuse shouldn't take the instance down |
 | **A6. Secrets** | DB role passwords and the LLM API key, in env or Sealed Secrets | Direct access around every app control |
-| **A7. Assistant conversations** (Phase 13) | `assistant_messages` | They contain financial questions and answers |
+| **A7. Assistant conversations** (Phase 13) | `assistant_chats`, `assistant_messages` (forced RLS); kept 48 h by default, 1–7 days or forever by the user's choice | They contain financial questions, answers and tool results |
 
 ## 2. Who might attack (actors)
 
@@ -46,7 +46,7 @@ flowchart LR
     subgraph data["Data (Postgres, role finuance_app)"]
         rls["RLS: app.user_id per transaction"]
     end
-    llm["LLM server (Phase 13, instance config only)"]
+    llm["Model servers (instance config only; local, or cloud with the admin flag + user consent)"]
 
     browser -- "B1: HTTP + cookie" --> ingress --> api
     files -- "B2: upload bytes" --> api
@@ -58,7 +58,7 @@ flowchart LR
 - **B1, browser → api.** Everything is untrusted input. Requests pass CSRF checks, session resolution, OpenAPI request validation (shape) and domain validation (meaning).
 - **B2, uploaded bytes → parser.** The file is hostile until parsed. Size, row, column and time limits apply: the parser limits from Phase 3, the upload limits from Phase 6.
 - **B3, application → database.** The app role is subject to row-level security. Even application bugs stay within one tenant.
-- **B4, application → LLM** (Phase 13). The endpoint comes from instance config, never from user input. Data is framed as data.
+- **B4, application → model servers** (Phase 13, ADR 0015). Connections come from instance config, never from user input. A connection reaches public addresses only with the admin's `cloud` flag (checked at startup and on every dial, so DNS changes don't redirect it), and each user agrees once per cloud connection before their data goes there. The prompt frames bank text as data; tool results for cloud models have long digit runs masked.
 
 ## 4. STRIDE
 
@@ -79,11 +79,14 @@ flowchart LR
 | I3 | **Information disclosure:** stolen database dump | B3 | Password hashes are argon2id. Session tokens are stored hashed. Account numbers live only in `raw`, the counterparty fields and the stored original files (`import_files`, kept so an import can be reprocessed); `number_hint` is the last 4 digits. Volume encryption and encrypted backups are documented in the RUNBOOK. | 🟡 | Hashes ✅; ⏳ Phase 16 RUNBOOK |
 | I4 | **Information disclosure:** XSS reading data in the browser | B1 | React escaping; an ESLint rule bans `innerHTML`, `outerHTML` and `dangerouslySetInnerHTML`. nginx sends `default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'` with `nosniff`, `Referrer-Policy: no-referrer` and a minimal `Permissions-Policy`. The ingress repeats it in Phase 16. | 🟡 | `deploy/docker/nginx.conf`, `web/eslint.config.js`; e2e `no CSP violations`, CI image job checks the header; ⏳ Phase 16 ingress |
 | I6 | **Information disclosure:** open redirect after sign-in (`?next=`) | B1 | Only same-origin paths are followed (`/x`, never `//host`, `/\\host` or a URL) | ✅ | `web/src/auth/next.ts`; `safeNext` test |
-| I5 | **Information disclosure:** prompt injection makes the assistant leak | B4 | Read-only tools in `WithUserReadOnly` (RLS-scoped, `READ ONLY` transaction); no network tools; prompts, outputs and tool results are never logged | 🟡 | `WithUserReadOnly` ✅ (`TestWithUserReadOnlyRejectsWrites`); ⏳ Phase 13 |
+| I5 | **Information disclosure:** prompt injection makes the assistant leak | B4 | Typed read-only tools only (no model-written SQL) in `WithUserReadOnly` (RLS-scoped, `READ ONLY` transaction); no network tools; every lookup is shown as a step; bank text framed as data in the prompt; prompts, outputs and tool results are never logged (one line per run: hashed user, model, rounds, tool names, duration) | ✅ | `assistant/tools.go`, `assistant/run.go`; `TestToolsTenancy`, `TestAssistantChatHTTP` (other user 404), `TestWithUserReadOnlyRejectsWrites` |
+| I7 | **Information disclosure:** data sent to a third-party model | B4 | Local connections can't dial public addresses (`llm` dial guard, startup `CheckHosts`); cloud connections need the admin flag, https, and the user's consent (`403 consent_required`); digit runs ≥ 6 masked in tool results for cloud models | ✅ | `llm/http.go`, `config/ai.go`, `assistant/run.go`; `TestPrivateAddressGuard`, `TestCheckHosts`, `TestAIConnectionsFileProblems`, `TestRunLimitsAndConsent` |
+| I8 | **Information disclosure:** SSRF through the model endpoint | B4 | Endpoints are instance config only; users choose a connection by name; the API key lives in an environment variable named by the config, never in the file or the database | ✅ | `config/ai.go`; `TestAIConnectionsFileProblems` |
 | D1 | **Denial of service:** login floods exhausting CPU and memory | B1 | Rate limits before hashing. At most 4 concurrent argon2 hashes (≈ 80 MB). Limiter memory capped at 100k keys per policy with eviction. | ✅ | `TestLimiterEviction`, ADR 0010/0012 |
 | D2 | **Denial of service:** hostile CSV (huge, wide, slow) | B2 | 200k rows, 200 columns, context cancellation every 10k rows (Phase 3). Uploads: `FINUANCE_MAX_UPLOAD_BYTES` (20 MiB) checked exactly on the file, with the request body capped at that plus 64 KiB for multipart framing (every other route stays at 1 MiB); one file per request; a NUL byte in the first 8 KiB is `415`; 30 uploads/min per user. The commit runs as a River job, never in the request. | ✅ | `ingest/parse.go`, `httpapi/handlers_imports.go`; `TestParseLimitsAndCancellation`, `TestImportErrorsHTTP`, `TestUploadRateLimit` |
 | D3 | **Denial of service:** oversized JSON bodies | B1 | 1 MiB body limit; the preferences document is capped at 256 KiB | ✅ | `TestBodyLimit`, `TestPreferences` |
 | D4 | **Denial of service:** session table growth | B3 | Hourly `CleanupExpiredSessions` River job | ✅ | `TestWorkerRunsJobs` |
+| D5 | **Denial of service:** assistant runs exhausting the model server or the api | B1, B4 | One run per user (`409 run_in_progress`), `FINUANCE_AI_MAX_CONCURRENT` per replica (`503 assistant_busy`), `FINUANCE_AI_RATE_PER_HOUR` per user (`429`), total and idle timeouts per model request, six tool rounds per question, history trimmed to the model's context, stop and disconnect cancel the request; chats capped at `FINUANCE_AI_MAX_CHATS` and expired hourly | ✅ | `assistant/run.go`, `jobs/assistant.go`; `TestRunLimitsAndConsent`, `TestAssistantStreamStopAndLimits`, `TestRunRoundsLimitAndLoopGuard`, `TestTimeoutsAndCancel`, `TestRetentionAndChatLimit` |
 | E1 | **Elevation of privilege:** the app role escaping RLS | B3 | `finuance_app` owns no tables and can't run DDL. RLS is forced. Migrations run as `finuance_owner`, which is also bound by FORCE. | ✅ | `TestRiverTablesAndRoles`, `TestEveryUserTableHasForcedRLS` |
 | E2 | **Elevation of privilege:** forgetting `WithUser` in new code | B3 | A guard test fails on direct `Query`/`Exec`/`Begin` or `db.New` outside `internal/store` | ✅ | `TestNoDatabaseAccessOutsideStore` |
 | E3 | **Elevation of privilege:** supply chain | — | Pinned dependencies and checksummed tool binaries; govulncheck, Trivy and gitleaks in CI; Renovate. SBOM and signing arrive in Phase 16. | 🟡 | CI ✅; ⏳ Phase 16 |
@@ -95,6 +98,8 @@ flowchart LR
 - **There is no MFA and no email verification** in v1. Personal instances run with signup disabled and admin-created accounts. OIDC is in the backlog.
 - **TLS terminates at the ingress or nginx.** The api trusts `X-Forwarded-For` only from `FINUANCE_TRUSTED_PROXIES`.
 - **`LIKE` is marked LEAKPROOF** (`bootstrap.sql`, Phase 7) so search can use its trigram index under RLS. A leakproof function may run on other users' rows before the policy filters them. `textlike` only errors on a malformed pattern (the user's own input), never because of a row's value, so it reveals nothing. Any other function given this flag needs the same review.
+- **Prompt injection can still mislead an answer** (a payee named "ignore previous instructions"). It can't write, reach the network or another user; the user sees every lookup behind an answer. A cloud model sees the looked-up rows of a user who agreed to that connection.
+- **Assistant rate limits and the one-run-per-user rule are per replica**, like the other limits.
 - **A compromised host or database superuser is out of scope.** It can read everything. Disk encryption and backup encryption reduce what a stolen disk or backup reveals.
 
 ## 6. Review checklist for new endpoints

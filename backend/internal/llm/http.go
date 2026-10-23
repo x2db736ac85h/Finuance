@@ -55,6 +55,10 @@ func New(c Config) Client {
 	return &openAIClient{c: c}
 }
 
+// Transport is the HTTP transport New uses: no proxy, and unless allowRemote, dials to public
+// addresses refused. Wrappers (llm-probe's recorder) build on it to keep the guard.
+func Transport(allowRemote bool) *http.Transport { return transport(allowRemote) }
+
 func transport(allowRemote bool) *http.Transport {
 	d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
 	if !allowRemote {

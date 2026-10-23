@@ -53,6 +53,9 @@ func ToolDefs(set string) []llm.Tool {
 	return toolDefs
 }
 
+// PlanInstructions is the plan-mode suffix of the system prompt for a tool set (llm-probe).
+func PlanInstructions(set string) string { return planInstructions(ToolDefs(set)) }
+
 // planInstructions is legacy PLAN(): for models without tool calling, the tools are described in
 // the prompt and the model answers with the calls as JSON.
 func planInstructions(tools []llm.Tool) string {

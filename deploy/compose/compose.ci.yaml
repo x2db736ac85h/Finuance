@@ -13,6 +13,11 @@ services:
     environment:
       FINUANCE_ENV: test
       FINUANCE_ALLOW_SIGNUP: "true"
+      # E2E talks to the mock model server (PLAN task 13.8); no real model is needed in CI.
+      FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
+      FINUANCE_AI_DEFAULT_MODEL: mock-tools
+  ai-mock:
+    profiles: !reset []
   worker:
     ports: !reset []
     environment:

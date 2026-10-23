@@ -54,6 +54,14 @@ services:
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       # web (nginx) forwards the client address; trust it from the Compose network only.
       FINUANCE_TRUSTED_PROXIES: ${FINUANCE_TRUSTED_PROXIES:-172.16.0.0/12}
+      # Assistant (docs/assistant.md): one server, or a connections file mounted into the container.
+      # With `--profile ai-mock`, point FINUANCE_AI_BASE_URL at http://ai-mock:11434/v1.
+      FINUANCE_AI_BASE_URL: ${FINUANCE_AI_BASE_URL:-}
+      FINUANCE_AI_API: ${FINUANCE_AI_API:-}
+      FINUANCE_AI_API_KEY: ${FINUANCE_AI_API_KEY:-}
+      FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
+      FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
+      FINUANCE_AI_CONNECTIONS_FILE: ${FINUANCE_AI_CONNECTIONS_FILE:-}
     ports:
       - "127.0.0.1:8080:8080" # API
       - "127.0.0.1:9090:9090" # admin (/metrics, pprof) — published in dev only, never via an ingress
@@ -92,6 +100,20 @@ services:
       timeout: 4s
       retries: 10
       start_period: 5s
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  # A mock model server (testutil/llmmock) for UI work and E2E without a model: docker compose
+  # --profile ai-mock up, with FINUANCE_AI_BASE_URL=http://ai-mock:11434/v1.
+  ai-mock:
+    image: finuance-llmmock:dev
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.backend
+      target: llmmock
+    profiles: [ai-mock]
     restart: unless-stopped
     read_only: true
     cap_drop: [ALL]
