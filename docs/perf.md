@@ -292,12 +292,31 @@ seeds the same 108,098-transaction user and times `insights.Overview` (everythin
 | search "blik warszawa" | 164 / 198 ms |
 
 **Reading.** One call stands in for the twelve cards, so it is compared with the §7.12 budget for a
-screen (≤ 300 ms) rather than with the 150 ms per insight call. Four statements read every base row
+screen (≤ 300 ms) rather than with the 150 ms per insight call. The service call meets it except with
+the negated category filter (317 ms p95); in the browser, through nginx and the Compose database, a
+month step takes 428 ms p50, nearly all of it the server (drawing is ~41 ms). Both are above the
+budget in this sandbox and need the homelab measurement. Four statements read every base row
 (months, colour slots, recurring candidates, balance); in this sandbox the transactions table
 (≈ 140 MB) doesn't fit the container's 128 MB of shared buffers, so each of them is a ~65 ms
 sequential read. The negated category filter is the slowest shape because nearly every row passes
 it. A larger `shared_buffers` on the homelab (Phase 16) is the first lever; the four scans could
 also be folded into fewer statements if a real data set needs it.
+
+Browser (`node tools/perf/overview.mjs --email …`, the 100,870-row user of `tools/perf/grid.mjs`,
+`make up`, headless Chromium at 1440×900; p50 / p95):
+
+| Step | Time |
+|---|---|
+| `POST /overview` through nginx (20 runs) | 310 / 366 ms |
+| table → overview drawn (title-bar button to the balance card painted) | 463 / 481 ms |
+| … of which before the overview request starts | 78 / 81 ms |
+| month step (← to the page idle again) | 428 / 446 ms |
+| … of which drawing after the response | 41 / 50 ms |
+
+The overview's code is a separate chunk (12 KB gzip, PLAN §7.12) loaded 1.5 s after the app starts;
+the overview request starts from the route's small entry component, in parallel with mounting the
+page. A first version loaded the page with `React.lazy`: React holds a resolved Suspense boundary
+back for ~300 ms, and the request only started after it (table → overview 810–1,120 ms).
 
 **What changed.** The first measurement was 315 ms p95 unfiltered and 417 ms with the category
 filter. Recurring detection took 180 ms: it counted months with `count(DISTINCT date_trunc(…))`,

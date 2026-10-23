@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 12 — Overview: API and UI · **Branch:** phase/12-overview · **Status:** in progress
+**Current phase:** 12 — Overview: API and UI · **Branch:** phase/12-overview · **Status:** built, awaiting gate review
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -31,12 +31,14 @@
 ## Current phase tasks
 - [x] 12.1 overview backend: month aggregates in `query` (month totals, month × category, income by payee, weekday window, largest expenses, recurring candidates, balance series) + rules in `internal/insights/overview.go` (M/P, partial, prevToDate, projection, KPIs and sparklines, default budgets and status, savings rate, weekday, balance, `findRecurring`, highlights)
 - [x] 12.2 budgets: `GET /budgets`, `PUT /budgets/{categoryId}` (`null` = default)
-- [ ] 12.3 opening balance input on the balance card (single-account views; sum read-only in "All accounts")
+- [x] 12.3 opening balance input on the balance card (single-account views; sum read-only in "All accounts")
 - [x] 12.6 investments: `GET`/`PUT /investments` (versioned), calculators in `internal/investments`, oracle portfolios
 - [x] Legacy oracle: overview card twins + highlight sentences on the demo year (11 views); `TestOverviewParity` matches every card and sentence (2 weekday half-cent ties, ALLOWED_DIFFS row 13); `TestInvestmentCardsParity` (5 portfolios × 2 months)
-- [ ] 12.4 `OverviewPage`: header, KPIs, the twelve cards, 12-column container grid, chart window with table and `ovMonths`, investment editors
-- [ ] 12.5 actions: Sankey category → filter + table, largest expense → row, cash-flow/savings bar → month
-- [ ] Tests, E2E, perf at 100k rows (server side done: `TestOverviewPerf`, 216 ms p95 unfiltered, docs/perf.md "Overview"), screenshots (both themes, 3 widths), PARITY rows
+- [x] 12.4 `OverviewPage`: header, KPIs, the twelve cards, 12-column container grid, chart window with table and `ovMonths`, investment editors
+- [x] 12.5 actions: Sankey category → filter + table, largest expense → row, cash-flow/savings bar → month
+- [x] Tests: Go unit (rules, highlights at every threshold, recurring, investments), parity (11 overview views, 5 portfolios), HTTP + tenancy (overview, budgets, investments), ledger (investments, clear budget); 267 Vitest (+22: every card with fixed data, page, month picker, budget and opening inputs, investment editor with debounced save and 409, actions); E2E `overview.spec.ts` (4: every card's window table and the highlights = legacy oracle, budget change survives a reload, Sankey → filtered table, bar → month and largest expense → located row); 33 Playwright specs pass
+- [x] Performance (docs/perf.md "Overview"): service 216 ms p95 unfiltered at 108k rows (recurring query rewritten); browser month step 428 ms p50, drawing 41 ms; overview chunk 12 KB gzip loaded at idle
+- [x] Screenshots in both themes at 1440 / 1000 / 600 px containers; 16 PARITY rows `ported`
 
 ## Phase 11 tasks (done)
 - [x] 11.1 backend: aggregation queries in `query/insights.go` (summary, categories, cashflow, pace, payees, daily) + pure rules in `internal/insights` (days clipping, prev-period delta, savings rate, pace arrays and comparisons, category shares and colour slots, top-N payees, heatmap ranges)
@@ -219,6 +221,9 @@
 ## Deviations from the plan (with reason)
 - 12.1: `POST /overview` answers `{currency, data?}` (no `data` without dated rows) with every card's facts in one document (`OverviewData`), not the §4.6 field list one by one. Highlights are facts (`kind`, `tone`, amounts, percentages); the browser writes the sentences, so the wording lives next to the other UI text. The income sources reuse `PayeeSpend` (`spentMinor` is the money received). A `month` outside the data is clamped to the latest month (legacy).
 - 12.2: `PUT /budgets/{categoryId}` answers `204`; `null` removes the budget and is idempotent, but a category the user doesn't own is `404` either way.
+- 12.4: each overview card is a `ChartDef` whose `use()` reads the one cached `POST /overview` document, so `ChartModal` and the table twins work unchanged (it takes the overview's lookup as a prop). The page is a separate chunk loaded 1.5 s after start and rendered without Suspense (React holds resolved boundaries back ~300 ms); the request starts from the route's eager entry. The month selector lists every month between the first and last month with data.
+- 12.4: removing an investment position happens at once with *Undo* in a toast (the legacy asked with `confirm()`); edits save 400 ms after the last change, one request at a time; a `409` shows the stored document with a toast. Names can't be emptied (the old one comes back).
+- 12.5: a largest expense outside the list's period switches the list to all time (legacy `gotoRow`); the table scrolls to the row once its first window has arrived (`scrollToRow` waits for rows). The uncategorised Sankey band filters with `=` (as 11.4).
 - 12.6: position ids are client-generated uuids (stable keys while editing). They are primary keys, so an id another user already has is `409 conflict` (nothing is revealed about the other document).
 - 11.4: a `ChartDef` is `{key, title, cfgControls, use(q, env)}`; `use` reads the data and returns the card's parts (subtitle, legend, drawing, table twin). The plan's sketch split these into `useData`, `Component`, `Subtitle`, `Legend` and `toTable`; one hook keeps them together because the cash-flow subtitle and table depend on the measured width (the months that fit).
 - 11.4: the "(uncategorized)" slice filters with `=` (an empty category) instead of the legacy `=(uncategorized)`, which matched nothing (planned at the Phase 11 plan). The largest expense on the summary card is a button that selects and scrolls to its row (PLAN §7.8; the legacy tile was plain text).
@@ -326,6 +331,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 12 built on `phase/12-overview`: overview API (one document per screen), budgets, investments, legacy oracle overview twins with Go parity tests, the overview page with KPIs and twelve cards, budget/opening/investment editors, actions, perf at 100k rows; 267 Vitest + 33 Playwright specs, integration tests green. Next: our Product Engineer's hands-on gate review.
 - 2026-10-23 — Phase 12 planned and approved (one overview request, oracle overview twins, uncategorised budget default-only, two pushes). Branch `phase/12-overview`.
 - 2026-10-23 — Phase 11 gate approved; merged. Next: plan Phase 12.
 - 2026-10-22 — Phase 11 built on `phase/11-insights`: insight endpoints (aggregations in `query`, rules in `insights`), oracle chart twins with a parity test over 16 views, chart library and the six charts, pane with period picker and Charts menu, chart window, chart → table actions, perf at 100k rows; 245 Vitest + 29 Playwright specs, integration tests green. Next: our Product Engineer's gate review (legacy vs new pane on the same demo data).

@@ -18,7 +18,14 @@ import { drawable, useSize } from './useSize';
 
 export type ModalState = { key: string; list: string[]; mode: 'chart' | 'table' };
 
-type Props = { viewId: string; q: ViewQuery; state: ModalState; onChange: (s: ModalState | null) => void };
+type Props = {
+  viewId: string;
+  q: ViewQuery;
+  state: ModalState;
+  onChange: (s: ModalState | null) => void;
+  /** Where the window finds its charts: the pane's by default, the overview passes its own. */
+  lookup?: (key: string) => ChartDef | undefined;
+};
 
 /** The table twin (legacy tableHtml). */
 export function TwinTable({ t }: { t: Twin }) {
@@ -101,8 +108,8 @@ function useModalChart(def: ChartDef, viewId: string, q: ViewQuery, mode: ModalS
   };
 }
 
-export function ChartModal({ viewId, q, state, onChange }: Props) {
-  const def = chartOf(state.key);
+export function ChartModal({ viewId, q, state, onChange, lookup = chartOf }: Props) {
+  const def = lookup(state.key);
   const step = (d: number) => {
     const n = state.list.length;
     if (n < 2) return;

@@ -36,3 +36,4 @@ blob-report/
 
 # tools/perf/grid.mjs writes its result next to where it runs
 /perf-grid.json
+/perf-overview.json

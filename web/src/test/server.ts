@@ -29,6 +29,13 @@ export type Db = {
   insights: Partial<Insights>;
   /** Bodies of every insight request, with the endpoint name. */
   insightRequests: { name: keyof Insights; body: Record<string, unknown> }[];
+  /** The answer of POST /overview (no data until set) and the request bodies. */
+  overview: Schemas['Overview'];
+  overviewRequests: Schemas['OverviewRequest'][];
+  budgetPuts: { categoryId: string; amountMinor: number | null }[];
+  investments: Schemas['Investments'];
+  investmentPuts: Schemas['Investments'][];
+  accountPatches: { id: string; body: Schemas['AccountInput'] }[];
 };
 
 export type Insights = {
@@ -72,6 +79,18 @@ export const freshDb = (): Db => ({
   puts: [],
   insights: {},
   insightRequests: [],
+  overview: { currency: 'PLN' },
+  overviewRequests: [],
+  budgetPuts: [],
+  investments: {
+    version: 0,
+    ppk: { employeeMinor: 0, employerMinor: 0, stateMinor: 0, valueMinor: 0 },
+    swrBp: 400,
+    realReturnBp: 500,
+    positions: [],
+  },
+  investmentPuts: [],
+  accountPatches: [],
 });
 
 export let db = freshDb();
@@ -195,6 +214,34 @@ export const server = setupServer(
         ...(t.group ? { groupId: t.group.id } : {}),
       })),
     );
+  }),
+  http.post(`${API}/overview`, async ({ request }) => {
+    db.overviewRequests.push((await request.json()) as Schemas['OverviewRequest']);
+    return HttpResponse.json(db.overview);
+  }),
+  http.put(`${API}/budgets/:categoryId`, async ({ params, request }) => {
+    const body = (await request.json()) as Schemas['BudgetInput'];
+    db.budgetPuts.push({ categoryId: String(params['categoryId']), amountMinor: body.amountMinor ?? null });
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get(`${API}/investments`, () => HttpResponse.json(db.investments)),
+  http.put(`${API}/investments`, async ({ request }) => {
+    const body = (await request.json()) as Schemas['Investments'];
+    db.investmentPuts.push(body);
+    if (body.version !== db.investments.version)
+      return problem(409, 'stale_version', 'Stale.', { current: db.investments });
+    db.investments = { ...body, version: body.version + 1 };
+    return HttpResponse.json(db.investments);
+  }),
+  http.patch(`${API}/accounts/:id`, async ({ params, request }) => {
+    const body = (await request.json()) as Schemas['AccountInput'];
+    const id = String(params['id']);
+    db.accountPatches.push({ id, body });
+    db.accounts = db.accounts.map((a) =>
+      a.id === id ? { ...a, openingBalance: { amountMinor: body.openingBalanceMinor ?? 0, currency: a.currency } } : a,
+    );
+    const a = db.accounts.find((x) => x.id === id);
+    return a ? HttpResponse.json(a) : problem(404, 'not_found');
   }),
   http.post(`${API}/auth/logout`, () => {
     db.signedIn = false;

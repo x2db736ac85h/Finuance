@@ -25,6 +25,7 @@ const whole = (v: number) => fmtMoney({ amountMinor: v, currency: 'PLN' }, { who
 
 function env(over: Partial<ChartEnv> = {}): ChartEnv {
   return {
+    viewId: 'all',
     w: 400,
     h: 200,
     big: false,
@@ -32,7 +33,15 @@ function env(over: Partial<ChartEnv> = {}): ChartEnv {
     catMode: 'donut',
     period: 'all',
     filters: {},
-    actions: { toggleFilter: vi.fn(), setPeriod: vi.fn(), locate: vi.fn(), setCatMode: vi.fn() },
+    ovMonth: null,
+    actions: {
+      toggleFilter: vi.fn(),
+      setPeriod: vi.fn(),
+      locate: vi.fn(),
+      setCatMode: vi.fn(),
+      setOvMonth: vi.fn(),
+      showTable: vi.fn(),
+    },
     ready: true,
     ...over,
   };
