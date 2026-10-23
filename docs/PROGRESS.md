@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 13 — AI assistant · **Branch:** phase/13-assistant · **Status:** in progress
+**Current phase:** 14 — Legacy migration and quality gate · **Branch:** phase/14-quality-gate · **Status:** in progress
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -27,9 +27,19 @@
 - Phase 11: the aggregation SQL lives in `internal/query/insights.go` (reusing the compiled `base`/`scoped` CTEs; no change to the store guard), and `internal/insights` holds only the pure rules. Cash flow returns every month of `base`; the client cuts it to fit/6/12/24/36/all. The legacy oracle records each chart's table twin on the demo file, and Go tests compare the API against it. One gate, two pushes (backend + chart library + charts; then pane, modal and actions).
 - Phase 12: one `POST /overview {context, month, months}` per screen with full lists (the browser cuts top-N for the small and large card sizes). The legacy oracle records every overview card's table twin and the highlight sentences on the demo year (several months and one filtered view), and Go tests compare against it. Uncategorised spending shows its default budget only (budgets are stored per category). One gate, two pushes (backend: overview, budgets, investments; then the page and cards).
 - Phase 13: connections are **instance config** (a connections file with named local and cloud connections; `FINUANCE_AI_BASE_URL` stays as a one-connection shorthand); users pick a connection and model, never a URL; per-user API keys are in the backlog. Two wire adapters (OpenAI Chat Completions, Anthropic Messages) behind one internal chat model; per-model capabilities (tools, reasoning, context window) detected and learned. Cloud connections need an admin flag per connection, a one-time per-user consent and masking of long digit runs in tool results. Tools: the three legacy tools plus month overview and recurring payments (a compact set for small/plan-mode models; evals decide the default). Typed tools only, no model-written SQL. Chats are kept 48 h by default; each user picks 1–7 days or "forever" (with a warning); an hourly cleanup job enforces it; `FINUANCE_AI_MAX_CHATS` = 25. `FINUANCE_AI_RATE_PER_HOUR` (default 30). One gate, two pushes (backend, mock and eval harness; then the panel and E2E). The sandbox can't reach models: `finuance admin llm-probe` records real streams at the gate, and our Product Engineer runs the evals.
+- Phase 14: dev dependency `@axe-core/playwright` approved. Release without new third-party GitHub Actions: buildx cross-compiles (no QEMU), cosign and syft run as pinned, checksum-verified binaries (like gitleaks), Trivy as the pinned container already used; images `ghcr.io/x2db736ac85h/finuance-api` and `finuance-web`. The gate tests `v0.1.0-rc.1` (tagged on the phase branch); `v0.1.0` is tagged on `main` after the merge. Migrated chats count as active from the moment of migration (they then follow the user's retention; the wizard shows it). `compose.prod.yaml` becomes a standalone file (only itself + `.env`, bootstrap inline as a Compose config) and replaces the overlay. One gate, three pushes (migration; E2E, parity harness, a11y, perf, PARITY; release).
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 14.1 legacy migration: `legacy_imports` (migration + RLS), `internal/legacyimport` (cfg → mapping, legacy keys → fingerprint + occurrence, overrides, budgets, opening, investments, chats, prefs), `POST`/`GET /legacy-imports`, idempotent `LegacyImport` job with progress and report; Settings → Data wizard (`deser`, passphrase + WebCrypto, accounts, upload, report)
+- [ ] 14.2 E2E completion: settings, keyboard map (⌘J), 720 px, UI scale, every fixture family, migration (plain + locked), screenshot artifact in CI
+- [ ] 14.3 parity harness `web/e2e/parity.spec.ts` (direct and through migration) → `docs/parity-report.md`
+- [ ] 14.4 accessibility: axe on login, table, preview, overview, settings, assistant; fixes; `docs/a11y.md`
+- [ ] 14.5 performance: bundle vs §7.12, API p95 at 100k rows, `docs/perf.md`
+- [ ] 14.6 `docs/PARITY.md`: every row `ported` or `retired: reason`
+- [ ] 14.7 release: `release.yml` (multi-arch, Trivy, SBOM, cosign, GitHub Release), standalone `compose.prod.yaml`, `CHANGELOG.md`, README v0.1, `v0.1.0-rc.1`
+
+## Phase 13 tasks (done)
 - [x] 13.1 connections (file + shorthand, private-address check, cloud flag), capabilities, `GET /assistant/status`, `GET /meta.assistantEnabled`
 - [x] 13.2 `internal/llm`: canonical chat model; OpenAI Chat Completions and Anthropic Messages adapters (streaming, reasoning fields and `<think>`, tool calls assembled by index, Qwen text fallback, non-streaming JSON, thinking levels, error classes, timeouts); recorded-stream tests; `finuance admin llm-probe`
 - [x] 13.3 tools: `search_transactions`, `aggregate_transactions` (+ `group_by: account`), `find_values` (+ `field: group`), `month_overview`, `recurring_payments`; differential tests against the oracle (67 cases)
@@ -356,6 +366,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 14 planned and approved (axe dev dependency, release without third-party actions, rc tag for the gate, migrated chats active from migration, standalone prod Compose, three pushes). Branch `phase/14-quality-gate`.
 - 2026-10-23 — Phase 13 gate approved by our Product Engineer, who will test against real models later (follow-up recorded); merged. Next: plan Phase 14.
 - 2026-10-23 — Phase 13 built on `phase/13-assistant` (second push): the assistant panel (streaming answers, lookups with Show in table, recent chats, settings with connection/model, thinking, retention and cloud consent), E2E against the mock, PARITY. Next: our Product Engineer's gate review (llm-probe and `make eval-assistant` on the homelab model, questions on the real data).
 - 2026-10-23 — Phase 13 backend built on `phase/13-assistant` (first push): `internal/llm` adapters, connections config and status, oracle-equal tools and prompt, run loop, chat storage with retention, SSE endpoints, `testutil/llmmock`, `llm-probe`, eval harness (46 questions), ADR 0015, `docs/assistant.md`. Next: the panel and E2E.
