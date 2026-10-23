@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 11 — Insights: API, pane, modal · **Branch:** phase/11-insights · **Status:** built, awaiting gate review
+**Current phase:** 11 — Insights: API, pane, modal · **Branch:** phase/11-insights · **Status:** gate approved, merged
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -182,6 +182,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 11 — Insights: API, pane, modal: gate approved 2026-10-23; `phase/11-insights` merged with `--no-ff`.
 - Phase 10 — Table view, groups and multi-selection: gate approved 2026-10-22; `phase/10-table` merged with `--no-ff`.
 - Phase 9 — Import UX: gate approved 2026-10-22; `phase/09-import` merged with `--no-ff`.
 - Phase 8 — Frontend foundation: gate approved 2026-10-22; `phase/08-frontend` merged with `--no-ff`.
@@ -311,6 +312,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 11 gate approved; merged. Next: plan Phase 12.
 - 2026-10-22 — Phase 11 built on `phase/11-insights`: insight endpoints (aggregations in `query`, rules in `insights`), oracle chart twins with a parity test over 16 views, chart library and the six charts, pane with period picker and Charts menu, chart window, chart → table actions, perf at 100k rows; 245 Vitest + 29 Playwright specs, integration tests green. Next: our Product Engineer's gate review (legacy vs new pane on the same demo data).
 - 2026-10-22 — Phase 11 planned and approved (aggregation SQL in `query`, all cash-flow months, oracle chart twins, two pushes). Branch `phase/11-insights`.
 - 2026-10-22 — Paused before Phase 11 for public-repository readiness (`chore/public-readiness`): README rewrite with screenshots, docs index, SECURITY/CONTRIBUTING, placeholder READMEs, naming clean-up; fixed the search box not emptying after *Clear all*. Next: plan Phase 11 (the plan proposed earlier still stands).

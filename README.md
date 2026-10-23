@@ -13,7 +13,7 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 </picture>
 
 > [!NOTE]
-> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 18 planned phases. **Phases 0–10 are done**: importing, the transaction table, groups and duplicate review all work today. Charts, the monthly overview, the AI assistant and the Kubernetes deployment are still under construction. See [Status](#status).
+> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 18 planned phases. **Phases 0–11 are done**: importing, the transaction table, groups, duplicate review and the insight charts all work today. The monthly overview, the AI assistant and the Kubernetes deployment are still under construction. See [Status](#status).
 
 ## Contents
 
@@ -39,10 +39,11 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
   - sorting, resizable and hideable columns;
   - CSV export of exactly what you see;
   - an inspector with every field, the bank's original row, the category and a note.
+- **See where the money goes.** Six charts above the table follow its search, filters and period: a summary with the change against the previous period, spending by category, cash flow by month, the month's spending pace against earlier months, top payees and a daily spending calendar. Click a category, payee, month or day to filter the table; open any chart larger to see its numbers as a table.
 - **Group transactions.** Select rows by dragging, Shift-click or ⌘/Ctrl-click, then add them to a colour-coded group such as "Italy trip". A quick bar shows the count and the total of the selection. Groups filter the table and are kept when you delete and re-import a file.
 - **Share an instance.** Several people can use one server. Each person's data is isolated in the database itself (row-level security), not just in the application code.
 
-Coming next (🚧): insights charts, a monthly overview with budgets and recurring payments, an optional AI assistant that runs on your own model, migration from the prototype's backups, and a Kubernetes deployment. See [Status](#status).
+Coming next (🚧): a monthly overview with budgets and recurring payments, an optional AI assistant that runs on your own model, migration from the prototype's backups, and a Kubernetes deployment. See [Status](#status).
 
 ## Screenshots
 
@@ -164,8 +165,8 @@ Performance notes and measurements: [docs/perf.md](docs/perf.md).
 | 3–4 | Import engine, database schema with row-level security | ✅ done |
 | 5–7 | Sign-in and sessions, import pipeline, transaction query API | ✅ done |
 | 8–10 | Web app foundation, import window, table with groups and duplicates | ✅ done |
-| 11 | Insights: charts, period picker, chart windows | 🚧 next |
-| 12 | Monthly overview: KPIs, budgets, recurring payments, money flow | 🚧 planned |
+| 11 | Insights: charts, period picker, chart windows | ✅ done |
+| 12 | Monthly overview: KPIs, budgets, recurring payments, money flow | 🚧 next |
 | 13 | AI assistant with read-only tools on your own model | 🚧 planned |
 | 14 | Migration from the prototype's backups, accessibility, v0.1.0 | 🚧 planned |
 | 15 | Category rules, transfer detection, group reports | 🚧 planned |
