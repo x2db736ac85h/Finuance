@@ -198,6 +198,6 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Auto interface scale relies on `devicePixelRatio` heuristics | Keep (Phase 8) |
 | `detectRoles().balance` unused | Keep detection; balance reconciliation in the backlog |
 | CSP uses `'unsafe-inline'` | Fix in phase 8: strict CSP, no inline scripts or styles |
-| No undo for removes; no transaction editing or categorisation rules | Fix in phase 15 (categories, rules); undo for import delete in the backlog |
+| No undo for removes; no transaction editing or categorisation rules | 15: **fixed** — category management, rules applied from scratch in order (ADR 0017), transfer detection (ADR 0018); `TestRulePrecedence`, `TestTransferDetection`, e2e `rules.spec.ts`. Undo for import delete stays in the backlog |
 | Large files (> 100k rows) are memory-heavy | Fix in phases 7 and 17: server-side queries, load tests |
 | Tooltips mouse-only; chart values not keyboard-reachable | Fix in phases 11 and 14: table twins + focusable marks, accessibility pass |

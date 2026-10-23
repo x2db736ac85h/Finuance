@@ -130,7 +130,7 @@ export function RuleEditor({ title, initial, rule, onClose }: Props) {
           save();
         }}
       >
-        <label className="fld">
+        <label className="rule-fld">
           <span>Name</span>
           <TextInput
             aria-label="Rule name"
@@ -142,7 +142,7 @@ export function RuleEditor({ title, initial, rule, onClose }: Props) {
             }}
           />
         </label>
-        <fieldset className="fld">
+        <fieldset className="rule-fld">
           <legend>Matches transactions where</legend>
           <TextInput
             aria-label="Search all columns"
@@ -193,7 +193,7 @@ export function RuleEditor({ title, initial, rule, onClose }: Props) {
             Add condition
           </Button>
         </fieldset>
-        <fieldset className="fld">
+        <fieldset className="rule-fld">
           <legend>Then</legend>
           <label className="rule-act">
             <span>Set category</span>

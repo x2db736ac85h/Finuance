@@ -42,7 +42,7 @@ export function useCategoryStats() {
 export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (name: string) => data(await api.POST('/categories/new', { body: { name } })),
+    mutationFn: async (name: string) => data(await api.POST('/categories', { body: { name } })),
     onSuccess: () => {
       invalidateClassified(qc);
     },

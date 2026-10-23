@@ -56,10 +56,10 @@ func TestCategoriesHTTP(t *testing.T) {
 	id := rachunki["id"].(string)
 	before := num(rachunki["txCount"])
 
-	nc := b.do("POST", "/categories/new", map[string]any{"name": "Media"})
+	nc := b.do("POST", "/categories", map[string]any{"name": "Media"})
 	expect(t, nc, 201, "")
-	expect(t, b.do("POST", "/categories/new", map[string]any{"name": "MEDIA"}), 409, "conflict")
-	expect(t, b.do("POST", "/categories/new", map[string]any{"name": ""}), 422, "validation_failed")
+	expect(t, b.do("POST", "/categories", map[string]any{"name": "MEDIA"}), 409, "conflict")
+	expect(t, b.do("POST", "/categories", map[string]any{"name": ""}), 422, "validation_failed")
 	rn := b.do("PATCH", "/categories/"+id, map[string]any{"name": "Opłaty"})
 	expect(t, rn, 200, "")
 	if rn.body["name"] != "Opłaty" {
@@ -105,7 +105,7 @@ func TestRulesHTTP(t *testing.T) {
 	e := newTestEnv(t, nil, true)
 	b := signedIn(t, e, testEmail(t))
 	demoAccount(t, b)
-	cat := b.do("POST", "/categories/new", map[string]any{"name": "Internet"})
+	cat := b.do("POST", "/categories", map[string]any{"name": "Internet"})
 	expect(t, cat, 201, "")
 	catID := cat.body["id"].(string)
 	match := map[string]any{"filters": []any{map[string]any{"column": "payee", "cond": "=OPERATOR INTERNETU"}}}
@@ -133,7 +133,7 @@ func TestRulesHTTP(t *testing.T) {
 	}
 
 	// a second rule over the same rows, later in the order, wins; reorder brings the first back
-	cat2 := b.do("POST", "/categories/new", map[string]any{"name": "Abonamenty"})
+	cat2 := b.do("POST", "/categories", map[string]any{"name": "Abonamenty"})
 	r2 := b.do("POST", "/rules", map[string]any{"name": "Abonamenty", "match": map[string]any{"search": "operator internetu"},
 		"setCategoryId": cat2.body["id"]})
 	expect(t, r2, 201, "")

@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -39,6 +40,9 @@ type ReclassifyWorker struct {
 
 // Work reclassifies the user's transactions.
 func (w *ReclassifyWorker) Work(ctx context.Context, job *river.Job[ReclassifyArgs]) error {
+	if w.Rules == nil {
+		return errors.New("reclassify: no rules service")
+	}
 	res, err := w.Rules.Reclassify(ctx, job.Args.UserID)
 	if err != nil {
 		return err

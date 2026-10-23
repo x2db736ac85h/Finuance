@@ -576,7 +576,11 @@ export interface paths {
          */
         get: operations["listCategories"];
         put?: never;
-        post?: never;
+        /**
+         * Create a category
+         * @description At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new category takes over its name: bank rows of that name come to it on the next import.
+         */
+        post: operations["createCategory"];
         delete?: never;
         options?: never;
         head?: never;
@@ -597,26 +601,6 @@ export interface paths {
         get: operations["categoryStats"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/categories/new": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a category
-         * @description At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new category takes over its name: bank rows of that name come to it on the next import.
-         */
-        post: operations["createCategory"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3680,27 +3664,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    categoryStats: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Categories in natural order. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CategoryStat"][];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     createCategory: {
         parameters: {
             query?: never;
@@ -3721,6 +3684,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NamedRef"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    categoryStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories in natural order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStat"][];
                 };
             };
             default: components["responses"]["Problem"];

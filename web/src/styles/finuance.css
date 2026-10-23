@@ -665,3 +665,120 @@ textarea.inp.ins-note {
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 0.7rem;
 }
+
+/* Phase 15: categories and rules settings, the rule window, transfers. */
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.set-row .inp {
+  flex: 1;
+  min-width: 0;
+}
+.set-row .grow {
+  flex: 1;
+}
+.set-li-main.off b {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.rules-list li .grip {
+  cursor: grab;
+  color: var(--muted);
+  font-size: 0.8rem;
+  user-select: none;
+}
+.rules-list li.dragging {
+  opacity: 0.4;
+}
+.rule-form {
+  max-height: min(80vh, 46rem);
+  overflow: auto;
+}
+.rule-fld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.rule-fld > span,
+.rule-fld > legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+.rule-filter,
+.rule-act {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.rule-filter .sel {
+  flex: 0 0 9.5rem;
+}
+.rule-filter .inp {
+  flex: 1;
+  min-width: 0;
+}
+.rule-act > span {
+  flex: 0 0 auto;
+  color: var(--text-2);
+}
+.rule-act .sel {
+  flex: 1;
+}
+.rule-fld > .btn {
+  align-self: flex-start;
+}
+.rule-preview {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+.rule-preview p {
+  margin: 0 0 0.375rem;
+}
+.rule-sample {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7188rem;
+}
+.rule-sample td {
+  padding: 0.1875rem 0.375rem 0.1875rem 0;
+  border-top: 1px solid var(--line);
+  white-space: nowrap;
+}
+.rule-sample td.tx {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rule-sample td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rule-sample td.neg {
+  color: var(--neg);
+}
+.tag.xfer {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.ins-xfer .fv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: normal;
+}
+.vi.rows-opt {
+  margin-top: 0.375rem;
+  padding-top: 0.375rem;
+  border-top: 1px solid var(--line);
+}

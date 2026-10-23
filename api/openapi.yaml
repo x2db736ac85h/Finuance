@@ -857,26 +857,6 @@ paths:
                   $ref: "#/components/schemas/Category"
         default:
           $ref: "#/components/responses/Problem"
-  /categories/stats:
-    get:
-      operationId: categoryStats
-      summary: Every category with its counts (Settings → Categories)
-      description: >-
-        Transactions over all accounts, how many were categorised by hand and by rules, and the
-        other bank category names that map to the category (left by renames and merges).
-      tags: [categories]
-      responses:
-        "200":
-          description: Categories in natural order.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CategoryStat"
-        default:
-          $ref: "#/components/responses/Problem"
-  /categories/new:
     post:
       operationId: createCategory
       summary: Create a category
@@ -897,6 +877,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NamedRef"
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/stats:
+    get:
+      operationId: categoryStats
+      summary: Every category with its counts (Settings → Categories)
+      description: >-
+        Transactions over all accounts, how many were categorised by hand and by rules, and the
+        other bank category names that map to the category (left by renames and merges).
+      tags: [categories]
+      responses:
+        "200":
+          description: Categories in natural order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryStat"
         default:
           $ref: "#/components/responses/Problem"
   /categories/{id}:
