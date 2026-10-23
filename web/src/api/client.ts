@@ -44,7 +44,7 @@ export function setUnauthenticatedHandler(fn: () => void): void {
   onUnauthenticated = fn;
 }
 
-async function toProblem(res: Response): Promise<Problem> {
+export async function toProblem(res: Response): Promise<Problem> {
   try {
     const body = (await res.clone().json()) as Partial<Problem>;
     if (typeof body.code === 'string' && typeof body.title === 'string') {

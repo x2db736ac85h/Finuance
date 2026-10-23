@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
@@ -36,6 +37,11 @@ var problemTable = []problemKind{
 	{platform.ErrPayloadTooLarge, gen.PayloadTooLarge, http.StatusRequestEntityTooLarge, "Payload too large"},
 	{platform.ErrUnsupportedFile, gen.UnsupportedFile, http.StatusUnsupportedMediaType, "Unsupported file"},
 	{platform.ErrNotImplemented, gen.NotImplemented, http.StatusNotImplemented, "Not implemented yet"},
+	{assistant.ErrConsent, gen.ConsentRequired, http.StatusForbidden, "Agreement needed for a cloud connection"},
+	{assistant.ErrRunning, gen.RunInProgress, http.StatusConflict, "A reply is still being written"},
+	{assistant.ErrBusy, gen.AssistantBusy, http.StatusServiceUnavailable, "The assistant is busy"},
+	{assistant.ErrDisabled, gen.AssistantUnavailable, http.StatusServiceUnavailable, "The assistant is unavailable"},
+	{assistant.ErrUnavailable, gen.AssistantUnavailable, http.StatusServiceUnavailable, "The assistant is unavailable"},
 	{ledger.ErrNotFound, gen.NotFound, http.StatusNotFound, "Not found"},
 	{ledger.ErrConflict, gen.Conflict, http.StatusConflict, "Conflict"},
 	{ledger.ErrState, gen.Conflict, http.StatusConflict, "Conflict"},

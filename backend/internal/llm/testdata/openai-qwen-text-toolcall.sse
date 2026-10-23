@@ -1,0 +1,8 @@
+data: {"choices":[{"index":0,"delta":{"content":"Let me look that up.\n<tool_"}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"call>\n{\"name\": \"find_values\", \"argu"}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"ments\": {\"field\": \"payee\", \"query\": \"amazon\"}}\n</tool_call>"}}]}
+
+data: [DONE]
+

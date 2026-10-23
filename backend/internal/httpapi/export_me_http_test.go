@@ -41,7 +41,7 @@ func TestExportMeHTTP(t *testing.T) {
 	}
 	files := unzip(t, r.raw)
 	for _, name := range []string{"manifest.json", "accounts.json", "categories.json", "groups.json", "budgets.json", "annotations.json",
-		"dedupe-overrides.json", "imports.json", "investments.json", "preferences.json", "transactions.csv"} {
+		"dedupe-overrides.json", "imports.json", "investments.json", "preferences.json", "assistant.json", "transactions.csv"} {
 		if _, ok := files[name]; !ok {
 			t.Errorf("missing %s (have %d files)", name, len(files))
 		}
@@ -77,7 +77,7 @@ func TestExportMeHTTP(t *testing.T) {
 	o := other.do("GET", "/me/export", nil)
 	expect(t, o, 200, "")
 	of := unzip(t, o.raw)
-	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 11 {
+	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 12 {
 		t.Errorf("other user's export: accounts %s, %d files", of["accounts.json"], len(of))
 	}
 }

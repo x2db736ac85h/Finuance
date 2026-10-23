@@ -9,6 +9,8 @@
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Assets, attackers, threats and the controls (with the tests that prove them) |
 | [adr/](adr/) | Architecture decision records: why Go + PostgreSQL, money in minor units, row-level security, sessions and CSRF, the CSV export format, … |
 | [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3) |
+| [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities, limits, retention, the probe and the evals |
+| [evals.md](evals.md) | Assistant quality per model on the 46 golden questions |
 | [perf.md](perf.md) | Performance measurements: parsing, staging, queries, the table with 100k rows |
 
 ## Working documents (how the rebuild is planned and tracked)

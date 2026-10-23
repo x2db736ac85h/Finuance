@@ -41,13 +41,12 @@ type Config struct {
 	OTLPEndpoint         string
 	LogLevel             slog.Level
 	TrustedProxies       []netip.Prefix
-	AIBaseURL            *url.URL // nil = assistant disabled
-	AIAPIKey             string
-	AIDefaultModel       string
-	AIAllowRemote        bool
-	AITimeout            time.Duration
-	AIMaxConcurrent      int
-	AIMaxChats           int
+	// AIConnections are the model servers the assistant may use; none = assistant disabled.
+	AIConnections   []AIConnection
+	AITimeout       time.Duration // one model request, first byte to last
+	AIMaxConcurrent int           // assistant runs at once per replica
+	AIMaxChats      int           // chats kept per user (the oldest go first)
+	AIRatePerHour   int           // messages per user per hour
 	// Argon2id parameters for new password hashes (ADR 0010). Existing hashes keep theirs until
 	// the next successful login rehashes them.
 	Argon2MemoryKiB uint32
@@ -114,17 +113,15 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		OTLPEndpoint:         p.str("FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT", ""),
 		LogLevel:             p.level("FINUANCE_LOG_LEVEL", slog.LevelInfo),
 		TrustedProxies:       p.prefixes("FINUANCE_TRUSTED_PROXIES"),
-		AIBaseURL:            p.httpURL("FINUANCE_AI_BASE_URL"),
-		AIAPIKey:             p.str("FINUANCE_AI_API_KEY", ""),
-		AIDefaultModel:       p.str("FINUANCE_AI_DEFAULT_MODEL", ""),
-		AIAllowRemote:        p.bool("FINUANCE_AI_ALLOW_REMOTE", false),
 		AITimeout:            p.duration("FINUANCE_AI_TIMEOUT", 120*time.Second),
 		AIMaxConcurrent:      p.int("FINUANCE_AI_MAX_CONCURRENT", 2, 1, 64),
-		AIMaxChats:           p.int("FINUANCE_AI_MAX_CHATS", 10, 1, 1000),
+		AIMaxChats:           p.int("FINUANCE_AI_MAX_CHATS", 25, 1, 1000),
+		AIRatePerHour:        p.int("FINUANCE_AI_RATE_PER_HOUR", 30, 1, 10000),
 		Argon2MemoryKiB:      uint32(p.int("FINUANCE_ARGON2_MEMORY_KIB", 19*1024, 8*1024, 1<<20)), //nolint:gosec // bounded by p.int
 		Argon2Time:           uint32(p.int("FINUANCE_ARGON2_TIME", 2, 1, 10)),                     //nolint:gosec // bounded by p.int
 		Argon2Threads:        uint8(p.int("FINUANCE_ARGON2_THREADS", 1, 1, 16)),                   //nolint:gosec // bounded by p.int
 	}
+	c.AIConnections = p.aiConnections(p.int("FINUANCE_AI_CONTEXT_TOKENS", 8192, 1024, 10_000_000))
 	switch c.Env {
 	case EnvDev, EnvTest, EnvProd:
 	default:

@@ -72,7 +72,9 @@ describe('api client', () => {
 
   it('data() returns the body', async () => {
     server.use(
-      http.get(`${base}/meta`, () => HttpResponse.json({ version: 'v', signupEnabled: true, demoMode: false })),
+      http.get(`${base}/meta`, () =>
+        HttpResponse.json({ version: 'v', signupEnabled: true, demoMode: false, assistantEnabled: false }),
+      ),
     );
     expect(data(await api.GET('/meta')).signupEnabled).toBe(true);
   });

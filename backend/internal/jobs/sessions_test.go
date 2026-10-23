@@ -45,7 +45,10 @@ func TestRegistry(t *testing.T) {
 	if (CleanupExpiredSessionsArgs{}).Kind() != "cleanup_expired_sessions" || (CleanupExpiredSessionsArgs{}).InsertOpts().MaxAttempts != 3 {
 		t.Error("job kind or options changed; a kind rename orphans queued jobs")
 	}
-	if len(PeriodicJobs()) != 1 {
+	if (CleanupAssistantChatsArgs{}).Kind() != "cleanup_assistant_chats" || (CleanupAssistantChatsArgs{}).InsertOpts().MaxAttempts != 3 {
+		t.Error("assistant cleanup kind or options changed")
+	}
+	if len(PeriodicJobs()) != 2 { // sessions and assistant chats, hourly
 		t.Errorf("periodic jobs = %d", len(PeriodicJobs()))
 	}
 	if Workers(Deps{Sessions: &fakeCleaner{}}) == nil {

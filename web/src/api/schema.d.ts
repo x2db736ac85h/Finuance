@@ -836,6 +836,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The assistant's connections and their models
+         * @description Every connection the instance offers, with its chat models (embedding models and models outside the connection's allowlist are left out) and what each can do. The model lists are cached for 60 s (5 s after a failure); `refresh=true` checks again.
+         */
+        get: operations["assistantStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The user's assistant settings
+         * @description How long chats are kept and which cloud connections the user agreed to (defaults before the first save).
+         */
+        get: operations["getAssistantSettings"];
+        /**
+         * Save the assistant settings
+         * @description A shorter retention deletes the chats past it at once. `retentionDays` null keeps chats until they are deleted.
+         */
+        put: operations["putAssistantSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The user's chats, newest first */
+        get: operations["listAssistantChats"];
+        put?: never;
+        /**
+         * Start a chat
+         * @description The oldest chats beyond `FINUANCE_AI_MAX_CHATS` are deleted.
+         */
+        post: operations["createAssistantChat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/chats/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** A chat with its turns */
+        get: operations["getAssistantChat"];
+        put?: never;
+        post?: never;
+        /** Delete a chat */
+        delete: operations["deleteAssistantChat"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/chats/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask a question; the answer streams back
+         * @description Answers `text/event-stream` (PLAN §6.3): `step`, `reasoning`, `content`, `mode`, then `done` or
+         *     `error`, as `event:`/`data:` pairs whose data is JSON (`AssistantStepEvent`, `AssistantDeltaEvent`,
+         *     `AssistantModeEvent`, `AssistantDoneEvent`, `AssistantErrorEvent`). A comment line every 15 s
+         *     keeps proxies from closing the stream. Closing the connection stops the run. Problems that keep
+         *     a run from starting are answered as usual: `run_in_progress` (another reply is being written),
+         *     `assistant_busy` (the server is at its limit), `consent_required` (a cloud connection the user
+         *     hasn't agreed to), `assistant_unavailable` (no connection, or the model server can't be used),
+         *     `rate_limited`.
+         */
+        post: operations["sendAssistantMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/chats/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop the reply being written
+         * @description Cancels the user's run (the model request too); nothing running is not an error.
+         */
+        post: operations["stopAssistant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/demo-data": {
         parameters: {
             query?: never;
@@ -866,6 +1002,8 @@ export interface components {
              * @example v0.1.0
              */
             version: string;
+            /** @description Whether at least one assistant connection is configured. */
+            assistantEnabled: boolean;
             /** @description Whether new accounts can be created (`FINUANCE_ALLOW_SIGNUP`). */
             signupEnabled: boolean;
             /** @description Whether this is the public demo instance (`FINUANCE_DEMO_MODE`). */
@@ -1923,6 +2061,185 @@ export interface components {
             /** Format: int64 */
             annualIncomeMinor: number;
         };
+        AssistantStatus: {
+            enabled: boolean;
+            connections: components["schemas"]["AssistantConnection"][];
+            /**
+             * @description The highest number of rows one lookup may return (legacy maxRows).
+             * @example 50
+             */
+            maxRowsLimit: number;
+        };
+        AssistantConnection: {
+            /** @example lmstudio */
+            name: string;
+            /** @example LM Studio (homelab) */
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            /** @description A cloud service; the user must agree once before their data is sent to it. */
+            cloud: boolean;
+            reachable: boolean;
+            /** @description The model used when none is chosen; absent when the server offers none. */
+            defaultModel?: string;
+            models: components["schemas"]["AssistantModel"][];
+            error?: components["schemas"]["AssistantError"];
+        };
+        AssistantModel: {
+            /** @example qwen3-14b */
+            id: string;
+            /** @description Whether the model is sent tool definitions (otherwise plan mode). */
+            tools: boolean;
+            /**
+             * @description How thinking is controlled (none = no control; the model may still reason).
+             * @enum {string}
+             */
+            reasoning: "none" | "effort" | "budget" | "switch";
+            contextTokens: number;
+        };
+        AssistantError: {
+            /** @enum {string} */
+            kind: "unreachable" | "auth" | "tools_rejected" | "context_too_long" | "rate_limited" | "model_not_found" | "timeout" | "bad_response" | "upstream";
+            /** @description A short explanation (the server's own message, clipped). */
+            message: string;
+        };
+        AssistantSettings: {
+            /** @description Days a chat is kept after its last message; null keeps chats until they are deleted. */
+            retentionDays: number | null;
+            /** @description Names of the cloud connections the user agreed to send their data to. */
+            cloudConsent: string[];
+        };
+        AssistantChat: {
+            /** Format: uuid */
+            id: string;
+            /** @description The first question ("" before it). */
+            title: string;
+            connection: string;
+            model: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AssistantChatList: {
+            chats: components["schemas"]["AssistantChat"][];
+            maxChats: number;
+        };
+        AssistantChatDetail: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            connection: string;
+            model: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @description Auto mode switched this chat to plan mode. */
+            noTools: boolean;
+            turns: components["schemas"]["AssistantTurn"][];
+        };
+        /** @description A question (`user`) or an answer (`assistant`) with its lookups. */
+        AssistantTurn: {
+            /** @enum {string} */
+            role: "user" | "assistant";
+            /** @description The sequence number of the turn's last message. */
+            seq: number;
+            content: string;
+            reasoning?: string;
+            steps?: components["schemas"]["AssistantStep"][];
+            meta?: components["schemas"]["AssistantMeta"];
+            error?: components["schemas"]["AssistantTurnError"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AssistantStep: {
+            tool: string;
+            /** @description The arguments as the model sent them. */
+            args: {
+                [key: string]: unknown;
+            };
+            summary: string;
+            /** @description The JSON the model received (cut at 6,000 characters for display). */
+            result: string;
+            truncated?: boolean;
+            matched?: number;
+            toolFilter?: components["schemas"]["ToolFilter"];
+        };
+        AssistantMeta: {
+            /** Format: int64 */
+            durationMs: number;
+            approxTokensSent: number;
+            lookups: number;
+            rounds: number;
+            connection: string;
+            model: string;
+            /** @enum {string} */
+            mode: "tools" | "plan";
+            /** @description Auto mode switched to plan mode during this turn. */
+            fallback?: boolean;
+            stopped?: boolean;
+            /** @enum {string} */
+            scope: "all" | "view";
+            accountIds?: string[];
+            inputTokens?: number;
+            outputTokens?: number;
+        };
+        AssistantTurnError: {
+            /** @description An assistant error kind (`unreachable`, `auth`, `tools_rejected`, `context_too_long`, `rate_limited`, `model_not_found`, `timeout`, `bad_response`, `upstream`) or `internal`. */
+            code: string;
+            message: string;
+        };
+        AssistantMessageRequest: {
+            text: string;
+            /**
+             * @default all
+             * @enum {string}
+             */
+            scope: "all" | "view";
+            context?: components["schemas"]["QueryContext"];
+            /**
+             * @description The browser's IANA time zone, for "today" (default Europe/Warsaw).
+             * @example Europe/Warsaw
+             */
+            timeZone?: string;
+            settings?: components["schemas"]["AssistantRunSettings"];
+        };
+        AssistantRunSettings: {
+            /** @description Default the chat's connection, else the first one. */
+            connection?: string;
+            /** @description Default the chat's model, else the connection's default. */
+            model?: string;
+            /** @enum {string} */
+            mode?: "auto" | "tools" | "plan";
+            /** @enum {string} */
+            think?: "off" | "auto" | "low" | "medium" | "high";
+            maxRows?: number;
+            /** Format: double */
+            temperature?: number;
+            /** @enum {string} */
+            toolset?: "full" | "compact";
+        };
+        AssistantDeltaEvent: {
+            delta: string;
+        };
+        AssistantStepEvent: components["schemas"]["AssistantStep"] & {
+            index: number;
+        };
+        AssistantModeEvent: {
+            /** @enum {string} */
+            mode: "plan";
+            reason: string;
+        };
+        AssistantDoneEvent: {
+            messageSeq: number;
+            meta: components["schemas"]["AssistantMeta"];
+        };
+        AssistantErrorEvent: {
+            code: string;
+            message: string;
+            messageSeq?: number;
+        };
         Investments: {
             /** Format: int32 */
             version: number;
@@ -1953,7 +2270,7 @@ export interface components {
          * @description Stable machine-readable error code.
          * @enum {string}
          */
-        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "internal";
+        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "internal";
         FieldError: {
             /** @description Dotted path of the offending field, e.g. `mapping.amount`. */
             field: string;
@@ -3338,6 +3655,210 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["StaleInvestmentsProblem"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    assistantStatus: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantStatus"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAssistantSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantSettings"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    putAssistantSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantSettings"];
+            };
+        };
+        responses: {
+            /** @description Saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantSettings"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAssistantChats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chats (expired ones are removed first). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantChatList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createAssistantChat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new chat. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantChat"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAssistantChat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The chat. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantChatDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteAssistantChat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    sendAssistantMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description The run's events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    stopAssistant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stopped (or nothing was running). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

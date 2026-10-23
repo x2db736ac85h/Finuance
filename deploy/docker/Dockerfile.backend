@@ -18,6 +18,18 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     go build -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" \
       -o /out/finuance ./cmd/finuance
 
+# The mock model server for the Compose ai-mock profile and E2E (target llmmock). It is a separate
+# target, so the production image below never contains it.
+FROM build AS llmmock-build
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags "-s -w" -o /out/llmmock ./cmd/llmmock
+
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:516757106de35205efb70b91ba03f6f1298424a0678c603255cf2852a7000087 AS llmmock
+COPY --from=llmmock-build /out/llmmock /llmmock
+USER nonroot:nonroot
+EXPOSE 11434
+ENTRYPOINT ["/llmmock"]
+
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:516757106de35205efb70b91ba03f6f1298424a0678c603255cf2852a7000087
 LABEL org.opencontainers.image.source="https://github.com/x2db736ac85h/Finuance" \
       org.opencontainers.image.title="finuance-backend" \

@@ -1,0 +1,385 @@
+package httpapi
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
+	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/llm"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+)
+
+// heartbeat is how often an idle stream gets a comment line, so proxies keep it open.
+const heartbeat = 15 * time.Second
+
+// conns returns the configured connections (nil when the assistant isn't wired, in tests).
+func (a *api) conns() *assistant.Connections {
+	if a.ai == nil {
+		return nil
+	}
+	return a.ai.Connections
+}
+
+// AssistantStatus lists the connections and their chat models.
+func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusRequestObject) (gen.AssistantStatusResponseObject, error) {
+	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: assistant.MaxRowsLimit}
+	for _, st := range a.conns().Status(ctx, req.Params.Refresh != nil && *req.Params.Refresh) {
+		c := gen.AssistantConnection{Name: st.Name, Label: st.Label, Api: gen.AssistantConnectionApi(st.API), Cloud: st.Cloud,
+			Reachable: st.Reachable, Models: make([]gen.AssistantModel, 0, len(st.Models)), Error: assistantError(st.Err)}
+		if st.DefaultModel != "" {
+			c.DefaultModel = &st.DefaultModel
+		}
+		for _, m := range st.Models {
+			c.Models = append(c.Models, gen.AssistantModel{Id: m.ID, Tools: m.Caps.Tools,
+				Reasoning: gen.AssistantModelReasoning(m.Caps.Reasoning), ContextTokens: m.Caps.ContextTokens})
+		}
+		out.Connections = append(out.Connections, c)
+	}
+	return out, nil
+}
+
+func assistantError(e *llm.Error) *gen.AssistantError {
+	if e == nil {
+		return nil
+	}
+	return &gen.AssistantError{Kind: gen.AssistantErrorKind(e.Kind), Message: e.Message}
+}
+
+// errAssistantOff answers the assistant routes of an instance without connections.
+var errAssistantOff = fmt.Errorf("%w: no assistant connection is configured", assistant.ErrUnavailable)
+
+func (a *api) chats() (*assistant.Chats, error) {
+	if a.ai == nil {
+		return nil, errAssistantOff
+	}
+	return a.ai.Chats, nil
+}
+
+// GetAssistantSettings returns the retention and cloud consent.
+func (a *api) GetAssistantSettings(ctx context.Context, _ gen.GetAssistantSettingsRequestObject) (gen.GetAssistantSettingsResponseObject, error) {
+	c, err := a.chats()
+	if err != nil {
+		return nil, err
+	}
+	s, err := c.Settings(ctx, identity(ctx).User.ID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetAssistantSettings200JSONResponse(settingsDTO(s)), nil
+}
+
+// PutAssistantSettings saves them.
+func (a *api) PutAssistantSettings(ctx context.Context, req gen.PutAssistantSettingsRequestObject) (gen.PutAssistantSettingsResponseObject, error) {
+	c, err := a.chats()
+	if err != nil {
+		return nil, err
+	}
+	s, err := c.SaveSettings(ctx, identity(ctx).User.ID, assistant.Settings{RetentionDays: req.Body.RetentionDays, CloudConsent: req.Body.CloudConsent})
+	if err != nil {
+		return nil, err
+	}
+	return gen.PutAssistantSettings200JSONResponse(settingsDTO(s)), nil
+}
+
+func settingsDTO(s assistant.Settings) gen.AssistantSettings {
+	return gen.AssistantSettings{RetentionDays: s.RetentionDays, CloudConsent: s.CloudConsent}
+}
+
+func chatDTO(c assistant.Chat) gen.AssistantChat {
+	return gen.AssistantChat{Id: c.ID, Title: c.Title, Connection: c.Connection, Model: c.Model, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt}
+}
+
+// ListAssistantChats lists the chats, newest first.
+func (a *api) ListAssistantChats(ctx context.Context, _ gen.ListAssistantChatsRequestObject) (gen.ListAssistantChatsResponseObject, error) {
+	c, err := a.chats()
+	if err != nil {
+		return nil, err
+	}
+	list, err := c.List(ctx, identity(ctx).User.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := gen.ListAssistantChats200JSONResponse{Chats: make([]gen.AssistantChat, 0, len(list)), MaxChats: a.cfg.AIMaxChats}
+	for _, ch := range list {
+		out.Chats = append(out.Chats, chatDTO(ch))
+	}
+	return out, nil
+}
+
+// CreateAssistantChat starts a chat.
+func (a *api) CreateAssistantChat(ctx context.Context, _ gen.CreateAssistantChatRequestObject) (gen.CreateAssistantChatResponseObject, error) {
+	c, err := a.chats()
+	if err != nil {
+		return nil, err
+	}
+	ch, err := c.Create(ctx, identity(ctx).User.ID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.CreateAssistantChat201JSONResponse(chatDTO(ch)), nil
+}
+
+// GetAssistantChat returns a chat as turns: each question, and each answer with its lookups.
+func (a *api) GetAssistantChat(ctx context.Context, req gen.GetAssistantChatRequestObject) (gen.GetAssistantChatResponseObject, error) {
+	c, err := a.chats()
+	if err != nil {
+		return nil, err
+	}
+	ch, msgs, err := c.Get(ctx, identity(ctx).User.ID, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	out := gen.GetAssistantChat200JSONResponse{Id: ch.ID, Title: ch.Title, Connection: ch.Connection, Model: ch.Model,
+		CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs)}
+	return out, nil
+}
+
+// turnsOf groups messages into turns. An answer's text and reasoning are its assistant messages'
+// joined (the text written before each lookup, then the answer), as the panel streamed them.
+func turnsOf(msgs []assistant.Message) []gen.AssistantTurn {
+	out := []gen.AssistantTurn{}
+	for i := 0; i < len(msgs); {
+		m := msgs[i]
+		if m.Role == llm.RoleUser {
+			out = append(out, gen.AssistantTurn{Role: gen.AssistantTurnRoleUser, Seq: m.Seq, Content: m.Content, CreatedAt: m.CreatedAt})
+			i++
+			continue
+		}
+		j := i
+		var content, reasoning []string
+		for j < len(msgs) && msgs[j].Role != llm.RoleUser {
+			if x := msgs[j]; x.Role == llm.RoleAssistant {
+				if x.Content != "" {
+					content = append(content, x.Content)
+				}
+				if x.Reasoning != "" {
+					reasoning = append(reasoning, x.Reasoning)
+				}
+			}
+			j++
+		}
+		fin := msgs[j-1]
+		t := gen.AssistantTurn{Role: gen.AssistantTurnRoleAssistant, Seq: fin.Seq, Content: strings.Join(content, "\n\n"), CreatedAt: fin.CreatedAt}
+		if r := strings.Join(reasoning, "\n\n"); r != "" {
+			t.Reasoning = &r
+		}
+		steps := make([]gen.AssistantStep, 0, len(fin.Steps))
+		for _, s := range fin.Steps {
+			steps = append(steps, stepDTO(s))
+		}
+		t.Steps = &steps
+		if fin.Meta != nil {
+			m := metaDTO(*fin.Meta)
+			t.Meta = &m
+		} else {
+			t.Error = &gen.AssistantTurnError{Code: "internal", Message: "The reply was interrupted."}
+		}
+		if fin.Error != nil {
+			t.Error = &gen.AssistantTurnError{Code: fin.Error.Code, Message: fin.Error.Message}
+		}
+		out = append(out, t)
+		i = j
+	}
+	return out
+}
+
+func stepDTO(s assistant.Step) gen.AssistantStep {
+	var args map[string]any
+	if json.Unmarshal(s.Args, &args) != nil || args == nil {
+		args = map[string]any{}
+	}
+	out := gen.AssistantStep{Tool: s.Tool, Args: args, Summary: s.Summary, Result: s.Result, Matched: s.Matched}
+	if s.Truncated {
+		out.Truncated = &s.Truncated
+	}
+	if f := s.ToolFilter; f != nil {
+		tf := gen.ToolFilter{Label: &f.Label, MinAmount: f.MinAmount, MaxAmount: f.MaxAmount}
+		for _, p := range []struct {
+			v   string
+			dst **string
+		}{{f.Query, &tf.Query}, {f.Payee, &tf.Payee}, {f.Category, &tf.Category}, {f.Group, &tf.Group}} {
+			if p.v != "" {
+				v := p.v
+				*p.dst = &v
+			}
+		}
+		if f.Type != "" {
+			t := gen.ToolFilterType(f.Type)
+			tf.Type = &t
+		}
+		if f.DateFrom != "" {
+			if d, err := platform.ParseDate(f.DateFrom); err == nil {
+				tf.DateFrom = dateDTO(&d)
+			}
+		}
+		if f.DateTo != "" {
+			if d, err := platform.ParseDate(f.DateTo); err == nil {
+				tf.DateTo = dateDTO(&d)
+			}
+		}
+		out.ToolFilter = &tf
+	}
+	return out
+}
+
+func metaDTO(m assistant.Meta) gen.AssistantMeta {
+	out := gen.AssistantMeta{DurationMs: m.DurationMs, ApproxTokensSent: m.ApproxTokensSent, Lookups: m.Lookups, Rounds: m.Rounds,
+		Connection: m.Connection, Model: m.Model, Mode: gen.AssistantMetaMode(m.Mode), Scope: gen.AssistantMetaScope(m.Scope)}
+	if m.Fallback {
+		out.Fallback = &m.Fallback
+	}
+	if m.Stopped {
+		out.Stopped = &m.Stopped
+	}
+	if len(m.AccountIDs) > 0 {
+		ids := m.AccountIDs
+		out.AccountIds = &ids
+	}
+	if m.InputTokens > 0 {
+		out.InputTokens = &m.InputTokens
+	}
+	if m.OutputTokens > 0 {
+		out.OutputTokens = &m.OutputTokens
+	}
+	return out
+}
+
+// DeleteAssistantChat deletes a chat.
+func (a *api) DeleteAssistantChat(ctx context.Context, req gen.DeleteAssistantChatRequestObject) (gen.DeleteAssistantChatResponseObject, error) {
+	c, err := a.chats()
+	if err != nil {
+		return nil, err
+	}
+	if err := c.Delete(ctx, identity(ctx).User.ID, req.Id); err != nil {
+		return nil, err
+	}
+	return gen.DeleteAssistantChat204Response{}, nil
+}
+
+// StopAssistant cancels the user's run.
+func (a *api) StopAssistant(ctx context.Context, _ gen.StopAssistantRequestObject) (gen.StopAssistantResponseObject, error) {
+	if a.ai != nil {
+		a.ai.Runner.Stop(identity(ctx).User.ID)
+	}
+	return gen.StopAssistant204Response{}, nil
+}
+
+// SendAssistantMessage checks the question, then streams the run as server-sent events.
+func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMessageRequestObject) (gen.SendAssistantMessageResponseObject, error) {
+	if a.ai == nil || !a.ai.Connections.Enabled() {
+		return nil, errAssistantOff
+	}
+	u := identity(ctx).User.ID
+	if err := a.limits.assistant.Allow(u.String()); err != nil {
+		return nil, err
+	}
+	b := req.Body
+	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone)}
+	if s := b.Settings; s != nil {
+		r.Connection, r.Model, r.Temperature = deref(s.Connection), deref(s.Model), s.Temperature
+		if s.Mode != nil {
+			r.Mode = string(*s.Mode)
+		}
+		if s.Think != nil {
+			r.Think = llm.Thinking(*s.Think)
+		}
+		if s.MaxRows != nil {
+			r.MaxRows = *s.MaxRows
+		}
+		if s.Toolset != nil {
+			r.Toolset = string(*s.Toolset)
+		}
+	}
+	if b.Scope != nil && *b.Scope == gen.AssistantMessageRequestScopeView {
+		r.View = true
+		if b.Context != nil {
+			r.Context = contextIn(*b.Context)
+		}
+		r.Context.ToolFilter = nil
+	}
+	run, err := a.ai.Runner.Prepare(ctx, u, r)
+	if err != nil {
+		var le *llm.Error
+		if errors.As(err, &le) {
+			return nil, fmt.Errorf("%w: %s", assistant.ErrUnavailable, le.Message)
+		}
+		if errors.Is(err, assistant.ErrUnknownConnection) || errors.Is(err, assistant.ErrUnknownModel) {
+			ve := &platform.ValidationError{}
+			ve.Add("settings.model", err.Error())
+			return nil, ve
+		}
+		return nil, err
+	}
+	return sseResponse{ctx: ctx, run: run}, nil
+}
+
+// sseResponse streams a prepared run (text/event-stream, one event per line pair).
+type sseResponse struct {
+	ctx context.Context
+	run *assistant.Run
+}
+
+func (s sseResponse) VisitSendAssistantMessageResponse(w http.ResponseWriter) error {
+	rc := http.NewResponseController(w)
+	if err := rc.SetWriteDeadline(time.Time{}); err != nil { // the server's write timeout would cut long answers
+		observability.Logger(s.ctx).WarnContext(s.ctx, "assistant stream keeps the write deadline", "error", err)
+	}
+	h := w.Header()
+	h.Set("Content-Type", "text/event-stream")
+	h.Set("Cache-Control", "no-store")
+	h.Set("X-Accel-Buffering", "no") // nginx: don't buffer
+	w.WriteHeader(http.StatusOK)
+	_ = rc.Flush()
+	var mu sync.Mutex
+	write := func(b []byte) {
+		mu.Lock()
+		defer mu.Unlock()
+		if _, err := w.Write(b); err == nil {
+			_ = rc.Flush()
+		}
+	}
+	stop := make(chan struct{})
+	go func() {
+		t := time.NewTicker(heartbeat)
+		defer t.Stop()
+		for {
+			select {
+			case <-t.C:
+				write([]byte(": keep-alive\n\n"))
+			case <-stop:
+				return
+			}
+		}
+	}()
+	s.run.Execute(s.ctx, func(e assistant.Event) {
+		data, err := json.Marshal(eventDTO(e))
+		if err != nil {
+			return
+		}
+		write([]byte("event: " + e.Name + "\ndata: " + string(data) + "\n\n"))
+	})
+	close(stop)
+	return nil
+}
+
+// eventDTO shapes event payloads like the API schemas (steps and meta in their API form).
+func eventDTO(e assistant.Event) any {
+	switch d := e.Data.(type) {
+	case assistant.StepEvent:
+		return struct {
+			Index int `json:"index"`
+			gen.AssistantStep
+		}{d.Index, stepDTO(d.Step)}
+	case assistant.DoneEvent:
+		return gen.AssistantDoneEvent{MessageSeq: d.MessageSeq, Meta: metaDTO(d.Meta)}
+	}
+	return e.Data
+}

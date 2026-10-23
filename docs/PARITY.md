@@ -124,20 +124,20 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Tools `search_transactions`, `aggregate_transactions`, `find_values`: every filter, sort, `group_by` 🧪 | §29.2 `execTool`, `aiFilter` | 13 | todo |
-| System prompt: today, relative-date rules, scope, schema, categories ≤ 60, payees ≤ 40, groups 🧪 | §29.2 `sysPrompt` | 13 | todo |
-| Streaming completions; `reasoning_content` / `<think>`; Qwen `<tool_call>` text fallback | §29.2 `complete` | 13 | todo |
-| Native tool loop (max 6 rounds) | §29.2 `runTools` | 13 | todo |
-| Plan mode for models without tools; auto fallback on HTTP 400/422/500 | §29.2 `runPlan` | 13 | todo |
-| History trimming (30 messages, 2.5k tool results, `/no_think`) | §29.2 `trimHistory` | 13 | todo |
-| Chat history: last 10 chats, menu with *Interaction DD.MM HH:MM*, delete, New chat | §29.2 `renderChatMenu` | 13 | todo |
-| Panel: resizable width, maximise, persisted | §29.2 `applyChatLayout` | 13 | todo |
-| Steps (collapsible, exactly what was sent), *Show in table* chip "✦ …", per-answer meta | §29.2 `showAiSelection` | 13 | todo |
-| Suggestions; minimal safe markdown `md()` | §29.2 | 13 | todo |
-| Settings: model, mode (auto/tools/plan), thinking, max rows, temperature, scope (all/view) | §29.2 `S.ai` | 13 | todo |
-| ⌘J toggles the panel | §22 | 13 | todo |
-| Connection flow: browser approves an LLM address, reload narrows the CSP to that origin | §29.3 `lockNetwork` | — | retired: the server orchestrates an admin-configured endpoint; browser CSP stays `connect-src 'self'` (PLAN §1.3, ADR 0019) |
-| API key in browser storage (`S.aiKey`) | §29.2 | — | retired: `FINUANCE_AI_API_KEY` server secret |
+| Tools `search_transactions`, `aggregate_transactions`, `find_values`: every filter, sort, `group_by` 🧪 (`TestToolsParity`: all 67 oracle cases; plus `group_by: account`, `field: group`, `month_overview`, `recurring_payments`) | §29.2 `execTool`, `aiFilter` | 13 | ported |
+| System prompt: today, relative-date rules, scope, schema, categories ≤ 60, payees ≤ 40, groups 🧪 (`TestSystemPromptParity`, ALLOWED_DIFFS row 14) | §29.2 `sysPrompt` | 13 | ported |
+| Streaming completions; `reasoning_content` / `<think>`; Qwen `<tool_call>` text fallback (server side, OpenAI and Anthropic wire formats, recorded-stream tests) | §29.2 `complete` | 13 | ported |
+| Native tool loop (max 6 rounds) | §29.2 `runTools` | 13 | ported |
+| Plan mode for models without tools; auto fallback on HTTP 400/422/500 | §29.2 `runPlan` | 13 | ported |
+| History trimming (30 messages, 2.5k tool results, `/no_think` for Qwen 3 only), plus the model's context size | §29.2 `trimHistory` | 13 | ported |
+| Chat history: menu with date and time, title, delete, New chat; stored on the server, 25 chats, kept 48 h by default (1–7 days or forever) | §29.2 `renderChatMenu` | 13 | ported |
+| Panel: resizable width, maximise, persisted | §29.2 `applyChatLayout` | 13 | ported |
+| Steps (collapsible, exactly what was sent), *Show in table* chip "✦ …" (the stored `toolFilter`, so it works in restored chats), per-answer meta | §29.2 `showAiSelection` | 13 | ported |
+| Suggestions; minimal safe markdown `md()` (React nodes, no HTML) | §29.2 | 13 | ported |
+| Settings: connection and model, mode (auto/tools/plan), thinking (off … high), max rows, scope (all/view); temperature stays the legacy 0.2 (no control, as in the legacy) | §29.2 `S.ai` | 13 | ported |
+| ⌘J toggles the panel | §22 | 13 | ported |
+| Connection flow: browser approves an LLM address, reload narrows the CSP to that origin | §29.3 `lockNetwork` | — | retired: the server orchestrates an admin-configured endpoint; browser CSP stays `connect-src 'self'` (PLAN §1.3, ADR 0015) |
+| API key in browser storage (`S.aiKey`) | §29.2 | — | retired: the key is a server secret (`FINUANCE_AI_API_KEY`, or the connection's `apiKeyEnv`) |
 
 ## 8. Shell, appearance, keyboard
 

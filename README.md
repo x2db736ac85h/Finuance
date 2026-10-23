@@ -13,7 +13,7 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 </picture>
 
 > [!NOTE]
-> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 18 planned phases. **Phases 0–12 are done**: importing, the transaction table, groups, duplicate review, the insight charts and the monthly overview all work today. The AI assistant and the Kubernetes deployment are still under construction. See [Status](#status).
+> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 18 planned phases. **Phases 0–13 are done**: importing, the transaction table, groups, duplicate review, the insight charts, the monthly overview and the AI assistant all work today. Migration from the prototype and the Kubernetes deployment are still under construction. See [Status](#status).
 
 ## Contents
 
@@ -41,10 +41,11 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
   - an inspector with every field, the bank's original row, the category and a note.
 - **See where the money goes.** Six charts above the table follow its search, filters and period: a summary with the change against the previous period, spending by category, cash flow by month, the month's spending pace against earlier months, top payees and a daily spending calendar. Click a category, payee, month or day to filter the table; open any chart larger to see its numbers as a table.
 - **Review each month.** An overview page shows the month's income, spending, net saved and projected spending against the previous month, with highlights in plain sentences, budgets per category (a default from your last three months, editable in place), recurring payments, a money-flow diagram from income to categories, the largest expenses, savings rate, spending by weekday and the account balance. Investment, yield-on-cost and FI/RE cards track values you enter by hand.
+- **Ask questions in plain language.** An optional assistant panel (⌘/Ctrl J) answers questions such as "how much did I spend on restaurants in March?" in English or Polish. It looks your data up through read-only tools (search, totals, month overview, recurring payments) and shows every lookup, with *Show in table* to see the same rows in the list. It works with any model your admin connects: LM Studio, Ollama, vLLM or another OpenAI- or Anthropic-compatible server, local or in the cloud, and uses the model's thinking when it has it. Cloud services need your consent first; chats are deleted after 2 days unless you choose otherwise.
 - **Group transactions.** Select rows by dragging, Shift-click or ⌘/Ctrl-click, then add them to a colour-coded group such as "Italy trip". A quick bar shows the count and the total of the selection. Groups filter the table and are kept when you delete and re-import a file.
 - **Share an instance.** Several people can use one server. Each person's data is isolated in the database itself (row-level security), not just in the application code.
 
-Coming next (🚧): an optional AI assistant that runs on your own model, migration from the prototype's backups, and a Kubernetes deployment. See [Status](#status).
+Coming next (🚧): migration from the prototype's backups, category rules and transfer detection, and a Kubernetes deployment. See [Status](#status).
 
 ## Screenshots
 
@@ -54,7 +55,8 @@ All screenshots use made-up demo data. They follow your GitHub theme (dark or li
 |---|---|
 | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/import-dark.png"><img alt="The import window: raw file with the detected header row, column meanings and a preview" src="docs/screenshots/import-light.png"></picture> **Import window**: the header was found on line 26 of an mBank-style export. | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/filters-dark.png"><img alt="Search and a column condition as chips, with the column menu open" src="docs/screenshots/filters-light.png"></picture> **Search and filters**: chips for each condition, the column menu with its value checklist. |
 | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/groups-dark.png"><img alt="Six selected rows with the quick bar and a Group column" src="docs/screenshots/groups-light.png"></picture> **Groups**: a drag selection, the quick bar with its total, and the Group column. | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/duplicates-dark.png"><img alt="The duplicates window with two versions of each transaction" src="docs/screenshots/duplicates-light.png"></picture> **Duplicates**: two exports of the same account, with the bank's re-labelled categories highlighted. |
-| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png"><img alt="The monthly overview with KPIs, highlights, cash flow, budgets and recurring payments" src="docs/screenshots/overview-light.png"></picture> **Monthly overview**: a month in progress with its projection, highlights, budgets and recurring payments. | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/welcome-dark.png"><img alt="The empty start screen with a drop zone and Load demo data" src="docs/screenshots/welcome-light.png"></picture> **First start**: drop files or load a demo year. |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png"><img alt="The monthly overview with KPIs, highlights, cash flow, budgets and recurring payments" src="docs/screenshots/overview-light.png"></picture> **Monthly overview**: a month in progress with its projection, highlights, budgets and recurring payments. | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/assistant-dark.png"><img alt="The assistant panel next to the table: a lookup, what was sent to the model, and the answer as a table" src="docs/screenshots/assistant-light.png"></picture> **Assistant**: one lookup, exactly what the model received, and the answer (here from the built-in test model). |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/welcome-dark.png"><img alt="The empty start screen with a drop zone and Load demo data" src="docs/screenshots/welcome-light.png"></picture> **First start**: drop files or load a demo year. | |
 
 ## Key concepts
 
@@ -77,7 +79,7 @@ All screenshots use made-up demo data. They follow your GitHub theme (dark or li
 
 **Groups** are your own colour-coded labels (one per transaction), independent of the bank's categories. They work like any other column: filter, sort, export.
 
-**Privacy by design.** Data stays on your server. The database enforces that every query only sees the signed-in user's rows (PostgreSQL row-level security), passwords are hashed with Argon2id, sessions are server-side, and the web app runs under a strict Content Security Policy. The planned AI assistant only reads data through read-only tools and talks to a model you run yourself. Details are in the [threat model](docs/THREAT-MODEL.md).
+**Privacy by design.** Data stays on your server. The database enforces that every query only sees the signed-in user's rows (PostgreSQL row-level security), passwords are hashed with Argon2id, sessions are server-side, and the web app runs under a strict Content Security Policy. The optional AI assistant only reads data through read-only tools, sends a model only what it looks up, and talks to a model your admin connects; a cloud model needs each user's consent. Details are in the [threat model](docs/THREAT-MODEL.md).
 
 ## Architecture
 
@@ -168,8 +170,8 @@ Performance notes and measurements: [docs/perf.md](docs/perf.md).
 | 8–10 | Web app foundation, import window, table with groups and duplicates | ✅ done |
 | 11 | Insights: charts, period picker, chart windows | ✅ done |
 | 12 | Monthly overview: KPIs, budgets, recurring payments, money flow | ✅ done |
-| 13 | AI assistant with read-only tools on your own model | 🚧 next |
-| 14 | Migration from the prototype's backups, accessibility, v0.1.0 | 🚧 planned |
+| 13 | AI assistant with read-only tools on your own model | ✅ done |
+| 14 | Migration from the prototype's backups, accessibility, v0.1.0 | 🚧 next |
 | 15 | Category rules, transfer detection, group reports | 🚧 planned |
 | 16–17 | Kubernetes deployment, observability, load tests, hardening | 🚧 planned |
 | 18 | Public demo, documentation, v1.0.0 | 🚧 planned |

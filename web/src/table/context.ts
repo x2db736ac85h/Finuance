@@ -24,7 +24,7 @@ export function periodOf(p: PeriodPref, custom: ViewState['custom']): Schemas['P
 
 export function contextOf(
   viewId: string,
-  v: Pick<ViewState, 'search' | 'filters' | 'period' | 'custom'>,
+  v: Pick<ViewState, 'search' | 'filters' | 'period' | 'custom'> & Partial<Pick<ViewState, 'toolFilter'>>,
 ): QueryContext {
   const filters: NonNullable<QueryContext['filters']> = [];
   for (const [column, f] of Object.entries(v.filters)) {
@@ -42,6 +42,7 @@ export function contextOf(
     ...(v.search.trim() ? { search: v.search.trim() } : {}),
     ...(filters.length ? { filters } : {}),
     ...(period ? { period } : {}),
+    ...(v.toolFilter ? { toolFilter: v.toolFilter } : {}),
   };
 }
 
@@ -53,9 +54,10 @@ export function useQueryContext(viewId: string): ViewQuery {
   const period = useViews((s) => viewOf(s.views, viewId).period);
   const custom = useViews((s) => viewOf(s.views, viewId).custom);
   const sortPref = useViews((s) => viewOf(s.views, viewId).sort);
+  const toolFilter = useViews((s) => viewOf(s.views, viewId).toolFilter);
   return useMemo(() => {
-    const context = contextOf(viewId, { search, filters, period, custom });
+    const context = contextOf(viewId, { search, filters, period, custom, toolFilter });
     const sort = sortPref ? { column: sortPref.column as Schemas['FilterColumn'], dir: sortPref.dir } : undefined;
     return { context, ctxKey: JSON.stringify(context), sort, sortKey: JSON.stringify(sort ?? null) };
-  }, [viewId, search, filters, period, custom, sortPref]);
+  }, [viewId, search, filters, period, custom, sortPref, toolFilter]);
 }

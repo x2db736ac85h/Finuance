@@ -1,0 +1,5 @@
+data: {"choices":[{"index":0,"delta":{"content":"Hello"}}]}
+data: {"choices":[{"index":0,"delta":{"content":" there"}}]}
+: keep-alive comment
+data: not json
+data: [DONE]

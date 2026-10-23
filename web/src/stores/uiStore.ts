@@ -49,6 +49,8 @@ export type UiState = {
   setMode: (m: Mode) => void;
   toggleViz: () => void;
   setAiOpen: (open: boolean) => void;
+  /** Merges assistant settings (panel width, connection, model, mode, thinking, …). */
+  setAi: (change: Partial<AiPrefs>) => void;
   setKeysOpen: (open: boolean) => void;
   setImportFastPath: (on: boolean) => void;
   /** Insight pane height as a CSS length ('' = the default 50vh). */
@@ -107,6 +109,9 @@ export const useUi = create<UiState>()((set) => ({
   },
   setAiOpen: (open) => {
     set((s) => ({ ai: { ...s.ai, open } }));
+  },
+  setAi: (change) => {
+    set((s) => ({ ai: { ...s.ai, ...change } }));
   },
   setKeysOpen: (keysOpen) => {
     set({ keysOpen });

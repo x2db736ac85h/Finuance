@@ -18,6 +18,7 @@ export function chipsOf(viewId: string, v: ViewState, periodLabel: string | unde
   const out: Chip[] = [];
   const label = (c: string) => columnById(c as ColumnId)?.label ?? c;
   if (periodLabel && v.period !== 'all') out.push({ key: 'period', icon: 'cal', value: periodLabel });
+  if (v.toolFilter) out.push({ key: 'tool', label: '✦', value: v.toolFilter.label ?? 'assistant lookup' });
   if (v.search.trim()) out.push({ key: 'search', icon: 'search', value: v.search.trim() });
   if (v.sort) out.push({ key: 'sort', icon: v.sort.dir === 'asc' ? 'up' : 'down', value: label(v.sort.column) });
   for (const [col, f] of Object.entries(v.filters)) {
@@ -35,6 +36,7 @@ export function chipsOf(viewId: string, v: ViewState, periodLabel: string | unde
 export function withoutChip(viewId: string, v: ViewState, key: string): Partial<ViewState> {
   if (key === 'period') return { period: 'all', custom: null };
   if (key === 'search') return { search: '' };
+  if (key === 'tool') return { toolFilter: null };
   if (key === 'sort') return { sort: null };
   if (key === 'hidden') return { hidden: [...newView(viewId).hidden] };
   const col = key.slice(2);
@@ -47,5 +49,13 @@ export function withoutChip(viewId: string, v: ViewState, key: string): Partial<
 
 /** Legacy clearAll: search, conditions, values, sort, hidden columns and period. */
 export function cleared(viewId: string): Partial<ViewState> {
-  return { search: '', filters: {}, sort: null, hidden: [...newView(viewId).hidden], period: 'all', custom: null };
+  return {
+    search: '',
+    filters: {},
+    sort: null,
+    hidden: [...newView(viewId).hidden],
+    period: 'all',
+    custom: null,
+    toolFilter: null,
+  };
 }

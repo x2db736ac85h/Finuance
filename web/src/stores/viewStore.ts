@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 
+import type { Schemas } from '../api/client';
 import type { Column, ParsedPrefs, PersistedView } from './prefs';
 
 export type FilterState = { cond: string; excluded: string[] };
@@ -15,6 +16,8 @@ export type ViewState = PersistedView & {
   /** The selected row's position in the result, when known (status bar, inspector). */
   selectedIndex: number | null;
   ovMonth: string | null;
+  /** An assistant lookup applied with "Show in table" (the "✦" chip); session-only. */
+  toolFilter: Schemas['ToolFilter'] | null;
 };
 
 /**
@@ -44,6 +47,7 @@ export const newView = (id = 'all'): ViewState => ({
   period: 'all',
   custom: null,
   ovMonth: null,
+  toolFilter: null,
 });
 
 type ViewStore = {

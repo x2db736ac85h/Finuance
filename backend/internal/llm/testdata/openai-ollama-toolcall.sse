@@ -1,0 +1,8 @@
+data: {"id":"chatcmpl-77","object":"chat.completion.chunk","created":1,"model":"qwen3:8b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"The user asks about last month, so February 2025."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-77","object":"chat.completion.chunk","created":1,"model":"qwen3:8b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_ab12","index":0,"type":"function","function":{"name":"search_transactions","arguments":"{\"payee\":\"kino\",\"limit\":5}"}},{"id":"call_cd34","index":1,"type":"function","function":{"name":"find_values","arguments":"{\"field\":\"payee\",\"query\":\"kino\"}"}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-77","object":"chat.completion.chunk","created":1,"model":"qwen3:8b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"tool_calls"}]}
+
+data: [DONE]
+

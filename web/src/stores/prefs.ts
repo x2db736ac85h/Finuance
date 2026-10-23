@@ -24,18 +24,26 @@ export type ChartCfg = {
   ovMonths: number;
 };
 
-/** Assistant panel settings (legacy S.ai without the connection, which is server-side now). */
+/** How much a model thinks before answering (PLAN §4.8, ADR 0015). */
+export type Thinking = 'off' | 'auto' | 'low' | 'medium' | 'high';
+export const THINKING: readonly Thinking[] = ['off', 'auto', 'low', 'medium', 'high'];
+
+/**
+ * Assistant panel settings (legacy S.ai). The server address is instance config now: the panel
+ * picks a connection by name and a model. `think` and `keepChats` are the legacy fields, read
+ * only to migrate (thinking on → auto; chat retention is a server setting now).
+ */
 export type AiPrefs = {
   open: boolean;
   width: number;
   max: boolean;
+  connection: string;
   model: string;
   mode: string;
-  think: boolean;
+  thinking: Thinking;
   maxRows: number;
   temperature: number;
   scope: string;
-  keepChats: boolean;
 };
 
 export type SortPref = { column: Column; dir: 'asc' | 'desc' };
@@ -88,13 +96,13 @@ export const DEFAULT_AI: AiPrefs = {
   open: false,
   width: 0,
   max: false,
+  connection: '',
   model: '',
   mode: 'auto',
-  think: false,
+  thinking: 'auto',
   maxRows: 50,
   temperature: 0.2,
   scope: 'all',
-  keepChats: true,
 };
 
 export const PERIOD_RE = /^(all|l30|l3m|l12m|ytd|custom|m:\d{4}-\d{2}|y:\d{4})$/;
@@ -133,7 +141,7 @@ function parseCfg(x: unknown): Partial<ChartCfg> {
 function parseAi(x: unknown): Partial<AiPrefs> {
   if (!isObj(x)) return {};
   const out: Partial<AiPrefs> = {};
-  for (const k of ['open', 'max', 'think', 'keepChats'] as const) {
+  for (const k of ['open', 'max'] as const) {
     const v = x[k];
     if (typeof v === 'boolean') out[k] = v;
   }
@@ -141,10 +149,14 @@ function parseAi(x: unknown): Partial<AiPrefs> {
     const v = x[k];
     if (finite(v)) out[k] = v;
   }
-  for (const k of ['model', 'mode', 'scope'] as const) {
+  for (const k of ['connection', 'model', 'mode', 'scope'] as const) {
     const v = x[k];
     if (typeof v === 'string') out[k] = v;
   }
+  const t = x['thinking'];
+  if (typeof t === 'string' && (THINKING as readonly string[]).includes(t)) out.thinking = t as Thinking;
+  // legacy: a checkbox "let reasoning models think"
+  else if (typeof x['think'] === 'boolean') out.thinking = x['think'] ? 'auto' : 'off';
   // legacy name
   if (out.temperature === undefined && finite(x['temp'])) out.temperature = x['temp'];
   return out;

@@ -26,6 +26,41 @@ type Account struct {
 	CreatedAt           time.Time
 }
 
+type AssistantChat struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	Title      string
+	Connection string
+	Model      string
+	NoTools    bool
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+type AssistantMessage struct {
+	ID         int64
+	ChatID     uuid.UUID
+	UserID     uuid.UUID
+	Seq        int32
+	Role       string
+	Content    string
+	Reasoning  string
+	ToolCalls  []byte
+	ToolCallID string
+	Replay     []byte
+	Steps      []byte
+	Meta       []byte
+	Error      []byte
+	CreatedAt  time.Time
+}
+
+type AssistantSetting struct {
+	UserID        uuid.UUID
+	RetentionDays *int16
+	CloudConsent  []string
+	UpdatedAt     time.Time
+}
+
 type Budget struct {
 	UserID      uuid.UUID
 	CategoryID  uuid.UUID

@@ -37,11 +37,11 @@ func TestDefaults(t *testing.T) {
 		{"MaxUploadBytes", c.MaxUploadBytes, int64(20971520)},
 		{"MaxLegacyImportBytes", c.MaxLegacyImportBytes, int64(209715200)},
 		{"LogLevel", c.LogLevel, slog.LevelInfo},
-		{"AIBaseURL", c.AIBaseURL == nil, true},
+		{"AIConnections", len(c.AIConnections), 0},
 		{"AITimeout", c.AITimeout, 120 * time.Second},
 		{"AIMaxConcurrent", c.AIMaxConcurrent, 2},
-		{"AIMaxChats", c.AIMaxChats, 10},
-		{"AIAllowRemote", c.AIAllowRemote, false},
+		{"AIMaxChats", c.AIMaxChats, 25},
+		{"AIRatePerHour", c.AIRatePerHour, 30},
 	}
 	for _, ch := range checks {
 		if ch.got != ch.want {
@@ -103,11 +103,14 @@ func TestInvalidValuesAllReported(t *testing.T) {
 		"FINUANCE_AI_MAX_CHATS":      "-3",
 		"FINUANCE_DEMO_MODE":         "yes",
 		"FINUANCE_AI_ALLOW_REMOTE":   "no",
+		"FINUANCE_AI_API":            "grpc",
+		"FINUANCE_AI_RATE_PER_HOUR":  "0",
 	}), ForServe)
 	want := []string{"FINUANCE_HTTP_ADDR", "FINUANCE_ADMIN_ADDR", "FINUANCE_PUBLIC_ORIGIN", "FINUANCE_DATABASE_URL",
 		"FINUANCE_DB_MAX_CONNS", "FINUANCE_SESSION_TTL", "FINUANCE_SESSION_IDLE_TTL", "FINUANCE_ALLOW_SIGNUP", "FINUANCE_DEMO_MODE",
 		"FINUANCE_MAX_UPLOAD_BYTES", "FINUANCE_LOG_LEVEL", "FINUANCE_TRUSTED_PROXIES", "FINUANCE_AI_BASE_URL", "FINUANCE_AI_ALLOW_REMOTE",
-		"FINUANCE_AI_TIMEOUT", "FINUANCE_AI_MAX_CONCURRENT", "FINUANCE_AI_MAX_CHATS", "FINUANCE_ENV"}
+		"FINUANCE_AI_TIMEOUT", "FINUANCE_AI_MAX_CONCURRENT", "FINUANCE_AI_MAX_CHATS", "FINUANCE_ENV",
+		"FINUANCE_AI_API", "FINUANCE_AI_RATE_PER_HOUR"}
 	got := map[string]bool{}
 	for _, v := range vars(err) {
 		got[v] = true
@@ -155,7 +158,8 @@ func TestParsing(t *testing.T) {
 	if len(c.TrustedProxies) != 3 || c.TrustedProxies[1].String() != "192.168.1.7/32" {
 		t.Errorf("proxies = %v", c.TrustedProxies)
 	}
-	if c.LogLevel != slog.LevelDebug || c.SessionIdleTTL != 90*time.Minute || c.AIBaseURL.Host != "ollama.ollama.svc:11434" {
+	if c.LogLevel != slog.LevelDebug || c.SessionIdleTTL != 90*time.Minute || len(c.AIConnections) != 1 ||
+		c.AIConnections[0].BaseURL.Host != "ollama.ollama.svc:11434" {
 		t.Errorf("parsed = %+v", c)
 	}
 	if _, err := Load(env(map[string]string{"FINUANCE_PUBLIC_ORIGIN": "https://x.example/app"}), ForHealthcheck); err == nil {

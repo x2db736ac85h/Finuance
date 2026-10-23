@@ -4,4 +4,5 @@
 backend/bin/
 backend/**/*_test.go
 backend/testutil/
+!backend/testutil/llmmock/
 !backend/vendor/

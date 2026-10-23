@@ -120,7 +120,7 @@ export const account = (over: Partial<Schemas['Account']> = {}): Schemas['Accoun
 
 export const server = setupServer(
   http.get(`${API}/meta`, () =>
-    HttpResponse.json({ version: 'test', signupEnabled: db.signupEnabled, demoMode: false }),
+    HttpResponse.json({ version: 'test', signupEnabled: db.signupEnabled, demoMode: false, assistantEnabled: false }),
   ),
   http.get(`${API}/me`, () => authed(() => HttpResponse.json(db.user))),
   http.get(`${API}/preferences`, () => authed(() => HttpResponse.json(db.prefs))),
