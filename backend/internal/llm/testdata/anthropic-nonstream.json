@@ -1,0 +1,1 @@
+{"id":"msg_2","type":"message","role":"assistant","model":"qwen3-8b","content":[{"type":"text","text":"You spent 97 014,46 PLN."}],"stop_reason":"end_turn","usage":{"input_tokens":100,"output_tokens":12}}

@@ -14,3 +14,4 @@ Makefile text eol=lf
 backend/internal/httpapi/gen/** linguist-generated=true
 backend/internal/store/db/** linguist-generated=true
 web/src/api/schema.d.ts linguist-generated=true
+backend/internal/llm/testdata/*.sse -text

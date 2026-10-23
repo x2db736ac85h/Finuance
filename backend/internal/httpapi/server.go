@@ -17,6 +17,7 @@ import (
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/riverqueue/river"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
@@ -58,6 +59,8 @@ type Deps struct {
 	Ledger *ledger.Ledger
 	// Query runs the transaction reads (query, distinct, export). Nil in tests of the bare server.
 	Query *query.Engine
+	// Assistant holds the model connections; nil or empty means the assistant is off.
+	Assistant *assistant.Connections
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -93,7 +96,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{insights: ins, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
+	impl := &api{insights: ins, conns: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

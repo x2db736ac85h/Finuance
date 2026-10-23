@@ -836,6 +836,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The assistant's connections and their models
+         * @description Every connection the instance offers, with its chat models (embedding models and models outside the connection's allowlist are left out) and what each can do. The model lists are cached for 60 s (5 s after a failure); `refresh=true` checks again.
+         */
+        get: operations["assistantStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/demo-data": {
         parameters: {
             query?: never;
@@ -866,6 +886,8 @@ export interface components {
              * @example v0.1.0
              */
             version: string;
+            /** @description Whether at least one assistant connection is configured. */
+            assistantEnabled: boolean;
             /** @description Whether new accounts can be created (`FINUANCE_ALLOW_SIGNUP`). */
             signupEnabled: boolean;
             /** @description Whether this is the public demo instance (`FINUANCE_DEMO_MODE`). */
@@ -1922,6 +1944,48 @@ export interface components {
             valueMinor: number;
             /** Format: int64 */
             annualIncomeMinor: number;
+        };
+        AssistantStatus: {
+            enabled: boolean;
+            connections: components["schemas"]["AssistantConnection"][];
+            /**
+             * @description The highest number of rows one lookup may return (legacy maxRows).
+             * @example 50
+             */
+            maxRowsLimit: number;
+        };
+        AssistantConnection: {
+            /** @example lmstudio */
+            name: string;
+            /** @example LM Studio (homelab) */
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            /** @description A cloud service; the user must agree once before their data is sent to it. */
+            cloud: boolean;
+            reachable: boolean;
+            /** @description The model used when none is chosen; absent when the server offers none. */
+            defaultModel?: string;
+            models: components["schemas"]["AssistantModel"][];
+            error?: components["schemas"]["AssistantError"];
+        };
+        AssistantModel: {
+            /** @example qwen3-14b */
+            id: string;
+            /** @description Whether the model is sent tool definitions (otherwise plan mode). */
+            tools: boolean;
+            /**
+             * @description How thinking is controlled (none = no control; the model may still reason).
+             * @enum {string}
+             */
+            reasoning: "none" | "effort" | "budget" | "switch";
+            contextTokens: number;
+        };
+        AssistantError: {
+            /** @enum {string} */
+            kind: "unreachable" | "auth" | "tools_rejected" | "context_too_long" | "rate_limited" | "model_not_found" | "timeout" | "bad_response" | "upstream";
+            /** @description A short explanation (the server's own message, clipped). */
+            message: string;
         };
         Investments: {
             /** Format: int32 */
@@ -3337,6 +3401,29 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["StaleInvestmentsProblem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    assistantStatus: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantStatus"];
                 };
             };
             default: components["responses"]["Problem"];

@@ -70,7 +70,7 @@ func TestMeta(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &m); err != nil {
 		t.Fatal(err)
 	}
-	if m["version"] != "v0.0.0-test" || m["signupEnabled"] != true || m["demoMode"] != false {
+	if m["version"] != "v0.0.0-test" || m["signupEnabled"] != true || m["demoMode"] != false || m["assistantEnabled"] != false {
 		t.Errorf("meta = %v", m)
 	}
 }

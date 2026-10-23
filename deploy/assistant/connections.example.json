@@ -1,0 +1,38 @@
+{
+  "connections": [
+    {
+      "name": "lmstudio",
+      "label": "LM Studio (homelab)",
+      "api": "openai",
+      "baseUrl": "http://lmstudio.lan:1234/v1",
+      "defaultModel": "qwen3-14b",
+      "caps": [{ "pattern": "gemma-*", "tools": false }]
+    },
+    {
+      "name": "ollama",
+      "label": "Ollama",
+      "api": "openai",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "contextTokens": 8192
+    },
+    {
+      "name": "openai",
+      "label": "OpenAI (cloud)",
+      "api": "openai",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": "OPENAI_API_KEY",
+      "cloud": true,
+      "defaultModel": "gpt-5-mini",
+      "models": ["gpt-5*", "gpt-4.1*"]
+    },
+    {
+      "name": "anthropic",
+      "label": "Claude (cloud)",
+      "api": "anthropic",
+      "baseUrl": "https://api.anthropic.com",
+      "apiKeyEnv": "ANTHROPIC_API_KEY",
+      "cloud": true,
+      "models": ["claude-*"]
+    }
+  ]
+}

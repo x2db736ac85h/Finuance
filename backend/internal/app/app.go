@@ -16,6 +16,7 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi"
@@ -80,10 +81,19 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)
 	}
+	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, platform.SystemClock{}, nil)
+	warnings, err := conns.CheckHosts(ctx, nil)
+	if err != nil {
+		return err
+	}
+	for _, w := range warnings {
+		log.Warn(w)
+	}
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
 		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
-		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
+		Assistant: conns,
+		Ready:     []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
 		return err

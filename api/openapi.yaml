@@ -1205,6 +1205,30 @@ paths:
                 $ref: "#/components/schemas/StaleInvestmentsProblem"
         default:
           $ref: "#/components/responses/Problem"
+  /assistant/status:
+    get:
+      operationId: assistantStatus
+      summary: The assistant's connections and their models
+      description: >-
+        Every connection the instance offers, with its chat models (embedding models and models
+        outside the connection's allowlist are left out) and what each can do. The model lists are
+        cached for 60 s (5 s after a failure); `refresh=true` checks again.
+      tags: [assistant]
+      parameters:
+        - name: refresh
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: The connections.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantStatus"
+        default:
+          $ref: "#/components/responses/Problem"
   /demo-data:
     post:
       operationId: loadDemoData
@@ -1269,12 +1293,15 @@ components:
     Meta:
       type: object
       additionalProperties: false
-      required: [version, signupEnabled, demoMode]
+      required: [version, signupEnabled, demoMode, assistantEnabled]
       properties:
         version:
           type: string
           description: Build version of the server.
           example: v0.1.0
+        assistantEnabled:
+          type: boolean
+          description: Whether at least one assistant connection is configured.
         signupEnabled:
           type: boolean
           description: Whether new accounts can be created (`FINUANCE_ALLOW_SIGNUP`).
@@ -3206,6 +3233,78 @@ components:
           type: integer
           format: int64
           minimum: 0
+    AssistantStatus:
+      type: object
+      additionalProperties: false
+      required: [enabled, connections, maxRowsLimit]
+      properties:
+        enabled:
+          type: boolean
+        connections:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssistantConnection"
+        maxRowsLimit:
+          type: integer
+          description: The highest number of rows one lookup may return (legacy maxRows).
+          example: 50
+    AssistantConnection:
+      type: object
+      additionalProperties: false
+      required: [name, label, api, cloud, reachable, models]
+      properties:
+        name:
+          type: string
+          example: lmstudio
+        label:
+          type: string
+          example: LM Studio (homelab)
+        api:
+          type: string
+          enum: [openai, anthropic]
+        cloud:
+          type: boolean
+          description: A cloud service; the user must agree once before their data is sent to it.
+        reachable:
+          type: boolean
+        defaultModel:
+          type: string
+          description: The model used when none is chosen; absent when the server offers none.
+        models:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssistantModel"
+        error:
+          $ref: "#/components/schemas/AssistantError"
+    AssistantModel:
+      type: object
+      additionalProperties: false
+      required: [id, tools, reasoning, contextTokens]
+      properties:
+        id:
+          type: string
+          example: qwen3-14b
+        tools:
+          type: boolean
+          description: Whether the model is sent tool definitions (otherwise plan mode).
+        reasoning:
+          type: string
+          enum: [none, effort, budget, switch]
+          description: How thinking is controlled (none = no control; the model may still reason).
+        contextTokens:
+          type: integer
+    AssistantError:
+      type: object
+      additionalProperties: false
+      required: [kind, message]
+      properties:
+        kind:
+          type: string
+          enum: [unreachable, auth, tools_rejected, context_too_long, rate_limited, model_not_found, timeout, bad_response, upstream]
+          x-enum-varnames: [AIUnreachable, AIAuth, AIToolsRejected, AIContextTooLong, AIRateLimited, AIModelNotFound, AITimeout, AIBadResponse, AIUpstream]
+        message:
+          type: string
+          description: A short explanation (the server's own message, clipped).
     Investments:
       type: object
       additionalProperties: false

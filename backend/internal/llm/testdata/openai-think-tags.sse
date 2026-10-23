@@ -1,0 +1,12 @@
+data: {"choices":[{"index":0,"delta":{"content":"<thi"}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"nk>\nThe user wants"}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":" groceries.</th"}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"ink>\n\n  Groceries cost "}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"1 095 PLN."}}]}
+
+data: [DONE]
+

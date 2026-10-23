@@ -23,6 +23,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
@@ -114,7 +115,8 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc})
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc,
+		Assistant: assistant.NewConnections(cfg.AIConnections, time.Minute, clk, nil)})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,0 +1,10 @@
+data: {"choices":[{"index":0,"delta":{"role":"assistant","reasoning_content":"Spending is negative amounts. "}}]}
+
+data: {"choices":[{"index":0,"delta":{"reasoning_content":"Sum the March rows."}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"You spent **5 151,82 PLN** in March."}}]}
+
+data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":1834,"completion_tokens":61,"total_tokens":1895}}
+
+data: [DONE]
+

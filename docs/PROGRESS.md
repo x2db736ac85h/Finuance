@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 12 — Overview: API and UI · **Branch:** phase/12-overview · **Status:** gate approved, merged
+**Current phase:** 13 — AI assistant · **Branch:** phase/13-assistant · **Status:** in progress
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -8,7 +8,7 @@
 - Banks for fixtures (Phase 1): **Pekao**, **PKO BP**, **mBank**. Pekao worked best with the MVP. Samples sit in `testdata/private/` (gitignored, never committed).
 - Demo hosting: TBD (ask in Phase 18)
 - Homelab (ingress, cert-manager issuer, storage class, backup bucket): TBD (ask in Phase 16)
-- Assistant LLM endpoint and model: TBD (ask in Phase 13)
+- Assistant LLM endpoint and model (Phase 13): **LM Studio** for dev and prod, but the assistant is **provider- and model-agnostic**: users pick from whatever connections the instance offers (LM Studio, Ollama, vLLM, OpenAI, Anthropic, any OpenAI- or Anthropic-compatible server, local or cloud). Thinking/reasoning is used when the model supports it.
 - Test data policy (Phase 1): committed fixtures are synthetic and must cover the edge cases. Real exports are only ever used through the anonymiser; Claude runs it on the samples in `testdata/private/`, and our Product Engineer reviews the output before anything goes into `testdata/fixtures/real/`.
 - Anonymiser keeps category, currency and operation-type columns verbatim. Amounts keep their original number of decimals.
 - Legacy oracle pins Playwright 1.56.1 (matches the Chromium in cloud sessions; CI installs the same build).
@@ -26,9 +26,23 @@
 - Public repository (2026-10-22): docs and code comments refer to "our Product Engineer"; test data uses a neutral sample user ("Alex", `alex@example.com`); git history is left as it is. README with screenshots, `SECURITY.md` (private vulnerability reporting), `CONTRIBUTING.md` (issues welcome, no pull requests yet), `docs/README.md` index, and a README in every placeholder folder.
 - Phase 11: the aggregation SQL lives in `internal/query/insights.go` (reusing the compiled `base`/`scoped` CTEs; no change to the store guard), and `internal/insights` holds only the pure rules. Cash flow returns every month of `base`; the client cuts it to fit/6/12/24/36/all. The legacy oracle records each chart's table twin on the demo file, and Go tests compare the API against it. One gate, two pushes (backend + chart library + charts; then pane, modal and actions).
 - Phase 12: one `POST /overview {context, month, months}` per screen with full lists (the browser cuts top-N for the small and large card sizes). The legacy oracle records every overview card's table twin and the highlight sentences on the demo year (several months and one filtered view), and Go tests compare against it. Uncategorised spending shows its default budget only (budgets are stored per category). One gate, two pushes (backend: overview, budgets, investments; then the page and cards).
+- Phase 13: connections are **instance config** (a connections file with named local and cloud connections; `FINUANCE_AI_BASE_URL` stays as a one-connection shorthand); users pick a connection and model, never a URL; per-user API keys are in the backlog. Two wire adapters (OpenAI Chat Completions, Anthropic Messages) behind one internal chat model; per-model capabilities (tools, reasoning, context window) detected and learned. Cloud connections need an admin flag per connection, a one-time per-user consent and masking of long digit runs in tool results. Tools: the three legacy tools plus month overview and recurring payments (a compact set for small/plan-mode models; evals decide the default). Typed tools only, no model-written SQL. Chats are kept 48 h by default; each user picks 1–7 days or "forever" (with a warning); an hourly cleanup job enforces it; `FINUANCE_AI_MAX_CHATS` = 25. `FINUANCE_AI_RATE_PER_HOUR` (default 30). One gate, two pushes (backend, mock and eval harness; then the panel and E2E). The sandbox can't reach models: `finuance admin llm-probe` records real streams at the gate, and our Product Engineer runs the evals.
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [ ] 13.1 connections (file + shorthand, private-address check, cloud flag), capabilities, `GET /assistant/status`, `GET /meta.assistantEnabled`
+- [ ] 13.2 `internal/llm`: canonical chat model; OpenAI Chat Completions and Anthropic Messages adapters (streaming, reasoning fields and `<think>`, tool calls assembled by index, Qwen text fallback, non-streaming JSON, thinking levels, error classes, timeouts); recorded-stream tests; `finuance admin llm-probe`
+- [ ] 13.3 tools: `search_transactions`, `aggregate_transactions` (+ `group_by: account`), `find_values` (+ `field: group`), `month_overview`, `recurring_payments`; differential tests against the oracle (67 cases)
+- [ ] 13.4 prompt builder (port `sysPrompt`, `PLAN()`, RULES); golden test against the oracle prompt with a frozen clock
+- [ ] 13.5 run loop (tools, plan, auto fallback, 6 rounds, loop guard, token budget, `/no_think`), storage (migration + RLS), retention setting + hourly cleanup job, max 25 chats
+- [ ] 13.6 endpoints: chats CRUD, settings, streaming messages (SSE, heartbeat, disconnect = cancel), stop, one run per user, per-replica cap, rate limit; nginx unbuffered; ADR 0015
+- [ ] 13.8 mock server (both protocols) + `cmd/llmmock` + Compose `ai-mock` profile; HTTP + tenancy tests
+- [ ] 13.10 metrics, spans, one log line per run (no prompt text)
+- [ ] 13.9 eval harness (≥ 40 questions, Polish and English), `make eval-assistant`, mock self-test in CI
+- [ ] 13.7 frontend: panel, chat menu, connection/model picker, settings (thinking, retention with warning), cloud consent and badge, steps with Show in table, `md()` port, ⌘/Ctrl J, resize/maximise, stop, error states
+- [ ] E2E against the mock (legacy §29.6), screenshots, PARITY rows, docs
+
+## Phase 12 tasks (done)
 - [x] 12.1 overview backend: month aggregates in `query` (month totals, month × category, income by payee, weekday window, largest expenses, recurring candidates, balance series) + rules in `internal/insights/overview.go` (M/P, partial, prevToDate, projection, KPIs and sparklines, default budgets and status, savings rate, weekday, balance, `findRecurring`, highlights)
 - [x] 12.2 budgets: `GET /budgets`, `PUT /budgets/{categoryId}` (`null` = default)
 - [x] 12.3 opening balance input on the balance card (single-account views; sum read-only in "All accounts")
@@ -332,6 +346,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 13 planned and approved (provider-agnostic assistant: instance connections, OpenAI + Anthropic adapters, cloud consent, five tools, 48 h retention with 1–7 days or forever, 25 chats, rate limit setting, two pushes). Branch `phase/13-assistant`.
 - 2026-10-23 — Phase 12 gate approved; merged. Next: plan Phase 13.
 - 2026-10-23 — Phase 12 built on `phase/12-overview`: overview API (one document per screen), budgets, investments, legacy oracle overview twins with Go parity tests, the overview page with KPIs and twelve cards, budget/opening/investment editors, actions, perf at 100k rows; 267 Vitest + 33 Playwright specs, integration tests green. Next: our Product Engineer's hands-on gate review.
 - 2026-10-23 — Phase 12 planned and approved (one overview request, oracle overview twins, uncategorised budget default-only, two pushes). Branch `phase/12-overview`.
