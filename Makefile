@@ -37,8 +37,12 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private check-no-float ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data and float checks
+check: lint typecheck test gen-check fixtures-check check-private check-no-float check-compose-prod ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, float and prod-Compose checks
 	@echo "check: ok"
+
+.PHONY: check-compose-prod
+check-compose-prod: ## compose.prod.yaml's inline database bootstrap equals deploy/db/
+	@tools/check-compose-prod.sh
 
 .PHONY: check-private
 check-private: ## Fail on IBAN-like numbers or files under testdata/private/

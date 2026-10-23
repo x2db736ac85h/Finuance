@@ -6,6 +6,7 @@ testdata/private/*
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # Go
 /backend/bin/

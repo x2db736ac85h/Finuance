@@ -3,7 +3,8 @@
 # /api/ to the API. Build from the repository root:  make images
 # Build context: deploy/docker/Dockerfile.web.dockerignore (web/ only, without node_modules).
 
-FROM node:22.22.0-alpine@sha256:e4bf2a82ad0a4037d28035ae71529873c069b13eb0455466ae0bc13363826e34 AS build
+# The app is built once on the build machine's platform; only nginx is per platform.
+FROM --platform=$BUILDPLATFORM node:22.22.0-alpine@sha256:e4bf2a82ad0a4037d28035ae71529873c069b13eb0455466ae0bc13363826e34 AS build
 WORKDIR /web
 COPY web/ ./
 # A web/dist built on the host is used as is (offline builds, like backend/vendor); otherwise the
