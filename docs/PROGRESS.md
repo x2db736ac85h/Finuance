@@ -211,6 +211,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 13 — AI assistant: gate approved 2026-10-23 with the real-model checks deferred (see Follow-ups); `phase/13-assistant` merged with `--no-ff`.
 - Phase 12 — Overview: API and UI: gate approved 2026-10-23; `phase/12-overview` merged with `--no-ff`.
 - Phase 11 — Insights: API, pane, modal: gate approved 2026-10-23; `phase/11-insights` merged with `--no-ff`.
 - Phase 10 — Table view, groups and multi-selection: gate approved 2026-10-22; `phase/10-table` merged with `--no-ff`.
@@ -345,6 +346,7 @@
 - Phase 8: `POST /demo-data` calls `ledger.SeedDemo` (the same path as `finuance seed-demo`).
 - Phase 8: the grid sends `includeTotals: false` for every window after the first.
 - Phase 16: the RUNBOOK repeats the `textlike` LEAKPROOF step for restores into a new cluster (bootstrap.sql, docs/perf.md).
+- Phase 13 (deferred gate checks, our Product Engineer): `finuance admin llm-probe` against LM Studio (recorded streams become `internal/llm` test cases), `make eval-assistant` on the chosen model(s) to fill `docs/evals.md` and decide the default toolset (full or compact), questions on the real data in the panel.
 - Later (optional): re-measure the staging insert on a dev machine; the schema options in `docs/perf.md` stay open if it matters.
 
 ## Backlog (ideas, not scheduled)
@@ -354,6 +356,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 13 gate approved by our Product Engineer, who will test against real models later (follow-up recorded); merged. Next: plan Phase 14.
 - 2026-10-23 — Phase 13 built on `phase/13-assistant` (second push): the assistant panel (streaming answers, lookups with Show in table, recent chats, settings with connection/model, thinking, retention and cloud consent), E2E against the mock, PARITY. Next: our Product Engineer's gate review (llm-probe and `make eval-assistant` on the homelab model, questions on the real data).
 - 2026-10-23 — Phase 13 backend built on `phase/13-assistant` (first push): `internal/llm` adapters, connections config and status, oracle-equal tools and prompt, run loop, chat storage with retention, SSE endpoints, `testutil/llmmock`, `llm-probe`, eval harness (46 questions), ADR 0015, `docs/assistant.md`. Next: the panel and E2E.
 - 2026-10-23 — Phase 13 planned and approved (provider-agnostic assistant: instance connections, OpenAI + Anthropic adapters, cloud consent, five tools, 48 h retention with 1–7 days or forever, 25 chats, rate limit setting, two pushes). Branch `phase/13-assistant`.
