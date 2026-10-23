@@ -25,6 +25,28 @@ export type Db = {
   idRequests: Schemas['IdsRequest'][];
   queries: Schemas['TransactionQuery'][];
   puts: Schemas['Preferences'][];
+  /** Answers of POST /insights/{name}; empty results when not set. */
+  insights: Partial<Insights>;
+  /** Bodies of every insight request, with the endpoint name. */
+  insightRequests: { name: keyof Insights; body: Record<string, unknown> }[];
+};
+
+export type Insights = {
+  summary: Schemas['InsightSummary'];
+  categories: Schemas['InsightCategories'];
+  cashflow: Schemas['InsightCashflow'];
+  pace: Schemas['InsightPace'];
+  payees: Schemas['InsightPayees'];
+  daily: Schemas['InsightDaily'];
+};
+
+const emptyInsights: Insights = {
+  summary: { currency: 'PLN', count: 0, spentMinor: 0, incomeMinor: 0, netMinor: 0, days: 1, avgPerDayMinor: 0 },
+  categories: { currency: 'PLN', totalMinor: 0, categories: [] },
+  cashflow: { currency: 'PLN', months: [] },
+  pace: { currency: 'PLN', current: [] },
+  payees: { currency: 'PLN', total: 0, payees: [] },
+  daily: { currency: 'PLN', days: [] },
 };
 
 export const freshDb = (): Db => ({
@@ -48,6 +70,8 @@ export const freshDb = (): Db => ({
   idRequests: [],
   queries: [],
   puts: [],
+  insights: {},
+  insightRequests: [],
 });
 
 export let db = freshDb();
@@ -113,6 +137,11 @@ export const server = setupServer(
       duplicatesSkipped: db.duplicatesSkipped,
       stats,
     });
+  }),
+  http.post(`${API}/insights/:name`, async ({ params, request }) => {
+    const name = params['name'] as keyof Insights;
+    db.insightRequests.push({ name, body: (await request.json()) as Record<string, unknown> });
+    return HttpResponse.json(db.insights[name] ?? emptyInsights[name]);
   }),
   http.get(`${API}/groups`, () => authed(() => HttpResponse.json(db.groups.map(groupOf)))),
   http.post(`${API}/groups`, async ({ request }) => {

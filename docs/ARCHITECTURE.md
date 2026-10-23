@@ -2,7 +2,7 @@
 
 How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation; Phase 8 the web app.
 
-> 🚧 This describes the system after Phase 10. Parts that come later (the `insights` and `rules` packages, the AI assistant and its LLM server, the Kubernetes deployment) appear in the diagrams where they will fit, and are marked as planned in the text.
+> 🚧 This describes the system after Phase 11. Parts that come later (the `rules` package, the overview, the AI assistant and its LLM server, the Kubernetes deployment) appear in the diagrams where they will fit, and are marked as planned in the text.
 
 ## Components
 
@@ -36,7 +36,7 @@ flowchart TB
 cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {store, ingest, money, platform}
 ```
 
-`insights` (Phase 11) and `rules` (Phase 15) are planned; the other packages exist.
+`rules` (Phase 15) is planned; the other packages exist. `insights` holds the chart rules; its aggregation SQL lives in `query` (`insights.go`), the only package besides `store` that runs SQL.
 
 | Package | Role |
 |---|---|
@@ -195,7 +195,7 @@ stateDiagram-v2
 
 ### Query engine (`internal/query`)
 
-Every transaction read — the table window, distinct values, id ranges, the CSV export, category colours, and later insights and the overview — goes through one compiler, so all views agree.
+Every transaction read — the table window, distinct values, id ranges, the CSV export, category colours, the insight charts, and later the overview — goes through one compiler, so all views agree.
 
 ```mermaid
 flowchart LR
@@ -208,7 +208,7 @@ flowchart LR
 ```
 
 - **The registry** (`columns.go`) holds each API column's typed value, display text (`-79,99`, `dd.mm.yyyy`), normalised text and sort expression. It is the only source of SQL fragments. User text is always an argument, and LIKE patterns are escaped.
-- **`base` and `scoped`.** Totals, stats and the data range are computed over `base` (filters, no period) in one pass. The window and the count use `scoped`. Comparisons (Phase 11) use `base` within the previous period.
+- **`base` and `scoped`.** Totals, stats and the data range are computed over `base` (filters, no period) in one pass. The window and the count use `scoped`. Comparisons use `base` within the previous period (the summary's delta), and the cash flow and pace charts read `base` for their whole history while the period only highlights.
 - **Statements join only what they need**, so the common unfiltered and period-only totals are index-only scans on `tx_user_booked_idx`. Windows find their ids first and then fetch the display columns (late row lookup). See `docs/perf.md` for the measurements, and for why the trigram index on `search_text` is unused under forced RLS.
 - **Execution** happens in `query/sql.go` inside `store.WithUser` (the store guard allows `internal/query`). The export streams one read-only query (ADR 0014).
 

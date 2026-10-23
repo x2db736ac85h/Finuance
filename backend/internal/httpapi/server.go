@@ -22,6 +22,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -88,7 +89,11 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if clock == nil {
 		clock = platform.SystemClock{}
 	}
-	impl := &api{cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
+	var ins *insights.Service
+	if d.Query != nil {
+		ins = insights.New(d.Query)
+	}
+	impl := &api{insights: ins, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

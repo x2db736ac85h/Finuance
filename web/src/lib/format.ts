@@ -73,3 +73,15 @@ export function fmtSize(bytes: number): string {
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
+
+const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
+
+/** Compact axis numbers without currency: "12.3K" (legacy cpt). */
+export function fmtCompact(m: Money): string {
+  return compact.format(minorToDecimal(m.amountMinor, currencyExponent(m.currency)));
+}
+
+/** A ratio as a percentage with fixed decimals, 0.4412 → "44.1%" (legacy toFixed, not localised). */
+export function fmtShare(x: number, digits = 0): string {
+  return `${(x * 100).toFixed(digits)}%`;
+}

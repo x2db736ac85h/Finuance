@@ -1,4 +1,4 @@
-// The table mode of a view (PLAN §7.6–§7.7): toolbar, grid and the column menu. The status bar and
+// The table mode of a view (PLAN §7.6–§7.8): insights pane, toolbar, grid and the column menu. The status bar and
 // the inspector read the same query (useQueryContext + useHead) from the cache.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroups } from '../api/hooks/groups';
 import { groupColor } from '../groups/colors';
 import { QuickBar } from '../groups/QuickBar';
+import { InsightsPane } from '../insights/InsightsPane';
 import { searchTokens } from '../lib/text';
 import { useSelection } from '../stores/selectionStore';
 import { useViews, viewOf } from '../stores/viewStore';
@@ -67,6 +68,13 @@ export function Table({ viewId, title, icon }: Props) {
 
   return (
     <>
+      <InsightsPane
+        viewId={viewId}
+        q={q}
+        resolved={head.data?.period}
+        dataRange={head.data?.dataRange}
+        ready={head.data !== undefined}
+      />
       <Toolbar
         viewId={viewId}
         title={title}

@@ -8,10 +8,12 @@
 //   - wheel scrolling (120 steps of 500 px) at the top and in the middle: frame intervals from
 //     requestAnimationFrame, and Chrome's script / layout / style time;
 //   - jumps to the bottom, the middle and the top: time until no skeleton row is left;
-//   - filter-to-paint for five filter shapes (6 runs, the first discarded);
+//   - filter-to-paint for five filter shapes (6 runs, the first discarded): the list (new count and
+//     rows painted) and, with the insights pane open (Phase 11), the six charts (every insight
+//     response in, then two frames);
 //   - the same wheel steps over a static table without script (the machine's floor).
 // It uses the web/ workspace's Playwright (run `npm ci` in web/ first). The password of a new
-// user is "perf password long enough".
+// user is "perf password long enough". The result is printed and written to ./perf-grid.json.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -149,6 +151,16 @@ for (const [name, at] of [['jumpBottomMs', 1], ['jumpMiddleMs', 0.5], ['jumpTopM
   result[name] = Date.now() - t0;
 }
 
+// in-flight insight requests (the pane's six charts)
+let inflight = 0;
+const isInsight = (r) => r.url().includes('/api/v1/insights/');
+p.on('request', (r) => { if (isInsight(r)) inflight++; });
+for (const ev of ['requestfinished', 'requestfailed']) p.on(ev, (r) => { if (isInsight(r)) inflight--; });
+const chartsSettled = async () => {
+  while (inflight > 0) await p.waitForTimeout(2);
+  await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+};
+
 const status = p.locator('footer.statusbar .st').first();
 const settle = async (before) => {
   await p.waitForFunction((b) => {
@@ -173,8 +185,10 @@ const cases = [
   ['category =Transport', () => condition('Category', '=Transport'), () => removeChip('Category')],
 ];
 result.filterToPaintMs = {};
+result.filterToChartsMs = {};
 for (const [name, apply, undo] of cases) {
   const ms = [];
+  const charts = [];
   for (let i = 0; i < 6; i++) {
     let before = await status.textContent();
     const go = await apply();
@@ -182,12 +196,17 @@ for (const [name, apply, undo] of cases) {
     if (go) await go();
     await settle(before);
     ms.push(Date.now() - t0);
+    await chartsSettled();
+    charts.push(Date.now() - t0);
     before = await status.textContent();
     await undo();
     await settle(before);
+    await chartsSettled();
   }
   ms.shift();
+  charts.shift();
   result.filterToPaintMs[name] = ms;
+  result.filterToChartsMs[name] = charts;
 }
 if (args.trace) await ctx.tracing.stop({ path: args.trace });
 

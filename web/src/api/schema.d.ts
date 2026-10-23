@@ -633,6 +633,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/insights/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Summary card (spent, income, net, average per day, largest expense)
+         * @description Over the period-scoped rows of the context. `days` is the period clipped to the data range (the context's accounts, ignoring filters); the spending delta compares with the previous period (`prevSpentMinor`, read without the period). PLAN §4.6, legacy CHARTS.sum.
+         */
+        post: operations["insightSummary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Spending by category, largest first
+         * @description Expenses of the period-scoped rows per category with shares and colour slots (the same ranking as `GET /categories`).
+         */
+        post: operations["insightCategories"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/cashflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Money in and out per month
+         * @description Every month from the first to the last with data in the context without its period (empty months included); months inside the period are marked. The client cuts the list to its range setting.
+         */
+        post: operations["insightCashflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/pace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cumulative spending through a month vs a comparison
+         * @description The target month is the period's month, else the month of the latest row shown. The comparison reads the context without its period. `target` is absent when there is no data.
+         */
+        post: operations["insightPace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/payees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Top payees by spending */
+        post: operations["insightPayees"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Spending per day for the calendar
+         * @description Days with spending in the calendar's range (`period` follows the period; `3m`/`6m`/`12m` are the last calendar months of the data; `all` the whole data). `from`/`to` are absent when there is nothing to show.
+         */
+        post: operations["insightDaily"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/demo-data": {
         parameters: {
             query?: never;
@@ -1243,6 +1360,166 @@ export interface components {
             /** Format: uuid */
             importId: string;
             transactions: number;
+        };
+        InsightRequest: {
+            context: components["schemas"]["QueryContext"];
+        };
+        PaceRequest: {
+            context: components["schemas"]["QueryContext"];
+            /** @enum {string} */
+            compare: "prev" | "yoy" | "avg3" | "avg6" | "none";
+        };
+        PayeesRequest: {
+            context: components["schemas"]["QueryContext"];
+            /**
+             * @description How many payees; 0 = all.
+             * @enum {integer}
+             */
+            top: 0 | 10 | 25 | 50 | 100;
+            /**
+             * @description `period`: the rows shown; `all`: all time (filters still apply).
+             * @enum {string}
+             */
+            scope: "period" | "all";
+        };
+        DailyRequest: {
+            context: components["schemas"]["QueryContext"];
+            /** @enum {string} */
+            range: "period" | "3m" | "6m" | "12m" | "all";
+        };
+        LargestExpense: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            bookedOn: string;
+            /**
+             * Format: int64
+             * @description Negative.
+             */
+            amountMinor: number;
+            /** @description The payee group. */
+            payee: string;
+        };
+        InsightSummary: {
+            period?: components["schemas"]["ResolvedPeriod"];
+            /** @description The most common currency of the context's accounts (empty without accounts). */
+            currency: string;
+            /** Format: int64 */
+            count: number;
+            /**
+             * Format: int64
+             * @description Sum of −amount over expenses (≥ 0).
+             */
+            spentMinor: number;
+            /** Format: int64 */
+            incomeMinor: number;
+            /** Format: int64 */
+            netMinor: number;
+            /**
+             * Format: double
+             * @description max(0, net / income); absent without income.
+             */
+            savingsRate?: number;
+            days: number;
+            /** Format: int64 */
+            avgPerDayMinor: number;
+            largestExpense?: components["schemas"]["LargestExpense"];
+            /**
+             * Format: int64
+             * @description The previous period's spending; absent without a period.
+             */
+            prevSpentMinor?: number;
+            /**
+             * Format: double
+             * @description (spent − prev) / prev; absent without a period or previous spending.
+             */
+            spentDelta?: number;
+        };
+        CategorySpend: {
+            category?: components["schemas"]["NamedRef"];
+            /** Format: int64 */
+            spentMinor: number;
+            /** Format: double */
+            share: number;
+            /** @description Absent for categories beyond the 7 largest all-time spenders. */
+            colorSlot?: number;
+        };
+        InsightCategories: {
+            currency: string;
+            /** Format: int64 */
+            totalMinor: number;
+            /** @description Largest first; an entry without `category` is the uncategorised spending. */
+            categories: components["schemas"]["CategorySpend"][];
+        };
+        MonthFlow: {
+            month: string;
+            /** Format: int64 */
+            incomeMinor: number;
+            /**
+             * Format: int64
+             * @description Money out as a positive number.
+             */
+            expenseMinor: number;
+            /** Format: int64 */
+            count: number;
+            inPeriod: boolean;
+        };
+        InsightCashflow: {
+            currency: string;
+            period?: components["schemas"]["ResolvedPeriod"];
+            months: components["schemas"]["MonthFlow"][];
+        };
+        PaceCompare: {
+            /** @enum {string} */
+            mode: "prev" | "yoy" | "avg3" | "avg6";
+            /** @description prev and yoy only. */
+            month?: string;
+            /** @description avg3 and avg6 only; how many months the average has. */
+            months?: number;
+            /** @description Draw values up to this day. */
+            days: number;
+            values: number[];
+        };
+        InsightPace: {
+            currency: string;
+            target?: string;
+            daysInMonth?: number;
+            lastDay?: number;
+            /** @description Cumulative spending by day of month (31 entries; empty without a target). */
+            current: number[];
+            compare?: components["schemas"]["PaceCompare"];
+        };
+        PayeeSpend: {
+            payee: string;
+            /** Format: int64 */
+            spentMinor: number;
+            /** Format: int64 */
+            count: number;
+        };
+        InsightPayees: {
+            currency: string;
+            /** @description Payees with spending before the top-N cut. */
+            total: number;
+            payees: components["schemas"]["PayeeSpend"][];
+        };
+        DaySpend: {
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            spentMinor: number;
+            /** Format: int64 */
+            count: number;
+        };
+        InsightDaily: {
+            currency: string;
+            /** Format: date */
+            from?: string;
+            /**
+             * Format: date
+             * @description Exclusive.
+             */
+            to?: string;
+            days: components["schemas"]["DaySpend"][];
         };
         Money: {
             /**
@@ -2369,6 +2646,156 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DuplicateGroup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    insightSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InsightRequest"];
+            };
+        };
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightSummary"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    insightCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InsightRequest"];
+            };
+        };
+        responses: {
+            /** @description Categories. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightCategories"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    insightCashflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InsightRequest"];
+            };
+        };
+        responses: {
+            /** @description Months, oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightCashflow"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    insightPace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaceRequest"];
+            };
+        };
+        responses: {
+            /** @description The pace. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightPace"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    insightPayees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayeesRequest"];
+            };
+        };
+        responses: {
+            /** @description Payees, largest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightPayees"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    insightDaily: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyRequest"];
+            };
+        };
+        responses: {
+            /** @description Days. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightDaily"];
                 };
             };
             default: components["responses"]["Problem"];

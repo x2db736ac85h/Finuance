@@ -33,3 +33,6 @@ blob-report/
 .vscode/*
 !.vscode/extensions.json
 *.swp
+
+# tools/perf/grid.mjs writes its result next to where it runs
+/perf-grid.json

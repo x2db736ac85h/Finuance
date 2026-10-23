@@ -8,6 +8,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 
@@ -17,15 +18,16 @@ import (
 
 // api implements gen.StrictServerInterface.
 type api struct {
-	cfg     config.Config
-	version string
-	prod    bool
-	auth    *auth.Service
-	ledger  *ledger.Ledger
-	query   *query.Engine
-	jobs    *river.Client[pgx.Tx]
-	cookies cookies
-	limits  limits
+	cfg      config.Config
+	version  string
+	prod     bool
+	auth     *auth.Service
+	ledger   *ledger.Ledger
+	query    *query.Engine
+	insights *insights.Service
+	jobs     *river.Client[pgx.Tx]
+	cookies  cookies
+	limits   limits
 }
 
 var _ gen.StrictServerInterface = (*api)(nil)

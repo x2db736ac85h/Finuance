@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 10 — Table view, groups and multi-selection · **Branch:** phase/10-table · **Status:** gate approved, merged
+**Current phase:** 11 — Insights: API, pane, modal · **Branch:** phase/11-insights · **Status:** gate approved, merged
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -24,9 +24,22 @@
 - Phase 9: the automatic header rule is fixed in the backend (the text-only row just before the first row with a date and a number; legacy rule otherwise), recorded in `ALLOWED_DIFFS.md` row 4. The import preview is a window over the app (legacy `.modal` look) with its own URL `/imports/:id`.
 - Phase 10: one phase with one gate, pushed in two halves (table first, then groups, selection and duplicates). `POST /transactions/bulk` takes explicit ids only (the selection; ranges resolved through `/transactions/ids`).
 - Public repository (2026-10-22): docs and code comments refer to "our Product Engineer"; test data uses a neutral sample user ("Alex", `alex@example.com`); git history is left as it is. README with screenshots, `SECURITY.md` (private vulnerability reporting), `CONTRIBUTING.md` (issues welcome, no pull requests yet), `docs/README.md` index, and a README in every placeholder folder.
+- Phase 11: the aggregation SQL lives in `internal/query/insights.go` (reusing the compiled `base`/`scoped` CTEs; no change to the store guard), and `internal/insights` holds only the pure rules. Cash flow returns every month of `base`; the client cuts it to fit/6/12/24/36/all. The legacy oracle records each chart's table twin on the demo file, and Go tests compare the API against it. One gate, two pushes (backend + chart library + charts; then pane, modal and actions).
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- [x] 11.1 backend: aggregation queries in `query/insights.go` (summary, categories, cashflow, pace, payees, daily) + pure rules in `internal/insights` (days clipping, prev-period delta, savings rate, pace arrays and comparisons, category shares and colour slots, top-N payees, heatmap ranges)
+- [x] 11.2 OpenAPI + handlers `POST /insights/{summary,categories,cashflow,pace,payees,daily}`, HTTP + tenancy tests
+- [x] 11.3 `web/src/charts/lib` ports (`barPath`, `arc`, `spark`, compact numbers, `roundNice`, heat quintiles, `<Svg w h>`, tooltip) with geometry tests
+- [x] 11.4 chart registry (`ChartDef.use` → subtitle, legend, drawing, table twin) and the six charts: Summary, Categories, Cash flow, Pace, Payees, Daily heatmap
+- [x] 11.5 `InsightsPane` (resize 170 px … 75 vh with double-click reset, collapse, Charts menu with drag/↑↓ reorder, scroll-snap cards) + `PeriodPicker` (months/years of the data, presets, stepping, custom range)
+- [x] 11.6 `ChartModal` (chart/table switch, range controls saved and applied to the cards, ←/→, Esc, backdrop, redraw on resize)
+- [x] 11.7 `useChartActions` (category `=Name` / `=` for uncategorised, month → period, payee contains, day → custom period, largest expense → located row; legacy toggle semantics)
+- [x] Legacy oracle: chart table twins on the demo file (16 cases); `TestChartParity` matches all six charts, ALLOWED_DIFFS row 13 (half-cent ties in averages)
+- [x] Performance (docs/perf.md "Insights"): every insight call ≤ 122 ms p95 at 108k rows; filter-to-charts 113–204 ms in the browser; first paint 275 ms
+- [x] Tests: Go unit (rules), integration (parity, slots, empty user, validation), HTTP + tenancy; 245 Vitest (+48: geometry, every chart with fixed data, pane, period picker, menu, window, actions); E2E `insights.spec.ts` (4: legacy numbers on the cards, category → chip and count, month → period, window table = API); 29 Playwright specs pass on a fresh stack; screenshots in both themes at 90/100/130 %; 13 PARITY rows `ported`
+
+## Phase 10 tasks (done)
 - [x] 10.1 `useQueryContext(viewId)` (debounced search 120 ms / conditions 160 ms, `ctxKey`)
 - [x] 10.2 `Grid` (§7.7: 200-row windows, skeletons, measured row height, sticky header + gutter, widths × uiScale, resize, sort cycle, badges, empty row); `includeTotals: false` after the first window
 - [x] 10.3 `hl()` port (`table/highlight.tsx`)
@@ -169,6 +182,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 11 — Insights: API, pane, modal: gate approved 2026-10-23; `phase/11-insights` merged with `--no-ff`.
 - Phase 10 — Table view, groups and multi-selection: gate approved 2026-10-22; `phase/10-table` merged with `--no-ff`.
 - Phase 9 — Import UX: gate approved 2026-10-22; `phase/09-import` merged with `--no-ff`.
 - Phase 8 — Frontend foundation: gate approved 2026-10-22; `phase/08-frontend` merged with `--no-ff`.
@@ -192,6 +206,13 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 11.4: a `ChartDef` is `{key, title, cfgControls, use(q, env)}`; `use` reads the data and returns the card's parts (subtitle, legend, drawing, table twin). The plan's sketch split these into `useData`, `Component`, `Subtitle`, `Legend` and `toTable`; one hook keeps them together because the cash-flow subtitle and table depend on the measured width (the months that fit).
+- 11.4: the "(uncategorized)" slice filters with `=` (an empty category) instead of the legacy `=(uncategorized)`, which matched nothing (planned at the Phase 11 plan). The largest expense on the summary card is a button that selects and scrolls to its row (PLAN §7.8; the legacy tile was plain text).
+- 11.4: insight amounts are in the most common currency of the view's accounts; a mixed-currency view adds minor units as they are (like the status bar, 10.7). The API's payee `top` accepts 0/10/25/50/100; another stored value reads as 25.
+- 11.5: no *Fields* button: roles are fixed by each import's mapping since Phase 6 (PARITY "Fields menu retired"). The period picker lists every month and year between the view's first and last booking dates (from the accounts), including months without rows; the legacy listed only months with rows.
+- 11.5: the charts load once the list's first window has arrived (`ChartEnv.ready`): six parallel insight requests otherwise queued the list's own request behind them (HTTP/1.1 allows six per host) and first paint took 1.9 s instead of 0.3 s. Later filter changes send everything at once.
+- 11.6: ←/→ step through the cards unless a select or input has focus (it would change its value); the Charts menu's arrow buttons are named per card ("Move Summary up") for screen readers.
+- E2E: `groups.spec.ts` hides the insights pane in its setup: in the 1280×720 test window the pane halves the grid, and its drags then reach the auto-scroll zone at the bottom edge.
 - 10.14 (found by the E2E): deleting a 917-row import took ~27 s because `transactions.transfer_peer_id` (self-reference, `ON DELETE SET NULL`) had no index. Migration `00005_fingerprint_index.sql` adds it plus `import_rows (user_id, fingerprint)`; delete now re-materialises only fingerprints other imports still contain; a store test requires an index for every foreign key (or a listed reason). docs/perf.md "Deleting an import".
 - 10.13: `PUT` and `DELETE /duplicates/{accountId}/{fingerprint}` rebuild the fingerprint's transactions in the request (`ledger.SetOverride`/`ClearOverride` already did this in one transaction) and answer `200` with the group as it is now, instead of `202` and a `RematerializeFingerprint` job: one fingerprint is a handful of rows, and the window needs no polling. The job stays for later bulk use. A decision on a key the account has no versions of is `404` (no stray overrides). The window shows the canonical fields (Date, Amount, Payee, Description + every field that differs) with the app's column names, not the bank's headers; versions are listed per import. *Reset choice* undoes *Use this version*. With nothing skipped, the status bar keeps a "duplicates reviewed" link while decided groups exist (legacy), asked only for views with two or more imports.
 - 10.11: `POST /transactions/ids` also returns each row's `groupId`, so a range selected across unloaded windows knows whether *Ungroup* applies. A range is capped at 5,000 rows (the bulk limit) with a toast. The selection lives in `stores/selectionStore` per view and is cleared when the result changes, on Esc (before the row selection), on a plain click and when the view closes.
@@ -291,6 +312,9 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-23 — Phase 11 gate approved; merged. Next: plan Phase 12.
+- 2026-10-22 — Phase 11 built on `phase/11-insights`: insight endpoints (aggregations in `query`, rules in `insights`), oracle chart twins with a parity test over 16 views, chart library and the six charts, pane with period picker and Charts menu, chart window, chart → table actions, perf at 100k rows; 245 Vitest + 29 Playwright specs, integration tests green. Next: our Product Engineer's gate review (legacy vs new pane on the same demo data).
+- 2026-10-22 — Phase 11 planned and approved (aggregation SQL in `query`, all cash-flow months, oracle chart twins, two pushes). Branch `phase/11-insights`.
 - 2026-10-22 — Paused before Phase 11 for public-repository readiness (`chore/public-readiness`): README rewrite with screenshots, docs index, SECURITY/CONTRIBUTING, placeholder READMEs, naming clean-up; fixed the search box not emptying after *Clear all*. Next: plan Phase 11 (the plan proposed earlier still stands).
 - 2026-10-22 — Phase 10 gate approved; merged. Next: plan Phase 11.
 - 2026-10-22 — Phase 10 built on `phase/10-table`: grid (windows, menus, chips, export, keyboard), inspector (category picker, note, sources), status bar, groups (API, menu, quick bar, pills), multi-selection, duplicates window, delete-import perf fix (migration 00005), 100k-row measurements (`tools/perf/grid.mjs`); 196 Vitest + 25 Playwright specs, integration tests and CI green. Next: our Product Engineer's gate review (hands-on legacy vs new table on the same demo data; 60 fps on real hardware).
