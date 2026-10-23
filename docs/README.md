@@ -12,7 +12,9 @@
 | [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities, limits, retention, the probe and the evals |
 | [migration.md](migration.md) | Moving a backup of the single-file app into Finuance |
 | [evals.md](evals.md) | Assistant quality per model on the 46 golden questions |
-| [perf.md](perf.md) | Performance measurements: parsing, staging, queries, the table with 100k rows |
+| [perf.md](perf.md) | Performance measurements: parsing, staging, queries, the table, charts and overview with 100k rows, the bundle |
+| [a11y.md](a11y.md) | Accessibility: what axe checks on every screen, what was fixed, the keyboard-only checklist |
+| [parity-report.md](parity-report.md) | The legacy app and Finuance on the same data, number by number (written by the parity test) |
 
 ## Working documents (how the rebuild is planned and tracked)
 

@@ -11,35 +11,35 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Keep raw bytes; re-parse on option change | §6 `addFiles`, `reparseAll` | 6 | todo |
-| Identical-file rejection (SHA-256) | §6 `hashBuf`, §8 | 6 | todo |
-| Encoding auto: strict UTF-8, else Windows-1250; BOM stripped 🧪 | §6 `decode` | 3 | todo |
-| Manual encodings UTF-8 / Windows-1250 / ISO-8859-2 / Windows-1252 🧪 | §6, `ENC_LABEL` | 3 | todo |
-| Delimiter detection `; , \t \|` by modal count consistency 🧪 | §6 `detectDelim` | 3 | todo |
-| RFC-4180-ish tokenizer: quotes, `""`, CRLF/CR/LF, quotes only at field start 🧪 | §6 `parseCSV` | 3 | todo |
-| Table shaping: blank lines, auto header (modal count + 80 % fill), trim, `'` strip, ragged rows, empty unnamed columns, `Column N`, `X (2)` 🧪 | §6, §31.3 `buildTable` | 3 | todo |
-| Footer/summary row drop (`dropShort`) 🧪 | §31.2 | 3 | todo |
-| Explicit header row / no header + skip 🧪 | §31.2 `header`, `skip` | 3, 9 | todo |
-| Month-first dates (`dateOrder: 'mdy'`) 🧪 | §31.2 `applyMapping` | 3, 9 | todo |
-| Invert sign (`invert`), incl. amount-column guess 🧪 | §31.2 `applyMapping` | 3, 9 | todo |
-| Column mapping to canonical roles (date, vdate, amount, debit, credit, payee, desc, category, currency, ref, type, account, balance, ignore) 🧪 | §31.2 `MAP_ROLES`, `CANON` | 3, 6, 9 | todo |
-| Debit + credit → one signed amount; kept as plain columns when a signed amount is mapped 🧪 | §31.2 `applyMapping` | 3 | todo |
-| Value parsers `parseNum`, `parseDate`, `looseDate` 🧪 | §7.1 | 3 | todo |
-| Column typing (≥ 90 % date, else ≥ 90 % number, else text) 🧪 | §7.2 `analyzeCol` | 3 | todo |
-| Role detection (date, amount, category, payee, currency, balance) 🧪 | §7.3 `detectRoles` | 3 | todo |
-| `norm`, `payeeName`, `collapse` 🧪 | §4.1 of PLAN, §7.3 | 3 | todo |
-| Import settings window: every control (encoding, delimiter, header row from raw lines, no header / automatic, skip, dropShort, dateOrder, invert, role per column, preview first 10 + last 5) | §31.4 `#imp` | 9 | todo |
-| Import window opens automatically when no date/amount is recognised | §31.4, `addFiles` | 9 | todo |
-| Source labels `b1`, `b2` for differing import profiles | §31.4 | 9 | todo |
-| Import toast: "N new operations · M duplicates skipped" | `addFiles` | 9 | todo |
-| Remembered per-layout settings (import profiles, fast path) | PLAN §1.3 | 6, 9 | todo (new) |
+| Keep raw bytes; re-parse on option change | §6 `addFiles`, `reparseAll` | 6 | ported (original bytes in `import_files`; `PATCH /imports/{id}` re-reads them, *Reprocess* for committed imports; 6.4/6.8) |
+| Identical-file rejection (SHA-256) | §6 `hashBuf`, §8 | 6 | ported (`409 duplicate_file` with the earlier import; `TestImportErrorsHTTP`, e2e `import.spec.ts`) |
+| Encoding auto: strict UTF-8, else Windows-1250; BOM stripped 🧪 | §6 `decode` | 3 | ported (`ingest/decode.go`; oracle suite `ingest/oracle_test.go`) |
+| Manual encodings UTF-8 / Windows-1250 / ISO-8859-2 / Windows-1252 🧪 | §6, `ENC_LABEL` | 3 | ported (`ingest/decode.go`; oracle `ingest-cfg` encodings) |
+| Delimiter detection `; , \t \|` by modal count consistency 🧪 | §6 `detectDelim` | 3 | ported (`ingest/delimiter.go`; oracle suite) |
+| RFC-4180-ish tokenizer: quotes, `""`, CRLF/CR/LF, quotes only at field start 🧪 | §6 `parseCSV` | 3 | ported (`ingest/csv.go`, fuzzed; oracle suite) |
+| Table shaping: blank lines, auto header (modal count + 80 % fill), trim, `'` strip, ragged rows, empty unnamed columns, `Column N`, `X (2)` 🧪 | §6, §31.3 `buildTable` | 3 | ported (`ingest/table.go`; oracle suite; automatic header fixed for bank layouts, ALLOWED_DIFFS row 4) |
+| Footer/summary row drop (`dropShort`) 🧪 | §31.2 | 3 | ported (`ingest/table.go`; oracle `ingest-cfg` dropShort; e2e footer summary) |
+| Explicit header row / no header + skip 🧪 | §31.2 `header`, `skip` | 3, 9 | ported (oracle `ingest-cfg` header/skip; import window, e2e headerless + skip) |
+| Month-first dates (`dateOrder: 'mdy'`) 🧪 | §31.2 `applyMapping` | 3, 9 | ported (`ingest.MDYColumns`; oracle `ingest-cfg` mdy; e2e month-first dates) |
+| Invert sign (`invert`), incl. amount-column guess 🧪 | §31.2 `applyMapping` | 3, 9 | ported (`StageOptions.InvertSign` incl. the amount-column guess; oracle `ingest-cfg` invert) |
+| Column mapping to canonical roles (date, vdate, amount, debit, credit, payee, desc, category, currency, ref, type, account, balance, ignore) 🧪 | §31.2 `MAP_ROLES`, `CANON` | 3, 6, 9 | ported (mapping document per import, `ingest.Mapping`; oracle `ingest-cfg` maps; the import window's column meanings) |
+| Debit + credit → one signed amount; kept as plain columns when a signed amount is mapped 🧪 | §31.2 `applyMapping` | 3 | ported (`AmountDebitCredit`; oracle `ingest-cfg` debit/credit; e2e debit/credit signs) |
+| Value parsers `parseNum`, `parseDate`, `looseDate` 🧪 | §7.1 | 3 | ported (`ingest/values.go`, `money/parse.go`; oracle corpora; ALLOWED_DIFFS rows 9–11) |
+| Column typing (≥ 90 % date, else ≥ 90 % number, else text) 🧪 | §7.2 `analyzeCol` | 3 | ported (`ingest.AnalyzeColumn`; oracle suite) |
+| Role detection (date, amount, category, payee, currency, balance) 🧪 | §7.3 `detectRoles` | 3 | ported (`ingest.DetectRoles`; oracle suite incl. roles) |
+| `norm`, `payeeName`, `collapse` 🧪 | §4.1 of PLAN, §7.3 | 3 | ported (`ingest/normalize.go`; oracle corpora) |
+| Import settings window: every control (encoding, delimiter, header row from raw lines, no header / automatic, skip, dropShort, dateOrder, invert, role per column, preview first 10 + last 5) | §31.4 `#imp` | 9 | ported (import window `/imports/:id`, 9.3/9.6: every control, first 50 + last 5 rows) |
+| Import window opens automatically when no date/amount is recognised | §31.4, `addFiles` | 9 | ported (the import window opens for every upload; only the fast path skips it, for a known, error-free layout) |
+| Source labels `b1`, `b2` for differing import profiles | §31.4 | 9 | ported (`profileLabel`, 6.12; sidebar history 9.5) |
+| Import toast: "N new operations · M duplicates skipped" | `addFiles` | 9 | ported ("Imported N transactions · M duplicates skipped", 9.4) |
+| Remembered per-layout settings (import profiles, fast path) | PLAN §1.3 | 6, 9 | ported (new) (import profiles 6.2, fast path with *Undo* 9.7; e2e fast path) |
 
 ## 2. De-duplication and duplicates window
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Dedupe key: `ref + amount`, else `date + amount + payee + title`, else normalised row 🧪 | §8 `getDataset('merged')` | 4, 6 | todo |
-| Multiset rule: keep max(count in any single file) 🧪 | §8 | 6 | todo |
+| Dedupe key: `ref + amount`, else `date + amount + payee + title`, else normalised row 🧪 | §8 `getDataset('merged')` | 4, 6 | ported (`ingest/fingerprint.go`; oracle dedupe sets, `TestOverlapMatchesOracleRows`) |
+| Multiset rule: keep max(count in any single file) 🧪 | §8 | 6 | ported (occurrences + unique key, `AssignOccurrences`; oracle dedupe sets, e2e overlap counts) |
 | *All data* merged view with `Source file` column | §8 | 7 | retired: replaced by *All accounts*; dedupe is per account (PLAN §1.3 [CHANGE]); provenance is the import history |
 | "N duplicates skipped" status link → Duplicates window | §32.3 | 10 | ported |
 | Duplicates window: groups newest first, 60 per page + *Show more*, text filter, versions side by side, differing cells highlighted, ✓ kept marker 🧪 | §32.3 `renderDups` | 10 | ported |
@@ -57,7 +57,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Row click → inspector; double-click cell → copy; ↑/↓, j/k, PgUp/PgDn | §10, §22 | 10 | ported |
 | Empty result row "No rows match … Clear all" | §10 | 10 | ported |
 | Global search: all tokens, accent-insensitive (`platnosc` → `PŁATNOŚĆ`) 🧪 | §9 | 7, 10 | ported |
-| Column filter language: `!x`, `=x`, `=`, `!=`, `> >= < <= =` for numbers and dates, `a..b`, `looseDate` intervals, contains fallback 🧪 | §9 `compileCond` | 7 | todo |
+| Column filter language: `!x`, `=x`, `=`, `!=`, `> >= < <= =` for numbers and dates, `a..b`, `looseDate` intervals, contains fallback 🧪 | §9 `compileCond` | 7 | ported (`query/dsl`, `query/compile.go`; 84 oracle filter cases, ALLOWED_DIFFS row 12) |
 | Value checklist (Excel-style): counts, search, All/None on shown values, cap 600 | §12 `openColMenu` | 10 | ported |
 | Column menu: sort, condition with type-specific help, checklist, hide, clear | §12 | 10 | ported |
 | Columns menu: show/hide each column; single *Hide all* / *Show all* toggle | §32.2 `openColsMenu` | 10 | ported |
@@ -143,23 +143,23 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 
 | Feature | Legacy ref | New phase | Status |
 |---|---|---|---|
-| Title bar: sidebar, charts pane and overview toggles, brand, search (⌘F, `/`), assistant, settings | §11 | 8 | todo |
-| Purple book-with-$ logo and favicon | §32.1 | 8 | todo |
-| Sidebar (Explorer) hidden by default (`sbOpen`), auto-collapse < 900 px and restore | §11, §31.4 | 8 | todo |
-| Sidebar file list with counts, remove ×, mini drop zone | §11 | 8, 9 | todo (becomes accounts + import history) |
-| Sidebar parsing options (encoding, delimiter, strip `'`) | §11 | 9 | todo (become per-import options) |
-| Settings → Appearance: theme System/Dark/Light, interface size incl. Auto | §32.2 | 8 | todo |
-| Dark/light design tokens, chart palette, status tokens | §19 | 8 | todo |
-| Interface scaling: rem-based, `S.ui`, Auto zoom compensation | §20 | 8 | todo |
+| Title bar: sidebar, charts pane and overview toggles, brand, search (⌘F, `/`), assistant, settings | §11 | 8 | ported (`shell/TitleBar`, 8.6; e2e keyboard map) |
+| Purple book-with-$ logo and favicon | §32.1 | 8 | ported (`ui/Logo`, favicon, 8.4) |
+| Sidebar (Explorer) hidden by default (`sbOpen`), auto-collapse < 900 px and restore | §11, §31.4 | 8 | ported (8.6; e2e `quality.spec.ts` 720 px) |
+| Sidebar file list with counts, remove ×, mini drop zone | §11 | 8, 9 | ported (accounts with counts + import history with Delete, mini drop zone; 9.5) |
+| Sidebar parsing options (encoding, delimiter, strip `'`) | §11 | 9 | retired: options are per import, in the import window (9.3) |
+| Settings → Appearance: theme System/Dark/Light, interface size incl. Auto | §32.2 | 8 | ported (Settings → Appearance, 8.9; e2e `quality.spec.ts`) |
+| Dark/light design tokens, chart palette, status tokens | §19 | 8 | ported (`styles/tokens.css`; contrast raised to WCAG AA in Phase 14, `docs/a11y.md`) |
+| Interface scaling: rem-based, `S.ui`, Auto zoom compensation | §20 | 8 | ported (`styles/scale.ts`; e2e UI scale at 2× and 2.5×) |
 | Responsiveness: inspector overlay < 1100 px, labels hidden ≤ 860 px | §21 | 8, 10 | ported |
-| Popovers that re-anchor on resize/scroll; outside-click/Esc close | §12 `placePop` | 8 | todo |
-| Toasts | §11 | 8 | todo |
-| Drag & drop anywhere with overlay (files only) | §22 | 9 | todo |
-| ⌘/Ctrl O file dialog | §22 | 9 | todo |
-| Keyboard shortcuts window (`?`, from Settings; ⌘ on Mac / Ctrl elsewhere) | §32.2 `KEYS` | 8 | todo |
+| Popovers that re-anchor on resize/scroll; outside-click/Esc close | §12 `placePop` | 8 | ported (`ui/Popover`, 8.5; e2e popovers inside a 720 px window) |
+| Toasts | §11 | 8 | ported (toast queue with actions, 8.5/9.7) |
+| Drag & drop anywhere with overlay (files only) | §22 | 9 | ported (`shell/DropOverlay`, 9.1) |
+| ⌘/Ctrl O file dialog | §22 | 9 | ported (9.1; e2e keyboard map) |
+| Keyboard shortcuts window (`?`, from Settings; ⌘ on Mac / Ctrl elsewhere) | §32.2 `KEYS` | 8 | ported (`shell/KeyboardShortcuts`, 8.14; e2e `shell.spec.ts`) |
 | Esc order: modal → popover → search → selection | §22 | 8, 10 | ported |
-| Empty state: drop zone, Browse | §11 | 9 | todo |
-| *Load demo year* (fictional, ~14 months) 🧪 (`demo-legacy.csv`) | §11 `demoCSV` | 9, 18 | todo |
+| Empty state: drop zone, Browse | §11 | 9 | ported (`shell/EmptyState`, 8.6) |
+| *Load demo year* (fictional, ~14 months) 🧪 (`demo-legacy.csv`) | §11 `demoCSV` | 9, 18 | ported (`internal/demo` port, `POST /demo-data`, 8.10) |
 | *Load sample* (7-row sample statement) | §11 `SAMPLE` | — | retired: the demo year covers previews; the scrubbed sample becomes a fixture |
 
 ## 9. Persistence, security, backup
@@ -168,12 +168,12 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 |---|---|---|---|
 | IndexedDB persistence (files, prefs, private, chats) | §17 | — | retired: PostgreSQL + server-side preferences (Phase 5) |
 | "Remember imported files" toggle; ephemeral demo files | §17.3 | — | retired: imports are always stored; demo data is a normal import that can be deleted |
-| Preferences persisted (theme, ui, pane, cards, chart cfg, per-view sort/widths/hidden/period) | §17.2 `collectPrefs` | 5, 8 | todo |
+| Preferences persisted (theme, ui, pane, cards, chart cfg, per-view sort/widths/hidden/period) | §17.2 `collectPrefs` | 5, 8 | ported (preferences document with the legacy key names, 8.8; legacy prefs applied by the migration, 14.1) |
 | Passphrase lock (PBKDF2 310k → AES-256-GCM), lock screen | §17.4 | — | retired: replaced by server auth (PLAN §7.6) |
-| Backup download / restore | §17.5 | 14 | todo (export via `GET /me/export`; restore of new exports in backlog) |
+| Backup download / restore | §17.5 | 14 | ported (download: `GET /me/export` zip, 7.10; restore: legacy backups through the migration, 14.1; restoring a Finuance export is in the backlog) |
 | **Legacy backup migration**, plain and encrypted (browser-side decryption) 🧪 (`legacy-backup/`) | §17.5, PLAN §4.10 | 14 | ported (Settings → Data wizard, `POST /legacy-imports`, ADR 0016; `TestMigratePlainAndLockedBackups`, e2e `legacy.spec.ts`) |
-| Erase all | §17.3 | 5 | todo (delete account / data) |
-| Strict CSP, all output escaped | §18 | 8 | todo (no `innerHTML`, `connect-src 'self'`) |
+| Erase all | §17.3 | 5 | ported (`DELETE /me` deletes the account and every row, 5.5; imports and accounts can be deleted one by one) |
+| Strict CSP, all output escaped | §18 | 8 | ported (nginx CSP `connect-src 'self'`, no inline scripts or styles, ESLint ban on `innerHTML`; e2e `no CSP violations`) |
 | Rename migration `csv-inspector` → `finuance` | §32.1 | — | retired: one-time browser storage migration; the backup importer accepts `csvInspectorBackup` |
 
 ## 10. Known MVP failures (reported by our Product Engineer)

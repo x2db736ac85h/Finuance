@@ -65,7 +65,7 @@ export function payeesParts(d: InsightPayees, env: ChartEnv): ChartParts {
       ]),
     },
     body: (
-      <div className="hbars">
+      <div className="hbars" tabIndex={0} role="region" aria-label="Top payees, list">
         {list.map((p) => (
           <Bar key={p.payee} p={p} max={first.spentMinor} cur={cur} on={active === p.payee} env={env} />
         ))}

@@ -323,3 +323,48 @@ filter. Recurring detection took 180 ms: it counted months with `count(DISTINCT 
 which sorts per payee. It now counts them with two hash aggregates, and every month truncation
 (`Months`, the per-month categories, recurring) truncates a `timestamp` instead of a `timestamptz`,
 which skips the time-zone conversion per row.
+
+## Phase 14: against the §7.12 budgets (task 14.5)
+
+Re-measured on 2026-10-23 in the cloud sandbox (4 vCPU, Postgres 18.6 in Docker) with the same
+108,098-transaction user, after the legacy migration and the assistant had landed. The overview numbers come from a run
+alone on the machine; a first run next to an image build was 20–50 % slower and is not used.
+
+**Bundle** (`npm run build`, gzip; budget: initial JS ≤ 250 KB, route-split chunks don't count):
+
+| Chunk | gzip |
+|---|---|
+| initial JS (`index-*.js`: shell, table, insights, import window, settings, migration wizard) | **200.5 KB** |
+| overview page (loaded at idle) | 12.3 KB |
+| assistant panel (loaded when it first opens) | 7.8 KB |
+| CSS | 12.3 KB |
+
+**API, p95 at 108k rows** (`FINUANCE_PERF=1`):
+
+| Call | Shape | Phase 7/11/12 | Phase 14 |
+|---|---|---|---|
+| `POST /transactions/query` | default sort, no filter | 102 ms | 68 ms |
+| | deep window (offset 90,000) | 130 ms | 80 ms |
+| | payee contains "kawiarnia" | 233 ms | 200 ms |
+| | search "blik warszawa" | 114 ms | 69 ms |
+| | category = Transport, last 3 months | 138 ms | 103 ms |
+| | sort by payee (collation) | 181 ms | 128 ms |
+| | amount < −100, sorted by amount | 139 ms | 89 ms |
+| | scrolling window without totals | 12 / 48 ms | 5 / 20 ms |
+| insights (six calls) | slowest call, all time | 107 ms (categories) | 138 ms (categories) |
+| | all six one after another, all time | 300 ms | 327 ms |
+| `POST /overview` | all accounts, 12 months | 216 ms | 237 ms |
+| | one account | 68 ms | 74 ms |
+| | category != Mieszkanie | 317 ms | 348 ms |
+| | search "blik warszawa" | 198 ms | 208 ms |
+
+**Reading.**
+- The bundle is within budget with 50 KB to spare. The migration wizard sits in the initial chunk
+  with the other settings pages; it can move to its own chunk if room runs short.
+- Every table request except "payee contains" (no trigram index on `payee_n`, see Phase 7) is within
+  150 ms p95, so filter-to-paint stays within the 300 ms budget measured in Phase 10.
+- The insight calls and the overview are where Phases 11 and 12 left them (run-to-run noise in
+  this sandbox is about ±15 %). The overview with a negated category filter is still above 300 ms
+  here; the levers are unchanged (a larger `shared_buffers` on the homelab, Phase 16).
+- Grid scrolling at 60 fps and filter-to-paint on the homelab remain the gate's hands-on checks
+  (software rendering in the sandbox, see "Table view").

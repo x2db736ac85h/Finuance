@@ -251,3 +251,11 @@ jobs:
             web/playwright-report
             web/test-results
           retention-days: 7
+      - uses: actions/upload-artifact@v4.6.2
+        if: always()
+        with:
+          name: screenshots-and-parity
+          path: |
+            web/screenshots
+            docs/parity-report.md
+          retention-days: 30

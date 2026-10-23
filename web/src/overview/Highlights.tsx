@@ -68,7 +68,7 @@ export const highlightsChart: ChartDef = {
       sub: fmtMonthLong(d.month),
       table: null,
       body: (
-        <ul className="hls">
+        <ul className="hls" tabIndex={0} aria-label="Highlights, list">
           {d.highlights.map((h, i) => (
             // the list is positional (the server's order), so the index is its identity
             <li key={i} className={`hl ${h.tone}`}>

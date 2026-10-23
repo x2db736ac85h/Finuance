@@ -115,7 +115,7 @@ kbd {
   border-color: var(--muted);
 }
 .btn.primary {
-  background: var(--accent);
+  background: var(--accent-solid);
   border-color: transparent;
   color: #fff;
 }

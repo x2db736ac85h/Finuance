@@ -32,11 +32,11 @@
 
 ## Current phase tasks
 - [x] 14.1 legacy migration: `00007_legacy_imports.sql` (runs + files, forced RLS), `internal/legacyimport` (legacy table and key replay, cfg → options and mapping, labels, overrides, budgets, opening, investments, chats, report), `POST`/`GET /legacy-imports` + `GET /legacy-imports/{id}`, idempotent `LegacyImport` job with progress; Settings → Data wizard (`deser`, passphrase + WebCrypto, accounts per layout or number hint, opening, chats, appearance settings, progress, report); ADR 0016, `docs/migration.md`, THREAT-MODEL I9/D6. Tests: key replay vs the oracle (every ingest and cfg table with roles, 5 txKeys sets incl. merged, 5 dedupe sets × overrides; 99 subtests), `TestMigratePlainAndLockedBackups` (Go-side decryption, 917 + 8 transactions, 8/8 labels, 2/2 decisions, budgets, opening, investments, chats, second run creates nothing), failed files, validation, one run per user, tenancy; HTTP (`TestLegacyMigrationOverHTTP`, `TestLegacyMigrationRequests`: 413/422/409/401); 11 Vitest (backup reader on both backups, wrong passphrase, manifest without the AI key, wizard with MSW, plan defaults); e2e `legacy.spec.ts` (2: plain backup → accounts, group filter, budgets, chats; locked backup, wrong passphrase refused with nothing sent, repeat run reuses all files); 297 Vitest, 39 Playwright
-- [ ] 14.2 E2E completion: settings, keyboard map (⌘J), 720 px, UI scale, every fixture family, migration (plain + locked), screenshot artifact in CI
-- [ ] 14.3 parity harness `web/e2e/parity.spec.ts` (direct and through migration) → `docs/parity-report.md`
-- [ ] 14.4 accessibility: axe on login, table, preview, overview, settings, assistant; fixes; `docs/a11y.md`
-- [ ] 14.5 performance: bundle vs §7.12, API p95 at 100k rows, `docs/perf.md`
-- [ ] 14.6 `docs/PARITY.md`: every row `ported` or `retired: reason`
+- [x] 14.2 E2E completion: `quality.spec.ts` (5: settings — theme, interface size, profile, sessions, data export zip; keyboard map — ⌘F, `/`, ⌘O, ⌘J, `?`, Esc; 720 px window — rows, sidebar toggle, popovers inside the viewport; UI scale at DPR 2 and 2.5; every fixture family imported and counted against the oracle, overlap A+B = the oracle's dedupe count); migration plain + locked in `legacy.spec.ts`; `screenshots.spec.ts` (6 screens × 2 themes); CI keeps `web/screenshots/` and the parity report as the `screenshots-and-parity` artifact of every run; Playwright `github` reporter in CI (failures as annotations)
+- [x] 14.3 parity harness `web/e2e/parity.spec.ts`: the legacy app (served from `legacy/finuance.html` inside the test) and the new app on the same data, direct and through migration (Σ, summaries for all time / last 3 months / three months, categories, cash flow, recurring, overview months, balance; on the migration path also groups, duplicate decisions, budgets, investments) → `docs/parity-report.md`: 30 of 30 equal
+- [x] 14.4 accessibility: `a11y.spec.ts` (axe WCAG 2.1 A/AA on sign-in, sign-up, empty, table + pane, import preview, overview, four settings pages, assistant, both themes; serious/critical fail): zero violations after the fixes (contrast tokens raised to 4.5:1 with `--accent-solid` for white button text; scrollable lists focusable and labelled); `docs/a11y.md` with the keyboard-only checklist
+- [x] 14.5 performance (`docs/perf.md` "Phase 14"): initial JS 200.5 KB gzip (budget 250), overview 12.3 KB and assistant 7.8 KB chunks; API p95 at 108k rows re-measured (query, insights, overview)
+- [x] 14.6 `docs/PARITY.md`: every row `ported` or `retired: reason` (45 open rows settled)
 - [ ] 14.7 release: `release.yml` (multi-arch, Trivy, SBOM, cosign, GitHub Release), standalone `compose.prod.yaml`, `CHANGELOG.md`, README v0.1, `v0.1.0-rc.1`
 
 ## Phase 13 tasks (done)
@@ -247,6 +247,8 @@
 - [x] 0.8 CI skeleton: `.github/workflows/ci.yml` (guardrails + placeholder jobs), `renovate.json`, PR template
 
 ## Deviations from the plan (with reason)
+- 14.4: the legacy palette fails WCAG AA contrast in places (muted text, accent links, white text on the accent button, green in the light theme). The tokens were raised just enough for 4.5:1 (each change commented with its legacy value in `tokens.css`) and a new `--accent-solid` sits behind white button text; the look is otherwise unchanged. Scrollable chart and overview lists are focusable (`tabindex="0"`) and labelled "…, list".
+- 14.2: the screenshot artifact also carries `docs/parity-report.md`; the Playwright `github` reporter turns E2E failures into annotations (job logs and artifacts can't be read from the cloud session).
 - 14.1: labels and duplicate decisions are matched by **replaying the legacy keys** on each imported file (legacy header rule, `applyMapping` port, legacy typing and roles, per-file and merged-view `txKeys`), not by translating each key into a fingerprint (ADR 0016); the oracle checks the replay. A file whose header the legacy app found elsewhere can't have its labels matched (reported per file). New: `ingest.ShapeOptions.LegacyHeader`, `ledger.Row.Fingerprint/Occurrence`, `assistant.Chats.Limit`.
 - 14.1: the uploaded files wait in `legacy_import_files` (not in the plan's schema) until the run ends; the manifest is cleared then too, so copied chats don't outlive the retention. Request limits: each file ≤ the upload limit, all files ≤ 4×, manifest ≤ 16 MiB. New problem code `migration_running` (409). A "new" account whose name exists is that account (idempotent re-runs); investments are written only when the user has none saved; a chat whose title exists is skipped; chats fill only the free room under the chat limit (oldest legacy chats skipped first).
 - 14.1: the legacy appearance settings (theme, size, pane, cards, chart cfg, sidebar, assistant panel; never the AI address or key, nor per-file views) are applied by the browser through the preferences sync when the user ticks the box, not by the job (the server keeps preferences opaque). The wizard shows each file's date range and account-number hints from a text scan in the browser (no server preview), proposes one new account per file layout, and a `md` Modal size was added.
@@ -363,6 +365,8 @@
 - Later (optional): re-measure the staging insert on a dev machine; the schema options in `docs/perf.md` stay open if it matters.
 
 ## Backlog (ideas, not scheduled)
+- Keyboard range selection in the table (Shift+↑/↓; docs/a11y.md known gap).
+- Restore a Finuance data export (`GET /me/export` zip) into a new instance.
 - Per-user model API keys for the assistant (ADR 0015; connections are instance config for now).
 - Recurring detection for weekly/yearly cadence (legacy §27).
 - Per-month budgets with rollover.

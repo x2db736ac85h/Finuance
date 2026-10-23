@@ -24,6 +24,7 @@ dist/
 # Playwright
 playwright-report/
 test-results/
+web/screenshots/
 blob-report/
 /playwright/.cache/
 
