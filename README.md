@@ -13,7 +13,7 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 </picture>
 
 > [!NOTE]
-> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 18 planned phases. **Phases 0–13 are done**: importing, the transaction table, groups, duplicate review, the insight charts, the monthly overview and the AI assistant all work today. Migration from the prototype and the Kubernetes deployment are still under construction. See [Status](#status).
+> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 18 planned phases. **v0.1.0** (Phases 0–14) has every feature of the prototype: importing, the transaction table, groups, duplicate review, the insight charts, the monthly overview, the AI assistant and migration from the prototype's backups. The Kubernetes deployment is still under construction. See [Status](#status).
 
 ## Contents
 
@@ -43,9 +43,10 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 - **Review each month.** An overview page shows the month's income, spending, net saved and projected spending against the previous month, with highlights in plain sentences, budgets per category (a default from your last three months, editable in place), recurring payments, a money-flow diagram from income to categories, the largest expenses, savings rate, spending by weekday and the account balance. Investment, yield-on-cost and FI/RE cards track values you enter by hand.
 - **Ask questions in plain language.** An optional assistant panel (⌘/Ctrl J) answers questions such as "how much did I spend on restaurants in March?" in English or Polish. It looks your data up through read-only tools (search, totals, month overview, recurring payments) and shows every lookup, with *Show in table* to see the same rows in the list. It works with any model your admin connects: LM Studio, Ollama, vLLM or another OpenAI- or Anthropic-compatible server, local or in the cloud, and uses the model's thinking when it has it. Cloud services need your consent first; chats are deleted after 2 days unless you choose otherwise.
 - **Group transactions.** Select rows by dragging, Shift-click or ⌘/Ctrl-click, then add them to a colour-coded group such as "Italy trip". A quick bar shows the count and the total of the selection. Groups filter the table and are kept when you delete and re-import a file.
+- **Move over from the prototype.** Settings → Data reads a backup of the single-file app (a locked one is decrypted in your browser) and brings its files, groups and labels, duplicate decisions, budgets, investments and chats, with a report of anything that didn't match. See [docs/migration.md](docs/migration.md).
 - **Share an instance.** Several people can use one server. Each person's data is isolated in the database itself (row-level security), not just in the application code.
 
-Coming next (🚧): migration from the prototype's backups, category rules and transfer detection, and a Kubernetes deployment. See [Status](#status).
+Coming next (🚧): category rules and transfer detection, and a Kubernetes deployment. See [Status](#status).
 
 ## Screenshots
 
@@ -90,7 +91,7 @@ flowchart LR
     api -->|"SQL, one user per transaction"| db[("PostgreSQL<br/>with row-level security")]
     api -.->|"queues slow work"| db
     worker["worker<br/>Go background jobs"] -->|"commits imports, rebuilds duplicates"| db
-    api -.->|"🚧 optional, your own model"| llm["LLM server"]
+    api -.->|"optional assistant"| llm["LLM server<br/>(LM Studio, Ollama, …)"]
 ```
 
 - **One Go binary** runs as the API server (`finuance serve`), the background worker (`finuance worker`), the migration step and the admin CLI. The API is specified first in [`api/openapi.yaml`](api/openapi.yaml); server code and the web app's typed client are generated from it.
@@ -103,7 +104,20 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (components, data mode
 
 ## Quick start
 
-Requirements: Docker with Compose, Node 22 (to build the web app) and GNU Make. Go 1.27 is only needed for development outside Docker.
+**Run a release** (Docker with Compose; nothing to build):
+
+```sh
+mkdir finuance && cd finuance
+curl -fsSLO https://github.com/x2db736ac85h/Finuance/releases/latest/download/compose.prod.yaml
+curl -fsSL -o .env https://github.com/x2db736ac85h/Finuance/releases/latest/download/finuance.env.example
+$EDITOR .env                  # passwords; FINUANCE_PUBLIC_ORIGIN=http://localhost:8000 to try it locally
+docker compose --env-file .env -f compose.prod.yaml up -d
+docker compose --env-file .env -f compose.prod.yaml exec -T api /finuance admin create-user --email you@example.com --password-stdin
+```
+
+Then open http://localhost:8000 (see [Deploying](#deploying) for TLS).
+
+**Build from source** (development). Requirements: Docker with Compose, Node 22 (to build the web app) and GNU Make. Go 1.27 is only needed for development outside Docker.
 
 ```sh
 git clone https://github.com/x2db736ac85h/Finuance.git
@@ -125,16 +139,11 @@ make dev-api & make dev-web               # API on :8080 and the Vite dev server
 
 ## Deploying
 
-**Docker Compose (available now).** The production overlay publishes only the web container. The database, the API and the admin port stay on the internal Compose network:
+**Docker Compose.** [`deploy/compose/compose.prod.yaml`](deploy/compose/compose.prod.yaml) runs the released images (`ghcr.io/x2db736ac85h/finuance-api` and `finuance-web`, amd64 and arm64, signed with cosign). It needs only itself and a `.env` ([`.env.prod.example`](deploy/compose/.env.prod.example), attached to every [release](https://github.com/x2db736ac85h/Finuance/releases) as `finuance.env.example`). Only the web container is published, on `127.0.0.1:8000` by default; the database, the API and the admin ports stay on the internal Compose network.
 
-```sh
-cp .env.example .env    # then set strong, unique passwords and your public URL (FINUANCE_PUBLIC_ORIGIN)
-make web-dist           # build the web app
-docker compose --env-file .env -f deploy/compose/compose.yaml -f deploy/compose/compose.prod.yaml up -d --build
-```
-
-- Put a reverse proxy with TLS in front of port 8000 (Caddy, Traefik, nginx). Production mode sends secure cookies only, so HTTPS is required.
-- To keep the instance private, set `FINUANCE_ALLOW_SIGNUP=false` and create accounts with the admin CLI: `docker compose … exec -T api /finuance admin create-user --email you@example.com --password-stdin` (it reads the password from standard input).
+- Put a reverse proxy with TLS in front of port 8000 (Caddy, Traefik, nginx) and set `FINUANCE_PUBLIC_ORIGIN` to its URL. Production mode sends secure cookies only, so the app works over HTTPS, or over plain http on `localhost` (e.g. through an ssh tunnel to a server).
+- Sign-up is off by default. Create accounts with the admin CLI: `docker compose … exec -T api /finuance admin create-user --email you@example.com --password-stdin` (it reads the password from standard input), or set `FINUANCE_ALLOW_SIGNUP=true`.
+- Verify an image: `cosign verify ghcr.io/x2db736ac85h/finuance-api:<version> --certificate-identity-regexp 'https://github.com/x2db736ac85h/Finuance/' --certificate-oidc-issuer https://token.actions.githubusercontent.com`.
 - Back up the database volume regularly. It holds your original CSV files too.
 
 **Kubernetes with Helm, CloudNativePG and Argo CD:** 🚧 under construction (Phase 16). The placeholders are in [`deploy/helm`](deploy/helm/finuance), [`deploy/k8s`](deploy/k8s) and [`deploy/environments`](deploy/environments).
@@ -151,7 +160,7 @@ make test-e2e           # Playwright end-to-end tests against a fresh Compose st
 What the tests cover:
 - **Go:** unit tests, HTTP tests against a real PostgreSQL with cross-user (tenancy) checks, a row-level-security suite, property tests for duplicate handling, and fuzz targets for the CSV parser, money and date parsing and the filter language (nightly in CI).
 - **Web:** component tests with Vitest and MSW.
-- **End to end:** Playwright specs for importing, the table, groups and duplicates.
+- **End to end:** Playwright specs for every screen and flow against a fresh Compose stack, accessibility checks with axe, and a parity harness that runs the prototype next to the new app on the same data ([report](docs/parity-report.md)).
 - **Legacy oracle:** [`tools/legacy-oracle`](tools/legacy-oracle) runs the original prototype in a headless browser and records its results (parsing, de-duplication, filters, …) on [synthetic fixtures](testdata/fixtures). The new backend is tested against those recordings, so it behaves like the prototype. The few deliberate differences are listed in [`testdata/oracle/ALLOWED_DIFFS.md`](testdata/oracle/ALLOWED_DIFFS.md).
 
 All test data is synthetic, or real exports passed through the [anonymiser](backend/cmd/anonymize) and reviewed before commit.
@@ -171,8 +180,8 @@ Performance notes and measurements: [docs/perf.md](docs/perf.md).
 | 11 | Insights: charts, period picker, chart windows | ✅ done |
 | 12 | Monthly overview: KPIs, budgets, recurring payments, money flow | ✅ done |
 | 13 | AI assistant with read-only tools on your own model | ✅ done |
-| 14 | Migration from the prototype's backups, accessibility, v0.1.0 | 🚧 next |
-| 15 | Category rules, transfer detection, group reports | 🚧 planned |
+| 14 | Migration from the prototype's backups, accessibility, v0.1.0 | ✅ done |
+| 15 | Category rules, transfer detection, group reports | 🚧 next |
 | 16–17 | Kubernetes deployment, observability, load tests, hardening | 🚧 planned |
 | 18 | Public demo, documentation, v1.0.0 | 🚧 planned |
 
@@ -196,6 +205,7 @@ Start with [docs/README.md](docs/README.md), which lists every document and who 
 - [Threat model](docs/THREAT-MODEL.md): what is protected, against whom, and how
 - [Architecture decisions](docs/adr/): why the main choices were made
 - [API specification](api/openapi.yaml): OpenAPI 3
+- [Moving over from the single-file app](docs/migration.md), [accessibility](docs/a11y.md), [parity report](docs/parity-report.md), [changelog](CHANGELOG.md)
 
 ## Security, contributing and license
 

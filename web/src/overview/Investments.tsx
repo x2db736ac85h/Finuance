@@ -509,7 +509,7 @@ export function yieldParts(d: OverviewData): ChartParts {
     legend,
     table,
     body: (
-      <div className="hbars">
+      <div className="hbars" tabIndex={0} role="region" aria-label="Yield on cost, list">
         {items.map((i) => (
           <YieldBar key={i.tot ? '\u0000total' : i.k} k={i.k} y={i.y} tot={i.tot} mx={mx} />
         ))}

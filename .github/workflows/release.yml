@@ -1,0 +1,153 @@
+# Release (PLAN §8.5, task 14.7): a tag vX.Y.Z (or vX.Y.Z-rc.N) builds the backend and web images for
+# amd64 and arm64, pushes them to GHCR, scans them with Trivy (CRITICAL fails the release), attaches
+# an SPDX SBOM, signs images and SBOM attestations keylessly with cosign, and publishes a GitHub
+# release with the notes from CHANGELOG.md and the files for compose.prod.yaml.
+#
+# No third-party actions: buildx cross-compiles (the Dockerfiles build on the runner's platform, so
+# no QEMU), Trivy runs as the pinned container the CI image job uses, cosign and syft are installed
+# with `go install` at pinned versions (verified by the Go checksum database). The GitOps bump of the
+# homelab values arrives in Phase 16.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write # the GitHub release
+  packages: write # GHCR
+  id-token: write # cosign keyless signing (Sigstore OIDC)
+
+env:
+  REGISTRY: ghcr.io/x2db736ac85h
+  COSIGN_VERSION: v3.1.3
+  SYFT_VERSION: v1.54.1
+  TRIVY_IMAGE: aquasec/trivy:0.76.0
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+
+      - name: Version
+        id: v
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || { echo "::error::tag $tag is not vX.Y.Z or vX.Y.Z-rc.N"; exit 1; }
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          if [[ "$tag" == *-rc.* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          v="${{ steps.v.outputs.version }}"
+          base="${v%%-rc.*}"
+          # the section "## [X.Y.Z]" (a release candidate uses its final version's section)
+          awk -v want="## [$base]" 'index($0, want) == 1 { on = 1; next } on && /^## \[/ { exit } on { print }' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "::error::CHANGELOG.md has no section [$base]"; exit 1; }
+          cat notes.md
+
+      - name: Tools (cosign, syft)
+        run: |
+          go install "github.com/sigstore/cosign/v3/cmd/cosign@${COSIGN_VERSION}"
+          go install "github.com/anchore/syft/cmd/syft@${SYFT_VERSION}"
+          cosign version
+          syft version
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Builder
+        run: docker buildx create --name release --driver docker-container --use
+
+      - name: Build and push (linux/amd64, linux/arm64)
+        run: |
+          set -euo pipefail
+          v="${{ steps.v.outputs.version }}"
+          latest=()
+          [[ "${{ steps.v.outputs.prerelease }}" == "false" ]] && latest=(--tag "$REGISTRY/finuance-api:latest")
+          docker buildx build --platform linux/amd64,linux/arm64 --file deploy/docker/Dockerfile.backend \
+            --build-arg VERSION="$v" --build-arg COMMIT="$GITHUB_SHA" --build-arg DATE="${{ steps.v.outputs.date }}" \
+            --label org.opencontainers.image.version="$v" --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            --tag "$REGISTRY/finuance-api:$v" "${latest[@]}" --metadata-file api.json --push .
+          latest=()
+          [[ "${{ steps.v.outputs.prerelease }}" == "false" ]] && latest=(--tag "$REGISTRY/finuance-web:latest")
+          docker buildx build --platform linux/amd64,linux/arm64 --file deploy/docker/Dockerfile.web \
+            --label org.opencontainers.image.version="$v" --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            --tag "$REGISTRY/finuance-web:$v" "${latest[@]}" --metadata-file web.json --push .
+          echo "API=$REGISTRY/finuance-api@$(jq -r '."containerimage.digest"' api.json)" >> "$GITHUB_ENV"
+          echo "WEB=$REGISTRY/finuance-web@$(jq -r '."containerimage.digest"' web.json)" >> "$GITHUB_ENV"
+
+      - name: Trivy (CRITICAL fails the release)
+        run: |
+          for img in "$API" "$WEB"; do
+            for platform in linux/amd64 linux/arm64; do
+              docker run --rm -e TRIVY_USERNAME="${{ github.actor }}" -e TRIVY_PASSWORD="${{ secrets.GITHUB_TOKEN }}" \
+                -v "$PWD/.trivyignore:/.trivyignore:ro" "$TRIVY_IMAGE" \
+                image --ignorefile /.trivyignore --platform "$platform" --scanners vuln --severity CRITICAL --exit-code 1 --no-progress "$img"
+            done
+          done
+
+      - name: SBOM, attestation and signature
+        run: |
+          set -euo pipefail
+          syft scan "registry:$API" -o spdx-json=finuance-api.spdx.json
+          syft scan "registry:$WEB" -o spdx-json=finuance-web.spdx.json
+          cosign attest --yes --type spdxjson --predicate finuance-api.spdx.json "$API"
+          cosign attest --yes --type spdxjson --predicate finuance-web.spdx.json "$WEB"
+          cosign sign --yes "$API"
+          cosign sign --yes "$WEB"
+
+      - name: Smoke test the released images with compose.prod.yaml
+        run: |
+          set -euo pipefail
+          cd deploy/compose
+          sed -e "s/^FINUANCE_VERSION=.*/FINUANCE_VERSION=${{ steps.v.outputs.version }}/" \
+              -e "s|^FINUANCE_PUBLIC_ORIGIN=.*|FINUANCE_PUBLIC_ORIGIN=http://localhost:8000|" .env.prod.example > .env
+          docker compose --env-file .env -f compose.prod.yaml up -d --wait
+          curl -fsS http://localhost:8000/healthz
+          # the api answers through nginx: an unknown login is a 401 problem
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/api/v1/auth/login -H 'Content-Type: application/json' \
+            -H 'X-Finuance-Client: web' -d '{"email":"nobody@example.com","password":"wrong password here"}' || true)
+          if [ "$code" != 401 ]; then docker compose --env-file .env -f compose.prod.yaml logs; echo "::error::login answered $code"; exit 1; fi
+          docker compose --env-file .env -f compose.prod.yaml down -v
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pre=()
+          [[ "${{ steps.v.outputs.prerelease }}" == "true" ]] && pre=(--prerelease)
+          {
+            cat notes.md
+            echo
+            echo "### Images"
+            echo
+            echo "- \`$API\`"
+            echo "- \`$WEB\`"
+            echo
+            echo "Signed with cosign (keyless). Verify with:"
+            echo
+            echo '```sh'
+            echo "cosign verify $API --certificate-identity-regexp 'https://github.com/x2db736ac85h/Finuance/' --certificate-oidc-issuer https://token.actions.githubusercontent.com"
+            echo '```'
+          } > release.md
+          # GitHub drops a leading dot from asset names (".env.prod.example" became "default.env.prod.example")
+          cp deploy/compose/compose.prod.yaml .
+          cp deploy/compose/.env.prod.example finuance.env.example
+          files=(compose.prod.yaml finuance.env.example finuance-api.spdx.json finuance-web.spdx.json)
+          title="Finuance ${{ steps.v.outputs.version }}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            # created by hand in the GitHub web UI (which also creates the tag), or a re-run
+            gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file release.md \
+              --prerelease="${{ steps.v.outputs.prerelease }}" --draft=false
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${pre[@]}" --title "$title" --notes-file release.md "${files[@]}"
+          fi

@@ -141,8 +141,8 @@ jobs:
         run: docker run --rm finuance-backend:dev version
       - name: Trivy (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.0 \
-            image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-backend:dev
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
+            image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-backend:dev
       - name: Web image runs as non-root and serves the app with the CSP
         run: |
           set -euo pipefail
@@ -156,8 +156,8 @@ jobs:
           docker rm -f web-smoke
       - name: Trivy web image (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.0 \
-            image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
+            image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
 
   oracle-fresh:
     name: legacy oracle is fresh
@@ -251,3 +251,11 @@ jobs:
             web/playwright-report
             web/test-results
           retention-days: 7
+      - uses: actions/upload-artifact@v4.6.2
+        if: always()
+        with:
+          name: screenshots-and-parity
+          path: |
+            web/screenshots
+            docs/parity-report.md
+          retention-days: 30

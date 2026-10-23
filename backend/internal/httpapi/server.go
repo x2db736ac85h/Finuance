@@ -25,6 +25,7 @@ import (
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -61,6 +62,8 @@ type Deps struct {
 	Query *query.Engine
 	// Assistant is the assistant (connections, chats, runner); nil or without connections it is off.
 	Assistant *assistant.Assistant
+	// Legacy runs migrations from the single-file app. Nil in tests of the bare server.
+	Legacy *legacyimport.Migrator
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -96,7 +99,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	impl := &api{insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}
@@ -139,7 +142,8 @@ func NewHandler(d Deps) (http.Handler, error) {
 		mw.Metrics(d.Metrics),
 		mw.Tracing(d.Tracing),
 		mw.SecurityHeaders,
-		mw.MaxBytes(MaxJSONBody, map[string]int64{"POST /api/v1/imports": d.Config.MaxUploadBytes + multipartOverhead}),
+		mw.MaxBytes(MaxJSONBody, map[string]int64{"POST /api/v1/imports": d.Config.MaxUploadBytes + multipartOverhead,
+			"POST /api/v1/legacy-imports": legacyBodyLimit(d.Config.MaxUploadBytes)}),
 		mw.Route,
 	), nil
 }

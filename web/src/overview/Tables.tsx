@@ -74,7 +74,7 @@ export function recurringParts(d: OverviewData, cur: string): ChartParts {
       ]),
     },
     body: (
-      <div className="oscroll">
+      <div className="oscroll" tabIndex={0} role="region" aria-label="Recurring payments, list">
         <table className="otab">
           <colgroup>
             <col style={{ width: '34%' }} />
@@ -124,7 +124,7 @@ export function largestParts(d: OverviewData, cur: string, env: ChartEnv): Chart
       rows: list.map((x) => [fmtDay(x.bookedOn), x.payee, x.category?.name ?? '', money(x.amountMinor, cur)]),
     },
     body: (
-      <div className="oscroll">
+      <div className="oscroll" tabIndex={0} role="region" aria-label="Largest expenses, list">
         <table className="otab">
           <colgroup>
             <col style={{ width: '17%' }} />

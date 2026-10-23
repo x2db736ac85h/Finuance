@@ -45,6 +45,8 @@ type Row struct {
 	Error               string
 	Duplicate           bool       // see ListImportRows
 	TransactionID       *uuid.UUID // set once committed
+	Fingerprint         []byte     // stored rows only (the dedupe identity, with Occurrence)
+	Occurrence          int
 }
 
 func rowFromStaged(r *ingest.StagedRow) Row {

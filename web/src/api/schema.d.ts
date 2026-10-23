@@ -183,6 +183,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/legacy-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The user's latest migrations from the single-file app, newest first */
+        get: operations["listLegacyImports"];
+        put?: never;
+        /**
+         * Migrate a backup of the single-file app
+         * @description The browser reads the backup (and decrypts it; the passphrase never leaves the browser) and
+         *     sends a `manifest` part (JSON, at most 16 MiB) plus one `file` part per legacy file, in the
+         *     manifest's order, each at most `FINUANCE_MAX_UPLOAD_BYTES`. The run happens in the
+         *     background (`202`); poll `GET /legacy-imports/{id}`. One run per user at a time
+         *     (`409 migration_running`). Running the same backup again creates nothing new.
+         */
+        post: operations["createLegacyImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legacy-imports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A migration's progress and report */
+        get: operations["getLegacyImport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/preferences": {
         parameters: {
             query?: never;
@@ -2266,11 +2308,102 @@ export interface components {
              */
             currency: string;
         };
+        LegacyImport: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "done" | "failed";
+            progress: {
+                filesDone: number;
+                filesTotal: number;
+                /** @description files | labels | settings | chats */
+                step: string;
+                /** @description The file being imported. */
+                current?: string;
+            };
+            report?: components["schemas"]["LegacyImportReport"];
+            /** @description Why a failed run stopped. */
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            finishedAt?: string;
+        };
+        /** @description What a finished run did (PLAN §4.10 step 5). */
+        LegacyImportReport: {
+            files: {
+                legacyId: string;
+                name: string;
+                /** @enum {string} */
+                status: "imported" | "reused" | "failed";
+                /** Format: uuid */
+                importId?: string;
+                /** Format: uuid */
+                accountId?: string;
+                accountName: string;
+                rows: number;
+                new: number;
+                /** Format: int64 */
+                duplicates: number;
+                /** Format: int64 */
+                errors: number;
+                message?: string;
+            }[];
+            accounts: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                created: boolean;
+            }[];
+            transactions: {
+                new: number;
+                /** Format: int64 */
+                duplicates: number;
+                /** Format: int64 */
+                errors: number;
+            };
+            groups: {
+                created: number;
+                reused: number;
+            };
+            labels: components["schemas"]["LegacyMatchReport"];
+            overrides: components["schemas"]["LegacyMatchReport"];
+            budgets: {
+                set: number;
+                skipped: string[];
+            };
+            opening?: {
+                /** Format: uuid */
+                accountId: string;
+                accountName: string;
+                /** Format: int64 */
+                amountMinor: number;
+            };
+            /** @enum {string} */
+            investments: "imported" | "kept" | "none";
+            chats: {
+                imported: number;
+                skipped: number;
+            };
+            unknownKeys: string[];
+        };
+        LegacyMatchReport: {
+            matched: number;
+            unmatched: number;
+            /** @description The first 50 legacy keys that found no transaction. */
+            examples: {
+                /** @description The group */
+                what: string;
+                /** @description The legacy key with its date as yyyy-mm-dd. */
+                key: string;
+                reason: string;
+            }[];
+        };
         /**
          * @description Stable machine-readable error code.
          * @enum {string}
          */
-        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "internal";
+        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "internal";
         FieldError: {
             /** @description Dotted path of the offending field, e.g. `mapping.amount`. */
             field: string;
@@ -2581,6 +2714,79 @@ export interface operations {
                 };
                 content: {
                     "application/zip": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listLegacyImports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 10 runs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyImport"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createLegacyImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** @description JSON document (PLAN §4.10). */
+                    manifest: string;
+                    file?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyImport"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getLegacyImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyImport"];
                 };
             };
             default: components["responses"]["Problem"];

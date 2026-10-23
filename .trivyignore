@@ -1,0 +1,9 @@
+# Accepted vulnerabilities, read by every Trivy scan (CI image job, release). Each entry needs a
+# reason and an expiry (exp:YYYY-MM-DD); after it the scan fails again. This file must be empty at
+# the Phase 17 security gate, before the public demo (docs/PROGRESS.md, Follow-ups).
+
+# brotli-libs 1.2.0-r1 in nginxinc/nginx-unprivileged:1.30.6-alpine (web image), fixed in 1.2.1-r0;
+# the base image hasn't been rebuilt yet. Not reachable in our image: nginx doesn't link libbrotli,
+# only the image_filter module (not loaded) and libcurl (unused; the healthcheck is busybox wget) do.
+# Remove when Renovate bumps the base digest. Accepted by our Product Engineer on 2026-10-23.
+CVE-2026-111497 exp:2026-10-30

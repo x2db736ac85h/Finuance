@@ -23,6 +23,9 @@ func isJSSpace(r rune) bool {
 // jsTrim is String.prototype.trim().
 func jsTrim(s string) string { return strings.TrimFunc(s, isJSSpace) }
 
+// JSTrim is String.prototype.trim(), for other ports of legacy code (the legacy migration).
+func JSTrim(s string) string { return jsTrim(s) }
+
 // jsCollapse is s.replace(/\s+/g, ' '): every run of JS whitespace becomes one space (no trim).
 func jsCollapse(s string) string {
 	if !needsCollapse(s) {

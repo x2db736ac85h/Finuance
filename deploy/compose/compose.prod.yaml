@@ -1,19 +1,174 @@
-# Production overlay: only web is reachable from outside; the database, the API and the admin
-# ports stay on the Compose network. Put TLS (and HSTS) in front of web, e.g. a reverse proxy.
+# Production stack with the released images (PLAN task 14.7). It needs only this file and a .env
+# next to it (see finuance.env.example in the release):
 #
-#   docker compose --env-file .env -f deploy/compose/compose.yaml -f deploy/compose/compose.prod.yaml up -d
+#   docker compose --env-file .env -f compose.prod.yaml up -d
+#
+# Only web is published (on 127.0.0.1:8000 by default; FINUANCE_WEB_BIND=0.0.0.0 to listen on every
+# interface). Put a TLS reverse proxy in front: production mode sends secure cookies only. The
+# database bootstrap below is a copy of deploy/db/ (`make check` keeps them in sync).
+name: finuance
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+x-backend: &backend
+  image: ghcr.io/x2db736ac85h/finuance-api:${FINUANCE_VERSION:?set FINUANCE_VERSION in .env, e.g. 0.1.0}
+
 services:
   db:
-    ports: !reset []
+    image: postgres:18.6-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: postgres
+      FINUANCE_OWNER_PASSWORD: ${FINUANCE_OWNER_PASSWORD:?set FINUANCE_OWNER_PASSWORD in .env}
+      FINUANCE_APP_PASSWORD: ${FINUANCE_APP_PASSWORD:?set FINUANCE_APP_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql
+    configs:
+      - source: bootstrap-sql
+        target: /finuance/bootstrap.sql
+      - source: bootstrap-sh
+        target: /docker-entrypoint-initdb.d/00-bootstrap.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d finuance"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  migrate:
+    <<: *backend
+    command: ["migrate", "up"]
+    environment:
+      FINUANCE_MIGRATE_DATABASE_URL: postgres://finuance_owner:${FINUANCE_OWNER_PASSWORD}@db:5432/finuance?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   api:
-    ports: !reset []
+    <<: [*backend, *hardening]
+    command: ["serve"]
     environment:
       FINUANCE_ENV: prod
+      FINUANCE_LOG_LEVEL: ${FINUANCE_LOG_LEVEL:-info}
+      FINUANCE_PUBLIC_ORIGIN: ${FINUANCE_PUBLIC_ORIGIN:?set FINUANCE_PUBLIC_ORIGIN in .env, e.g. https://finance.example.com}
+      FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
       FINUANCE_COOKIE_SECURE: "true"
+      FINUANCE_ALLOW_SIGNUP: ${FINUANCE_ALLOW_SIGNUP:-false}
+      FINUANCE_TRUSTED_PROXIES: ${FINUANCE_TRUSTED_PROXIES:-172.16.0.0/12}
+      FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      FINUANCE_AI_BASE_URL: ${FINUANCE_AI_BASE_URL:-}
+      FINUANCE_AI_API: ${FINUANCE_AI_API:-}
+      FINUANCE_AI_API_KEY: ${FINUANCE_AI_API_KEY:-}
+      FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
+      FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/finuance", "healthcheck"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
   worker:
-    ports: !reset []
+    <<: [*backend, *hardening]
+    command: ["worker"]
     environment:
       FINUANCE_ENV: prod
+      FINUANCE_LOG_LEVEL: ${FINUANCE_LOG_LEVEL:-info}
+      FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
+      FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      FINUANCE_HTTP_ADDR: ":9090"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/finuance", "healthcheck"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
   web:
-    ports: !override
-      - "${FINUANCE_WEB_BIND:-0.0.0.0}:${FINUANCE_WEB_PORT:-8000}:8080"
+    <<: *hardening
+    image: ghcr.io/x2db736ac85h/finuance-web:${FINUANCE_VERSION}
+    environment:
+      FINUANCE_API_UPSTREAM: api:8080
+    ports:
+      - "${FINUANCE_WEB_BIND:-127.0.0.1}:${FINUANCE_WEB_PORT:-8000}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    restart: unless-stopped
+    tmpfs: ["/etc/nginx/conf.d:uid=101,gid=101", "/tmp:uid=101,gid=101"]
+
+volumes:
+  db-data:
+
+configs:
+  # deploy/db/bootstrap.sql
+  bootstrap-sql:
+    content: |
+      -- Finuance database bootstrap: roles, database, extensions, default privileges.
+      -- Run ONCE as a superuser. This is not a goose migration (it needs superuser rights).
+      -- Passwords are injected by the runner as psql variables:
+      --   psql -v ON_ERROR_STOP=1 -v owner_password=… -v app_password=… -f bootstrap.sql
+      -- In Compose, deploy/db/initdb/00-bootstrap.sh does this; on k8s, CloudNativePG managed roles replace the CREATE ROLE lines.
+
+      CREATE ROLE finuance_owner LOGIN PASSWORD :'owner_password';   -- owns schema, runs migrations
+      CREATE ROLE finuance_app   LOGIN PASSWORD :'app_password';     -- used by api + worker; subject to RLS
+      CREATE DATABASE finuance OWNER finuance_owner;
+
+      -- Only the two Finuance roles may connect.
+      REVOKE ALL ON DATABASE finuance FROM PUBLIC;
+      GRANT CONNECT, TEMPORARY ON DATABASE finuance TO finuance_owner, finuance_app;
+
+      \connect finuance
+
+      ALTER SCHEMA public OWNER TO finuance_owner;
+      REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+      CREATE EXTENSION IF NOT EXISTS pg_trgm;
+      CREATE EXTENSION IF NOT EXISTS citext;
+
+      -- Let LIKE serve as an index condition under row-level security (Phase 7, our Product Engineer's decision; docs/perf.md).
+      -- PostgreSQL only uses leakproof operators in index scans on RLS tables. textlike can raise an error
+      -- only for a malformed pattern, never because of the row's value, so it can't reveal other users'
+      -- rows. The flag lives in this database's catalog: repeat it after a dump/restore into a new cluster.
+      ALTER FUNCTION pg_catalog.textlike(text, text) LEAKPROOF;
+
+      GRANT USAGE ON SCHEMA public TO finuance_app;
+      ALTER DEFAULT PRIVILEGES FOR ROLE finuance_owner IN SCHEMA public
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO finuance_app;
+      ALTER DEFAULT PRIVILEGES FOR ROLE finuance_owner IN SCHEMA public
+        GRANT USAGE, SELECT ON SEQUENCES TO finuance_app;
+  # deploy/db/initdb/00-bootstrap.sh ($ doubled for Compose)
+  bootstrap-sh:
+    content: |
+      #!/usr/bin/env bash
+      # Runs once, from /docker-entrypoint-initdb.d/, when the Postgres volume is first created.
+      # Passes the Finuance role passwords from env into deploy/db/bootstrap.sql as psql variables.
+      set -euo pipefail
+
+      : "$${FINUANCE_OWNER_PASSWORD:?FINUANCE_OWNER_PASSWORD must be set}"
+      : "$${FINUANCE_APP_PASSWORD:?FINUANCE_APP_PASSWORD must be set}"
+
+      psql -v ON_ERROR_STOP=1 \
+        --username "$$POSTGRES_USER" --dbname postgres \
+        -v owner_password="$$FINUANCE_OWNER_PASSWORD" \
+        -v app_password="$$FINUANCE_APP_PASSWORD" \
+        -f /finuance/bootstrap.sql

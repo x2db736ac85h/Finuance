@@ -129,6 +129,9 @@ func NewChats(st *store.Store, clock platform.Clock, maxChats int) *Chats {
 	return &Chats{st: st, clock: clock, maxChats: maxChats}
 }
 
+// Limit is the most chats a user keeps (FINUANCE_AI_MAX_CHATS); creating one more drops the oldest.
+func (c *Chats) Limit() int { return c.maxChats }
+
 // Settings returns the user's settings (the defaults before the first save).
 func (c *Chats) Settings(ctx context.Context, userID uuid.UUID) (Settings, error) {
 	var s Settings

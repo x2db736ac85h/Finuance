@@ -43,6 +43,7 @@ cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {
 | `ingest`, `money` | Pure parsing and normalisation (Phase 3): bytes in, staged rows out. No database, no clock. |
 | `store` | The database: the pool, migrations, sqlc queries (`store/queries/*.sql` → `store/db`), and the only entry points to user data (`WithUser`, `WithUserReadOnly`, `WithoutUser`). |
 | `ledger` | Accounts, categories, groups, imports, transactions, annotations, budgets and profiles. Every method runs through `WithUser` and returns domain types, never sqlc rows. |
+| `legacyimport` | Migration of single-file app backups (Phase 14, ADR 0016): rebuilds the legacy tables and keys, runs each file through the import pipeline, moves labels, duplicate decisions, budgets, investments and chats, writes the report. |
 | `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. |
 
 A guard test (`store/guard_test.go`) parses every non-test file outside `internal/store`. It fails on direct `Query`/`Exec`/`Begin` calls, and on building a sqlc querier (`db.New`) that would bypass `WithUser`.

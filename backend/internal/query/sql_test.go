@@ -591,3 +591,41 @@ func TestDuplicatesSkippedFormula(t *testing.T) {
 	}
 	check("after deleting A")
 }
+
+// TestWindowWithStaleStatistics: a user who arrived after the last ANALYZE is estimated at one row.
+// The window (ORDER BY … LIMIT) must still run once, not once per row of the user (the Phase 14
+// E2E found a filtered 917-row window taking seconds on a fresh database before autoanalyze ran).
+func TestWindowWithStaleStatistics(t *testing.T) {
+	e := newEnv(t)
+	owner := testutil.Require(t, testDB).Owner
+	exec := func(sql string) {
+		t.Helper()
+		if _, err := owner.Exec(e.ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("ALTER TABLE transactions SET (autovacuum_enabled = false)")
+	t.Cleanup(func() { exec("ALTER TABLE transactions RESET (autovacuum_enabled)") })
+	content := fixture(t, "fixtures/demo/demo-legacy.csv")
+	e.importFile(e.user(), "Earlier", content)
+	// every user so far is in the most-common-values list, so a later user is estimated at ~0 rows
+	exec("ANALYZE transactions, categories, accounts")
+	u := e.user()
+	acc := e.importFile(u, "Later", content)
+
+	ctx := query.Context{AccountIDs: []uuid.UUID{acc.ID}, Filters: []query.Filter{{Column: "category", Cond: "=Rachunki"}}}
+	for _, req := range []query.PageRequest{{Context: ctx, Limit: 200}, {Context: ctx, Limit: 200, Offset: 5}} {
+		plans, err := e.q.Explain(e.ctx, u, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, line := range strings.Split(plans["rows"], "\n") {
+			if strings.Contains(line, "Limit") && !strings.Contains(line, "loops=1)") {
+				t.Fatalf("the window runs more than once:\n%s", plans["rows"])
+			}
+		}
+		if p := e.page(u, req); p.Total == 0 || len(p.Rows) == 0 {
+			t.Fatalf("no rows for %+v", req)
+		}
+	}
+}

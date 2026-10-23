@@ -194,6 +194,25 @@ type InvestmentProfile struct {
 	UpdatedAt        time.Time
 }
 
+type LegacyImport struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	Status     string
+	Manifest   []byte
+	Progress   []byte
+	Report     []byte
+	Error      *string
+	CreatedAt  time.Time
+	FinishedAt *time.Time
+}
+
+type LegacyImportFile struct {
+	LegacyImportID uuid.UUID
+	Position       int32
+	UserID         uuid.UUID
+	Content        []byte
+}
+
 type Session struct {
 	TokenHash  []byte
 	UserID     uuid.UUID

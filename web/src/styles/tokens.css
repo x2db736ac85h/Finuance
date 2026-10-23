@@ -17,8 +17,9 @@
   --line: rgba(255, 255, 255, 0.045);
   --text: #d6d6d9;
   --text-2: #a3a3aa;
-  --muted: #6e6e77;
-  --accent: #8b7cf6;
+  --muted: #919198; /* legacy #6e6e77: raised to 4.5:1 on every surface (WCAG AA, Phase 14) */
+  --accent: #9789f7; /* legacy #8b7cf6: 4.5:1 as text on the selected-row tint */
+  --accent-solid: #6d5ce7; /* filled buttons with white text (4.8:1) */
   --accent-soft: rgba(139, 124, 246, 0.16);
   --hover: rgba(255, 255, 255, 0.035);
   --hover-strong: rgba(255, 255, 255, 0.07);
@@ -65,14 +66,15 @@
   --line: #f0f0f3;
   --text: #1d1d21;
   --text-2: #55555e;
-  --muted: #8e8e97;
-  --accent: #6d5ce7;
+  --muted: #68686e; /* legacy #8e8e97: raised to 4.5:1 on every surface (WCAG AA, Phase 14) */
+  --accent: #6354d2; /* legacy #6d5ce7: 4.5:1 as text on grey surfaces */
+  --accent-solid: #6354d2;
   --accent-soft: rgba(109, 92, 231, 0.1);
   --hover: rgba(0, 0, 0, 0.025);
   --hover-strong: rgba(0, 0, 0, 0.05);
   --sel: rgba(109, 92, 231, 0.1);
   --neg: #c5372c;
-  --pos: #1e8e3e;
+  --pos: #1a7a35; /* legacy #1e8e3e: 4.5:1 on grey surfaces */
   --mark: rgba(250, 204, 21, 0.45);
   --c-num: #0070c1;
   --c-date: #795e26;

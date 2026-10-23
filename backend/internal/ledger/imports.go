@@ -203,7 +203,11 @@ func (l *Ledger) ImportRowsPage(ctx context.Context, userID, importID uuid.UUID,
 			row := Row{RowIndex: int(r.RowIndex), BookedOn: r.BookedOn, ValueOn: r.ValueOn, AmountMinor: r.AmountMinor,
 				Currency: deref(r.Currency), Payee: deref(r.Payee), Description: deref(r.Description), Reference: deref(r.Reference),
 				TxType: deref(r.TxType), BankCategory: deref(r.BankCategory), CounterpartyAccount: deref(r.CounterpartyAccount),
-				BalanceMinor: r.BalanceAfterMinor, Error: deref(r.ParseError), Duplicate: r.Duplicate, TransactionID: r.TransactionID}
+				BalanceMinor: r.BalanceAfterMinor, Error: deref(r.ParseError), Duplicate: r.Duplicate, TransactionID: r.TransactionID,
+				Fingerprint: r.Fingerprint}
+			if r.Occurrence != nil {
+				row.Occurrence = int(*r.Occurrence)
+			}
 			if row.Raw, err = decodeRaw(r.Raw); err != nil {
 				return err
 			}

@@ -240,9 +240,19 @@ func pageSQL(r *resolved, stat string, o order, offset, limit int) (totals, rows
 	if err != nil {
 		return "", "", nil, nil, err
 	}
-	rows = "SELECT " + rowColumns + " FROM " + from + " WHERE t.id IN (SELECT t.id FROM " + source(rc.joins(o.join)...) +
-		" WHERE " + scoped + " ORDER BY " + o.sql + " OFFSET " + rc.Add(offset) + " LIMIT " + rc.Add(limit) + ") ORDER BY " + o.sql
+	rows = windowFirst(source(rc.joins(o.join)...)+" WHERE "+scoped+" ORDER BY "+o.sql+
+		" OFFSET "+rc.Add(offset)+" LIMIT "+rc.Add(limit), rowColumns, o.sql)
 	return totals, rows, c.Args, rc.Args, nil
+}
+
+// windowFirst is the late row lookup: the window's ids (window is "<source> WHERE … ORDER BY …
+// LIMIT …") are found once, in a materialised CTE, and only those rows are joined to the display
+// columns. Written as "t.id IN (SELECT … LIMIT …)", the planner may run the window once per row
+// when its statistics predate the user (estimate: 1 row), which made a 917-row account's filtered
+// window take seconds until autoanalyze caught up (found by the Phase 14 E2E on a fresh database).
+func windowFirst(window, columns, orderBy string) string {
+	return "WITH w AS MATERIALIZED (SELECT t.id FROM " + window + ") SELECT " + columns + " FROM " + from +
+		" WHERE t.id IN (SELECT id FROM w) ORDER BY " + orderBy
 }
 
 // Explain runs EXPLAIN (ANALYZE, BUFFERS) on the statements of a page request, read-only, and

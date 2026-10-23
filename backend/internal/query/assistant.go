@@ -49,9 +49,9 @@ func (in *Insight) ToolRows(sort string, limit int) ([]ToolRow, error) {
 	if !ok {
 		o = toolSorts["date_desc"]
 	}
-	rows, err := in.tx.Query(in.ctx, "SELECT t.booked_on, t.amount_minor, t.currency, t.payee, t.description, coalesce(c.name, ''),"+
-		" t.tx_type, coalesce(g.name, ''), a.name FROM "+from+" WHERE t.id IN (SELECT t.id FROM "+source(c.joins()...)+
-		" WHERE "+w+" ORDER BY "+o+" LIMIT "+c.Add(limit)+") ORDER BY "+o, c.Args...)
+	rows, err := in.tx.Query(in.ctx, windowFirst(source(c.joins()...)+" WHERE "+w+" ORDER BY "+o+" LIMIT "+c.Add(limit),
+		"t.booked_on, t.amount_minor, t.currency, t.payee, t.description, coalesce(c.name, ''), t.tx_type, coalesce(g.name, ''), a.name", o),
+		c.Args...)
 	if err != nil {
 		return nil, err
 	}

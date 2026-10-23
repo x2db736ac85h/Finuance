@@ -118,6 +118,13 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if _, err := q.InsertAssistantMessage(ctx, db.InsertAssistantMessageParams{ChatID: chat.ID, UserID: u, Role: "user", Content: "Q", Now: now}); err != nil {
 			return fmt.Errorf("assistant message: %w", err)
 		}
+		run, err := q.CreateLegacyImport(ctx, db.CreateLegacyImportParams{ID: platform.NewID(), UserID: u, Manifest: []byte(`{}`), Progress: []byte(`{}`), Now: now})
+		if err != nil {
+			return fmt.Errorf("legacy import: %w", err)
+		}
+		if err := q.AddLegacyImportFile(ctx, db.AddLegacyImportFileParams{LegacyImportID: run.ID, Position: 0, UserID: u, Content: []byte("x")}); err != nil {
+			return fmt.Errorf("legacy import file: %w", err)
+		}
 		return nil
 	})
 	if err != nil {

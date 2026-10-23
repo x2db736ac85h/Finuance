@@ -29,6 +29,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -94,7 +95,8 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	svc := auth.New(st, clk, auth.Config{Params: auth.Params{MemoryKiB: 8 * 1024, Time: 1, Threads: 1},
 		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: true})
 	led := ledger.New(st, platform.SystemClock{})
-	rc := &river.Config{Workers: jobs.Workers(jobs.Deps{Sessions: svc, Ledger: led})}
+	legacy := legacyimport.New(st, led, assistant.NewChats(st, platform.SystemClock{}, 25), platform.SystemClock{})
+	rc := &river.Config{Workers: jobs.Workers(jobs.Deps{Sessions: svc, Ledger: led, Migrator: legacy})}
 	if withWorkers {
 		rc.Queues = map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}}
 		rc.FetchCooldown, rc.FetchPollInterval = 20*time.Millisecond, 50*time.Millisecond
@@ -116,7 +118,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc,
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy,
 		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
 			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, clk, nil)})})
 	if err != nil {
@@ -531,6 +533,13 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 			return err
 		}
 		if _, err := q.CreateInvestmentPosition(ctx, db.CreateInvestmentPositionParams{ID: platform.NewID(), UserID: u, Name: "ETF", Now: now}); err != nil {
+			return err
+		}
+		run, err := q.CreateLegacyImport(ctx, db.CreateLegacyImportParams{ID: platform.NewID(), UserID: u, Manifest: []byte(`{}`), Progress: []byte(`{}`), Now: now})
+		if err != nil {
+			return err
+		}
+		if err := q.AddLegacyImportFile(ctx, db.AddLegacyImportFileParams{LegacyImportID: run.ID, Position: 0, UserID: u, Content: []byte("x")}); err != nil {
 			return err
 		}
 		_, err = q.SavePreferences(ctx, db.SavePreferencesParams{UserID: u, Prefs: []byte(`{}`), Now: now})

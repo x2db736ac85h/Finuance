@@ -293,7 +293,7 @@ export function categoriesParts(d: InsightCategories, env: ChartEnv): ChartParts
     },
     body:
       env.catMode === 'bars' ? (
-        <div className="hbars">
+        <div className="hbars" tabIndex={0} role="region" aria-label="Spending by category, list">
           {ents.map((e) => (
             <Bar key={e.name} e={e} max={max} cur={d.currency} on={active === e.name} env={env} />
           ))}

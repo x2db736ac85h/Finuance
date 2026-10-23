@@ -22,6 +22,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -92,6 +93,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
 		Auth: authSvc, Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
+		Legacy: legacyimport.New(c.store, led, nil, platform.SystemClock{}),
 		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
 			MaxChats: cfg.AIMaxChats, MaxConcurrent: cfg.AIMaxConcurrent, Metrics: assistant.NewMetrics(c.metrics.Registry),
 			Tracer: c.tracing.Provider, Logger: log}),
@@ -113,12 +115,14 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 		return err
 	}
 	defer c.close(ctx)
+	led := ledger.New(c.store, platform.SystemClock{})
+	chats := assistant.NewChats(c.store, platform.SystemClock{}, cfg.AIMaxChats)
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
 		Logger: log,
 		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
-		Workers: jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg), Ledger: ledger.New(c.store, platform.SystemClock{}),
-			Chats:   assistant.NewChats(c.store, platform.SystemClock{}, cfg.AIMaxChats),
-			Metrics: jobs.NewImportMetrics(c.metrics.Registry)}),
+		Workers: jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg), Ledger: led, Chats: chats,
+			Migrator: legacyimport.New(c.store, led, chats, platform.SystemClock{}),
+			Metrics:  jobs.NewImportMetrics(c.metrics.Registry)}),
 		PeriodicJobs: jobs.PeriodicJobs(),
 	})
 	if err != nil {
