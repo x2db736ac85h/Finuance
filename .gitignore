@@ -39,3 +39,6 @@ blob-report/
 # tools/perf/grid.mjs writes its result next to where it runs
 /perf-grid.json
 /perf-overview.json
+
+# tools/rehearsal.sh work directory (kubeconfig, throwaway CA and keys, k6 output)
+/.rehearsal/

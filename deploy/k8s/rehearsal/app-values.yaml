@@ -1,0 +1,25 @@
+# The app chart in the rehearsal: the CI-built images (loaded into kind), HTTPS through Traefik on
+# https://localhost:8443 with a throwaway CA, sign-up on (the smoke scripts sign up), and the
+# assistant pointed at the mock model server in the llm namespace.
+image:
+  registry: ghcr.io/x2db736ac85h
+  tag: rehearsal
+  pullPolicy: Never
+publicOrigin: https://localhost:8443
+ingress:
+  host: localhost
+  tls:
+    mode: secret
+    secretName: finuance-tls
+allowSignup: true
+# kind's pod CIDR (Traefik's pods)
+trustedProxies: "10.244.0.0/16"
+assistant:
+  enabled: true
+  connectionsFile: |
+    {"connections":[{"name":"mock","label":"Mock model","api":"openai","baseUrl":"http://llmmock.llm.svc.cluster.local:11434/v1","defaultModel":"mock-tools"}]}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: llm }
+      ports: [11434]

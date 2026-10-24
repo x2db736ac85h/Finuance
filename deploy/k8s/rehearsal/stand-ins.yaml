@@ -1,0 +1,96 @@
+# Stand-ins for what the homelab has outside the app: an S3-compatible store for the backups
+# (RustFS, as in the Barman Cloud plugin's docs) and the mock model server instead of LM Studio.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: s3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rustfs
+  namespace: s3
+stringData:
+  RUSTFS_ACCESS_KEY: rehearsal
+  RUSTFS_SECRET_KEY: rehearsal-secret-key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  namespace: s3
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: rustfs }
+  template:
+    metadata:
+      labels: { app: rustfs }
+    spec:
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.1
+          args: ["/data"]
+          envFrom:
+            - secretRef: { name: rustfs }
+          ports:
+            - { name: s3, containerPort: 9000 }
+          readinessProbe:
+            tcpSocket: { port: s3 }
+            periodSeconds: 2
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: logs, mountPath: /logs }
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: s3
+spec:
+  selector: { app: rustfs }
+  ports:
+    - { name: s3, port: 9000, targetPort: s3 }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llm
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llmmock
+  namespace: llm
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: llmmock }
+  template:
+    metadata:
+      labels: { app: llmmock }
+    spec:
+      containers:
+        - name: llmmock
+          image: finuance-llmmock:rehearsal
+          imagePullPolicy: Never
+          ports:
+            - { name: http, containerPort: 11434 }
+          readinessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmmock
+  namespace: llm
+spec:
+  selector: { app: llmmock }
+  ports:
+    - { name: http, port: 11434, targetPort: http }

@@ -1,0 +1,14 @@
+# Traefik in kube-system, as k3s runs it; HTTPS on NodePort 30443 (kind.yaml maps it to the host).
+service:
+  spec:
+    type: NodePort
+ports:
+  web:
+    expose:
+      default: false
+  websecure:
+    nodePort: 30443
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+  name: traefik

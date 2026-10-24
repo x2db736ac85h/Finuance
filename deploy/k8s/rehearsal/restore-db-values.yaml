@@ -1,0 +1,19 @@
+# The restore drill: a one-instance cluster in finuance-restore from finuance-db's backups. It
+# doesn't archive (a scratch copy); in a real switch-over it would, into a new folder.
+cluster:
+  instances: 1
+  storage:
+    size: 1Gi
+    storageClass: standard
+  resources:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 768Mi }
+objectStore:
+  destinationPath: s3://finuance-backups/
+  endpointURL: http://rustfs.s3.svc.cluster.local:9000
+  credentialsSecret: finuance-db-backup
+backup:
+  enabled: false
+recovery:
+  enabled: true
+  serverName: finuance-db

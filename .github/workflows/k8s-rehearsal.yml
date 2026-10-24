@@ -1,0 +1,76 @@
+# The deployment rehearsal (PLAN task 16.6): tools/rehearsal.sh on a throwaway kind cluster, from
+# images built from the pushed commit. It runs on demand, every night, and on pushes that change
+# the deployment. The cloud session that builds Finuance can't pull the CloudNativePG, cert-manager
+# or Barman Cloud images (ghcr.io, quay.io), so this job is where the cluster-side manifests meet a
+# real cluster before the homelab rollout (Phase 18). Its timings (RPO/RTO) are in the job summary
+# and in docs/RUNBOOK.md.
+name: k8s-rehearsal
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+  push:
+    branches: [main, "phase/**"]
+    paths:
+      - "deploy/**"
+      - "tools/rehearsal.sh"
+      - "tools/seal-secrets.sh"
+      - "scripts/*-smoke.sh"
+      - ".github/workflows/k8s-rehearsal.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k8s-rehearsal-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HELM_VERSION: v3.18.4
+  KIND_VERSION: v0.29.0
+  KUBESEAL_VERSION: v0.40.0
+  YQ_VERSION: v4.54.1
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Tools (helm, kind, kubeseal, yq; kubectl comes with the runner)
+        run: |
+          go install "helm.sh/helm/v3/cmd/helm@${HELM_VERSION}"
+          go install "sigs.k8s.io/kind@${KIND_VERSION}"
+          go install "github.com/bitnami/sealed-secrets/cmd/kubeseal@${KUBESEAL_VERSION}"
+          go install "github.com/mikefarah/yq/v4@${YQ_VERSION}"
+          echo "YQ=$(go env GOPATH)/bin/yq" >> "$GITHUB_ENV"
+          kubectl version --client
+      - name: Images from this commit
+        run: tools/rehearsal.sh images
+      - name: kind cluster
+        run: tools/rehearsal.sh cluster
+      - name: Platform (Traefik, cert-manager, CloudNativePG, Barman Cloud plugin, Sealed Secrets, stand-ins)
+        run: tools/rehearsal.sh platform
+      - name: Deploy the database and the app
+        run: tools/rehearsal.sh deploy
+      - name: Smoke scripts through the ingress
+        run: tools/rehearsal.sh smoke
+      - name: NetworkPolicies
+        run: tools/rehearsal.sh netpol
+      - name: Assistant stream through Traefik
+        run: tools/rehearsal.sh sse
+      - name: Pod kills under load (k6, zero failed requests)
+        run: tools/rehearsal.sh podkill
+      - name: Backup, restore into a scratch namespace, smoke
+        run: tools/rehearsal.sh restore
+      - name: Summary (RPO/RTO and timings)
+        if: always()
+        run: tools/rehearsal.sh summary
+      - name: Diagnostics
+        if: failure()
+        run: tools/rehearsal.sh diagnostics

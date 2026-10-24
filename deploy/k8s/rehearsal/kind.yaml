@@ -1,0 +1,14 @@
+# The throwaway cluster of the deployment rehearsal (PLAN task 16.6; tools/rehearsal.sh).
+# Three nodes, so the api's and the database's pods spread and a pod kill moves work elsewhere.
+# Traefik's HTTPS NodePort (30443) is reachable on the host as https://localhost:8443.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30443
+        hostPort: 8443
+        listenAddress: 127.0.0.1
+        protocol: TCP
+  - role: worker
+  - role: worker

@@ -49,6 +49,12 @@ spec:
           livenessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 10
+          # Keep serving while Traefik drops the pod from its endpoints; nginx then stops
+          # gracefully (the image's stop signal is SIGQUIT).
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ .Values.web.preStopSleep }}
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
           securityContext:

@@ -1,0 +1,15 @@
+# The database chart in the rehearsal: 2 instances on kind's storage class, backups to RustFS.
+cluster:
+  instances: 2
+  storage:
+    size: 1Gi
+    storageClass: standard
+  resources:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 768Mi }
+objectStore:
+  destinationPath: s3://finuance-backups/
+  endpointURL: http://rustfs.s3.svc.cluster.local:9000
+  credentialsSecret: finuance-db-backup
+backup:
+  enabled: true
