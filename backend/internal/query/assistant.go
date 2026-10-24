@@ -3,6 +3,7 @@ package query
 import (
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -20,6 +21,7 @@ const fileOrder = "t.booked_on DESC, t.seq ASC"
 
 // ToolRow is one transaction as the assistant's search returns it.
 type ToolRow struct {
+	ID          uuid.UUID
 	BookedOn    platform.Date
 	AmountMinor int64
 	Currency    string
@@ -50,7 +52,7 @@ func (in *Insight) ToolRows(sort string, limit int) ([]ToolRow, error) {
 		o = toolSorts["date_desc"]
 	}
 	rows, err := in.tx.Query(in.ctx, windowFirst(source(c.joins()...)+" WHERE "+w+" ORDER BY "+o+" LIMIT "+c.Add(limit),
-		"t.booked_on, t.amount_minor, t.currency, t.payee, t.description, coalesce(c.name, ''), t.tx_type, coalesce(g.name, ''), a.name", o),
+		"t.id, t.booked_on, t.amount_minor, t.currency, t.payee, t.description, coalesce(c.name, ''), t.tx_type, coalesce(g.name, ''), a.name", o),
 		c.Args...)
 	if err != nil {
 		return nil, err
@@ -58,7 +60,7 @@ func (in *Insight) ToolRows(sort string, limit int) ([]ToolRow, error) {
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (ToolRow, error) {
 		var x ToolRow
 		var d pgtype.Date
-		err := r.Scan(&d, &x.AmountMinor, &x.Currency, &x.Payee, &x.Description, &x.Category, &x.TxType, &x.Group, &x.Account)
+		err := r.Scan(&x.ID, &d, &x.AmountMinor, &x.Currency, &x.Payee, &x.Description, &x.Category, &x.TxType, &x.Group, &x.Account)
 		x.BookedOn = *dateOf(d)
 		return x, err
 	})

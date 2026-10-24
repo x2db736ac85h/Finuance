@@ -5,7 +5,7 @@
 // its own origin. The mock (testutil/llmmock) turns a "quoted" word into a search for it.
 import { expect, test, type Page } from '@playwright/test';
 
-import { importViaApi, signUp } from './helpers';
+import { API_HEADERS, importViaApi, signUp } from './helpers';
 
 /** Every request the page makes goes to its own origin; page errors fail the test. */
 function watch(page: Page, base: string): { foreign: string[]; errors: string[] } {
@@ -99,4 +99,33 @@ test('says so when no model is configured', async ({ page }) => {
   const panel = page.getByRole('complementary', { name: 'Assistant' });
   await expect(panel.getByRole('heading', { name: 'The assistant isn’t set up' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Question' })).toBeHidden();
+});
+
+test('a proposal changes nothing until Apply; Apply categorises the rows (PLAN 15.7)', async ({ page, baseURL }) => {
+  const seen = watch(page, baseURL ?? '');
+  const panel = await setup(page);
+  const count = async (cond: string) => {
+    const r = await page.request.post('/api/v1/transactions/query', {
+      headers: API_HEADERS,
+      data: { context: { filters: [{ column: 'category', cond }] }, limit: 1 },
+    });
+    return ((await r.json()) as { total: number }).total;
+  };
+  await ask(page, 'put "OPERATOR INTERNETU" in Internet');
+  const card = panel.getByRole('group', { name: 'Proposed change' });
+  await expect(card).toContainText('Set the category “Internet” for 14 transactions');
+  await expect(card).toContainText('The category is new and is created first.');
+  await expect(panel.getByText(/Nothing has changed yet/)).toBeVisible();
+  expect(await count('=Internet')).toBe(0);
+
+  await card.getByRole('button', { name: 'Apply' }).click();
+  await expect(page.getByText('Applied to 14 transactions')).toBeVisible();
+  await expect(card).toContainText('✓ Applied');
+  await expect.poll(() => count('=Internet')).toBe(14);
+  // the table shows the new category without a reload
+  await card.getByRole('button', { name: 'Show in table' }).click();
+  await expect(page.locator('tr[data-i]')).toHaveCount(14);
+  await expect(page.locator('tr[data-i]').first()).toContainText('Internet');
+  expect(seen.foreign).toEqual([]);
+  expect(seen.errors).toEqual([]);
 });

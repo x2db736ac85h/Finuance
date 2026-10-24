@@ -59,7 +59,7 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 		}
 		for _, cp := range cats {
 			c := deref(cp)
-			if _, err := q.UpsertCategory(ctx, db.UpsertCategoryParams{ID: platform.NewID(), UserID: userID, Name: truncate(c, maxCategoryName), NameN: nameKey(c)}); err != nil {
+			if err := q.UpsertBankCategory(ctx, db.UpsertBankCategoryParams{ID: platform.NewID(), UserID: userID, Name: truncate(c, maxCategoryName), NameN: nameKey(c)}); err != nil {
 				return err
 			}
 		}

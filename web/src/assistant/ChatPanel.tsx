@@ -22,7 +22,7 @@ import { fmtInt, plural } from '../lib/format';
 import { useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { uiScale } from '../styles/scale';
-import { contextOf } from '../table/context';
+import { contextOf, withoutTransfers } from '../table/context';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
@@ -98,7 +98,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
       q,
       {
         scope: view ? 'view' : 'all',
-        ...(view ? { context: contextOf(viewId, v) } : {}),
+        ...(view ? { context: withoutTransfers(contextOf(viewId, v)) } : {}),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         settings: {
           connection: conn.name,
@@ -281,7 +281,9 @@ export function ChatPanel({ viewId }: { viewId: string }) {
             </div>
           </div>
         ) : (
-          turns.map((t, i) => <TurnView key={i} turn={t} last={i === turns.length - 1} onShow={showInTable} />)
+          turns.map((t, i) => (
+            <TurnView key={i} turn={t} last={i === turns.length - 1} chatId={chatId} onShow={showInTable} />
+          ))
         )}
       </div>
       <form

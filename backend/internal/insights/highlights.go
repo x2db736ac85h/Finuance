@@ -244,17 +244,17 @@ func hlNoSpendDays(o *Overview, days []query.DaySpend) *Highlight {
 
 func hlRecurring(o *Overview) *Highlight {
 	var n int
-	var m int64
-	for _, r := range o.Recurring {
-		if r.Active {
+	var y int64 // the yearly costs; a monthly payment's is 12 × its amount
+	for i := range o.Recurring {
+		if r := &o.Recurring[i]; r.Active {
 			n++
-			m += r.MedianMinor
+			y += r.YearlyMinor
 		}
 	}
 	if n == 0 {
 		return nil
 	}
-	return &Highlight{Kind: HLRecurring, Tone: ToneInfo, Count: n, Amount: m, Other: m * 12}
+	return &Highlight{Kind: HLRecurring, Tone: ToneInfo, Count: n, Amount: y / 12, Other: y}
 }
 
 func hlLargest(o *Overview) *Highlight {

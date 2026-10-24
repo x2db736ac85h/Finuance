@@ -29,6 +29,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
+	"github.com/x2db736ac85h/finuance/backend/internal/rules"
 )
 
 // MaxJSONBody is the default request body limit (docs/PLAN.md §6.1).
@@ -64,6 +65,8 @@ type Deps struct {
 	Assistant *assistant.Assistant
 	// Legacy runs migrations from the single-file app. Nil in tests of the bare server.
 	Legacy *legacyimport.Migrator
+	// Rules stores the categorisation rules. Nil in tests of the bare server.
+	Rules *rules.Service
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -99,7 +102,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	impl := &api{insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

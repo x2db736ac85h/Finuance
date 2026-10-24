@@ -125,6 +125,13 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if err := q.AddLegacyImportFile(ctx, db.AddLegacyImportFileParams{LegacyImportID: run.ID, Position: 0, UserID: u, Content: []byte("x")}); err != nil {
 			return fmt.Errorf("legacy import file: %w", err)
 		}
+		if err := q.SetCategoryAlias(ctx, db.SetCategoryAliasParams{UserID: u, NameN: "jedzenie", CategoryID: &cat.ID}); err != nil {
+			return fmt.Errorf("category alias: %w", err)
+		}
+		if err := q.CreateRule(ctx, db.CreateRuleParams{ID: platform.NewID(), UserID: u, Name: "Kawa", Enabled: true,
+			Match: []byte(`{"search":"kawa"}`), SetCategoryID: &cat.ID, Now: now}); err != nil {
+			return fmt.Errorf("rule: %w", err)
+		}
 		return nil
 	})
 	if err != nil {

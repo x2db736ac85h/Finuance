@@ -202,7 +202,11 @@ func read(req request, anthropic bool) conversation {
 	return c
 }
 
-var quotedRe = regexp.MustCompile(`["“„]([^"”]+)["”]`)
+var (
+	quotedRe = regexp.MustCompile(`["“„]([^"”]+)["”]`)
+	// `put "PAYEE" in Category` proposes a category; `rule "PAYEE" as Category` proposes a rule.
+	proposeRe = regexp.MustCompile(`(?i)^\s*(put|rule)\s+["“„]([^"”]+)["”]\s+(?:in|as)\s+(.+?)\s*$`)
+)
 
 func brain(req request, anthropic bool) Reply {
 	c := read(req, anthropic)
@@ -249,6 +253,13 @@ func brain(req request, anthropic bool) Reply {
 // pick chooses the lookup for a question.
 func pick(question string) Call {
 	q := strings.ToLower(question)
+	if m := proposeRe.FindStringSubmatch(question); m != nil {
+		action := "set_category"
+		if strings.EqualFold(m[1], "rule") {
+			action = "create_rule"
+		}
+		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":%q,"payee":%q,"to_category":%q,"reason":"You asked for it"}`, action, m[2], m[3])}
+	}
 	switch {
 	case strings.Contains(q, "by category"):
 		return Call{Name: "aggregate_transactions", Arguments: `{"group_by":"category","type":"expense"}`}
@@ -275,6 +286,9 @@ func answer(result string) string {
 		Groups     []map[string]any `json:"groups"`
 		Values     []map[string]any `json:"values"`
 		Error      string           `json:"error"`
+		Status     string           `json:"status"`
+		Action     string           `json:"action"`
+		ToCategory string           `json:"to_category"`
 	}
 	if json.Unmarshal([]byte(result), &r) != nil {
 		return "The lookup returned something I can't read."
@@ -283,6 +297,9 @@ func answer(result string) string {
 	switch {
 	case r.Error != "":
 		fmt.Fprintf(&b, "The lookup failed: %s", r.Error)
+	case r.Status != "":
+		fmt.Fprintf(&b, "I prepared a change for you to review (%s → %s, %d transactions). Nothing has changed yet: use **Apply** on the card.",
+			strings.ReplaceAll(r.Action, "_", " "), r.ToCategory, *r.Matched)
 	case r.Rows != nil:
 		fmt.Fprintf(&b, "Found **%d** matching transactions; spent **%s %s**.\n\n| Date | Payee | Amount |\n|---|---|---:|\n", *r.Matched, r.TotalSpent, r.Currency)
 		for _, row := range r.Rows {

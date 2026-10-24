@@ -9,7 +9,7 @@ import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 import { invalidateData, useAccounts } from '../api/hooks/accounts';
 import { DuplicatesDialog } from '../duplicates/DuplicatesDialog';
 import { configureImports } from '../import/queue';
-import { escapeSelection, moveSelection } from '../table/controller';
+import { escapeSelection, extendSelection, moveSelection } from '../table/controller';
 import { Inspector } from '../table/Inspector';
 import { TableStatus } from '../table/TableStatus';
 import type { User } from '../api/hooks/me';
@@ -104,6 +104,7 @@ export function AppShell({ user }: { user: User }) {
       useUi.getState().setKeysOpen(true);
     },
     move: moveSelection,
+    extend: extendSelection,
     escape: escapeSelection,
   });
 

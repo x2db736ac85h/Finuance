@@ -16,6 +16,7 @@ import { useQueryContext } from './context';
 import { useHead } from './data';
 import { Grid } from './Grid';
 import { cleared } from './chips';
+import { RuleSuggestionCard } from '../rules/RuleSuggestion';
 import { Toolbar } from './Toolbar';
 import { useGridController } from './controller';
 
@@ -85,6 +86,7 @@ export function Table({ viewId, title, icon }: Props) {
         columns={columns}
         visible={visible}
       />
+      <RuleSuggestionCard />
       <Grid
         viewId={viewId}
         q={q}

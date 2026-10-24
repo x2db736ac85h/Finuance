@@ -20,8 +20,10 @@ export type Db = {
   transactions: Schemas['TransactionRow'][];
   duplicatesSkipped: number;
   /** Groups; their stats are computed from `transactions`. */
-  groups: { id: string; name: string; color: number }[];
+  groups: { id: string; name: string; color: number; budgetMinor?: number }[];
   bulks: Schemas['BulkUpdate'][];
+  /** Answers of GET /rules/suggestions. */
+  ruleSuggestions: Schemas['RuleSuggestion'][];
   idRequests: Schemas['IdsRequest'][];
   queries: Schemas['TransactionQuery'][];
   puts: Schemas['Preferences'][];
@@ -74,6 +76,7 @@ export const freshDb = (): Db => ({
   duplicatesSkipped: 0,
   groups: [],
   bulks: [],
+  ruleSuggestions: [],
   idRequests: [],
   queries: [],
   puts: [],
@@ -162,6 +165,7 @@ export const server = setupServer(
     db.insightRequests.push({ name, body: (await request.json()) as Record<string, unknown> });
     return HttpResponse.json(db.insights[name] ?? emptyInsights[name]);
   }),
+  http.get(`${API}/rules/suggestions`, () => authed(() => HttpResponse.json(db.ruleSuggestions))),
   http.get(`${API}/groups`, () => authed(() => HttpResponse.json(db.groups.map(groupOf)))),
   http.post(`${API}/groups`, async ({ request }) => {
     const b = (await request.json()) as Schemas['GroupInput'];
@@ -172,6 +176,7 @@ export const server = setupServer(
       id: `00000000-0000-4000-8000-${String(db.groups.length + 1).padStart(12, '0')}`,
       name: b.name,
       color: b.color ?? 0,
+      ...(b.budgetMinor ? { budgetMinor: b.budgetMinor } : {}),
     };
     db.groups.push(g);
     return HttpResponse.json(groupOf(g), { status: 201 });
@@ -182,10 +187,17 @@ export const server = setupServer(
     if (!g) return problem(404, 'not_found');
     g.name = b.name;
     g.color = b.color ?? g.color;
+    if (b.budgetMinor === 0) delete g.budgetMinor;
+    else if (b.budgetMinor !== undefined) g.budgetMinor = b.budgetMinor;
     db.transactions = db.transactions.map((t) =>
       t.group?.id === g.id ? { ...t, group: { id: g.id, name: g.name } } : t,
     );
     return HttpResponse.json(groupOf(g));
+  }),
+  http.get(`${API}/groups/:id/report`, ({ params }) => {
+    const g = db.groups.find((x) => x.id === params['id']);
+    if (!g) return problem(404, 'not_found');
+    return HttpResponse.json(groupReportOf(g));
   }),
   http.delete(`${API}/groups/:id`, ({ params }) => {
     db.groups = db.groups.filter((g) => g.id !== params['id']);
@@ -195,11 +207,13 @@ export const server = setupServer(
   http.post(`${API}/transactions/bulk`, async ({ request }) => {
     const b = (await request.json()) as Schemas['BulkUpdate'];
     db.bulks.push(b);
-    const g = db.groups.find((x) => x.id === b.set.groupId);
+    const g = b.set && db.groups.find((x) => x.id === b.set?.groupId);
     let updated = 0;
     db.transactions = db.transactions.map((t) => {
       if (!b.ids.includes(t.id)) return t;
       updated++;
+      if (b.transfer) return { ...t, isTransfer: b.transfer === 'yes' };
+      if (b.category) return { ...t, categorySource: b.category.id ? ('manual' as const) : ('bank' as const) };
       return g ? { ...t, group: { id: g.id, name: g.name } } : ungrouped(t);
     });
     return HttpResponse.json({ updated });
@@ -255,15 +269,55 @@ function ungrouped(t: Schemas['TransactionRow']): Schemas['TransactionRow'] {
   return out;
 }
 
-function groupOf(g: { id: string; name: string; color: number }): Schemas['Group'] {
+function groupOf(g: Db['groups'][number]): Schemas['Group'] {
   const rows = db.transactions.filter((t) => t.group?.id === g.id);
   const spent = rows.reduce((n, t) => n + Math.max(0, -t.amount.amountMinor), 0);
   const income = rows.reduce((n, t) => n + Math.max(0, t.amount.amountMinor), 0);
+  const days = rows.map((t) => t.bookedOn).sort();
+  const [first, last] = [days[0], days.at(-1)];
   return {
     ...g,
     count: rows.length,
     spent: { amountMinor: spent, currency: 'PLN' },
     income: { amountMinor: income, currency: 'PLN' },
+    ...(first && last ? { firstOn: first, lastOn: last } : {}),
+  };
+}
+
+/** The group window's report, computed from `transactions` like the server (top 10 payees). */
+function groupReportOf(g: Db['groups'][number]): Schemas['GroupReport'] {
+  const group = groupOf(g);
+  const out = db.transactions.filter((t) => t.group?.id === g.id && t.amount.amountMinor < 0);
+  const sum = (key: (t: Schemas['TransactionRow']) => string) => {
+    const m = new Map<string, { v: number; n: number }>();
+    for (const t of out) {
+      const k = key(t);
+      const e = m.get(k) ?? { v: 0, n: 0 };
+      m.set(k, { v: e.v - t.amount.amountMinor, n: e.n + 1 });
+    }
+    return [...m].sort((a, b) => b[1].v - a[1].v);
+  };
+  const days =
+    group.firstOn && group.lastOn
+      ? Math.round((Date.parse(group.lastOn) - Date.parse(group.firstOn)) / 86_400_000) + 1
+      : 1;
+  const payees = sum((t) => t.payee);
+  return {
+    group,
+    currency: 'PLN',
+    days,
+    avgPerDayMinor: Math.round(group.spent.amountMinor / days),
+    daily: sum((t) => t.bookedOn)
+      .map(([date, e]) => ({ date, spentMinor: e.v, count: e.n }))
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    categories: sum((t) => t.category?.name ?? '').map(([name, e], i) => ({
+      ...(name ? { category: { id: `cat-${name}`, name } } : {}),
+      spentMinor: e.v,
+      share: e.v / group.spent.amountMinor,
+      ...(i < 7 ? { colorSlot: i + 1 } : {}),
+    })),
+    payees: payees.slice(0, 10).map(([payee, e]) => ({ payee, spentMinor: e.v, count: e.n })),
+    payeeCount: payees.length,
   };
 }
 

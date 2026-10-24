@@ -1,7 +1,7 @@
 // Package jobs holds River job arguments, workers and periodic jobs (ADR 0006). Job args carry ids,
 // never user data. Noop proves the queue end to end; CleanupExpiredSessions runs hourly (Phase 5);
 // CommitImport and RematerializeFingerprint are the import pipeline's (Phase 6); LegacyImport
-// migrates a legacy backup (Phase 14).
+// migrates a legacy backup (Phase 14); Reclassify applies rules and finds transfers (Phase 15).
 package jobs
 
 import (
@@ -43,6 +43,7 @@ type Deps struct {
 	Chats    ChatCleaner
 	Ledger   Ledger
 	Migrator Migrator
+	Rules    Reclassifier
 	Metrics  *ImportMetrics // nil: unregistered metrics
 }
 
@@ -60,6 +61,7 @@ func Workers(d Deps) *river.Workers {
 	river.AddWorker(w, &CommitImportWorker{Ledger: d.Ledger, Metrics: m})
 	river.AddWorker(w, &RematerializeFingerprintWorker{Ledger: d.Ledger})
 	river.AddWorker(w, &LegacyImportWorker{Migrator: d.Migrator})
+	river.AddWorker(w, &ReclassifyWorker{Rules: d.Rules})
 	return w
 }
 

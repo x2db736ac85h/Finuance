@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -293,7 +295,7 @@ func TestOverviewTools(t *testing.T) {
 		t.Fatalf("recurring = %s", rec.JSON)
 	}
 	for _, p := range pays {
-		if p.(map[string]any)["active"] != true || p.(map[string]any)["next"] == nil {
+		if p.(map[string]any)["active"] != true || p.(map[string]any)["next"] == nil || p.(map[string]any)["cadence"] != "monthly" {
 			t.Errorf("payment = %v", p)
 		}
 	}
@@ -309,7 +311,8 @@ func TestToolsTenancy(t *testing.T) {
 	e, _ := demoUser(t)
 	other := e.user()
 	tools := NewTools(e.q)
-	for _, c := range []struct{ name, args string }{{ToolSearch, `{}`}, {ToolAggregate, `{"group_by":"payee"}`}, {ToolValues, `{}`}} {
+	for _, c := range []struct{ name, args string }{{ToolSearch, `{}`}, {ToolAggregate, `{"group_by":"payee"}`}, {ToolValues, `{}`},
+		{ToolBudgets, `{}`}, {ToolGroup, `{"group":"Wakacje nad morzem"}`}} {
 		out, err := tools.Run(e.ctx, other, Scope{MaxRows: 50}, c.name, c.args)
 		if err != nil {
 			t.Fatal(err)
@@ -318,4 +321,219 @@ func TestToolsTenancy(t *testing.T) {
 			t.Errorf("%s leaks: %s", c.name, out.JSON)
 		}
 	}
+}
+
+// The budget and group tools (PLAN 15.8) on the demo year.
+func TestBudgetAndGroupTools(t *testing.T) {
+	e, u := demoUser(t)
+	tools := NewTools(e.q)
+	run := func(name, args string, sc Scope) (map[string]any, string) {
+		t.Helper()
+		out, err := tools.Run(e.ctx, u, sc, name, args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return decode(t, []byte(out.JSON)).(map[string]any), out.Summary
+	}
+	sc := Scope{MaxRows: 50}
+
+	// budget_status: the month's categories, worst first; the totals add up
+	b, sum := run(ToolBudgets, `{"month":"2025-02"}`, sc)
+	if b["month"] != "2025-02" || b["partial"] != false || b["spent"] != 5569.62 || !strings.HasPrefix(sum, "budget status · 2025-02 · ") {
+		t.Fatalf("budget_status = %v (%s)", b, sum)
+	}
+	cats := b["categories"].([]any)
+	rank := map[string]int{"over": 0, "ahead": 1, "ok": 2, "none": 3}
+	counts := map[string]int{}
+	var spent float64
+	prev := -1
+	for _, c := range cats {
+		c := c.(map[string]any)
+		st := c["status"].(string)
+		if rank[st] < prev {
+			t.Errorf("order: %v", cats)
+		}
+		prev = rank[st]
+		counts[st]++
+		spent += c["spent"].(float64)
+		if math.Abs(c["left"].(float64)-(c["budget"].(float64)-c["spent"].(float64))) > 0.005 {
+			t.Errorf("left = %v", c)
+		}
+	}
+	if num := func(k string) int { return int(b[k].(float64)) }; num("over_budget") != counts["over"] || num("ahead_of_pace") != counts["ahead"] ||
+		num("on_track") != counts["ok"] || b["omitted_categories"] != float64(0) {
+		t.Errorf("counts %v vs %v", b, counts)
+	}
+	if math.Abs(spent-5569.62) > 0.005 {
+		t.Errorf("categories spend %v", spent)
+	}
+	// the latest month is in progress
+	if cur, _ := run(ToolBudgets, `{}`, sc); cur["month"] != "2025-03" || cur["partial"] != true || cur["days_elapsed"] != float64(17) {
+		t.Errorf("latest = %v", cur)
+	}
+
+	// group_summary: matched ignoring case and accents, or by a unique part of the name
+	stats, err := e.l.GroupStats(e.ctx, u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wak ledger.GroupStat
+	for _, g := range stats {
+		if g.Name == "Wakacje nad morzem" {
+			wak = g
+		}
+	}
+	for _, name := range []string{"Wakacje nad morzem", "WAKACJE  NAD MORZEM", "wakacje"} {
+		g, sum := run(ToolGroup, `{"group":"`+name+`"}`, sc)
+		if g["group"] != "Wakacje nad morzem" || sum != "group summary · Wakacje nad morzem" {
+			t.Fatalf("%q: %v", name, g)
+		}
+		if int(g["transactions"].(float64)) != wak.Count || g["spent"] != float64(wak.SpentMinor)/100 ||
+			g["first_day"] != wak.FirstOn.String() || g["last_day"] != wak.LastOn.String() || g["budget"] != nil {
+			t.Errorf("%q: %v vs %+v", name, g, wak)
+		}
+		var cs float64
+		for _, c := range g["categories"].([]any) {
+			cs += c.(map[string]any)["spent"].(float64)
+		}
+		if len(g["categories"].([]any)) < groupCategories && math.Abs(cs-float64(wak.SpentMinor)/100) > 0.005 {
+			t.Errorf("categories add up to %v", cs)
+		}
+		if p := g["top_payees"].([]any); len(p) == 0 || len(p) > 10 {
+			t.Errorf("payees = %v", p)
+		}
+	}
+	// a budget shows with what is left
+	if _, err := e.l.EditGroup(e.ctx, u, wak.ID, wak.Name, -1, 100000); err != nil {
+		t.Fatal(err)
+	}
+	if g, _ := run(ToolGroup, `{"group":"wakacje"}`, sc); g["budget"] != float64(1000) || g["budget_left"] != float64(100000-wak.SpentMinor)/100 {
+		t.Errorf("budget = %v", g)
+	}
+	if _, err := e.l.EditGroup(e.ctx, u, wak.ID, wak.Name, -1, ledger.NoBudget); err != nil {
+		t.Fatal(err)
+	}
+	// no single match: the error lists the candidates
+	for args, want := range map[string]int{`{"group":"e"}`: 2, `{"group":"Italy"}`: 2} {
+		g, _ := run(ToolGroup, args, sc)
+		if g["error"] == nil || len(g["groups"].([]any)) != want {
+			t.Errorf("%s = %v", args, g)
+		}
+	}
+	if g, _ := run(ToolGroup, `{}`, sc); g["error"] == nil {
+		t.Errorf("no group = %v", g)
+	}
+	// cloud connections: long digit runs in payees are masked
+	g, _ := run(ToolGroup, `{"group":"wakacje"}`, Scope{MaxRows: 50, Mask: true})
+	for _, p := range g["top_payees"].([]any) {
+		if longDigits.MatchString(p.(map[string]any)["payee"].(string)) {
+			t.Errorf("unmasked payee %v", p)
+		}
+	}
+}
+
+// propose_action (PLAN 15.7) reads what a change would touch and never changes anything.
+func TestProposeAction(t *testing.T) {
+	e, u := demoUser(t)
+	tools := NewTools(e.q)
+	sc := Scope{MaxRows: 50}
+	run := func(args string, sc Scope) (Outcome, map[string]any) {
+		t.Helper()
+		out, err := tools.Run(e.ctx, u, sc, ToolPropose, args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out, decode(t, []byte(out.JSON)).(map[string]any)
+	}
+	before := totalsOf(t, e, u)
+
+	// set_category with a new category: 14 rows, their ids for Apply, a sample; the model gets no ids
+	out, m := run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"Internet","reason":"Monthly internet bills"}`, sc)
+	p := out.Proposal
+	if p == nil || p.Action != ActionSetCategory || p.Matched != 14 || len(p.IDs) != 14 || p.CategoryID != nil || p.CategoryName != "Internet" ||
+		len(p.Sample) != 5 || p.Reason != "Monthly internet bills" || p.Filter == nil || p.Filter.Payee != "OPERATOR INTERNETU" {
+		t.Fatalf("proposal = %+v", p)
+	}
+	if m["status"] != proposedStatus || m["creates_category"] != true || m["matched"] != float64(14) || len(m["sample"].([]any)) != 5 ||
+		strings.Contains(out.JSON, p.IDs[0].String()) || !strings.HasPrefix(out.Summary, "proposed set category · payee: OPERATOR INTERNETU → 14") {
+		t.Errorf("result = %s (%s)", out.JSON, out.Summary)
+	}
+	// an existing category is found ignoring case and accents
+	out, m = run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"rachunki"}`, sc)
+	if out.Proposal.CategoryID == nil || out.Proposal.CategoryName != "Rachunki" || m["creates_category"] != nil {
+		t.Errorf("existing category: %+v %v", out.Proposal, m)
+	}
+	// set_group to an existing group
+	out, _ = run(`{"action":"set_group","payee":"OPERATOR INTERNETU","date_from":"2025-01-01","to_group":"wakacje nad morzem"}`, sc)
+	if p := out.Proposal; p.GroupID == nil || p.GroupName != "Wakacje nad morzem" || p.Matched != 2 {
+		t.Errorf("set_group = %+v", p)
+	}
+	// create_rule: payee contains …, counted over everything
+	out, m = run(`{"action":"create_rule","payee":"OPERATOR INTERNETU","to_category":"Internet"}`, sc)
+	if p := out.Proposal; p.Match == nil || len(p.Match.Filters) != 1 || p.Match.Filters[0] != (ProposalFilter{"payee", "OPERATOR INTERNETU"}) ||
+		p.RuleName != "OPERATOR INTERNETU" || p.Matched != 14 || len(p.IDs) != 0 || m["rule_name"] != "OPERATOR INTERNETU" {
+		t.Errorf("create_rule = %+v %v", p, m)
+	}
+
+	// refusals are answered to the model, with no proposal
+	for args, want := range map[string]string{
+		`{}`:                             "action must be",
+		`{"action":"delete_everything"}`: "action must be",
+		`{"action":"set_category","to_category":"Internet"}`:                              "Give a filter",
+		`{"action":"set_category","payee":"OPERATOR INTERNETU"}`:                          "to_category must be",
+		`{"action":"set_group","payee":"x","to_group":"` + strings.Repeat("g", 41) + `"}`: "to_group must be",
+		`{"action":"set_category","payee":"NO SUCH PAYEE","to_category":"X"}`:             "No transactions match",
+		`{"action":"create_rule","to_category":"Internet"}`:                               "A rule needs",
+		`{"action":"create_rule","payee":"=OPERATOR","to_category":"Internet"}`:           "plain text",
+	} {
+		out, m := run(args, sc)
+		if out.Proposal != nil || !strings.Contains(fmt.Sprint(m["error"]), want) {
+			t.Errorf("%s = %s", args, out.JSON)
+		}
+	}
+	old := proposalCap
+	proposalCap = 10
+	out, m = run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"Internet"}`, sc)
+	proposalCap = old
+	if out.Proposal != nil || !strings.Contains(fmt.Sprint(m["error"]), "14 transactions match; a proposal may change at most 10") {
+		t.Errorf("cap = %s", out.JSON)
+	}
+	// the chat's scope applies: a view filtered to 2025 sees 2 bills
+	view := Scope{MaxRows: 50, Context: query.Context{Period: &query.Period{Year: 2025}}, View: true}
+	if out, _ := run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"Internet"}`, view); out.Proposal.Matched != 2 {
+		t.Errorf("view scope = %+v", out.Proposal)
+	}
+	// cloud connections: the model's sample is masked, the card's isn't
+	out, _ = run(`{"action":"set_category","query":"DEMO","type":"income","to_category":"Wpływy"}`, Scope{MaxRows: 50, Mask: true})
+	if longDigits.MatchString(out.JSON) {
+		t.Errorf("unmasked: %s", out.JSON)
+	}
+	// nothing changed
+	if after := totalsOf(t, e, u); after != before {
+		t.Errorf("data changed: %v → %v", before, after)
+	}
+	// another user's proposal sees none of these rows
+	if out, err := tools.Run(e.ctx, e.user(), sc, ToolPropose, `{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"X"}`); err != nil ||
+		out.Proposal != nil {
+		t.Errorf("tenancy: %v %s", err, out.JSON)
+	}
+}
+
+// totalsOf is a fingerprint of the user's categorisation: categories, manual ones and groups.
+func totalsOf(t *testing.T, e *env, u uuid.UUID) [3]int {
+	t.Helper()
+	var out [3]int
+	cats, err := e.q.Categories(e.ctx, u, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out[0] = len(cats)
+	for _, f := range []query.Filter{{Column: "category", Cond: "="}, {Column: "group", Cond: "!="}} {
+		p, err := e.q.Page(e.ctx, u, query.PageRequest{Context: query.Context{Filters: []query.Filter{f}}, Limit: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[1+map[string]int{"category": 0, "group": 1}[f.Column]] = p.Total
+	}
+	return out
 }

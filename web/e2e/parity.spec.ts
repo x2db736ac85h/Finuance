@@ -200,8 +200,13 @@ function periodOf(p: string): Schemas['Period'] | undefined {
 
 /** The same facts from the new app's API, for the signed-in user (every account). */
 async function apiFacts(page: Page, withMigration: boolean): Promise<Facts> {
-  const ctx = (period?: string) => (period && period !== 'all' ? { period: periodOf(period) } : {});
-  const q = await post<Schemas['TransactionPage']>(page, '/transactions/query', { context: {}, limit: 1 });
+  // The legacy app has no transfers: compare with transfers included, so a pair the new app finds
+  // between the migrated accounts can't make the numbers differ (Phase 15 plan).
+  const ctx = (period?: string) => ({
+    includeTransfers: true,
+    ...(period && period !== 'all' ? { period: periodOf(period) } : {}),
+  });
+  const q = await post<Schemas['TransactionPage']>(page, '/transactions/query', { context: ctx(), limit: 1 });
   const out: Facts = {
     sum: q.stats?.sum ?? NaN,
     summary: {},
@@ -215,24 +220,27 @@ async function apiFacts(page: Page, withMigration: boolean): Promise<Facts> {
     const s = await post<Schemas['InsightSummary']>(page, '/insights/summary', { context: ctx(p) });
     out.summary[p] = { spent: s.spentMinor, income: s.incomeMinor, count: s.count };
   }
-  const cats = await post<Schemas['InsightCategories']>(page, '/insights/categories', { context: {} });
+  const cats = await post<Schemas['InsightCategories']>(page, '/insights/categories', { context: ctx() });
   for (const c of cats.categories) out.categories[c.category?.name ?? ''] = c.spentMinor;
-  const flow = await post<Schemas['InsightCashflow']>(page, '/insights/cashflow', { context: {} });
+  const flow = await post<Schemas['InsightCashflow']>(page, '/insights/cashflow', { context: ctx() });
   for (const f of flow.months)
     out.cashflow[f.month] = { income: f.incomeMinor, expense: f.expenseMinor, count: f.count };
   for (const month of MONTHS) {
-    const o = await post<Schemas['Overview']>(page, '/overview', { context: {}, month, months: 12 });
+    const o = await post<Schemas['Overview']>(page, '/overview', { context: ctx(), month, months: 12 });
     const d = o.data;
     if (!d) throw new Error('no overview data');
     out.months[month] = { income: d.current.incomeMinor, expense: d.current.expenseMinor, count: d.current.count };
     if (month === MONTHS[0]) {
-      out.recurring = d.recurring.map((r) => ({
-        payee: r.payee,
-        median: r.medianMinor,
-        count: r.count,
-        last: r.last,
-        next: r.next,
-      }));
+      // the legacy app finds monthly payments only (weekly and yearly are new in Phase 15)
+      out.recurring = d.recurring
+        .filter((r) => r.cadence === 'monthly')
+        .map((r) => ({
+          payee: r.payee,
+          median: r.medianMinor,
+          count: r.count,
+          last: r.last,
+          next: r.next,
+        }));
       out.balance = d.balance.nowMinor;
     }
   }

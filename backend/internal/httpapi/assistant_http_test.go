@@ -305,3 +305,79 @@ func TestAssistantInDataExport(t *testing.T) {
 		t.Errorf("assistant.json = %s", files["assistant.json"])
 	}
 }
+
+// An action proposal (PLAN 15.7): the step carries what the card shows; nothing changes until the
+// browser applies it through the normal endpoints, which log one structured line for it.
+func TestAssistantProposalHTTP(t *testing.T) {
+	e, _ := mockEnv(t, nil)
+	b, _ := demoBrowser(t, e)
+	chat := b.do("POST", "/assistant/chats", nil)
+	id := chat.body["id"].(string)
+	ask := b.do("POST", "/assistant/chats/"+id+"/messages", map[string]any{"text": `put "OPERATOR INTERNETU" in Internet`,
+		"settings": map[string]any{"mode": "auto", "think": "auto"}})
+	expect(t, ask, 200, "")
+	evs := parseSSE(t, ask.raw)
+	i := slicesIndexEv(evs, "step")
+	if i < 0 {
+		t.Fatalf("no step: %s", ask.raw)
+	}
+	step := evs[i].data
+	p := obj(t, step, "proposal")
+	if step["tool"] != "propose_action" || p["action"] != "set_category" || num(p["matched"]) != 14 || len(p["ids"].([]any)) != 14 ||
+		p["categoryName"] != "Internet" || p["categoryId"] != nil || len(p["sample"].([]any)) != 5 || p["reason"] != "You asked for it" ||
+		obj(t, p, "toolFilter")["payee"] != "OPERATOR INTERNETU" {
+		t.Fatalf("proposal = %v", p)
+	}
+	if s := p["sample"].([]any)[0].(map[string]any); s["payee"] != "OPERATOR INTERNETU" || num(obj(t, s, "amount")["amountMinor"]) != -7999 {
+		t.Errorf("sample = %v", s)
+	}
+	// nothing changed; the stored chat keeps the proposal
+	if n := totalWhere(t, b, map[string]any{"column": "category", "cond": "=Internet"}); n != 0 {
+		t.Fatalf("applied by the server: %d", n)
+	}
+	turns := b.do("GET", "/assistant/chats/"+id, nil).body["turns"].([]any)
+	if c := turns[1].(map[string]any)["content"].(string); !strings.Contains(c, "Nothing has changed yet") {
+		t.Errorf("answer = %q", c)
+	}
+	stored := turns[1].(map[string]any)["steps"].([]any)[0].(map[string]any)
+	if sp := obj(t, stored, "proposal"); len(sp["ids"].([]any)) != 14 {
+		t.Errorf("stored proposal = %v", sp)
+	}
+
+	// Apply as the panel does: create the category, then the bulk change marked with the chat
+	nc := b.do("POST", "/categories", map[string]any{"name": "Internet"})
+	expect(t, nc, 201, "")
+	ids := p["ids"].([]any)
+	b.header["X-Assistant-Chat"] = id
+	bu := b.do("POST", "/transactions/bulk", map[string]any{"ids": ids, "category": map[string]any{"id": nc.body["id"]}})
+	delete(b.header, "X-Assistant-Chat")
+	expect(t, bu, 200, "")
+	if num(bu.body["updated"]) != 14 || totalWhere(t, b, map[string]any{"column": "category", "cond": "=Internet"}) != 14 {
+		t.Fatalf("applied = %s", bu.raw)
+	}
+	var line string
+	for _, l := range strings.Split(e.logs.String(), "\n") {
+		if strings.Contains(l, `"assistant.action_applied"`) {
+			line = l
+		}
+	}
+	if !strings.Contains(line, `"action":"set_category"`) || !strings.Contains(line, `"rows":14`) || !strings.Contains(line, `"chat_id":"`+id+`"`) ||
+		strings.Contains(line, "Internet") || strings.Contains(line, "OPERATOR") {
+		t.Errorf("log line = %s", line)
+	}
+	// create_rule is logged too; requests without the header are not
+	b.header["X-Assistant-Chat"] = id
+	expect(t, b.do("POST", "/rules", map[string]any{"name": "Internet", "match": map[string]any{"filters": []any{
+		map[string]any{"column": "payee", "cond": "OPERATOR INTERNETU"}}}, "setCategoryId": nc.body["id"]}), 201, "")
+	delete(b.header, "X-Assistant-Chat")
+	before := strings.Count(e.logs.String(), `"assistant.action_applied"`)
+	expect(t, b.do("POST", "/transactions/bulk", map[string]any{"ids": ids[:1], "category": map[string]any{"reset": true}}), 200, "")
+	if logs := e.logs.String(); strings.Count(logs, `"assistant.action_applied"`) != before || !strings.Contains(logs, `"action":"create_rule"`) {
+		t.Errorf("log lines: %d before, %d after", before, strings.Count(logs, `"assistant.action_applied"`))
+	}
+	b.header["X-Assistant-Chat"] = "not-a-uuid"
+	if r := b.do("POST", "/transactions/bulk", map[string]any{"ids": ids[:1], "category": map[string]any{"reset": true}}); r.code < 400 || r.code >= 500 {
+		t.Errorf("bad header = %d", r.code)
+	}
+	delete(b.header, "X-Assistant-Chat")
+}

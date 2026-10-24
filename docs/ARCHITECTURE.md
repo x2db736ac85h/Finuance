@@ -2,7 +2,7 @@
 
 How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation; Phase 8 the web app.
 
-> 🚧 This describes the system after Phase 11. Parts that come later (the `rules` package, the overview, the AI assistant and its LLM server, the Kubernetes deployment) appear in the diagrams where they will fit, and are marked as planned in the text.
+> 🚧 This describes the system after Phase 11. Parts that come later (the overview, the AI assistant and its LLM server, the Kubernetes deployment; the `rules` package arrived in Phase 15) appear in the diagrams where they will fit, and are marked as planned in the text.
 
 ## Components
 
@@ -36,7 +36,7 @@ flowchart TB
 cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {store, ingest, money, platform}
 ```
 
-`rules` (Phase 15) is planned; the other packages exist. `insights` holds the chart rules; its aggregation SQL lives in `query` (`insights.go`), the only package besides `store` that runs SQL.
+`rules` (Phase 15) stores the categorisation rules and reclassifies transactions: rules from scratch in position order, then transfer detection, as the `reclassify` job (ADRs 0017, 0018); a rule's match compiles with `query`'s filter compiler. `insights` holds the chart rules; its aggregation SQL lives in `query` (`insights.go`), the only package besides `store` that runs SQL.
 
 | Package | Role |
 |---|---|

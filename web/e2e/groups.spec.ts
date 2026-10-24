@@ -72,10 +72,7 @@ test('drag-select five rows: the quick bar sums them; a new group filters to exa
 
   // rename → the active filter follows
   await page.getByRole('button', { name: /Groups/ }).click();
-  await page
-    .getByRole('dialog', { name: 'Groups' })
-    .getByRole('button', { name: 'Rename or recolour Italy trip 2025' })
-    .click();
+  await page.getByRole('dialog', { name: 'Groups' }).getByRole('button', { name: 'Edit Italy trip 2025' }).click();
   const name = page.getByRole('textbox', { name: 'Group name' });
   await name.fill('Włochy');
   await name.press('Enter');
@@ -143,4 +140,52 @@ test('a label survives deleting and re-importing its file', async ({ page }) => 
     .getByRole('button', { name: /^Wesele/ })
     .click();
   await expect(shown(page)).toHaveText(`2 of ${String(TOTAL)} rows`);
+});
+
+test('the group window: totals, span, budget, CSV export and Show in table (PLAN 15.9)', async ({ page }) => {
+  test.setTimeout(60_000);
+  await setup(page);
+  const g = await page.request.post('/api/v1/groups', { headers: H, data: { name: 'Internet', budgetMinor: 100000 } });
+  expect(g.status()).toBe(201);
+  const gid = ((await g.json()) as { id: string }).id;
+  const q = await page.request.post('/api/v1/transactions/query', {
+    headers: H,
+    data: { context: { filters: [{ column: 'payee', cond: '=OPERATOR INTERNETU' }] }, limit: 50 },
+  });
+  const ids = ((await q.json()) as { rows: { id: string }[] }).rows.map((r) => r.id);
+  expect(ids).toHaveLength(14);
+  const b = await page.request.post('/api/v1/transactions/bulk', { headers: H, data: { ids, set: { groupId: gid } } });
+  expect(b.status()).toBe(200);
+  await page.reload();
+  await expect(page.locator('tr[data-i]').first()).toBeVisible();
+
+  await page.getByRole('button', { name: /Groups/ }).click();
+  const menu = page.getByRole('dialog', { name: 'Groups' });
+  // 14 × 79.99 = 1,119.86 against a 1,000.00 budget
+  await expect(menu.getByText('over 120')).toBeVisible();
+  await menu.getByRole('button', { name: 'Report for Internet' }).click();
+  const win = page.getByRole('dialog', { name: 'Internet' });
+  await expect(win.getByRole('group', { name: 'Spent' })).toContainText('1,119.86');
+  await expect(win.getByRole('group', { name: 'Span' })).toContainText('398 days');
+  await expect(win.getByRole('group', { name: 'Span' })).toContainText('20.01.2024 – 20.02.2025');
+  await expect(win.getByRole('region', { name: 'Budget' })).toContainText('over 120');
+  await expect(win.locator('rect[data-date]')).toHaveCount(14);
+  await expect(
+    win.getByRole('list', { name: 'Top payees' }).getByRole('listitem').filter({ hasText: 'OPERATOR INTERNETU' }),
+  ).toContainText('14×');
+
+  const [dl] = await Promise.all([
+    page.waitForEvent('download'),
+    win.getByRole('button', { name: 'Export CSV' }).click(),
+  ]);
+  const path = await dl.path();
+  const fs = await import('node:fs/promises');
+  const csv = (await fs.readFile(path, 'utf8')).replace(/^\ufeff/, '');
+  const lines = csv.trimEnd().split('\r\n');
+  expect(lines).toHaveLength(15);
+  expect(lines[0]).toBe('Date;Payee;Description;Amount;Currency;Category;Account;Note');
+  expect(dl.suggestedFilename()).toMatch(/^finuance-internet-\d{4}-\d{2}-\d{2}\.csv$/);
+
+  await win.getByRole('button', { name: 'Show in table' }).click();
+  await expect(shown(page)).toHaveText(`14 of ${String(TOTAL)} rows`);
 });

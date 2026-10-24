@@ -245,7 +245,8 @@ func recurTwin(o insights.Overview) (*twin, string) {
 	}
 	tw := &twin{Cols: []string{"Payee", "Category", "Typical", "Last", "Next expected", "Per year", "Status"}}
 	n, m := 0, int64(0)
-	for _, r := range o.Recurring {
+	for i := range o.Recurring {
+		r := &o.Recurring[i]
 		next, st := "–", "stopped?"
 		if r.Active {
 			next, st = dayShort(r.Next), "active"

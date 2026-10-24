@@ -18,6 +18,7 @@ type Context struct {
 	Filters          []Filter    // AND across columns
 	Period           *Period     // nil: all time
 	IncludeTransfers bool        // Phase 15: transfers are hidden unless asked for
+	GroupID          *uuid.UUID  // Phase 15: only this group's transactions (group report, export)
 	ToolFilter       *ToolFilter // the assistant's lookup filter ("✦" chip), PLAN §4.8
 }
 

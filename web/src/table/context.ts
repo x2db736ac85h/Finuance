@@ -24,7 +24,8 @@ export function periodOf(p: PeriodPref, custom: ViewState['custom']): Schemas['P
 
 export function contextOf(
   viewId: string,
-  v: Pick<ViewState, 'search' | 'filters' | 'period' | 'custom'> & Partial<Pick<ViewState, 'toolFilter'>>,
+  v: Pick<ViewState, 'search' | 'filters' | 'period' | 'custom'> &
+    Partial<Pick<ViewState, 'toolFilter' | 'hideTransfers'>>,
 ): QueryContext {
   const filters: NonNullable<QueryContext['filters']> = [];
   for (const [column, f] of Object.entries(v.filters)) {
@@ -43,8 +44,14 @@ export function contextOf(
     ...(filters.length ? { filters } : {}),
     ...(period ? { period } : {}),
     ...(v.toolFilter ? { toolFilter: v.toolFilter } : {}),
+    // the list shows transfers unless hidden; charts, the overview and the assistant leave them
+    // out (their requests set includeTransfers: false, ADR 0018)
+    includeTransfers: !v.hideTransfers,
   };
 }
+
+/** The context for charts, the overview and the assistant: transfers left out. */
+export const withoutTransfers = (c: QueryContext): QueryContext => ({ ...c, includeTransfers: false });
 
 export type ViewQuery = { context: QueryContext; ctxKey: string; sort: Sort | undefined; sortKey: string };
 
@@ -55,9 +62,10 @@ export function useQueryContext(viewId: string): ViewQuery {
   const custom = useViews((s) => viewOf(s.views, viewId).custom);
   const sortPref = useViews((s) => viewOf(s.views, viewId).sort);
   const toolFilter = useViews((s) => viewOf(s.views, viewId).toolFilter);
+  const hideTransfers = useViews((s) => viewOf(s.views, viewId).hideTransfers);
   return useMemo(() => {
-    const context = contextOf(viewId, { search, filters, period, custom, toolFilter });
+    const context = contextOf(viewId, { search, filters, period, custom, toolFilter, hideTransfers });
     const sort = sortPref ? { column: sortPref.column as Schemas['FilterColumn'], dir: sortPref.dir } : undefined;
     return { context, ctxKey: JSON.stringify(context), sort, sortKey: JSON.stringify(sort ?? null) };
-  }, [viewId, search, filters, period, custom, sortPref, toolFilter]);
+  }, [viewId, search, filters, period, custom, sortPref, toolFilter, hideTransfers]);
 }

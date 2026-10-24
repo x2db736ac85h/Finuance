@@ -17,6 +17,7 @@ import { sides, topN } from './Sankey';
 import { savingsRates } from './Savings';
 import { weekdayAverages } from './Weekday';
 import { fireParts, yieldParts } from './Investments';
+import { recurringParts } from './Tables';
 
 type Data = Schemas['OverviewData'];
 
@@ -150,6 +151,7 @@ export function overviewData(over: Partial<Data> = {}): Data {
         active: true,
         yearlyMinor: 3420000,
         count: 15,
+        cadence: 'monthly',
       },
     ],
     largest: [
@@ -245,7 +247,7 @@ describe('overview page', () => {
   it('asks for the view without its period and shows the KPIs and the twelve cards', async () => {
     renderApp('/o/all');
     await screen.findByText('Projected spend · PLN');
-    expect(db.overviewRequests.at(-1)).toEqual({ context: {}, months: 12 });
+    expect(db.overviewRequests.at(-1)).toEqual({ context: { includeTransfers: false }, months: 12 });
     act(() => {
       useViews.getState().patch('all', { period: 'm:2025-01' });
     });
@@ -253,7 +255,7 @@ describe('overview page', () => {
       useViews.getState().patch('all', { search: 'kino' });
     });
     await waitFor(() => {
-      expect(db.overviewRequests.at(-1)).toEqual({ context: { search: 'kino' }, months: 12 });
+      expect(db.overviewRequests.at(-1)).toEqual({ context: { search: 'kino', includeTransfers: false }, months: 12 });
     });
     // the period alone never asks again
     expect(db.overviewRequests.filter((r) => !r.context.search)).toHaveLength(1);
@@ -415,7 +417,7 @@ describe('overview page', () => {
         },
       ]);
     });
-    expect(db.overviewRequests.at(-1)?.context).toEqual({ accountIds: [ACC] });
+    expect(db.overviewRequests.at(-1)?.context).toEqual({ accountIds: [ACC], includeTransfers: false });
   });
 
   it('edits investments in the larger view and saves them after a pause', async () => {
@@ -562,6 +564,54 @@ describe('overview cards (fixed data)', () => {
     expect(container.querySelectorAll('.bpace')).toHaveLength(4); // a month in progress
     expect(budgetsParts(overviewData({ categories: [] }), 'PLN').table).toBeNull();
     expect(budgetsParts(overviewData({ avgMonths: 0 }), 'PLN').sub).toBe('set your own limits');
+  });
+
+  it('recurring payments: weekly and yearly ones are tagged and count with their monthly share', () => {
+    const monthly = overviewData();
+    const only = recurringParts(monthly, 'PLN');
+    expect(only.sub).toBe('1 active · ≈ 2,850.00 PLN/mo');
+    expect(only.table?.cols).toEqual(['Payee', 'Category', 'Typical', 'Last', 'Next expected', 'Per year', 'Status']);
+    const gym: Schemas['RecurringPayment'] = {
+      payee: 'SILOWNIA',
+      category: 'Sport',
+      medianMinor: 2500,
+      last: '2025-03-14',
+      next: '2025-03-21',
+      active: true,
+      yearlyMinor: 130000,
+      count: 12,
+      cadence: 'weekly',
+    };
+    const p = recurringParts(
+      {
+        ...monthly,
+        recurring: [
+          ...monthly.recurring,
+          gym,
+          { ...gym, payee: 'PZU', medianMinor: 60000, yearlyMinor: 60000, cadence: 'yearly', active: false },
+        ],
+      },
+      'PLN',
+    );
+    // (3,420,000 + 130,000) / 12 = 295,833.33 → 2,958.33
+    expect(p.sub).toBe('2 active · ≈ 2,958.33 PLN/mo');
+    expect(p.table?.cols).toEqual([
+      'Payee',
+      'Category',
+      'Cadence',
+      'Typical',
+      'Last',
+      'Next expected',
+      'Per year',
+      'Status',
+    ]);
+    expect(p.table?.rows.map((r) => r.slice(0, 3))).toEqual([
+      ['WSPÓLNOTA MIESZKANIOWA', 'Mieszkanie', 'monthly'],
+      ['SILOWNIA', 'Sport', 'weekly'],
+      ['PZU', 'Sport', 'yearly'],
+    ]);
+    const { container } = render(<>{p.body}</>);
+    expect([...container.querySelectorAll('.tag.cad')].map((t) => t.textContent)).toEqual(['weekly', 'yearly']);
   });
 
   it('input text of an amount', () => {

@@ -737,11 +737,15 @@ paths:
   /transactions/bulk:
     post:
       operationId: bulkUpdateTransactions
-      summary: Set or remove the group of many transactions
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+      summary: Change the group, category or transfer state of many transactions
       description: >-
-        Applies `set` to the given transactions (at most 5,000) and keeps the change as annotations,
-        so it survives deleting and re-importing the file. `groupId: null` removes the label. Ids
-        that are not the user's are ignored; `updated` counts the transactions changed.
+        Applies exactly one action to the given transactions (at most 5,000) and keeps the change as
+        annotations, so it survives deleting and re-importing the file: `set.groupId` (null removes
+        the label), `category` (`id` sets a manual category, `reset` goes back to the bank's) or
+        `transfer` (as on one transaction). Ids that are not the user's are ignored; `updated`
+        counts the transactions changed.
       tags: [transactions]
       requestBody:
         required: true
@@ -857,6 +861,286 @@ paths:
                   $ref: "#/components/schemas/Category"
         default:
           $ref: "#/components/responses/Problem"
+    post:
+      operationId: createCategory
+      summary: Create a category
+      description: >-
+        At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new
+        category takes over its name: bank rows of that name come to it on the next import.
+      tags: [categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: The new category.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NamedRef"
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/stats:
+    get:
+      operationId: categoryStats
+      summary: Every category with its counts (Settings → Categories)
+      description: >-
+        Transactions over all accounts, how many were categorised by hand and by rules, and the
+        other bank category names that map to the category (left by renames and merges).
+      tags: [categories]
+      responses:
+        "200":
+          description: Categories in natural order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryStat"
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      operationId: renameCategory
+      summary: Rename a category
+      description: >-
+        The bank's rows of the old name keep coming to it. A name another category has is
+        `409 conflict`: merge the two instead.
+      tags: [categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "200":
+          description: The category.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NamedRef"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteCategory
+      summary: Delete a category (its transactions become uncategorised)
+      description: >-
+        Its transactions become uncategorised however they were categorised, its budget goes, rules
+        that set it lose that action, and its bank name stays uncategorised on later imports.
+      tags: [categories]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/{id}/merge:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: mergeCategory
+      summary: Merge a category into another one and delete it
+      description: >-
+        Its transactions, manual categories, rules, bank names and (when the target has none) its
+        budget move to `intoId`.
+      tags: [categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [intoId]
+              properties:
+                intoId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: How many transactions moved.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [moved]
+                properties:
+                  moved:
+                    type: integer
+                    format: int64
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules:
+    get:
+      operationId: listRules
+      summary: The rules in the order they apply
+      tags: [rules]
+      responses:
+        "200":
+          description: The rules.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createRule
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+      summary: Create a rule (it goes last)
+      description: >-
+        A rule matches with the table's filter language and needs a search or a column filter, and
+        an action. Every change to the rules re-applies all of them in the background (ADR 0017).
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleInput"
+      responses:
+        "201":
+          description: The new rule.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/order:
+    put:
+      operationId: reorderRules
+      summary: Set the order the rules apply in
+      description: Every rule's id exactly once, first applies first (the last match wins).
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: The rules in their new order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/preview:
+    post:
+      operationId: previewRule
+      summary: What a match selects now
+      description: >-
+        The number of matching transactions (all accounts, all time, transfers included), how many
+        of them have a manual category (a category action leaves those alone), and the newest 10.
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [match]
+              properties:
+                match:
+                  $ref: "#/components/schemas/RuleMatch"
+      responses:
+        "200":
+          description: The preview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RulePreview"
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/suggestions:
+    get:
+      operationId: ruleSuggestions
+      summary: Rules worth creating (the toolbar card)
+      description: >-
+        Payee groups the user put in one category by hand at least 3 times, with the rule that
+        would do it ("payee contains the group" → the category), most manual categorisations
+        first, at most 5. A group a rule already handles (the same match and category) is left
+        out; dismissing a suggestion is kept by the client (PLAN 15.10).
+      tags: [rules]
+      responses:
+        "200":
+          description: The suggestions.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  $ref: "#/components/schemas/RuleSuggestion"
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/apply:
+    post:
+      operationId: applyRules
+      summary: Re-apply every rule and look for transfers again
+      description: Queues the reclassification job; the table shows the result when it has run.
+      tags: [rules]
+      responses:
+        "202":
+          description: Queued.
+        default:
+          $ref: "#/components/responses/Problem"
+  /rules/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
+      operationId: updateRule
+      summary: Replace a rule (its position stays)
+      tags: [rules]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleInput"
+      responses:
+        "200":
+          description: The rule.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteRule
+      summary: Delete a rule
+      description: Its categories go back to the bank's, or to another matching rule's.
+      tags: [rules]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
   /groups:
     get:
       operationId: listGroups
@@ -898,12 +1182,32 @@ paths:
                 $ref: "#/components/schemas/Group"
         default:
           $ref: "#/components/responses/Problem"
+  /groups/{id}/report:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: groupReport
+      summary: A group's report (the group window)
+      description: >-
+        The group's transactions over all accounts, ignoring filters and with transfers included
+        (like its stats): the group with its totals and budget, the date span and money out per
+        day, money out per day, per category and for the top payees (PLAN 15.9).
+      tags: [groups]
+      responses:
+        "200":
+          description: The report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupReport"
+        default:
+          $ref: "#/components/responses/Problem"
   /groups/{id}:
     parameters:
       - $ref: "#/components/parameters/Id"
     patch:
       operationId: updateGroup
-      summary: Rename or recolour a group
+      summary: Rename, recolour or budget a group
       description: The client renames view filters that mention the old name.
       tags: [groups]
       requestBody:
@@ -1465,6 +1769,17 @@ paths:
           $ref: "#/components/responses/Problem"
 components:
   parameters:
+    AssistantChatHeader:
+      name: X-Assistant-Chat
+      in: header
+      required: false
+      description: >-
+        Set by the assistant panel when the request applies one of the assistant's action proposals
+        (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the
+        audit log of Phase 17); the request is otherwise an ordinary one.
+      schema:
+        type: string
+        format: uuid
     Id:
       name: id
       in: path
@@ -2116,6 +2431,10 @@ components:
           $ref: "#/components/schemas/Period"
         includeTransfers:
           type: boolean
+        groupId:
+          type: string
+          format: uuid
+          description: Only this group's transactions (the group window's export).
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
     Sort:
@@ -2416,6 +2735,30 @@ components:
             updatedAt:
               type: string
               format: date-time
+            transferSource:
+              type: string
+              enum: [none, pair, rule, manual]
+              description: Why isTransfer is what it is (ADR 0018).
+            transferPeer:
+              $ref: "#/components/schemas/TransferPeer"
+            categoryRule:
+              $ref: "#/components/schemas/NamedRef"
+    TransferPeer:
+      type: object
+      additionalProperties: false
+      required: [id, accountName, bookedOn, amount]
+      description: The other half of a detected transfer pair.
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountName:
+          type: string
+        bookedOn:
+          type: string
+          format: date
+        amount:
+          $ref: "#/components/schemas/Money"
     TransactionPatch:
       type: object
       additionalProperties: false
@@ -2433,6 +2776,12 @@ components:
         note:
           type: string
           maxLength: 2000
+        transfer:
+          type: string
+          enum: ["yes", "no", auto]
+          description: >-
+            The user's transfer decision: `yes` marks it, `no` says it isn't one (a detected pair is
+            unpaired on both sides), `auto` hands it back to the rules and the detection.
     Category:
       type: object
       additionalProperties: false
@@ -2449,6 +2798,129 @@ components:
           type: integer
           minimum: 1
           maximum: 7
+    CategoryInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+    CategoryStat:
+      type: object
+      additionalProperties: false
+      required: [id, name, txCount, manualCount, ruleCount, aliases]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        txCount:
+          type: integer
+          format: int64
+        manualCount:
+          type: integer
+          format: int64
+        ruleCount:
+          type: integer
+          format: int64
+        aliases:
+          type: array
+          description: Other bank category names (normalised) that map to this category.
+          items:
+            type: string
+    RuleMatch:
+      type: object
+      additionalProperties: false
+      properties:
+        search:
+          type: string
+          maxLength: 200
+        filters:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ColumnFilter"
+    RuleInput:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        enabled:
+          type: boolean
+          default: true
+        match:
+          $ref: "#/components/schemas/RuleMatch"
+        setCategoryId:
+          type: string
+          format: uuid
+          description: The category to set; omit for no category action.
+        markTransfer:
+          type: boolean
+          default: false
+    Rule:
+      type: object
+      additionalProperties: false
+      required: [id, name, enabled, position, match, markTransfer, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+        position:
+          type: integer
+        match:
+          $ref: "#/components/schemas/RuleMatch"
+        setCategory:
+          $ref: "#/components/schemas/NamedRef"
+        markTransfer:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+    RuleSuggestion:
+      type: object
+      additionalProperties: false
+      required: [payeeGroup, category, manualCount, txCount, match]
+      properties:
+        payeeGroup:
+          type: string
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        manualCount:
+          type: integer
+          format: int64
+          description: Transactions of the group put in the category by hand.
+        txCount:
+          type: integer
+          format: int64
+          description: Every transaction of the group.
+        match:
+          $ref: "#/components/schemas/RuleMatch"
+    RulePreview:
+      type: object
+      additionalProperties: false
+      required: [matched, manual, sample]
+      properties:
+        matched:
+          type: integer
+          format: int64
+        manual:
+          type: integer
+          format: int64
+        sample:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionRow"
     Group:
       type: object
       additionalProperties: false
@@ -2475,6 +2947,11 @@ components:
         lastOn:
           type: string
           format: date
+        budgetMinor:
+          type: integer
+          format: int64
+          minimum: 1
+          description: The money out the group should stay under (e.g. a trip budget), in `spent`'s currency; absent without a budget.
     GroupInput:
       type: object
       additionalProperties: false
@@ -2488,10 +2965,51 @@ components:
           type: integer
           minimum: 0
           maximum: 7
+        budgetMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 1000000000000
+          description: Sets the group budget; `0` removes it. Omitted on an update keeps it.
+    GroupReport:
+      type: object
+      additionalProperties: false
+      required: [group, currency, days, avgPerDayMinor, daily, categories, payees, payeeCount]
+      properties:
+        group:
+          $ref: "#/components/schemas/Group"
+        currency:
+          type: string
+        days:
+          type: integer
+          description: Days from the first to the last transaction, inclusive (1 for an empty group).
+        avgPerDayMinor:
+          type: integer
+          format: int64
+          description: Money out per day over `days`.
+        daily:
+          type: array
+          description: Every day with money out, oldest first.
+          items:
+            $ref: "#/components/schemas/DaySpend"
+        categories:
+          type: array
+          description: Money out per category, largest first, with all-time colour slots.
+          items:
+            $ref: "#/components/schemas/CategorySpend"
+        payees:
+          type: array
+          description: The 10 payee groups with the most money out.
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/PayeeSpend"
+        payeeCount:
+          type: integer
+          description: Payee groups with money out, before the top-10 cut.
     BulkUpdate:
       type: object
       additionalProperties: false
-      required: [ids, set]
+      required: [ids]
       properties:
         ids:
           type: array
@@ -2509,6 +3027,19 @@ components:
               type: string
               format: uuid
               nullable: true
+        category:
+          type: object
+          additionalProperties: false
+          description: Exactly one of `id` (a manual category) and `reset` (back to the bank's).
+          properties:
+            id:
+              type: string
+              format: uuid
+            reset:
+              type: boolean
+        transfer:
+          type: string
+          enum: ["yes", "no", auto]
     BulkResult:
       type: object
       additionalProperties: false
@@ -3139,11 +3670,17 @@ components:
     RecurringPayment:
       type: object
       additionalProperties: false
-      required: [payee, medianMinor, last, next, active, yearlyMinor, count]
+      required: [payee, medianMinor, last, next, active, yearlyMinor, count, cadence]
       properties:
         payee:
           type: string
           description: The payee group.
+        cadence:
+          type: string
+          enum: [monthly, weekly, yearly]
+          description: >-
+            How often it is charged. Monthly payments follow the legacy rules; weekly and yearly
+            ones are found among the payee groups the monthly rules leave out.
         category:
           type: string
           description: The most frequent category; absent when uncategorised.
@@ -3162,6 +3699,7 @@ components:
         yearlyMinor:
           type: integer
           format: int64
+          description: The cost per year (12, 52 or 1 × the typical amount).
         count:
           type: integer
     OverviewExpense:
@@ -3647,6 +4185,70 @@ components:
           type: integer
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
+        proposal:
+          $ref: "#/components/schemas/ActionProposal"
+    ActionProposal:
+      type: object
+      additionalProperties: false
+      description: >-
+        A change propose_action suggests (PLAN 15.7, ADR 0019). The server never applies it; the
+        panel shows it with the affected rows and applies it through the normal endpoints when the
+        user confirms. A missing categoryId / groupId means the category or group is created first.
+      required: [action, matched, sample]
+      properties:
+        action:
+          type: string
+          enum: [set_category, set_group, create_rule]
+        reason:
+          type: string
+        matched:
+          type: integer
+          description: The transactions it changes (set_*) or the rule matches now (create_rule).
+        ids:
+          type: array
+          maxItems: 1000
+          description: "set_*: the transactions, read when it was proposed."
+          items:
+            type: string
+            format: uuid
+        categoryName:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        groupName:
+          type: string
+        groupId:
+          type: string
+          format: uuid
+        ruleName:
+          type: string
+        match:
+          $ref: "#/components/schemas/RuleMatch"
+        sample:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ProposalRow"
+        toolFilter:
+          $ref: "#/components/schemas/ToolFilter"
+    ProposalRow:
+      type: object
+      additionalProperties: false
+      required: [id, bookedOn, payee, amount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookedOn:
+          type: string
+          format: date
+        payee:
+          type: string
+        amount:
+          $ref: "#/components/schemas/Money"
+        category:
+          type: string
     AssistantMeta:
       type: object
       additionalProperties: false

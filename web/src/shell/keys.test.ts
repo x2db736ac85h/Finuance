@@ -9,6 +9,7 @@ const actions = () =>
     toggleAssistant: vi.fn(),
     openShortcuts: vi.fn(),
     move: vi.fn<KeyActions['move']>(() => true),
+    extend: vi.fn<KeyActions['extend']>(() => true),
     escape: vi.fn(() => true),
   }) satisfies KeyActions;
 
@@ -85,6 +86,17 @@ describe('table keys', () => {
     input.focus();
     handleKey(key('j'), a, none);
     expect(a.move).toHaveBeenCalledTimes(6);
+  });
+
+  it('Shift+arrows and Shift+j/k extend a range instead of moving', () => {
+    const a = actions();
+    for (const k of ['ArrowDown', 'ArrowUp', 'J', 'K']) {
+      const e = key(k, { shiftKey: true });
+      handleKey(e, a, none);
+      expect(e.defaultPrevented).toBe(true);
+    }
+    expect(a.extend.mock.calls.map((c) => c[0])).toEqual([1, -1, 1, -1]);
+    expect(a.move).not.toHaveBeenCalled();
   });
 
   it('Esc clears the selection unless a popover is open', () => {

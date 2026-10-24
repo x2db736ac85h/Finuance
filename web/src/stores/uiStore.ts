@@ -10,6 +10,7 @@ import {
   CARD_KEYS,
   DEFAULT_AI,
   DEFAULT_CFG,
+  MAX_RULE_HINTS,
   type AiPrefs,
   type CatMode,
   type ChartCfg,
@@ -37,6 +38,7 @@ export type UiState = {
   cfg: ChartCfg;
   ai: AiPrefs;
   importFastPath: boolean;
+  ruleHints: string[];
   /** Keyboard shortcuts window (not persisted). */
   keysOpen: boolean;
 
@@ -53,6 +55,8 @@ export type UiState = {
   setAi: (change: Partial<AiPrefs>) => void;
   setKeysOpen: (open: boolean) => void;
   setImportFastPath: (on: boolean) => void;
+  /** Hides a rule suggestion for good (dismissed, or made into a rule). */
+  dismissRuleHint: (key: string) => void;
   /** Insight pane height as a CSS length ('' = the default 50vh). */
   setPaneHeight: (h: string) => void;
   setCards: (cards: string[]) => void;
@@ -76,6 +80,7 @@ export const uiDefaults = {
   cfg: DEFAULT_CFG,
   ai: DEFAULT_AI,
   importFastPath: true,
+  ruleHints: [] as string[],
   keysOpen: false,
 } satisfies Partial<UiState>;
 
@@ -119,6 +124,9 @@ export const useUi = create<UiState>()((set) => ({
   setImportFastPath: (importFastPath) => {
     set({ importFastPath });
   },
+  dismissRuleHint: (key) => {
+    set((s) => (s.ruleHints.includes(key) ? {} : { ruleHints: [...s.ruleHints, key].slice(-MAX_RULE_HINTS) }));
+  },
   setPaneHeight: (paneHeight) => {
     set({ paneHeight });
   },
@@ -150,6 +158,7 @@ export const useUi = create<UiState>()((set) => ({
       cfg: { ...s.cfg, ...p.cfg },
       ai: { ...s.ai, ...p.ai },
       importFastPath: p.importFastPath ?? s.importFastPath,
+      ruleHints: p.ruleHints ?? s.ruleHints,
     }));
   },
 }));
@@ -169,6 +178,7 @@ export function collectUi(s: UiState): Omit<PrefsDoc, 'v' | 'views'> {
     sbOpen: s.sidebarOpen,
     ai: s.ai,
     importFastPath: s.importFastPath,
+    ruleHints: s.ruleHints,
   };
 }
 

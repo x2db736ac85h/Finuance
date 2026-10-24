@@ -200,34 +200,96 @@ func stepDTO(s assistant.Step) gen.AssistantStep {
 	if s.Truncated {
 		out.Truncated = &s.Truncated
 	}
-	if f := s.ToolFilter; f != nil {
-		tf := gen.ToolFilter{Label: &f.Label, MinAmount: f.MinAmount, MaxAmount: f.MaxAmount}
-		for _, p := range []struct {
-			v   string
-			dst **string
-		}{{f.Query, &tf.Query}, {f.Payee, &tf.Payee}, {f.Category, &tf.Category}, {f.Group, &tf.Group}} {
-			if p.v != "" {
-				v := p.v
-				*p.dst = &v
-			}
-		}
-		if f.Type != "" {
-			t := gen.ToolFilterType(f.Type)
-			tf.Type = &t
-		}
-		if f.DateFrom != "" {
-			if d, err := platform.ParseDate(f.DateFrom); err == nil {
-				tf.DateFrom = dateDTO(&d)
-			}
-		}
-		if f.DateTo != "" {
-			if d, err := platform.ParseDate(f.DateTo); err == nil {
-				tf.DateTo = dateDTO(&d)
-			}
-		}
-		out.ToolFilter = &tf
+	out.ToolFilter = toolFilterDTO(s.ToolFilter)
+	if p := s.Proposal; p != nil {
+		out.Proposal = proposalDTO(p)
 	}
 	return out
+}
+
+// toolFilterDTO is a step's lookup filter in the API form; nil for none.
+func toolFilterDTO(f *assistant.StepFilter) *gen.ToolFilter {
+	if f == nil {
+		return nil
+	}
+	tf := gen.ToolFilter{Label: &f.Label, MinAmount: f.MinAmount, MaxAmount: f.MaxAmount}
+	for _, p := range []struct {
+		v   string
+		dst **string
+	}{{f.Query, &tf.Query}, {f.Payee, &tf.Payee}, {f.Category, &tf.Category}, {f.Group, &tf.Group}} {
+		if p.v != "" {
+			v := p.v
+			*p.dst = &v
+		}
+	}
+	if f.Type != "" {
+		t := gen.ToolFilterType(f.Type)
+		tf.Type = &t
+	}
+	if f.DateFrom != "" {
+		if d, err := platform.ParseDate(f.DateFrom); err == nil {
+			tf.DateFrom = dateDTO(&d)
+		}
+	}
+	if f.DateTo != "" {
+		if d, err := platform.ParseDate(f.DateTo); err == nil {
+			tf.DateTo = dateDTO(&d)
+		}
+	}
+	return &tf
+}
+
+func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
+	out := &gen.ActionProposal{Action: gen.ActionProposalAction(p.Action), Matched: p.Matched, CategoryId: p.CategoryID, GroupId: p.GroupID,
+		Sample: make([]gen.ProposalRow, len(p.Sample))}
+	for _, f := range []struct {
+		v   string
+		dst **string
+	}{{p.Reason, &out.Reason}, {p.CategoryName, &out.CategoryName}, {p.GroupName, &out.GroupName}, {p.RuleName, &out.RuleName}} {
+		if f.v != "" {
+			v := f.v
+			*f.dst = &v
+		}
+	}
+	if len(p.IDs) > 0 {
+		out.Ids = &p.IDs
+	}
+	if m := p.Match; m != nil {
+		rm := gen.RuleMatch{}
+		if m.Search != "" {
+			rm.Search = &m.Search
+		}
+		if len(m.Filters) > 0 {
+			fs := make([]gen.ColumnFilter, len(m.Filters))
+			for i, f := range m.Filters {
+				fs[i] = gen.ColumnFilter{Column: gen.FilterColumn(f.Column), Cond: &f.Cond}
+			}
+			rm.Filters = &fs
+		}
+		out.Match = &rm
+	}
+	for i, r := range p.Sample {
+		out.Sample[i] = gen.ProposalRow{Id: r.ID, Payee: r.Payee, Amount: gen.Money{AmountMinor: r.AmountMinor, Currency: r.Currency}}
+		if d, err := platform.ParseDate(r.Date); err == nil {
+			out.Sample[i].BookedOn = *dateDTO(&d)
+		}
+		if r.Category != "" {
+			out.Sample[i].Category = &r.Category
+		}
+	}
+	out.ToolFilter = toolFilterDTO(p.Filter)
+	return out
+}
+
+// logAppliedAction writes the structured line of an applied assistant proposal (PLAN 15.7; the
+// audit log of Phase 17 replaces it): who, which chat, what kind of change and how many rows.
+// Never names, filters or any other content.
+func logAppliedAction(ctx context.Context, chat *gen.AssistantChatHeader, action string, rows int) {
+	if chat == nil {
+		return
+	}
+	observability.Logger(ctx).InfoContext(ctx, "assistant action applied", "event", "assistant.action_applied",
+		"user_id", identity(ctx).User.ID, "chat_id", *chat, "action", action, "rows", rows)
 }
 
 func metaDTO(m assistant.Meta) gen.AssistantMeta {

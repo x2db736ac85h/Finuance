@@ -89,9 +89,10 @@ func overviewDTO(o *insights.Overview) gen.OverviewData {
 			d.Highlights[i].Month = &m
 		}
 	}
-	for i, r := range o.Recurring {
+	for i := range o.Recurring {
+		r := &o.Recurring[i]
 		d.Recurring[i] = gen.RecurringPayment{Payee: r.Payee, MedianMinor: r.MedianMinor, Last: *dateDTO(&r.Last), Next: *dateDTO(&r.Next),
-			Active: r.Active, YearlyMinor: r.YearlyMinor, Count: r.Count}
+			Active: r.Active, YearlyMinor: r.YearlyMinor, Count: r.Count, Cadence: gen.RecurringPaymentCadence(r.Cadence)}
 		if r.Category != "" {
 			d.Recurring[i].Category = ptr(r.Category)
 		}

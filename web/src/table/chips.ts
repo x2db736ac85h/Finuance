@@ -1,5 +1,6 @@
 // Toolbar chips (PLAN §7.6, legacy renderToolbar): one removable chip per thing that narrows or
-// orders the view — period, search, sort, each condition, excluded values, hidden columns.
+// orders the view — period, search, sort, each condition, excluded values, hidden columns, and
+// hidden transfers (Phase 15).
 
 import type { IconName } from '../ui/icons';
 import { without } from '../lib/objects';
@@ -29,6 +30,7 @@ export function chipsOf(viewId: string, v: ViewState, periodLabel: string | unde
   }
   const hidden = extraHidden(viewId, v.hidden).length;
   if (hidden) out.push({ key: 'hidden', icon: 'eyeoff', value: `${String(hidden)} hidden` });
+  if (v.hideTransfers) out.push({ key: 'transfers', icon: 'eyeoff', value: 'transfers hidden' });
   return out;
 }
 
@@ -39,6 +41,7 @@ export function withoutChip(viewId: string, v: ViewState, key: string): Partial<
   if (key === 'tool') return { toolFilter: null };
   if (key === 'sort') return { sort: null };
   if (key === 'hidden') return { hidden: [...newView(viewId).hidden] };
+  if (key === 'transfers') return { hideTransfers: false };
   const col = key.slice(2);
   const f = v.filters[col];
   if (!f) return {};
@@ -57,5 +60,6 @@ export function cleared(viewId: string): Partial<ViewState> {
     period: 'all',
     custom: null,
     toolFilter: null,
+    hideTransfers: false,
   };
 }

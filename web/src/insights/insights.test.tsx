@@ -121,9 +121,9 @@ describe('insights pane', () => {
         new Set(['summary', 'categories', 'cashflow', 'pace', 'payees', 'daily']),
       );
     });
-    expect(lastInsight('pace')).toEqual({ context: {}, compare: 'prev' });
-    expect(lastInsight('payees')).toEqual({ context: {}, top: 25, scope: 'period' });
-    expect(lastInsight('daily')).toEqual({ context: {}, range: 'period' });
+    expect(lastInsight('pace')).toEqual({ context: { includeTransfers: false }, compare: 'prev' });
+    expect(lastInsight('payees')).toEqual({ context: { includeTransfers: false }, top: 25, scope: 'period' });
+    expect(lastInsight('daily')).toEqual({ context: { includeTransfers: false }, range: 'period' });
     expect(within(card('Spending by category')).getByText('2 categories')).toBeTruthy();
   });
 
@@ -134,7 +134,9 @@ describe('insights pane', () => {
     await waitFor(() => {
       expect(lastQuery()?.context.filters).toEqual([{ column: 'category', cond: '=Mieszkanie' }]);
     });
-    expect(lastInsight('summary')).toEqual({ context: { filters: [{ column: 'category', cond: '=Mieszkanie' }] } });
+    expect(lastInsight('summary')).toEqual({
+      context: { filters: [{ column: 'category', cond: '=Mieszkanie' }], includeTransfers: false },
+    });
     expect(screen.getByRole('button', { name: /^Remove Category/ })).toBeTruthy();
     expect(within(card('Spending by category')).getByText('Mieszkanie').closest('.lg')?.className).toContain('on');
     fireEvent.click(within(card('Spending by category')).getByText('Mieszkanie'));
@@ -310,7 +312,7 @@ describe('chart window', () => {
     await user.selectOptions(within(dlg).getByRole('combobox', { name: 'Show' }), '10');
     expect(useUi.getState().cfg.payeeTop).toBe(10);
     await waitFor(() => {
-      expect(lastInsight('payees')).toEqual({ context: {}, top: 10, scope: 'period' });
+      expect(lastInsight('payees')).toEqual({ context: { includeTransfers: false }, top: 10, scope: 'period' });
     });
 
     // arrows step only when no select has focus (it would change the select instead)
@@ -320,7 +322,7 @@ describe('chart window', () => {
     await user.selectOptions(within(dlg).getByRole('combobox', { name: 'Range' }), '3');
     expect(useUi.getState().cfg.heatRange).toBe(3);
     await waitFor(() => {
-      expect(lastInsight('daily')).toEqual({ context: {}, range: '3m' });
+      expect(lastInsight('daily')).toEqual({ context: { includeTransfers: false }, range: '3m' });
     });
     await user.click(within(dlg).getByText('Daily spending'));
     await user.keyboard('{ArrowRight}');

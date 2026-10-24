@@ -30,7 +30,7 @@ func deref[T any](p *T) T {
 }
 
 func contextIn(c gen.QueryContext) query.Context {
-	out := query.Context{AccountIDs: deref(c.AccountIds), Search: deref(c.Search), IncludeTransfers: deref(c.IncludeTransfers)}
+	out := query.Context{AccountIDs: deref(c.AccountIds), Search: deref(c.Search), IncludeTransfers: deref(c.IncludeTransfers), GroupID: c.GroupId}
 	for _, f := range deref(c.Filters) {
 		out.Filters = append(out.Filters, query.Filter{Column: string(f.Column), Cond: deref(f.Cond), Excluded: deref(f.Excluded)})
 	}
@@ -101,6 +101,16 @@ func txDetailDTO(t *ledger.Transaction, accountName string, sources []ledger.Pro
 	}
 	for i, s := range sources {
 		out.Sources[i] = gen.TransactionSource{ImportId: s.ImportID, Filename: s.Filename, CommittedAt: s.CommittedAt, RowIndex: s.RowIndex, Raw: rawDTO(s.Raw)}
+	}
+	out.IsTransfer = t.IsTransfer
+	src := gen.TransactionDetailTransferSource(t.TransferSource)
+	out.TransferSource = &src
+	if p := t.TransferPeer; p != nil {
+		out.TransferPeer = &gen.TransferPeer{Id: p.ID, AccountName: p.AccountName, BookedOn: *dateDTO(&p.BookedOn),
+			Amount: gen.Money{AmountMinor: p.AmountMinor, Currency: t.Currency}}
+	}
+	if t.CategoryRuleID != nil && t.CategorySource == "rule" {
+		out.CategoryRule = &gen.NamedRef{Id: *t.CategoryRuleID, Name: t.CategoryRuleName}
 	}
 	return out
 }

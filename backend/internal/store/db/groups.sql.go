@@ -15,7 +15,7 @@ import (
 
 const createGroup = `-- name: CreateGroup :one
 
-INSERT INTO groups (id, user_id, name, name_n, color) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, name, name_n, color, created_at
+INSERT INTO groups (id, user_id, name, name_n, color) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, name, name_n, color, created_at, budget_minor
 `
 
 type CreateGroupParams struct {
@@ -43,6 +43,7 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.NameN,
 		&i.Color,
 		&i.CreatedAt,
+		&i.BudgetMinor,
 	)
 	return i, err
 }
@@ -66,7 +67,7 @@ func (q *Queries) DeleteGroup(ctx context.Context, arg DeleteGroupParams) (int64
 }
 
 const getGroup = `-- name: GetGroup :one
-SELECT id, user_id, name, name_n, color, created_at FROM groups WHERE user_id = $1 AND id = $2
+SELECT id, user_id, name, name_n, color, created_at, budget_minor FROM groups WHERE user_id = $1 AND id = $2
 `
 
 type GetGroupParams struct {
@@ -84,12 +85,13 @@ func (q *Queries) GetGroup(ctx context.Context, arg GetGroupParams) (Group, erro
 		&i.NameN,
 		&i.Color,
 		&i.CreatedAt,
+		&i.BudgetMinor,
 	)
 	return i, err
 }
 
 const groupStats = `-- name: GroupStats :many
-SELECT g.id, g.name, g.color, g.created_at,
+SELECT g.id, g.name, g.color, g.created_at, g.budget_minor,
        count(t.id)::bigint AS tx_count,
        coalesce(sum(-t.amount_minor) FILTER (WHERE t.amount_minor < 0), 0)::bigint AS spent_minor,
        coalesce(sum(t.amount_minor) FILTER (WHERE t.amount_minor > 0), 0)::bigint AS income_minor,
@@ -108,6 +110,7 @@ type GroupStatsRow struct {
 	Name        string
 	Color       int16
 	CreatedAt   time.Time
+	BudgetMinor *int64
 	TxCount     int64
 	SpentMinor  int64
 	IncomeMinor int64
@@ -133,6 +136,7 @@ func (q *Queries) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStat
 			&i.Name,
 			&i.Color,
 			&i.CreatedAt,
+			&i.BudgetMinor,
 			&i.TxCount,
 			&i.SpentMinor,
 			&i.IncomeMinor,
@@ -151,7 +155,7 @@ func (q *Queries) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStat
 }
 
 const listGroups = `-- name: ListGroups :many
-SELECT id, user_id, name, name_n, color, created_at FROM groups WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
+SELECT id, user_id, name, name_n, color, created_at, budget_minor FROM groups WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
 `
 
 func (q *Queries) ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, error) {
@@ -170,6 +174,7 @@ func (q *Queries) ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, er
 			&i.NameN,
 			&i.Color,
 			&i.CreatedAt,
+			&i.BudgetMinor,
 		); err != nil {
 			return nil, err
 		}
@@ -181,8 +186,27 @@ func (q *Queries) ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, er
 	return items, nil
 }
 
+const setGroupBudget = `-- name: SetGroupBudget :execrows
+UPDATE groups SET budget_minor = $1::bigint WHERE user_id = $2 AND id = $3
+`
+
+type SetGroupBudgetParams struct {
+	BudgetMinor *int64
+	UserID      uuid.UUID
+	ID          uuid.UUID
+}
+
+// NULL removes the budget.
+func (q *Queries) SetGroupBudget(ctx context.Context, arg SetGroupBudgetParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setGroupBudget, arg.BudgetMinor, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateGroup = `-- name: UpdateGroup :one
-UPDATE groups SET name = $1, name_n = $2, color = $3 WHERE user_id = $4 AND id = $5 RETURNING id, user_id, name, name_n, color, created_at
+UPDATE groups SET name = $1, name_n = $2, color = $3 WHERE user_id = $4 AND id = $5 RETURNING id, user_id, name, name_n, color, created_at, budget_minor
 `
 
 type UpdateGroupParams struct {
@@ -209,6 +233,7 @@ func (q *Queries) UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group
 		&i.NameN,
 		&i.Color,
 		&i.CreatedAt,
+		&i.BudgetMinor,
 	)
 	return i, err
 }

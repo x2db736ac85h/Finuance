@@ -62,7 +62,7 @@ export function usePatchTransaction(id: string) {
       data(await api.PATCH('/transactions/{id}', { params: { path: { id } }, body })),
     onSuccess: (detail) => {
       qc.setQueryData(keys.transaction(id), detail);
-      for (const k of [keys.tx, keys.categories, keys.insight, keys.overview])
+      for (const k of [keys.tx, keys.categories, keys.insight, keys.overview, keys.ruleSuggestions])
         void qc.invalidateQueries({ queryKey: k });
     },
   });

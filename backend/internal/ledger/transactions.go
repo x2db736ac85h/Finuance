@@ -40,8 +40,21 @@ type Transaction struct {
 	Raw                 []ingest.RawField
 	SourceImportID      *uuid.UUID
 	Occurrence          int
+	IsTransfer          bool
+	TransferSource      string // none | pair | rule | manual (ADR 0018)
+	TransferPeer        *TransferPeer
+	CategoryRuleID      *uuid.UUID
+	CategoryRuleName    string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+}
+
+// TransferPeer is the other half of a detected transfer pair.
+type TransferPeer struct {
+	ID          uuid.UUID
+	AccountName string
+	BookedOn    platform.Date
+	AmountMinor int64
 }
 
 // GetTransaction returns one transaction with its category and group names.
@@ -58,7 +71,12 @@ func (l *Ledger) GetTransaction(ctx context.Context, userID, id uuid.UUID) (Tran
 			CounterpartyAccount: t.CounterpartyAccount, BalanceAfterMinor: t.BalanceAfterMinor, CategoryID: t.CategoryID,
 			CategoryName: deref(t.CategoryName), CategorySource: t.CategorySource, GroupID: t.GroupID,
 			GroupName: deref(t.GroupName), Note: t.Note, SourceImportID: t.SourceImportID,
-			Occurrence: int(t.Occurrence), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+			Occurrence: int(t.Occurrence), IsTransfer: t.IsTransfer, TransferSource: t.TransferSource,
+			CategoryRuleID: t.CategoryRuleID, CategoryRuleName: deref(t.RuleName), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+		if t.TransferPeerID != nil && t.PeerBookedOn != nil && t.PeerAmountMinor != nil {
+			out.TransferPeer = &TransferPeer{ID: *t.TransferPeerID, AccountName: deref(t.PeerAccountName),
+				BookedOn: *t.PeerBookedOn, AmountMinor: *t.PeerAmountMinor}
+		}
 		if t.GroupColor != nil {
 			c := int(*t.GroupColor)
 			out.GroupColor = &c
@@ -135,7 +153,14 @@ func (l *Ledger) UpdateTransaction(ctx context.Context, userID, id uuid.UUID, p 
 		if err != nil {
 			return Transaction{}, err
 		}
-		cid := ids[nameKey(name)]
+		cid, ok := ids[nameKey(name)]
+		if !ok { // the name of a deleted category: typing it asks for that category again
+			c, err := l.CreateCategory(ctx, userID, name)
+			if err != nil {
+				return Transaction{}, err
+			}
+			cid = c.ID
+		}
 		patch.CategoryID = &cid
 	}
 	if p.Note != nil {

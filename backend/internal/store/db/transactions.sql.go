@@ -19,7 +19,9 @@ SET group_id = a.group_id,
     category_id = coalesce(a.category_id, t.category_id),
     category_source = CASE WHEN a.category_id IS NOT NULL THEN 'manual' ELSE t.category_source END,
     note = a.note,
-    note_n = a.note_n
+    note_n = a.note_n,
+    is_transfer = coalesce(a.transfer_override, t.is_transfer),
+    transfer_source = CASE WHEN a.transfer_override IS NOT NULL THEN 'manual' ELSE t.transfer_source END
 FROM tx_annotations a
 WHERE t.user_id = $1 AND t.id = ANY($2::uuid[])
   AND a.user_id = $1
@@ -31,8 +33,8 @@ type ApplyAnnotationsParams struct {
 	Ids    []uuid.UUID
 }
 
-// Commit step 1b: re-apply user annotations (group, manual category, note) to freshly inserted
-// transactions, so labels survive delete + re-import.
+// Commit step 1b: re-apply user annotations (group, manual category, note, manual transfer mark)
+// to freshly inserted transactions, so labels survive delete + re-import.
 func (q *Queries) ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error) {
 	result, err := q.db.Exec(ctx, applyAnnotations, arg.UserID, arg.Ids)
 	if err != nil {
@@ -83,10 +85,14 @@ func (q *Queries) DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphan
 }
 
 const getTransaction = `-- name: GetTransaction :one
-SELECT t.id, t.seq, t.user_id, t.account_id, t.origin, t.fingerprint, t.occurrence, t.split_scope, t.source_import_id, t.booked_on, t.value_on, t.amount_minor, t.currency, t.payee, t.payee_n, t.payee_group, t.description, t.description_n, t.reference, t.reference_n, t.tx_type, t.tx_type_n, t.bank_category, t.bank_category_n, t.counterparty_account, t.counterparty_n, t.balance_after_minor, t.category_id, t.category_source, t.group_id, t.is_transfer, t.transfer_peer_id, t.note, t.note_n, t.raw, t.search_text, t.created_at, t.updated_at, c.name AS category_name, g.name AS group_name, g.color AS group_color
+SELECT t.id, t.seq, t.user_id, t.account_id, t.origin, t.fingerprint, t.occurrence, t.split_scope, t.source_import_id, t.booked_on, t.value_on, t.amount_minor, t.currency, t.payee, t.payee_n, t.payee_group, t.description, t.description_n, t.reference, t.reference_n, t.tx_type, t.tx_type_n, t.bank_category, t.bank_category_n, t.counterparty_account, t.counterparty_n, t.balance_after_minor, t.category_id, t.category_source, t.group_id, t.is_transfer, t.transfer_peer_id, t.note, t.note_n, t.raw, t.search_text, t.created_at, t.updated_at, t.category_rule_id, t.transfer_source, c.name AS category_name, g.name AS group_name, g.color AS group_color, r.name AS rule_name,
+       p.booked_on AS peer_booked_on, p.amount_minor AS peer_amount_minor, pa.name AS peer_account_name
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 LEFT JOIN groups g ON g.id = t.group_id
+LEFT JOIN rules r ON r.id = t.category_rule_id
+LEFT JOIN transactions p ON p.id = t.transfer_peer_id
+LEFT JOIN accounts pa ON pa.id = p.account_id
 WHERE t.user_id = $1 AND t.id = $2
 `
 
@@ -134,12 +140,19 @@ type GetTransactionRow struct {
 	SearchText          string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	CategoryRuleID      *uuid.UUID
+	TransferSource      string
 	CategoryName        *string
 	GroupName           *string
 	GroupColor          *int16
+	RuleName            *string
+	PeerBookedOn        *platform.Date
+	PeerAmountMinor     *int64
+	PeerAccountName     *string
 }
 
-// Detail view: the transaction with its category and group names.
+// Detail view: the transaction with its category and group names, the rule that set the category
+// and the other half of a transfer pair.
 func (q *Queries) GetTransaction(ctx context.Context, arg GetTransactionParams) (GetTransactionRow, error) {
 	row := q.db.QueryRow(ctx, getTransaction, arg.UserID, arg.ID)
 	var i GetTransactionRow
@@ -182,9 +195,15 @@ func (q *Queries) GetTransaction(ctx context.Context, arg GetTransactionParams) 
 		&i.SearchText,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CategoryRuleID,
+		&i.TransferSource,
 		&i.CategoryName,
 		&i.GroupName,
 		&i.GroupColor,
+		&i.RuleName,
+		&i.PeerBookedOn,
+		&i.PeerAmountMinor,
+		&i.PeerAccountName,
 	)
 	return i, err
 }
@@ -207,10 +226,10 @@ SELECT ids.id, src.user_id, $1, 'import', src.fingerprint, src.occurrence, src.s
        src.booked_on, src.value_on, src.amount_minor, src.currency, src.payee, src.payee_n, src.payee_group,
        src.description, src.description_n, src.reference, src.reference_n, src.tx_type, src.tx_type_n,
        src.bank_category, src.bank_category_n, src.counterparty_account, src.counterparty_n,
-       src.balance_after_minor, c.id, CASE WHEN c.id IS NULL THEN 'none' ELSE 'bank' END, src.raw, src.search_text
+       src.balance_after_minor, m.category_id, CASE WHEN m.category_id IS NULL THEN 'none' ELSE 'bank' END, src.raw, src.search_text
 FROM src
 JOIN ids ON ids.ord = src.rn
-LEFT JOIN categories c ON c.user_id = src.user_id AND c.name_n = src.bank_category_n AND src.bank_category_n <> ''
+LEFT JOIN bank_category_map m ON m.user_id = src.user_id AND m.name_n = src.bank_category_n AND src.bank_category_n <> ''
 ORDER BY src.row_index
 ON CONFLICT (account_id, fingerprint, occurrence, split_scope) DO NOTHING
 RETURNING id
@@ -227,8 +246,8 @@ type InsertTransactionsFromImportParams struct {
 // fingerprints with a dedupe override are skipped (the override path re-materialises them). A row
 // whose (fingerprint, occurrence) already exists in the account is a duplicate: ON CONFLICT skips
 // it. ids holds one pre-generated UUIDv7 per eligible row (CountEligibleImportRows); ids of skipped
-// rows are simply unused. The bank category is resolved by normalised name; the caller upserts the
-// categories first. Returns the inserted ids (the "new" rows).
+// rows are simply unused. The bank category is resolved through bank_category_map (aliases first); the
+// caller upserts the categories first. Returns the inserted ids (the "new" rows).
 func (q *Queries) InsertTransactionsFromImport(ctx context.Context, arg InsertTransactionsFromImportParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, insertTransactionsFromImport,
 		arg.AccountID,
@@ -330,10 +349,10 @@ UPDATE transactions t
 SET group_id = CASE WHEN $1::bool THEN $2::uuid ELSE t.group_id END,
     category_id = CASE WHEN NOT $3::bool THEN t.category_id
                        WHEN $4::uuid IS NOT NULL THEN $4::uuid
-                       ELSE (SELECT c.id FROM categories c WHERE c.user_id = t.user_id AND c.name_n = t.bank_category_n AND t.bank_category_n <> '') END,
+                       ELSE (SELECT m.category_id FROM bank_category_map m WHERE m.user_id = t.user_id AND m.name_n = t.bank_category_n AND t.bank_category_n <> '') END,
     category_source = CASE WHEN NOT $3::bool THEN t.category_source
                            WHEN $4::uuid IS NOT NULL THEN 'manual'
-                           WHEN EXISTS (SELECT 1 FROM categories c WHERE c.user_id = t.user_id AND c.name_n = t.bank_category_n AND t.bank_category_n <> '') THEN 'bank'
+                           WHEN EXISTS (SELECT 1 FROM bank_category_map m WHERE m.user_id = t.user_id AND m.name_n = t.bank_category_n AND t.bank_category_n <> '' AND m.category_id IS NOT NULL) THEN 'bank'
                            ELSE 'none' END,
     note = CASE WHEN $5::bool THEN $6::text ELSE t.note END,
     note_n = CASE WHEN $5::bool THEN $7::text ELSE t.note_n END,

@@ -618,7 +618,7 @@ func (run *Run) step(ctx context.Context, emit func(Event), sc Scope, t *turn, n
 	}
 	run.r.cfg.Metrics.ToolCalls.WithLabelValues(knownTool(name), result).Inc()
 	st := Step{Tool: name, Args: args, Summary: out.Summary, Result: cutBytes(out.JSON, MaxStepResult), Matched: out.Matched,
-		Truncated: len(out.JSON) > MaxStepResult, ToolFilter: stepFilter(out.Filter)}
+		Truncated: len(out.JSON) > MaxStepResult, ToolFilter: stepFilter(out.Filter), Proposal: out.Proposal}
 	t.steps = append(t.steps, st)
 	t.tools = append(t.tools, knownTool(name))
 	emit(Event{"step", StepEvent{Index: len(t.steps) - 1, Step: st}})

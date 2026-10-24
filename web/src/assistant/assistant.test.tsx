@@ -201,6 +201,150 @@ describe('ChatPanel', () => {
     expect(await screen.findByText('Showing 10 matching rows')).toBeTruthy();
   });
 
+  it('shows a proposal as a card; Apply creates the category and sends the change marked with the chat', async () => {
+    const ids = Array.from({ length: 14 }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`);
+    const proposal: Schemas['ActionProposal'] = {
+      action: 'set_category',
+      reason: 'Monthly internet bills',
+      matched: 14,
+      ids,
+      categoryName: 'Internet',
+      sample: [
+        {
+          id: ids[0] ?? '',
+          bookedOn: '2025-02-20',
+          payee: 'OPERATOR INTERNETU',
+          amount: { amountMinor: -7999, currency: 'PLN' },
+          category: 'Rachunki',
+        },
+      ],
+      toolFilter: { payee: 'OPERATOR INTERNETU', label: 'payee: OPERATOR INTERNETU' },
+    };
+    st.answer = streamed([
+      [
+        'step',
+        {
+          index: 0,
+          tool: 'propose_action',
+          args: {},
+          summary: 'proposed set category → 14 transactions',
+          result: '{}',
+          matched: 14,
+          proposal,
+        },
+      ],
+      ['content', { delta: 'Review the change and click Apply.' }],
+      ['done', { messageSeq: 4, meta }],
+    ]);
+    const calls: { path: string; chat: string | null; body: unknown }[] = [];
+    server.use(
+      http.get(`${API}/categories`, () => HttpResponse.json([])),
+      http.post(`${API}/categories`, async ({ request }) => {
+        calls.push({ path: '/categories', chat: request.headers.get('X-Assistant-Chat'), body: await request.json() });
+        return HttpResponse.json({ id: '00000000-0000-4000-8000-0000000000c9', name: 'Internet' }, { status: 201 });
+      }),
+      http.post(`${API}/transactions/bulk`, async ({ request }) => {
+        calls.push({
+          path: '/transactions/bulk',
+          chat: request.headers.get('X-Assistant-Chat'),
+          body: await request.json(),
+        });
+        return HttpResponse.json({ updated: 14 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    const p = await panel();
+    await user.type(
+      await within(p).findByRole('textbox', { name: 'Question' }),
+      'Put the internet bills in Internet{Enter}',
+    );
+    const card = await within(p).findByRole('group', { name: 'Proposed change' });
+    expect(within(card).getByText('Set the category “Internet” for 14 transactions')).toBeTruthy();
+    expect(card.textContent).toContain('Monthly internet bills');
+    expect(card.textContent).toContain('The category is new and is created first.');
+    expect(card.textContent).toContain('OPERATOR INTERNETU');
+    expect(card.textContent).toContain('and 13 more');
+    expect(card.textContent).toContain('Nothing changes until you apply it.');
+    expect(calls).toEqual([]);
+
+    await user.click(within(card).getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('Applied to 14 transactions')).toBeTruthy();
+    expect(calls).toEqual([
+      { path: '/categories', chat: null, body: { name: 'Internet' } },
+      {
+        path: '/transactions/bulk',
+        chat: CHAT,
+        body: { ids, category: { id: '00000000-0000-4000-8000-0000000000c9' } },
+      },
+    ]);
+    expect(within(card).getByText('✓ Applied')).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: 'Apply' })).toBeNull();
+
+    // Show in table puts the proposal's rows in the view
+    await user.click(within(card).getByRole('button', { name: 'Show in table' }));
+    expect(viewOf(useViews.getState().views, 'all').toolFilter).toEqual(proposal.toolFilter);
+  });
+
+  it('a rule proposal with an existing category creates the rule', async () => {
+    const proposal: Schemas['ActionProposal'] = {
+      action: 'create_rule',
+      matched: 19,
+      categoryName: 'Sport',
+      categoryId: '00000000-0000-4000-8000-0000000000c5',
+      ruleName: 'KLUB FITNESS RUCH',
+      match: { filters: [{ column: 'payee', cond: 'KLUB FITNESS RUCH' }] },
+      sample: [],
+    };
+    st.answer = streamed([
+      [
+        'step',
+        {
+          index: 0,
+          tool: 'propose_action',
+          args: {},
+          summary: 'proposed create rule',
+          result: '{}',
+          matched: 19,
+          proposal,
+        },
+      ],
+      ['done', { messageSeq: 4, meta }],
+    ]);
+    const rules: { chat: string | null; body: unknown }[] = [];
+    server.use(
+      http.get(`${API}/categories`, () => HttpResponse.json([])),
+      http.post(`${API}/rules`, async ({ request }) => {
+        rules.push({ chat: request.headers.get('X-Assistant-Chat'), body: await request.json() });
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    const p = await panel();
+    await user.type(await within(p).findByRole('textbox', { name: 'Question' }), 'Make a rule for the gym{Enter}');
+    const card = await within(p).findByRole('group', { name: 'Proposed change' });
+    expect(
+      within(card).getByText('Create the rule “KLUB FITNESS RUCH”: payee contains “KLUB FITNESS RUCH” → Sport'),
+    ).toBeTruthy();
+    expect(card.textContent).toContain('It matches 19 transactions now and future imports');
+    expect(card.textContent).not.toContain('created first');
+    await user.click(within(card).getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('Rule “KLUB FITNESS RUCH” created · applying…')).toBeTruthy();
+    expect(rules).toEqual([
+      {
+        chat: CHAT,
+        body: {
+          name: 'KLUB FITNESS RUCH',
+          enabled: true,
+          match: proposal.match,
+          setCategoryId: proposal.categoryId,
+          markTransfer: false,
+        },
+      },
+    ]);
+  });
+
   it('asks about the table view with its context', async () => {
     db.prefs = { version: 1, prefs: { ai: { open: true, scope: 'view' } } };
     renderApp('/t/all');
@@ -212,7 +356,7 @@ describe('ChatPanel', () => {
       expect(st.sent).toHaveLength(1);
     });
     expect(st.sent[0]?.scope).toBe('view');
-    expect(st.sent[0]?.context).toEqual({ filters: [{ column: 'payee', cond: 'kino' }] });
+    expect(st.sent[0]?.context).toEqual({ filters: [{ column: 'payee', cond: 'kino' }], includeTransfers: false });
   });
 
   it('explains how to fix an error', async () => {

@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import type { ChartCfg } from '../../stores/prefs';
 import { api, data, type Schemas } from '../client';
+import { withoutTransfers } from '../../table/context';
 import { keys } from '../keys';
 
 export type QueryContext = Schemas['QueryContext'];
@@ -23,7 +24,7 @@ const opts = { placeholderData: keepPreviousData, staleTime: 30_000 } as const;
 export function useSummary(context: QueryContext, ctxKey: string, enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'summary', ctxKey],
-    queryFn: async () => data(await api.POST('/insights/summary', { body: { context } })),
+    queryFn: async () => data(await api.POST('/insights/summary', { body: { context: withoutTransfers(context) } })),
     ...opts,
     enabled,
   });
@@ -32,7 +33,7 @@ export function useSummary(context: QueryContext, ctxKey: string, enabled = true
 export function useCategorySpend(context: QueryContext, ctxKey: string, enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'categories', ctxKey],
-    queryFn: async () => data(await api.POST('/insights/categories', { body: { context } })),
+    queryFn: async () => data(await api.POST('/insights/categories', { body: { context: withoutTransfers(context) } })),
     ...opts,
     enabled,
   });
@@ -41,7 +42,7 @@ export function useCategorySpend(context: QueryContext, ctxKey: string, enabled 
 export function useCashflow(context: QueryContext, ctxKey: string, enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'cashflow', ctxKey],
-    queryFn: async () => data(await api.POST('/insights/cashflow', { body: { context } })),
+    queryFn: async () => data(await api.POST('/insights/cashflow', { body: { context: withoutTransfers(context) } })),
     ...opts,
     enabled,
   });
@@ -50,7 +51,8 @@ export function useCashflow(context: QueryContext, ctxKey: string, enabled = tru
 export function usePace(context: QueryContext, ctxKey: string, compare: ChartCfg['paceCmp'], enabled = true) {
   return useQuery({
     queryKey: [...keys.insight, 'pace', ctxKey, compare],
-    queryFn: async () => data(await api.POST('/insights/pace', { body: { context, compare } })),
+    queryFn: async () =>
+      data(await api.POST('/insights/pace', { body: { context: withoutTransfers(context), compare } })),
     ...opts,
     enabled,
   });
@@ -72,7 +74,8 @@ export function usePayees(
   const s = scope === 'all' ? 'all' : 'period';
   return useQuery({
     queryKey: [...keys.insight, 'payees', ctxKey, t, s],
-    queryFn: async () => data(await api.POST('/insights/payees', { body: { context, top: t, scope: s } })),
+    queryFn: async () =>
+      data(await api.POST('/insights/payees', { body: { context: withoutTransfers(context), top: t, scope: s } })),
     ...opts,
     enabled,
   });
@@ -88,7 +91,8 @@ export function useDaily(context: QueryContext, ctxKey: string, heatRange: Chart
   const range = dailyRange(heatRange);
   return useQuery({
     queryKey: [...keys.insight, 'daily', ctxKey, range],
-    queryFn: async () => data(await api.POST('/insights/daily', { body: { context, range } })),
+    queryFn: async () =>
+      data(await api.POST('/insights/daily', { body: { context: withoutTransfers(context), range } })),
     ...opts,
     enabled,
   });

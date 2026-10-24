@@ -190,7 +190,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 |---|---|
 | Dedupe: files with identical names share a multiset bucket | **Already fixed in the current legacy file**: buckets are per file position (oracle `dedupe/same-name.json` keeps both identical coffees of `b/export.csv`). The rebuild buckets per import (Phase 6). |
 | Dedupe: reference-less rows that differ only in category/title variants may not match; no merge/unmerge UI | Fix in phase 6/10 (duplicate overrides and the Duplicates dialog; the key ignores category) |
-| Recurring detection only handles ~monthly cadence | Keep for parity (Phase 12); weekly/yearly cadence in the backlog |
+| Recurring detection only handles ~monthly cadence | Monthly kept byte-identical for parity (Phase 12); **fixed in Phase 15 (15.4)**: weekly and yearly payments are found among the payee groups the monthly rules leave out, with a `cadence` field (overview card tag, assistant `recurring_payments`) |
 | Budgets global by category name, no per-month budgets or rollover | Keep (Phase 12); per-month budgets with rollover in the backlog |
 | Dates assume day-first for ambiguous `dd/mm/yyyy` | Fix in phase 9: per-import `dateOrder`, shown in the preview |
 | Role overrides per view, re-mapping needed when switching views | Fix in phase 6/9: roles mapped per import (Fields menu retired) |
@@ -198,6 +198,6 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Auto interface scale relies on `devicePixelRatio` heuristics | Keep (Phase 8) |
 | `detectRoles().balance` unused | Keep detection; balance reconciliation in the backlog |
 | CSP uses `'unsafe-inline'` | Fix in phase 8: strict CSP, no inline scripts or styles |
-| No undo for removes; no transaction editing or categorisation rules | Fix in phase 15 (categories, rules); undo for import delete in the backlog |
+| No undo for removes; no transaction editing or categorisation rules | 15: **fixed** — category management, rules applied from scratch in order (ADR 0017), transfer detection (ADR 0018); `TestRulePrecedence`, `TestTransferDetection`, e2e `rules.spec.ts`. Undo for import delete stays in the backlog |
 | Large files (> 100k rows) are memory-heavy | Fix in phases 7 and 17: server-side queries, load tests |
 | Tooltips mouse-only; chart values not keyboard-reachable | Fix in phases 11 and 14: table twins + focusable marks, accessibility pass |

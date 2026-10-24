@@ -478,9 +478,9 @@ SELECT $1, ir.user_id, $2, 'import', ir.fingerprint, ir.occurrence, $3, ir.impor
        ir.booked_on, ir.value_on, ir.amount_minor, ir.currency, ir.payee, ir.payee_n, ir.payee_group,
        ir.description, ir.description_n, ir.reference, ir.reference_n, ir.tx_type, ir.tx_type_n,
        ir.bank_category, ir.bank_category_n, ir.counterparty_account, ir.counterparty_n,
-       ir.balance_after_minor, c.id, CASE WHEN c.id IS NULL THEN 'none' ELSE 'bank' END, ir.raw, ir.search_text
+       ir.balance_after_minor, m.category_id, CASE WHEN m.category_id IS NULL THEN 'none' ELSE 'bank' END, ir.raw, ir.search_text
 FROM import_rows ir
-LEFT JOIN categories c ON c.user_id = ir.user_id AND c.name_n = ir.bank_category_n AND ir.bank_category_n <> ''
+LEFT JOIN bank_category_map m ON m.user_id = ir.user_id AND m.name_n = ir.bank_category_n AND ir.bank_category_n <> ''
 WHERE ir.user_id = $4 AND ir.import_id = $5 AND ir.row_index = $6
 `
 
@@ -646,12 +646,12 @@ SET source_import_id = ir.import_id,
     tx_type = ir.tx_type, tx_type_n = ir.tx_type_n, bank_category = ir.bank_category, bank_category_n = ir.bank_category_n,
     counterparty_account = ir.counterparty_account, counterparty_n = ir.counterparty_n,
     balance_after_minor = ir.balance_after_minor, raw = ir.raw, search_text = ir.search_text,
-    category_id = CASE WHEN t.category_source IN ('none', 'bank') THEN c.id ELSE t.category_id END,
+    category_id = CASE WHEN t.category_source IN ('none', 'bank') THEN m.category_id ELSE t.category_id END,
     category_source = CASE WHEN t.category_source NOT IN ('none', 'bank') THEN t.category_source
-                           WHEN c.id IS NULL THEN 'none' ELSE 'bank' END,
+                           WHEN m.category_id IS NULL THEN 'none' ELSE 'bank' END,
     updated_at = $1
 FROM import_rows ir
-LEFT JOIN categories c ON c.user_id = ir.user_id AND c.name_n = ir.bank_category_n AND ir.bank_category_n <> ''
+LEFT JOIN bank_category_map m ON m.user_id = ir.user_id AND m.name_n = ir.bank_category_n AND ir.bank_category_n <> ''
 WHERE t.user_id = $2 AND t.id = $3
   AND ir.user_id = $2 AND ir.import_id = $4 AND ir.row_index = $5
 `

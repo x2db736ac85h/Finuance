@@ -510,8 +510,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Set or remove the group of many transactions
-         * @description Applies `set` to the given transactions (at most 5,000) and keeps the change as annotations, so it survives deleting and re-importing the file. `groupId: null` removes the label. Ids that are not the user's are ignored; `updated` counts the transactions changed.
+         * Change the group, category or transfer state of many transactions
+         * @description Applies exactly one action to the given transactions (at most 5,000) and keeps the change as annotations, so it survives deleting and re-importing the file: `set.groupId` (null removes the label), `category` (`id` sets a manual category, `reset` goes back to the bank's) or `transfer` (as on one transaction). Ids that are not the user's are ignored; `updated` counts the transactions changed.
          */
         post: operations["bulkUpdateTransactions"];
         delete?: never;
@@ -576,8 +576,204 @@ export interface paths {
          */
         get: operations["listCategories"];
         put?: never;
+        /**
+         * Create a category
+         * @description At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new category takes over its name: bank rows of that name come to it on the next import.
+         */
+        post: operations["createCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every category with its counts (Settings → Categories)
+         * @description Transactions over all accounts, how many were categorised by hand and by rules, and the other bank category names that map to the category (left by renames and merges).
+         */
+        get: operations["categoryStats"];
+        put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a category (its transactions become uncategorised)
+         * @description Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports.
+         */
+        delete: operations["deleteCategory"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename a category
+         * @description The bank's rows of the old name keep coming to it. A name another category has is `409 conflict`: merge the two instead.
+         */
+        patch: operations["renameCategory"];
+        trace?: never;
+    };
+    "/categories/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a category into another one and delete it
+         * @description Its transactions, manual categories, rules, bank names and (when the target has none) its budget move to `intoId`.
+         */
+        post: operations["mergeCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The rules in the order they apply */
+        get: operations["listRules"];
+        put?: never;
+        /**
+         * Create a rule (it goes last)
+         * @description A rule matches with the table's filter language and needs a search or a column filter, and an action. Every change to the rules re-applies all of them in the background (ADR 0017).
+         */
+        post: operations["createRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the order the rules apply in
+         * @description Every rule's id exactly once, first applies first (the last match wins).
+         */
+        put: operations["reorderRules"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What a match selects now
+         * @description The number of matching transactions (all accounts, all time, transfers included), how many of them have a manual category (a category action leaves those alone), and the newest 10.
+         */
+        post: operations["previewRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rules worth creating (the toolbar card)
+         * @description Payee groups the user put in one category by hand at least 3 times, with the rule that would do it ("payee contains the group" → the category), most manual categorisations first, at most 5. A group a rule already handles (the same match and category) is left out; dismissing a suggestion is kept by the client (PLAN 15.10).
+         */
+        get: operations["ruleSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-apply every rule and look for transfers again
+         * @description Queues the reclassification job; the table shows the result when it has run.
+         */
+        post: operations["applyRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a rule (its position stays) */
+        put: operations["updateRule"];
+        post?: never;
+        /**
+         * Delete a rule
+         * @description Its categories go back to the bank's, or to another matching rule's.
+         */
+        delete: operations["deleteRule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -607,6 +803,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * A group's report (the group window)
+         * @description The group's transactions over all accounts, ignoring filters and with transfers included (like its stats): the group with its totals and budget, the date span and money out per day, money out per day, per category and for the top payees (PLAN 15.9).
+         */
+        get: operations["groupReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{id}": {
         parameters: {
             query?: never;
@@ -624,7 +842,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Rename or recolour a group
+         * Rename, recolour or budget a group
          * @description The client renames view filters that mention the old name.
          */
         patch: operations["updateGroup"];
@@ -1362,6 +1580,11 @@ export interface components {
             filters?: components["schemas"]["ColumnFilter"][];
             period?: components["schemas"]["Period"];
             includeTransfers?: boolean;
+            /**
+             * Format: uuid
+             * @description Only this group's transactions (the group window's export).
+             */
+            groupId?: string;
             toolFilter?: components["schemas"]["ToolFilter"];
         };
         Sort: {
@@ -1523,6 +1746,22 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /**
+             * @description Why isTransfer is what it is (ADR 0018).
+             * @enum {string}
+             */
+            transferSource?: "none" | "pair" | "rule" | "manual";
+            transferPeer?: components["schemas"]["TransferPeer"];
+            categoryRule?: components["schemas"]["NamedRef"];
+        };
+        /** @description The other half of a detected transfer pair. */
+        TransferPeer: {
+            /** Format: uuid */
+            id: string;
+            accountName: string;
+            /** Format: date */
+            bookedOn: string;
+            amount: components["schemas"]["Money"];
         };
         TransactionPatch: {
             /** Format: uuid */
@@ -1531,6 +1770,11 @@ export interface components {
             /** @description Back to the bank's category (or none). */
             resetCategory?: boolean;
             note?: string;
+            /**
+             * @description The user's transfer decision: `yes` marks it, `no` says it isn't one (a detected pair is unpaired on both sides), `auto` hands it back to the rules and the detection.
+             * @enum {string}
+             */
+            transfer?: "yes" | "no" | "auto";
         };
         Category: {
             /** Format: uuid */
@@ -1538,6 +1782,73 @@ export interface components {
             name: string;
             txCount: number;
             colorSlot?: number;
+        };
+        CategoryInput: {
+            name: string;
+        };
+        CategoryStat: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int64 */
+            txCount: number;
+            /** Format: int64 */
+            manualCount: number;
+            /** Format: int64 */
+            ruleCount: number;
+            /** @description Other bank category names (normalised) that map to this category. */
+            aliases: string[];
+        };
+        RuleMatch: {
+            search?: string;
+            filters?: components["schemas"]["ColumnFilter"][];
+        };
+        RuleInput: {
+            name: string;
+            /** @default true */
+            enabled: boolean;
+            match: components["schemas"]["RuleMatch"];
+            /**
+             * Format: uuid
+             * @description The category to set; omit for no category action.
+             */
+            setCategoryId?: string;
+            /** @default false */
+            markTransfer: boolean;
+        };
+        Rule: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            enabled: boolean;
+            position: number;
+            match: components["schemas"]["RuleMatch"];
+            setCategory?: components["schemas"]["NamedRef"];
+            markTransfer: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        RuleSuggestion: {
+            payeeGroup: string;
+            category: components["schemas"]["NamedRef"];
+            /**
+             * Format: int64
+             * @description Transactions of the group put in the category by hand.
+             */
+            manualCount: number;
+            /**
+             * Format: int64
+             * @description Every transaction of the group.
+             */
+            txCount: number;
+            match: components["schemas"]["RuleMatch"];
+        };
+        RulePreview: {
+            /** Format: int64 */
+            matched: number;
+            /** Format: int64 */
+            manual: number;
+            sample: components["schemas"]["TransactionRow"][];
         };
         Group: {
             /** Format: uuid */
@@ -1551,17 +1862,54 @@ export interface components {
             firstOn?: string;
             /** Format: date */
             lastOn?: string;
+            /**
+             * Format: int64
+             * @description The money out the group should stay under (e.g. a trip budget), in `spent`'s currency; absent without a budget.
+             */
+            budgetMinor?: number;
         };
         GroupInput: {
             name: string;
             color?: number;
+            /**
+             * Format: int64
+             * @description Sets the group budget; `0` removes it. Omitted on an update keeps it.
+             */
+            budgetMinor?: number;
+        };
+        GroupReport: {
+            group: components["schemas"]["Group"];
+            currency: string;
+            /** @description Days from the first to the last transaction, inclusive (1 for an empty group). */
+            days: number;
+            /**
+             * Format: int64
+             * @description Money out per day over `days`.
+             */
+            avgPerDayMinor: number;
+            /** @description Every day with money out, oldest first. */
+            daily: components["schemas"]["DaySpend"][];
+            /** @description Money out per category, largest first, with all-time colour slots. */
+            categories: components["schemas"]["CategorySpend"][];
+            /** @description The 10 payee groups with the most money out. */
+            payees: components["schemas"]["PayeeSpend"][];
+            /** @description Payee groups with money out, before the top-10 cut. */
+            payeeCount: number;
         };
         BulkUpdate: {
             ids: string[];
-            set: {
+            set?: {
                 /** Format: uuid */
                 groupId: string | null;
             };
+            /** @description Exactly one of `id` (a manual category) and `reset` (back to the bank's). */
+            category?: {
+                /** Format: uuid */
+                id?: string;
+                reset?: boolean;
+            };
+            /** @enum {string} */
+            transfer?: "yes" | "no" | "auto";
         };
         BulkResult: {
             updated: number;
@@ -1916,6 +2264,11 @@ export interface components {
         RecurringPayment: {
             /** @description The payee group. */
             payee: string;
+            /**
+             * @description How often it is charged. Monthly payments follow the legacy rules; weekly and yearly ones are found among the payee groups the monthly rules leave out.
+             * @enum {string}
+             */
+            cadence: "monthly" | "weekly" | "yearly";
             /** @description The most frequent category; absent when uncategorised. */
             category?: string;
             /**
@@ -1928,7 +2281,10 @@ export interface components {
             /** Format: date */
             next: string;
             active: boolean;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The cost per year (12, 52 or 1 × the typical amount).
+             */
             yearlyMinor: number;
             count: number;
         };
@@ -2207,6 +2563,36 @@ export interface components {
             truncated?: boolean;
             matched?: number;
             toolFilter?: components["schemas"]["ToolFilter"];
+            proposal?: components["schemas"]["ActionProposal"];
+        };
+        /** @description A change propose_action suggests (PLAN 15.7, ADR 0019). The server never applies it; the panel shows it with the affected rows and applies it through the normal endpoints when the user confirms. A missing categoryId / groupId means the category or group is created first. */
+        ActionProposal: {
+            /** @enum {string} */
+            action: "set_category" | "set_group" | "create_rule";
+            reason?: string;
+            /** @description The transactions it changes (set_*) or the rule matches now (create_rule). */
+            matched: number;
+            /** @description set_*: the transactions, read when it was proposed. */
+            ids?: string[];
+            categoryName?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            groupName?: string;
+            /** Format: uuid */
+            groupId?: string;
+            ruleName?: string;
+            match?: components["schemas"]["RuleMatch"];
+            sample: components["schemas"]["ProposalRow"][];
+            toolFilter?: components["schemas"]["ToolFilter"];
+        };
+        ProposalRow: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            bookedOn: string;
+            payee: string;
+            amount: components["schemas"]["Money"];
+            category?: string;
         };
         AssistantMeta: {
             /** Format: int64 */
@@ -2450,6 +2836,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+        AssistantChatHeader: string;
         Id: string;
     };
     requestBodies: never;
@@ -3294,7 +3682,10 @@ export interface operations {
     bulkUpdateTransactions: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3415,6 +3806,324 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    createCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryInput"];
+            };
+        };
+        responses: {
+            /** @description The new category. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedRef"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    categoryStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories in natural order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStat"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    renameCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryInput"];
+            };
+        };
+        responses: {
+            /** @description The category. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedRef"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    mergeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    intoId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description How many transactions moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: int64 */
+                        moved: number;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createRule: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description The new rule. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    reorderRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    ids: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description The rules in their new order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    previewRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    match: components["schemas"]["RuleMatch"];
+                };
+            };
+        };
+        responses: {
+            /** @description The preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulePreview"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ruleSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSuggestion"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    applyRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description The rule. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listGroups: {
         parameters: {
             query?: never;
@@ -3456,6 +4165,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Group"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    groupReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupReport"];
                 };
             };
             default: components["responses"]["Problem"];
