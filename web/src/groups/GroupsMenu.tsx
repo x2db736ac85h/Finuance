@@ -1,7 +1,8 @@
 // The toolbar's Groups button and menu (legacy #grpBtn, openGroupsMenu): every group with its colour,
-// count and money out; clicking one shows only its transactions (the Group column's `=Name`
-// filter), again shows everything. ✎ renames or recolours, × deletes the group (labels only, after
-// a confirmation), New group, Show all.
+// count and money out, and its budget's progress when it has one (PLAN 15.9); clicking one shows
+// only its transactions (the Group column's `=Name` filter), again shows everything. The chart
+// button opens the group window, ✎ renames, recolours or budgets, × deletes the group (labels
+// only, after a confirmation), New group, Show all.
 
 import { useState } from 'react';
 
@@ -17,14 +18,16 @@ import { Modal } from '../ui/Modal';
 import { Popover } from '../ui/Popover';
 import { toast } from '../ui/toastStore';
 import { groupColor } from './colors';
-import { renameGroupFilters, toggleGroupFilter } from './filters';
+import { activeGroup, renameGroupFilters, toggleGroupFilter } from './filters';
 import { GroupForm } from './GroupForm';
+import { BudgetBar, GroupReportWindow } from './GroupReport';
 
 export function GroupsButton({ viewId }: { viewId: string }) {
   const [btn, setBtn] = useState<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<{ group?: Group } | null>(null);
   const [del, setDel] = useState<Group | null>(null);
+  const [report, setReport] = useState<Group | null>(null);
   const groups = useGroups().data ?? [];
   const cond = useViews((s) => viewOf(s.views, viewId).filters.group?.cond ?? '');
   const active = cond.startsWith('=') ? cond.slice(1) : null;
@@ -65,7 +68,10 @@ export function GroupsButton({ viewId }: { viewId: string }) {
           <div className="pop-s">
             {groups.length ? (
               groups.map((g) => (
-                <div key={g.id} className={active === g.name ? 'gr on' : 'gr'}>
+                <div
+                  key={g.id}
+                  className={`gr${active === g.name ? ' on' : ''}${g.budgetMinor !== undefined ? ' has-bud' : ''}`}
+                >
                   <button
                     type="button"
                     className="gr-main"
@@ -83,9 +89,19 @@ export function GroupsButton({ viewId }: { viewId: string }) {
                     </span>
                   </button>
                   <IconButton
+                    icon="chart"
+                    size="sm"
+                    title={`Report for ${g.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(false);
+                      setReport(g);
+                    }}
+                  />
+                  <IconButton
                     icon="pen"
                     size="sm"
-                    title={`Rename or recolour ${g.name}`}
+                    title={`Edit ${g.name}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setForm({ group: g });
@@ -101,6 +117,9 @@ export function GroupsButton({ viewId }: { viewId: string }) {
                       setDel(g);
                     }}
                   />
+                  {g.budgetMinor !== undefined && (
+                    <BudgetBar spent={g.spent.amountMinor} budget={g.budgetMinor} cur={g.spent.currency} />
+                  )}
                 </div>
               ))
             ) : (
@@ -143,6 +162,18 @@ export function GroupsButton({ viewId }: { viewId: string }) {
           {...(form.group ? { group: form.group } : {})}
           onClose={() => {
             setForm(null);
+          }}
+        />
+      )}
+      {report && (
+        <GroupReportWindow
+          group={report}
+          onClose={() => {
+            setReport(null);
+          }}
+          onShow={() => {
+            if (activeGroup(viewId) !== report.name) toggleGroupFilter(viewId, report.name);
+            setReport(null);
           }}
         />
       )}

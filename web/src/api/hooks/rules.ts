@@ -24,6 +24,7 @@ const RESULT_KEYS = [
   keys.categoryStats,
   keys.insight,
   keys.overview,
+  ['groupReport'],
 ];
 
 /** Refetch everything that shows categories or transfers, now and after the background job. */

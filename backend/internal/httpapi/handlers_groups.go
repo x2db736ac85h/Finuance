@@ -13,7 +13,15 @@ func groupDTO(g ledger.GroupStat) gen.Group {
 	return gen.Group{Id: g.ID, Name: g.Name, Color: g.Color, Count: g.Count,
 		Spent:   gen.Money{AmountMinor: g.SpentMinor, Currency: g.Currency},
 		Income:  gen.Money{AmountMinor: g.IncomeMinor, Currency: g.Currency},
-		FirstOn: dateDTO(g.FirstOn), LastOn: dateDTO(g.LastOn)}
+		FirstOn: dateDTO(g.FirstOn), LastOn: dateDTO(g.LastOn), BudgetMinor: g.BudgetMinor}
+}
+
+// budgetIn reads GroupInput.budgetMinor: omitted keeps the budget, 0 removes it.
+func budgetIn(b *int64) int64 {
+	if b == nil {
+		return ledger.KeepBudget
+	}
+	return *b
 }
 
 // ListGroups returns every group with its stats.
@@ -23,8 +31,8 @@ func (a *api) ListGroups(ctx context.Context, _ gen.ListGroupsRequestObject) (ge
 		return nil, err
 	}
 	out := make(gen.ListGroups200JSONResponse, len(groups))
-	for i, g := range groups {
-		out[i] = groupDTO(g)
+	for i := range groups {
+		out[i] = groupDTO(groups[i])
 	}
 	return out, nil
 }
@@ -36,7 +44,7 @@ func (a *api) CreateGroup(ctx context.Context, req gen.CreateGroupRequestObject)
 	if req.Body.Color != nil {
 		color = *req.Body.Color
 	}
-	g, err := a.ledger.CreateGroup(ctx, userID, req.Body.Name, color)
+	g, err := a.ledger.CreateGroupWith(ctx, userID, req.Body.Name, color, budgetIn(req.Body.BudgetMinor))
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +55,14 @@ func (a *api) CreateGroup(ctx context.Context, req gen.CreateGroupRequestObject)
 	return gen.CreateGroup201JSONResponse(groupDTO(st)), nil
 }
 
-// UpdateGroup renames and/or recolours a group.
+// UpdateGroup renames, recolours and/or budgets a group.
 func (a *api) UpdateGroup(ctx context.Context, req gen.UpdateGroupRequestObject) (gen.UpdateGroupResponseObject, error) {
 	userID := identity(ctx).User.ID
 	color := -1
 	if req.Body.Color != nil {
 		color = *req.Body.Color
 	}
-	if _, err := a.ledger.UpdateGroup(ctx, userID, req.Id, req.Body.Name, color); err != nil {
+	if _, err := a.ledger.EditGroup(ctx, userID, req.Id, req.Body.Name, color, budgetIn(req.Body.BudgetMinor)); err != nil {
 		return nil, err
 	}
 	st, err := a.ledger.GroupStatOf(ctx, userID, req.Id)
@@ -62,6 +70,21 @@ func (a *api) UpdateGroup(ctx context.Context, req gen.UpdateGroupRequestObject)
 		return nil, err
 	}
 	return gen.UpdateGroup200JSONResponse(groupDTO(st)), nil
+}
+
+// GroupReport breaks a group down for the group window (PLAN 15.9).
+func (a *api) GroupReport(ctx context.Context, req gen.GroupReportRequestObject) (gen.GroupReportResponseObject, error) {
+	userID := identity(ctx).User.ID
+	st, err := a.ledger.GroupStatOf(ctx, userID, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	r, err := a.insights.GroupReport(ctx, userID, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GroupReport200JSONResponse{Group: groupDTO(st), Currency: st.Currency, Days: r.Days, AvgPerDayMinor: r.AvgPerDayMinor,
+		Daily: daySpendDTO(r.Daily), Categories: categorySpendDTO(r.Categories), Payees: payeeSpendDTO(r.Payees), PayeeCount: r.PayeeCount}, nil
 }
 
 // DeleteGroup removes a group and its labels, never transactions.

@@ -783,6 +783,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * A group's report (the group window)
+         * @description The group's transactions over all accounts, ignoring filters and with transfers included (like its stats): the group with its totals and budget, the date span and money out per day, money out per day, per category and for the top payees (PLAN 15.9).
+         */
+        get: operations["groupReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{id}": {
         parameters: {
             query?: never;
@@ -800,7 +822,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Rename or recolour a group
+         * Rename, recolour or budget a group
          * @description The client renames view filters that mention the old name.
          */
         patch: operations["updateGroup"];
@@ -1538,6 +1560,11 @@ export interface components {
             filters?: components["schemas"]["ColumnFilter"][];
             period?: components["schemas"]["Period"];
             includeTransfers?: boolean;
+            /**
+             * Format: uuid
+             * @description Only this group's transactions (the group window's export).
+             */
+            groupId?: string;
             toolFilter?: components["schemas"]["ToolFilter"];
         };
         Sort: {
@@ -1800,10 +1827,39 @@ export interface components {
             firstOn?: string;
             /** Format: date */
             lastOn?: string;
+            /**
+             * Format: int64
+             * @description The money out the group should stay under (e.g. a trip budget), in `spent`'s currency; absent without a budget.
+             */
+            budgetMinor?: number;
         };
         GroupInput: {
             name: string;
             color?: number;
+            /**
+             * Format: int64
+             * @description Sets the group budget; `0` removes it. Omitted on an update keeps it.
+             */
+            budgetMinor?: number;
+        };
+        GroupReport: {
+            group: components["schemas"]["Group"];
+            currency: string;
+            /** @description Days from the first to the last transaction, inclusive (1 for an empty group). */
+            days: number;
+            /**
+             * Format: int64
+             * @description Money out per day over `days`.
+             */
+            avgPerDayMinor: number;
+            /** @description Every day with money out, oldest first. */
+            daily: components["schemas"]["DaySpend"][];
+            /** @description Money out per category, largest first, with all-time colour slots. */
+            categories: components["schemas"]["CategorySpend"][];
+            /** @description The 10 payee groups with the most money out. */
+            payees: components["schemas"]["PayeeSpend"][];
+            /** @description Payee groups with money out, before the top-10 cut. */
+            payeeCount: number;
         };
         BulkUpdate: {
             ids: string[];
@@ -4015,6 +4071,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Group"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    groupReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupReport"];
                 };
             };
             default: components["responses"]["Problem"];

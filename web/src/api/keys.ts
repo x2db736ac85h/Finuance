@@ -14,6 +14,7 @@ export const keys = {
   rules: ['rules'] as const,
   rulePreview: (matchKey: string) => ['rulePreview', matchKey] as const,
   groups: ['groups'] as const,
+  groupReport: (id: string) => ['groupReport', id] as const,
   duplicates: ['duplicates'] as const,
   tx: ['tx'] as const,
   distinct: (ctxKey: string, column: string, search: string) => ['distinct', ctxKey, column, search] as const,

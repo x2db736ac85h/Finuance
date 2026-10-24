@@ -2,8 +2,12 @@ package httpapi
 
 import (
 	"encoding/json"
+	"math"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 // HTTP tests of groups and bulk labelling (PLAN task 10.10) on the demo year.
@@ -172,5 +176,99 @@ func TestGroupsHTTP(t *testing.T) {
 	}
 	if l := groupList(t, b); len(l) != 2 {
 		t.Errorf("groups left = %v", l)
+	}
+}
+
+// The group window (PLAN 15.9): a budget on the group, the report, and the export by group id.
+func TestGroupReportHTTP(t *testing.T) {
+	e := newTestEnv(t, nil, true)
+	b := signedIn(t, e, testEmail(t))
+	acc := b.do("POST", "/accounts", map[string]any{"name": "Demo"})
+	expect(t, acc, 201, "")
+	b.commit(obj(t, b.upload("", "demo.csv", fixture(t, "demo/demo-legacy.csv"), acc.body["id"].(string)).body, "import")["id"].(string))
+
+	g := b.do("POST", "/groups", map[string]any{"name": "Trip", "budgetMinor": 150000})
+	expect(t, g, 201, "")
+	gid := g.body["id"].(string)
+	if num(g.body["budgetMinor"]) != 150000 {
+		t.Fatalf("created = %s", g.raw)
+	}
+	empty := b.do("GET", "/groups/"+gid+"/report", nil)
+	expect(t, empty, 200, "")
+	if num(empty.body["days"]) != 1 || num(empty.body["avgPerDayMinor"]) != 0 || len(empty.body["daily"].([]any)) != 0 ||
+		len(empty.body["categories"].([]any)) != 0 || num(empty.body["payeeCount"]) != 0 {
+		t.Errorf("empty report = %s", empty.raw)
+	}
+
+	bills := idsWhere(t, b, map[string]any{"column": "payee", "cond": "=OPERATOR INTERNETU"}, 50)
+	big := idsWhere(t, b, map[string]any{"column": "amount", "cond": "<-1000"}, 3)
+	expect(t, b.do("POST", "/transactions/bulk", map[string]any{"ids": append(bills, big...), "set": map[string]any{"groupId": gid}}), 200, "")
+
+	r := b.do("GET", "/groups/"+gid+"/report", nil)
+	expect(t, r, 200, "")
+	grp := obj(t, r.body, "group")
+	spent := num(obj(t, grp, "spent")["amountMinor"])
+	if num(grp["count"]) != 17 || num(grp["budgetMinor"]) != 150000 || r.body["currency"] != "PLN" {
+		t.Fatalf("report group = %s", r.raw)
+	}
+	first, _ := time.Parse(time.DateOnly, grp["firstOn"].(string))
+	last, _ := time.Parse(time.DateOnly, grp["lastOn"].(string))
+	days := int(last.Sub(first).Hours()/24) + 1
+	if num(r.body["days"]) != days || num(r.body["avgPerDayMinor"]) != int(math.Round(float64(spent)/float64(days))) {
+		t.Errorf("days %v, avg %v; want %d days of %d", r.body["days"], r.body["avgPerDayMinor"], days, spent)
+	}
+	sum := func(list []any) (s int) {
+		for _, x := range list {
+			s += num(x.(map[string]any)["spentMinor"])
+		}
+		return s
+	}
+	daily, cats, payees := r.body["daily"].([]any), r.body["categories"].([]any), r.body["payees"].([]any)
+	if sum(daily) != spent || sum(cats) != spent || daily[0].(map[string]any)["date"] != grp["firstOn"] {
+		t.Errorf("daily %d, categories %d, spent %d", sum(daily), sum(cats), spent)
+	}
+	if num(r.body["payeeCount"]) < 2 || len(payees) > 10 {
+		t.Errorf("payees = %v", payees)
+	}
+	for _, p := range payees {
+		if p := p.(map[string]any); p["payee"] == "OPERATOR INTERNETU" && (num(p["count"]) != 14 || num(p["spentMinor"]) != 14*7999) {
+			t.Errorf("internet = %v", p)
+		}
+	}
+
+	// The export of the group window, by id.
+	ex := b.do("POST", "/transactions/export", map[string]any{"context": map[string]any{"groupId": gid, "includeTransfers": true},
+		"columns": []string{"payee", "group"}})
+	expect(t, ex, 200, "")
+	if lines := strings.Split(strings.TrimSuffix(strings.TrimPrefix(ex.raw, "\ufeff"), "\r\n"), "\r\n"); len(lines) != 18 {
+		t.Errorf("export = %d lines", len(lines))
+	}
+
+	// The budget: an update without it keeps it, 0 removes it, a negative one is refused.
+	up := b.do("PATCH", "/groups/"+gid, map[string]any{"name": "Trip 2025"})
+	expect(t, up, 200, "")
+	if num(up.body["budgetMinor"]) != 150000 {
+		t.Errorf("kept = %s", up.raw)
+	}
+	up = b.do("PATCH", "/groups/"+gid, map[string]any{"name": "Trip 2025", "budgetMinor": 90000})
+	if num(up.body["budgetMinor"]) != 90000 {
+		t.Errorf("changed = %s", up.raw)
+	}
+	up = b.do("PATCH", "/groups/"+gid, map[string]any{"name": "Trip 2025", "budgetMinor": 0})
+	expect(t, up, 200, "")
+	if _, ok := up.body["budgetMinor"]; ok {
+		t.Errorf("removed = %s", up.raw)
+	}
+	expect(t, b.do("PATCH", "/groups/"+gid, map[string]any{"name": "Trip 2025", "budgetMinor": -1}), 422, "validation_failed")
+
+	// Unknown and other users' groups.
+	expect(t, b.do("GET", "/groups/"+uuid.NewString()+"/report", nil), 404, "not_found")
+	other := signedIn(t, e, "other-"+testEmail(t))
+	expect(t, other.do("GET", "/groups/"+gid+"/report", nil), 404, "not_found")
+	expect(t, other.do("PATCH", "/groups/"+gid, map[string]any{"name": "Mine", "budgetMinor": 5}), 404, "not_found")
+	oex := other.do("POST", "/transactions/export", map[string]any{"context": map[string]any{"groupId": gid}, "columns": []string{"payee"}})
+	expect(t, oex, 200, "")
+	if lines := strings.Split(strings.TrimSuffix(strings.TrimPrefix(oex.raw, "\ufeff"), "\r\n"), "\r\n"); len(lines) != 1 {
+		t.Errorf("another user's export by group id = %d lines", len(lines))
 	}
 }

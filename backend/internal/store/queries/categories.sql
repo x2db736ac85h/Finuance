@@ -82,3 +82,9 @@ DELETE FROM categories WHERE user_id = @user_id AND id = @id;
 
 -- name: GetCategory :one
 SELECT * FROM categories WHERE user_id = @user_id AND id = @id;
+
+-- name: ListCategoryAliases :many
+-- Every bank category name with the category it now goes to (NULL: uncategorised), for the data export.
+SELECT a.name_n, a.category_id, c.name AS category_name FROM category_aliases a
+LEFT JOIN categories c ON c.id = a.category_id
+WHERE a.user_id = @user_id ORDER BY a.name_n;

@@ -1156,12 +1156,32 @@ paths:
                 $ref: "#/components/schemas/Group"
         default:
           $ref: "#/components/responses/Problem"
+  /groups/{id}/report:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: groupReport
+      summary: A group's report (the group window)
+      description: >-
+        The group's transactions over all accounts, ignoring filters and with transfers included
+        (like its stats): the group with its totals and budget, the date span and money out per
+        day, money out per day, per category and for the top payees (PLAN 15.9).
+      tags: [groups]
+      responses:
+        "200":
+          description: The report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupReport"
+        default:
+          $ref: "#/components/responses/Problem"
   /groups/{id}:
     parameters:
       - $ref: "#/components/parameters/Id"
     patch:
       operationId: updateGroup
-      summary: Rename or recolour a group
+      summary: Rename, recolour or budget a group
       description: The client renames view filters that mention the old name.
       tags: [groups]
       requestBody:
@@ -2374,6 +2394,10 @@ components:
           $ref: "#/components/schemas/Period"
         includeTransfers:
           type: boolean
+        groupId:
+          type: string
+          format: uuid
+          description: Only this group's transactions (the group window's export).
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
     Sort:
@@ -2867,6 +2891,11 @@ components:
         lastOn:
           type: string
           format: date
+        budgetMinor:
+          type: integer
+          format: int64
+          minimum: 1
+          description: The money out the group should stay under (e.g. a trip budget), in `spent`'s currency; absent without a budget.
     GroupInput:
       type: object
       additionalProperties: false
@@ -2880,6 +2909,47 @@ components:
           type: integer
           minimum: 0
           maximum: 7
+        budgetMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 1000000000000
+          description: Sets the group budget; `0` removes it. Omitted on an update keeps it.
+    GroupReport:
+      type: object
+      additionalProperties: false
+      required: [group, currency, days, avgPerDayMinor, daily, categories, payees, payeeCount]
+      properties:
+        group:
+          $ref: "#/components/schemas/Group"
+        currency:
+          type: string
+        days:
+          type: integer
+          description: Days from the first to the last transaction, inclusive (1 for an empty group).
+        avgPerDayMinor:
+          type: integer
+          format: int64
+          description: Money out per day over `days`.
+        daily:
+          type: array
+          description: Every day with money out, oldest first.
+          items:
+            $ref: "#/components/schemas/DaySpend"
+        categories:
+          type: array
+          description: Money out per category, largest first, with all-time colour slots.
+          items:
+            $ref: "#/components/schemas/CategorySpend"
+        payees:
+          type: array
+          description: The 10 payee groups with the most money out.
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/PayeeSpend"
+        payeeCount:
+          type: integer
+          description: Payee groups with money out, before the top-10 cut.
     BulkUpdate:
       type: object
       additionalProperties: false

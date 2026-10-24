@@ -180,6 +180,8 @@ type Querier interface {
 	ListAssistantMessages(ctx context.Context, arg ListAssistantMessagesParams) ([]AssistantMessage, error)
 	ListBudgets(ctx context.Context, userID uuid.UUID) ([]ListBudgetsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
+	// Every bank category name with the category it now goes to (NULL: uncategorised), for the data export.
+	ListCategoryAliases(ctx context.Context, userID uuid.UUID) ([]ListCategoryAliasesRow, error)
 	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
 	// The overrides of the given (account, fingerprint) pairs.
 	ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error)
@@ -245,6 +247,8 @@ type Querier interface {
 	SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error
 	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
 	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
+	// NULL removes the budget.
+	SetGroupBudget(ctx context.Context, arg SetGroupBudgetParams) (int64, error)
 	// Moves an import along previewed → committing → committed | failed. from_status guards the move,
 	// so two concurrent commits can't both start. committed_at is the first commit time and survives a
 	// reprocess: it orders value sources ("the earliest import wins").

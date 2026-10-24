@@ -72,10 +72,7 @@ test('drag-select five rows: the quick bar sums them; a new group filters to exa
 
   // rename → the active filter follows
   await page.getByRole('button', { name: /Groups/ }).click();
-  await page
-    .getByRole('dialog', { name: 'Groups' })
-    .getByRole('button', { name: 'Rename or recolour Italy trip 2025' })
-    .click();
+  await page.getByRole('dialog', { name: 'Groups' }).getByRole('button', { name: 'Edit Italy trip 2025' }).click();
   const name = page.getByRole('textbox', { name: 'Group name' });
   await name.fill('Włochy');
   await name.press('Enter');

@@ -1,5 +1,6 @@
 // Transaction groups (PLAN §4.7, task 10.12): the list with stats, create / rename / delete, and
-// bulk labelling. Every change refetches the groups, the grid windows and the open details.
+// bulk labelling; the group window's report and budget (task 15.9). Every change refetches the
+// groups, the grid windows and the open details.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -8,14 +9,23 @@ import { keys } from '../keys';
 
 export type Group = Schemas['Group'];
 export type GroupInput = Schemas['GroupInput'];
+export type GroupReport = Schemas['GroupReport'];
 
 export function useGroups() {
   return useQuery({ queryKey: keys.groups, queryFn: async () => data(await api.GET('/groups')) });
 }
 
+/** GET /groups/{id}/report: the group window (totals, span, per day, categories, top payees). */
+export function useGroupReport(id: string) {
+  return useQuery({
+    queryKey: keys.groupReport(id),
+    queryFn: async () => data(await api.GET('/groups/{id}/report', { params: { path: { id } } })),
+  });
+}
+
 /** After any group change: the list, the rows (group column and filter) and dependent views. */
 export function invalidateGroups(qc: ReturnType<typeof useQueryClient>) {
-  for (const k of [keys.groups, keys.tx, ['distinct'], ['transaction'], keys.insight, keys.overview]) {
+  for (const k of [keys.groups, ['groupReport'], keys.tx, ['distinct'], ['transaction'], keys.insight, keys.overview]) {
     void qc.invalidateQueries({ queryKey: k });
   }
 }

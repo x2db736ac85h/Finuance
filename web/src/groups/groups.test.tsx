@@ -235,7 +235,7 @@ describe('groups menu', () => {
     await user.click(screen.getByRole('button', { name: /Groups/ }));
     await user.click(
       within(await screen.findByRole('dialog', { name: 'Groups' })).getByRole('button', {
-        name: 'Rename or recolour Italy',
+        name: 'Edit Italy',
       }),
     );
     const form = await screen.findByRole('dialog', { name: 'Edit group' });

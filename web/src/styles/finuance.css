@@ -785,3 +785,80 @@ textarea.inp.ins-note {
   padding-top: 0.375rem;
   border-top: 1px solid var(--line);
 }
+
+/* Group window and budget (PLAN 15.9) */
+.gbud {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.gbudget {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.gbudget .gbv {
+  font-size: 0.6875rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.gr .gbudget {
+  grid-column: 1 / -1;
+  padding: 0 0.25rem 0.25rem 1.25rem;
+}
+.gr.has-bud {
+  flex-wrap: wrap;
+}
+.gr.has-bud .gbudget {
+  flex: 1 0 100%;
+}
+.grep {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem 1rem;
+  min-width: min(44rem, calc(100vw - 2rem));
+}
+.grep .kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: auto;
+  padding: 0;
+}
+.grep .gsec h3 {
+  margin: 0 0 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.grep .gsec svg {
+  max-width: 100%;
+  height: auto;
+}
+.grep .gcols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.grep .donut {
+  height: auto;
+  padding: 0;
+}
+.grep .gpayees .hb {
+  cursor: default;
+}
+@media (max-width: 40rem) {
+  .grep .kpis,
+  .grep .gcols {
+    grid-template-columns: 1fr 1fr;
+  }
+  .grep .gcols {
+    grid-template-columns: 1fr;
+  }
+}

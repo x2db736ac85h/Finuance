@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 )
@@ -31,14 +32,19 @@ func (a *api) InsightCategories(ctx context.Context, req gen.InsightCategoriesRe
 	if err != nil {
 		return nil, err
 	}
-	out := gen.InsightCategories{Currency: c.Currency, TotalMinor: c.TotalMinor, Categories: make([]gen.CategorySpend, len(c.Categories))}
-	for i, x := range c.Categories {
-		out.Categories[i] = gen.CategorySpend{SpentMinor: x.SpentMinor, Share: x.Share, ColorSlot: x.ColorSlot}
+	out := gen.InsightCategories{Currency: c.Currency, TotalMinor: c.TotalMinor, Categories: categorySpendDTO(c.Categories)}
+	return gen.InsightCategories200JSONResponse(out), nil
+}
+
+func categorySpendDTO(cats []insights.CategoryShare) []gen.CategorySpend {
+	out := make([]gen.CategorySpend, len(cats))
+	for i, x := range cats {
+		out[i] = gen.CategorySpend{SpentMinor: x.SpentMinor, Share: x.Share, ColorSlot: x.ColorSlot}
 		if x.ID != nil && x.Name != nil {
-			out.Categories[i].Category = &gen.NamedRef{Id: *x.ID, Name: *x.Name}
+			out[i].Category = &gen.NamedRef{Id: *x.ID, Name: *x.Name}
 		}
 	}
-	return gen.InsightCategories200JSONResponse(out), nil
+	return out
 }
 
 // InsightCashflow returns money in and out per month.
@@ -90,11 +96,16 @@ func (a *api) InsightPayees(ctx context.Context, req gen.InsightPayeesRequestObj
 	if err != nil {
 		return nil, err
 	}
-	out := gen.InsightPayees{Currency: p.Currency, Total: p.Total, Payees: make([]gen.PayeeSpend, len(p.Payees))}
-	for i, x := range p.Payees {
-		out.Payees[i] = gen.PayeeSpend{Payee: x.Payee, SpentMinor: x.SpentMinor, Count: x.Count}
-	}
+	out := gen.InsightPayees{Currency: p.Currency, Total: p.Total, Payees: payeeSpendDTO(p.Payees)}
 	return gen.InsightPayees200JSONResponse(out), nil
+}
+
+func payeeSpendDTO(ps []query.PayeeSpend) []gen.PayeeSpend {
+	out := make([]gen.PayeeSpend, len(ps))
+	for i, x := range ps {
+		out[i] = gen.PayeeSpend{Payee: x.Payee, SpentMinor: x.SpentMinor, Count: x.Count}
+	}
+	return out
 }
 
 // InsightDaily returns the spending per day for the calendar.
@@ -103,11 +114,16 @@ func (a *api) InsightDaily(ctx context.Context, req gen.InsightDailyRequestObjec
 	if err != nil {
 		return nil, err
 	}
-	out := gen.InsightDaily{Currency: d.Currency, From: dateDTO(d.From), To: dateDTO(d.To), Days: make([]gen.DaySpend, len(d.Days))}
-	for i, x := range d.Days {
-		out.Days[i] = gen.DaySpend{Date: *dateDTO(&x.Date), SpentMinor: x.SpentMinor, Count: x.Count}
-	}
+	out := gen.InsightDaily{Currency: d.Currency, From: dateDTO(d.From), To: dateDTO(d.To), Days: daySpendDTO(d.Days)}
 	return gen.InsightDaily200JSONResponse(out), nil
+}
+
+func daySpendDTO(ds []query.DaySpend) []gen.DaySpend {
+	out := make([]gen.DaySpend, len(ds))
+	for i, x := range ds {
+		out[i] = gen.DaySpend{Date: *dateDTO(&x.Date), SpentMinor: x.SpentMinor, Count: x.Count}
+	}
+	return out
 }
 
 func periodDTO(r *query.Resolved) *gen.ResolvedPeriod {

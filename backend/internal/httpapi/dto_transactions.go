@@ -30,7 +30,7 @@ func deref[T any](p *T) T {
 }
 
 func contextIn(c gen.QueryContext) query.Context {
-	out := query.Context{AccountIDs: deref(c.AccountIds), Search: deref(c.Search), IncludeTransfers: deref(c.IncludeTransfers)}
+	out := query.Context{AccountIDs: deref(c.AccountIds), Search: deref(c.Search), IncludeTransfers: deref(c.IncludeTransfers), GroupID: c.GroupId}
 	for _, f := range deref(c.Filters) {
 		out.Filters = append(out.Filters, query.Filter{Column: string(f.Column), Cond: deref(f.Cond), Excluded: deref(f.Excluded)})
 	}

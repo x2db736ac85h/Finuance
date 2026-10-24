@@ -46,6 +46,9 @@ func Compile(userID uuid.UUID, c Context) (*Compiled, error) {
 	if !c.IncludeTransfers {
 		out.Where = append(out.Where, "NOT t.is_transfer")
 	}
+	if c.GroupID != nil {
+		out.Where = append(out.Where, "t.group_id = "+a.add(*c.GroupID))
+	}
 	out.Where = append(out.Where, searchPreds("t.search_text", c.Search, a)...)
 	ve := &platform.ValidationError{}
 	checkText(ve, "context.search", c.Search)

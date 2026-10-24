@@ -105,12 +105,13 @@ type GooseDbVersion struct {
 }
 
 type Group struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Name      string
-	NameN     string
-	Color     int16
-	CreatedAt time.Time
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	Name        string
+	NameN       string
+	Color       int16
+	CreatedAt   time.Time
+	BudgetMinor *int64
 }
 
 type Import struct {

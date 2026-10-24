@@ -209,6 +209,39 @@ func (q *Queries) ListCategories(ctx context.Context, userID uuid.UUID) ([]Categ
 	return items, nil
 }
 
+const listCategoryAliases = `-- name: ListCategoryAliases :many
+SELECT a.name_n, a.category_id, c.name AS category_name FROM category_aliases a
+LEFT JOIN categories c ON c.id = a.category_id
+WHERE a.user_id = $1 ORDER BY a.name_n
+`
+
+type ListCategoryAliasesRow struct {
+	NameN        string
+	CategoryID   *uuid.UUID
+	CategoryName *string
+}
+
+// Every bank category name with the category it now goes to (NULL: uncategorised), for the data export.
+func (q *Queries) ListCategoryAliases(ctx context.Context, userID uuid.UUID) ([]ListCategoryAliasesRow, error) {
+	rows, err := q.db.Query(ctx, listCategoryAliases, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCategoryAliasesRow
+	for rows.Next() {
+		var i ListCategoryAliasesRow
+		if err := rows.Scan(&i.NameN, &i.CategoryID, &i.CategoryName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const mergeCategoryAnnotations = `-- name: MergeCategoryAnnotations :exec
 UPDATE tx_annotations SET category_id = $1::uuid WHERE user_id = $2 AND category_id = $3::uuid
 `

@@ -32,9 +32,32 @@ type ExportAccount struct {
 
 // ExportNamed is a category or group.
 type ExportNamed struct {
-	ID    uuid.UUID `json:"id"`
-	Name  string    `json:"name"`
-	Color *int      `json:"color,omitempty"`
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Color       *int      `json:"color,omitempty"`
+	BudgetMinor *int64    `json:"budgetMinor,omitempty"` // groups (Phase 15)
+}
+
+// ExportRule is a categorisation rule (Phase 15): what it matches, in the table's filter
+// language, and what it does.
+type ExportRule struct {
+	ID            uuid.UUID       `json:"id"`
+	Name          string          `json:"name"`
+	Enabled       bool            `json:"enabled"`
+	Position      int             `json:"position"`
+	Match         json.RawMessage `json:"match"`
+	SetCategoryID *uuid.UUID      `json:"setCategoryId,omitempty"`
+	SetCategory   *string         `json:"setCategory,omitempty"`
+	MarkTransfer  bool            `json:"markTransfer"`
+	UpdatedAt     time.Time       `json:"updatedAt"`
+}
+
+// ExportAlias is where a bank category name now goes after a rename, merge or delete (Phase 15);
+// no category means uncategorised.
+type ExportAlias struct {
+	BankCategory string     `json:"bankCategory"` // normalised (lower case, no accents)
+	CategoryID   *uuid.UUID `json:"categoryId,omitempty"`
+	CategoryName *string    `json:"categoryName,omitempty"`
 }
 
 // ExportBudget is a category budget override.
@@ -138,9 +161,31 @@ func (l *Ledger) Export(ctx context.Context, userID uuid.UUID) (map[string]any, 
 		groups := make([]ExportNamed, len(grps))
 		for i, g := range grps {
 			c := int(g.Color)
-			groups[i] = ExportNamed{ID: g.ID, Name: g.Name, Color: &c}
+			groups[i] = ExportNamed{ID: g.ID, Name: g.Name, Color: &c, BudgetMinor: g.BudgetMinor}
 		}
 		out["groups.json"] = groups
+
+		rs, err := q.ListRules(ctx, userID)
+		if err != nil {
+			return err
+		}
+		rules := make([]ExportRule, len(rs))
+		for i := range rs {
+			r := &rs[i]
+			rules[i] = ExportRule{ID: r.ID, Name: r.Name, Enabled: r.Enabled, Position: int(r.Position), Match: r.Match,
+				SetCategoryID: r.SetCategoryID, SetCategory: r.CategoryName, MarkTransfer: r.MarkTransfer, UpdatedAt: r.UpdatedAt}
+		}
+		out["rules.json"] = rules
+
+		as, err := q.ListCategoryAliases(ctx, userID)
+		if err != nil {
+			return err
+		}
+		aliases := make([]ExportAlias, len(as))
+		for i, a := range as {
+			aliases[i] = ExportAlias{BankCategory: a.NameN, CategoryID: a.CategoryID, CategoryName: a.CategoryName}
+		}
+		out["category-aliases.json"] = aliases
 
 		bs, err := q.ListBudgets(ctx, userID)
 		if err != nil {
