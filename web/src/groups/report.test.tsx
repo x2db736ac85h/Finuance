@@ -67,7 +67,7 @@ beforeEach(() => {
     http.get(`${API}/categories`, () => HttpResponse.json([])),
     http.post(`${API}/transactions/export`, async ({ request }) => {
       exports.push((await request.json()) as Schemas['ExportRequest']);
-      return new HttpResponse('﻿Date;Payee\r\n', {
+      return new HttpResponse('\ufeffDate;Payee\r\n', {
         headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="finuance-italy.csv"' },
       });
     }),
@@ -107,8 +107,8 @@ describe('group window', () => {
     expect(legend).toEqual(['Noclegi', 'Jedzenie']);
     const payees = within(within(win).getByRole('list', { name: 'Top payees' })).getAllByRole('listitem');
     expect(payees.map((p) => p.textContent)).toEqual([
-      expect.stringMatching(/^Hotel · 1×2,000/),
-      expect.stringMatching(/^Pizzeria · 2×200/),
+      expect.stringMatching(/^Hotel1×2,000/),
+      expect.stringMatching(/^Pizzeria2×200/),
     ]);
   });
 

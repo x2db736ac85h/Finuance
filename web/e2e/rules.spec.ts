@@ -113,3 +113,39 @@ test('a transfer between two accounts is badged, hidden on request, left out of 
   await expect(page.locator('tr[data-i] .tag.xfer')).toHaveCount(0);
   await expect.poll(() => total(page, {})).toBe(3);
 });
+
+test('three manual categorisations suggest a rule; creating it categorises the whole payee group (PLAN 15.10)', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await signUp(page);
+  await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
+  const cat = await page.request.post('/api/v1/categories', { headers: API_HEADERS, data: { name: 'Internet' } });
+  const catId = ((await cat.json()) as { id: string }).id;
+  const q = await page.request.post('/api/v1/transactions/query', {
+    headers: API_HEADERS,
+    data: { context: { filters: [{ column: 'payee', cond: '=OPERATOR INTERNETU' }] }, limit: 3 },
+  });
+  const ids = ((await q.json()) as { rows: { id: string }[] }).rows.map((r) => r.id);
+  const b = await page.request.post('/api/v1/transactions/bulk', {
+    headers: API_HEADERS,
+    data: { ids, category: { id: catId } },
+  });
+  expect(b.status()).toBe(200);
+
+  await page.goto('/t/all');
+  const card = page.getByRole('region', { name: 'Rule suggestion' });
+  await expect(card).toContainText('You put 3 transactions of OPERATOR INTERNETU in Internet by hand.');
+  await card.getByRole('button', { name: 'Create rule…' }).click();
+  const dlg = page.getByRole('dialog', { name: 'New rule' });
+  await expect(dlg.getByText('Matches 14 transactions')).toBeVisible();
+  await dlg.getByRole('button', { name: 'Create rule' }).click();
+  await expect(card).toHaveCount(0);
+  await expect
+    .poll(() => total(page, { filters: [{ column: 'category', cond: '=Internet' }] }), { timeout: 20_000 })
+    .toBe(14);
+  // the dismissal is kept in the preferences: a reload doesn't bring the card back
+  await page.reload();
+  await expect(page.locator('tr[data-i]').first()).toBeVisible();
+  await expect(card).toHaveCount(0);
+});

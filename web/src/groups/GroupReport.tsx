@@ -215,13 +215,15 @@ function Payees({ r }: { r: GroupReport }) {
         <div key={p.payee} className="hb" role="listitem">
           <span className="hb-l">
             <span>{p.payee || '(no payee)'}</span>
-            <span className="muted"> · {fmtInt(p.count)}×</span>
           </span>
           <span className="hb-t">
             <span
               className="hb-f"
               style={{ width: `${((p.spentMinor / max) * 100).toFixed(2)}%`, background: 'var(--exp)' }}
             />
+          </span>
+          <span className="hb-n" title={plural(p.count, 'payment')}>
+            {fmtInt(p.count)}×
           </span>
           <span className="hb-v">{whole(p.spentMinor, r.currency)}</span>
         </div>

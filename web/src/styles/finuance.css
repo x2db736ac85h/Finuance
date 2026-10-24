@@ -851,7 +851,12 @@ textarea.inp.ins-note {
   padding: 0;
 }
 .grep .gpayees .hb {
+  grid-template-columns: minmax(4.375rem, 42%) minmax(0, 1fr) auto auto;
   cursor: default;
+}
+.grep .gpayees .hb-n {
+  font: 0.6875rem var(--mono);
+  color: var(--muted);
 }
 @media (max-width: 40rem) {
   .grep .kpis,
