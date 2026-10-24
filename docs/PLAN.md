@@ -254,7 +254,7 @@ Do not relitigate these without an ADR and our Product Engineer's approval.
 2. License (suggest MIT or AGPL-3.0 for a self-hosted app).
 3. Which banks' exports they can provide as private fixtures. These get anonymised by the tool from Phase 1.
 4. Public demo hosting preference: Tailscale Funnel from the homelab, Cloudflare Tunnel, or a small VPS.
-5. Homelab specifics needed in Phase 16:
+5. Homelab specifics needed in Phase 16 (asked again in Phase 18, the homelab rollout, after the 2026-10-24 regrouping):
    * k3s ingress controller (Traefik default?);
    * cert-manager issuer name;
    * storage class;
@@ -3280,6 +3280,17 @@ Tests:
 
 ### Phase 16 — Production deployment: Helm, CloudNativePG, Argo CD, LLM endpoint · Size L
 
+> **Phase regrouping (2026-10-24, our Product Engineer, option B).** The homelab is out of reach for
+> now, so the work that needs it moves to one rollout phase. **Phase 16** builds and rehearses the
+> deployment without the homelab: 16.1–16.4, 16.7, the 16.8 ADR and values, and 16.6 as a rehearsal
+> on a throwaway kind cluster in CI (the cloud session can't pull ghcr.io or quay.io images).
+> **Phase 17** does the parts of 17 that need no cluster (17.2, 17.3 and 17.4 as code, 17.5 against
+> the Compose stack, 17.6 audit log, Activity page, chart scan, ZAP baseline, THREAT-MODEL v2) plus
+> the demo-mode code of 18.1. The new **Phase 18 — Homelab rollout** deploys everything on the real
+> cluster. The old Phase 18 (public demo, documentation, v1.0.0) becomes **Phase 19**, and its gate
+> carries the full security scan with nothing ignored.
+
+
 **Goal:** a GitOps deployment on our Product Engineer's k3s homelab with HA-ish API, managed Postgres, backups and a tested restore.
 
 **Read first:** §2 (deploy rows), §3.1, §8.1, §8.5; our Product Engineer's answers to §2.1 Q5. **Before writing manifests, check the current docs** of CloudNativePG (backup method), Argo CD (Helm hook handling) and Sealed Secrets, because these projects evolve.
@@ -3404,7 +3415,33 @@ Record the results with Grafana screenshots in `docs/perf.md`. **Find, fix and d
 
 ---
 
-### Phase 18 — Public demo, documentation, v1.0.0 · Size M
+### Phase 18 — Homelab rollout · Size M
+
+**Goal:** the Phase 16 and 17 artifacts running on our Product Engineer's k3s homelab (added by the
+2026-10-24 regrouping; needs physical or remote access to the homelab).
+
+**Read first:** Phase 16 and 17 above, `docs/RUNBOOK.md`, the ADRs written in Phases 16–17.
+
+**Tasks**
+* Homelab answers (§2.1 Q5): ingress (Traefik, confirmed), certificate issuer (Let's Encrypt with a
+  domain, or Tailscale `*.ts.net` certificates without one), storage class, backup target (S3-compatible
+  bucket or volume snapshots), hostname, LLM address. Fill `deploy/environments/homelab/values.yaml`.
+* 16.4 on the real cluster: bootstrap Argo CD, the app-of-apps, Sealed Secrets keys (real sealed
+  secrets), CNPG cluster with backups; 16.5 access over the tailnet with TLS.
+* 16.6 restore drill on the homelab with measured RPO/RTO; the pod-kill k6 test on real hardware.
+* 16.8 the LLM endpoint: values, SSE through Traefik, one eval run against the deployed instance.
+* 17.1 observability stack (reuse what the homelab already runs), 17.3 dashboards provisioned,
+  17.4 alert receiver and a test alert, 17.5 load test on the homelab hardware.
+* 17.6 OpenVAS / Nessus scans of the deployed instance, triaged in `docs/security-scan.md`.
+* 18.2 (now 19.2) the demo environment can be prepared here or in Phase 19.
+* Every deferred gate check of Phases 13–17 that needs the homelab or the real data.
+
+**Gate (our Product Engineer):** watch a deploy via PR merge, roll back via revert, read the restore
+drill notes, a Grafana walkthrough.
+
+---
+
+### Phase 19 — Public demo, documentation, v1.0.0 · Size M (was Phase 18)
 
 **Goal:** something a recruiter can click on, plus documents that make the engineering visible.
 
