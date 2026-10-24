@@ -195,11 +195,13 @@ export const server = setupServer(
   http.post(`${API}/transactions/bulk`, async ({ request }) => {
     const b = (await request.json()) as Schemas['BulkUpdate'];
     db.bulks.push(b);
-    const g = db.groups.find((x) => x.id === b.set.groupId);
+    const g = b.set && db.groups.find((x) => x.id === b.set?.groupId);
     let updated = 0;
     db.transactions = db.transactions.map((t) => {
       if (!b.ids.includes(t.id)) return t;
       updated++;
+      if (b.transfer) return { ...t, isTransfer: b.transfer === 'yes' };
+      if (b.category) return { ...t, categorySource: b.category.id ? ('manual' as const) : ('bank' as const) };
       return g ? { ...t, group: { id: g.id, name: g.name } } : ungrouped(t);
     });
     return HttpResponse.json({ updated });

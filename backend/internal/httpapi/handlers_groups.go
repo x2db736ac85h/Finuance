@@ -72,9 +72,39 @@ func (a *api) DeleteGroup(ctx context.Context, req gen.DeleteGroupRequestObject)
 	return gen.DeleteGroup204Response{}, nil
 }
 
-// BulkUpdateTransactions sets or removes the group of many transactions (annotations included).
+// BulkUpdateTransactions applies one action to many transactions (annotations included): the
+// group, a manual category or back to the bank's, or the transfer decision.
 func (a *api) BulkUpdateTransactions(ctx context.Context, req gen.BulkUpdateTransactionsRequestObject) (gen.BulkUpdateTransactionsResponseObject, error) {
-	n, err := a.ledger.Annotate(ctx, identity(ctx).User.ID, req.Body.Ids, ledger.AnnotationPatch{SetGroup: true, GroupID: req.Body.Set.GroupId})
+	u, b := identity(ctx).User.ID, req.Body
+	actions := 0
+	for _, set := range []bool{b.Set != nil, b.Category != nil, b.Transfer != nil} {
+		if set {
+			actions++
+		}
+	}
+	if actions != 1 {
+		return nil, validation("set", "send exactly one of set, category and transfer")
+	}
+	var n int
+	var err error
+	switch {
+	case b.Set != nil:
+		n, err = a.ledger.Annotate(ctx, u, b.Ids, ledger.AnnotationPatch{SetGroup: true, GroupID: b.Set.GroupId})
+	case b.Category != nil:
+		if (b.Category.Id != nil) == deref(b.Category.Reset) {
+			return nil, validation("category", "send either id or reset: true")
+		}
+		n, err = a.ledger.Annotate(ctx, u, b.Ids, ledger.AnnotationPatch{SetCategory: true, CategoryID: b.Category.Id})
+	default:
+		var v *bool
+		if *b.Transfer != gen.BulkUpdateTransferAuto {
+			yes := *b.Transfer == gen.BulkUpdateTransferYes
+			v = &yes
+		}
+		if n, err = a.ledger.SetTransfer(ctx, u, b.Ids, v); err == nil && v == nil {
+			a.reclassifyAfter(ctx, u)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}

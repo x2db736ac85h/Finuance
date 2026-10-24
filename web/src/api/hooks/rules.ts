@@ -137,3 +137,17 @@ export function useRulePreview(match: RuleMatch) {
     staleTime: 10_000,
   });
 }
+
+export type BulkAction = { category: { id: string } | { reset: true } } | { transfer: 'yes' | 'no' | 'auto' };
+
+/** POST /transactions/bulk with a category or transfer action (the quick bar, PLAN task 15.5). */
+export function useBulkClassify() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, ...action }: BulkAction & { ids: string[] }) =>
+      data(await api.POST('/transactions/bulk', { body: { ids, ...action } })),
+    onSuccess: () => {
+      invalidateClassified(qc);
+    },
+  });
+}

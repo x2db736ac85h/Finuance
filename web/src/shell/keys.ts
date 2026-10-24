@@ -15,6 +15,8 @@ export type KeyActions = {
   openShortcuts: () => void;
   /** ↑/↓, j/k, PgUp/PgDn: move the table selection; false when there is no table. */
   move: (m: number | 'pageDown' | 'pageUp') => boolean;
+  /** Shift+↑/↓ (Shift+j/k): grow or shrink a range of selected rows. */
+  extend: (d: number) => boolean;
   /** Esc after popovers and search: clear the selection; false when there was none. */
   escape: () => boolean;
 };
@@ -46,6 +48,8 @@ export function handleKey(e: KeyboardEvent, a: KeyActions, layers: { modal: numb
     a.openShortcuts();
   } else if (e.key === '/') {
     if (a.focusSearch()) e.preventDefault();
+  } else if (e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || k === 'j' || k === 'k')) {
+    if (a.extend(e.key === 'ArrowDown' || k === 'j' ? 1 : -1)) e.preventDefault();
   } else if (e.key === 'ArrowDown' || k === 'j') {
     if (a.move(1)) e.preventDefault();
   } else if (e.key === 'ArrowUp' || k === 'k') {

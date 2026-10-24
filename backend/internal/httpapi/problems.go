@@ -109,3 +109,10 @@ func writeProblem(w http.ResponseWriter, p gen.Problem) {
 	w.WriteHeader(p.Status)
 	_ = json.NewEncoder(w).Encode(p)
 }
+
+// validation is a 422 validation_failed with one field error.
+func validation(field, message string) error {
+	ve := &platform.ValidationError{}
+	ve.Add(field, message)
+	return ve.Err()
+}

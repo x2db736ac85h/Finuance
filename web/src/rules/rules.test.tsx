@@ -272,6 +272,34 @@ describe('the table', () => {
     });
   });
 
+  it('Shift+↓ selects a range, and the quick bar sets its category or transfer state', async () => {
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    await user.click(await screen.findByText('PRZELEW WLASNY'));
+    await user.keyboard('{Shift>}{ArrowDown}{ArrowDown}{/Shift}');
+    const bar = within(await screen.findByRole('toolbar', { name: 'Selected transactions' }));
+    expect(bar.getByText('3')).toBeTruthy();
+    await user.keyboard('{Shift>}{ArrowUp}{/Shift}');
+    await waitFor(() => {
+      expect(bar.getByText('2')).toBeTruthy();
+    });
+    await user.click(bar.getByRole('button', { name: 'Category…' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Kawa' }));
+    await waitFor(() => {
+      expect(db.bulks.at(-1)).toEqual({ ids: [db.transactions[0]?.id, db.transactions[1]?.id], category: { id: C1 } });
+    });
+    expect(await screen.findByText('2 transactions set to “Kawa”', {}, { timeout: 3000 })).toBeTruthy();
+
+    await user.click(screen.getByText('ZABKA'));
+    await user.keyboard('{Shift>}{ArrowUp}{/Shift}');
+    const bar2 = within(await screen.findByRole('toolbar', { name: 'Selected transactions' }));
+    await user.click(bar2.getByRole('button', { name: 'Transfer…' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Mark as transfer' }));
+    await waitFor(() => {
+      expect(db.bulks.at(-1)).toEqual({ ids: [db.transactions[1]?.id, db.transactions[2]?.id], transfer: 'yes' });
+    });
+  });
+
   it('shows the pair in the inspector and unpairs it', async () => {
     const user = userEvent.setup();
     const t = db.transactions[0];

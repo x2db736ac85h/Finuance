@@ -510,8 +510,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Set or remove the group of many transactions
-         * @description Applies `set` to the given transactions (at most 5,000) and keeps the change as annotations, so it survives deleting and re-importing the file. `groupId: null` removes the label. Ids that are not the user's are ignored; `updated` counts the transactions changed.
+         * Change the group, category or transfer state of many transactions
+         * @description Applies exactly one action to the given transactions (at most 5,000) and keeps the change as annotations, so it survives deleting and re-importing the file: `set.groupId` (null removes the label), `category` (`id` sets a manual category, `reset` goes back to the bank's) or `transfer` (as on one transaction). Ids that are not the user's are ignored; `updated` counts the transactions changed.
          */
         post: operations["bulkUpdateTransactions"];
         delete?: never;
@@ -1807,10 +1807,18 @@ export interface components {
         };
         BulkUpdate: {
             ids: string[];
-            set: {
+            set?: {
                 /** Format: uuid */
                 groupId: string | null;
             };
+            /** @description Exactly one of `id` (a manual category) and `reset` (back to the bank's). */
+            category?: {
+                /** Format: uuid */
+                id?: string;
+                reset?: boolean;
+            };
+            /** @enum {string} */
+            transfer?: "yes" | "no" | "auto";
         };
         BulkResult: {
             updated: number;

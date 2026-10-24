@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { useSelection } from '../stores/selectionStore';
+import { useSelection, type Picked } from '../stores/selectionStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import type { RowSource } from './data';
 import type { GridHandle } from './Grid';
@@ -90,6 +90,34 @@ export function moveSelection(move: Move): boolean {
   const target = cur === null ? (d > 0 ? 0 : total - 1) : Math.min(total - 1, Math.max(0, cur + d));
   st.grid.scrollToIndex(target);
   if (!selectAt(st, target)) st.pending = target;
+  return true;
+}
+
+/**
+ * Shift+↑/↓ (PLAN task 15.5): grows or shrinks a multi-selection from the anchor (the open row, or
+ * the first or last row) one row at a time, as Shift-click does with the mouse. The rows walked
+ * over are loaded (each step scrolls to the new end); a step onto a row not loaded yet waits for the
+ * next press.
+ */
+export function extendSelection(d: number): boolean {
+  const st = active?.current;
+  const rows = st?.rows;
+  const total = rows?.total ?? 0;
+  if (!st?.grid || !rows || !total) return false;
+  const sel = useSelection.getState();
+  const mine = sel.viewId === st.viewId;
+  const cur = viewState(st).selectedIndex;
+  const anchor = (mine ? sel.anchor : null) ?? cur ?? (d > 0 ? 0 : total - 1);
+  const from = (mine ? sel.head : null) ?? anchor;
+  const head = Math.min(total - 1, Math.max(0, from + d));
+  st.grid.scrollToIndex(head);
+  const picked = new Map<string, Picked>();
+  for (let i = Math.min(anchor, head); i <= Math.max(anchor, head); i++) {
+    const r = rows.rowAt(i);
+    if (!r) return true;
+    picked.set(r.id, { amountMinor: r.amount.amountMinor, grouped: !!r.group });
+  }
+  sel.setRange(st.viewId, anchor, head, picked);
   return true;
 }
 

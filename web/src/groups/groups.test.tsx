@@ -165,7 +165,7 @@ describe('multi-selection and the quick bar', () => {
       }),
     );
     expect(await screen.findByText('1 transaction removed from their group', {}, { timeout: 3000 })).toBeTruthy();
-    expect(db.bulks.at(-1)?.set.groupId).toBeNull();
+    expect(db.bulks.at(-1)?.set?.groupId).toBeNull();
   });
 
   it('adds the selection to an existing group with its dot', async () => {
@@ -276,6 +276,6 @@ describe('groups menu', () => {
     });
     await user.click(pills.getByRole('button', { name: 'Wesele' }));
     expect(await screen.findByText('Removed from its group', {}, { timeout: 3000 })).toBeTruthy();
-    expect(db.bulks.map((b) => b.set.groupId)).toEqual(['00000000-0000-4000-8000-0000000000e2', null]);
+    expect(db.bulks.map((b) => b.set?.groupId)).toEqual(['00000000-0000-4000-8000-0000000000e2', null]);
   });
 });

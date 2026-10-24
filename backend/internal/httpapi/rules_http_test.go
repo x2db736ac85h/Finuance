@@ -253,3 +253,54 @@ func TestTransfersHTTP(t *testing.T) {
 	other := signedIn(t, e, testEmail(t)+".other")
 	expect(t, other.do("PATCH", "/transactions/"+zabka, map[string]any{"transfer": "no"}), 404, "not_found")
 }
+
+func TestBulkClassifyHTTP(t *testing.T) {
+	e := newTestEnv(t, nil, true)
+	b := signedIn(t, e, testEmail(t))
+	demoAccount(t, b)
+	cat := b.do("POST", "/categories", map[string]any{"name": "Internet"})
+	expect(t, cat, 201, "")
+	ids := idsWhere(t, b, map[string]any{"column": "payee", "cond": "=OPERATOR INTERNETU"}, 3)
+	bulk := func(body map[string]any) resp {
+		body["ids"] = ids
+		return b.do("POST", "/transactions/bulk", body)
+	}
+	r := bulk(map[string]any{"category": map[string]any{"id": cat.body["id"]}})
+	expect(t, r, 200, "")
+	if num(r.body["updated"]) != 3 {
+		t.Errorf("bulk category = %s", r.raw)
+	}
+	for _, id := range ids {
+		if d := b.do("GET", "/transactions/"+id, nil); d.body["categorySource"] != "manual" || obj(t, d.body, "category")["name"] != "Internet" {
+			t.Errorf("after bulk category: %s", d.raw)
+		}
+	}
+	expect(t, bulk(map[string]any{"category": map[string]any{"reset": true}}), 200, "")
+	if d := b.do("GET", "/transactions/"+ids[0], nil); d.body["categorySource"] != "bank" {
+		t.Errorf("after reset: %v", d.body["categorySource"])
+	}
+	expect(t, bulk(map[string]any{"transfer": "yes"}), 200, "")
+	if d := b.do("GET", "/transactions/"+ids[1], nil); d.body["isTransfer"] != true || d.body["transferSource"] != "manual" {
+		t.Errorf("after transfer yes: %s", d.raw)
+	}
+	for name, body := range map[string]map[string]any{
+		"no action":    {},
+		"two actions":  {"transfer": "no", "set": map[string]any{"groupId": nil}},
+		"id and reset": {"category": map[string]any{"id": cat.body["id"], "reset": true}},
+		"empty cat":    {"category": map[string]any{}},
+	} {
+		if r := bulk(body); r.code != 422 {
+			t.Errorf("%s: %d %s", name, r.code, r.raw)
+		}
+	}
+	other := signedIn(t, e, testEmail(t)+".other")
+	r = other.do("POST", "/transactions/bulk", map[string]any{"ids": ids, "transfer": "no"})
+	expect(t, r, 200, "")
+	if num(r.body["updated"]) != 0 {
+		t.Errorf("another user's bulk changed %v rows", r.body["updated"])
+	}
+	r = other.do("POST", "/transactions/bulk", map[string]any{"ids": ids, "category": map[string]any{"id": cat.body["id"]}})
+	if r.code != 404 && r.code != 422 {
+		t.Errorf("another user's category: %d %s", r.code, r.raw)
+	}
+}
