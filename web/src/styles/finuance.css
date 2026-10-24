@@ -888,3 +888,63 @@ textarea.inp.ins-note {
 .rule-hint .ico {
   color: var(--accent);
 }
+
+/* Assistant action proposal card (PLAN 15.7) */
+.proposal {
+  margin: 0.375rem 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  font-size: 0.8125rem;
+}
+.proposal .pr-h {
+  display: flex;
+  gap: 0.375rem;
+  align-items: flex-start;
+}
+.proposal .pr-h .ico {
+  color: var(--accent);
+  flex: none;
+  margin-top: 0.125rem;
+}
+.proposal .pr-why {
+  margin: 0.25rem 0 0;
+  color: var(--text-2);
+}
+.proposal .hint {
+  margin: 0.25rem 0 0;
+}
+.proposal .pr-rows {
+  width: 100%;
+  margin-top: 0.375rem;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.proposal .pr-rows td {
+  padding: 0.125rem 0.25rem;
+  white-space: nowrap;
+}
+.proposal .pr-rows td.tx {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.proposal .pr-rows td.num {
+  text-align: right;
+  font-family: var(--mono);
+}
+.proposal .pr-rows td.neg {
+  color: var(--neg);
+}
+.proposal .pr-a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.proposal .pr-done {
+  color: var(--st-good);
+  font-weight: 600;
+}

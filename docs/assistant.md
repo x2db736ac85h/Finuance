@@ -2,7 +2,7 @@
 
 The assistant answers questions about your transactions with a language model that looks the data up through read-only tools (PLAN §4.8, ADR 0015). It works with any server that speaks the OpenAI Chat Completions or Anthropic Messages API: LM Studio, Ollama, vLLM, llama.cpp, OpenAI, Anthropic, OpenRouter and others, local or in the cloud.
 
-The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and seven tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
+The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and eight tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
 
 | Tool | What it does |
 |---|---|
@@ -13,8 +13,13 @@ The model never gets a dump of your data. It gets a short description (date rang
 | `recurring_payments` | Subscriptions and regular bills found in the data (weekly, monthly or yearly; `cadence` on each payment) |
 | `budget_status` | One month's budgets: spent, budget and what is left per category, over budget or ahead of pace first |
 | `group_summary` | One transaction group (e.g. a trip): totals, days, spending per day, the group budget, categories and top payees |
+| `propose_action` | Proposes a change (a category or group for some transactions, or a rule); it changes nothing by itself |
 
 Every lookup is shown under the answer, with exactly what went back to the model and a *Show in table* link.
+
+### Proposed changes
+
+The assistant never changes your data. When you ask it to ("put these in Groceries", "make a rule for ŻABKA", "label these as Italy trip"), it proposes the change and the panel shows a card: what would change, why, a few of the affected transactions and *Show in table*. Nothing happens until you click **Apply**; the change then goes through the same requests as when you make it yourself. A proposal changes exactly the transactions it listed when it was made (at most 1,000), and a new category or group is created first. Applied proposals are logged without any content (ADR 0019).
 
 ## Configure one server
 

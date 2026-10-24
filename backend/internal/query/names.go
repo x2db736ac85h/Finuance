@@ -24,7 +24,8 @@ type GroupInfo struct {
 	BudgetMinor *int64
 }
 
-// Groups lists the user's groups with their stats, read-only (the assistant's group_summary).
+// Groups lists the user's groups with their stats, read-only (the assistant's group_summary and
+// action proposals).
 func (e *Engine) Groups(ctx context.Context, userID uuid.UUID) ([]GroupInfo, error) {
 	var out []GroupInfo
 	err := e.st.WithUserReadOnly(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
@@ -38,6 +39,19 @@ func (e *Engine) Groups(ctx context.Context, userID uuid.UUID) ([]GroupInfo, err
 				g.FirstOn, g.LastOn = &first, &last
 			}
 			out = append(out, g)
+		}
+		return err
+	})
+	return out, err
+}
+
+// CategoryRefs lists the user's categories, read-only (the assistant's action proposals).
+func (e *Engine) CategoryRefs(ctx context.Context, userID uuid.UUID) ([]NamedRef, error) {
+	var out []NamedRef
+	err := e.st.WithUserReadOnly(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		rows, err := q.ListCategories(ctx, userID)
+		for _, r := range rows {
+			out = append(out, NamedRef{ID: r.ID, Name: r.Name})
 		}
 		return err
 	})

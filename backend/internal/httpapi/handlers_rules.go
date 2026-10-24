@@ -155,6 +155,7 @@ func (a *api) CreateRule(ctx context.Context, req gen.CreateRuleRequestObject) (
 	if err != nil {
 		return nil, err
 	}
+	logAppliedAction(ctx, req.Params.XAssistantChat, "create_rule", 1)
 	return gen.CreateRule201JSONResponse(ruleDTO(&r)), nil
 }
 

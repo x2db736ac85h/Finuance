@@ -737,6 +737,8 @@ paths:
   /transactions/bulk:
     post:
       operationId: bulkUpdateTransactions
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
       summary: Change the group, category or transfer state of many transactions
       description: >-
         Applies exactly one action to the given transactions (at most 5,000) and keeps the change as
@@ -992,6 +994,8 @@ paths:
           $ref: "#/components/responses/Problem"
     post:
       operationId: createRule
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
       summary: Create a rule (it goes last)
       description: >-
         A rule matches with the table's filter language and needs a search or a column filter, and
@@ -1765,6 +1769,17 @@ paths:
           $ref: "#/components/responses/Problem"
 components:
   parameters:
+    AssistantChatHeader:
+      name: X-Assistant-Chat
+      in: header
+      required: false
+      description: >-
+        Set by the assistant panel when the request applies one of the assistant's action proposals
+        (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the
+        audit log of Phase 17); the request is otherwise an ordinary one.
+      schema:
+        type: string
+        format: uuid
     Id:
       name: id
       in: path
@@ -4170,6 +4185,70 @@ components:
           type: integer
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
+        proposal:
+          $ref: "#/components/schemas/ActionProposal"
+    ActionProposal:
+      type: object
+      additionalProperties: false
+      description: >-
+        A change propose_action suggests (PLAN 15.7, ADR 0019). The server never applies it; the
+        panel shows it with the affected rows and applies it through the normal endpoints when the
+        user confirms. A missing categoryId / groupId means the category or group is created first.
+      required: [action, matched, sample]
+      properties:
+        action:
+          type: string
+          enum: [set_category, set_group, create_rule]
+        reason:
+          type: string
+        matched:
+          type: integer
+          description: The transactions it changes (set_*) or the rule matches now (create_rule).
+        ids:
+          type: array
+          maxItems: 1000
+          description: "set_*: the transactions, read when it was proposed."
+          items:
+            type: string
+            format: uuid
+        categoryName:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        groupName:
+          type: string
+        groupId:
+          type: string
+          format: uuid
+        ruleName:
+          type: string
+        match:
+          $ref: "#/components/schemas/RuleMatch"
+        sample:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ProposalRow"
+        toolFilter:
+          $ref: "#/components/schemas/ToolFilter"
+    ProposalRow:
+      type: object
+      additionalProperties: false
+      required: [id, bookedOn, payee, amount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookedOn:
+          type: string
+          format: date
+        payee:
+          type: string
+        amount:
+          $ref: "#/components/schemas/Money"
+        category:
+          type: string
     AssistantMeta:
       type: object
       additionalProperties: false

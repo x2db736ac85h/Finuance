@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -429,4 +430,110 @@ func TestBudgetAndGroupTools(t *testing.T) {
 			t.Errorf("unmasked payee %v", p)
 		}
 	}
+}
+
+// propose_action (PLAN 15.7) reads what a change would touch and never changes anything.
+func TestProposeAction(t *testing.T) {
+	e, u := demoUser(t)
+	tools := NewTools(e.q)
+	sc := Scope{MaxRows: 50}
+	run := func(args string, sc Scope) (Outcome, map[string]any) {
+		t.Helper()
+		out, err := tools.Run(e.ctx, u, sc, ToolPropose, args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out, decode(t, []byte(out.JSON)).(map[string]any)
+	}
+	before := totalsOf(t, e, u)
+
+	// set_category with a new category: 14 rows, their ids for Apply, a sample; the model gets no ids
+	out, m := run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"Internet","reason":"Monthly internet bills"}`, sc)
+	p := out.Proposal
+	if p == nil || p.Action != ActionSetCategory || p.Matched != 14 || len(p.IDs) != 14 || p.CategoryID != nil || p.CategoryName != "Internet" ||
+		len(p.Sample) != 5 || p.Reason != "Monthly internet bills" || p.Filter == nil || p.Filter.Payee != "OPERATOR INTERNETU" {
+		t.Fatalf("proposal = %+v", p)
+	}
+	if m["status"] != proposedStatus || m["creates_category"] != true || m["matched"] != float64(14) || len(m["sample"].([]any)) != 5 ||
+		strings.Contains(out.JSON, p.IDs[0].String()) || !strings.HasPrefix(out.Summary, "proposed set category · payee: OPERATOR INTERNETU → 14") {
+		t.Errorf("result = %s (%s)", out.JSON, out.Summary)
+	}
+	// an existing category is found ignoring case and accents
+	out, m = run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"rachunki"}`, sc)
+	if out.Proposal.CategoryID == nil || out.Proposal.CategoryName != "Rachunki" || m["creates_category"] != nil {
+		t.Errorf("existing category: %+v %v", out.Proposal, m)
+	}
+	// set_group to an existing group
+	out, _ = run(`{"action":"set_group","payee":"OPERATOR INTERNETU","date_from":"2025-01-01","to_group":"wakacje nad morzem"}`, sc)
+	if p := out.Proposal; p.GroupID == nil || p.GroupName != "Wakacje nad morzem" || p.Matched != 2 {
+		t.Errorf("set_group = %+v", p)
+	}
+	// create_rule: payee contains …, counted over everything
+	out, m = run(`{"action":"create_rule","payee":"OPERATOR INTERNETU","to_category":"Internet"}`, sc)
+	if p := out.Proposal; p.Match == nil || len(p.Match.Filters) != 1 || p.Match.Filters[0] != (ProposalFilter{"payee", "OPERATOR INTERNETU"}) ||
+		p.RuleName != "OPERATOR INTERNETU" || p.Matched != 14 || len(p.IDs) != 0 || m["rule_name"] != "OPERATOR INTERNETU" {
+		t.Errorf("create_rule = %+v %v", p, m)
+	}
+
+	// refusals are answered to the model, with no proposal
+	for args, want := range map[string]string{
+		`{}`:                             "action must be",
+		`{"action":"delete_everything"}`: "action must be",
+		`{"action":"set_category","to_category":"Internet"}`:                              "Give a filter",
+		`{"action":"set_category","payee":"OPERATOR INTERNETU"}`:                          "to_category must be",
+		`{"action":"set_group","payee":"x","to_group":"` + strings.Repeat("g", 41) + `"}`: "to_group must be",
+		`{"action":"set_category","payee":"NO SUCH PAYEE","to_category":"X"}`:             "No transactions match",
+		`{"action":"create_rule","to_category":"Internet"}`:                               "A rule needs",
+		`{"action":"create_rule","payee":"=OPERATOR","to_category":"Internet"}`:           "plain text",
+	} {
+		out, m := run(args, sc)
+		if out.Proposal != nil || !strings.Contains(fmt.Sprint(m["error"]), want) {
+			t.Errorf("%s = %s", args, out.JSON)
+		}
+	}
+	old := proposalCap
+	proposalCap = 10
+	out, m = run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"Internet"}`, sc)
+	proposalCap = old
+	if out.Proposal != nil || !strings.Contains(fmt.Sprint(m["error"]), "14 transactions match; a proposal may change at most 10") {
+		t.Errorf("cap = %s", out.JSON)
+	}
+	// the chat's scope applies: a view filtered to 2025 sees 2 bills
+	view := Scope{MaxRows: 50, Context: query.Context{Period: &query.Period{Year: 2025}}, View: true}
+	if out, _ := run(`{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"Internet"}`, view); out.Proposal.Matched != 2 {
+		t.Errorf("view scope = %+v", out.Proposal)
+	}
+	// cloud connections: the model's sample is masked, the card's isn't
+	out, _ = run(`{"action":"set_category","query":"DEMO","type":"income","to_category":"Wpływy"}`, Scope{MaxRows: 50, Mask: true})
+	if longDigits.MatchString(out.JSON) {
+		t.Errorf("unmasked: %s", out.JSON)
+	}
+	// nothing changed
+	if after := totalsOf(t, e, u); after != before {
+		t.Errorf("data changed: %v → %v", before, after)
+	}
+	// another user's proposal sees none of these rows
+	if out, err := tools.Run(e.ctx, e.user(), sc, ToolPropose, `{"action":"set_category","payee":"OPERATOR INTERNETU","to_category":"X"}`); err != nil ||
+		out.Proposal != nil {
+		t.Errorf("tenancy: %v %s", err, out.JSON)
+	}
+}
+
+// totalsOf is a fingerprint of the user's categorisation: categories, manual ones and groups.
+func totalsOf(t *testing.T, e *env, u uuid.UUID) [3]int {
+	t.Helper()
+	var out [3]int
+	cats, err := e.q.Categories(e.ctx, u, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out[0] = len(cats)
+	for _, f := range []query.Filter{{Column: "category", Cond: "="}, {Column: "group", Cond: "!="}} {
+		p, err := e.q.Page(e.ctx, u, query.PageRequest{Context: query.Context{Filters: []query.Filter{f}}, Limit: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[1+map[string]int{"category": 0, "group": 1}[f.Column]] = p.Total
+	}
+	return out
 }

@@ -2563,6 +2563,36 @@ export interface components {
             truncated?: boolean;
             matched?: number;
             toolFilter?: components["schemas"]["ToolFilter"];
+            proposal?: components["schemas"]["ActionProposal"];
+        };
+        /** @description A change propose_action suggests (PLAN 15.7, ADR 0019). The server never applies it; the panel shows it with the affected rows and applies it through the normal endpoints when the user confirms. A missing categoryId / groupId means the category or group is created first. */
+        ActionProposal: {
+            /** @enum {string} */
+            action: "set_category" | "set_group" | "create_rule";
+            reason?: string;
+            /** @description The transactions it changes (set_*) or the rule matches now (create_rule). */
+            matched: number;
+            /** @description set_*: the transactions, read when it was proposed. */
+            ids?: string[];
+            categoryName?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            groupName?: string;
+            /** Format: uuid */
+            groupId?: string;
+            ruleName?: string;
+            match?: components["schemas"]["RuleMatch"];
+            sample: components["schemas"]["ProposalRow"][];
+            toolFilter?: components["schemas"]["ToolFilter"];
+        };
+        ProposalRow: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            bookedOn: string;
+            payee: string;
+            amount: components["schemas"]["Money"];
+            category?: string;
         };
         AssistantMeta: {
             /** Format: int64 */
@@ -2806,6 +2836,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+        AssistantChatHeader: string;
         Id: string;
     };
     requestBodies: never;
@@ -3650,7 +3682,10 @@ export interface operations {
     bulkUpdateTransactions: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3922,7 +3957,10 @@ export interface operations {
     createRule: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+            };
             path?: never;
             cookie?: never;
         };

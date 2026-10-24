@@ -281,7 +281,9 @@ export function ChatPanel({ viewId }: { viewId: string }) {
             </div>
           </div>
         ) : (
-          turns.map((t, i) => <TurnView key={i} turn={t} last={i === turns.length - 1} onShow={showInTable} />)
+          turns.map((t, i) => (
+            <TurnView key={i} turn={t} last={i === turns.length - 1} chatId={chatId} onShow={showInTable} />
+          ))
         )}
       </div>
       <form

@@ -182,6 +182,16 @@
      "refs": [{"tool": "group_summary", "args": {"group": "wakacje"}}], "expect": ["0:days", "0:spent_per_day"]},
     {"id": "grp-remont-payee-pl", "category": "budgets and groups", "lang": "pl", "question": "Gdzie wydałem najwięcej podczas remontu?",
      "tools": ["group_summary", "aggregate_transactions"], "args": [{"group|query": "~remont"}],
-     "refs": [{"tool": "group_summary", "args": {"group": "remont"}}], "expect": ["0:top_payees.0.payee"]}
+     "refs": [{"tool": "group_summary", "args": {"group": "remont"}}], "expect": ["0:top_payees.0.payee"]},
+
+    {"id": "prop-category-en", "category": "action proposals", "lang": "en", "question": "Put all OPERATOR INTERNETU payments in a new category called Internet.",
+     "tools": ["propose_action"], "args": [{"action": "set_category", "payee|query": "~operator internetu", "to_category": "~internet"}],
+     "mention": "Apply|confirm|review|card"},
+    {"id": "prop-rule-pl", "category": "action proposals", "lang": "pl", "question": "Utwórz regułę, żeby KLUB FITNESS RUCH zawsze trafiał do kategorii Sport.",
+     "tools": ["propose_action"], "args": [{"action": "create_rule", "payee|query": "~fitness", "to_category": "~sport"}],
+     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"},
+    {"id": "prop-group-en", "category": "action proposals", "lang": "en", "question": "Label my TEATR MAŁY visits with the group Culture.",
+     "tools": ["propose_action"], "args": [{"action": "set_group", "payee|query": "~teatr", "to_group": "~culture"}],
+     "mention": "Apply|confirm|review|card"}
   ]
 }

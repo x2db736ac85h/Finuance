@@ -42,6 +42,14 @@ var toolDefs = []llm.Tool{
 	{Name: ToolGroup, Description: "Summary of one user-defined transaction group (e.g. a trip): totals, first and last day, spending per day, " +
 		"the group budget and what is left, categories and top payees.",
 		Parameters: json.RawMessage(`{"type":"object","properties":{"group":{"type":"string","description":"The group name (find_values with field group lists them)"}},"required":["group"]}`)},
+	{Name: ToolPropose, Description: "Propose a change for the user to confirm: put transactions in a category (set_category) or a group (set_group), " +
+		"or create a rule that categorises a payee from now on (create_rule). You never change data yourself: the user sees a card with the affected " +
+		"transactions and applies it. Select the transactions with the usual filters; a rule uses payee and/or query.",
+		Parameters: json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["set_category","set_group","create_rule"]},` +
+			`"to_category":{"type":"string","description":"set_category and create_rule: the category name (an existing one, or a new one to create)"},` +
+			`"to_group":{"type":"string","description":"set_group: the group name (an existing one, or a new one to create)"},` +
+			`"rule_name":{"type":"string","description":"create_rule: a short name for the rule"},` +
+			`"reason":{"type":"string","description":"One short sentence for the user on why"},` + filters + `},"required":["action"]}`)},
 }
 
 // Tool sets: the full set, and the legacy three for small models and plan mode (PLAN §4.8; the

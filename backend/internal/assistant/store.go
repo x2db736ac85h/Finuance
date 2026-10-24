@@ -69,6 +69,7 @@ type Step struct {
 	Truncated  bool            `json:"truncated,omitempty"`
 	Matched    *int            `json:"matched,omitempty"`
 	ToolFilter *StepFilter     `json:"toolFilter,omitempty"`
+	Proposal   *Proposal       `json:"proposal,omitempty"` // propose_action (PLAN 15.7)
 }
 
 // StepFilter is a step's lookup filter in the API's ToolFilter form, for "Show in table".

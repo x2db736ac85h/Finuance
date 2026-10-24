@@ -7,6 +7,7 @@ import type { Step } from '../api/hooks/assistant';
 import type { AiTurn, UiTurn } from './chatStore';
 import { fixFor } from './errors';
 import { Markdown } from './md';
+import { ProposalCard } from './Proposal';
 
 const NICE: Record<string, string> = {
   search_transactions: 'Searched transactions',
@@ -16,6 +17,7 @@ const NICE: Record<string, string> = {
   recurring_payments: 'Looked for recurring payments',
   budget_status: 'Checked the budgets',
   group_summary: 'Summarised the group',
+  propose_action: 'Proposed a change',
 };
 
 function pretty(json: string): string {
@@ -74,10 +76,13 @@ export function metaLine(t: AiTurn): string {
 export function TurnView({
   turn,
   last,
+  chatId,
   onShow,
 }: {
   turn: UiTurn;
   last: boolean;
+  /** The chat the turn belongs to (proposals are applied with it). */
+  chatId: string | null;
   onShow: (s: Step, t: AiTurn) => void;
 }) {
   if (turn.role === 'user') {
@@ -106,6 +111,20 @@ export function TurnView({
           }}
         />
       ))}
+      {turn.steps.map(
+        (s, i) =>
+          s.proposal && (
+            <ProposalCard
+              key={`p${String(i)}`}
+              proposal={s.proposal}
+              chatId={chatId}
+              onShow={() => {
+                const tf = s.proposal?.toolFilter;
+                if (tf) onShow({ ...s, toolFilter: tf }, turn);
+              }}
+            />
+          ),
+      )}
       <div className="bub md">
         {turn.content ? (
           <Markdown text={turn.content} />

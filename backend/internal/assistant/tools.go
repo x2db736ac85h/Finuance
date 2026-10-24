@@ -31,6 +31,7 @@ const (
 	ToolRecurring = "recurring_payments"
 	ToolBudgets   = "budget_status"
 	ToolGroup     = "group_summary"
+	ToolPropose   = "propose_action"
 )
 
 // Scope is what a chat's lookups may read: every account, or the table view the user asked from
@@ -49,10 +50,11 @@ type Scope struct {
 // Outcome is one executed tool call: the JSON the model receives, the step summary, and for
 // search and aggregate the filter that "Show in table" applies (PLAN §4.8).
 type Outcome struct {
-	JSON    string
-	Summary string
-	Filter  *query.ToolFilter
-	Matched *int
+	JSON     string
+	Summary  string
+	Filter   *query.ToolFilter
+	Matched  *int
+	Proposal *Proposal // propose_action: what the confirmation card shows and applies
 }
 
 // Tools runs the read-only lookups. Every call is one read-only transaction under the user's RLS
@@ -88,6 +90,8 @@ func (t *Tools) Run(ctx context.Context, userID uuid.UUID, sc Scope, name, rawAr
 		out, err = t.budgets(ctx, userID, sc, a)
 	case ToolGroup:
 		out, err = t.group(ctx, userID, sc, a)
+	case ToolPropose:
+		out, err = t.propose(ctx, userID, sc, a)
 	default:
 		return outcome(map[string]string{"error": "Unknown tool " + name}, "unknown tool "+name), nil
 	}
