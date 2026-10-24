@@ -22,13 +22,15 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 )
 
-// The tool names (legacy AI_TOOLS plus two overview tools).
+// The tool names (legacy AI_TOOLS, two overview tools, and the budget and group tools of 15.8).
 const (
 	ToolSearch    = "search_transactions"
 	ToolAggregate = "aggregate_transactions"
 	ToolValues    = "find_values"
 	ToolMonth     = "month_overview"
 	ToolRecurring = "recurring_payments"
+	ToolBudgets   = "budget_status"
+	ToolGroup     = "group_summary"
 )
 
 // Scope is what a chat's lookups may read: every account, or the table view the user asked from
@@ -82,6 +84,10 @@ func (t *Tools) Run(ctx context.Context, userID uuid.UUID, sc Scope, name, rawAr
 		out, err = t.month(ctx, userID, sc, a)
 	case ToolRecurring:
 		out, err = t.recurring(ctx, userID, sc, a)
+	case ToolBudgets:
+		out, err = t.budgets(ctx, userID, sc, a)
+	case ToolGroup:
+		out, err = t.group(ctx, userID, sc, a)
 	default:
 		return outcome(map[string]string{"error": "Unknown tool " + name}, "unknown tool "+name), nil
 	}
@@ -402,13 +408,7 @@ const (
 var monthRe = regexp.MustCompile(`^(\d{4})-(\d{2})`)
 
 func (t *Tools) month(ctx context.Context, userID uuid.UUID, sc Scope, a args) (Outcome, error) {
-	var month *platform.Date
-	if m := monthRe.FindStringSubmatch(a.str("month")); m != nil {
-		if d := query.ParseToolDate(m[0] + "-01"); d != nil {
-			month = d
-		}
-	}
-	ov, err := t.ins.Overview(ctx, userID, sc.Context, month, 6, investments.Doc{})
+	ov, err := t.ins.Overview(ctx, userID, sc.Context, monthArg(a), 6, investments.Doc{})
 	if err != nil {
 		return Outcome{}, err
 	}
@@ -431,9 +431,7 @@ func (t *Tools) month(ctx context.Context, userID uuid.UUID, sc Scope, a args) (
 		r.ProjectedSpent = &p
 	}
 	if inc := ov.Cur.IncomeMinor; inc > 0 {
-		// tenths of a percent, rounded half away from zero, without a float
-		tenths := insights.DivRound((inc-ov.Cur.ExpenseMinor)*1000, inc)
-		n := json.Number(strings.TrimSuffix(strings.TrimSuffix(money.FormatMinor(tenths, 1), "0"), "."))
+		n := percent(inc-ov.Cur.ExpenseMinor, inc)
 		r.SavingsRate = &n
 	}
 	for _, c := range ov.Categories {

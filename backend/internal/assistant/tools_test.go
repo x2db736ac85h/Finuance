@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -309,13 +310,123 @@ func TestToolsTenancy(t *testing.T) {
 	e, _ := demoUser(t)
 	other := e.user()
 	tools := NewTools(e.q)
-	for _, c := range []struct{ name, args string }{{ToolSearch, `{}`}, {ToolAggregate, `{"group_by":"payee"}`}, {ToolValues, `{}`}} {
+	for _, c := range []struct{ name, args string }{{ToolSearch, `{}`}, {ToolAggregate, `{"group_by":"payee"}`}, {ToolValues, `{}`},
+		{ToolBudgets, `{}`}, {ToolGroup, `{"group":"Wakacje nad morzem"}`}} {
 		out, err := tools.Run(e.ctx, other, Scope{MaxRows: 50}, c.name, c.args)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if strings.Contains(out.JSON, "DEMO") || strings.Contains(out.JSON, "WSPÓLNOTA") {
 			t.Errorf("%s leaks: %s", c.name, out.JSON)
+		}
+	}
+}
+
+// The budget and group tools (PLAN 15.8) on the demo year.
+func TestBudgetAndGroupTools(t *testing.T) {
+	e, u := demoUser(t)
+	tools := NewTools(e.q)
+	run := func(name, args string, sc Scope) (map[string]any, string) {
+		t.Helper()
+		out, err := tools.Run(e.ctx, u, sc, name, args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return decode(t, []byte(out.JSON)).(map[string]any), out.Summary
+	}
+	sc := Scope{MaxRows: 50}
+
+	// budget_status: the month's categories, worst first; the totals add up
+	b, sum := run(ToolBudgets, `{"month":"2025-02"}`, sc)
+	if b["month"] != "2025-02" || b["partial"] != false || b["spent"] != 5569.62 || !strings.HasPrefix(sum, "budget status · 2025-02 · ") {
+		t.Fatalf("budget_status = %v (%s)", b, sum)
+	}
+	cats := b["categories"].([]any)
+	rank := map[string]int{"over": 0, "ahead": 1, "ok": 2, "none": 3}
+	counts := map[string]int{}
+	var spent float64
+	prev := -1
+	for _, c := range cats {
+		c := c.(map[string]any)
+		st := c["status"].(string)
+		if rank[st] < prev {
+			t.Errorf("order: %v", cats)
+		}
+		prev = rank[st]
+		counts[st]++
+		spent += c["spent"].(float64)
+		if math.Abs(c["left"].(float64)-(c["budget"].(float64)-c["spent"].(float64))) > 0.005 {
+			t.Errorf("left = %v", c)
+		}
+	}
+	if num := func(k string) int { return int(b[k].(float64)) }; num("over_budget") != counts["over"] || num("ahead_of_pace") != counts["ahead"] ||
+		num("on_track") != counts["ok"] || b["omitted_categories"] != float64(0) {
+		t.Errorf("counts %v vs %v", b, counts)
+	}
+	if math.Abs(spent-5569.62) > 0.005 {
+		t.Errorf("categories spend %v", spent)
+	}
+	// the latest month is in progress
+	if cur, _ := run(ToolBudgets, `{}`, sc); cur["month"] != "2025-03" || cur["partial"] != true || cur["days_elapsed"] != float64(17) {
+		t.Errorf("latest = %v", cur)
+	}
+
+	// group_summary: matched ignoring case and accents, or by a unique part of the name
+	stats, err := e.l.GroupStats(e.ctx, u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wak ledger.GroupStat
+	for _, g := range stats {
+		if g.Name == "Wakacje nad morzem" {
+			wak = g
+		}
+	}
+	for _, name := range []string{"Wakacje nad morzem", "WAKACJE  NAD MORZEM", "wakacje"} {
+		g, sum := run(ToolGroup, `{"group":"`+name+`"}`, sc)
+		if g["group"] != "Wakacje nad morzem" || sum != "group summary · Wakacje nad morzem" {
+			t.Fatalf("%q: %v", name, g)
+		}
+		if int(g["transactions"].(float64)) != wak.Count || g["spent"] != float64(wak.SpentMinor)/100 ||
+			g["first_day"] != wak.FirstOn.String() || g["last_day"] != wak.LastOn.String() || g["budget"] != nil {
+			t.Errorf("%q: %v vs %+v", name, g, wak)
+		}
+		var cs float64
+		for _, c := range g["categories"].([]any) {
+			cs += c.(map[string]any)["spent"].(float64)
+		}
+		if len(g["categories"].([]any)) < groupCategories && math.Abs(cs-float64(wak.SpentMinor)/100) > 0.005 {
+			t.Errorf("categories add up to %v", cs)
+		}
+		if p := g["top_payees"].([]any); len(p) == 0 || len(p) > 10 {
+			t.Errorf("payees = %v", p)
+		}
+	}
+	// a budget shows with what is left
+	if _, err := e.l.EditGroup(e.ctx, u, wak.ID, wak.Name, -1, 100000); err != nil {
+		t.Fatal(err)
+	}
+	if g, _ := run(ToolGroup, `{"group":"wakacje"}`, sc); g["budget"] != float64(1000) || g["budget_left"] != float64(100000-wak.SpentMinor)/100 {
+		t.Errorf("budget = %v", g)
+	}
+	if _, err := e.l.EditGroup(e.ctx, u, wak.ID, wak.Name, -1, ledger.NoBudget); err != nil {
+		t.Fatal(err)
+	}
+	// no single match: the error lists the candidates
+	for args, want := range map[string]int{`{"group":"e"}`: 2, `{"group":"Italy"}`: 2} {
+		g, _ := run(ToolGroup, args, sc)
+		if g["error"] == nil || len(g["groups"].([]any)) != want {
+			t.Errorf("%s = %v", args, g)
+		}
+	}
+	if g, _ := run(ToolGroup, `{}`, sc); g["error"] == nil {
+		t.Errorf("no group = %v", g)
+	}
+	// cloud connections: long digit runs in payees are masked
+	g, _ := run(ToolGroup, `{"group":"wakacje"}`, Scope{MaxRows: 50, Mask: true})
+	for _, p := range g["top_payees"].([]any) {
+		if longDigits.MatchString(p.(map[string]any)["payee"].(string)) {
+			t.Errorf("unmasked payee %v", p)
 		}
 	}
 }

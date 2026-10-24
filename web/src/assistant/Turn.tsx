@@ -14,6 +14,8 @@ const NICE: Record<string, string> = {
   find_values: 'Looked up names',
   month_overview: 'Read the month overview',
   recurring_payments: 'Looked for recurring payments',
+  budget_status: 'Checked the budgets',
+  group_summary: 'Summarised the group',
 };
 
 function pretty(json: string): string {

@@ -85,13 +85,13 @@
      "expect": ["0:groups.0.key", "0:groups.1.key", "0:groups.2.key"]},
 
     {"id": "grp-holiday-en", "category": "groups", "lang": "en", "question": "How much did the seaside holiday cost me?",
-     "tools": ["aggregate_transactions", "search_transactions"], "args": [{"group|query": "~wakacje"}, {"group|query": "~morz"}],
+     "tools": ["aggregate_transactions", "search_transactions", "group_summary"], "args": [{"group|query": "~wakacje"}, {"group|query": "~morz"}],
      "refs": [{"tool": "search_transactions", "args": {"group": "wakacje"}}], "expect": ["0:total_spent"]},
     {"id": "grp-remont-pl", "category": "groups", "lang": "pl", "question": "Ile kosztował remont?",
-     "tools": ["aggregate_transactions", "search_transactions"], "args": [{"group|query": "~remont"}],
+     "tools": ["aggregate_transactions", "search_transactions", "group_summary"], "args": [{"group|query": "~remont"}],
      "refs": [{"tool": "search_transactions", "args": {"group": "remont"}}], "expect": ["0:total_spent"]},
     {"id": "grp-holiday-count-pl", "category": "groups", "lang": "pl", "question": "Ile transakcji jest w grupie Wakacje nad morzem?",
-     "tools": ["aggregate_transactions", "search_transactions"], "args": [{"group|query": "~wakacje"}],
+     "tools": ["aggregate_transactions", "search_transactions", "group_summary"], "args": [{"group|query": "~wakacje"}],
      "refs": [{"tool": "search_transactions", "args": {"group": "wakacje"}}], "expect": ["0:matched"]},
     {"id": "grp-holiday-food-en", "category": "groups", "lang": "en", "question": "How much did I spend on groceries during the seaside holiday?",
      "tools": ["aggregate_transactions", "search_transactions"], "args": [{"group": "~wakacje"}],
@@ -169,6 +169,19 @@
     {"id": "month-summary-en", "category": "overview and recurring", "lang": "en", "question": "Give me a short summary of February 2025.",
      "tools": ["month_overview", "aggregate_transactions", "search_transactions"],
      "args": [{"date_from": "2025-02-01", "date_to": "2025-02-28"}, {"month": "2025-02"}],
-     "refs": [{"tool": "aggregate_transactions", "args": {"date_from": "2025-02-01", "date_to": "2025-02-28"}}], "expect": ["0:total_spent", "0:total_income"]}
+     "refs": [{"tool": "aggregate_transactions", "args": {"date_from": "2025-02-01", "date_to": "2025-02-28"}}], "expect": ["0:total_spent", "0:total_income"]},
+
+    {"id": "budget-now-pl", "category": "budgets and groups", "lang": "pl", "question": "Czy w tym miesiącu przekraczam jakiś budżet?",
+     "tools": ["budget_status", "month_overview"],
+     "refs": [{"tool": "budget_status", "args": {}}], "expect": ["0:categories.0.category"]},
+    {"id": "budget-feb-en", "category": "budgets and groups", "lang": "en", "question": "Which categories went over budget in February 2025, and by how much?",
+     "tools": ["budget_status", "month_overview"], "args": [{"month": "2025-02"}],
+     "refs": [{"tool": "budget_status", "args": {"month": "2025-02"}}], "expect": ["0:categories.0.category"]},
+    {"id": "grp-holiday-days-en", "category": "budgets and groups", "lang": "en", "question": "How many days did the seaside holiday last, and what did I spend per day?",
+     "tools": ["group_summary", "aggregate_transactions", "search_transactions"], "args": [{"group|query": "~wakacje"}],
+     "refs": [{"tool": "group_summary", "args": {"group": "wakacje"}}], "expect": ["0:days", "0:spent_per_day"]},
+    {"id": "grp-remont-payee-pl", "category": "budgets and groups", "lang": "pl", "question": "Gdzie wydałem najwięcej podczas remontu?",
+     "tools": ["group_summary", "aggregate_transactions"], "args": [{"group|query": "~remont"}],
+     "refs": [{"tool": "group_summary", "args": {"group": "remont"}}], "expect": ["0:top_payees.0.payee"]}
   ]
 }

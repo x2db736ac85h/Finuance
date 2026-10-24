@@ -36,6 +36,12 @@ var toolDefs = []llm.Tool{
 	{Name: ToolRecurring, Description: "Subscriptions and regular bills found in the data (the same payee charging a similar amount every week, month or year), " +
 		"with the cadence, typical amount, yearly cost, last and next expected charge.",
 		Parameters: json.RawMessage(`{"type":"object","properties":{"active_only":{"type":"boolean","description":"Only payments still charging (the last charge is recent for its cadence)"}}}`)},
+	{Name: ToolBudgets, Description: "Budget status for one month: each category's spending against its budget (set by the user or the default from earlier months), " +
+		"what is left and whether it is on track, ahead of pace or over. Use for \"am I over budget\" questions.",
+		Parameters: json.RawMessage(`{"type":"object","properties":{"month":{"type":"string","description":"YYYY-MM; default the latest month with data"}}}`)},
+	{Name: ToolGroup, Description: "Summary of one user-defined transaction group (e.g. a trip): totals, first and last day, spending per day, " +
+		"the group budget and what is left, categories and top payees.",
+		Parameters: json.RawMessage(`{"type":"object","properties":{"group":{"type":"string","description":"The group name (find_values with field group lists them)"}},"required":["group"]}`)},
 }
 
 // Tool sets: the full set, and the legacy three for small models and plan mode (PLAN §4.8; the

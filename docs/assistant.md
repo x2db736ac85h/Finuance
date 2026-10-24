@@ -2,7 +2,7 @@
 
 The assistant answers questions about your transactions with a language model that looks the data up through read-only tools (PLAN §4.8, ADR 0015). It works with any server that speaks the OpenAI Chat Completions or Anthropic Messages API: LM Studio, Ollama, vLLM, llama.cpp, OpenAI, Anthropic, OpenRouter and others, local or in the cloud.
 
-The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and five tools. Each tool runs on the server as a read-only query over the asking user's data only:
+The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and seven tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
 
 | Tool | What it does |
 |---|---|
@@ -11,6 +11,8 @@ The model never gets a dump of your data. It gets a short description (date rang
 | `find_values` | Finds how a payee, category or group is spelled |
 | `month_overview` | One month at a glance: totals, savings rate, projection, budgets, largest expenses |
 | `recurring_payments` | Subscriptions and regular bills found in the data (weekly, monthly or yearly; `cadence` on each payment) |
+| `budget_status` | One month's budgets: spent, budget and what is left per category, over budget or ahead of pace first |
+| `group_summary` | One transaction group (e.g. a trip): totals, days, spending per day, the group budget, categories and top payees |
 
 Every lookup is shown under the answer, with exactly what went back to the model and a *Show in table* link.
 
