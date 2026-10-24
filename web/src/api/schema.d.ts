@@ -2173,6 +2173,11 @@ export interface components {
         RecurringPayment: {
             /** @description The payee group. */
             payee: string;
+            /**
+             * @description How often it is charged. Monthly payments follow the legacy rules; weekly and yearly ones are found among the payee groups the monthly rules leave out.
+             * @enum {string}
+             */
+            cadence: "monthly" | "weekly" | "yearly";
             /** @description The most frequent category; absent when uncategorised. */
             category?: string;
             /**
@@ -2185,7 +2190,10 @@ export interface components {
             /** Format: date */
             next: string;
             active: boolean;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The cost per year (12, 52 or 1 × the typical amount).
+             */
             yearlyMinor: number;
             count: number;
         };

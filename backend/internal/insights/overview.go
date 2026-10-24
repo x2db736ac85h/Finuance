@@ -169,11 +169,11 @@ func (s *Service) Overview(ctx context.Context, userID uuid.UUID, c query.Contex
 		if out.Largest, err = in.LargestExpenses(ov.m, ov.m.AddMonths(1), MaxLargest); err != nil {
 			return err
 		}
-		charges, err := in.RecurringCandidates()
+		charges, others, err := in.RecurringCandidates()
 		if err != nil {
 			return err
 		}
-		out.Recurring = FindRecurring(charges, *data.Max)
+		out.Recurring = WithCadences(FindRecurring(charges, *data.Max), others, *data.Max)
 		opening, totals, err := in.Balance()
 		if err != nil {
 			return err
@@ -433,6 +433,7 @@ type Recurring struct {
 	Active      bool
 	YearlyMinor int64
 	Count       int
+	Cadence     string // CadenceMonthly, CadenceWeekly or CadenceYearly
 }
 
 // FindRecurring ports the legacy rules over a payee group's expenses (charges sorted by payee
@@ -453,6 +454,12 @@ func FindRecurring(charges []query.Charge, dataMax platform.Date) []Recurring {
 		}
 		i = j
 	}
+	sortRecurring(out)
+	return out
+}
+
+// sortRecurring puts active payments first, then the larger yearly costs; ties keep their order.
+func sortRecurring(out []Recurring) {
 	slices.SortStableFunc(out, func(x, y Recurring) int {
 		if x.Active != y.Active {
 			if x.Active {
@@ -462,7 +469,6 @@ func FindRecurring(charges []query.Charge, dataMax platform.Date) []Recurring {
 		}
 		return cmp.Compare(y.YearlyMinor, x.YearlyMinor)
 	})
-	return out
 }
 
 func recurringOf(list []query.Charge, dataMax platform.Date) (Recurring, bool) {
@@ -496,8 +502,15 @@ func recurringOf(list []query.Charge, dataMax platform.Date) (Recurring, bool) {
 	}
 	nm := last.FirstOfMonth().AddMonths(1)
 	next := minDate(nm.AddDays(last.D-1), nm.AddMonths(1).AddDays(-1))
+	return Recurring{Payee: list[0].PayeeGroup, Category: topCategory(list), MedianMinor: med, Last: last, Next: next,
+		Active: last.DaysUntil(dataMax) <= 45, YearlyMinor: med * 12, Count: len(list), Cadence: CadenceMonthly}, true
+}
+
+// topCategory is the most frequent category of the charges ("" for uncategorised); ties go to
+// the one seen first (oldest).
+func topCategory(list []query.Charge) string {
 	counts := map[string]int{}
-	var names []string // first seen, oldest first: ties go to the earliest
+	var names []string
 	for _, c := range list {
 		n := ""
 		if c.Category != nil {
@@ -514,6 +527,5 @@ func recurringOf(list []query.Charge, dataMax platform.Date) (Recurring, bool) {
 			cat = n
 		}
 	}
-	return Recurring{Payee: list[0].PayeeGroup, Category: cat, MedianMinor: med, Last: last, Next: next,
-		Active: last.DaysUntil(dataMax) <= 45, YearlyMinor: med * 12, Count: len(list)}, true
+	return cat
 }

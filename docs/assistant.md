@@ -10,7 +10,7 @@ The model never gets a dump of your data. It gets a short description (date rang
 | `aggregate_transactions` | Counts and totals per category, payee, month, week, day, weekday, type, group or account |
 | `find_values` | Finds how a payee, category or group is spelled |
 | `month_overview` | One month at a glance: totals, savings rate, projection, budgets, largest expenses |
-| `recurring_payments` | Subscriptions and regular bills found in the data |
+| `recurring_payments` | Subscriptions and regular bills found in the data (weekly, monthly or yearly; `cadence` on each payment) |
 
 Every lookup is shown under the answer, with exactly what went back to the model and a *Show in table* link.
 

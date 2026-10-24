@@ -111,7 +111,7 @@ func TestFindRecurring(t *testing.T) {
 	// go to the first seen
 	r := FindRecurring(monthly("A", []int64{900, 1000, 1100}, "Media", "Rachunki", "Rachunki"), d("2025-02-14"))
 	want := Recurring{Payee: "A", Category: "Rachunki", MedianMinor: 1000, Last: d("2024-12-31"), Next: d("2025-01-31"), Active: true,
-		YearlyMinor: 12000, Count: 3}
+		YearlyMinor: 12000, Count: 3, Cadence: CadenceMonthly}
 	if diff := cmp.Diff([]Recurring{want}, r); diff != "" {
 		t.Errorf("recurring (-want +got):\n%s", diff)
 	}

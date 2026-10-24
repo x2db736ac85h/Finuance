@@ -1,5 +1,5 @@
 // The overview's table cards: Recurring payments (legacy CHARTS.o_recur, detected by the server's
-// findRecurring port) and Largest expenses (legacy CHARTS.o_top; a click shows the row in the
+// findRecurring port plus weekly and yearly payments, PLAN 15.4) and Largest expenses (legacy CHARTS.o_top; a click shows the row in the
 // table, legacy gotoRow).
 
 import type { Schemas } from '../api/client';
@@ -14,12 +14,19 @@ type Recurring = Schemas['RecurringPayment'];
 
 const dayOf = (iso: string) => Number(iso.slice(8, 10));
 
+const EVERY: Record<Recurring['cadence'], string> = {
+  weekly: 'every week',
+  monthly: 'every month',
+  yearly: 'every year',
+};
+
 function RecurringRow({ r, cur, color }: { r: Recurring; cur: string; color: (n: string) => string }) {
   const tip = useTip(
     <TipContent
       title={r.payee}
       rows={[
         ['', 'Typical amount', negMoney(r.medianMinor, cur)],
+        ['', 'Charged', EVERY[r.cadence]],
         ['', 'Payments seen', String(r.count)],
         ['', 'Last charged', fmtDayMedium(r.last)],
         ['', 'Next expected', r.active ? fmtDayMedium(r.next) : 'not seen recently'],
@@ -28,7 +35,10 @@ function RecurringRow({ r, cur, color }: { r: Recurring; cur: string; color: (n:
   );
   return (
     <tr className={r.active ? undefined : 'off'} {...tip}>
-      <td>{r.payee}</td>
+      <td>
+        {r.payee}
+        {r.cadence !== 'monthly' && <span className="tag cad">{r.cadence}</span>}
+      </td>
       <td>
         {r.category && (
           <>
@@ -50,22 +60,35 @@ export function recurringParts(d: OverviewData, cur: string): ChartParts {
       loading: false,
       error: false,
       sub: '',
-      body: <Empty>No monthly repeating payments detected yet (needs 3+ months of data).</Empty>,
+      body: <Empty>No repeating payments detected yet (needs 3+ months, 6+ weeks or 2+ years of data).</Empty>,
       table: null,
     };
   const active = rec.filter((r) => r.active);
-  const perMonth = active.reduce((a, r) => a + r.medianMinor, 0);
+  // a weekly or yearly payment counts with its monthly share (for monthly ones: the typical amount)
+  const perMonth = Math.floor(active.reduce((a, r) => a + r.yearlyMinor, 0) / 12);
   const color = colorsOf(d);
+  // the table twin gets a Cadence column only when there is something besides monthly (legacy look)
+  const mixed = rec.some((r) => r.cadence !== 'monthly');
   return {
     loading: false,
     error: false,
     sub: `${active.length} active · ≈ ${money(perMonth, cur)}/mo`,
     table: {
-      cols: ['Payee', 'Category', 'Typical', 'Last', 'Next expected', 'Per year', 'Status'],
-      num: [false, false, true, false, false, true, false],
+      cols: [
+        'Payee',
+        'Category',
+        ...(mixed ? ['Cadence'] : []),
+        'Typical',
+        'Last',
+        'Next expected',
+        'Per year',
+        'Status',
+      ],
+      num: [false, false, ...(mixed ? [false] : []), true, false, false, true, false],
       rows: rec.map((r) => [
         r.payee,
         r.category ?? '',
+        ...(mixed ? [r.cadence] : []),
         negMoney(r.medianMinor, cur),
         fmtDayMedium(r.last),
         r.active ? fmtDayMedium(r.next) : '–',

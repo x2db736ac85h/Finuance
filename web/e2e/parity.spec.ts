@@ -231,13 +231,16 @@ async function apiFacts(page: Page, withMigration: boolean): Promise<Facts> {
     if (!d) throw new Error('no overview data');
     out.months[month] = { income: d.current.incomeMinor, expense: d.current.expenseMinor, count: d.current.count };
     if (month === MONTHS[0]) {
-      out.recurring = d.recurring.map((r) => ({
-        payee: r.payee,
-        median: r.medianMinor,
-        count: r.count,
-        last: r.last,
-        next: r.next,
-      }));
+      // the legacy app finds monthly payments only (weekly and yearly are new in Phase 15)
+      out.recurring = d.recurring
+        .filter((r) => r.cadence === 'monthly')
+        .map((r) => ({
+          payee: r.payee,
+          median: r.medianMinor,
+          count: r.count,
+          last: r.last,
+          next: r.next,
+        }));
       out.balance = d.balance.nowMinor;
     }
   }

@@ -770,6 +770,9 @@ textarea.inp.ins-note {
   color: var(--accent);
   border-color: var(--accent);
 }
+.otab .tag.cad {
+  margin-left: 0.375rem;
+}
 .ins-xfer .fv {
   display: flex;
   flex-wrap: wrap;

@@ -152,34 +152,53 @@ type Charge struct {
 	Category   *string // nil: uncategorised
 }
 
-// RecurringCandidates lists the base rows' expenses of the payee groups that pass the cheap part
-// of the legacy findRecurring rules (expenses in at least 3 distinct months, at most 1.5 per month),
-// oldest first per group. The other rules need every amount and run in Go.
-func (in *Insight) RecurringCandidates() ([]Charge, error) {
+// RecurringCandidates lists the base rows' expenses of the payee groups that may be recurring,
+// oldest first per group, in one scan. monthly holds the groups that pass the cheap part of the
+// legacy findRecurring rules (expenses in at least 3 distinct months, at most 1.5 per month);
+// others the groups that may be weekly (at least 6 expenses, at most 1.5 per calendar week, in at
+// least half the weeks between the first and the last) or yearly (at least 2 expenses in at least
+// 2 distinct years, at most 1.5 per year; PLAN 15.4). A group can be in both. The interval and
+// amount rules need every amount and run in Go.
+func (in *Insight) RecurringCandidates() (monthly, others []Charge, err error) {
 	c, w, err := in.r.fresh(false)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	src := source(c.joins(JoinCategories)...)
-	// The months are counted with two hash aggregates instead of count(DISTINCT …), which sorts.
-	// date_trunc on a timestamp (not timestamptz) skips the time-zone conversion.
-	q := "WITH g AS (SELECT p FROM (SELECT t.payee_group AS p, date_trunc('month', t.booked_on::timestamp) AS m, count(*) AS n FROM " + src +
-		" WHERE " + w + " AND t.amount_minor < 0 GROUP BY 1, 2) pm GROUP BY 1 HAVING count(*) >= 3 AND sum(n) <= 1.5 * count(*))" +
-		" SELECT t.payee_group, t.booked_on, -t.amount_minor, c.name FROM " + src + " WHERE " + w + " AND t.amount_minor < 0" +
-		" AND t.payee_group IN (SELECT p FROM g) ORDER BY t.payee_group, t.booked_on, t.seq"
+	// One hash aggregate per (group, month, week) feeds every count; date_trunc on a timestamp
+	// (not timestamptz) skips the time-zone conversion. A week's year is that of its first expense.
+	months := "count(DISTINCT m)"
+	weeks := "count(DISTINCT wk)"
+	years := "count(DISTINCT extract(year FROM d0))"
+	q := "WITH g AS (SELECT p, " + months + " >= 3 AND sum(n) <= 1.5 * " + months + " AS mo," +
+		" (sum(n) >= 6 AND sum(n) <= 1.5 * " + weeks + " AND " + weeks + " >= 0.5 * ((max(d1) - min(d0)) / 7 + 1))" +
+		" OR (sum(n) >= 2 AND " + years + " >= 2 AND sum(n) <= 1.5 * " + years + ") AS ot" +
+		" FROM (SELECT t.payee_group AS p, date_trunc('month', t.booked_on::timestamp) AS m, date_trunc('week', t.booked_on::timestamp) AS wk," +
+		" count(*) AS n, min(t.booked_on) AS d0, max(t.booked_on) AS d1 FROM " + src + " WHERE " + w + " AND t.amount_minor < 0 GROUP BY 1, 2, 3) x" +
+		" GROUP BY 1)" +
+		" SELECT t.payee_group, t.booked_on, -t.amount_minor, c.name, g.mo, g.ot FROM " + src + " JOIN g ON g.p = t.payee_group WHERE " + w +
+		" AND t.amount_minor < 0 AND (g.mo OR g.ot) ORDER BY t.payee_group, t.booked_on, t.seq"
 	rows, err := in.tx.Query(in.ctx, q, c.Args...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Charge, error) {
+	defer rows.Close()
+	for rows.Next() {
 		var x Charge
 		var d pgtype.Date
-		err := r.Scan(&x.PayeeGroup, &d, &x.SpentMinor, &x.Category)
-		if err == nil {
-			x.BookedOn = *dateOf(d)
+		var mo, ot bool
+		if err := rows.Scan(&x.PayeeGroup, &d, &x.SpentMinor, &x.Category, &mo, &ot); err != nil {
+			return nil, nil, err
 		}
-		return x, err
-	})
+		x.BookedOn = *dateOf(d)
+		if mo {
+			monthly = append(monthly, x)
+		}
+		if ot {
+			others = append(others, x)
+		}
+	}
+	return monthly, others, rows.Err()
 }
 
 // DayTotal is the sum of one day's transactions.

@@ -33,9 +33,9 @@ var toolDefs = []llm.Tool{
 	{Name: ToolMonth, Description: "One month at a glance: spent, income, net, savings rate, the projection for an unfinished month, the previous month, " +
 		"spending per category with budgets and status, income sources and the largest expenses. Use for month summaries and budget questions.",
 		Parameters: json.RawMessage(`{"type":"object","properties":{"month":{"type":"string","description":"YYYY-MM; default the latest month with data"}}}`)},
-	{Name: ToolRecurring, Description: "Subscriptions and regular bills found in the data (the same payee charging a similar amount most months), " +
-		"with the typical amount, yearly cost, last and next expected charge.",
-		Parameters: json.RawMessage(`{"type":"object","properties":{"active_only":{"type":"boolean","description":"Only payments still charging (last charge within 45 days of the data's end)"}}}`)},
+	{Name: ToolRecurring, Description: "Subscriptions and regular bills found in the data (the same payee charging a similar amount every week, month or year), " +
+		"with the cadence, typical amount, yearly cost, last and next expected charge.",
+		Parameters: json.RawMessage(`{"type":"object","properties":{"active_only":{"type":"boolean","description":"Only payments still charging (the last charge is recent for its cadence)"}}}`)},
 }
 
 // Tool sets: the full set, and the legacy three for small models and plan mode (PLAN §4.8; the

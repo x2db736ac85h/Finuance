@@ -2,11 +2,14 @@ package insights_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
+	"github.com/x2db736ac85h/finuance/backend/internal/investments"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 )
@@ -129,5 +132,52 @@ func TestValidation(t *testing.T) {
 	}
 	if _, err := e.svc.Summary(e.ctx, e.u, query.Context{Filters: []query.Filter{{Column: "nope", Cond: "x"}}}); !errors.As(err, &ve) {
 		t.Errorf("summary: %v", err)
+	}
+}
+
+// Weekly and yearly payments come from the database next to the monthly ones (PLAN 15.4); a
+// payee with irregular charges is left out.
+func TestOverviewCadences(t *testing.T) {
+	e := newEnv(t)
+	e.u = e.user()
+	csv := "Data;Kwota;Odbiorca;Kategoria\n"
+	add := func(day platform.Date, amount, payee, cat string) {
+		csv += day.Time().Format("02.01.2006") + ";" + amount + ";" + payee + ";" + cat + "\n"
+	}
+	start := platform.Date{Y: 2025, M: 1, D: 3}
+	for i := range 12 {
+		add(start.AddDays(7*i), "-25,00", "SILOWNIA", "Sport") // weekly, last 2025-03-21
+	}
+	for y := range 3 {
+		add(platform.Date{Y: 2022 + y, M: 3, D: 10}, "-600,00", "PZU", "Ubezpieczenia") // yearly, last 2024-03-10
+	}
+	for m := range 3 {
+		add(platform.Date{Y: 2025, M: 1, D: 5}.AddMonths(m), "-49,00", "NETFLIX", "Rozrywka")
+	}
+	for _, d := range []int{1, 2, 3, 15, 16, 28, 40, 41, 60, 75} {
+		add(start.AddDays(d), "-"+[]string{"12,00", "80,00", "7,50"}[d%3], "ZABKA", "Jedzenie")
+	}
+	e.importFile(e.u, "Konto", []byte(csv))
+
+	ov, err := e.svc.Overview(e.ctx, e.u, query.Context{}, nil, 6, investments.Doc{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, r := range ov.Recurring {
+		got = append(got, fmt.Sprintf("%s %s %d %s active=%v", r.Payee, r.Cadence, r.YearlyMinor, r.Next, r.Active))
+	}
+	want := []string{
+		"SILOWNIA weekly 130000 2025-03-28 active=true",
+		"PZU yearly 60000 2025-03-10 active=true",
+		"NETFLIX monthly 58800 2025-04-05 active=true",
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("recurring (-want +got):\n%s", diff)
+	}
+	for _, h := range ov.Highlights {
+		if h.Kind == insights.HLRecurring && (h.Count != 3 || h.Other != 130000+58800+60000 || h.Amount != (130000+58800+60000)/12) {
+			t.Errorf("recurring highlight: %+v", h)
+		}
 	}
 }

@@ -3544,11 +3544,17 @@ components:
     RecurringPayment:
       type: object
       additionalProperties: false
-      required: [payee, medianMinor, last, next, active, yearlyMinor, count]
+      required: [payee, medianMinor, last, next, active, yearlyMinor, count, cadence]
       properties:
         payee:
           type: string
           description: The payee group.
+        cadence:
+          type: string
+          enum: [monthly, weekly, yearly]
+          description: >-
+            How often it is charged. Monthly payments follow the legacy rules; weekly and yearly
+            ones are found among the payee groups the monthly rules leave out.
         category:
           type: string
           description: The most frequent category; absent when uncategorised.
@@ -3567,6 +3573,7 @@ components:
         yearlyMinor:
           type: integer
           format: int64
+          description: The cost per year (12, 52 or 1 × the typical amount).
         count:
           type: integer
     OverviewExpense:

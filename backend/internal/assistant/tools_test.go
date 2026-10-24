@@ -293,7 +293,7 @@ func TestOverviewTools(t *testing.T) {
 		t.Fatalf("recurring = %s", rec.JSON)
 	}
 	for _, p := range pays {
-		if p.(map[string]any)["active"] != true || p.(map[string]any)["next"] == nil {
+		if p.(map[string]any)["active"] != true || p.(map[string]any)["next"] == nil || p.(map[string]any)["cadence"] != "monthly" {
 			t.Errorf("payment = %v", p)
 		}
 	}

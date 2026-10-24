@@ -378,3 +378,20 @@ first import of a new user. The window is now a `MATERIALIZED` CTE that runs onc
 (`query.windowFirst`, also used by the assistant's row lookup). `TestWindowWithStaleStatistics`
 recreates the stale statistics (analyze, then a new user imports) and checks that the window
 runs once; it fails on the old statement. The query rows above are measured with the CTE.
+
+## Phase 15: recurring cadences (task 15.4)
+
+Weekly and yearly payments need their own candidates (the legacy monthly prefilter drops most of
+them). A second scan with its own aggregate made `POST /overview` ~100–400 ms slower at 108k rows,
+so `query.RecurringCandidates` now computes both prefilters from one `(group, month, week)` hash
+aggregate and returns the rows once, flagged monthly and/or other. The monthly candidates are the
+same as before (`TestOverviewParity`).
+
+`TestOverviewPerf`, p50 / p95 of 20 runs, same 108,098-transaction user:
+
+| Shape | without cadences | one scan, both cadences |
+|---|---|---|
+| all accounts, latest month, 12 months | 202 / 239 ms | 224 / 277 ms |
+| one account | 53 / 121 ms | 64 / 75 ms |
+| category != Mieszkanie | 311 / 358 ms | 320 / 388 ms |
+| search "blik warszawa" | 170 / 208 ms | 161 / 190 ms |

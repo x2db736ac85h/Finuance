@@ -477,6 +477,7 @@ type recurringOut struct {
 	Typical  json.Number `json:"typical_amount"`
 	Yearly   json.Number `json:"yearly_cost"`
 	Charges  int         `json:"charges"`
+	Cadence  string      `json:"cadence"`
 	Last     string      `json:"last"`
 	Next     string      `json:"next,omitempty"`
 	Active   bool        `json:"active"`
@@ -492,7 +493,8 @@ func (t *Tools) recurring(ctx context.Context, userID uuid.UUID, sc Scope, a arg
 	}
 	activeOnly := a.truthy("active_only")
 	r := recurringResult{Currency: ov.Currency, Payments: []recurringOut{}}
-	for _, x := range ov.Recurring {
+	for i := range ov.Recurring {
+		x := &ov.Recurring[i]
 		if activeOnly && !x.Active {
 			continue
 		}
@@ -502,7 +504,7 @@ func (t *Tools) recurring(ctx context.Context, userID uuid.UUID, sc Scope, a arg
 			continue
 		}
 		p := recurringOut{Payee: sc.mask(x.Payee), Category: x.Category, Typical: amount(x.MedianMinor, ov.Currency),
-			Yearly: amount(x.YearlyMinor, ov.Currency), Charges: x.Count, Last: x.Last.String(), Active: x.Active}
+			Yearly: amount(x.YearlyMinor, ov.Currency), Charges: x.Count, Cadence: x.Cadence, Last: x.Last.String(), Active: x.Active}
 		if x.Active {
 			p.Next = x.Next.String()
 		}
