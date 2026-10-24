@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 15 — Product depth: categories, rules, transfers, assistant actions, group reports · **Branch:** phase/15-product-depth · **Status:** gate review
+**Current phase:** 16 — Production deployment: Helm, CloudNativePG, Argo CD, LLM endpoint · **Branch:** — · **Status:** not started (plan next)
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -33,6 +33,9 @@
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- (Phase 16 tasks are listed once the plan is approved.)
+
+## Phase 15 tasks (done)
 - [x] 15.1 category management: Settings → Categories (counts incl. by hand / by rules, bank names it also gets, new, rename, merge, delete → uncategorised); `GET /categories/stats`, `POST /categories`, `PATCH`/`DELETE /categories/{id}`, `POST /categories/{id}/merge`; `category_aliases` + the `bank_category_map` view keep renames, merges and deletes across re-imports; colour slots keep the all-time rank (unchanged query)
 - [x] 15.2 rules engine: migration `00008_rules_transfers.sql`, `internal/rules` (CRUD, reorder, preview, `Reclassify`), match compiled by `query` (`query/rules.go`), from scratch in position order (manual > rule > bank, last match wins), `reclassify` job after commits, migrations, deletes, duplicate decisions, demo data, category merges/deletes and every rule change; `GET`/`POST /rules`, `PUT`/`DELETE /rules/{id}`, `PUT /rules/order`, `POST /rules/preview`, `POST /rules/apply`; toolbar *Save filters as rule…*, Settings → Rules (drag and ↑/↓ reorder, enable, edit, delete, apply now), rule window with live preview, inspector "by the rule …"; ADR 0017
 - [x] 15.3 transfer detection in the reclassify job (opposite amounts, same currency, another account of the same user, ≤ 3 days, smallest gap first, `seq` tie-break, greedy), `transactions.transfer_source` (pair/rule/manual), rules can mark transfers, inspector *Not a transfer* (unpairs both) / *Mark as transfer* / *Automatic* via `PATCH /transactions/{id}` `transfer`, decisions kept in `tx_annotations`; *Transfer* badge, Columns menu toggle + "transfers hidden" chip; insights, overview and the assistant's view scope without transfers; ADR 0018
@@ -235,6 +238,7 @@
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 15 — Product depth: categories, rules, transfers, assistant actions, group reports: gate approved 2026-10-24 with the hands-on checks deferred (see Follow-ups); `phase/15-product-depth` merged with `--no-ff`.
 - Phase 14 — Legacy migration and quality gate: gate approved 2026-10-23 with the hands-on checks deferred (see Follow-ups); `v0.1.0-rc.1` released; `phase/14-quality-gate` merged with `--no-ff`; `v0.1.0` is published from `main` by our Product Engineer.
 - Phase 13 — AI assistant: gate approved 2026-10-23 with the real-model checks deferred (see Follow-ups); `phase/13-assistant` merged with `--no-ff`.
 - Phase 12 — Overview: API and UI: gate approved 2026-10-23; `phase/12-overview` merged with `--no-ff`.
@@ -376,6 +380,9 @@
 - 0.8: gitleaks runs as the pinned release binary (checksum verified) instead of `gitleaks-action`, which needs a license key for organisation accounts.
 
 ## Follow-ups (must be done in a later phase)
+- Phase 15 (deferred gate checks, our Product Engineer, approved 2026-10-24): create rules for the real categories (Settings → Rules or *Save filters as rule…*) and check that the table and overview follow; check the detected transfer pairs between the real accounts (*Transfer* badge, inspector *Not a transfer* / *Mark as transfer*); try a group with a budget (group window, CSV export); try a rule suggestion after 3 manual categorisations; try an assistant proposal (*Apply*) and `budget_status` / `group_summary` against the real local model, and add the 7 new eval questions to the `make eval-assistant` run (Phase 13 follow-up).
+- Phase 16 (start of the phase): the `.trivyignore` exception for CVE-2026-111497 expires on 2026-10-30. Bump the nginx base image of the web image (or take Renovate's bump) so the scans pass without it; don't extend the exception.
+- Phase 17: applied assistant proposals become audit events (`audit_log`), replacing the `assistant.action_applied` log line; the card's "Applied" state can then be read back after a reload (ADR 0019).
 - **Phase 17 (security hardening) and the Phase 18 gate, required before the public demo (our Product Engineer, 2026-10-23):** a full security scan with no accepted findings. `.trivyignore` must be empty (today: CVE-2026-111497 until 2026-10-30, removed when Renovate bumps the nginx base); the release's Trivy gate is raised from CRITICAL to HIGH + CRITICAL; Trivy also scans the repository (Go and npm dependencies, secrets, misconfiguration, the Helm chart); `govulncheck` and `npm audit` clean; the OpenVAS / Nessus scan and an OWASP ZAP scan (17.6) of the deployed instance with every finding fixed or, if not exploitable, documented in `docs/security-scan.md`. The Phase 18 gate repeats the scans right before the demo goes public.
 - Phase 14 (deferred gate checks, our Product Engineer): migrate the real legacy backup, read `docs/parity-report.md`, run `compose.prod.yaml` with the released images on a clean machine, 60 fps scrolling and the overview's negated-category filter (348 ms p95 in the sandbox) on the homelab.
 - Phase 1: bank notes from the private samples, for the fixtures and the anonymiser:
@@ -400,6 +407,7 @@
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-24 — Phase 15 gate approved by our Product Engineer with the hands-on checks deferred (follow-ups recorded: real rules and transfer pairs, group budget, suggestions, proposals and new tools on the real model; nginx base bump before 2026-10-30; proposals as audit events in Phase 17); merged. Next: plan Phase 16 (homelab answers needed: ingress, cert-manager issuer, storage class, backup target, hostname, LM Studio address).
 - 2026-10-24 — Phase 15 third push: assistant `budget_status` and `group_summary` tools (15.8) and action proposals with a confirmation card, applied through the normal endpoints with a log line (15.7, ADR 0019); evals +7 questions. 54 Playwright specs on a fresh stack, 317 Vitest, `make test-integration` green. Next: our Product Engineer's gate review (rules for their real categories, transfer pairs between their accounts).
 - 2026-10-24 — Phase 15 second push on `phase/15-product-depth`: bulk category/transfer actions and Shift+↑/↓ ranges (15.5), weekly and yearly recurring payments with one candidate scan (15.4), the group window with report, export and budget (15.9, migration 00009), rule suggestions (15.10); the data export gained rules, category aliases and group budgets. 53 Playwright specs on a fresh stack, 315 Vitest, every Go package green. Next: assistant insight tools (15.8) and action proposals (15.7).
 - 2026-10-23 — Phase 15 first push on `phase/15-product-depth`: category management with aliases, rules applied from scratch (ADR 0017), transfer detection with the user's decisions (ADR 0018), the `reclassify` job, Settings → Categories and Rules, rule window, Save filters as rule, transfer badge/toggle/inspector; Go, Vitest and E2E tests, parity 30/30 with transfers included. Next: push 2 (bulk edit, cadence, group reports, rule suggestions).
