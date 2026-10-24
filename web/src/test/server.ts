@@ -22,6 +22,8 @@ export type Db = {
   /** Groups; their stats are computed from `transactions`. */
   groups: { id: string; name: string; color: number; budgetMinor?: number }[];
   bulks: Schemas['BulkUpdate'][];
+  /** Answers of GET /rules/suggestions. */
+  ruleSuggestions: Schemas['RuleSuggestion'][];
   idRequests: Schemas['IdsRequest'][];
   queries: Schemas['TransactionQuery'][];
   puts: Schemas['Preferences'][];
@@ -74,6 +76,7 @@ export const freshDb = (): Db => ({
   duplicatesSkipped: 0,
   groups: [],
   bulks: [],
+  ruleSuggestions: [],
   idRequests: [],
   queries: [],
   puts: [],
@@ -162,6 +165,7 @@ export const server = setupServer(
     db.insightRequests.push({ name, body: (await request.json()) as Record<string, unknown> });
     return HttpResponse.json(db.insights[name] ?? emptyInsights[name]);
   }),
+  http.get(`${API}/rules/suggestions`, () => authed(() => HttpResponse.json(db.ruleSuggestions))),
   http.get(`${API}/groups`, () => authed(() => HttpResponse.json(db.groups.map(groupOf)))),
   http.post(`${API}/groups`, async ({ request }) => {
     const b = (await request.json()) as Schemas['GroupInput'];

@@ -1072,6 +1072,28 @@ paths:
                 $ref: "#/components/schemas/RulePreview"
         default:
           $ref: "#/components/responses/Problem"
+  /rules/suggestions:
+    get:
+      operationId: ruleSuggestions
+      summary: Rules worth creating (the toolbar card)
+      description: >-
+        Payee groups the user put in one category by hand at least 3 times, with the rule that
+        would do it ("payee contains the group" → the category), most manual categorisations
+        first, at most 5. A group a rule already handles (the same match and category) is left
+        out; dismissing a suggestion is kept by the client (PLAN 15.10).
+      tags: [rules]
+      responses:
+        "200":
+          description: The suggestions.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  $ref: "#/components/schemas/RuleSuggestion"
+        default:
+          $ref: "#/components/responses/Problem"
   /rules/apply:
     post:
       operationId: applyRules
@@ -2850,6 +2872,25 @@ components:
         updatedAt:
           type: string
           format: date-time
+    RuleSuggestion:
+      type: object
+      additionalProperties: false
+      required: [payeeGroup, category, manualCount, txCount, match]
+      properties:
+        payeeGroup:
+          type: string
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        manualCount:
+          type: integer
+          format: int64
+          description: Transactions of the group put in the category by hand.
+        txCount:
+          type: integer
+          format: int64
+          description: Every transaction of the group.
+        match:
+          $ref: "#/components/schemas/RuleMatch"
     RulePreview:
       type: object
       additionalProperties: false

@@ -716,6 +716,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rules/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rules worth creating (the toolbar card)
+         * @description Payee groups the user put in one category by hand at least 3 times, with the rule that would do it ("payee contains the group" → the category), most manual categorisations first, at most 5. A group a rule already handles (the same match and category) is left out; dismissing a suggestion is kept by the client (PLAN 15.10).
+         */
+        get: operations["ruleSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rules/apply": {
         parameters: {
             query?: never;
@@ -1807,6 +1827,21 @@ export interface components {
             markTransfer: boolean;
             /** Format: date-time */
             updatedAt: string;
+        };
+        RuleSuggestion: {
+            payeeGroup: string;
+            category: components["schemas"]["NamedRef"];
+            /**
+             * Format: int64
+             * @description Transactions of the group put in the category by hand.
+             */
+            manualCount: number;
+            /**
+             * Format: int64
+             * @description Every transaction of the group.
+             */
+            txCount: number;
+            match: components["schemas"]["RuleMatch"];
         };
         RulePreview: {
             /** Format: int64 */
@@ -3958,6 +3993,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RulePreview"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ruleSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSuggestion"][];
                 };
             };
             default: components["responses"]["Problem"];

@@ -209,3 +209,18 @@ func (a *api) ApplyRules(ctx context.Context, _ gen.ApplyRulesRequestObject) (ge
 	}
 	return gen.ApplyRules202Response{}, nil
 }
+
+// RuleSuggestions lists rules worth creating (PLAN 15.10).
+func (a *api) RuleSuggestions(ctx context.Context, _ gen.RuleSuggestionsRequestObject) (gen.RuleSuggestionsResponseObject, error) {
+	ss, err := a.rules.Suggestions(ctx, identity(ctx).User.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := make(gen.RuleSuggestions200JSONResponse, len(ss))
+	for i := range ss {
+		s := &ss[i]
+		out[i] = gen.RuleSuggestion{PayeeGroup: s.PayeeGroup, Category: gen.NamedRef{Id: s.CategoryID, Name: s.CategoryName},
+			ManualCount: s.ManualCount, TxCount: s.TxCount, Match: matchDTO(s.Match)}
+	}
+	return out, nil
+}

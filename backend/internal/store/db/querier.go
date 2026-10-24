@@ -231,6 +231,10 @@ type Querier interface {
 	ResetAutomaticTransfers(ctx context.Context, userID uuid.UUID) (int64, error)
 	// Reclassify step 1: categories set by rules go back to the bank's category.
 	ResetRuleCategories(ctx context.Context, userID uuid.UUID) (int64, error)
+	// Payee groups whose transactions the user put in one category by hand at least 3 times (PLAN
+	// 15.10), with that category (the most frequent one when there are several), the number of
+	// manual categorisations and the group's transaction count, most manual first.
+	RuleSuggestions(ctx context.Context, userID uuid.UUID) ([]RuleSuggestionsRow, error)
 	// Optimistic concurrency as in SavePreferences.
 	SaveInvestmentProfile(ctx context.Context, arg SaveInvestmentProfileParams) (int32, error)
 	// Optimistic concurrency. expected_version is the version the client read: 0 means "there is no

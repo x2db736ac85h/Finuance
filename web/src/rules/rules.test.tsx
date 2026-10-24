@@ -7,6 +7,8 @@ import type { Schemas } from '../api/client';
 import { chipsOf, cleared, withoutChip } from '../table/chips';
 import { contextOf } from '../table/context';
 import { ruleDraftOf } from '../table/Toolbar';
+import { parsePrefs } from '../stores/prefs';
+import { collectUi, uiDefaults, useUi } from '../stores/uiStore';
 import { newView, useViews, viewOf } from '../stores/viewStore';
 import { account, API, db, resetDb, server, txRow } from '../test/server';
 import { renderApp } from '../test/render';
@@ -57,6 +59,7 @@ const record = async (method: string, path: string, request: Request) => {
 beforeEach(() => {
   resetDb();
   useViews.getState().reset();
+  useUi.setState(uiDefaults);
   calls = [];
   stats = [
     { id: C1, name: 'Kawa', txCount: 12, manualCount: 2, ruleCount: 5, aliases: ['kawiarnie'] },
@@ -253,6 +256,75 @@ describe('the table', () => {
     expect(within(dlg).getByRole<HTMLInputElement>('textbox', { name: 'Rule name' }).value).toBe('Payee kawiarnia');
     expect(within(dlg).getByRole<HTMLInputElement>('textbox', { name: 'Search all columns' }).value).toBe('blik');
     expect(within(dlg).getByRole<HTMLInputElement>('textbox', { name: 'Condition 1' }).value).toBe('kawiarnia');
+  });
+
+  it('suggests a rule after manual categorisations; Dismiss and a created rule hide it for good', async () => {
+    const suggestion = (payeeGroup: string, cat: { id: string; name: string }): Schemas['RuleSuggestion'] => ({
+      payeeGroup,
+      category: cat,
+      manualCount: 3,
+      txCount: 9,
+      match: { filters: [{ column: 'payee', cond: payeeGroup }] },
+    });
+    db.ruleSuggestions = [
+      suggestion('ZABKA', { id: C2, name: 'Zakupy' }),
+      suggestion('KAWIARNIA ZIARNO', { id: C1, name: 'Kawa' }),
+    ];
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    let card = await screen.findByRole('region', { name: 'Rule suggestion' });
+    expect(card.textContent).toBe(
+      'You put 3 transactions of ZABKA in Zakupy by hand. A rule can do it for all 9 transactions and future imports.Create rule…',
+    );
+    await user.click(within(card).getByRole('button', { name: 'Dismiss this suggestion' }));
+    expect(useUi.getState().ruleHints).toEqual([`${C2}:ZABKA`]);
+    card = await screen.findByRole('region', { name: 'Rule suggestion' });
+    expect(card.textContent).toContain('KAWIARNIA ZIARNO in Kawa');
+
+    await user.click(within(card).getByRole('button', { name: 'Create rule…' }));
+    const dlg = await screen.findByRole('dialog', { name: 'New rule' });
+    expect(within(dlg).getByRole<HTMLInputElement>('textbox', { name: 'Rule name' }).value).toBe('KAWIARNIA ZIARNO');
+    expect(within(dlg).getByRole<HTMLSelectElement>('combobox', { name: 'Column of condition 1' }).value).toBe('payee');
+    expect(within(dlg).getByRole<HTMLInputElement>('textbox', { name: 'Condition 1' }).value).toBe('KAWIARNIA ZIARNO');
+    expect(within(dlg).getByRole<HTMLSelectElement>('combobox', { name: 'Category to set' }).value).toBe(C1);
+    await user.click(await within(dlg).findByRole('button', { name: 'Create rule' }));
+    await waitFor(() => {
+      expect(lastCall('POST', '/rules')?.body).toEqual({
+        name: 'KAWIARNIA ZIARNO',
+        enabled: true,
+        match: { filters: [{ column: 'payee', cond: 'KAWIARNIA ZIARNO' }] },
+        setCategoryId: C1,
+        markTransfer: false,
+      });
+    });
+    expect(useUi.getState().ruleHints).toEqual([`${C2}:ZABKA`, `${C1}:KAWIARNIA ZIARNO`]);
+    await waitFor(() => {
+      expect(screen.queryByRole('region', { name: 'Rule suggestion' })).toBeNull();
+    });
+  });
+
+  it('a cancelled suggestion comes back; dismissed ones survive in the preferences', async () => {
+    db.ruleSuggestions = [
+      {
+        payeeGroup: 'ZABKA',
+        category: { id: C2, name: 'Zakupy' },
+        manualCount: 4,
+        txCount: 4,
+        match: { filters: [{ column: 'payee', cond: 'ZABKA' }] },
+      },
+    ];
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    const card = await screen.findByRole('region', { name: 'Rule suggestion' });
+    await user.click(within(card).getByRole('button', { name: 'Create rule…' }));
+    await user.click(
+      within(await screen.findByRole('dialog', { name: 'New rule' })).getByRole('button', { name: 'Cancel' }),
+    );
+    expect(await screen.findByRole('region', { name: 'Rule suggestion' })).toBeTruthy();
+    expect(useUi.getState().ruleHints).toEqual([]);
+    expect(parsePrefs({ ruleHints: ['a', 1, 'b'] }).ruleHints).toBeUndefined();
+    expect(parsePrefs({ ruleHints: Array.from({ length: 250 }, (_, i) => String(i)) }).ruleHints).toHaveLength(200);
+    expect(collectUi(useUi.getState()).ruleHints).toEqual([]);
   });
 
   it('marks transfers and hides them from the Columns menu, with a chip to show them again', async () => {

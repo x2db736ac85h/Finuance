@@ -862,3 +862,24 @@ textarea.inp.ins-note {
     grid-template-columns: 1fr;
   }
 }
+
+/* Rule suggestion card under the toolbar (PLAN 15.10) */
+.rule-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0 0.75rem 0.5rem;
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  border: 1px solid var(--border-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  font-size: 0.8125rem;
+}
+.rule-hint > span:not(.ico) {
+  flex: 1;
+  min-width: 0;
+}
+.rule-hint .ico {
+  color: var(--accent);
+}

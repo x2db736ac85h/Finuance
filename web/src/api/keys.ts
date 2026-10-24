@@ -13,6 +13,7 @@ export const keys = {
   categoryStats: ['categoryStats'] as const,
   rules: ['rules'] as const,
   rulePreview: (matchKey: string) => ['rulePreview', matchKey] as const,
+  ruleSuggestions: ['ruleSuggestions'] as const,
   groups: ['groups'] as const,
   groupReport: (id: string) => ['groupReport', id] as const,
   duplicates: ['duplicates'] as const,

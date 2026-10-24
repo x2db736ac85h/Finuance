@@ -25,6 +25,7 @@ const RESULT_KEYS = [
   keys.insight,
   keys.overview,
   ['groupReport'],
+  keys.ruleSuggestions,
 ];
 
 /** Refetch everything that shows categories or transfers, now and after the background job. */
@@ -152,3 +153,17 @@ export function useBulkClassify() {
     },
   });
 }
+
+export type RuleSuggestion = Schemas['RuleSuggestion'];
+
+/** GET /rules/suggestions: rules worth creating after manual categorisations (PLAN 15.10). */
+export function useRuleSuggestions() {
+  return useQuery({
+    queryKey: keys.ruleSuggestions,
+    queryFn: async () => data(await api.GET('/rules/suggestions')),
+    staleTime: 30_000,
+  });
+}
+
+/** The key a dismissed suggestion is remembered by (prefs.ruleHints). */
+export const hintKey = (s: Pick<RuleSuggestion, 'category' | 'payeeGroup'>) => `${s.category.id}:${s.payeeGroup}`;

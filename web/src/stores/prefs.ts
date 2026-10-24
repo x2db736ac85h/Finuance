@@ -77,8 +77,13 @@ export type PrefsDoc = {
   sbOpen: boolean;
   ai: AiPrefs;
   importFastPath: boolean;
+  /** Rule suggestions the user dismissed or turned into a rule (`categoryId:payeeGroup`, PLAN 15.10). */
+  ruleHints: string[];
   views: Record<string, PersistedView>;
 };
+
+/** At most this many dismissed rule suggestions are kept (the oldest go first). */
+export const MAX_RULE_HINTS = 200;
 
 /** Insight cards in their default order (legacy CARD_DEFS). */
 export const CARD_KEYS = ['sum', 'cat', 'flow', 'pace', 'payee', 'heat'] as const;
@@ -209,6 +214,7 @@ export function parsePrefs(raw: unknown): ParsedPrefs {
   if (typeof raw['sbOpen'] === 'boolean') out.sbOpen = raw['sbOpen'];
   if (raw['ai'] !== undefined) out.ai = parseAi(raw['ai']);
   if (typeof raw['importFastPath'] === 'boolean') out.importFastPath = raw['importFastPath'];
+  if (isStrings(raw['ruleHints'])) out.ruleHints = raw['ruleHints'].slice(-MAX_RULE_HINTS);
   if (isObj(raw['views'])) {
     out.views = {};
     for (const [id, v] of Object.entries(raw['views'])) out.views[id] = parseView(v);

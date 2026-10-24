@@ -82,9 +82,16 @@ export function ruleSummary(r: Pick<Rule, 'match' | 'setCategory' | 'markTransfe
   return `${parts.join(' · ') || 'nothing'} → ${acts.join(', ') || 'no action'}`;
 }
 
-type Props = { title: string; initial: RuleDraft; rule?: Rule; onClose: () => void };
+type Props = {
+  title: string;
+  initial: RuleDraft;
+  rule?: Rule;
+  onClose: () => void;
+  /** After a successful save (before onClose). */
+  onSaved?: (r: Rule) => void;
+};
 
-export function RuleEditor({ title, initial, rule, onClose }: Props) {
+export function RuleEditor({ title, initial, rule, onClose, onSaved }: Props) {
   const [d, setD] = useState(initial);
   const cats = useCategories();
   const create = useCreateRule();
@@ -109,8 +116,9 @@ export function RuleEditor({ title, initial, rule, onClose }: Props) {
       markTransfer: d.markTransfer,
     };
     const done = {
-      onSuccess: () => {
+      onSuccess: (r: Rule) => {
         toast(rule ? `Rule “${body.name}” saved · applying…` : `Rule “${body.name}” created · applying…`);
+        onSaved?.(r);
         onClose();
       },
       onError: (e: unknown) => {

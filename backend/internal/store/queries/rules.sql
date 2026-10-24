@@ -103,3 +103,25 @@ INSERT INTO tx_annotations (account_id, fingerprint, occurrence, split_scope, us
 VALUES (@account_id, @fingerprint, @occurrence, @split_scope, @user_id, sqlc.narg(transfer_override), @now)
 ON CONFLICT (account_id, fingerprint, occurrence, split_scope)
 DO UPDATE SET transfer_override = excluded.transfer_override, updated_at = excluded.updated_at;
+
+-- name: RuleSuggestions :many
+-- Payee groups whose transactions the user put in one category by hand at least 3 times (PLAN
+-- 15.10), with that category (the most frequent one when there are several), the number of
+-- manual categorisations and the group's transaction count, most manual first.
+WITH m AS (
+  SELECT t.payee_group, t.category_id, count(*) AS manual
+  FROM transactions t
+  WHERE t.user_id = @user_id AND t.category_source = 'manual' AND t.category_id IS NOT NULL
+    AND t.payee_group NOT IN ('', '(unknown)')
+  GROUP BY 1, 2
+  HAVING count(*) >= 3
+), best AS (
+  SELECT DISTINCT ON (payee_group) payee_group, category_id, manual FROM m
+  ORDER BY payee_group, manual DESC, category_id
+)
+SELECT b.payee_group, b.category_id::uuid AS category_id, c.name AS category_name, b.manual::bigint AS manual_count,
+       (SELECT count(*) FROM transactions t WHERE t.user_id = @user_id AND t.payee_group = b.payee_group)::bigint AS tx_count
+FROM best b
+JOIN categories c ON c.id = b.category_id AND c.user_id = @user_id
+ORDER BY b.manual DESC, b.payee_group COLLATE pl_natural
+LIMIT 50;

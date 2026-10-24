@@ -304,3 +304,60 @@ func TestBulkClassifyHTTP(t *testing.T) {
 		t.Errorf("another user's category: %d %s", r.code, r.raw)
 	}
 }
+
+// Rule suggestions (PLAN 15.10): 3 manual categorisations of one payee group make a suggestion
+// with the rule that would do it; a rule with that match and category ends it.
+func TestRuleSuggestionsHTTP(t *testing.T) {
+	e := newTestEnv(t, nil, true)
+	b := signedIn(t, e, testEmail(t))
+	demoAccount(t, b)
+	expect(t, b.do("GET", "/rules/suggestions", nil), 200, "")
+	if s := list(t, b.do("GET", "/rules/suggestions", nil)); len(s) != 0 {
+		t.Fatalf("no manual categories, suggestions %v", s)
+	}
+	nc := b.do("POST", "/categories", map[string]any{"name": "Internet"})
+	expect(t, nc, 201, "")
+	catID := nc.body["id"].(string)
+	bills := idsWhere(t, b, map[string]any{"column": "payee", "cond": "=OPERATOR INTERNETU"}, 50)
+	set := func(ids []string) {
+		t.Helper()
+		expect(t, b.do("POST", "/transactions/bulk", map[string]any{"ids": ids, "category": map[string]any{"id": catID}}), 200, "")
+	}
+	set(bills[:2])
+	if s := list(t, b.do("GET", "/rules/suggestions", nil)); len(s) != 0 {
+		t.Fatalf("two manual categories are not enough: %v", s)
+	}
+	set(bills[2:3])
+	s := list(t, b.do("GET", "/rules/suggestions", nil))
+	if len(s) != 1 || s[0]["payeeGroup"] != "OPERATOR INTERNETU" || obj(t, s[0], "category")["id"] != catID ||
+		num(s[0]["manualCount"]) != 3 || num(s[0]["txCount"]) != 14 {
+		t.Fatalf("suggestions = %v", s)
+	}
+	match := obj(t, s[0], "match")
+	if fs := match["filters"].([]any); len(fs) != 1 || fs[0].(map[string]any)["column"] != "payee" || fs[0].(map[string]any)["cond"] != "OPERATOR INTERNETU" {
+		t.Errorf("match = %v", match)
+	}
+	// the suggested match finds the whole group
+	pv := b.do("POST", "/rules/preview", map[string]any{"match": match})
+	expect(t, pv, 200, "")
+	if num(pv.body["matched"]) != 14 || num(pv.body["manual"]) != 3 {
+		t.Errorf("preview = %s", pv.raw)
+	}
+
+	// another user sees nothing
+	other := signedIn(t, e, "other-"+testEmail(t))
+	if s := list(t, other.do("GET", "/rules/suggestions", nil)); len(s) != 0 {
+		t.Errorf("other user's suggestions = %v", s)
+	}
+
+	// a rule with another category doesn't end it; the suggested rule does, even disabled
+	media := b.do("POST", "/categories", map[string]any{"name": "Media"})
+	expect(t, b.do("POST", "/rules", map[string]any{"name": "Media", "match": match, "setCategoryId": media.body["id"]}), 201, "")
+	if s := list(t, b.do("GET", "/rules/suggestions", nil)); len(s) != 1 {
+		t.Errorf("after a rule with another category: %v", s)
+	}
+	expect(t, b.do("POST", "/rules", map[string]any{"name": "Internet", "enabled": false, "match": match, "setCategoryId": catID}), 201, "")
+	if s := list(t, b.do("GET", "/rules/suggestions", nil)); len(s) != 0 {
+		t.Errorf("after the suggested rule: %v", s)
+	}
+}
