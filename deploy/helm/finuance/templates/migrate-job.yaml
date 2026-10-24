@@ -1,0 +1,54 @@
+{{- if .Values.migrations.enabled }}
+{{- $name := include "finuance.fullname" . -}}
+# Migrations run before every install and upgrade, as the owner role. Helm runs the hook itself;
+# Argo CD runs it as a PreSync hook (it maps pre-install/pre-upgrade, and the explicit annotation
+# says so). The api's /readyz stays 503 until the schema is current, so new pods wait for it.
+# Only external objects are referenced: on a first install the chart's ConfigMap doesn't exist yet.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-migrate
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ .Values.migrations.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "finuance.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "finuance.podSecurity" (dict "uid" 65532) | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "finuance.image" (dict "root" . "name" .Values.image.api) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["migrate", "up"]
+          env:
+            - name: FINUANCE_LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            - name: FINUANCE_MIGRATE_DATABASE_URL
+              value: {{ include "finuance.dbURL" (dict "root" . "user" .Values.database.owner.user) | quote }}
+            {{- include "finuance.dbPassword" .Values.database.owner | nindent 12 }}
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            {{- include "finuance.containerSecurity" . | nindent 12 }}
+{{- end }}

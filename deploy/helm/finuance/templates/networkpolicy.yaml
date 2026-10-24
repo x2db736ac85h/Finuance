@@ -1,0 +1,153 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy -}}
+{{- $sel := dict "app.kubernetes.io/name" .Chart.Name "app.kubernetes.io/instance" .Release.Name -}}
+# Default deny for every Finuance pod, then one policy per component (PLAN 16.1). Kubelet probes
+# come from the node and are not subject to these policies.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finuance.fullname" . }}-default-deny
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- toYaml $sel | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finuance.fullname" . }}-web
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "finuance.selector" (dict "root" . "component" "web") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: {{- toYaml $np.ingressController.namespaceSelector | nindent 12 }}
+          podSelector: {{- toYaml $np.ingressController.podSelector | nindent 12 }}
+      ports: [{ port: 8080, protocol: TCP }]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "finuance.selector" (dict "root" . "component" "api") | nindent 14 }}
+      ports: [{ port: 8080, protocol: TCP }]
+    {{- include "finuance.dnsEgress" . | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finuance.fullname" . }}-api
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "finuance.selector" (dict "root" . "component" "api") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: {{- toYaml $np.ingressController.namespaceSelector | nindent 12 }}
+          podSelector: {{- toYaml $np.ingressController.podSelector | nindent 12 }}
+        - podSelector:
+            matchLabels:
+              {{- include "finuance.selector" (dict "root" . "component" "web") | nindent 14 }}
+      ports: [{ port: 8080, protocol: TCP }]
+    {{- include "finuance.metricsIngress" . | nindent 4 }}
+  egress:
+    {{- include "finuance.dbEgress" . | nindent 4 }}
+    {{- include "finuance.dnsEgress" . | nindent 4 }}
+    {{- include "finuance.cidrEgress" .Values.otel.egress | nindent 4 }}
+    {{- if .Values.assistant.enabled }}
+    # The model servers (assistant.egress); nothing else outside the cluster.
+    {{- include "finuance.cidrEgress" .Values.assistant.egress | nindent 4 }}
+    {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finuance.fullname" . }}-worker
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "finuance.selector" (dict "root" . "component" "worker") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  {{- with (include "finuance.metricsIngress" .) }}
+  ingress:
+    {{- . | nindent 4 }}
+  {{- else }}
+  ingress: []
+  {{- end }}
+  egress:
+    {{- include "finuance.dbEgress" . | nindent 4 }}
+    {{- include "finuance.dnsEgress" . | nindent 4 }}
+    {{- include "finuance.cidrEgress" .Values.otel.egress | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finuance.fullname" . }}-migrate
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "finuance.selector" (dict "root" . "component" "migrate") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    {{- include "finuance.dbEgress" . | nindent 4 }}
+    {{- include "finuance.dnsEgress" . | nindent 4 }}
+{{- end }}
+
+{{- define "finuance.dnsEgress" -}}
+- to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels: { k8s-app: kube-dns }
+  ports:
+    - { port: 53, protocol: UDP }
+    - { port: 53, protocol: TCP }
+{{- end -}}
+
+{{- define "finuance.dbEgress" -}}
+{{- $db := .Values.networkPolicy.database -}}
+- to:
+    - namespaceSelector: {{- toYaml $db.namespaceSelector | nindent 8 }}
+      podSelector: {{- toYaml $db.podSelector | nindent 8 }}
+  ports: [{ port: {{ .Values.database.port }}, protocol: TCP }]
+{{- end -}}
+
+{{- define "finuance.metricsIngress" -}}
+{{- $m := .Values.networkPolicy.monitoring -}}
+{{- if or $m.namespaceSelector $m.podSelector -}}
+- from:
+    - namespaceSelector: {{- toYaml $m.namespaceSelector | nindent 8 }}
+      podSelector: {{- toYaml $m.podSelector | nindent 8 }}
+  ports: [{ port: 9090, protocol: TCP }]
+{{- end -}}
+{{- end -}}
+
+{{/* Extra egress: each entry has ports and either a cidr (outside the cluster) or peers in `to`
+(pods in the cluster: a ClusterIP can't be matched by an ipBlock). */}}
+{{- define "finuance.cidrEgress" -}}
+{{- range . }}
+- to:
+    {{- if .to }}
+    {{- toYaml .to | nindent 4 }}
+    {{- else }}
+    - ipBlock: { cidr: {{ required "an egress entry needs cidr or to" .cidr | quote }} }
+    {{- end }}
+  ports:
+    {{- range .ports }}
+    - { port: {{ . }}, protocol: TCP }
+    {{- end }}
+{{- end }}
+{{- end -}}

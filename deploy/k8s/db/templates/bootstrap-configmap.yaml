@@ -1,0 +1,12 @@
+{{- if not .Values.recovery.enabled }}
+# The bootstrap SQL run once after initdb (bootstrap.initdb.postInitApplicationSQLRefs).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.cluster.name }}-bootstrap
+  labels:
+    {{- include "db.labels" . | nindent 4 }}
+data:
+  bootstrap.sql: |
+    {{- .Files.Get "files/bootstrap.sql" | nindent 4 }}
+{{- end }}

@@ -1,0 +1,26 @@
+# The PostgreSQL cluster (deploy/k8s/db). Manual sync only (PLAN 16.4): a change to the database
+# is applied when someone presses Sync, after reading the diff. Never pruned automatically.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance-db
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: finuance
+  source:
+    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/k8s/db
+    helm:
+      releaseName: finuance-db
+      valueFiles:
+        - ../../environments/homelab/db-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: finuance
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true

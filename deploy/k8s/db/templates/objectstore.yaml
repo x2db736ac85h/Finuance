@@ -1,0 +1,39 @@
+{{- if include "db.objectStoreUsed" . }}
+{{- $os := .Values.objectStore }}
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ include "db.store" . }}
+  labels:
+    {{- include "db.labels" . | nindent 4 }}
+spec:
+  retentionPolicy: {{ $os.retention | quote }}
+  configuration:
+    destinationPath: {{ required "objectStore.destinationPath is required when backup or recovery is on (e.g. s3://finuance-backups/)" $os.destinationPath | quote }}
+    {{- with $os.endpointURL }}
+    endpointURL: {{ . | quote }}
+    {{- end }}
+    {{- if $os.endpointCA.name }}
+    endpointCA:
+      name: {{ $os.endpointCA.name }}
+      key: {{ $os.endpointCA.key }}
+    {{- end }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ $os.credentialsSecret }}
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: {{ $os.credentialsSecret }}
+        key: ACCESS_SECRET_KEY
+      {{- with $os.regionKey }}
+      region:
+        name: {{ $os.credentialsSecret }}
+        key: {{ . }}
+      {{- end }}
+    wal:
+      compression: {{ $os.compression }}
+      maxParallel: 2
+    data:
+      compression: {{ $os.compression }}
+      jobs: 2
+{{- end }}

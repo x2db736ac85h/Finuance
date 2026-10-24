@@ -146,7 +146,13 @@ make dev-api & make dev-web               # API on :8080 and the Vite dev server
 - Verify an image: `cosign verify ghcr.io/x2db736ac85h/finuance-api:<version> --certificate-identity-regexp 'https://github.com/x2db736ac85h/Finuance/' --certificate-oidc-issuer https://token.actions.githubusercontent.com`.
 - Back up the database volume regularly. It holds your original CSV files too.
 
-**Kubernetes with Helm, CloudNativePG and Argo CD:** 🚧 under construction (Phase 16). The placeholders are in [`deploy/helm`](deploy/helm/finuance), [`deploy/k8s`](deploy/k8s) and [`deploy/environments`](deploy/environments).
+**Kubernetes with Helm, CloudNativePG and Argo CD** (Phase 16, checked in CI; homelab rollout in Phase 18):
+- The app chart [`deploy/helm/finuance`](deploy/helm/finuance) runs the api (with an HPA), the worker, the web front end, a migrations Job before every upgrade, and NetworkPolicies.
+- The database chart [`deploy/k8s/db`](deploy/k8s/db) runs a CloudNativePG cluster, with WAL archiving and daily backups to S3-compatible storage.
+- [`deploy/k8s/argocd`](deploy/k8s/argocd) is an Argo CD app-of-apps with Sealed Secrets.
+- A release opens a pull request that bumps the image tag in [`deploy/environments/homelab`](deploy/environments/homelab), and merging it deploys.
+
+Operating it: [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## Testing
 
@@ -181,9 +187,11 @@ Performance notes and measurements: [docs/perf.md](docs/perf.md).
 | 12 | Monthly overview: KPIs, budgets, recurring payments, money flow | ✅ done |
 | 13 | AI assistant with read-only tools on your own model | ✅ done |
 | 14 | Migration from the prototype's backups, accessibility, v0.1.0 | ✅ done |
-| 15 | Category rules, transfer detection, group reports | 🚧 next |
-| 16–17 | Kubernetes deployment, observability, load tests, hardening | 🚧 planned |
-| 18 | Public demo, documentation, v1.0.0 | 🚧 planned |
+| 15 | Category rules, transfer detection, group reports, assistant actions | ✅ done |
+| 16 | Kubernetes deployment: Helm, CloudNativePG, Argo CD, rehearsed in CI | 🚧 in progress |
+| 17 | Observability, load tests, audit log, hardening | 🚧 planned |
+| 18 | Homelab rollout | 🚧 planned |
+| 19 | Public demo, documentation, v1.0.0 | 🚧 planned |
 
 The detailed task list and every decision taken so far are in [docs/PROGRESS.md](docs/PROGRESS.md); the full specification is [docs/PLAN.md](docs/PLAN.md).
 

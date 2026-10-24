@@ -1,0 +1,11 @@
+Finuance {{ include "finuance.tag" . }} is deploying as release {{ .Release.Name }}.
+
+{{- if .Values.ingress.enabled }}
+Open {{ .Values.publicOrigin }} (ingress host {{ .Values.ingress.host }}).
+{{- end }}
+
+The migration job ran first; api pods turn ready once the schema is current.
+Create the first user (sign-up is {{ ternary "on" "off" .Values.allowSignup }}):
+  kubectl -n {{ .Release.Namespace }} exec -i deploy/{{ include "finuance.fullname" . }}-api -- \
+    /finuance admin create-user -email you@example.com -password-stdin
+See docs/RUNBOOK.md.

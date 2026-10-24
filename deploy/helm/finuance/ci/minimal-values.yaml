@@ -1,0 +1,12 @@
+# Rendered by the CI helm job: an external TLS secret, no autoscaling, no network policies.
+publicOrigin: https://finuance.example.ts.net
+ingress:
+  host: finuance.example.ts.net
+  tls:
+    mode: secret
+    secretName: finuance-tailscale-tls
+api:
+  autoscaling:
+    enabled: false
+networkPolicy:
+  enabled: false

@@ -1,0 +1,10 @@
+PostgreSQL cluster {{ .Values.cluster.name }} ({{ .Values.cluster.instances }} instances).
+Read-write service: {{ .Values.cluster.name }}-rw.{{ .Release.Namespace }}:5432 (the app chart's database.host).
+
+  kubectl -n {{ .Release.Namespace }} get cluster {{ .Values.cluster.name }}
+{{- if .Values.backup.enabled }}
+  kubectl -n {{ .Release.Namespace }} get backups   # daily ({{ .Values.backup.schedule }}), kept {{ .Values.objectStore.retention }}
+{{- else }}
+
+Backups are OFF (backup.enabled=false).
+{{- end }}

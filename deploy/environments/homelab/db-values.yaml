@@ -1,0 +1,25 @@
+# Homelab values for the database chart (deploy/k8s/db), applied by the Argo CD application
+# deploy/k8s/argocd/apps/finuance-db.yaml (synced by hand, never automatically).
+# Values marked "Phase 18" are not known yet and are set during the homelab rollout.
+
+cluster:
+  instances: 2
+  storage:
+    size: 10Gi
+    # Phase 18: the cluster's storage class (k3s ships local-path).
+    storageClass: local-path
+
+objectStore:
+  # Phase 18: the backup target (bucket and endpoint). Off-site or at least off the cluster's disks.
+  destinationPath: s3://finuance-backups/
+  endpointURL: ""
+  credentialsSecret: finuance-db-backup
+  retention: 14d
+
+backup:
+  enabled: true
+  schedule: "0 15 2 * * *"
+
+networkPolicy:
+  enabled: true
+  operatorNamespace: cnpg-system

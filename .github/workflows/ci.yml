@@ -159,6 +159,59 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
             image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
 
+  helm:
+    name: helm (charts + Argo CD manifests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      HELM_VERSION: v3.18.4
+      KUBECONFORM_VERSION: v0.7.0
+      KUBESEAL_VERSION: v0.40.0
+      YQ_VERSION: v4.54.1
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      # Pinned versions through `go install` (verified by the Go checksum database), like cosign
+      # and syft in release.yml.
+      - name: Tools (helm, kubeconform, kubeseal, yq)
+        run: |
+          go install "github.com/mikefarah/yq/v4@${YQ_VERSION}"
+          go install "helm.sh/helm/v3/cmd/helm@${HELM_VERSION}"
+          go install "github.com/yannh/kubeconform/cmd/kubeconform@${KUBECONFORM_VERSION}"
+          go install "github.com/bitnami/sealed-secrets/cmd/kubeseal@${KUBESEAL_VERSION}"
+      - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas)
+        run: RENDER_DIR="$RUNNER_TEMP/rendered" make helm-lint
+      - name: Trivy config scan of the rendered manifests (HIGH/CRITICAL fail the build)
+        run: |
+          docker run --rm -v "$RUNNER_TEMP/rendered:/manifests:ro" aquasec/trivy:0.76.0 \
+            config --severity HIGH,CRITICAL --exit-code 1 --disable-telemetry /manifests
+      - name: GitOps bump (tools/bump-homelab-tag.sh changes only the tag line)
+        run: |
+          set -euo pipefail
+          f="$RUNNER_TEMP/values.yaml"; cp deploy/environments/homelab/values.yaml "$f"
+          YQ="$(go env GOPATH)/bin/yq" tools/bump-homelab-tag.sh 9.8.7 "$f"
+          test "$(diff deploy/environments/homelab/values.yaml "$f" | grep -c '^[<>]')" -eq 2
+          grep -q '^  tag: "9.8.7"$' "$f"
+          if YQ="$(go env GOPATH)/bin/yq" tools/bump-homelab-tag.sh 9.8 "$f"; then exit 1; fi
+      - name: Sealing round trip (tools/seal-secrets.sh with a throwaway key)
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/seal"; mkdir -p "$d/out"
+          openssl req -x509 -newkey rsa:4096 -nodes -keyout "$d/key.pem" -out "$d/cert.pem" -days 1 -subj "/CN=sealed-secret/O=sealed-secret" 2>/dev/null
+          export SEAL_CERT="$d/cert.pem" SECRETS_DIR="$d/out"
+          tools/seal-secrets.sh homelab db
+          ACCESS_KEY_ID=ak ACCESS_SECRET_KEY=sk tools/seal-secrets.sh homelab backup
+          for f in "$d"/out/*.sealed.yaml; do
+            # only encrypted data: a SealedSecret, no plain data/stringData
+            grep -q '^kind: SealedSecret' "$f"
+            if grep -qE '^ *(data|stringData):' "$f"; then echo "::error::$f holds plain data"; exit 1; fi
+            kubeseal --recovery-unseal --recovery-private-key "$d/key.pem" <"$f" \
+              | python3 -c 'import json,sys; s=json.load(sys.stdin); assert s["metadata"]["namespace"]=="finuance" and s["data"], s["metadata"]["name"]; print("unsealed", s["metadata"]["name"], sorted(s["data"]))'
+          done
+
   oracle-fresh:
     name: legacy oracle is fresh
     runs-on: ubuntu-24.04

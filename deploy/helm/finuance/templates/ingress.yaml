@@ -1,0 +1,73 @@
+{{- if .Values.ingress.enabled }}
+{{- $name := include "finuance.fullname" . -}}
+{{- $tls := .Values.ingress.tls -}}
+{{- $host := required "ingress.host is required when the ingress is enabled" .Values.ingress.host -}}
+{{- if and (eq $tls.mode "certManager") (not $tls.clusterIssuer) }}
+{{- fail "ingress.tls.clusterIssuer is required with tls.mode certManager (or use tls.mode traefik / secret / none)" }}
+{{- end }}
+{{- if and (eq $tls.mode "traefik") (not $tls.certResolver) }}
+{{- fail "ingress.tls.certResolver is required with tls.mode traefik (the name of a Traefik ACME resolver)" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+  annotations:
+    {{- if eq $tls.mode "certManager" }}
+    cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
+    {{- end }}
+    {{- if eq $tls.mode "traefik" }}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ $tls.certResolver | quote }}
+    {{- end }}
+    {{- if and .Values.ingress.hsts.enabled (ne $tls.mode "none") }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ printf "%s-%s-headers@kubernetescrd" .Release.Namespace $name | quote }}
+    {{- end }}
+    {{- if ne $tls.mode "none" }}
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if ne $tls.mode "none" }}
+  tls:
+    - hosts: [{{ $host | quote }}]
+      {{- if ne $tls.mode "traefik" }}
+      secretName: {{ $tls.secretName }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          # The API directly (streamed assistant answers need no buffering); the rest is the SPA.
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}-api
+                port: { name: http }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}-web
+                port: { name: http }
+{{- if and .Values.ingress.hsts.enabled (ne $tls.mode "none") }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-headers
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  headers:
+    stsSeconds: {{ .Values.ingress.hsts.maxAge }}
+    stsIncludeSubdomains: false
+    stsPreload: false
+{{- end }}
+{{- end }}

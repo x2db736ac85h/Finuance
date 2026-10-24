@@ -1,0 +1,41 @@
+# Two projects: "platform" for the operators (they need cluster-wide resources: CRDs, cluster
+# roles, webhooks) and "finuance" for the app, its database and its secrets (namespaced only).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Operators Finuance depends on (CloudNativePG, Barman Cloud plugin, Sealed Secrets).
+  sourceRepos:
+    - https://cloudnative-pg.github.io/charts
+    - https://bitnami-labs.github.io/sealed-secrets
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: cnpg-system
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: finuance
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: The Finuance app, its PostgreSQL cluster and its sealed secrets.
+  sourceRepos:
+    - https://github.com/x2db736ac85h/Finuance.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: finuance
+  # Only the namespace itself is cluster-scoped; everything else stays inside it.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace

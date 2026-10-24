@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Finuance chart values",
+  "type": "object",
+  "required": ["image", "publicOrigin", "database", "ingress"],
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": ["registry", "api", "web"],
+      "properties": {
+        "registry": { "type": "string", "minLength": 1 },
+        "api": { "type": "string", "minLength": 1 },
+        "web": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "imagePullSecrets": { "type": "array" },
+    "publicOrigin": {
+      "type": "string",
+      "description": "The address users open; https in production.",
+      "anyOf": [{ "const": "" }, { "pattern": "^https?://[^/]+$" }]
+    },
+    "logLevel": { "enum": ["debug", "info", "warn", "error"] },
+    "allowSignup": { "type": "boolean" },
+    "trustedProxies": { "type": "string" },
+    "maxUploadBytes": { "type": "integer", "minimum": 1024 },
+    "extraEnv": {
+      "type": "object",
+      "propertyNames": { "pattern": "^FINUANCE_[A-Z0-9_]+$" },
+      "additionalProperties": { "type": "string" }
+    },
+    "database": {
+      "type": "object",
+      "required": ["host", "port", "name", "sslmode", "app", "owner"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "name": { "type": "string", "minLength": 1 },
+        "sslmode": { "enum": ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] },
+        "maxConns": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "app": { "$ref": "#/definitions/dbRole" },
+        "owner": { "$ref": "#/definitions/dbRole" }
+      }
+    },
+    "assistant": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "connectionsFile": { "type": "string" },
+        "envSecret": { "type": "string" },
+        "egress": { "$ref": "#/definitions/egress" }
+      }
+    },
+    "otel": {
+      "type": "object",
+      "properties": {
+        "endpoint": { "type": "string" },
+        "egress": { "$ref": "#/definitions/egress" }
+      }
+    },
+    "api": { "type": "object" },
+    "worker": { "type": "object" },
+    "web": { "type": "object" },
+    "migrations": { "type": "object" },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "host": { "type": "string" },
+        "tls": {
+          "type": "object",
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["certManager", "traefik", "secret", "none"] },
+            "clusterIssuer": { "type": "string" },
+            "certResolver": { "type": "string" },
+            "secretName": { "type": "string" }
+          }
+        },
+        "hsts": { "type": "object" },
+        "annotations": { "type": "object" }
+      }
+    },
+    "networkPolicy": { "type": "object" },
+    "serviceMonitor": { "type": "object" }
+  },
+  "definitions": {
+    "dbRole": {
+      "type": "object",
+      "required": ["user", "passwordSecret", "passwordKey"],
+      "properties": {
+        "user": { "type": "string", "minLength": 1 },
+        "passwordSecret": { "type": "string", "minLength": 1 },
+        "passwordKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "egress": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ports"],
+        "properties": {
+          "cidr": { "type": "string" },
+          "to": { "type": "array" },
+          "ports": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 }, "minItems": 1 }
+        },
+        "oneOf": [{ "required": ["cidr"] }, { "required": ["to"] }]
+      }
+    }
+  }
+}

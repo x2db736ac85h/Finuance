@@ -1,0 +1,77 @@
+{{- $name := include "finuance.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-web
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.web.replicas }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "finuance.selector" (dict "root" . "component" "web") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "finuance.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "finuance.podSecurity" (dict "uid" 101) | nindent 8 }}
+      containers:
+        - name: web
+          image: {{ include "finuance.image" (dict "root" . "name" .Values.image.web) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - name: FINUANCE_API_UPSTREAM
+              value: {{ printf "%s-api:8080" $name | quote }}
+            # nginx's client_max_body_size: the upload limit plus room for the multipart framing.
+            - name: FINUANCE_MAX_BODY
+              value: {{ printf "%dk" (add (div (int64 .Values.maxUploadBytes) 1024) 1024) | quote }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          securityContext:
+            {{- include "finuance.containerSecurity" . | nindent 12 }}
+          # nginx renders its config from the template at start and needs a writable temp dir.
+          volumeMounts:
+            - { name: conf, mountPath: /etc/nginx/conf.d }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: conf
+          emptyDir: { sizeLimit: 1Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-web
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  selector:
+    {{- include "finuance.selector" (dict "root" . "component" "web") | nindent 4 }}
+  ports:
+    - { name: http, port: 8080, targetPort: http }
