@@ -12,7 +12,7 @@
 # Timings go to $SUMMARY (and the GitHub job summary). Needs docker, kind, kubectl, helm, kubeseal,
 # mikefarah's yq ($YQ), curl, openssl and python3.
 #
-#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|netpol|sse|podkill|restore|summary|diagnostics|down]
+#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|netpol|sse|podkill|restore|summary|diagnostics|report|down]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -341,6 +341,47 @@ diagnostics() {
   kubectl -n cnpg-system logs deploy/barman-cloud --tail=80 2>/dev/null || kubectl -n cnpg-system logs -l app.kubernetes.io/name=plugin-barman-cloud --tail=80 2>/dev/null || true
 }
 
+# report: GitHub annotations with the failing step's last lines and the cluster's state. The job
+# log can't be read everywhere the results are needed (the cloud session that builds Finuance gets
+# 403 on logs and artifacts), annotations can. At most 10 per kind and step, a few KB each.
+annotate() { # annotate <error|warning> <title> <file>
+  [ -s "$3" ] || return 0
+  python3 - "$1" "$2" "$3" <<'PY'
+import re, sys
+level, title, path = sys.argv[1:4]
+text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", open(path, errors="replace").read())[-7000:]
+esc = text.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+print(f"::{level} title={title}::{esc}")
+PY
+}
+
+report() {
+  local last
+  last=$(ls -t "$WORK"/logs/*.log 2>/dev/null | head -1 || true)
+  if [ -n "$last" ]; then
+    tail -120 "$last" >"$WORK/report-step.txt"
+    annotate error "rehearsal step $(basename "$last" .log) (last lines)" "$WORK/report-step.txt"
+  fi
+  kubectl get pods -A -o wide >"$WORK/report-pods.txt" 2>&1 || true
+  annotate warning "pods" "$WORK/report-pods.txt"
+  kubectl get events -A --sort-by=.lastTimestamp 2>&1 | grep -v ' Normal ' | tail -50 >"$WORK/report-events.txt" || true
+  annotate warning "warning events" "$WORK/report-events.txt"
+  local n=0
+  # pods that aren't running and ready: describe + logs
+  kubectl get pods -A --no-headers 2>/dev/null | awk '{ split($3, r, "/") } ($4 != "Running" && $4 != "Completed") || ($4 == "Running" && r[1] != r[2])' | head -4 |
+    while read -r ns pod _; do
+      { kubectl -n "$ns" describe pod "$pod" | sed -n '/^Containers:/,$p' | tail -60; kubectl -n "$ns" logs "$pod" --all-containers --tail=40; } >"$WORK/report-pod-$n.txt" 2>&1 || true
+      annotate warning "pod $ns/$pod" "$WORK/report-pod-$n.txt"
+      n=$((n + 1))
+    done
+  for ns in finuance finuance-restore; do
+    kubectl -n "$ns" get clusters.postgresql.cnpg.io finuance-db -o yaml 2>/dev/null | sed -n '/^status:/,$p' | head -80 >"$WORK/report-cluster-$ns.txt" || true
+    annotate warning "CNPG cluster status ($ns)" "$WORK/report-cluster-$ns.txt"
+  done
+  { kubectl -n cnpg-system logs deploy/cnpg-cloudnative-pg --tail=30; kubectl -n cnpg-system logs -l app.kubernetes.io/name=plugin-barman-cloud --tail=30; } 2>&1 | grep -iE 'error|fail|warn' | tail -40 >"$WORK/report-operator.txt" || true
+  annotate warning "operator and plugin errors" "$WORK/report-operator.txt"
+}
+
 down() { kind delete cluster --name "$CLUSTER" || true; }
 
 case ${1:-all} in
@@ -348,6 +389,10 @@ case ${1:-all} in
     rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
     images; cluster; platform; deploy; smoke; netpol; sse; podkill; restore; summary
     ;;
-  images | cluster | platform | deploy | smoke | netpol | sse | podkill | restore | summary | diagnostics | down) "$1" ;;
+  images | cluster | platform | deploy | smoke | netpol | sse | podkill | restore)
+    mkdir -p "$WORK/logs"
+    "$1" 2>&1 | tee "$WORK/logs/$1.log"
+    ;;
+  summary | diagnostics | report | down) "$1" ;;
   *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

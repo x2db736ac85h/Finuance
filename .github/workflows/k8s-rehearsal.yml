@@ -74,3 +74,6 @@ jobs:
       - name: Diagnostics
         if: failure()
         run: tools/rehearsal.sh diagnostics
+      - name: Failure report as annotations
+        if: failure()
+        run: tools/rehearsal.sh report

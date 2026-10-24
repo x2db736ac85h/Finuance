@@ -2,7 +2,7 @@
 
 How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation; Phase 8 the web app.
 
-> 🚧 This describes the system after Phase 11. Parts that come later (the overview, the AI assistant and its LLM server, the Kubernetes deployment; the `rules` package arrived in Phase 15) appear in the diagrams where they will fit, and are marked as planned in the text.
+> 🚧 This describes the system after Phase 11, plus the Kubernetes deployment of Phase 16 ([Deployment](#deployment)). Parts from Phases 12–15 (the overview, the AI assistant and its model server; the `rules` package arrived in Phase 15) appear in the diagrams where they fit and are described in their own documents (`docs/assistant.md`, the ADRs).
 
 ## Components
 
@@ -62,6 +62,47 @@ A Vite + React + TypeScript single-page app that recreates the legacy `finuance.
 | `ui/` | Primitives: Popover and Menu (Floating UI), Modal, Toast queue, Tooltip, buttons, inputs. Open modals and popovers register as layers, so the global keyboard manager leaves their keys alone. |
 
 The production image (`deploy/docker/Dockerfile.web`) is unprivileged nginx: static files with a strict CSP (`script-src 'self'; style-src 'self'; connect-src 'self'`), immutable hashed assets, `no-cache` for `index.html`, and `/api/` proxied to the API without buffering (exports stream through). No HTML is ever built from strings (an ESLint rule bans `innerHTML` and `dangerouslySetInnerHTML`), which is what makes that CSP possible.
+
+## Deployment
+
+Two ways to run it, from the same images (`ghcr.io/x2db736ac85h/finuance-api`, `finuance-web`):
+
+- **Docker Compose** (`deploy/compose/compose.prod.yaml`): one machine; nginx in the web container proxies `/api` to the api.
+- **Kubernetes** (Phase 16; [docs/RUNBOOK.md](RUNBOOK.md)): the Helm chart `deploy/helm/finuance`, the database chart `deploy/k8s/db` on CloudNativePG, and Argo CD applications in `deploy/k8s/argocd`, with the homelab's values in `deploy/environments/homelab`.
+
+```mermaid
+flowchart TB
+    user["Browser"] -- "HTTPS" --> traefik["Traefik (kube-system)<br/>TLS: cert-manager / ACME / secret<br/>HSTS middleware"]
+    subgraph ns["namespace finuance (Pod Security: restricted; NetworkPolicies: default deny)"]
+        web["web ×2<br/>nginx, CSP"]
+        api["api ×2–4 (HPA)<br/>finuance serve"]
+        worker["worker<br/>finuance worker"]
+        migrate["Job finuance-migrate<br/>PreSync hook, owner role"]
+        pg[("finuance-db ×2<br/>CloudNativePG<br/>primary + replica")]
+        secrets["Secrets from SealedSecrets<br/>finuance-db-app / -owner / -backup"]
+    end
+    s3[("S3-compatible bucket<br/>WAL + daily base backups")]
+    llm["Model server (LM Studio, ADR 0020)"]
+    argo["Argo CD<br/>app-of-apps, syncs main"]
+
+    traefik -- "/ " --> web
+    traefik -- "/api/" --> api
+    api -- "5432, app role" --> pg
+    worker -- "5432, app role" --> pg
+    migrate -- "5432, owner role" --> pg
+    pg -- "Barman Cloud plugin" --> s3
+    api -. "assistant on: one address:port" .-> llm
+    secrets -. "PGPASSWORD" .-> api
+    argo -. "Helm charts + values" .-> ns
+```
+
+- **Same origin, two routes.** The Ingress sends `/api/` straight to the api (streamed assistant answers need no buffering) and everything else to web. Under Compose, nginx does that split.
+- **Migrations before every rollout.** The `finuance-migrate` Job (Helm `pre-install`/`pre-upgrade`, Argo CD `PreSync`) runs as the owner role. The api reports ready only when the schema is at least at its version, so a failed migration leaves the old pods serving.
+- **Zero-downtime rollouts.** Rolling updates with `maxUnavailable: 0`; api and web pause in `preStop` until Traefik has dropped them from its endpoints; the api drains in-flight requests on SIGTERM. The CI rehearsal checks this under load.
+- **Passwords never sit in a URL.** The ConfigMap holds password-less database URLs; each process gets `PGPASSWORD` from the role's basic-auth secret, the same secret CloudNativePG's managed role reads.
+- **Backups** are continuous WAL archiving plus a daily base backup through the Barman Cloud plugin, with a 14-day recovery window. A restore is a new cluster from the bucket, optionally to a point in time.
+- **GitOps.** A release opens a pull request that bumps the image tag in the homelab values; merging it deploys, reverting it rolls back. The database application syncs only by hand.
+- **The rehearsal** (`tools/rehearsal.sh`, the `k8s-rehearsal` workflow) runs all of this on a kind cluster, with RustFS as the bucket and the mock model server.
 
 ## Data model
 
