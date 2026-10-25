@@ -334,7 +334,11 @@ summary() {
     [ -f "$WORK/facts.tsv" ] && awk -F'\t' '{ printf "| %s | %s |\n", $1, $2 }' "$WORK/facts.tsv"
   } >"$SUMMARY"
   cat "$SUMMARY"
-  [ -n "${GITHUB_STEP_SUMMARY:-}" ] && cat "$SUMMARY" >>"$GITHUB_STEP_SUMMARY"
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    cat "$SUMMARY" >>"$GITHUB_STEP_SUMMARY"
+    # also as an annotation: readable through the API where the job summary isn't
+    annotate notice "rehearsal summary" "$SUMMARY"
+  fi
   return 0
 }
 
