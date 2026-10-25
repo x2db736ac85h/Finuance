@@ -77,6 +77,9 @@ images() {
   docker build -q -f deploy/docker/Dockerfile.backend --target llmmock -t "$MOCK_IMAGE" .
   docker tag finuance-backend:dev "$API_IMAGE"
   docker tag finuance-web:dev "$WEB_IMAGE"
+  # the build cache isn't needed again; the kind nodes need the disk
+  docker builder prune -af >/dev/null
+  df -h / | tail -1
 }
 
 cluster() {

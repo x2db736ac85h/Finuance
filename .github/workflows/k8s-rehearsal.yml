@@ -38,6 +38,14 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7.0.1
+      # Three kind nodes each pull the PostgreSQL, operator and app images; the runner's
+      # preinstalled SDKs we don't use take the space they need.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          docker system prune -af >/dev/null
+          df -h /
       - uses: actions/setup-go@v7.0.0
         with:
           go-version-file: backend/go.mod

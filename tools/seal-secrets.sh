@@ -27,7 +27,7 @@ seal_args=(--format yaml)
 
 b64() { printf '%s' "$1" | base64 | tr -d '\n'; }
 # 32 characters of [A-Za-z0-9] (no quoting trouble in URLs or shells).
-password() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32 || true; }
+password() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 32 || true; }
 
 # seal <name> <type> <key> <value> [<key> <value> ...]
 seal() {
