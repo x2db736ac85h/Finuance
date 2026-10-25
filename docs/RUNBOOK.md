@@ -2,7 +2,7 @@
 
 How to run Finuance on Kubernetes: the first install, deploys and rollbacks, secrets, scaling, backups and restores, and what to do when something breaks. The Compose install is in the [main README](../README.md#deploying).
 
-> **Status (Phase 16).** The manifests are written and checked in CI: `make helm-lint` and the `helm` job render, validate and scan them; the kind rehearsal adds a cluster run in the second push. Nothing is deployed on the homelab yet. Values marked *Phase 18* in `deploy/environments/homelab/` are set during the homelab rollout, and the timings below come from the CI rehearsal until then.
+> **Status (Phase 16).** The manifests are written and checked in CI: `make helm-lint` and the `helm` job render, validate and scan them; the kind rehearsal (`tools/rehearsal.sh`, workflow `k8s-rehearsal`) installs everything on a throwaway cluster and runs the drills below. Nothing is deployed on the homelab yet. Values marked *Phase 18* in `deploy/environments/homelab/` are set during the homelab rollout, and the timings below come from the CI rehearsal until then.
 
 ## What runs where
 
@@ -211,7 +211,7 @@ Record the times in the table below: **RTO** is from `helm install finuance-db` 
 
 | Drill | Where | Data | RTO | RPO | Notes |
 |---|---|---|---|---|---|
-| — | CI rehearsal (kind) | demo data | *(second push of Phase 16)* | | |
+| 2026-10-25 | CI rehearsal (kind, 3 nodes, RustFS bucket) | smoke-test data | 75 s (restored cluster ready after 56 s) | 51 s (a write until its WAL was archived; at most `archive_timeout`, 5 min) | on-demand base backup 159 s; both markers back (before the base backup, and only in the WAL after it); `textlike` still LEAKPROOF; the restored roles took the scratch namespace's new passwords |
 | — | homelab | real | *(Phase 18)* | | |
 
 ### Point-in-time recovery
