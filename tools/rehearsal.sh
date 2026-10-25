@@ -93,8 +93,18 @@ platform() {
   helm repo add traefik https://traefik.github.io/charts --force-update >/dev/null
   helm repo add jetstack https://charts.jetstack.io --force-update >/dev/null
   helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update >/dev/null
-  helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets --force-update >/dev/null
+  helm repo add sealed-secrets https://bitnami.github.io/sealed-secrets --force-update >/dev/null
   helm repo update >/dev/null
+  # every pinned chart version must exist before anything is installed (all problems at once)
+  local missing=0 chart
+  for chart in "traefik/traefik $TRAEFIK_CHART" "jetstack/cert-manager $CERT_MANAGER_CHART" \
+    "cnpg/cloudnative-pg $(argo_version cnpg-operator)" "cnpg/plugin-barman-cloud $(argo_version barman-cloud-plugin)" \
+    "sealed-secrets/sealed-secrets $(argo_version sealed-secrets)"; do
+    set -- $chart
+    if helm show chart "$1" --version "$2" >/dev/null 2>&1; then echo "   chart $1 $2: ok"
+    else echo "   chart $1 $2: NOT FOUND (newest: $(helm search repo "$1" -o json | "$YQ" -p json '.[0].version'))"; missing=1; fi
+  done
+  [ $missing -eq 0 ] || return 1
   helm upgrade --install traefik traefik/traefik --version "$TRAEFIK_CHART" -n kube-system -f "$R/traefik-values.yaml" --wait
   helm upgrade --install cert-manager jetstack/cert-manager --version "$CERT_MANAGER_CHART" -n cert-manager --create-namespace \
     --set crds.enabled=true --wait

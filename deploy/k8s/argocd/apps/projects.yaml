@@ -11,7 +11,7 @@ spec:
   description: Operators Finuance depends on (CloudNativePG, Barman Cloud plugin, Sealed Secrets).
   sourceRepos:
     - https://cloudnative-pg.github.io/charts
-    - https://bitnami-labs.github.io/sealed-secrets
+    - https://bitnami.github.io/sealed-secrets
   destinations:
     - server: https://kubernetes.default.svc
       namespace: cnpg-system
