@@ -183,7 +183,7 @@ jobs:
           go install "github.com/yannh/kubeconform/cmd/kubeconform@${KUBECONFORM_VERSION}"
           go install "github.com/bitnami/sealed-secrets/cmd/kubeseal@${KUBESEAL_VERSION}"
       - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas)
-        run: RENDER_DIR="$RUNNER_TEMP/rendered" make helm-lint
+        run: RENDER_DIR="$RUNNER_TEMP/rendered" YQ="$(go env GOPATH)/bin/yq" make helm-lint
       - name: Trivy config scan of the rendered manifests (HIGH/CRITICAL fail the build)
         run: |
           docker run --rm -v "$RUNNER_TEMP/rendered:/manifests:ro" aquasec/trivy:0.76.0 \

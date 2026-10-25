@@ -3,10 +3,11 @@
 # values file the repository uses, validates the rendered manifests and the Argo CD applications
 # with kubeconform (strict, CRD schemas from the datree catalog), and checks that wrong settings
 # fail to render. RENDER_DIR keeps the rendered manifests (the CI helm job scans them with Trivy).
-# Needs helm and kubeconform (versions in .github/workflows/ci.yml) and network access for schemas.
+# Needs helm, kubeconform and mikefarah's yq ($YQ) (versions in .github/workflows/ci.yml) and network access for schemas.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 K8S=1.33.0
+YQ=${YQ:-yq} # mikefarah's yq v4
 out=${RENDER_DIR:-$(mktemp -d)}
 mkdir -p "$out"
 CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
@@ -45,6 +46,16 @@ for f in "$app"/ci/*.yaml; do render "app-$(basename "$f" .yaml)" finuance "$app
 render app-homelab finuance "$app" finuance deploy/environments/homelab/values.yaml
 for f in "$db"/ci/*.yaml; do render "db-$(basename "$f" .yaml)" finuance-db "$db" finuance "$f"; done
 render db-homelab finuance-db "$db" finuance deploy/environments/homelab/db-values.yaml
+
+# The assistant's connections file: every container told to read it must mount it (the rehearsal
+# found the worker crash-looping on a path only the api had).
+echo "== assistant connections file is mounted where it is read"
+"$YQ" -e 'select(.kind == "Deployment" or .kind == "Job") | .spec.template.spec.containers[]
+  | select(.env[]? | .name == "FINUANCE_AI_CONNECTIONS_FILE") | select([.volumeMounts[]? | .mountPath] | contains(["/etc/finuance"]) | not)
+  | .name' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a container reads the connections file without mounting it"; exit 1; }
+"$YQ" -e '.data.FINUANCE_AI_CONNECTIONS_FILE' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 &&
+  { echo "check-helm: FINUANCE_AI_CONNECTIONS_FILE is in the shared ConfigMap (every component would read it)"; exit 1; }
+echo "ok"
 
 echo "== Argo CD applications"
 validate deploy/k8s/argocd/root.yaml deploy/k8s/argocd/apps/

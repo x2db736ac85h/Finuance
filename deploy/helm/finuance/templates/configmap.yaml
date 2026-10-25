@@ -17,9 +17,6 @@ data:
   {{- with .Values.otel.endpoint }}
   FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: {{ . | quote }}
   {{- end }}
-  {{- if and .Values.assistant.enabled .Values.assistant.connectionsFile }}
-  FINUANCE_AI_CONNECTIONS_FILE: /etc/finuance/connections.json
-  {{- end }}
   {{- range $k, $v := .Values.extraEnv }}
   {{ $k }}: {{ $v | quote }}
   {{- end }}
