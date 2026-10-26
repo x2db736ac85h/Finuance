@@ -1,0 +1,7 @@
+# Findings gitleaks reports that are not secrets. Each line is a finding's fingerprint
+# (commit:path:rule:line), so only that exact occurrence is skipped; a new one still fails.
+#
+# c38e3e5 (Phase 17 push 1): fake assistant proposal keys (16 hex characters, a hash of the
+# proposal's content) in a Vitest fixture; the fixture uses plainly fake keys since.
+c38e3e585e9a30139c42cfe17105b83fe8fe4222:web/src/assistant/assistant.test.tsx:generic-api-key:216
+c38e3e585e9a30139c42cfe17105b83fe8fe4222:web/src/assistant/assistant.test.tsx:generic-api-key:304

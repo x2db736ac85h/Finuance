@@ -213,7 +213,7 @@ describe('ChatPanel', () => {
   it('shows a proposal as a card; Apply creates the category and sends the change marked with the chat and proposal', async () => {
     const ids = Array.from({ length: 14 }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`);
     const proposal: Schemas['ActionProposal'] = {
-      key: '0123456789abcdef',
+      key: 'proposal-internet',
       action: 'set_category',
       reason: 'Monthly internet bills',
       matched: 14,
@@ -286,13 +286,13 @@ describe('ChatPanel', () => {
       {
         path: '/transactions/bulk',
         chat: CHAT,
-        proposal: '0123456789abcdef',
+        proposal: 'proposal-internet',
         body: { ids, category: { id: '00000000-0000-4000-8000-0000000000c9' } },
       },
     ]);
     expect(within(card).getByText('✓ Applied')).toBeTruthy();
     expect(within(card).queryByRole('button', { name: 'Apply' })).toBeNull();
-    expect(useChat.getState().applied).toEqual(['0123456789abcdef']);
+    expect(useChat.getState().applied).toEqual(['proposal-internet']);
 
     // Show in table puts the proposal's rows in the view
     await user.click(within(card).getByRole('button', { name: 'Show in table' }));
@@ -301,7 +301,7 @@ describe('ChatPanel', () => {
 
   it('a rule proposal with an existing category creates the rule', async () => {
     const proposal: Schemas['ActionProposal'] = {
-      key: 'fedcba9876543210',
+      key: 'proposal-gym-rule',
       action: 'create_rule',
       matched: 19,
       categoryName: 'Sport',
