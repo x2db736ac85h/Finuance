@@ -2,8 +2,6 @@
 // affected rows, and Apply. The server never applies a proposal; Apply sends the change through
 // the normal endpoints with the user's session.
 
-import { useState } from 'react';
-
 import { useApplyProposal, type Proposal } from '../api/hooks/assistant';
 import { fmtDay } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
@@ -11,11 +9,7 @@ import { fmtInt, fmtMoney, plural } from '../lib/format';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { toast } from '../ui/toastStore';
-
-/** Proposals applied in this session (the card shows "Applied" after a remount). */
-const applied = new Set<string>();
-const keyOf = (chatId: string, p: Proposal) =>
-  [chatId, p.action, p.categoryName, p.groupName, p.ruleName, p.ids?.[0] ?? '', String(p.matched)].join('\u0000');
+import { useChat } from './chatStore';
 
 /** The card's headline, e.g. "Set the category Internet for 14 transactions". */
 export function proposalTitle(p: Proposal): string {
@@ -38,8 +32,9 @@ type Props = { proposal: Proposal; chatId: string | null; onShow?: () => void };
 
 export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
   const apply = useApplyProposal();
-  const key = chatId ? keyOf(chatId, p) : '';
-  const [done, setDone] = useState(() => applied.has(key));
+  // the server records applied proposals in the activity log; the chat reads them back
+  const done = useChat((s) => s.chatId === chatId && s.applied.includes(p.key));
+  const markApplied = useChat((s) => s.markApplied);
   const creates =
     (p.action !== 'set_group' && !p.categoryId) || (p.action === 'set_group' && !p.groupId)
       ? p.action === 'set_group'
@@ -52,8 +47,7 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
       { proposal: p, chatId },
       {
         onSuccess: (n) => {
-          applied.add(key);
-          setDone(true);
+          markApplied(p.key);
           toast(
             p.action === 'create_rule'
               ? `Rule “${p.ruleName ?? ''}” created · applying…`

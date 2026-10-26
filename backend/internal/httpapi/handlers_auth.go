@@ -2,12 +2,16 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
@@ -69,16 +73,31 @@ func (a *api) Login(ctx context.Context, req gen.LoginRequestObject) (gen.LoginR
 	}
 	ra := authFrom(ctx)
 	u, token, err := a.auth.Login(ctx, req.Body.Email, req.Body.Password, ra.token, ra.client)
+	var failed *auth.FailedLoginError
+	if errors.As(err, &failed) { // an existing account; an unknown email has no log to write to
+		a.audit(ctx, failed.UserID, ledger.AuditLoginFailed, "", nil)
+	}
 	if err != nil {
 		return nil, err
 	}
+	a.audit(ctx, u.ID, ledger.AuditLogin, "", nil)
 	return gen.Login200JSONResponse{Body: userDTO(u), Headers: gen.Login200ResponseHeaders{SetCookie: a.cookies.session(token)}}, nil
 }
 
 // Logout deletes the session (if any) and clears the cookie.
 func (a *api) Logout(ctx context.Context, _ gen.LogoutRequestObject) (gen.LogoutResponseObject, error) {
-	if err := a.auth.Logout(ctx, authFrom(ctx).token); err != nil {
+	token := authFrom(ctx).token
+	var who uuid.UUID // logout is a public route; the session, if still valid, says whose it was
+	if token != "" {
+		if id, err := a.auth.Resolve(ctx, token); err == nil {
+			who = id.User.ID
+		}
+	}
+	if err := a.auth.Logout(ctx, token); err != nil {
 		return nil, err
+	}
+	if who != uuid.Nil {
+		a.audit(ctx, who, ledger.AuditLogout, "", nil)
 	}
 	return gen.Logout204Response{Headers: gen.Logout204ResponseHeaders{SetCookie: a.cookies.clear()}}, nil
 }

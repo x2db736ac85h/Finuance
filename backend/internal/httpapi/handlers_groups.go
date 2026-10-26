@@ -133,11 +133,11 @@ func (a *api) BulkUpdateTransactions(ctx context.Context, req gen.BulkUpdateTran
 	}
 	switch {
 	case b.Set != nil:
-		logAppliedAction(ctx, req.Params.XAssistantChat, "set_group", n)
+		a.auditAppliedAction(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, "set_group", n)
 	case b.Category != nil:
-		logAppliedAction(ctx, req.Params.XAssistantChat, "set_category", n)
+		a.auditAppliedAction(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, "set_category", n)
 	default:
-		logAppliedAction(ctx, req.Params.XAssistantChat, "set_transfer", n)
+		a.auditAppliedAction(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, "set_transfer", n)
 	}
 	return gen.BulkUpdateTransactions200JSONResponse{Updated: n}, nil
 }

@@ -1,5 +1,5 @@
 # Release (PLAN §8.5, task 14.7): a tag vX.Y.Z (or vX.Y.Z-rc.N) builds the backend and web images for
-# amd64 and arm64, pushes them to GHCR, scans them with Trivy (CRITICAL fails the release), attaches
+# amd64 and arm64, pushes them to GHCR, scans them with Trivy (HIGH or CRITICAL fails the release, Phase 17), attaches
 # an SPDX SBOM, signs images and SBOM attestations keylessly with cosign, and publishes a GitHub
 # release with the notes from CHANGELOG.md and the files for compose.prod.yaml.
 #
@@ -93,13 +93,13 @@ jobs:
           echo "API=$REGISTRY/finuance-api@$(jq -r '."containerimage.digest"' api.json)" >> "$GITHUB_ENV"
           echo "WEB=$REGISTRY/finuance-web@$(jq -r '."containerimage.digest"' web.json)" >> "$GITHUB_ENV"
 
-      - name: Trivy (CRITICAL fails the release)
+      - name: Trivy (HIGH/CRITICAL fail the release)
         run: |
           for img in "$API" "$WEB"; do
             for platform in linux/amd64 linux/arm64; do
               docker run --rm -e TRIVY_USERNAME="${{ github.actor }}" -e TRIVY_PASSWORD="${{ secrets.GITHUB_TOKEN }}" \
                 -v "$PWD/.trivyignore:/.trivyignore:ro" "$TRIVY_IMAGE" \
-                image --ignorefile /.trivyignore --platform "$platform" --scanners vuln --severity CRITICAL --exit-code 1 --no-progress "$img"
+                image --ignorefile /.trivyignore --platform "$platform" --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress "$img"
             done
           done
 

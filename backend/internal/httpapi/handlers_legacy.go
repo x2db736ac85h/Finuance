@@ -13,6 +13,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -47,6 +48,7 @@ func (a *api) CreateLegacyImport(ctx context.Context, req gen.CreateLegacyImport
 	if err != nil {
 		return nil, err
 	}
+	a.audit(ctx, u, ledger.AuditLegacyImport, run.ID.String(), map[string]any{"files": len(files)})
 	return gen.CreateLegacyImport202JSONResponse(legacyDTO(run)), nil
 }
 

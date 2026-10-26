@@ -30,7 +30,8 @@ type CommitResult struct {
 //  3. mark the import committed (keeping the first commit time on a reprocess);
 //  4. re-materialise the fingerprints that have an override (the plan's step 2b), and those whose
 //     value source should now be this import (only after a reprocess: "the earliest import wins");
-//  5. record the stats.
+//  5. record the stats;
+//  6. record the activity-log event.
 //
 // The import must have an account. The CommitImport job runs this; it also upserts the profile.
 func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (CommitResult, error) {
@@ -117,9 +118,13 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 		if err != nil {
 			return err
 		}
-		_, err = q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: importID, FromStatus: string(StatusCommitted),
-			ToStatus: string(StatusCommitted), Stats: stats, Now: now})
-		return err
+		if _, err = q.SetImportStatus(ctx, db.SetImportStatusParams{UserID: userID, ID: importID, FromStatus: string(StatusCommitted),
+			ToStatus: string(StatusCommitted), Stats: stats, Now: now}); err != nil {
+			return err
+		}
+		// 6. the activity log, in the same transaction (a job: no address)
+		return insertAudit(ctx, q, userID, AuditEvent{Action: AuditImportCommitted, EntityID: importID.String(),
+			Meta: map[string]any{"file": imp.Filename, "new": res.New, "duplicates": res.Duplicates, "errors": res.Errors}})
 	})
 	return res, dbErr("commit import", err)
 }

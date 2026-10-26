@@ -139,6 +139,11 @@ func TestLoginRotatesAndFailsUniformly(t *testing.T) {
 	if !errors.Is(errWrong, auth.ErrInvalidCredentials) || !errors.Is(errUnknown, auth.ErrInvalidCredentials) || errWrong.Error() != errUnknown.Error() {
 		t.Errorf("wrong password %v / unknown email %v: want the same error", errWrong, errUnknown)
 	}
+	// Only the wrong password names the account (for its activity log, PLAN 17.6).
+	var failed *auth.FailedLoginError
+	if !errors.As(errWrong, &failed) || failed.UserID != u.ID || errors.As(errUnknown, &failed) {
+		t.Errorf("FailedLoginError: wrong password %#v, unknown email %#v", errWrong, errUnknown)
+	}
 }
 
 // TestUnknownEmailRunsArgon2: the failure path for an unknown email costs a full hash, like a

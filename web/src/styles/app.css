@@ -2374,6 +2374,10 @@ body.has-qbar .toast {
   border-color: var(--accent-soft);
   font-family: var(--mono);
 }
+.tag.warn {
+  color: var(--neg);
+  border-color: var(--neg);
+}
 .vt-title .ib {
   margin-left: 0.125rem;
 }

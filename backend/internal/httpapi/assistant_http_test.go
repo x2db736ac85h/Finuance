@@ -307,7 +307,8 @@ func TestAssistantInDataExport(t *testing.T) {
 }
 
 // An action proposal (PLAN 15.7): the step carries what the card shows; nothing changes until the
-// browser applies it through the normal endpoints, which log one structured line for it.
+// browser applies it through the normal endpoints, which record it in the activity log, so the
+// chat reads it back as applied.
 func TestAssistantProposalHTTP(t *testing.T) {
 	e, _ := mockEnv(t, nil)
 	b, _ := demoBrowser(t, e)
@@ -340,41 +341,65 @@ func TestAssistantProposalHTTP(t *testing.T) {
 		t.Errorf("answer = %q", c)
 	}
 	stored := turns[1].(map[string]any)["steps"].([]any)[0].(map[string]any)
-	if sp := obj(t, stored, "proposal"); len(sp["ids"].([]any)) != 14 {
-		t.Errorf("stored proposal = %v", sp)
+	key, _ := p["key"].(string)
+	if sp := obj(t, stored, "proposal"); len(sp["ids"].([]any)) != 14 || len(key) != 16 || sp["key"] != key {
+		t.Errorf("stored proposal = %v, streamed key %q (the same key both ways)", sp, key)
 	}
 
 	// Apply as the panel does: create the category, then the bulk change marked with the chat
 	nc := b.do("POST", "/categories", map[string]any{"name": "Internet"})
 	expect(t, nc, 201, "")
 	ids := p["ids"].([]any)
-	b.header["X-Assistant-Chat"] = id
+	b.header["X-Assistant-Chat"], b.header["X-Assistant-Proposal"] = id, key
 	bu := b.do("POST", "/transactions/bulk", map[string]any{"ids": ids, "category": map[string]any{"id": nc.body["id"]}})
 	delete(b.header, "X-Assistant-Chat")
+	delete(b.header, "X-Assistant-Proposal")
 	expect(t, bu, 200, "")
 	if num(bu.body["updated"]) != 14 || totalWhere(t, b, map[string]any{"column": "category", "cond": "=Internet"}) != 14 {
 		t.Fatalf("applied = %s", bu.raw)
 	}
-	var line string
-	for _, l := range strings.Split(e.logs.String(), "\n") {
-		if strings.Contains(l, `"assistant.action_applied"`) {
-			line = l
+	applied := func() []any {
+		t.Helper()
+		return b.do("GET", "/assistant/chats/"+id, nil).body["appliedProposals"].([]any)
+	}
+	if got := applied(); len(got) != 1 || got[0] != key {
+		t.Errorf("appliedProposals = %v, want [%s]", got, key)
+	}
+	events := func() []map[string]any {
+		t.Helper()
+		var out []map[string]any
+		for _, ev := range b.do("GET", "/me/activity", nil).body["events"].([]any) {
+			if ev := ev.(map[string]any); ev["action"] == "assistant.action_applied" {
+				out = append(out, ev)
+			}
 		}
+		return out
 	}
-	if !strings.Contains(line, `"action":"set_category"`) || !strings.Contains(line, `"rows":14`) || !strings.Contains(line, `"chat_id":"`+id+`"`) ||
-		strings.Contains(line, "Internet") || strings.Contains(line, "OPERATOR") {
-		t.Errorf("log line = %s", line)
+	ev := events()
+	if len(ev) != 1 || ev[0]["entityId"] != id {
+		t.Fatalf("activity = %v", ev)
 	}
-	// create_rule is logged too; requests without the header are not
+	if m := obj(t, ev[0], "meta"); m["action"] != "set_category" || num(m["rows"]) != 14 || m["proposal"] != key || len(m) != 3 {
+		t.Errorf("meta = %v (no names or filters)", m)
+	}
+	// create_rule is recorded too (without a proposal key it stays out of appliedProposals);
+	// requests without the header are ordinary edits
 	b.header["X-Assistant-Chat"] = id
 	expect(t, b.do("POST", "/rules", map[string]any{"name": "Internet", "match": map[string]any{"filters": []any{
 		map[string]any{"column": "payee", "cond": "OPERATOR INTERNETU"}}}, "setCategoryId": nc.body["id"]}), 201, "")
 	delete(b.header, "X-Assistant-Chat")
-	before := strings.Count(e.logs.String(), `"assistant.action_applied"`)
 	expect(t, b.do("POST", "/transactions/bulk", map[string]any{"ids": ids[:1], "category": map[string]any{"reset": true}}), 200, "")
-	if logs := e.logs.String(); strings.Count(logs, `"assistant.action_applied"`) != before || !strings.Contains(logs, `"action":"create_rule"`) {
-		t.Errorf("log lines: %d before, %d after", before, strings.Count(logs, `"assistant.action_applied"`))
+	if ev := events(); len(ev) != 2 || obj(t, ev[0], "meta")["action"] != "create_rule" || len(applied()) != 1 {
+		t.Errorf("activity after create_rule and a plain edit = %v", ev)
 	}
+	if strings.Contains(e.logs.String(), "OPERATOR") {
+		t.Error("a payee reached the logs")
+	}
+	b.header["X-Assistant-Proposal"] = "XYZ"
+	if r := b.do("POST", "/transactions/bulk", map[string]any{"ids": ids[:1], "category": map[string]any{"reset": true}}); r.code < 400 || r.code >= 500 {
+		t.Errorf("bad proposal header = %d", r.code)
+	}
+	delete(b.header, "X-Assistant-Proposal")
 	b.header["X-Assistant-Chat"] = "not-a-uuid"
 	if r := b.do("POST", "/transactions/bulk", map[string]any{"ids": ids[:1], "category": map[string]any{"reset": true}}); r.code < 400 || r.code >= 500 {
 		t.Errorf("bad header = %d", r.code)

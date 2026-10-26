@@ -162,6 +162,7 @@ func (a *api) ExportTransactions(ctx context.Context, req gen.ExportTransactions
 		view = "transactions"
 	}
 	name := "finuance-" + view + "-" + time.Now().UTC().Format("2006-01-02") + ".csv"
+	a.audit(ctx, u, ledger.AuditExportCSV, "", map[string]any{"file": name})
 	pr, pw := io.Pipe()
 	go func() {
 		w := bufio.NewWriterSize(pw, 64<<10)

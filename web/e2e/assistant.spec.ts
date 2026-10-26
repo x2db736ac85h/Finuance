@@ -126,6 +126,12 @@ test('a proposal changes nothing until Apply; Apply categorises the rows (PLAN 1
   await card.getByRole('button', { name: 'Show in table' }).click();
   await expect(page.locator('tr[data-i]')).toHaveCount(14);
   await expect(page.locator('tr[data-i]').first()).toContainText('Internet');
+  // the activity log remembers it: after a reload the reopened chat shows the card as applied
+  await page.reload();
+  const again = page.getByRole('complementary', { name: 'Assistant' });
+  await again.getByTitle('Recent chats').click();
+  await again.getByTitle('put "OPERATOR INTERNETU" in Internet').click();
+  await expect(again.getByRole('group', { name: 'Proposed change' })).toContainText('✓ Applied');
   expect(seen.foreign).toEqual([]);
   expect(seen.errors).toEqual([]);
 });

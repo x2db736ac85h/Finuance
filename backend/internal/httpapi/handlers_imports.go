@@ -57,9 +57,15 @@ func (a *api) UpdateAccount(ctx context.Context, req gen.UpdateAccountRequestObj
 
 // DeleteAccount deletes an account with its imports and transactions.
 func (a *api) DeleteAccount(ctx context.Context, req gen.DeleteAccountRequestObject) (gen.DeleteAccountResponseObject, error) {
-	if err := a.ledger.DeleteAccount(ctx, identity(ctx).User.ID, req.Id); err != nil {
+	u := identity(ctx).User.ID
+	acc, err := a.ledger.GetAccount(ctx, u, req.Id) // its name, for the activity log
+	if err != nil {
 		return nil, err
 	}
+	if err := a.ledger.DeleteAccount(ctx, u, req.Id); err != nil {
+		return nil, err
+	}
+	a.audit(ctx, u, ledger.AuditAccountDeleted, req.Id.String(), map[string]any{"name": acc.Name})
 	return gen.DeleteAccount204Response{}, nil
 }
 
@@ -227,9 +233,16 @@ func (a *api) UpdateImport(ctx context.Context, req gen.UpdateImportRequestObjec
 // DeleteImport cancels a preview or removes a committed import (orphan-safe).
 func (a *api) DeleteImport(ctx context.Context, req gen.DeleteImportRequestObject) (gen.DeleteImportResponseObject, error) {
 	u := identity(ctx).User.ID
-	if _, err := a.ledger.DeleteImport(ctx, u, req.Id); err != nil {
+	imp, err := a.ledger.GetImport(ctx, u, req.Id) // its file name and state, for the activity log
+	if err != nil {
 		return nil, err
 	}
+	removed, err := a.ledger.DeleteImport(ctx, u, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	a.audit(ctx, u, ledger.AuditImportDeleted, req.Id.String(),
+		map[string]any{"file": imp.Filename, "status": imp.Status, "transactionsRemoved": removed})
 	a.reclassifyAfter(ctx, u) // re-materialised rows and broken transfer pairs
 	return gen.DeleteImport204Response{}, nil
 }

@@ -159,6 +159,32 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
             image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
 
+  security:
+    name: security (repository scan, npm audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # PLAN 17.6 and the Phase 14 gate follow-up: no accepted findings before the public demo.
+      # Go and npm dependencies (dev dependencies included), secrets, and the misconfiguration
+      # checks for the Dockerfiles, Compose and Kubernetes files. The two Helm charts are rendered
+      # with every values file and config-scanned by the helm job, so their sources are skipped
+      # here (they don't render without the required values).
+      - name: Trivy repository scan (HIGH/CRITICAL fail the build)
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" -w /repo -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
+            fs --ignorefile /.trivyignore --scanners vuln,secret,misconfig --include-dev-deps \
+            --severity HIGH,CRITICAL --exit-code 1 --no-progress \
+            --skip-dirs deploy/helm/finuance --skip-dirs deploy/k8s/db .
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+      - name: npm audit (HIGH/CRITICAL fail the build)
+        working-directory: web
+        run: |
+          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high
+
   helm:
     name: helm (charts + Argo CD manifests)
     runs-on: ubuntu-24.04

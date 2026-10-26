@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertype"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
@@ -79,7 +80,9 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	led := ledger.New(c.store, platform.SystemClock{})
 	// Insert-only River client (no queues): handlers enqueue jobs in the same transaction as the
 	// state change (ADR 0006); the worker process runs them.
-	jobClient, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{Logger: log, Workers: jobs.Workers(jobs.Deps{Sessions: authSvc, Ledger: led})})
+	jobClient, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{Logger: log, Workers: jobs.Workers(jobs.Deps{Sessions: authSvc, Ledger: led}),
+		// the request's trace context travels with every job it enqueues (PLAN 17.2)
+		Middleware: []rivertype.Middleware{jobs.NewTelemetry(c.tracing.Provider, c.tracing.Propagator, nil)}})
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)
 	}
@@ -122,11 +125,13 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
 		Logger: log,
 		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
-		Workers: jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg), Ledger: led, Chats: chats,
+		Workers: jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg), Ledger: led, Audit: led, Chats: chats,
 			Migrator: legacyimport.New(c.store, led, chats, platform.SystemClock{}),
 			Rules:    rules.New(c.store, platform.SystemClock{}),
 			Metrics:  jobs.NewImportMetrics(c.metrics.Registry)}),
 		PeriodicJobs: jobs.PeriodicJobs(),
+		Middleware: []rivertype.Middleware{jobs.NewTelemetry(c.tracing.Provider, c.tracing.Propagator,
+			jobs.NewJobMetrics(c.metrics.Registry))},
 	})
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)

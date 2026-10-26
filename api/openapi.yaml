@@ -217,13 +217,51 @@ paths:
           description: Revoked.
         default:
           $ref: "#/components/responses/Problem"
+  /me/activity:
+    get:
+      operationId: listActivity
+      summary: The user's activity log (Settings → Activity)
+      description: >-
+        Security-relevant actions of the account, newest first (PLAN 17.6): sign-ins and failed
+        sign-ins, sign-outs, password changes, revoked sessions, imports committed or deleted,
+        deleted accounts, exports, rule runs, legacy migrations, duplicate decisions and applied
+        assistant proposals, with the address and a short browser name. Events are kept for one
+        year and can't be changed or deleted by the user; deleting the account deletes them.
+      tags: [me]
+      parameters:
+        - name: before
+          in: query
+          required: false
+          description: Only events older than this event id (the previous page's `nextBefore`).
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: One page of events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityPage"
+        default:
+          $ref: "#/components/responses/Problem"
   /me/export:
     get:
       operationId: exportMe
       summary: Download all of the user's data
       description: >-
         A zip stream: one JSON file per entity (accounts, categories, groups, budgets, annotations,
-        dedupe overrides, imports, investments, preferences), `transactions.csv` for every account and
+        dedupe overrides, imports, investments, preferences, rules, category aliases, the activity
+        log), `transactions.csv` for every account and
         the original import files under `imports/`.
       tags: [me]
       responses:
@@ -739,6 +777,7 @@ paths:
       operationId: bulkUpdateTransactions
       parameters:
         - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
       summary: Change the group, category or transfer state of many transactions
       description: >-
         Applies exactly one action to the given transactions (at most 5,000) and keeps the change as
@@ -996,6 +1035,7 @@ paths:
       operationId: createRule
       parameters:
         - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
       summary: Create a rule (it goes last)
       description: >-
         A rule matches with the table's filter language and needs a search or a column filter, and
@@ -1775,11 +1815,21 @@ components:
       required: false
       description: >-
         Set by the assistant panel when the request applies one of the assistant's action proposals
-        (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the
-        audit log of Phase 17); the request is otherwise an ordinary one.
+        (PLAN 15.7): the chat it came from. The server records it in the user's activity log
+        (PLAN 17.6); the request is otherwise an ordinary one.
       schema:
         type: string
         format: uuid
+    AssistantProposalHeader:
+      name: X-Assistant-Proposal
+      in: header
+      required: false
+      description: >-
+        With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the
+        chat shows the proposal as applied after a reload (`appliedProposals`).
+      schema:
+        type: string
+        pattern: "^[0-9a-f]{16}$"
     Id:
       name: id
       in: path
@@ -1904,6 +1954,61 @@ components:
       properties:
         password:
           type: string
+    ActivityPage:
+      type: object
+      additionalProperties: false
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityEvent"
+        nextBefore:
+          type: integer
+          format: int64
+          description: Pass as `before` for the next page; absent on the last page.
+    ActivityEvent:
+      type: object
+      additionalProperties: false
+      required: [id, at, action]
+      properties:
+        id:
+          type: integer
+          format: int64
+        at:
+          type: string
+          format: date-time
+        action:
+          type: string
+          enum:
+            - auth.login
+            - auth.login_failed
+            - auth.logout
+            - auth.password_changed
+            - auth.session_revoked
+            - import.committed
+            - import.deleted
+            - account.deleted
+            - export.csv
+            - export.data
+            - rules.applied
+            - legacy.import_started
+            - duplicates.decided
+            - duplicates.reset
+            - assistant.action_applied
+        entityId:
+          type: string
+          description: The affected record (import, account, session, chat …), if any.
+        ip:
+          type: string
+          description: The client address; absent for actions of a background job.
+        browser:
+          type: string
+          description: A short browser and system name, e.g. "Firefox on Linux".
+        meta:
+          type: object
+          additionalProperties: true
+          description: Small facts about the action (file name, counts, kind).
     Session:
       type: object
       additionalProperties: false
@@ -4112,7 +4217,7 @@ components:
     AssistantChatDetail:
       type: object
       additionalProperties: false
-      required: [id, title, connection, model, createdAt, updatedAt, noTools, turns]
+      required: [id, title, connection, model, createdAt, updatedAt, noTools, turns, appliedProposals]
       properties:
         id:
           type: string
@@ -4136,6 +4241,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AssistantTurn"
+        appliedProposals:
+          type: array
+          description: The keys of this chat's proposals the user has applied (from the activity log).
+          items:
+            type: string
     AssistantTurn:
       type: object
       additionalProperties: false
@@ -4194,8 +4304,13 @@ components:
         A change propose_action suggests (PLAN 15.7, ADR 0019). The server never applies it; the
         panel shows it with the affected rows and applies it through the normal endpoints when the
         user confirms. A missing categoryId / groupId means the category or group is created first.
-      required: [action, matched, sample]
+      required: [key, action, matched, sample]
       properties:
+        key:
+          type: string
+          description: >-
+            Identifies the proposal within its chat (a hash of its content); sent back as
+            X-Assistant-Proposal when it is applied.
         action:
           type: string
           enum: [set_category, set_group, create_rule]

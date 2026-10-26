@@ -12,6 +12,11 @@ import (
 // resolved before the user is known.
 var notTenantTables = []string{"sessions"}
 
+// ownPolicies are tables whose policies differ from the single "<table>_tenant" policy: the audit
+// log has one per command, so it can be read and appended to but never updated, and only expired
+// rows can be deleted (migration 00010, TestAuditLogIsAppendOnly).
+var ownPolicies = map[string][]string{"audit_log": {"audit_log_expire", "audit_log_read", "audit_log_write"}}
+
 // TestEveryUserTableHasForcedRLS reads the catalog instead of a hand-kept list, so a table added in a
 // later migration fails here until it gets its policy.
 func TestEveryUserTableHasForcedRLS(t *testing.T) {
@@ -49,14 +54,18 @@ func TestEveryUserTableHasForcedRLS(t *testing.T) {
 		if !enabled || !forced {
 			t.Errorf("%s: row level security enabled=%v forced=%v, want both", name, enabled, forced)
 		}
-		if !slices.Equal(policies, []string{name + "_tenant"}) {
-			t.Errorf("%s: policies %v, want [%s_tenant]", name, policies, name)
+		want := []string{name + "_tenant"}
+		if own, ok := ownPolicies[name]; ok {
+			want = own
+		}
+		if !slices.Equal(policies, want) {
+			t.Errorf("%s: policies %v, want %v", name, policies, want)
 		}
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"accounts", "assistant_chats", "assistant_messages", "assistant_settings", "budgets", "categories", "category_aliases", "dedupe_overrides", "groups", "import_files", "import_profiles",
+	want := []string{"accounts", "assistant_chats", "assistant_messages", "assistant_settings", "audit_log", "budgets", "categories", "category_aliases", "dedupe_overrides", "groups", "import_files", "import_profiles",
 		"import_rows", "imports", "investment_positions", "investment_profile", "legacy_import_files", "legacy_imports", "rules", "transactions", "tx_annotations", "user_preferences"}
 	if !slices.Equal(tenant, want) {
 		t.Errorf("tenant tables = %v, want %v", tenant, want)

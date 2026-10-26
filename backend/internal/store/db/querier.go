@@ -14,6 +14,10 @@ type Querier interface {
 	// Transaction count and date range per account (GET /accounts).
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
+	// The data export: every row of the user, oldest first.
+	AllAuditEvents(ctx context.Context, userID uuid.UUID) ([]AllAuditEventsRow, error)
+	// The proposal keys of one chat that the user applied (the panel's "Applied" state).
+	AppliedProposals(ctx context.Context, arg AppliedProposalsParams) ([]string, error)
 	// Commit step 1b: re-apply user annotations (group, manual category, note, manual transfer mark)
 	// to freshly inserted transactions, so labels survive delete + re-import.
 	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
@@ -59,6 +63,8 @@ type Querier interface {
 	// An annotation with nothing left (no group, no manual category, no note, no transfer override)
 	// is deleted (PLAN §4.4 "explicit clear").
 	DeleteEmptyAnnotations(ctx context.Context, userID uuid.UUID) (int64, error)
+	// The daily cleanup; the delete policy allows only rows past the retention anyway.
+	DeleteExpiredAuditEvents(ctx context.Context, userID uuid.UUID) (int64, error)
 	// Periodic cleanup: absolute expiry passed, or idle for longer than the idle timeout.
 	DeleteExpiredSessions(ctx context.Context, arg DeleteExpiredSessionsParams) (int64, error)
 	// Removes the group and its labels only (ON DELETE SET NULL on transactions and annotations).
@@ -160,6 +166,9 @@ type Querier interface {
 	// sidebar source labels b1, b2, … (task 6.12).
 	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
 	InsertAssistantMessage(ctx context.Context, arg InsertAssistantMessageParams) (InsertAssistantMessageRow, error)
+	// The audit log (PLAN task 17.6, migration 00010). Rows are only ever inserted, listed and, after
+	// the retention, deleted (the table's policies allow nothing else).
+	InsertAuditEvent(ctx context.Context, arg InsertAuditEventParams) error
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
@@ -178,6 +187,8 @@ type Querier interface {
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
 	ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]AssistantChat, error)
 	ListAssistantMessages(ctx context.Context, arg ListAssistantMessagesParams) ([]AssistantMessage, error)
+	// Newest first, a page at a time: rows with an id below before_id (0 = from the newest).
+	ListAuditEvents(ctx context.Context, arg ListAuditEventsParams) ([]ListAuditEventsRow, error)
 	ListBudgets(ctx context.Context, userID uuid.UUID) ([]ListBudgetsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
 	// Every bank category name with the category it now goes to (NULL: uncategorised), for the data export.

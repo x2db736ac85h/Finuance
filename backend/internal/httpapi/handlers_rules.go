@@ -8,6 +8,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
@@ -155,7 +156,7 @@ func (a *api) CreateRule(ctx context.Context, req gen.CreateRuleRequestObject) (
 	if err != nil {
 		return nil, err
 	}
-	logAppliedAction(ctx, req.Params.XAssistantChat, "create_rule", 1)
+	a.auditAppliedAction(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, "create_rule", 1)
 	return gen.CreateRule201JSONResponse(ruleDTO(&r)), nil
 }
 
@@ -208,6 +209,7 @@ func (a *api) ApplyRules(ctx context.Context, _ gen.ApplyRulesRequestObject) (ge
 			return nil, err
 		}
 	}
+	a.auditMe(ctx, ledger.AuditRulesApplied, "", nil)
 	return gen.ApplyRules202Response{}, nil
 }
 

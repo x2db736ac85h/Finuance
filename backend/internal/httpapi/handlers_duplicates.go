@@ -90,6 +90,8 @@ func (a *api) DecideDuplicate(ctx context.Context, req gen.DecideDuplicateReques
 	if err := a.ledger.SetOverride(ctx, userID, req.AccountId, fp, ledger.OverrideMode(req.Body.Mode), req.Body.ImportId); err != nil {
 		return nil, err
 	}
+	a.audit(ctx, userID, ledger.AuditDuplicateDecided, req.AccountId.String(),
+		map[string]any{"fingerprint": req.Fingerprint, "mode": string(req.Body.Mode)})
 	a.reclassifyAfter(ctx, userID) // the fingerprint's transactions were rebuilt
 	g, err := a.ledger.DuplicateGroupOf(ctx, userID, req.AccountId, fp)
 	if err != nil {
@@ -108,6 +110,7 @@ func (a *api) ResetDuplicate(ctx context.Context, req gen.ResetDuplicateRequestO
 	if err := a.ledger.ClearOverride(ctx, userID, req.AccountId, fp); err != nil {
 		return nil, err
 	}
+	a.audit(ctx, userID, ledger.AuditDuplicateReset, req.AccountId.String(), map[string]any{"fingerprint": req.Fingerprint})
 	a.reclassifyAfter(ctx, userID) // the fingerprint's transactions were rebuilt
 	g, err := a.ledger.DuplicateGroupOf(ctx, userID, req.AccountId, fp)
 	if err != nil {

@@ -48,7 +48,10 @@ func TestRegistry(t *testing.T) {
 	if (CleanupAssistantChatsArgs{}).Kind() != "cleanup_assistant_chats" || (CleanupAssistantChatsArgs{}).InsertOpts().MaxAttempts != 3 {
 		t.Error("assistant cleanup kind or options changed")
 	}
-	if len(PeriodicJobs()) != 2 { // sessions and assistant chats, hourly
+	if (CleanupAuditLogArgs{}).Kind() != "cleanup_audit_log" || (CleanupAuditLogArgs{}).InsertOpts().MaxAttempts != 3 {
+		t.Error("audit cleanup kind or options changed")
+	}
+	if len(PeriodicJobs()) != 3 { // sessions and assistant chats hourly, the audit log daily
 		t.Errorf("periodic jobs = %d", len(PeriodicJobs()))
 	}
 	if Workers(Deps{Sessions: &fakeCleaner{}}) == nil {

@@ -1,7 +1,8 @@
 // Package jobs holds River job arguments, workers and periodic jobs (ADR 0006). Job args carry ids,
 // never user data. Noop proves the queue end to end; CleanupExpiredSessions runs hourly (Phase 5);
 // CommitImport and RematerializeFingerprint are the import pipeline's (Phase 6); LegacyImport
-// migrates a legacy backup (Phase 14); Reclassify applies rules and finds transfers (Phase 15).
+// migrates a legacy backup (Phase 14); Reclassify applies rules and finds transfers (Phase 15);
+// CleanupAuditLog keeps the activity log to its retention (Phase 17).
 package jobs
 
 import (
@@ -42,6 +43,7 @@ type Deps struct {
 	Sessions SessionCleaner
 	Chats    ChatCleaner
 	Ledger   Ledger
+	Audit    AuditCleaner
 	Migrator Migrator
 	Rules    Reclassifier
 	Metrics  *ImportMetrics // nil: unregistered metrics
@@ -62,6 +64,7 @@ func Workers(d Deps) *river.Workers {
 	river.AddWorker(w, &RematerializeFingerprintWorker{Ledger: d.Ledger})
 	river.AddWorker(w, &LegacyImportWorker{Migrator: d.Migrator})
 	river.AddWorker(w, &ReclassifyWorker{Rules: d.Rules})
+	river.AddWorker(w, &CleanupAuditLogWorker{Audit: d.Audit})
 	return w
 }
 
@@ -73,6 +76,9 @@ func PeriodicJobs() []*river.PeriodicJob {
 			&river.PeriodicJobOpts{RunOnStart: true}),
 		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
 			func() (river.JobArgs, *river.InsertOpts) { return CleanupAssistantChatsArgs{}, nil },
+			&river.PeriodicJobOpts{RunOnStart: true}),
+		river.NewPeriodicJob(river.PeriodicInterval(24*time.Hour),
+			func() (river.JobArgs, *river.InsertOpts) { return CleanupAuditLogArgs{}, nil },
 			&river.PeriodicJobOpts{RunOnStart: true}),
 	}
 }

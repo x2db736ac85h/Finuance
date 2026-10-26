@@ -266,6 +266,11 @@ Two independent layers keep users apart.
    WITH CHECK (user_id = nullif(current_setting('app.user_id', true), '')::uuid)
    ```
 
+   One table has its own policies: the activity log (`audit_log`, ADR 0021) has one per command,
+   so the app can read and add its own events but never update them, can't backdate one, and can
+   delete only those older than 365 days; `UPDATE` and `TRUNCATE` are also revoked from the app
+   role (`TestAuditLogIsAppendOnly`).
+
 ### How a request reaches the database
 
 ```mermaid

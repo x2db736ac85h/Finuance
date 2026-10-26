@@ -12,6 +12,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -137,8 +138,15 @@ func (a *api) GetAssistantChat(ctx context.Context, req gen.GetAssistantChatRequ
 	if err != nil {
 		return nil, err
 	}
+	applied, err := a.ledger.AppliedProposals(ctx, identity(ctx).User.ID, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	if applied == nil {
+		applied = []string{}
+	}
 	out := gen.GetAssistantChat200JSONResponse{Id: ch.ID, Title: ch.Title, Connection: ch.Connection, Model: ch.Model,
-		CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs)}
+		CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs), AppliedProposals: applied}
 	return out, nil
 }
 
@@ -240,7 +248,7 @@ func toolFilterDTO(f *assistant.StepFilter) *gen.ToolFilter {
 }
 
 func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
-	out := &gen.ActionProposal{Action: gen.ActionProposalAction(p.Action), Matched: p.Matched, CategoryId: p.CategoryID, GroupId: p.GroupID,
+	out := &gen.ActionProposal{Key: p.Key(), Action: gen.ActionProposalAction(p.Action), Matched: p.Matched, CategoryId: p.CategoryID, GroupId: p.GroupID,
 		Sample: make([]gen.ProposalRow, len(p.Sample))}
 	for _, f := range []struct {
 		v   string
@@ -281,15 +289,18 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	return out
 }
 
-// logAppliedAction writes the structured line of an applied assistant proposal (PLAN 15.7; the
-// audit log of Phase 17 replaces it): who, which chat, what kind of change and how many rows.
-// Never names, filters or any other content.
-func logAppliedAction(ctx context.Context, chat *gen.AssistantChatHeader, action string, rows int) {
+// auditAppliedAction records an applied assistant proposal in the activity log (PLAN 15.7/17.6,
+// ADR 0019): which chat, which proposal, what kind of change and how many rows. Never names,
+// filters or any other content. A request without X-Assistant-Chat is an ordinary edit.
+func (a *api) auditAppliedAction(ctx context.Context, chat *gen.AssistantChatHeader, proposal *gen.AssistantProposalHeader, action string, rows int) {
 	if chat == nil {
 		return
 	}
-	observability.Logger(ctx).InfoContext(ctx, "assistant action applied", "event", "assistant.action_applied",
-		"user_id", identity(ctx).User.ID, "chat_id", *chat, "action", action, "rows", rows)
+	meta := map[string]any{"action": action, "rows": rows}
+	if proposal != nil {
+		meta["proposal"] = *proposal
+	}
+	a.auditMe(ctx, ledger.AuditAssistantApplied, chat.String(), meta)
 }
 
 func metaDTO(m assistant.Meta) gen.AssistantMeta {

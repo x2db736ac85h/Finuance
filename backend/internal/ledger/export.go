@@ -108,6 +108,17 @@ type ExportImport struct {
 	CommittedAt   *time.Time      `json:"committedAt,omitempty"`
 }
 
+// ExportActivity is one audit-log event (Settings → Activity).
+type ExportActivity struct {
+	ID       int64          `json:"id"`
+	At       time.Time      `json:"at"`
+	Action   string         `json:"action"`
+	EntityID string         `json:"entityId,omitempty"`
+	IP       string         `json:"ip,omitempty"`
+	Browser  string         `json:"browser,omitempty"`
+	Meta     map[string]any `json:"meta,omitempty"`
+}
+
 // ExportInvestments is the manual investment data.
 type ExportInvestments struct {
 	PPK struct {
@@ -241,6 +252,20 @@ func (l *Ledger) Export(ctx context.Context, userID uuid.UUID) (map[string]any, 
 			return err
 		}
 		out["investments.json"] = inv
+
+		evs, err := q.AllAuditEvents(ctx, userID)
+		if err != nil {
+			return err
+		}
+		activity := make([]ExportActivity, len(evs))
+		for i := range evs {
+			e := auditEntry(evs[i].ID, evs[i].At, evs[i].Action, evs[i].EntityID, evs[i].Ip, evs[i].Browser, evs[i].Meta)
+			activity[i] = ExportActivity{ID: e.ID, At: e.At, Action: e.Action, EntityID: e.EntityID, Browser: e.Browser, Meta: e.Meta}
+			if e.IP.IsValid() {
+				activity[i].IP = e.IP.String()
+			}
+		}
+		out["activity.json"] = activity
 		return nil
 	})
 	return out, dbErr("export", err)
