@@ -20,7 +20,7 @@ otel:
         - namespaceSelector:
             matchLabels: { kubernetes.io/metadata.name: observability }
       ports: [4318]
-serviceMonitor:
+podMonitor:
   enabled: true
 extraEnv:
   FINUANCE_AI_RATE_PER_HOUR: "60"

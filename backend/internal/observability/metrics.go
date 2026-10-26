@@ -13,6 +13,7 @@ type Metrics struct {
 	HTTPDuration *prometheus.HistogramVec
 	HTTPInFlight prometheus.Gauge
 	BuildInfo    *prometheus.GaugeVec
+	collectors   []prometheus.Collector
 }
 
 // NewMetrics creates a registry with Go runtime and process collectors plus the HTTP metrics.
@@ -39,10 +40,15 @@ func NewMetrics() *Metrics {
 			Help: "Always 1; labels carry the build version and commit.",
 		}, []string{"version", "commit"}),
 	}
-	reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.HTTPRequests, m.HTTPDuration, m.HTTPInFlight, m.BuildInfo)
+	m.collectors = []prometheus.Collector{collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		m.HTTPRequests, m.HTTPDuration, m.HTTPInFlight, m.BuildInfo}
+	reg.MustRegister(m.collectors...)
 	return m
 }
+
+// Collectors are the collectors NewMetrics registered (the metric-name list in the deployment
+// checks describes them).
+func (m *Metrics) Collectors() []prometheus.Collector { return m.collectors }
 
 // StatusClass maps 204 → "2xx", 404 → "4xx".
 func StatusClass(status int) string {

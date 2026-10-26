@@ -1,0 +1,48 @@
+{{- with .Values.alerting.email }}
+{{- if .enabled }}
+{{- if not (and .to .from .smarthost) }}
+{{- fail "alerting.email needs to, from and smarthost (e.g. smtp.example.com:587)" }}
+{{- end }}
+# Every Finuance alert goes by e-mail (Phase 17 decision): pages at once and repeated hourly,
+# tickets grouped and repeated daily. The SMTP password is a Secret in the same namespace
+# (sealed in Phase 18).
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ $.Release.Name }}-email
+  labels:
+    {{- include "obs.labels" $ | nindent 4 }}
+    {{- with $.Values.alerting.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  route:
+    receiver: email
+    matchers:
+      - { name: alertname, matchType: "=~", value: "Finuance.*" }
+    groupBy: [alertname, severity]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 24h
+    routes:
+      - receiver: email
+        matchers:
+          - { name: severity, matchType: "=", value: page }
+        groupWait: 10s
+        repeatInterval: 1h
+  receivers:
+    - name: email
+      emailConfigs:
+        - to: {{ .to | quote }}
+          from: {{ .from | quote }}
+          smarthost: {{ .smarthost | quote }}
+          {{- with .authUsername }}
+          authUsername: {{ . | quote }}
+          authPassword:
+            name: {{ $.Values.alerting.email.passwordSecret.name }}
+            key: {{ $.Values.alerting.email.passwordSecret.key }}
+          {{- end }}
+          requireTLS: {{ .requireTLS }}
+          sendResolved: true
+{{- end }}
+{{- end }}

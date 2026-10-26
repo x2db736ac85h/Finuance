@@ -85,6 +85,11 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 				return err
 			}
 		}
+		// After a bulk insert, steps 2–5 run without nested loops (afterBulkInsert).
+		restore, err := afterBulkInsert(ctx, q, len(inserted))
+		if err != nil {
+			return err
+		}
 		// 2.
 		if _, err := q.LinkImportRows(ctx, db.LinkImportRowsParams{UserID: userID, ImportID: importID, AccountID: account}); err != nil {
 			return err
@@ -112,6 +117,9 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 		if err != nil {
 			return err
 		}
+		if err := restore(); err != nil {
+			return err
+		}
 		res = CommitResult{New: len(inserted) + added, Errors: counts.Errors}
 		res.Duplicates = counts.Linked - int64(res.New)
 		stats, err := mergeStats(imp.Stats, map[string]any{"rows": counts.Rows, "errors": res.Errors, "new": res.New, "duplicates": res.Duplicates})
@@ -127,6 +135,30 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 			Meta: map[string]any{"file": imp.Filename, "new": res.New, "duplicates": res.Duplicates, "errors": res.Errors}})
 	})
 	return res, dbErr("commit import", err)
+}
+
+// bulkInsert is how many rows step 1 must have inserted for afterBulkInsert to act.
+const bulkInsert = 1000
+
+// afterBulkInsert turns nested loops off for the commit's next statements when step 1 inserted
+// many rows, and returns how to turn them back on. The table statistics can't know about rows this
+// transaction just inserted: for a new user they still describe an empty account, and the planner
+// then joins with a nested loop that scans every one of the user's transactions per staged row
+// (quadratic: 20,000 rows took 119 s in step 2 and 100 s in step 4; docs/perf.md "Phase 17").
+// Without nested loops the joins are hash joins, linear in the import and the account. Small
+// imports keep the planner's choice, an index lookup per row, which is right for them.
+func afterBulkInsert(ctx context.Context, q *db.Queries, inserted int) (restore func() error, err error) {
+	if inserted < bulkInsert {
+		return func() error { return nil }, nil
+	}
+	prev, err := q.CurrentEnableNestLoop(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := q.SetEnableNestLoop(ctx, "off"); err != nil {
+		return nil, err
+	}
+	return func() error { return q.SetEnableNestLoop(ctx, prev) }, nil
 }
 
 func truncate(s string, n int) string {

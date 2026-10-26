@@ -194,7 +194,7 @@ jobs:
           npm audit --audit-level=high
 
   helm:
-    name: helm (charts + Argo CD manifests)
+    name: helm (charts, Argo CD manifests, dashboards and alert rules)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -216,7 +216,11 @@ jobs:
           go install "helm.sh/helm/v3/cmd/helm@${HELM_VERSION}"
           go install "github.com/yannh/kubeconform/cmd/kubeconform@${KUBECONFORM_VERSION}"
           go install "github.com/bitnami/sealed-secrets/cmd/kubeseal@${KUBESEAL_VERSION}"
-      - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas)
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+      # tools/check-observability.sh also runs promtool from the pinned prom/prometheus image.
+      - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas, promtool)
         run: RENDER_DIR="$RUNNER_TEMP/rendered" YQ="$(go env GOPATH)/bin/yq" make helm-lint
       - name: Trivy config scan of the rendered manifests (HIGH/CRITICAL fail the build)
         run: |

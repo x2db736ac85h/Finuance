@@ -43,6 +43,6 @@ otel:
   # Phase 18: the collector of the observability stack.
   endpoint: ""
 
-serviceMonitor:
+podMonitor:
   # Phase 18: on once the Prometheus Operator runs.
   enabled: false

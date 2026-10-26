@@ -27,6 +27,10 @@ func TestDispatch(t *testing.T) {
 		{[]string{"migrate"}, 2, "", "usage: finuance migrate"},
 		{[]string{"seed-demo"}, 2, "", "usage: finuance seed-demo"},
 		{[]string{"seed-demo", "-email=a@b.c"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
+		{[]string{"seed-demo", "-email=a@b.c", "-users=3"}, 2, "", "usage: finuance seed-demo"},        // no -password-stdin
+		{[]string{"seed-demo", "-email=a@b.c", "-password-stdin"}, 2, "", "usage: finuance seed-demo"}, // without -users
+		{[]string{"seed-demo", "-email=a@b.c", "-rows=-1"}, 2, "", "usage: finuance seed-demo"},
+		{[]string{"seed-demo", "-email=a@b.c", "-users=3", "-rows=20000", "-password-stdin"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
 		{[]string{"admin"}, 2, "", "usage: finuance admin"},
 		{[]string{"admin", "create-user"}, 2, "", "usage: finuance admin"},                          // no -email
 		{[]string{"admin", "create-user", "-email=a@b.c"}, 2, "", "usage: finuance admin"},          // no -password-stdin

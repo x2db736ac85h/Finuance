@@ -15,8 +15,8 @@ var testDB *testutil.DB
 func TestMain(m *testing.M) { testutil.Main(m, &testDB) }
 
 func TestExpectedVersion(t *testing.T) {
-	if v := store.ExpectedVersion(); v != 10 {
-		t.Errorf("ExpectedVersion = %d, want 10 (00010_audit_log.sql)", v)
+	if v := store.ExpectedVersion(); v != 11 {
+		t.Errorf("ExpectedVersion = %d, want 11 (00011_search_index.sql)", v)
 	}
 }
 
@@ -112,7 +112,8 @@ func TestDateRoundTrip(t *testing.T) {
 
 // TestLikeIsLeakproof: bootstrap.sql marks textlike LEAKPROOF (Phase 7 decision), so a LIKE on
 // search_text can be an index condition for the app role despite forced RLS. That the planner then
-// uses tx_search_trgm_idx on real data is asserted by TestQueryPerf (internal/query, 100k rows).
+// uses the per-user trigram index is asserted by TestSearchReadsOnlyTheUsersEntries and TestQueryPerf
+// (internal/query).
 func TestLikeIsLeakproof(t *testing.T) {
 	tdb := testutil.Require(t, testDB)
 	var leakproof bool

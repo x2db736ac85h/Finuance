@@ -1,0 +1,29 @@
+{{- if .Values.podMonitor.enabled }}
+# Prometheus scrapes the api and the worker on their metrics port (PLAN 17.3). The job label is
+# finuance-api / finuance-worker, which the dashboards and alert rules of deploy/k8s/observability
+# select on.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "finuance.fullname" . }}
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+    {{- with .Values.podMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Chart.Name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+    matchExpressions:
+      - { key: app.kubernetes.io/component, operator: In, values: [api, worker] }
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.podMonitor.interval }}
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+          targetLabel: job
+          replacement: finuance-$1
+{{- end }}

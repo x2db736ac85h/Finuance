@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -29,6 +30,16 @@ type DemoSeed struct {
 // returns (POST /demo-data relies on that). A user who already has a demo account gets ErrConflict;
 // if the import fails, the new account is removed again.
 func (l *Ledger) SeedDemo(ctx context.Context, userID uuid.UUID) (DemoSeed, error) {
+	return l.SeedDemoDays(ctx, userID, 0)
+}
+
+// DemoRowsPerDay is how many rows the demo generator makes per day on average (917 in 442 days);
+// the load test seeds a number of rows by asking for rows / DemoRowsPerDay days.
+const DemoRowsPerDay = 917.0 / 442
+
+// SeedDemoDays is SeedDemo with a history of the given number of days ending yesterday (0: the
+// legacy demo span, 442 days) — the load test's large users (PLAN 17.5).
+func (l *Ledger) SeedDemoDays(ctx context.Context, userID uuid.UUID, days int) (DemoSeed, error) {
 	accounts, err := l.ListAccounts(ctx, userID)
 	if err != nil {
 		return DemoSeed{}, err
@@ -42,7 +53,7 @@ func (l *Ledger) SeedDemo(ctx context.Context, userID uuid.UUID) (DemoSeed, erro
 	if err != nil {
 		return DemoSeed{}, err
 	}
-	importID, res, err := l.seedImport(ctx, userID, acc.ID)
+	importID, res, err := l.seedImport(ctx, userID, acc.ID, days)
 	if err != nil {
 		return DemoSeed{}, errors.Join(err, l.DeleteAccount(ctx, userID, acc.ID))
 	}
@@ -50,8 +61,14 @@ func (l *Ledger) SeedDemo(ctx context.Context, userID uuid.UUID) (DemoSeed, erro
 	return DemoSeed{Account: acc, ImportID: importID, Result: res}, err
 }
 
-func (l *Ledger) seedImport(ctx context.Context, userID, accountID uuid.UUID) (uuid.UUID, CommitResult, error) {
-	p, err := l.CreatePreview(ctx, userID, Upload{Filename: DemoFilename, Content: []byte(demo.Recent(l.clock.Now())), AccountID: &accountID})
+func (l *Ledger) seedImport(ctx context.Context, userID, accountID uuid.UUID, days int) (uuid.UUID, CommitResult, error) {
+	content := demo.Recent(l.clock.Now())
+	if days > 0 {
+		now := l.clock.Now()
+		end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		content = demo.CSV(end.AddDate(0, 0, -days), end)
+	}
+	p, err := l.CreatePreview(ctx, userID, Upload{Filename: DemoFilename, Content: []byte(content), AccountID: &accountID})
 	if err != nil {
 		return uuid.Nil, CommitResult{}, err
 	}

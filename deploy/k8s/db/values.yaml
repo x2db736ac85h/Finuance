@@ -24,7 +24,9 @@ cluster:
     log_min_duration_statement: "1000"
   # Keep the instances on different nodes when there are several (a single-node cluster still works).
   podAntiAffinityType: preferred
-  # A PodMonitor for the Prometheus operator (Phase 17/18).
+  # A PodMonitor for the Prometheus operator (templates/podmonitor.yaml; the operator's own
+  # enablePodMonitor is deprecated since CloudNativePG 1.26). Dashboards and alert rules:
+  # deploy/k8s/observability.
   podMonitor: false
 
 roles:

@@ -395,3 +395,120 @@ same as before (`TestOverviewParity`).
 | one account | 53 / 121 ms | 64 / 75 ms |
 | category != Mieszkanie | 311 / 358 ms | 320 / 388 ms |
 | search "blik warszawa" | 170 / 208 ms | 161 / 190 ms |
+
+## Phase 17: load test (task 17.5)
+
+Measured on 2026-10-26 in the cloud sandbox (4 vCPU shared by everything below, 16 GB) with
+`make up-observability` (api, worker, web, PostgreSQL 18.6 with the Compose defaults —
+`shared_buffers` 128 MB — and the local Grafana/Prometheus/Tempo container) and k6 in Docker on the
+same machine. Data: `make loadtest-seed`, 50 users × 20,202 transactions (26 years of the demo
+generator each) plus a few small users: 1.05 million transactions, a 4 GB database.
+`make loadtest` (profile `load`, 5 minutes): 30 virtual users browsing the table (random filters,
+search words, sorts, periods, two scrolled windows), 15 loading all six charts, 5 on the overview,
+2 imports of a 5,000-row file per minute (upload, commit, poll, delete). The homelab numbers come
+in Phase 18.
+
+The load test found two bottlenecks that only show with many users or long histories. Both are
+fixed.
+
+### 1. A new user's first large import was quadratic
+
+Seeding the first load-test user took over 2 minutes for 20,000 rows. auto_explain on the Compose
+database showed the commit's link step (`LinkImportRows`, 119 s) and the duplicate check
+(`FingerprintsSourcedLater`, 99.8 s) running nested loops that scanned all of the user's
+transactions once per staged row. The planner's statistics predate the rows the commit has just
+inserted in its own transaction, so it estimated the new account at a handful of rows. Running
+`ANALYZE` inside the commit would fix the estimates, but it holds a lock until the commit ends and
+would serialise imports. Instead, after inserting at least 1,000 transactions the commit turns off
+nested loops for the rest of its transaction (`SET LOCAL enable_nestloop = off` through
+`set_config(…, true)`, restored afterwards; `ledger.afterBulkInsert`), so steps 2–5 use hash joins,
+linear in the import. Smaller imports keep the planner's per-row index lookups, which suit them.
+
+| | before | after |
+|---|---|---|
+| link step, 20,000 rows | 119 s | 1.1 s |
+| whole seed of one 20,202-row user (parse, stage, commit) | > 2 min | ≈ 8 s |
+| 50 users × 20,202 rows | — | 6 min 42 s |
+| `TestBulkCommitForANewUser` (≈ 10,000 rows after an `ANALYZE` of a small instance) | 27 s | 4.3 s |
+
+### 2. Search cost grew with the instance, not with the user
+
+The first `load` run failed the latency SLO (p95 671 ms). The database was the limit: the api used
+a quarter of a core while the pool's waits averaged 33 ms. In the database log most slow
+statements were searches (`search_text LIKE '%…%'`). The trigram index `tx_search_trgm_idx`
+indexed `search_text` alone, so it returned the matching rows of *every* user. RLS and
+`user_id = $1` then discarded all but one user's. That cost grows with the size of the instance.
+Phase 7 measured one 108k-row user and could not see it.
+
+`EXPLAIN (ANALYZE)` of the totals statement for one 20,202-row user, warm cache:
+
+| search | index entries read | index scan | statement | after: entries | index scan | statement |
+|---|---|---|---|---|---|---|
+| `kawiarnia` | 58,661 (user: 1,127) | 69 ms | 85 ms | 1,127 | 4.2 ms | 26 ms |
+| `blik` | 223,867 (user: 4,301) | 79 ms | 99 ms | 4,301 | 3.0 ms | 50 ms |
+| `apteka` | 17,543 (user: 337) | 10.5 ms | 20 ms | 337 | 0.9 ms | 6.4 ms |
+
+Migration `00011_search_index.sql` replaces it with a GIN index on `(user_id, search_text
+gin_trgm_ops)`. `btree_gin`, a trusted contrib extension that ships with PostgreSQL, gives `uuid`
+a GIN operator class (our Product Engineer's decision, 2026-10-26). The GIN scan intersects the
+user's entries with the trigrams and reads only that user's matches. It is also smaller: 204 MB
+instead of 265 MB for 1.05 million rows. Building it blocks writes to `transactions`. At
+1 million rows that took 2 min 35 s with the default `maintenance_work_mem` and 24 s with the
+256 MB the migration sets for itself. `TestSearchReadsOnlyTheUsersEntries` checks that a search
+reads no more index entries than the user's own matches; on the old index it reads 4× as many
+(four users).
+
+### Results (`make loadtest`, profile `load`)
+
+| run | requests | failed | median | p95 (SLO routes) | p99 |
+|---|---|---|---|---|---|
+| before (global trigram index) | 12,112 | 0 | 132 ms | **671 ms** ✗ | 1.32 s |
+| after, warm database, run 1 | 12,772 | 0 | 63 ms | **303 ms** ✗ (by 3 ms) | 1.44 s |
+| after, warm database, run 2 | 12,906 | 0 | 59 ms | **240 ms** ✓ | 520 ms |
+
+**Breaking point** (`PROFILE=ramp`: table views without think time, 10 → 320 per second; each
+view is the first window plus up to two scrolled ones). Rate and p95 of `POST
+/transactions/query` per 30 s, from Prometheus:
+
+| | p95 under 300 ms up to | saturated at | p95 when saturated |
+|---|---|---|---|
+| before | ≈ 18 requests/s (290 ms) | ≈ 31 requests/s | 29 s (k6: 14.2 s) |
+| after | ≈ 45 requests/s (140 ms) | ≈ 57 requests/s | 9.8 s (k6: 7.6 s) |
+
+Both times PostgreSQL used 3.2 of the 4 cores and the machine had no idle CPU at saturation, and
+no request failed. On this shared 4-vCPU sandbox the table traffic the stack serves within the
+SLO went up 2.5 times (18 → 45 requests/s), and its ceiling 1.8 times; the `load` profile sends
+about 20 table requests/s besides the charts.
+
+"SLO routes" are `/transactions/query` and `/insights/*` (docs/SLO.md). A run straight after a
+database restart (cold cache, 128 MB of shared buffers for a 4 GB database) had a p95 of 1.79 s;
+the numbers above are from a warm database. Runs vary by about ±25 % in this sandbox, which also
+runs k6, Grafana and the build tools. Imports kept working under load: 100 % committed, a 5,000-row
+commit took 4.7 s at the median (p95 15 s), and deleting one took 1.8 s.
+
+Per route (Prometheus, p50 / p95 over the run; the latency histogram's buckets make these
+approximate):
+
+| route | before p95 | after p50 / p95 |
+|---|---|---|
+| `POST /transactions/query` | 804 ms | 68 / 296 ms |
+| `POST /insights/*` (six) | 480–890 ms | 26–97 / 222–350 ms |
+| `POST /overview` (outside the latency SLO) | 2.07 s | 290 ms / 1.23 s |
+
+The overview is now the slowest request. It aggregates the whole history once per month card, and
+the levers are the same as in Phase 14: more `shared_buffers` (the CloudNativePG values also keep
+128 MB, to be sized in Phase 18) and caching the month aggregates. It stays outside the SLO.
+
+![SLO dashboard during the run](screenshots/grafana/slo.png)
+![API dashboard](screenshots/grafana/api.png)
+![Imports and jobs](screenshots/grafana/jobs.png)
+![Go runtime and connection pool](screenshots/grafana/runtime.png)
+
+Also found by the load test and fixed:
+- the dashboards' availability, 5xx share, failed imports and job errors read *No data* while
+  nothing had failed: the error series didn't exist yet. The recording rule and the panels now
+  count a missing error series as 0 (`or vector(0)`), with a promtool test;
+- the api's trace spans were named after the HTTP method only (otelhttp renamed them after the
+  handler ran); they are named after the route again (`TestSpanNamedAfterRoute`);
+- every k6 virtual user's sign-in rotated the previous user's session in a shared cookie jar (a
+  test-script bug: each sign-in now has its own jar).

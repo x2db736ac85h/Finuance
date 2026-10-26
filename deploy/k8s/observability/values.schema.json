@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["appNamespace", "dashboards", "rules", "alerting"],
+  "properties": {
+    "appNamespace": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" },
+    "dashboards": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "folder": { "type": "string" },
+        "folderAnnotation": { "type": "string" }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "database": { "type": "boolean" },
+        "backups": { "type": "boolean" },
+        "kubernetes": { "type": "boolean" }
+      }
+    },
+    "alerting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "to": { "type": "string" },
+            "from": { "type": "string" },
+            "smarthost": { "type": "string", "pattern": "^$|^[^:/\\s]+:[0-9]+$" },
+            "authUsername": { "type": "string" },
+            "passwordSecret": {
+              "type": "object",
+              "required": ["name", "key"],
+              "properties": { "name": { "type": "string", "minLength": 1 }, "key": { "type": "string", "minLength": 1 } }
+            },
+            "requireTLS": { "type": "boolean" }
+          }
+        },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -51,6 +51,8 @@ type Querier interface {
 	// users and sessions are outside RLS (PLAN §5.3); only the auth package uses these queries,
 	// through store.WithoutUser.
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// The planner's enable_nestloop setting (to restore it after SetEnableNestLoop).
+	CurrentEnableNestLoop(ctx context.Context) (string, error)
 	// Cascades to the account's imports, transactions, annotations and overrides.
 	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
 	DeleteAssistantChat(ctx context.Context, arg DeleteAssistantChatParams) (int64, error)
@@ -262,6 +264,9 @@ type Querier interface {
 	SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error
 	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
 	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
+	// Lets the planner use nested loops or not, for the rest of the transaction (set_config with
+	// is_local). The commit turns them off after a bulk insert (ledger/commit.go, afterBulkInsert).
+	SetEnableNestLoop(ctx context.Context, value string) error
 	// NULL removes the budget.
 	SetGroupBudget(ctx context.Context, arg SetGroupBudgetParams) (int64, error)
 	// Moves an import along previewed → committing → committed | failed. from_status guards the move,

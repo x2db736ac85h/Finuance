@@ -63,6 +63,18 @@ func (q *Queries) CountEligibleImportRows(ctx context.Context, arg CountEligible
 	return count, err
 }
 
+const currentEnableNestLoop = `-- name: CurrentEnableNestLoop :one
+SELECT current_setting('enable_nestloop')::text AS value
+`
+
+// The planner's enable_nestloop setting (to restore it after SetEnableNestLoop).
+func (q *Queries) CurrentEnableNestLoop(ctx context.Context) (string, error) {
+	row := q.db.QueryRow(ctx, currentEnableNestLoop)
+	var value string
+	err := row.Scan(&value)
+	return value, err
+}
+
 const deleteOrphanTransactions = `-- name: DeleteOrphanTransactions :execrows
 DELETE FROM transactions t
 WHERE t.user_id = $1 AND t.account_id = $2 AND t.origin = 'import'
@@ -294,6 +306,17 @@ func (q *Queries) LinkImportRows(ctx context.Context, arg LinkImportRowsParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const setEnableNestLoop = `-- name: SetEnableNestLoop :exec
+SELECT set_config('enable_nestloop', $1::text, true)
+`
+
+// Lets the planner use nested loops or not, for the rest of the transaction (set_config with
+// is_local). The commit turns them off after a bulk insert (ledger/commit.go, afterBulkInsert).
+func (q *Queries) SetEnableNestLoop(ctx context.Context, value string) error {
+	_, err := q.db.Exec(ctx, setEnableNestLoop, value)
+	return err
 }
 
 const transactionProvenance = `-- name: TransactionProvenance :many

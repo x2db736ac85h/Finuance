@@ -107,3 +107,12 @@ SET group_id = CASE WHEN @set_group::bool THEN sqlc.narg(group_id)::uuid ELSE t.
     updated_at = @now
 WHERE t.user_id = @user_id AND t.id = ANY(@ids::uuid[])
 RETURNING t.id, t.account_id, t.fingerprint, t.occurrence, t.split_scope, t.group_id, t.category_id, t.category_source, t.note, t.note_n;
+
+-- name: CurrentEnableNestLoop :one
+-- The planner's enable_nestloop setting (to restore it after SetEnableNestLoop).
+SELECT current_setting('enable_nestloop')::text AS value;
+
+-- name: SetEnableNestLoop :exec
+-- Lets the planner use nested loops or not, for the rest of the transaction (set_config with
+-- is_local). The commit turns them off after a bulk insert (ledger/commit.go, afterBulkInsert).
+SELECT set_config('enable_nestloop', @value::text, true);

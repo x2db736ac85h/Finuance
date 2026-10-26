@@ -10,6 +10,13 @@ ENV_FILE ?= .env
 ORACLE   := tools/legacy-oracle
 COMPOSE  := docker compose --env-file $(ENV_FILE) -f deploy/compose/compose.yaml
 COMPOSE_CI := $(COMPOSE) -f deploy/compose/compose.ci.yaml
+# Load test (PLAN 17.5): k6 pinned like the rehearsal's; the plan's size is 50 users × 20,000 rows.
+K6_IMAGE := grafana/k6:1.8.2
+LOADTEST_BASE_URL ?= http://localhost:8000
+LOADTEST_USERS ?= 50
+LOADTEST_ROWS ?= 20000
+LOADTEST_PASSWORD ?= load test password
+PROFILE ?= load
 FUZZTIME ?= 30s
 BIN      := backend/bin
 SQLC     := $(BIN)/sqlc
@@ -195,6 +202,10 @@ migrate-new: ## Create a migration: make migrate-new name=add_accounts
 up: $(ENV_FILE) web-dist ## Full Compose stack: db, migrate, api, worker, web (app on http://localhost:8000)
 	VERSION=$(VERSION) $(COMPOSE) up -d $(UP_FLAGS) --wait
 
+.PHONY: up-observability
+up-observability: $(ENV_FILE) web-dist ## The Compose stack plus local Grafana, Prometheus and Tempo (grafana/otel-lgtm; http://localhost:3000)
+	VERSION=$(VERSION) $(COMPOSE) -f deploy/compose/compose.observability.yaml up -d $(UP_FLAGS) --wait
+
 .PHONY: web-dist
 web-dist: web/node_modules ## Build web/dist on the host; the web image uses it instead of building in Docker
 	cd web && npm run --silent build
@@ -239,9 +250,18 @@ images: ## Build the backend and web images locally (web uses web/dist when pres
 	docker build -f deploy/docker/Dockerfile.web -t finuance-web:dev .
 
 .PHONY: helm-lint
-helm-lint: ## Lint, render and validate the Helm charts and Argo CD manifests (needs helm, kubeconform, network)
+helm-lint: ## Lint, render and validate the Helm charts, Argo CD manifests, dashboards and alert rules (needs helm, kubeconform, node, Docker, network)
 	@tools/check-helm.sh
+	@tools/check-observability.sh
 
 .PHONY: loadtest
-loadtest: ## k6 against LOADTEST_BASE_URL
-	$(call todo,17)
+loadtest: ## k6 load test against the running stack (PROFILE=load|smoke|ramp, LOADTEST_BASE_URL, LOADTEST_USERS); needs make loadtest-seed
+	mkdir -p loadtest/results && chmod 777 loadtest/results
+	docker run --rm --network host -v "$(CURDIR)/loadtest:/scripts:ro" -v "$(CURDIR)/loadtest/results:/out" \
+	  -e BASE_URL=$(LOADTEST_BASE_URL) -e USERS=$(LOADTEST_USERS) -e PASSWORD="$(LOADTEST_PASSWORD)" -e PROFILE=$(PROFILE) \
+	  $(K6_IMAGE) run --quiet --summary-export=/out/summary-$(PROFILE).json /scripts/finuance.js
+
+.PHONY: loadtest-seed
+loadtest-seed: $(ENV_FILE) ## Seed LOADTEST_USERS load-test users with LOADTEST_ROWS demo rows each (in the running api container)
+	echo "$(LOADTEST_PASSWORD)" | $(COMPOSE) exec -T api /finuance seed-demo -email=loadtest@example.test \
+	  -users=$(LOADTEST_USERS) -rows=$(LOADTEST_ROWS) -password-stdin

@@ -84,7 +84,7 @@
       }
     },
     "networkPolicy": { "type": "object" },
-    "serviceMonitor": { "type": "object" }
+    "podMonitor": { "type": "object" }
   },
   "definitions": {
     "dbRole": {

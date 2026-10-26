@@ -1,0 +1,10 @@
+# Grafana provisioning for the local observability profile: the six Finuance dashboards of
+# deploy/k8s/observability (mounted at /finuance/dashboards) in a Finuance folder.
+apiVersion: 1
+providers:
+  - name: Finuance
+    folder: Finuance
+    type: file
+    disableDeletion: true
+    options:
+      path: /finuance/dashboards

@@ -27,7 +27,7 @@ Before that, the namespace needs the two basic-auth secrets of the database role
 | HPA, PodDisruptionBudgets | api 2–4 pods at 70 % CPU; one pod of api and web always up |
 | NetworkPolicies | default deny; Traefik → web/api; api, worker, migrations → PostgreSQL; DNS; metrics from the monitoring namespace; api → the model servers only when the assistant is on; the OTLP collector when set |
 | ConfigMap `-env` | non-secret settings, including the password-less database URL (the password comes from `PGPASSWORD`) |
-| ServiceMonitor | optional, needs the Prometheus Operator |
+| PodMonitor (api + worker, `job` = `finuance-api` / `finuance-worker`) | optional, needs the Prometheus Operator |
 
 ## Values
 
