@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 17 — Observability and hardening (cluster-independent) · **Branch:** — · **Status:** planning (next: the Phase 17 task list)
+**Current phase:** 17 — Observability and hardening (cluster-independent) · **Branch:** phase/17-observability-hardening · **Status:** in progress (push 1)
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -32,11 +32,26 @@
 - Phase 15: the table **shows transfers** with a "Transfer" badge and a chip to hide them, while insights and overview leave them out (plan; ADR). A category set by a rule records the rule (`category_rule_id`); saving, reordering, disabling or deleting a rule re-applies all rules from scratch in the background (rule categories reset to the bank's, then rules in position order, last match wins), and manual categories are never touched. Assistant action proposals (15.7) are built now; applied actions are logged as a structured line until Phase 17's `audit_log` turns them into audit events. FX conversion (15.6) and assistant-named rule suggestions go to the backlog. The parity harness compares with transfers included (the legacy app has none). One gate, three pushes: (1) categories, rules, transfers; (2) bulk edit, cadence, group reports, rule suggestions; (3) assistant tools and action proposals.
 - Phase regrouping (2026-10-24, option B): no homelab access for now. **Phase 16** builds and rehearses the deployment without the homelab (Helm chart, CNPG, Sealed Secrets and Argo CD manifests with homelab values left as settings, CI helm job, a kind-cluster rehearsal in CI with the restore drill, RUNBOOK, LLM ADR, the nginx base bump). **Phase 17** does the cluster-independent parts of observability and hardening (trace propagation, dashboards and SLO rules as code, k6 against Compose, audit log + Activity page, chart scan, ZAP baseline, THREAT-MODEL v2) plus the demo-mode code. New **Phase 18 — Homelab rollout** deploys everything on the real cluster (Argo CD bootstrap, real values and secrets, tailnet + TLS, real restore drill and pod-kill test, LLM endpoint, observability stack, alert receiver, homelab load test, OpenVAS/Nessus scans, deferred hands-on gate checks). The old Phase 18 (public demo, docs, v1.0.0) becomes **Phase 19**; its gate carries the full security scan. PLAN §9 has the regrouping note.
 - Phase 16 plan (2026-10-24, approved): CI/tooling only (no app dependencies): `helm`, `kind`, `kubeconform`, `kubeseal`, `yq`, k6 as its Docker image, the CloudNativePG, Sealed Secrets and Traefik charts, and an S3 stand-in for the rehearsal; all pinned like gitleaks. TLS stays a setting (cert-manager issuer or an external certificate, so Let's Encrypt and Tailscale both stay open); backups target an S3-compatible bucket with volume snapshots documented as the fallback (chosen in Phase 18). Phase 16 gate: our Product Engineer reviews the chart, the RUNBOOK and the CI rehearsal results (restore drill timings); deploy-by-PR and rollback-by-revert move to the Phase 18 gate. Two pushes.
+- Phase 17 plan (2026-10-26, approved): the cluster-independent parts of PLAN Phase 17 plus the demo-mode code (old 18.1), one gate, three pushes. No new Go or npm dependencies; CI/local tooling only (`promtool` via `go install`, `grafana/otel-lgtm` for a local Compose observability profile, ZAP pinned by digest). Alerts go by **email** (receiver template now; SMTP password sealed in Phase 18). The audit log keeps **365 days** with the **full IP** and a shortened browser name, append-only for the app role, deleted with the user. ZAP (baseline + OpenAPI scan) runs **weekly and on demand**, together with a k6 smoke test and the demo-mode E2E. The demo assistant is **off by default, switchable** (`FINUANCE_DEMO_ASSISTANT`, 10 messages per visitor, 25 rows).
 - Phase 16 gate (2026-10-26, approved): the kind rehearsal runs **weekly** (Mondays 03:17 UTC), on demand and on deployment changes, instead of nightly, to keep the Actions minutes down (private repository, GitHub Pro).
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
-- (Phase 17 tasks are listed once the plan is approved.)
+Push 1 (traces, job metrics, audit log, Activity page, CI security scans):
+- [ ] 17.2 trace propagation into River jobs (insert/worker middleware: `traceparent` in the job metadata, `job <kind>` span as its child, SQL spans under it) + `finuance_jobs_total{kind,result}` / `finuance_job_duration_seconds{kind}`; 0.3 s bucket on the HTTP latency histogram
+- [ ] 17.6a audit log: migration `00010_audit_log.sql` (forced RLS, app role SELECT + INSERT only, cascade with the user), `ledger/audit.go`, events (login ok/failed, logout, password change, session revoked, import committed/deleted, bank account deleted, CSV and data export, rules applied, legacy import, duplicate decisions, assistant proposal applied — replacing the log line), daily 365-day cleanup job, `GET /me/activity`, `activity.json` in the data export, Settings → Activity page
+- [ ] 17.6b CI `security` job (Trivy fs: vuln, secret, misconfig; `npm audit --omit=dev`), release Trivy gate HIGH + CRITICAL
+
+Push 2 (dashboards, SLOs and alerts, local Grafana, load test):
+- [ ] 17.3 six dashboards as code (`deploy/k8s/observability`, Grafana sidecar ConfigMaps)
+- [ ] 17.4 `docs/SLO.md`, PrometheusRules (multi-window burn rates, job failures, backup age, CrashLoopBackOff, PostgreSQL not ready), email receiver template, `promtool check/test rules`, metric-name check
+- [ ] Compose `observability` profile (`grafana/otel-lgtm`) with the same dashboards
+- [ ] 17.5 `loadtest/` (k6: browse, insights, overview, import), `seed-demo -rows -users`, `make loadtest`, one bottleneck fixed with before/after in `docs/perf.md`
+
+Push 3 (demo mode, ZAP, reports):
+- [ ] demo mode: `POST /auth/demo` (ephemeral seeded user), limits (5/h per IP, 2 MiB uploads, no legacy import, assistant off unless enabled), 24 h cleanup job, "Try the demo" + banner, `compose.demo.yaml` E2E
+- [ ] `weekly.yml`: ZAP baseline + OpenAPI scan, k6 smoke, demo E2E; `.zap/rules.tsv`
+- [ ] chart scan at all severities, `docs/security-scan.md`, THREAT-MODEL v2
 
 ## Phase 16 tasks (done)
 First push (deployment files and checks):
@@ -432,6 +447,7 @@ Second push (rehearsal and LLM decision):
 - Balance reconciliation against the bank's `saldo` column.
 
 ## Session log
+- 2026-10-26 — Phase 17 planned and approved (email alerts, 365-day audit log with full IP, weekly ZAP, demo assistant off but switchable, three pushes). Branch `phase/17-observability-hardening`.
 - 2026-10-26 — Phase 16 gate approved by our Product Engineer; the rehearsal now runs weekly; merged. Next: plan Phase 17.
 - 2026-10-25 — Actions running again (our Product Engineer moved to GitHub Pro). The rehearsal's annotations showed three problems, fixed: the moved Sealed Secrets chart repository, runner disk space, and the worker reading the assistant connections file it doesn't mount (chart fix + check). Rehearsal green twice: RTO 75 s, RPO 51 s, 0 failed requests in 19,241 during pod kills, NetworkPolicies and unbuffered SSE through Traefik confirmed; CI green on the same commit. Next: Phase 16 gate review.
 - 2026-10-24 — Phase 16 second push (in progress): the kind rehearsal (`tools/rehearsal.sh`, `k8s-rehearsal` workflow), ADR 0020 (model server outside the cluster), ARCHITECTURE deployment section, THREAT-MODEL cluster boundary; web pods pause in `preStop`; `make test-integration` green locally. The first rehearsal run failed in the platform step (log not readable; annotation report added). **Blocked:** GitHub Actions stopped starting jobs ("recent account payments have failed or your spending limit needs to be increased"). Next: once Actions runs again, iterate the rehearsal to green, put its RPO/RTO into the RUNBOOK, then the Phase 16 gate.
