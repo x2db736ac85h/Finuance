@@ -1,6 +1,6 @@
 # The deployment rehearsal (PLAN task 16.6): tools/rehearsal.sh on a throwaway kind cluster, from
-# images built from the pushed commit. It runs on demand, every night, and on pushes that change
-# the deployment. The cloud session that builds Finuance can't pull the CloudNativePG, cert-manager
+# images built from the pushed commit. It runs on demand, every Monday (weekly keeps the Actions
+# minutes down; a run takes about 35 minutes), and on pushes that change the deployment. The cloud session that builds Finuance can't pull the CloudNativePG, cert-manager
 # or Barman Cloud images (ghcr.io, quay.io), so this job is where the cluster-side manifests meet a
 # real cluster before the homelab rollout (Phase 18). Its timings (RPO/RTO) are in the job summary
 # and in docs/RUNBOOK.md.
@@ -9,7 +9,7 @@ name: k8s-rehearsal
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 3 * * *"
+    - cron: "17 3 * * 1"
   push:
     branches: [main, "phase/**"]
     paths:
