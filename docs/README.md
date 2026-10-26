@@ -6,6 +6,7 @@
 |---|---|
 | [Main README](../README.md) | What Finuance does, screenshots, key concepts, quick start, deployment, status |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, backend packages, data model (ERD), row-level security, request flow, the web app |
+| [RUNBOOK.md](RUNBOOK.md) | Running it on Kubernetes: bootstrap, deploy, rollback, failed migrations, secrets, scaling, backups and restores, playbooks |
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Assets, attackers, threats and the controls (with the tests that prove them) |
 | [adr/](adr/) | Architecture decision records: why Go + PostgreSQL, money in minor units, row-level security, sessions and CSRF, the CSV export format, … |
 | [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3) |
@@ -22,7 +23,7 @@ These are written for the team and the AI agent that builds Finuance. They are d
 
 | Document | What it covers |
 |---|---|
-| [PLAN.md](PLAN.md) | The full specification and the 18-phase plan, with tasks, tests and the review gate of each phase |
+| [PLAN.md](PLAN.md) | The full specification and the phase plan (Phases 0–19), with tasks, tests and the review gate of each phase |
 | [PROGRESS.md](PROGRESS.md) | The current phase, every decision taken by our Product Engineer, deviations from the plan, follow-ups |
 | [PARITY.md](PARITY.md) | Every capability of the legacy prototype and the phase that ports (or retires) it |
 | [perf-phase7-plans.md](perf-phase7-plans.md) | Raw `EXPLAIN ANALYZE` output behind the Phase 7 query measurements |

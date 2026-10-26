@@ -1,0 +1,88 @@
+{{- $c := .Values.cluster }}
+{{- $r := .Values.roles }}
+{{- if and .Values.recovery.enabled .Values.backup.enabled (eq (.Values.backup.serverName | default $c.name) .Values.recovery.serverName) }}
+{{- fail "a restored cluster must archive to another folder: set backup.serverName (e.g. finuance-db-r1) or backup.enabled=false" }}
+{{- end }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $c.name }}
+  labels:
+    {{- include "db.labels" . | nindent 4 }}
+spec:
+  instances: {{ $c.instances }}
+  imageName: {{ $c.imageName }}
+  primaryUpdateStrategy: unsupervised
+  # No superuser secret: nothing logs in as postgres (kubectl cnpg psql uses the pod's socket).
+  enableSuperuserAccess: false
+  postgresql:
+    parameters:
+      {{- range $k, $v := $c.parameters }}
+      {{ $k }}: {{ $v | quote }}
+      {{- end }}
+  bootstrap:
+    {{- if .Values.recovery.enabled }}
+    # Restore (docs/RUNBOOK.md): the base backup and WAL of recovery.serverName. The database, its
+    # roles, the extensions and the LEAKPROOF flag come with the backup.
+    recovery:
+      source: origin
+      {{- with .Values.recovery.targetTime }}
+      recoveryTarget:
+        targetTime: {{ . | quote }}
+      {{- end }}
+    {{- else }}
+    initdb:
+      database: finuance
+      owner: {{ $r.owner.name }}
+      secret:
+        name: {{ $r.owner.passwordSecret }}
+      postInitApplicationSQLRefs:
+        configMapRefs:
+          - name: {{ $c.name }}-bootstrap
+            key: bootstrap.sql
+    {{- end }}
+  # The roles' passwords follow their secrets (a re-sealed secret rotates the password; RUNBOOK).
+  managed:
+    roles:
+      - name: {{ $r.owner.name }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: {{ $r.owner.passwordSecret }}
+      - name: {{ $r.app.name }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: {{ $r.app.passwordSecret }}
+  storage:
+    size: {{ $c.storage.size }}
+    {{- with $c.storage.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  resources:
+    {{- toYaml $c.resources | nindent 4 }}
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: {{ $c.podAntiAffinityType }}
+  {{- if $c.podMonitor }}
+  monitoring:
+    enablePodMonitor: true
+  {{- end }}
+  {{- if .Values.backup.enabled }}
+  plugins:
+    - name: {{ include "db.plugin" . }}
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ include "db.store" . }}
+        serverName: {{ .Values.backup.serverName | default $c.name }}
+  {{- end }}
+  {{- if .Values.recovery.enabled }}
+  externalClusters:
+    - name: origin
+      plugin:
+        name: {{ include "db.plugin" . }}
+        parameters:
+          barmanObjectName: {{ include "db.store" . }}
+          serverName: {{ .Values.recovery.serverName }}
+  {{- end }}

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["cluster", "roles", "objectStore", "backup", "recovery", "networkPolicy"],
+  "properties": {
+    "cluster": {
+      "type": "object",
+      "required": ["name", "instances", "imageName", "storage"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z]([-a-z0-9]{0,48}[a-z0-9])?$" },
+        "instances": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "imageName": { "type": "string", "minLength": 1 },
+        "storage": {
+          "type": "object",
+          "required": ["size"],
+          "properties": { "size": { "type": "string", "pattern": "^[0-9]+(Mi|Gi|Ti)$" }, "storageClass": { "type": "string" } }
+        },
+        "parameters": { "type": "object", "additionalProperties": { "type": "string" } },
+        "podAntiAffinityType": { "enum": ["preferred", "required"] },
+        "podMonitor": { "type": "boolean" }
+      }
+    },
+    "objectStore": {
+      "type": "object",
+      "properties": {
+        "destinationPath": { "type": "string", "pattern": "^$|^(s3|gs|https)://.+" },
+        "endpointURL": { "type": "string", "pattern": "^$|^https?://[^/]+" },
+        "retention": { "type": "string", "pattern": "^[1-9][0-9]*[dwm]$" },
+        "compression": { "enum": ["gzip", "bzip2", "snappy", "lz4", "zstd", "xz"] }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "required": ["enabled", "schedule"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "schedule": { "type": "string", "pattern": "^\\S+( \\S+){5}$" },
+        "immediate": { "type": "boolean" },
+        "serverName": { "type": "string" }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "serverName": { "type": "string", "minLength": 1 },
+        "targetTime": { "type": "string", "pattern": "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9:]{8}(\\.[0-9]+)?(Z|[+-][0-9:]{2,5})$" }
+      }
+    }
+  }
+}

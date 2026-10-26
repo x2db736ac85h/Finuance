@@ -1,0 +1,9 @@
+apiVersion: v2
+name: finuance-db
+description: The Finuance PostgreSQL cluster on CloudNativePG, with roles, bootstrap SQL and backups to object storage.
+type: application
+version: 0.1.0
+# The PostgreSQL version of the default image (values.cluster.imageName); Compose uses the same.
+appVersion: "18.6"
+home: https://github.com/x2db736ac85h/Finuance
+kubeVersion: ">=1.30.0-0"

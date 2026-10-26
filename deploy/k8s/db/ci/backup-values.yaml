@@ -1,0 +1,13 @@
+# Rendered by the CI helm job: backups to an S3-compatible store with every optional part on.
+cluster:
+  storage:
+    storageClass: local-path
+  podMonitor: true
+objectStore:
+  destinationPath: s3://finuance-backups/
+  endpointURL: https://minio.backup.svc:9000
+  endpointCA:
+    name: minio-ca
+  regionKey: REGION
+networkPolicy:
+  monitoringNamespace: monitoring

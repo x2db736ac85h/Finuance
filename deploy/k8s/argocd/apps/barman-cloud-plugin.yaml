@@ -1,0 +1,25 @@
+# The Barman Cloud plugin (WAL archiving and base backups to object storage; CNPG's recommended
+# backup method since 1.26). It must run in the operator's namespace and needs cert-manager, which
+# the homelab runs for the Let's Encrypt certificates (RUNBOOK "Prerequisites").
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: barman-cloud-plugin
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  project: platform
+  source:
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: plugin-barman-cloud
+    targetRevision: 0.8.1 # plugin v0.15.1
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

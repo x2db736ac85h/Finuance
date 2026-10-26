@@ -14,8 +14,11 @@ import { renderApp } from '../test/render';
 import { account, API, db, problem, resetDb, server } from '../test/server';
 import { applyEvent, useChat, type AiTurn } from './chatStore';
 
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
+  // The shell loads the panel lazily; transform its chunk here, so the first test's findBy waits
+  // for the render and not for a cold import under a busy parallel run.
+  await import('./ChatPanel');
 });
 afterAll(() => {
   server.close();

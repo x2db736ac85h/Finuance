@@ -1,0 +1,87 @@
+# The Finuance PostgreSQL cluster (PLAN task 16.2) on the CloudNativePG operator, with WAL archiving
+# and daily base backups through the Barman Cloud plugin (CNPG's in-tree backup is deprecated and
+# removed in 1.32). Needs the operator and the plugin in cnpg-system (deploy/k8s/argocd/platform).
+# Homelab-specific values live in deploy/environments/homelab/db-values.yaml.
+
+cluster:
+  # Also the prefix of the services: <name>-rw is what the app chart's database.host points at.
+  name: finuance-db
+  instances: 2
+  # A pinned PostgreSQL image (the `standard` flavour works with backup plugins). Same major and
+  # minor as Compose (postgres:18.6).
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  storage:
+    size: 10Gi
+    # Empty: the cluster's default storage class.
+    storageClass: ""
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 1Gi }
+  # PostgreSQL settings CNPG doesn't fix itself.
+  parameters:
+    shared_buffers: 128MB
+    max_connections: "100"
+    log_min_duration_statement: "1000"
+  # Keep the instances on different nodes when there are several (a single-node cluster still works).
+  podAntiAffinityType: preferred
+  # A PodMonitor for the Prometheus operator (Phase 17/18).
+  podMonitor: false
+
+roles:
+  # Basic-auth secrets (keys username and password), sealed in deploy/environments/<env>/secrets.
+  # The owner runs migrations; the app role is what api and worker use (subject to RLS).
+  owner:
+    name: finuance_owner
+    passwordSecret: finuance-db-owner
+  app:
+    name: finuance_app
+    passwordSecret: finuance-db-app
+
+# The object store for WAL and base backups (S3 or S3-compatible, e.g. MinIO). Required when
+# backup or recovery is on.
+objectStore:
+  # e.g. s3://finuance-backups/ (each cluster writes under <destinationPath>/<serverName>/).
+  destinationPath: ""
+  # Empty: AWS S3. An S3-compatible server, e.g. http://minio.backup.svc:9000.
+  endpointURL: ""
+  # A secret with the CA of a self-signed endpoint. Empty name: the system CAs.
+  endpointCA:
+    name: ""
+    key: ca.crt
+  # A secret with the keys ACCESS_KEY_ID and ACCESS_SECRET_KEY.
+  credentialsSecret: finuance-db-backup
+  # A key of that secret holding the region, for stores that need one. Empty: none.
+  regionKey: ""
+  # Recovery window: backups older than the newest one before now − retention are deleted.
+  retention: 14d
+  compression: gzip
+
+backup:
+  enabled: true
+  # CNPG cron has seconds first: daily at 02:15 (the cluster's time zone, usually UTC).
+  schedule: "0 15 2 * * *"
+  # Take the first base backup as soon as the cluster is up.
+  immediate: true
+  # The folder in the bucket. Empty: the cluster name. A restored cluster must write somewhere
+  # else than the cluster it was restored from.
+  serverName: ""
+
+# Bootstrap from the object store instead of an empty database (restore; docs/RUNBOOK.md).
+recovery:
+  enabled: false
+  # The folder of the cluster to restore (its serverName, by default its cluster name).
+  serverName: finuance-db
+  # Point in time to restore to, RFC 3339 (e.g. "2026-10-24T10:00:00Z"). Empty: the latest WAL.
+  targetTime: ""
+
+networkPolicy:
+  enabled: true
+  # Pods that may connect on 5432: the Finuance chart's pods (api, worker, migrate).
+  clients:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: finuance
+  # The namespace of the CloudNativePG operator and the Barman Cloud plugin.
+  operatorNamespace: cnpg-system
+  # The namespace allowed to scrape the exporter on 9187. Empty: none.
+  monitoringNamespace: ""

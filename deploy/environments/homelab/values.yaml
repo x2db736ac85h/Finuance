@@ -1,0 +1,48 @@
+# Homelab values for the Finuance chart (deploy/helm/finuance), applied by the Argo CD application
+# deploy/k8s/argocd/apps/finuance.yaml. A merged change to this file is what deploys (GitOps).
+# Values marked "Phase 18" are not known yet and are set during the homelab rollout.
+
+image:
+  # Bumped by release.yml (a pull request per release, vX.Y.Z tags only).
+  tag: "0.1.0"
+
+# Phase 18: the real host name (a bought domain, or finuance.<tailnet>.ts.net).
+publicOrigin: https://finuance.homelab.invalid
+ingress:
+  className: traefik
+  # Phase 18: the same host as publicOrigin.
+  host: finuance.homelab.invalid
+  tls:
+    # Let's Encrypt through cert-manager (decision 2026-10-24). Phase 18: the ClusterIssuer's name
+    # once it exists (or tls.mode traefik with Traefik's ACME resolver, or tls.mode secret with a
+    # Tailscale *.ts.net certificate).
+    mode: certManager
+    clusterIssuer: letsencrypt-prod
+
+allowSignup: false
+# Phase 18: the cluster's pod CIDR (k3s: 10.42.0.0/16), where Traefik's pods live.
+trustedProxies: "10.42.0.0/16"
+
+database:
+  host: finuance-db-rw
+
+networkPolicy:
+  enabled: true
+  # Phase 18: check the namespace and labels of the cluster's Traefik (k3s installs it in kube-system).
+  ingressController:
+    namespaceSelector:
+      matchLabels: { kubernetes.io/metadata.name: kube-system }
+    podSelector:
+      matchLabels: { app.kubernetes.io/name: traefik }
+
+assistant:
+  # Phase 18: the LM Studio address (ADR 0020); enable with its connections file and egress.
+  enabled: false
+
+otel:
+  # Phase 18: the collector of the observability stack.
+  endpoint: ""
+
+serviceMonitor:
+  # Phase 18: on once the Prometheus Operator runs.
+  enabled: false

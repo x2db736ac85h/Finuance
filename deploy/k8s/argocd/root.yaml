@@ -1,0 +1,20 @@
+# The app-of-apps (PLAN task 16.4). Applied once by hand when Argo CD is bootstrapped (Phase 18,
+# docs/RUNBOOK.md "Bootstrap"); from then on Argo CD keeps everything under apps/ in sync with main.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance-root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/k8s/argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

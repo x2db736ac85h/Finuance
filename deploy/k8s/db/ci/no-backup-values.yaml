@@ -1,0 +1,7 @@
+# Rendered by the CI helm job: one instance, no backups, no network policy (a scratch cluster).
+cluster:
+  instances: 1
+backup:
+  enabled: false
+networkPolicy:
+  enabled: false

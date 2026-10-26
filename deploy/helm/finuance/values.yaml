@@ -1,0 +1,149 @@
+# Finuance Helm chart (PLAN task 16.1). The database is not part of the chart: it comes from the
+# CloudNativePG cluster in deploy/k8s/db (or any PostgreSQL prepared with deploy/db/bootstrap.sql).
+# Homelab-specific values live in deploy/environments/homelab/values.yaml.
+
+image:
+  registry: ghcr.io/x2db736ac85h
+  api: finuance-api
+  web: finuance-web
+  # Empty: the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# The address users open, e.g. https://finance.example.com (cookies, CSRF origin check). Required.
+publicOrigin: ""
+logLevel: info
+# New accounts can sign up when true; otherwise an admin creates them (finuance admin create-user).
+allowSignup: false
+# Addresses whose X-Forwarded-For is trusted (the ingress controller's pods). k3s pods use
+# 10.42.0.0/16 by default.
+trustedProxies: "10.42.0.0/16"
+# Upload limit for one CSV file (bytes); the ingress must allow at least this much.
+maxUploadBytes: 20971520
+# Further non-secret settings, FINUANCE_* name → value (strings).
+extraEnv: {}
+
+database:
+  # The CloudNativePG read-write service (<cluster>-rw), or any PostgreSQL host.
+  host: finuance-db-rw
+  port: 5432
+  name: finuance
+  sslmode: require
+  maxConns: 10
+  # Passwords come from basic-auth secrets (keys username/password), the same ones the CNPG managed
+  # roles use. They reach the processes as PGPASSWORD, so the URLs never hold a password.
+  app:
+    user: finuance_app
+    passwordSecret: finuance-db-app
+    passwordKey: password
+  owner:
+    user: finuance_owner
+    passwordSecret: finuance-db-owner
+    passwordKey: password
+
+assistant:
+  enabled: false
+  # The connections file (JSON, docs/assistant.md), mounted at /etc/finuance/connections.json.
+  connectionsFile: ""
+  # An existing secret whose keys become environment variables (the API keys the file names with
+  # apiKeyEnv). Empty: none.
+  envSecret: ""
+  # Where the api may connect when the assistant is on (NetworkPolicy egress): the model servers,
+  # as a `cidr` outside the cluster or `to` peers inside it.
+  egress: []
+  #  - cidr: 192.168.1.20/32
+  #    ports: [1234]
+  #  - to: [{ namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ollama } } }]
+  #    ports: [11434]
+
+otel:
+  # OTLP/HTTP endpoint, e.g. http://otel-collector.observability:4318 (Phase 17/18). Empty: off.
+  endpoint: ""
+  # NetworkPolicy egress to the collector: entries with ports and `to` (peers, e.g. a
+  # namespaceSelector) or a `cidr` outside the cluster.
+  egress: []
+
+api:
+  replicas: 2
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { memory: 512Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 1
+  # Seconds a stopping pod keeps serving after it leaves the endpoints (lets Traefik notice).
+  preStopSleep: 5
+  terminationGracePeriodSeconds: 45
+
+worker:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+  terminationGracePeriodSeconds: 45
+
+web:
+  replicas: 2
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { memory: 128Mi }
+  preStopSleep: 5
+  podDisruptionBudget:
+    minAvailable: 1
+
+migrations:
+  # Runs `finuance migrate up` as the owner role before every install and upgrade (Helm hook and
+  # Argo CD PreSync).
+  enabled: true
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+
+ingress:
+  enabled: true
+  className: traefik
+  # The host name, e.g. finance.example.com or finuance.<tailnet>.ts.net. Required when enabled.
+  host: ""
+  tls:
+    # certManager: cert-manager issues the certificate (clusterIssuer); traefik: Traefik's own ACME
+    # resolver does (certResolver, configured in Traefik); secret: an existing TLS secret (e.g.
+    # made by the Tailscale operator or by hand); none: plain HTTP (testing only).
+    mode: certManager
+    clusterIssuer: ""
+    certResolver: ""
+    secretName: finuance-tls
+  # Strict-Transport-Security through a Traefik Middleware (traefik.io/v1alpha1).
+  hsts:
+    enabled: true
+    maxAge: 31536000
+  annotations: {}
+
+networkPolicy:
+  enabled: true
+  # Who may reach web and api: the ingress controller's pods.
+  ingressController:
+    namespaceSelector:
+      matchLabels: { kubernetes.io/metadata.name: kube-system }
+    podSelector:
+      matchLabels: { app.kubernetes.io/name: traefik }
+  # The database pods (CloudNativePG labels its instances with cnpg.io/cluster).
+  database:
+    namespaceSelector: {}
+    podSelector:
+      matchLabels: { cnpg.io/cluster: finuance-db }
+  # Who may scrape the metrics ports (9090); empty: nobody.
+  monitoring:
+    namespaceSelector:
+      matchLabels: { kubernetes.io/metadata.name: monitoring }
+    podSelector: {}
+
+serviceMonitor:
+  # Needs the Prometheus Operator CRDs (Phase 17/18).
+  enabled: false
+  interval: 30s
+  labels: {}

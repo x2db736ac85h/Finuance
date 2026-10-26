@@ -1,0 +1,12 @@
+apiVersion: v2
+name: finuance
+description: Finuance, a self-hosted personal-finance app for bank CSV exports (api, worker, web).
+type: application
+# The chart's own version; bumped when the templates change.
+version: 0.1.0
+# The image tag used when values.image.tag is empty; release.yml keeps the homelab values in step.
+appVersion: "0.1.0"
+home: https://github.com/x2db736ac85h/Finuance
+sources:
+  - https://github.com/x2db736ac85h/Finuance
+kubeVersion: ">=1.30.0-0"

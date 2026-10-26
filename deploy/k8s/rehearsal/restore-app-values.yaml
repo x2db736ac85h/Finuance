@@ -1,0 +1,19 @@
+# The temporary app on the restored database, at https://restore.localhost:8443.
+image:
+  registry: ghcr.io/x2db736ac85h
+  tag: rehearsal
+  pullPolicy: Never
+publicOrigin: https://restore.localhost:8443
+ingress:
+  host: restore.localhost
+  tls:
+    mode: secret
+    secretName: finuance-tls
+allowSignup: true
+trustedProxies: "10.244.0.0/16"
+api:
+  replicas: 1
+  autoscaling:
+    enabled: false
+web:
+  replicas: 1

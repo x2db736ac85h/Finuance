@@ -37,12 +37,16 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private check-no-float check-compose-prod ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, float and prod-Compose checks
+check: lint typecheck test gen-check fixtures-check check-private check-no-float check-compose-prod check-db-bootstrap ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, float, prod-Compose and k8s bootstrap checks
 	@echo "check: ok"
 
 .PHONY: check-compose-prod
 check-compose-prod: ## compose.prod.yaml's inline database bootstrap equals deploy/db/
 	@tools/check-compose-prod.sh
+
+.PHONY: check-db-bootstrap
+check-db-bootstrap: ## The CloudNativePG bootstrap SQL (deploy/k8s/db) matches deploy/db/bootstrap.sql
+	@tools/check-db-bootstrap.sh
 
 .PHONY: check-private
 check-private: ## Fail on IBAN-like numbers or files under testdata/private/
@@ -235,8 +239,8 @@ images: ## Build the backend and web images locally (web uses web/dist when pres
 	docker build -f deploy/docker/Dockerfile.web -t finuance-web:dev .
 
 .PHONY: helm-lint
-helm-lint: ## helm lint + kubeconform
-	$(call todo,16)
+helm-lint: ## Lint, render and validate the Helm charts and Argo CD manifests (needs helm, kubeconform, network)
+	@tools/check-helm.sh
 
 .PHONY: loadtest
 loadtest: ## k6 against LOADTEST_BASE_URL

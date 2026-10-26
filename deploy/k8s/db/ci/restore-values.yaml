@@ -1,0 +1,9 @@
+# Rendered by the CI helm job: a point-in-time restore that archives into a new folder.
+objectStore:
+  destinationPath: s3://finuance-backups/
+recovery:
+  enabled: true
+  serverName: finuance-db
+  targetTime: "2026-10-24T10:00:00Z"
+backup:
+  serverName: finuance-db-r1

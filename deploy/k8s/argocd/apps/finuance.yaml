@@ -1,0 +1,42 @@
+# The app (deploy/helm/finuance) with the homelab values. Automated: a merged pull request that
+# changes the chart or deploy/environments/homelab/values.yaml (e.g. release.yml's image tag bump)
+# deploys; reverting it rolls back. Migrations run first as a PreSync hook.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: finuance
+  source:
+    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/helm/finuance
+    helm:
+      releaseName: finuance
+      valueFiles:
+        - ../../environments/homelab/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: finuance
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
+  # The HPA owns the api's replica count.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: finuance-api
+      jsonPointers:
+        - /spec/replicas

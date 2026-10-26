@@ -1,0 +1,60 @@
+{{- $name := include "finuance.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-worker
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      {{- include "finuance.selector" (dict "root" . "component" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "finuance.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "finuance.podSecurity" (dict "uid" 65532) | nindent 8 }}
+      # River finishes running jobs on SIGTERM within the shutdown grace.
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      containers:
+        - name: worker
+          image: {{ include "finuance.image" (dict "root" . "name" .Values.image.api) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["worker"]
+          ports:
+            - { name: metrics, containerPort: 9090 }
+          envFrom:
+            - configMapRef:
+                name: {{ $name }}-env
+          env:
+            {{- include "finuance.dbPassword" .Values.database.app | nindent 12 }}
+          # The worker serves /healthz, /readyz and /metrics on its admin port.
+          startupProbe:
+            httpGet: { path: /healthz, port: metrics }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /readyz, port: metrics }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: metrics }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          securityContext:
+            {{- include "finuance.containerSecurity" . | nindent 12 }}
