@@ -52,7 +52,15 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: make check
-        run: make check
+        # Failing lines become annotations: job logs can't be read from the cloud sessions that
+        # build this project, annotations can (as in the k8s rehearsal).
+        run: |
+          set -o pipefail
+          make check 2>&1 | tee "$RUNNER_TEMP/check.log" || {
+            grep -E -- '--- FAIL|^FAIL|_test\.go:[0-9]+:|\.go:[0-9]+:[0-9]+:|gen-check:|check-[a-z-]+:|✗|×|Error:|error TS|npm ERR|make: \*\*\*' "$RUNNER_TEMP/check.log" \
+              | head -30 | sed 's/^/::error title=make check::/'
+            exit 1
+          }
 
   db:
     name: db bootstrap (Compose)
