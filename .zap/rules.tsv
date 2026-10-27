@@ -16,3 +16,9 @@
 #       own sessions (Settings → Sessions), by design; in the scan that is the Docker network's.
 #       Kept visible as INFO.
 2	INFO	(Private IP Disclosure)
+# 10106 HTTP Only Site: the scanned stack is plain HTTP on localhost. In every deployment TLS ends
+#       at the ingress or reverse proxy, which also sends HSTS (Traefik middleware in the chart).
+10106	IGNORE	(HTTP Only Site)
+# 10049 Storable and (Non-)Cacheable Content: informational; the caching is deliberate: hashed
+#       assets are immutable for a year, pages are `no-cache`, API responses `no-store`.
+10049	IGNORE	(Storable and Cacheable Content)

@@ -21,7 +21,7 @@ with a vulnerability database of 2026-10-26.
 | `npm audit` (production and all) | 0 | – |
 | govulncheck | 0 (CI; `vuln.go.dev` is blocked in the sandbox) | – |
 | gitleaks | 0 (CI) | – |
-| ZAP baseline | 0 WARN, 0 FAIL, 61 rules pass | 1 informational, ignored |
+| ZAP baseline | 0 WARN, 0 FAIL, 61 rules pass; the first Actions run added 90004 (fixed), 10106 and 10049 | 3 ignored with reasons |
 | ZAP API scan (active, signed in) | 0 WARN, 0 FAIL, 112 rules pass; ~100,000 requests, no 5xx | 2 INFO, 1 ignored |
 | OpenVAS / Nessus | – | Phase 18 |
 
@@ -86,6 +86,16 @@ The first runs found two problems, both fixed:
   absolute and named the internal port (`http://localhost:8080/api/`). Redirects are now relative
   (`absolute_redirect off`); the same spec checks it.
 
+The first weekly run in Actions (2026-10-27) reported three more rules. ZAP updates its scan
+rules at start-up, which works in Actions but not in the sandbox, so the local runs didn't have
+them:
+- **90004 Insufficient Site Isolation Against Spectre.** Fixed: nginx sends
+  `Cross-Origin-Resource-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`
+  on every response, and the api sends the same `Cross-Origin-Resource-Policy` (nginx drops its
+  copy). Everything the app loads is same-origin, so `require-corp` breaks nothing (all 57 E2E
+  specs pass with it); `headers.spec.ts` checks both arrive once.
+- **10106 HTTP Only Site** and **10049 Storable and Cacheable Content**: ignored, see below.
+
 Remaining alerts, each with its rule in [`.zap/rules.tsv`](../.zap/rules.tsv):
 
 | Rule | Alert | Decision |
@@ -93,6 +103,8 @@ Remaining alerts, each with its rule in [`.zap/rules.tsv`](../.zap/rules.tsv):
 | 10109 | Modern Web Application | IGNORE: informational; ZAP saw a single-page app and suggests its AJAX spider. The API scan covers every operation instead. |
 | 100001 | Unexpected Content-Type | IGNORE: the API scan expects JSON everywhere. `/api/v1/me/export` is a zip by design, the SPA answers its own routes (and ZAP's probes such as `/swagger.json` or `/.env`) with `index.html`, and `/api`, `/api/v1` redirect to their trailing-slash forms. None of them returns data. |
 | 10096 | Timestamp Disclosure (Unix) | INFO: false positive. The API returns ISO dates; the number in `GET /me` was a display name ZAP had written itself a moment earlier. |
+| 10106 | HTTP Only Site | IGNORE: the scan targets the Compose stack over plain HTTP. In production TLS ends at the ingress or the host's proxy (Traefik sends HSTS; `compose.prod.yaml` sets `Secure` cookies). |
+| 10049 | Storable and Cacheable Content | IGNORE: deliberate. The hashed assets are cached for a year as immutable and `index.html` is revalidated; API responses carry `Cache-Control: no-store`. |
 | 2 | Private IP Disclosure | INFO: `GET /me/sessions` shows signed-in users the address of each of their own sessions (Settings → Sessions), by design; in the scan that is the Docker network's. |
 
 Informational alerts that ZAP never counts as warnings, for the record:

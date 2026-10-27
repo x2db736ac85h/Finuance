@@ -78,7 +78,7 @@ func TestMeta(t *testing.T) {
 func TestSecurityHeadersAndRequestID(t *testing.T) {
 	hs := newHarness(t, nil)
 	w := hs.do("GET", "/healthz", map[string]string{"X-Request-ID": "abc-123_XYZ"})
-	for k, v := range map[string]string{"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY",
+	for k, v := range map[string]string{"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Cross-Origin-Resource-Policy": "same-origin",
 		"Cache-Control": "no-store", "X-Request-ID": "abc-123_XYZ"} {
 		if got := w.Header().Get(k); got != v {
 			t.Errorf("%s = %q, want %q", k, got, v)
