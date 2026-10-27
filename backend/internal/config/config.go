@@ -36,6 +36,7 @@ type Config struct {
 	CookieSecure         bool
 	AllowSignup          bool
 	DemoMode             bool
+	DemoAssistant        bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
 	MaxUploadBytes       int64
 	MaxLegacyImportBytes int64
 	OTLPEndpoint         string
@@ -108,6 +109,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		SessionIdleTTL:       p.duration("FINUANCE_SESSION_IDLE_TTL", 168*time.Hour),
 		AllowSignup:          p.bool("FINUANCE_ALLOW_SIGNUP", true),
 		DemoMode:             p.bool("FINUANCE_DEMO_MODE", false),
+		DemoAssistant:        p.bool("FINUANCE_DEMO_ASSISTANT", false),
 		MaxUploadBytes:       int64(p.int("FINUANCE_MAX_UPLOAD_BYTES", 20<<20, 1024, 1<<31)),
 		MaxLegacyImportBytes: int64(p.int("FINUANCE_MAX_LEGACY_IMPORT_BYTES", 200<<20, 1024, 1<<33)),
 		OTLPEndpoint:         p.str("FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT", ""),
@@ -131,6 +133,9 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 	if !c.CookieSecure && c.Env == EnvProd {
 		p.fail("FINUANCE_COOKIE_SECURE", "false is only allowed when FINUANCE_ENV is dev or test")
 	}
+	if c.DemoMode {
+		c.demoLimits(&p)
+	}
 	if c.SessionIdleTTL > c.SessionTTL {
 		p.fail("FINUANCE_SESSION_IDLE_TTL", "must not exceed FINUANCE_SESSION_TTL")
 	}
@@ -138,6 +143,27 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		return Config{}, p.errs
 	}
 	return c, nil
+}
+
+// Demo mode (PLAN 19.1): visitors get ephemeral demo users (POST /auth/demo), so the instance
+// takes no sign-ups, smaller uploads, and no assistant unless FINUANCE_DEMO_ASSISTANT asks for it.
+const (
+	DemoMaxUploadBytes    = 2 << 20
+	DemoAssistantMessages = 10 // per demo user over its lifetime
+	DemoMaxRows           = 25 // rows one assistant lookup may return
+)
+
+func (c *Config) demoLimits(p *parser) {
+	if v, ok := p.raw("FINUANCE_ALLOW_SIGNUP"); ok {
+		if b, err := strconv.ParseBool(v); err == nil && b {
+			p.fail("FINUANCE_ALLOW_SIGNUP", "must not be true when FINUANCE_DEMO_MODE is (visitors use the demo instead)")
+		}
+	}
+	c.AllowSignup = false
+	c.MaxUploadBytes = min(c.MaxUploadBytes, DemoMaxUploadBytes)
+	if !c.DemoAssistant {
+		c.AIConnections = nil
+	}
 }
 
 type parser struct {

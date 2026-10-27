@@ -81,7 +81,7 @@ func TestQueryPerf(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.HasPrefix(s.name, "search") && !strings.Contains(pl["totals"], "tx_search_trgm_idx") {
+		if strings.HasPrefix(s.name, "search") && !strings.Contains(pl["totals"], "tx_user_search_trgm_idx") {
 			t.Errorf("search does not use the trigram index (bootstrap.sql LEAKPROOF):\n%s", pl["totals"])
 		}
 		fmt.Fprintf(&plans, "\n### %s\n", s.name)

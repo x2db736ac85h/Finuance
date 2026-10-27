@@ -1,0 +1,34 @@
+# Metrics the dashboards and rules use that other software exports (tools/check-observability.sh).
+# Checked against their sources when pinned; update with the versions.
+#
+# Prometheus itself
+up
+ALERTS
+# Go client collectors (client_golang, in every Finuance process)
+go_gc_duration_seconds
+go_goroutines
+go_memstats_heap_inuse_bytes
+process_cpu_seconds_total
+process_open_fds
+process_resident_memory_bytes
+# CloudNativePG 1.30.1 instance manager (docs/src/monitoring.md, config/manager/default-monitoring.yaml)
+cnpg_backends_max_tx_duration_seconds
+cnpg_backends_total
+cnpg_collector_pg_wal_archive_status
+cnpg_collector_up
+cnpg_pg_database_size_bytes
+cnpg_pg_replication_lag
+cnpg_pg_stat_archiver_failed_count
+cnpg_pg_stat_archiver_seconds_since_last_archival
+cnpg_pg_stat_database_blks_hit
+cnpg_pg_stat_database_blks_read
+cnpg_pg_stat_database_deadlocks
+cnpg_pg_stat_database_temp_bytes
+cnpg_pg_stat_database_xact_commit
+cnpg_pg_stat_database_xact_rollback
+# Barman Cloud plugin v0.15.1 (web/docs/observability.md)
+barman_cloud_cloudnative_pg_io_first_recoverability_point
+barman_cloud_cloudnative_pg_io_last_available_backup_timestamp
+barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp
+# kube-state-metrics
+kube_pod_container_status_waiting_reason

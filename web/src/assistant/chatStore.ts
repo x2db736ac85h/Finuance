@@ -40,12 +40,16 @@ type ChatStore = {
   busy: boolean;
   /** Auto mode switched this chat to plan mode. */
   noTools: boolean;
+  /** The keys of the chat's proposals the user applied (from the activity log, PLAN 17.6). */
+  applied: string[];
   ctrl: AbortController | null;
   newChat: () => Promise<void>;
   open: (id: string) => Promise<void>;
   /** Forget the chat on screen when it was deleted. */
   dropped: (id: string) => void;
   send: (text: string, req: Omit<MessageRequest, 'text'>, scope: TurnScope, hooks?: SendHooks) => Promise<void>;
+  /** A proposal of this chat was applied. */
+  markApplied: (key: string) => void;
   stop: () => Promise<void>;
 };
 
@@ -116,21 +120,26 @@ export const useChat = create<ChatStore>()((set, get) => ({
   turns: [],
   busy: false,
   noTools: false,
+  applied: [],
   ctrl: null,
 
   newChat: async () => {
     await get().stop();
-    set({ chatId: null, turns: [], noTools: false });
+    set({ chatId: null, turns: [], noTools: false, applied: [] });
   },
 
   open: async (id) => {
     await get().stop();
     const c = await fetchChat(id);
-    set({ chatId: c.id, turns: turnsOf(c), noTools: c.noTools });
+    set({ chatId: c.id, turns: turnsOf(c), noTools: c.noTools, applied: c.appliedProposals });
   },
 
   dropped: (id) => {
-    if (get().chatId === id) set({ chatId: null, turns: [], noTools: false });
+    if (get().chatId === id) set({ chatId: null, turns: [], noTools: false, applied: [] });
+  },
+
+  markApplied: (key) => {
+    set((s) => (s.applied.includes(key) ? s : { applied: [...s.applied, key] }));
   },
 
   send: async (text, req, scope, hooks = {}) => {

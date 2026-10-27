@@ -28,7 +28,8 @@ const ExportFormatVersion = 1
 //	manifest.json           format version, export time, the user
 //	<entity>.json           accounts, categories, groups, budgets, annotations, dedupe overrides,
 //	                        imports (metadata), investments, preferences, assistant (settings and
-//	                        chats with their turns)
+//	                        chats with their turns), rules, category aliases, activity (the
+//	                        audit log)
 //	transactions.csv        every transaction of every account (the CSV export format, all columns)
 //	imports/<id>/<filename> the original files
 //
@@ -52,6 +53,7 @@ func (a *api) ExportMe(ctx context.Context, _ gen.ExportMeRequestObject) (gen.Ex
 		}
 		docs["assistant.json"] = doc
 	}
+	a.audit(ctx, u, ledger.AuditExportData, "", nil)
 	now := time.Now().UTC()
 	docs["preferences.json"] = map[string]any{"version": prefs.Version, "prefs": prefs.Prefs}
 	docs["manifest.json"] = map[string]any{"format": "finuance-export", "version": ExportFormatVersion, "exportedAt": now,

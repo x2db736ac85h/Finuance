@@ -79,6 +79,9 @@ type State = {
   settingsPuts: Schemas['AssistantSettings'][];
   stops: number;
   deleted: string[];
+  /** The stored chat's lookups and the proposals applied in it. */
+  storedSteps: Schemas['AssistantStep'][];
+  applied: string[];
   answer: () => Response;
 };
 
@@ -109,13 +112,14 @@ function handlers() {
       HttpResponse.json({
         ...st.chats.find((c) => c.id === params['id']),
         noTools: false,
+        appliedProposals: st.applied,
         turns: [
           { role: 'user', seq: 1, content: 'Earlier question', createdAt: '2025-03-19T10:00:00Z' },
           {
             role: 'assistant',
             seq: 4,
             content: 'Earlier **answer**',
-            steps: [step],
+            steps: st.storedSteps,
             meta,
             createdAt: '2025-03-19T10:00:05Z',
           },
@@ -146,7 +150,7 @@ beforeEach(() => {
   db.prefs = { version: 1, prefs: { ai: { open: true } } };
   useUi.setState({ ...uiDefaults, ai: { ...uiDefaults.ai, open: true } });
   useViews.getState().reset();
-  useChat.setState({ chatId: null, turns: [], busy: false, noTools: false, ctrl: null });
+  useChat.setState({ chatId: null, turns: [], busy: false, noTools: false, applied: [], ctrl: null });
   st = {
     status: status(),
     settings: { retentionDays: 2, cloudConsent: [] },
@@ -155,6 +159,8 @@ beforeEach(() => {
     settingsPuts: [],
     stops: 0,
     deleted: [],
+    storedSteps: [step],
+    applied: [],
     answer: streamed([
       ['reasoning', { delta: 'Looking up kino.' }],
       ['step', step],
@@ -204,9 +210,10 @@ describe('ChatPanel', () => {
     expect(await screen.findByText('Showing 10 matching rows')).toBeTruthy();
   });
 
-  it('shows a proposal as a card; Apply creates the category and sends the change marked with the chat', async () => {
+  it('shows a proposal as a card; Apply creates the category and sends the change marked with the chat and proposal', async () => {
     const ids = Array.from({ length: 14 }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`);
     const proposal: Schemas['ActionProposal'] = {
+      key: 'proposal-internet',
       action: 'set_category',
       reason: 'Monthly internet bills',
       matched: 14,
@@ -239,7 +246,7 @@ describe('ChatPanel', () => {
       ['content', { delta: 'Review the change and click Apply.' }],
       ['done', { messageSeq: 4, meta }],
     ]);
-    const calls: { path: string; chat: string | null; body: unknown }[] = [];
+    const calls: { path: string; chat: string | null; proposal?: string | null; body: unknown }[] = [];
     server.use(
       http.get(`${API}/categories`, () => HttpResponse.json([])),
       http.post(`${API}/categories`, async ({ request }) => {
@@ -250,6 +257,7 @@ describe('ChatPanel', () => {
         calls.push({
           path: '/transactions/bulk',
           chat: request.headers.get('X-Assistant-Chat'),
+          proposal: request.headers.get('X-Assistant-Proposal'),
           body: await request.json(),
         });
         return HttpResponse.json({ updated: 14 });
@@ -278,11 +286,13 @@ describe('ChatPanel', () => {
       {
         path: '/transactions/bulk',
         chat: CHAT,
+        proposal: 'proposal-internet',
         body: { ids, category: { id: '00000000-0000-4000-8000-0000000000c9' } },
       },
     ]);
     expect(within(card).getByText('✓ Applied')).toBeTruthy();
     expect(within(card).queryByRole('button', { name: 'Apply' })).toBeNull();
+    expect(useChat.getState().applied).toEqual(['proposal-internet']);
 
     // Show in table puts the proposal's rows in the view
     await user.click(within(card).getByRole('button', { name: 'Show in table' }));
@@ -291,6 +301,7 @@ describe('ChatPanel', () => {
 
   it('a rule proposal with an existing category creates the rule', async () => {
     const proposal: Schemas['ActionProposal'] = {
+      key: 'proposal-gym-rule',
       action: 'create_rule',
       matched: 19,
       categoryName: 'Sport',
@@ -418,6 +429,45 @@ describe('ChatPanel', () => {
     expect(st.stops).toBe(1);
     expect(within(p).getByText(/stopped · qwen3-14b/)).toBeTruthy();
     expect(useChat.getState().busy).toBe(false);
+  });
+
+  it('reopens a chat with its applied proposal shown as applied (from the activity log)', async () => {
+    const proposal: Schemas['ActionProposal'] = {
+      key: 'aaaaaaaaaaaaaaaa',
+      action: 'set_group',
+      matched: 3,
+      groupName: 'Trip',
+      groupId: '00000000-0000-4000-8000-0000000000a1',
+      sample: [],
+    };
+    const other: Schemas['ActionProposal'] = { ...proposal, key: 'bbbbbbbbbbbbbbbb', groupName: 'Home' };
+    const prop = (p: Schemas['ActionProposal']): Schemas['AssistantStep'] => ({
+      tool: 'propose_action',
+      args: {},
+      summary: 'proposed set group',
+      result: '{}',
+      matched: 3,
+      proposal: p,
+    });
+    st.storedSteps = [prop(proposal), prop(other)];
+    st.applied = ['aaaaaaaaaaaaaaaa'];
+    st.chats = [
+      {
+        id: CHAT,
+        title: 'Earlier question',
+        connection: 'lmstudio',
+        model: 'qwen3-14b',
+        createdAt: '2025-03-19T10:00:00Z',
+        updatedAt: '2025-03-19T10:00:05Z',
+      },
+    ];
+    renderApp('/t/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Earlier question'));
+    const cards = await within(p).findAllByRole('group', { name: 'Proposed change' });
+    expect(cards).toHaveLength(2);
+    expect(within(cards[0] as HTMLElement).getByText('✓ Applied')).toBeTruthy();
+    expect(within(cards[1] as HTMLElement).getByRole('button', { name: 'Apply' })).toBeTruthy();
   });
 
   it('opens and deletes a recent chat', async () => {

@@ -66,6 +66,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Try the demo
+         * @description Only on a demo instance (`FINUANCE_DEMO_MODE`, see `GET /meta`): creates an ephemeral demo user
+         *     with the demo year imported, and signs it in. The user and all of its data are deleted
+         *     24 hours after creation. At most 5 per hour per client address. Elsewhere `404`.
+         */
+        post: operations["startDemo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -163,6 +185,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The user's activity log (Settings → Activity)
+         * @description Security-relevant actions of the account, newest first (PLAN 17.6): sign-ins and failed sign-ins, sign-outs, password changes, revoked sessions, imports committed or deleted, deleted accounts, exports, rule runs, legacy migrations, duplicate decisions and applied assistant proposals, with the address and a short browser name. Events are kept for one year and can't be changed or deleted by the user; deleting the account deletes them.
+         */
+        get: operations["listActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/export": {
         parameters: {
             query?: never;
@@ -172,7 +214,7 @@ export interface paths {
         };
         /**
          * Download all of the user's data
-         * @description A zip stream: one JSON file per entity (accounts, categories, groups, budgets, annotations, dedupe overrides, imports, investments, preferences), `transactions.csv` for every account and the original import files under `imports/`.
+         * @description A zip stream: one JSON file per entity (accounts, categories, groups, budgets, annotations, dedupe overrides, imports, investments, preferences, rules, category aliases, the activity log), `transactions.csv` for every account and the original import files under `imports/`.
          */
         get: operations["exportMe"];
         put?: never;
@@ -1298,6 +1340,32 @@ export interface components {
         };
         DeleteMeRequest: {
             password: string;
+        };
+        ActivityPage: {
+            events: components["schemas"]["ActivityEvent"][];
+            /**
+             * Format: int64
+             * @description Pass as `before` for the next page; absent on the last page.
+             */
+            nextBefore?: number;
+        };
+        ActivityEvent: {
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            at: string;
+            /** @enum {string} */
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied";
+            /** @description The affected record (import, account, session, chat …), if any. */
+            entityId?: string;
+            /** @description The client address; absent for actions of a background job. */
+            ip?: string;
+            /** @description A short browser and system name, e.g. "Firefox on Linux". */
+            browser?: string;
+            /** @description Small facts about the action (file name, counts, kind). */
+            meta?: {
+                [key: string]: unknown;
+            };
         };
         Session: {
             /**
@@ -2536,6 +2604,8 @@ export interface components {
             /** @description Auto mode switched this chat to plan mode. */
             noTools: boolean;
             turns: components["schemas"]["AssistantTurn"][];
+            /** @description The keys of this chat's proposals the user has applied (from the activity log). */
+            appliedProposals: string[];
         };
         /** @description A question (`user`) or an answer (`assistant`) with its lookups. */
         AssistantTurn: {
@@ -2567,6 +2637,8 @@ export interface components {
         };
         /** @description A change propose_action suggests (PLAN 15.7, ADR 0019). The server never applies it; the panel shows it with the affected rows and applies it through the normal endpoints when the user confirms. A missing categoryId / groupId means the category or group is created first. */
         ActionProposal: {
+            /** @description Identifies the proposal within its chat (a hash of its content); sent back as X-Assistant-Proposal when it is applied. */
+            key: string;
             /** @enum {string} */
             action: "set_category" | "set_group" | "create_rule";
             reason?: string;
@@ -2836,8 +2908,10 @@ export interface components {
         };
     };
     parameters: {
-        /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+        /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
         AssistantChatHeader: string;
+        /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). */
+        AssistantProposalHeader: string;
         Id: string;
     };
     requestBodies: never;
@@ -2913,6 +2987,29 @@ export interface operations {
         };
         responses: {
             /** @description Signed in; the session cookie is set. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetSessionCookie"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    startDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed in as a new demo user; the session cookie is set. */
             200: {
                 headers: {
                     "Set-Cookie": components["headers"]["SetSessionCookie"];
@@ -3081,6 +3178,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listActivity: {
+        parameters: {
+            query?: {
+                /** @description Only events older than this event id (the previous page's `nextBefore`). */
+                before?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPage"];
+                };
             };
             default: components["responses"]["Problem"];
         };
@@ -3683,8 +3805,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
                 "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
             };
             path?: never;
             cookie?: never;
@@ -3958,8 +4082,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server logs one structured line for it (until the audit log of Phase 17); the request is otherwise an ordinary one. */
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
                 "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
             };
             path?: never;
             cookie?: never;

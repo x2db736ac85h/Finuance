@@ -250,7 +250,7 @@ func TestSeedDemo(t *testing.T) {
 	if err := Admin(ctx, cfg, AdminInput{Command: "create-user", Email: email, Password: strings.NewReader("seed password 123\n")}, log); err != nil {
 		t.Fatal(err)
 	}
-	if err := SeedDemo(ctx, cfg, email, log); err != nil {
+	if err := SeedDemo(ctx, cfg, SeedInput{Email: email}, log); err != nil {
 		t.Fatal(err)
 	}
 	st := store.New(tdb.App)
@@ -269,13 +269,50 @@ func TestSeedDemo(t *testing.T) {
 		accounts[0].LastOn == nil || *accounts[0].LastOn != yesterday {
 		t.Fatalf("accounts = %+v, want one demo account with %d transactions up to %s", accounts, rows, yesterday)
 	}
-	if err := SeedDemo(ctx, cfg, email, log); !errors.Is(err, ledger.ErrConflict) {
+	if err := SeedDemo(ctx, cfg, SeedInput{Email: email}, log); !errors.Is(err, ledger.ErrConflict) {
 		t.Errorf("second seed: %v, want a conflict", err)
 	}
-	if err := SeedDemo(ctx, cfg, "nobody@example.test", log); !errors.Is(err, platform.ErrNotFound) {
+	if err := SeedDemo(ctx, cfg, SeedInput{Email: "nobody@example.test"}, log); !errors.Is(err, platform.ErrNotFound) {
 		t.Errorf("unknown user: %v", err)
 	}
 	if len(out) != 2 || !strings.Contains(out[1], fmt.Sprintf("%d transactions", rows)) {
 		t.Errorf("output = %q", out)
+	}
+}
+
+// TestSeedLoadTestUsers: -users creates numbered users with the given password and gives each
+// about -rows demo rows; a second run skips them (PLAN 17.5).
+func TestSeedLoadTestUsers(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	cfg := testConfig(t, tdb)
+	ctx := context.Background()
+	var out []string
+	log := func(f string, a ...any) { out = append(out, fmt.Sprintf(f, a...)) }
+	in := SeedInput{Email: "load@example.test", Users: 2, Rows: 3000, Password: strings.NewReader("load password 123\n")}
+	if err := SeedDemo(ctx, cfg, in, log); err != nil {
+		t.Fatal(err)
+	}
+	st := store.New(tdb.App)
+	svc := NewAuth(st, cfg)
+	for _, email := range []string{"load+001@example.test", "load+002@example.test"} {
+		u, err := svc.UserByEmail(ctx, email)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := svc.Login(ctx, email, "load password 123", "", auth.Client{}); err != nil {
+			t.Errorf("%s can't sign in: %v", email, err)
+		}
+		accounts, err := ledger.New(st, platform.SystemClock{}).ListAccounts(ctx, u.ID)
+		if err != nil || len(accounts) != 1 || accounts[0].TxCount < 2700 || accounts[0].TxCount > 3300 {
+			t.Errorf("%s accounts = %+v, %v (want about 3,000 rows)", email, accounts, err)
+		}
+	}
+	in.Password = strings.NewReader("load password 123\n")
+	out = nil
+	if err := SeedDemo(ctx, cfg, in, log); err != nil || len(out) != 2 || !strings.Contains(out[0], "already has demo data") {
+		t.Errorf("second run: %v, %q", err, out)
+	}
+	if err := SeedDemo(ctx, cfg, SeedInput{Email: "no-domain", Users: 1, Password: strings.NewReader("x\n")}, log); err == nil {
+		t.Error("an email without a domain was accepted")
 	}
 }

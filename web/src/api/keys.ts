@@ -5,6 +5,7 @@ export const keys = {
   prefs: ['prefs'] as const,
   accounts: ['accounts'] as const,
   sessions: ['sessions'] as const,
+  activity: ['activity'] as const,
   imports: (accountId?: string) => (accountId ? (['imports', accountId] as const) : (['imports'] as const)),
   import: (id: string) => ['import', id] as const,
   importLines: (id: string, optionsKey: string) => ['importLines', id, optionsKey] as const,

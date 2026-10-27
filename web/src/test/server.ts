@@ -11,6 +11,7 @@ export const API = `${window.location.origin}/api/v1`;
 export type Db = {
   signedIn: boolean;
   signupEnabled: boolean;
+  demoMode: boolean;
   user: Schemas['User'];
   prefs: Schemas['Preferences'];
   accounts: Schemas['Account'][];
@@ -61,6 +62,7 @@ const emptyInsights: Insights = {
 export const freshDb = (): Db => ({
   signedIn: true,
   signupEnabled: true,
+  demoMode: false,
   user: {
     id: '00000000-0000-4000-8000-000000000001',
     email: 'alex@example.com',
@@ -123,7 +125,12 @@ export const account = (over: Partial<Schemas['Account']> = {}): Schemas['Accoun
 
 export const server = setupServer(
   http.get(`${API}/meta`, () =>
-    HttpResponse.json({ version: 'test', signupEnabled: db.signupEnabled, demoMode: false, assistantEnabled: false }),
+    HttpResponse.json({
+      version: 'test',
+      signupEnabled: db.signupEnabled,
+      demoMode: db.demoMode,
+      assistantEnabled: false,
+    }),
   ),
   http.get(`${API}/me`, () => authed(() => HttpResponse.json(db.user))),
   http.get(`${API}/preferences`, () => authed(() => HttpResponse.json(db.prefs))),

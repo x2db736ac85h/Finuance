@@ -1,0 +1,19 @@
+{{- if .Values.cluster.podMonitor }}
+# Prometheus scrapes every instance's exporter (9187): the cnpg_* metrics and the Barman Cloud
+# plugin's barman_cloud_cloudnative_pg_io_* backup metrics. The job label is finuance-db.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ .Values.cluster.name }}
+  labels:
+    {{- include "db.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      cnpg.io/cluster: {{ .Values.cluster.name }}
+  podMetricsEndpoints:
+    - port: metrics
+      relabelings:
+        - targetLabel: job
+          replacement: finuance-db
+{{- end }}

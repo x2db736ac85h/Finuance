@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
+	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -28,9 +30,17 @@ func (a *api) conns() *assistant.Connections {
 	return a.ai.Connections
 }
 
+// maxRows is the most rows one lookup may return: the legacy cap, or less in the demo (PLAN 19.1).
+func (a *api) maxRows() int {
+	if a.cfg.DemoMode {
+		return config.DemoMaxRows
+	}
+	return assistant.MaxRowsLimit
+}
+
 // AssistantStatus lists the connections and their chat models.
 func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusRequestObject) (gen.AssistantStatusResponseObject, error) {
-	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: assistant.MaxRowsLimit}
+	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: a.maxRows()}
 	for _, st := range a.conns().Status(ctx, req.Params.Refresh != nil && *req.Params.Refresh) {
 		c := gen.AssistantConnection{Name: st.Name, Label: st.Label, Api: gen.AssistantConnectionApi(st.API), Cloud: st.Cloud,
 			Reachable: st.Reachable, Models: make([]gen.AssistantModel, 0, len(st.Models)), Error: assistantError(st.Err)}
@@ -137,8 +147,15 @@ func (a *api) GetAssistantChat(ctx context.Context, req gen.GetAssistantChatRequ
 	if err != nil {
 		return nil, err
 	}
+	applied, err := a.ledger.AppliedProposals(ctx, identity(ctx).User.ID, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	if applied == nil {
+		applied = []string{}
+	}
 	out := gen.GetAssistantChat200JSONResponse{Id: ch.ID, Title: ch.Title, Connection: ch.Connection, Model: ch.Model,
-		CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs)}
+		CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs), AppliedProposals: applied}
 	return out, nil
 }
 
@@ -240,7 +257,7 @@ func toolFilterDTO(f *assistant.StepFilter) *gen.ToolFilter {
 }
 
 func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
-	out := &gen.ActionProposal{Action: gen.ActionProposalAction(p.Action), Matched: p.Matched, CategoryId: p.CategoryID, GroupId: p.GroupID,
+	out := &gen.ActionProposal{Key: p.Key(), Action: gen.ActionProposalAction(p.Action), Matched: p.Matched, CategoryId: p.CategoryID, GroupId: p.GroupID,
 		Sample: make([]gen.ProposalRow, len(p.Sample))}
 	for _, f := range []struct {
 		v   string
@@ -281,15 +298,18 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	return out
 }
 
-// logAppliedAction writes the structured line of an applied assistant proposal (PLAN 15.7; the
-// audit log of Phase 17 replaces it): who, which chat, what kind of change and how many rows.
-// Never names, filters or any other content.
-func logAppliedAction(ctx context.Context, chat *gen.AssistantChatHeader, action string, rows int) {
+// auditAppliedAction records an applied assistant proposal in the activity log (PLAN 15.7/17.6,
+// ADR 0019): which chat, which proposal, what kind of change and how many rows. Never names,
+// filters or any other content. A request without X-Assistant-Chat is an ordinary edit.
+func (a *api) auditAppliedAction(ctx context.Context, chat *gen.AssistantChatHeader, proposal *gen.AssistantProposalHeader, action string, rows int) {
 	if chat == nil {
 		return
 	}
-	observability.Logger(ctx).InfoContext(ctx, "assistant action applied", "event", "assistant.action_applied",
-		"user_id", identity(ctx).User.ID, "chat_id", *chat, "action", action, "rows", rows)
+	meta := map[string]any{"action": action, "rows": rows}
+	if proposal != nil {
+		meta["proposal"] = *proposal
+	}
+	a.auditMe(ctx, ledger.AuditAssistantApplied, chat.String(), meta)
 }
 
 func metaDTO(m assistant.Meta) gen.AssistantMeta {
@@ -343,6 +363,11 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 	if err := a.limits.assistant.Allow(u.String()); err != nil {
 		return nil, err
 	}
+	if a.cfg.DemoMode {
+		if err := a.limits.demoAsk.Allow(u.String()); err != nil {
+			return nil, err
+		}
+	}
 	b := req.Body
 	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone)}
 	if s := b.Settings; s != nil {
@@ -359,6 +384,9 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 		if s.Toolset != nil {
 			r.Toolset = string(*s.Toolset)
 		}
+	}
+	if a.cfg.DemoMode && (r.MaxRows == 0 || r.MaxRows > config.DemoMaxRows) {
+		r.MaxRows = config.DemoMaxRows
 	}
 	if b.Scope != nil && *b.Scope == gen.AssistantMessageRequestScopeView {
 		r.View = true

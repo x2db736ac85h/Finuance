@@ -142,8 +142,9 @@ networkPolicy:
       matchLabels: { kubernetes.io/metadata.name: monitoring }
     podSelector: {}
 
-serviceMonitor:
-  # Needs the Prometheus Operator CRDs (Phase 17/18).
+podMonitor:
+  # Scrapes the api and the worker (job finuance-api / finuance-worker); needs the Prometheus
+  # Operator CRDs. Dashboards and alert rules: deploy/k8s/observability.
   enabled: false
   interval: 30s
   labels: {}

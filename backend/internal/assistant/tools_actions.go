@@ -2,6 +2,8 @@ package assistant
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -54,6 +56,14 @@ type Proposal struct {
 	Match        *ProposalMatch `json:"match,omitempty"`
 	Sample       []ProposalRow  `json:"sample"`
 	Filter       *StepFilter    `json:"filter,omitempty"` // set_*: the rows' lookup filter, for "Show in table"
+}
+
+// Key identifies the proposal within its chat: a hash of its stored form, so the streamed step
+// and the chat read back later give the same key (the activity log records applied ones).
+func (p *Proposal) Key() string {
+	b, _ := json.Marshal(p) // plain data; it can't fail
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:8])
 }
 
 // ProposalMatch is a create_rule match in the API's RuleMatch form.

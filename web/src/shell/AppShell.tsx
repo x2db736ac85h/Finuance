@@ -117,12 +117,18 @@ export function AppShell({ user }: { user: User }) {
     tableShown && selected && 'has-insp',
     aiOpen && 'has-chat',
     aiOpen && aiMax && 'chat-max',
+    user.isDemo && 'is-demo',
   ]
     .filter(Boolean)
     .join(' ');
 
   return (
     <div className={cls} id="app">
+      {user.isDemo && (
+        <div className="demo-banner" role="status">
+          Demo — your data is deleted after 24 hours.
+        </div>
+      )}
       <TitleBar user={user} viewId={viewId} hasData={hasData} searchRef={searchRef} onToggleMode={setMode} />
       <div className="main">
         <Sidebar accounts={list} total={total} email={user.email} />

@@ -1,0 +1,231 @@
+{{- if .Values.rules.enabled }}
+{{- $ns := .Values.appNamespace }}
+{{- /* Requests that count for availability: every API route except health checks, the
+       assistant (its failures are the model server's; FinuanceAssistantModelErrors covers them)
+       and unmatched paths. */}}
+{{- $avail := printf `job="finuance-api",namespace="%s",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"` $ns }}
+{{- /* Requests that count for latency: the table query and the insight charts (docs/SLO.md). */}}
+{{- $lat := printf `job="finuance-api",namespace="%s",route=~"POST /api/v1/(transactions/query|insights/.*)"` $ns }}
+# Recording rules and alerts for Finuance (PLAN 17.4, docs/SLO.md). Burn-rate alerts follow the
+# multi-window, multi-burn-rate pattern of the Google SRE workbook: "page" when 2 % of the 30-day
+# budget burns in an hour (14.4×, 1 h and 5 m windows), "ticket" when 5 % burns in 6 hours (6×,
+# 6 h and 30 m windows). tests/rules.test.yaml checks each alert with promtool.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "obs.labels" . | nindent 4 }}
+    {{- with .Values.rules.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: finuance-slo.rules
+      rules:
+        {{- range $w := list "5m" "30m" "1h" "6h" "3d" }}
+        # "or vector(0)": with no 5xx at all the series doesn't exist, and the ratio would be empty
+        # instead of 0 (no burn rate, blank dashboards).
+        - record: finuance:slo_availability:error_ratio_rate{{ $w }}
+          expr: |
+            (sum(rate(http_server_requests_total{ {{- $avail }},status_class="5xx"}[{{ $w }}])) or vector(0))
+            /
+            sum(rate(http_server_requests_total{ {{- $avail }}}[{{ $w }}]))
+        - record: finuance:slo_latency:error_ratio_rate{{ $w }}
+          expr: |
+            1 - (
+              sum(rate(http_server_request_duration_seconds_bucket{ {{- $lat }},le="0.3"}[{{ $w }}]))
+              /
+              sum(rate(http_server_request_duration_seconds_count{ {{- $lat }}}[{{ $w }}]))
+            )
+        {{- end }}
+    - name: finuance-slo.alerts
+      rules:
+        - alert: FinuanceAvailabilityBurnFast
+          expr: |
+            finuance:slo_availability:error_ratio_rate1h > (14.4 * 0.005)
+            and
+            finuance:slo_availability:error_ratio_rate5m > (14.4 * 0.005)
+          labels: { severity: page, slo: availability }
+          annotations:
+            summary: >-
+              Finuance API errors burn the 30-day availability budget 14× too fast
+            description: >-
+              {{`More than {{ $value | humanizePercentage }} of API requests failed with 5xx in the last hour (SLO 99.5 %). RUNBOOK: "api not ready", recent deploys.`}}
+        - alert: FinuanceAvailabilityBurnSlow
+          expr: |
+            finuance:slo_availability:error_ratio_rate6h > (6 * 0.005)
+            and
+            finuance:slo_availability:error_ratio_rate30m > (6 * 0.005)
+          labels: { severity: ticket, slo: availability }
+          annotations:
+            summary: >-
+              Finuance API errors burn the 30-day availability budget 6× too fast
+            description: >-
+              {{`{{ $value | humanizePercentage }} of API requests failed with 5xx over 6 hours (SLO 99.5 %).`}}
+        - alert: FinuanceLatencyBurnFast
+          expr: |
+            finuance:slo_latency:error_ratio_rate1h > (14.4 * 0.05)
+            and
+            finuance:slo_latency:error_ratio_rate5m > (14.4 * 0.05)
+          labels: { severity: page, slo: latency }
+          annotations:
+            summary: >-
+              Table and chart requests are slow (latency budget burning 14× too fast)
+            description: >-
+              {{`{{ $value | humanizePercentage }} of /transactions/query and /insights requests took over 300 ms in the last hour (SLO: 95 % under 300 ms).`}}
+        - alert: FinuanceLatencyBurnSlow
+          expr: |
+            finuance:slo_latency:error_ratio_rate6h > (6 * 0.05)
+            and
+            finuance:slo_latency:error_ratio_rate30m > (6 * 0.05)
+          labels: { severity: ticket, slo: latency }
+          annotations:
+            summary: >-
+              Table and chart requests are slow (latency budget burning 6× too fast)
+            description: >-
+              {{`{{ $value | humanizePercentage }} of /transactions/query and /insights requests took over 300 ms over 6 hours.`}}
+    - name: finuance-app.alerts
+      rules:
+        - alert: FinuanceTargetDown
+          expr: up{job=~"finuance-(api|worker)",namespace="{{ $ns }}"} == 0
+          for: 5m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              {{`{{ $labels.job }} pod {{ $labels.pod }} can't be scraped`}}
+            description: >-
+              Prometheus has failed to scrape it for 5 minutes; the pod is down or its metrics port is blocked.
+        - alert: FinuanceApiAbsent
+          expr: absent(up{job="finuance-api",namespace="{{ $ns }}"} == 1)
+          for: 10m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              No Finuance api pod is up
+            description: >-
+              No api target has answered for 10 minutes (or the PodMonitor is missing).
+        - alert: FinuanceImportFailed
+          expr: increase(finuance_imports_total{job="finuance-worker",namespace="{{ $ns }}",result="failed"}[1h]) > 0
+          labels: { severity: ticket }
+          annotations:
+            summary: >-
+              An import commit failed after all its retries
+            description: >-
+              {{`{{ $value | humanize }} import(s) failed in the last hour; the user sees "Try again". Check the worker's log line "commit_import failed".`}}
+        - alert: FinuanceJobsFailing
+          expr: |
+            sum by (kind) (rate(finuance_jobs_total{job="finuance-worker",namespace="{{ $ns }}",result="error"}[15m]))
+            /
+            sum by (kind) (rate(finuance_jobs_total{job="finuance-worker",namespace="{{ $ns }}"}[15m]))
+            > 0.1
+          for: 15m
+          labels: { severity: ticket }
+          annotations:
+            summary: >-
+              {{`More than 10 % of {{ $labels.kind }} jobs fail`}}
+            description: >-
+              {{`{{ $value | humanizePercentage }} of {{ $labels.kind }} jobs returned an error over 15 minutes (River retries them).`}}
+        - alert: FinuanceDatabasePoolSaturated
+          expr: |
+            max by (job, pod) (pgxpool_acquired_conns{namespace="{{ $ns }}"} / pgxpool_max_conns{namespace="{{ $ns }}"}) > 0.9
+          for: 10m
+          labels: { severity: ticket }
+          annotations:
+            summary: >-
+              {{`{{ $labels.pod }} uses over 90 % of its database connections`}}
+            description: >-
+              Requests wait for connections; raise FINUANCE_DB_MAX_CONNS or find the slow queries.
+        - alert: FinuanceAssistantModelErrors
+          expr: |
+            sum by (connection) (rate(finuance_assistant_model_requests_total{job="finuance-api",namespace="{{ $ns }}",result!="ok"}[15m]))
+            /
+            sum by (connection) (rate(finuance_assistant_model_requests_total{job="finuance-api",namespace="{{ $ns }}"}[15m]))
+            > 0.5
+          for: 15m
+          labels: { severity: ticket }
+          annotations:
+            summary: >-
+              {{`The model server of the assistant connection {{ $labels.connection }} fails`}}
+            description: >-
+              {{`{{ $value | humanizePercentage }} of model requests failed over 15 minutes (outside the SLO; the rest of the app is unaffected).`}}
+    {{- if .Values.rules.database }}
+    - name: finuance-database.alerts
+      rules:
+        - alert: FinuancePostgresDown
+          expr: cnpg_collector_up{job="finuance-db",namespace="{{ $ns }}"} == 0
+          for: 5m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              {{`PostgreSQL on {{ $labels.pod }} is down`}}
+            description: >-
+              The instance manager reports PostgreSQL not running for 5 minutes. RUNBOOK "Postgres down".
+        - alert: FinuancePostgresAbsent
+          expr: absent(cnpg_collector_up{job="finuance-db",namespace="{{ $ns }}"} == 1)
+          for: 10m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              No PostgreSQL instance of Finuance is up
+            description: >-
+              No instance has reported PostgreSQL running for 10 minutes (or the database PodMonitor is missing).
+        - alert: FinuancePostgresReplicationLag
+          expr: max by (pod) (cnpg_pg_replication_lag{job="finuance-db",namespace="{{ $ns }}"}) > 300
+          for: 10m
+          labels: { severity: ticket }
+          annotations:
+            summary: >-
+              {{`The replica {{ $labels.pod }} is {{ $value | humanizeDuration }} behind`}}
+            description: >-
+              A switch-over now would lose that much. Check the replica's disk and network.
+        - alert: FinuanceWalArchivingFailing
+          expr: |
+            increase(cnpg_pg_stat_archiver_failed_count{job="finuance-db",namespace="{{ $ns }}"}[30m]) > 0
+            or
+            max by (pod) (cnpg_collector_pg_wal_archive_status{job="finuance-db",namespace="{{ $ns }}",value="ready"}) > 10
+          for: 30m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              WAL archiving to the backup bucket is failing
+            description: >-
+              Point-in-time recovery stops at the last archived WAL, and pg_wal grows until the disk is full. Check the bucket and its credentials.
+    {{- end }}
+    {{- if .Values.rules.backups }}
+    - name: finuance-backup.alerts
+      rules:
+        - alert: FinuanceBackupTooOld
+          expr: |
+            time() - max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{job="finuance-db",namespace="{{ $ns }}"}) > 26 * 3600
+          for: 15m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              The last successful backup is older than 26 hours
+            description: >-
+              {{`The newest base backup is {{ $value | humanizeDuration }} old (daily ScheduledBackup). RUNBOOK "Backups".`}}
+        - alert: FinuanceBackupMetricsAbsent
+          expr: absent(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{job="finuance-db",namespace="{{ $ns }}"})
+          for: 2h
+          labels: { severity: ticket }
+          annotations:
+            summary: >-
+              No backup has been reported
+            description: >-
+              The Barman Cloud plugin reports no available backup (none taken yet, the plugin isn't running, or the database PodMonitor is missing).
+    {{- end }}
+    {{- if .Values.rules.kubernetes }}
+    - name: finuance-kubernetes.alerts
+      rules:
+        - alert: FinuancePodCrashLooping
+          expr: max by (namespace, pod, container) (kube_pod_container_status_waiting_reason{namespace="{{ $ns }}",reason="CrashLoopBackOff"}) == 1
+          for: 5m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              {{`{{ $labels.pod }} ({{ $labels.container }}) is crash-looping`}}
+            description: >-
+              {{`kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }} -c {{ $labels.container }} --previous`}}
+    {{- end }}
+{{- end }}

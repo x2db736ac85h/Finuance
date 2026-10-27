@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -131,6 +132,11 @@ func TestLegacyMigrationOverHTTP(t *testing.T) {
 	groups := b.do("GET", "/groups", nil)
 	if !strings.Contains(groups.raw, "Wakacje nad morzem") || !strings.Contains(groups.raw, "Remont") {
 		t.Errorf("groups: %s", groups.raw)
+	}
+
+	// the run and each file's commit are in the activity log
+	if got := actions(t, b); !slices.Contains(got, "legacy.import_started") || slices.Index(got, "import.committed") < slices.Index(got, "legacy.import_started") {
+		t.Errorf("activity = %v", got)
 	}
 
 	// the list shows the run; another user sees nothing

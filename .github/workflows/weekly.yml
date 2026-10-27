@@ -1,0 +1,87 @@
+name: Weekly
+
+# The slower checks (PLAN 17.5, 17.6, 19.1): the OWASP ZAP scans, a k6 smoke test against the SLOs
+# and the demo-mode E2E. Mondays and on demand; failures are annotations on the run.
+on:
+  schedule:
+    - cron: "41 4 * * 1" # Mondays 04:41 UTC, after the k8s rehearsal
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    name: zap (baseline + API scan)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Start the stack
+        run: |
+          (cd web && npm ci --no-audit --no-fund)
+          make up
+      - name: ZAP
+        run: make zap
+      - name: Findings as annotations
+        if: always()
+        run: |
+          for f in zap-reports/baseline.json zap-reports/api.json; do
+            [ -f "$f" ] || continue
+            jq -r --arg f "$f" '.site[].alerts[] | "::notice title=ZAP \($f | sub(".*/"; "") | sub(".json"; "")) \(.pluginid)::\(.alert) (\(.riskdesc)), \(.instances | length) instance(s), e.g. \(.instances[0].method) \(.instances[0].uri)"' "$f"
+          done
+      - uses: actions/upload-artifact@v4.6.2
+        if: always()
+        with:
+          name: zap-reports
+          path: zap-reports
+          retention-days: 30
+
+  k6-smoke:
+    name: k6 smoke (SLO thresholds)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Start the stack and seed 5 users
+        run: |
+          (cd web && npm ci --no-audit --no-fund)
+          make up
+          make loadtest-seed LOADTEST_USERS=5 LOADTEST_ROWS=5000
+      - name: k6 (profile smoke)
+        run: make loadtest PROFILE=smoke LOADTEST_USERS=5
+      - name: Summary
+        if: always()
+        run: |
+          f=loadtest/results/summary-smoke.json
+          [ -f "$f" ] || exit 0
+          jq -r '"p95 of the SLO routes: \(.metrics["http_req_duration{slo:latency}"]["p(95)"] | floor) ms, failed: \(.metrics["http_req_failed{slo:latency}"].value * 100) %"' "$f" | tee -a "$GITHUB_STEP_SUMMARY" | sed 's/^/::notice title=k6 smoke::/'
+
+  demo-e2e:
+    name: demo-mode E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies and Chromium
+        working-directory: web
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Build, start compose.ci.yaml + compose.demo.yaml, run the demo specs
+        env:
+          CI: "true"
+        run: make test-e2e-demo

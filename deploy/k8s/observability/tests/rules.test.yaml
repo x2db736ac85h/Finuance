@@ -1,0 +1,287 @@
+# promtool unit tests for templates/prometheusrule.yaml, rendered with the default values
+# (tools/check-observability.sh writes the rules to rules.yaml next to this file). Every alert
+# fires on a series that should trigger it and stays quiet below its threshold.
+rule_files: [rules.yaml]
+evaluation_interval: 1m
+
+tests:
+  # Nothing failed (no 5xx series at all): the availability error ratio is 0, not missing, so the
+  # burn rates and the SLO dashboard show a value.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="2xx"}'
+        values: '0+100x120'
+    promql_expr_test:
+      - expr: finuance:slo_availability:error_ratio_rate1h
+        eval_time: 60m
+        exp_samples: [{ labels: 'finuance:slo_availability:error_ratio_rate1h', value: 0 }]
+    alert_rule_test:
+      - { eval_time: 90m, alertname: FinuanceAvailabilityBurnFast, exp_alerts: [] }
+
+  # 10 % of requests fail: both availability burn alerts fire; the latency ones don't.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="2xx"}'
+        values: '0+90x120'
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="5xx"}'
+        values: '0+10x120'
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",le="0.3"}'
+        values: '0+100x120'
+      - series: 'http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query"}'
+        values: '0+100x120'
+    promql_expr_test:
+      - expr: finuance:slo_availability:error_ratio_rate1h
+        eval_time: 60m
+        exp_samples: [{ labels: 'finuance:slo_availability:error_ratio_rate1h', value: 0.1 }]
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: FinuanceAvailabilityBurnFast
+        exp_alerts:
+          - exp_labels: { severity: page, slo: availability }
+            exp_annotations:
+              summary: Finuance API errors burn the 30-day availability budget 14× too fast
+              description: 'More than 10% of API requests failed with 5xx in the last hour (SLO 99.5 %). RUNBOOK: "api not ready", recent deploys.'
+      - eval_time: 60m
+        alertname: FinuanceAvailabilityBurnSlow
+        exp_alerts:
+          - exp_labels: { severity: ticket, slo: availability }
+            exp_annotations:
+              summary: Finuance API errors burn the 30-day availability budget 6× too fast
+              description: 10% of API requests failed with 5xx over 6 hours (SLO 99.5 %).
+      - eval_time: 60m
+        alertname: FinuanceLatencyBurnFast
+        exp_alerts: []
+
+  # 0.25 % of requests fail (half the budget rate) and the assistant's errors don't count: quiet.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="2xx"}'
+        values: '0+399x120'
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="5xx"}'
+        values: '0+1x120'
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/assistant/chats/{id}/messages",method="POST",status_class="5xx"}'
+        values: '0+1000x120'
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="GET /readyz",method="GET",status_class="5xx"}'
+        values: '0+1000x120'
+    alert_rule_test:
+      - { eval_time: 90m, alertname: FinuanceAvailabilityBurnFast, exp_alerts: [] }
+      - { eval_time: 90m, alertname: FinuanceAvailabilityBurnSlow, exp_alerts: [] }
+
+  # 90 % of table and chart requests take over 300 ms: both latency alerts fire.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/insights/cashflow",le="0.3"}'
+        values: '0+10x120'
+      - series: 'http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route="POST /api/v1/insights/cashflow"}'
+        values: '0+100x120'
+      # a slow route outside the SLO doesn't change the ratio
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="GET /api/v1/me/export",le="0.3"}'
+        values: '0+0x120'
+      - series: 'http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route="GET /api/v1/me/export"}'
+        values: '0+1000x120'
+    promql_expr_test:
+      - expr: finuance:slo_latency:error_ratio_rate1h
+        eval_time: 60m
+        exp_samples: [{ labels: 'finuance:slo_latency:error_ratio_rate1h', value: 0.9 }]
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: FinuanceLatencyBurnFast
+        exp_alerts:
+          - exp_labels: { severity: page, slo: latency }
+            exp_annotations:
+              summary: Table and chart requests are slow (latency budget burning 14× too fast)
+              description: '90% of /transactions/query and /insights requests took over 300 ms in the last hour (SLO: 95 % under 300 ms).'
+      - eval_time: 60m
+        alertname: FinuanceLatencyBurnSlow
+        exp_alerts:
+          - exp_labels: { severity: ticket, slo: latency }
+            exp_annotations:
+              summary: Table and chart requests are slow (latency budget burning 6× too fast)
+              description: 90% of /transactions/query and /insights requests took over 300 ms over 6 hours.
+
+  # 97 % are fast enough: quiet.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",le="0.3"}'
+        values: '0+97x420'
+      - series: 'http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query"}'
+        values: '0+100x420'
+    alert_rule_test:
+      - { eval_time: 400m, alertname: FinuanceLatencyBurnFast, exp_alerts: [] }
+      - { eval_time: 400m, alertname: FinuanceLatencyBurnSlow, exp_alerts: [] }
+
+  # Jobs and imports: a failed import, a job kind failing half the time, a quiet kind.
+  - interval: 1m
+    input_series:
+      - series: 'finuance_imports_total{job="finuance-worker",namespace="finuance",result="failed"}'
+        values: '0x30 1x30'
+      - series: 'finuance_jobs_total{job="finuance-worker",namespace="finuance",kind="commit_import",result="ok"}'
+        values: '0+1x60'
+      - series: 'finuance_jobs_total{job="finuance-worker",namespace="finuance",kind="commit_import",result="error"}'
+        values: '0+1x60'
+      - series: 'finuance_jobs_total{job="finuance-worker",namespace="finuance",kind="reclassify",result="ok"}'
+        values: '0+5x60'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: FinuanceImportFailed
+        exp_alerts: []
+      - eval_time: 45m
+        alertname: FinuanceImportFailed
+        exp_alerts:
+          - exp_labels: { severity: ticket, job: finuance-worker, namespace: finuance, result: failed }
+            exp_annotations:
+              summary: An import commit failed after all its retries
+              description: 1 import(s) failed in the last hour; the user sees "Try again". Check the worker's log line "commit_import failed".
+      - eval_time: 40m
+        alertname: FinuanceJobsFailing
+        exp_alerts:
+          - exp_labels: { severity: ticket, kind: commit_import }
+            exp_annotations:
+              summary: More than 10 % of commit_import jobs fail
+              description: 50% of commit_import jobs returned an error over 15 minutes (River retries them).
+
+  # Targets and the connection pool.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="finuance-api",namespace="finuance",pod="api-1"}'
+        values: '1x60'
+      - series: 'up{job="finuance-worker",namespace="finuance",pod="worker-1"}'
+        values: '1x10 0x50'
+      - series: 'pgxpool_acquired_conns{job="finuance-api",namespace="finuance",pod="api-1"}'
+        values: '19x60'
+      - series: 'pgxpool_max_conns{job="finuance-api",namespace="finuance",pod="api-1"}'
+        values: '20x60'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: FinuanceTargetDown
+        exp_alerts:
+          - exp_labels: { severity: page, job: finuance-worker, namespace: finuance, pod: worker-1 }
+            exp_annotations:
+              summary: finuance-worker pod worker-1 can't be scraped
+              description: Prometheus has failed to scrape it for 5 minutes; the pod is down or its metrics port is blocked.
+      - { eval_time: 30m, alertname: FinuanceApiAbsent, exp_alerts: [] }
+      - eval_time: 30m
+        alertname: FinuanceDatabasePoolSaturated
+        exp_alerts:
+          - exp_labels: { severity: ticket, job: finuance-api, pod: api-1 }
+            exp_annotations:
+              summary: api-1 uses over 90 % of its database connections
+              description: Requests wait for connections; raise FINUANCE_DB_MAX_CONNS or find the slow queries.
+
+  # No api target at all.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="finuance-worker",namespace="finuance",pod="worker-1"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: FinuanceApiAbsent
+        exp_alerts:
+          - exp_labels: { severity: page }
+            exp_annotations:
+              summary: No Finuance api pod is up
+              description: No api target has answered for 10 minutes (or the PodMonitor is missing).
+
+  # The assistant's model server fails for one connection only.
+  - interval: 1m
+    input_series:
+      - series: 'finuance_assistant_model_requests_total{job="finuance-api",namespace="finuance",connection="lmstudio",result="ok"}'
+        values: '0+1x60'
+      - series: 'finuance_assistant_model_requests_total{job="finuance-api",namespace="finuance",connection="lmstudio",result="unreachable"}'
+        values: '0+3x60'
+      - series: 'finuance_assistant_model_requests_total{job="finuance-api",namespace="finuance",connection="cloud",result="ok"}'
+        values: '0+5x60'
+    alert_rule_test:
+      - eval_time: 45m
+        alertname: FinuanceAssistantModelErrors
+        exp_alerts:
+          - exp_labels: { severity: ticket, connection: lmstudio }
+            exp_annotations:
+              summary: The model server of the assistant connection lmstudio fails
+              description: 75% of model requests failed over 15 minutes (outside the SLO; the rest of the app is unaffected).
+
+  # The database: one instance down, a lagging replica, WAL archiving failing.
+  - interval: 1m
+    input_series:
+      - series: 'cnpg_collector_up{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '1x60'
+      - series: 'cnpg_collector_up{job="finuance-db",namespace="finuance",pod="finuance-db-2"}'
+        values: '1x10 0x50'
+      - series: 'cnpg_pg_replication_lag{job="finuance-db",namespace="finuance",pod="finuance-db-2"}'
+        values: '600x60'
+      - series: 'cnpg_pg_stat_archiver_failed_count{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '0+1x60'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: FinuancePostgresDown
+        exp_alerts:
+          - exp_labels: { severity: page, job: finuance-db, namespace: finuance, pod: finuance-db-2 }
+            exp_annotations:
+              summary: PostgreSQL on finuance-db-2 is down
+              description: The instance manager reports PostgreSQL not running for 5 minutes. RUNBOOK "Postgres down".
+      - { eval_time: 30m, alertname: FinuancePostgresAbsent, exp_alerts: [] }
+      - eval_time: 30m
+        alertname: FinuancePostgresReplicationLag
+        exp_alerts:
+          - exp_labels: { severity: ticket, pod: finuance-db-2 }
+            exp_annotations:
+              summary: The replica finuance-db-2 is 10m 0s behind
+              description: A switch-over now would lose that much. Check the replica's disk and network.
+      - eval_time: 59m
+        alertname: FinuanceWalArchivingFailing
+        exp_alerts:
+          - exp_labels: { severity: page, job: finuance-db, namespace: finuance, pod: finuance-db-1 }
+            exp_annotations:
+              summary: WAL archiving to the backup bucket is failing
+              description: Point-in-time recovery stops at the last archived WAL, and pg_wal grows until the disk is full. Check the bucket and its credentials.
+
+  # Backups: the last one stays at time 0 (28 hours old at the end); then one that keeps up.
+  - interval: 1m
+    input_series:
+      - series: 'barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '0x1700'
+    alert_rule_test:
+      - { eval_time: 25h, alertname: FinuanceBackupTooOld, exp_alerts: [] }
+      - eval_time: 28h
+        alertname: FinuanceBackupTooOld
+        exp_alerts:
+          - exp_labels: { severity: page }
+            exp_annotations:
+              summary: The last successful backup is older than 26 hours
+              description: The newest base backup is 1d 4h 0m 0s old (daily ScheduledBackup). RUNBOOK "Backups".
+      - { eval_time: 28h, alertname: FinuanceBackupMetricsAbsent, exp_alerts: [] }
+  - interval: 1m
+    input_series:
+      - series: 'barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '0+60x1700'
+    alert_rule_test:
+      - { eval_time: 28h, alertname: FinuanceBackupTooOld, exp_alerts: [] }
+  - interval: 1m
+    input_series:
+      - series: 'cnpg_collector_up{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '1x200'
+    alert_rule_test:
+      - eval_time: 150m
+        alertname: FinuanceBackupMetricsAbsent
+        exp_alerts:
+          - exp_labels: { severity: ticket, job: finuance-db, namespace: finuance }
+            exp_annotations:
+              summary: No backup has been reported
+              description: The Barman Cloud plugin reports no available backup (none taken yet, the plugin isn't running, or the database PodMonitor is missing).
+
+  # A crash-looping pod in Finuance's namespace (another namespace doesn't count).
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_container_status_waiting_reason{namespace="finuance",pod="worker-1",container="worker",reason="CrashLoopBackOff"}'
+        values: '0x5 1x20'
+      - series: 'kube_pod_container_status_waiting_reason{namespace="other",pod="x-1",container="x",reason="CrashLoopBackOff"}'
+        values: '1x25'
+    alert_rule_test:
+      - { eval_time: 8m, alertname: FinuancePodCrashLooping, exp_alerts: [] }
+      - eval_time: 15m
+        alertname: FinuancePodCrashLooping
+        exp_alerts:
+          - exp_labels: { severity: page, namespace: finuance, pod: worker-1, container: worker }
+            exp_annotations:
+              summary: worker-1 (worker) is crash-looping
+              description: kubectl -n finuance logs worker-1 -c worker --previous

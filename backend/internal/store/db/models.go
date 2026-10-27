@@ -61,6 +61,17 @@ type AssistantSetting struct {
 	UpdatedAt     time.Time
 }
 
+type AuditLog struct {
+	ID       int64
+	UserID   uuid.UUID
+	At       time.Time
+	Action   string
+	EntityID *string
+	Ip       *netip.Addr
+	Browser  string
+	Meta     []byte
+}
+
 type BankCategoryMap struct {
 	UserID     uuid.UUID
 	NameN      string

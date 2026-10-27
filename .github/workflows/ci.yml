@@ -52,7 +52,15 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: make check
-        run: make check
+        # Failing lines become annotations: job logs can't be read from the cloud sessions that
+        # build this project, annotations can (as in the k8s rehearsal).
+        run: |
+          set -o pipefail
+          make check 2>&1 | tee "$RUNNER_TEMP/check.log" || {
+            grep -E -- '--- FAIL|^FAIL|_test\.go:[0-9]+:|\.go:[0-9]+:[0-9]+:|gen-check:|check-[a-z-]+:|✗|×|Error:|error TS|npm ERR|make: \*\*\*' "$RUNNER_TEMP/check.log" \
+              | head -30 | sed 's/^/::error title=make check::/'
+            exit 1
+          }
 
   db:
     name: db bootstrap (Compose)
@@ -159,8 +167,34 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
             image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
 
+  security:
+    name: security (repository scan, npm audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # PLAN 17.6 and the Phase 14 gate follow-up: no accepted findings before the public demo.
+      # Go and npm dependencies (dev dependencies included), secrets, and the misconfiguration
+      # checks for the Dockerfiles, Compose and Kubernetes files. The two Helm charts are rendered
+      # with every values file and config-scanned by the helm job, so their sources are skipped
+      # here (they don't render without the required values).
+      - name: Trivy repository scan (HIGH/CRITICAL fail the build)
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" -w /repo -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
+            fs --ignorefile /.trivyignore --scanners vuln,secret,misconfig --include-dev-deps \
+            --severity HIGH,CRITICAL --exit-code 1 --no-progress \
+            --skip-dirs deploy/helm/finuance --skip-dirs deploy/k8s/db .
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+      - name: npm audit (HIGH/CRITICAL fail the build)
+        working-directory: web
+        run: |
+          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high
+
   helm:
-    name: helm (charts + Argo CD manifests)
+    name: helm (charts, Argo CD manifests, dashboards and alert rules)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -182,7 +216,11 @@ jobs:
           go install "helm.sh/helm/v3/cmd/helm@${HELM_VERSION}"
           go install "github.com/yannh/kubeconform/cmd/kubeconform@${KUBECONFORM_VERSION}"
           go install "github.com/bitnami/sealed-secrets/cmd/kubeseal@${KUBESEAL_VERSION}"
-      - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas)
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+      # tools/check-observability.sh also runs promtool from the pinned prom/prometheus image.
+      - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas, promtool)
         run: RENDER_DIR="$RUNNER_TEMP/rendered" YQ="$(go env GOPATH)/bin/yq" make helm-lint
       - name: Trivy config scan of the rendered manifests (HIGH/CRITICAL fail the build)
         run: |

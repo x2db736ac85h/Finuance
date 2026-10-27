@@ -157,6 +157,20 @@ func TestDuplicatesHTTP(t *testing.T) {
 	expect(t, b.do("PUT", kpath, map[string]any{"mode": "merge"}), 422, "validation_failed")
 	expect(t, b.do("GET", "/duplicates?limit=61", nil), 422, "validation_failed")
 
+	// Each decision is in the activity log (the failed requests are not).
+	var decided, reset int
+	for _, a := range actions(t, b) {
+		switch a {
+		case "duplicates.decided":
+			decided++
+		case "duplicates.reset":
+			reset++
+		}
+	}
+	if decided != 2 || reset != 1 {
+		t.Errorf("activity: %d decided, %d reset, want 2 and 1", decided, reset)
+	}
+
 	// Another user sees and changes nothing.
 	o := signedIn(t, e, "other-"+testEmail(t))
 	if f := o.do("GET", "/duplicates?accountIds="+accID, nil); f.code != 200 || num(f.body["total"]) != 0 {

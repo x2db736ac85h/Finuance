@@ -110,6 +110,27 @@ button.mini-drop {
   color: var(--accent);
 }
 
+.auth-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+/* demo instance (PLAN 19.1): a banner row above the title bar */
+.app.is-demo {
+  grid-template-rows: auto 2.75rem minmax(0, 1fr) 1.625rem;
+}
+.demo-banner {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--text);
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--line);
+}
+
 /* settings pages */
 .settings {
   flex: 1;

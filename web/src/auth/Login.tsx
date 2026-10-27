@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
-import { useLogin, useMeta } from '../api/hooks/me';
+import { useLogin, useMeta, useStartDemo } from '../api/hooks/me';
 import { errorMessage } from '../lib/errors';
 import { Button } from '../ui/Button';
 import { TextInput } from '../ui/inputs';
@@ -13,6 +13,7 @@ export function Login() {
   const navigate = useNavigate();
   const meta = useMeta();
   const login = useLogin();
+  const demo = useStartDemo();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,6 +33,16 @@ export function Login() {
         },
       },
     );
+  };
+
+  const tryDemo = () => {
+    setError('');
+    demo.mutate(undefined, {
+      onSuccess: () => void navigate('/t/all', { replace: true }),
+      onError: (e) => {
+        setError(errorMessage(e));
+      },
+    });
   };
 
   return (
@@ -65,6 +76,14 @@ export function Login() {
       <div className="lock-err" role="alert">
         {error}
       </div>
+      {meta.data?.demoMode && (
+        <div className="auth-demo">
+          <Button type="button" onClick={tryDemo} disabled={demo.isPending}>
+            {demo.isPending ? 'Preparing the demo…' : 'Try the demo'}
+          </Button>
+          <p className="auth-alt">A year of sample transactions, yours alone and deleted after 24 hours.</p>
+        </div>
+      )}
       {meta.data?.signupEnabled && (
         <p className="auth-alt">
           New here? <Link to="/signup">Create an account</Link>

@@ -1,0 +1,6 @@
+# The local observability profile (deploy/compose/observability/rules.yaml): Compose has no
+# CloudNativePG, backups or kube-state-metrics, so only the SLO and app rules.
+rules:
+  database: false
+  backups: false
+  kubernetes: false

@@ -181,11 +181,12 @@ async function groupFor(p: Proposal): Promise<string> {
 /**
  * Applies an assistant proposal (PLAN 15.7) through the normal endpoints with the user's session:
  * the category or group first when it is new, then the bulk change or the rule. The main request
- * carries X-Assistant-Chat, so the server logs it as an applied proposal. Returns how many
+ * carries X-Assistant-Chat and X-Assistant-Proposal, so the server records it in the activity log
+ * and the chat shows it as applied after a reload. Returns how many
  * transactions changed (set_*) or the rule's current matches (create_rule).
  */
 export async function applyProposal(p: Proposal, chatId: string): Promise<number> {
-  const header = { 'X-Assistant-Chat': chatId };
+  const header = { 'X-Assistant-Chat': chatId, 'X-Assistant-Proposal': p.key };
   switch (p.action) {
     case 'set_category': {
       const id = await categoryFor(p);

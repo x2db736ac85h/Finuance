@@ -1,0 +1,12 @@
+# CI render: everything on, with the e-mail receiver (tools/check-observability.sh).
+appNamespace: finuance
+rules:
+  labels: { release: kube-prometheus-stack }
+alerting:
+  email:
+    enabled: true
+    to: alerts@example.com
+    from: finuance@example.com
+    smarthost: smtp.example.com:587
+    authUsername: finuance@example.com
+  labels: { alertmanagerConfig: finuance }

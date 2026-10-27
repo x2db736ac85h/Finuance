@@ -31,6 +31,14 @@ const (
 // password wrong. It wraps platform.ErrUnauthenticated (401).
 var ErrInvalidCredentials = fmt.Errorf("invalid email or password: %w", platform.ErrUnauthenticated)
 
+// FailedLoginError is ErrInvalidCredentials for an existing account with a wrong password. It
+// carries the account's id for that user's audit log (PLAN 17.6) and is otherwise the same error:
+// same message, same 401, same timing, so it reveals nothing about which emails exist.
+type FailedLoginError struct{ UserID uuid.UUID }
+
+func (e *FailedLoginError) Error() string { return ErrInvalidCredentials.Error() }
+func (e *FailedLoginError) Unwrap() error { return ErrInvalidCredentials }
+
 // Config are the auth settings (from config.Config).
 type Config struct {
 	Params         Params
@@ -209,8 +217,11 @@ func (s *Service) Login(ctx context.Context, email, password, previousToken stri
 	if err != nil && !errors.Is(err, ErrMalformedHash) {
 		return User{}, "", err
 	}
-	if !known || !ok {
+	if !known {
 		return User{}, "", ErrInvalidCredentials
+	}
+	if !ok {
+		return User{}, "", &FailedLoginError{UserID: u.ID}
 	}
 	var rehash string
 	if NeedsRehash(u.PasswordHash, s.cfg.Params) {

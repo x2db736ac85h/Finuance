@@ -132,6 +132,9 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 			Match: []byte(`{"search":"kawa"}`), SetCategoryID: &cat.ID, Now: now}); err != nil {
 			return fmt.Errorf("rule: %w", err)
 		}
+		if err := q.InsertAuditEvent(ctx, db.InsertAuditEventParams{UserID: u, Action: "auth.login", Meta: []byte(`{}`)}); err != nil {
+			return fmt.Errorf("audit event: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
@@ -139,6 +142,9 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 	}
 	return d
 }
+
+// appendOnlyTables can't be updated by the app role at all.
+var appendOnlyTables = []string{"audit_log"}
 
 // rlsFixture is two seeded users, A and B.
 func rlsFixture(t *testing.T) (*testutil.DB, *store.Store, tenantData, tenantData, []string) {
@@ -188,9 +194,12 @@ func TestRLSCannotWriteOtherUsersRows(t *testing.T) {
 	ctx := context.Background()
 	err := s.WithUser(ctx, a.user, func(_ *db.Queries, tx pgx.Tx) error {
 		for _, table := range tables {
-			up, err := tx.Exec(ctx, `UPDATE `+table+` SET user_id = user_id WHERE user_id = $1`, b.user)
-			if err != nil {
-				return fmt.Errorf("%s update: %w", table, err)
+			var up pgconn.CommandTag
+			if !slices.Contains(appendOnlyTables, table) { // no UPDATE grant at all (TestAuditLogIsAppendOnly)
+				var err error
+				if up, err = tx.Exec(ctx, `UPDATE `+table+` SET user_id = user_id WHERE user_id = $1`, b.user); err != nil {
+					return fmt.Errorf("%s update: %w", table, err)
+				}
 			}
 			del, err := tx.Exec(ctx, `DELETE FROM `+table+` WHERE user_id = $1`, b.user)
 			if err != nil {

@@ -35,6 +35,9 @@ type DB struct {
 	Owner    *pgxpool.Pool // finuance_owner: owns the schema
 	AppDSN   string
 	OwnerDSN string
+	// SuperDSN is the container's superuser, which bypasses row level security. Only for tests
+	// that must create what the app roles can't (e.g. audit events older than the retention).
+	SuperDSN string
 }
 
 // Main is called from TestMain: os.Exit(run(...)).  In -short mode no container is started and tests that
@@ -100,7 +103,7 @@ func StartPostgres(ctx context.Context) (*DB, func(), error) {
 		u.Path = "/finuance"
 		return u.String()
 	}
-	db := &DB{OwnerDSN: dsn("finuance_owner", ownerPassword), AppDSN: dsn("finuance_app", appPassword)}
+	db := &DB{OwnerDSN: dsn("finuance_owner", ownerPassword), AppDSN: dsn("finuance_app", appPassword), SuperDSN: dsn("postgres", superPassword)}
 	if db.Owner, err = pgxpool.New(ctx, db.OwnerDSN); err != nil {
 		stop()
 		return nil, nil, err

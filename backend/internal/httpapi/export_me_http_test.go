@@ -53,7 +53,7 @@ func TestExportMeHTTP(t *testing.T) {
 	files := unzip(t, r.raw)
 	for _, name := range []string{"manifest.json", "accounts.json", "categories.json", "groups.json", "budgets.json", "annotations.json",
 		"dedupe-overrides.json", "imports.json", "investments.json", "preferences.json", "assistant.json", "transactions.csv",
-		"rules.json", "category-aliases.json"} {
+		"rules.json", "category-aliases.json", "activity.json"} {
 		if _, ok := files[name]; !ok {
 			t.Errorf("missing %s (have %d files)", name, len(files))
 		}
@@ -80,6 +80,15 @@ func TestExportMeHTTP(t *testing.T) {
 		len(groups) != 1 || num(groups[0]["budgetMinor"]) != 50000 {
 		t.Errorf("rules %s\naliases %s\ngroups %s", files["rules.json"], files["category-aliases.json"], files["groups.json"])
 	}
+	// Phase 17: the activity log; this export is recorded after its documents were read
+	var act []map[string]any
+	_ = json.Unmarshal(files["activity.json"], &act)
+	if len(act) != 1 || act[0]["action"] != "import.committed" || act[0]["entityId"] != imports[0]["id"] || act[0]["at"] == nil {
+		t.Errorf("activity %s", files["activity.json"])
+	}
+	if got := actions(t, b); len(got) != 2 || got[1] != "export.data" {
+		t.Errorf("activity after the export = %v", got)
+	}
 	if !strings.Contains(string(files["preferences.json"]), `"theme": "dark"`) || string(files["investments.json"]) != "null\n" {
 		t.Errorf("preferences %s investments %s", files["preferences.json"], files["investments.json"])
 	}
@@ -98,8 +107,8 @@ func TestExportMeHTTP(t *testing.T) {
 	o := other.do("GET", "/me/export", nil)
 	expect(t, o, 200, "")
 	of := unzip(t, o.raw)
-	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 14 ||
-		string(of["rules.json"]) != "[]\n" || string(of["category-aliases.json"]) != "[]\n" {
+	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 15 ||
+		string(of["rules.json"]) != "[]\n" || string(of["category-aliases.json"]) != "[]\n" || string(of["activity.json"]) != "[]\n" {
 		t.Errorf("other user's export: accounts %s, %d files", of["accounts.json"], len(of))
 	}
 }

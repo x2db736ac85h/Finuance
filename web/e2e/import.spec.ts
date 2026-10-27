@@ -16,10 +16,10 @@ async function newAccount(page: Page, name: string) {
   const w = win(page);
   const input = w.getByRole('textbox', { name: 'New account name' });
   if (!(await input.isVisible()))
-    await w.getByRole('combobox', { name: 'Account' }).selectOption({ label: 'New account…' });
+    await w.getByRole('combobox', { name: 'Account', exact: true }).selectOption({ label: 'New account…' });
   await input.fill(name);
   await w.getByRole('button', { name: 'Create' }).click();
-  await expect(w.getByRole('combobox', { name: 'Account' })).toHaveValue(/[0-9a-f-]{36}/);
+  await expect(w.getByRole('combobox', { name: 'Account', exact: true })).toHaveValue(/[0-9a-f-]{36}/);
 }
 
 /** Sets a column's meaning with the role menu on its name. */

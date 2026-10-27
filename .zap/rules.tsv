@@ -1,0 +1,18 @@
+# ZAP scan rules (tools/zap-scan.sh, weekly workflow): <rule id> TAB <IGNORE|INFO|WARN|FAIL> TAB <name>.
+# Rules not listed keep ZAP's default (WARN), and a WARN fails the scan. Every rule below that is
+# turned down has its reason here and in docs/security-scan.md.
+#
+# 10109 Modern Web Application: informational; ZAP noticed a single-page app and suggests its AJAX
+#       spider. The API scan covers every operation from api/openapi.yaml instead.
+10109	IGNORE	(Modern Web Application)
+# 100001 Unexpected Content-Type: the API scan expects JSON everywhere, but /api/v1/me/export is a
+#       zip by design, the SPA answers its own routes (and ZAP's random paths) with index.html,
+#       and /api and /api/v1 redirect to their trailing-slash forms (no data in any of them).
+100001	IGNORE	(Unexpected Content-Type was returned)
+# 10096 Timestamp Disclosure: false positive; the API returns ISO dates only. The flagged number in
+#       GET /me was a display name ZAP had just written itself. Kept visible as INFO.
+10096	INFO	(Timestamp Disclosure - Unix)
+# 2 Private IP Disclosure: GET /me/sessions shows the signed-in user the address of each of their
+#       own sessions (Settings → Sessions), by design; in the scan that is the Docker network's.
+#       Kept visible as INFO.
+2	INFO	(Private IP Disclosure)

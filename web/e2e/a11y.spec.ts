@@ -51,7 +51,7 @@ test('table, import preview, overview, settings, assistant', async ({ page }) =>
   await expect(page.getByText('Recurring payments').first()).toBeVisible();
   await check(page, 'overview');
 
-  for (const s of ['appearance', 'profile', 'sessions', 'data']) {
+  for (const s of ['appearance', 'profile', 'sessions', 'activity', 'data']) {
     await page.goto(`/settings/${s}`);
     await expect(page.locator('.set-body')).toBeVisible();
     await check(page, `settings ${s}`);

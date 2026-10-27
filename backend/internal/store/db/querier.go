@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,6 +15,10 @@ type Querier interface {
 	// Transaction count and date range per account (GET /accounts).
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
+	// The data export: every row of the user, oldest first.
+	AllAuditEvents(ctx context.Context, userID uuid.UUID) ([]AllAuditEventsRow, error)
+	// The proposal keys of one chat that the user applied (the panel's "Applied" state).
+	AppliedProposals(ctx context.Context, arg AppliedProposalsParams) ([]string, error)
 	// Commit step 1b: re-apply user annotations (group, manual category, note, manual transfer mark)
 	// to freshly inserted transactions, so labels survive delete + re-import.
 	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
@@ -47,6 +52,8 @@ type Querier interface {
 	// users and sessions are outside RLS (PLAN §5.3); only the auth package uses these queries,
 	// through store.WithoutUser.
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// The planner's enable_nestloop setting (to restore it after SetEnableNestLoop).
+	CurrentEnableNestLoop(ctx context.Context) (string, error)
 	// Cascades to the account's imports, transactions, annotations and overrides.
 	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
 	DeleteAssistantChat(ctx context.Context, arg DeleteAssistantChatParams) (int64, error)
@@ -56,9 +63,15 @@ type Querier interface {
 	// Transactions keep existing with category_id NULL; budgets of the category go with it.
 	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error)
 	DeleteCategoryAlias(ctx context.Context, arg DeleteCategoryAliasParams) error
+	// Removes a demo user whose seeding failed; never touches a normal account.
+	DeleteDemoUser(ctx context.Context, id uuid.UUID) (int64, error)
+	// Periodic cleanup of demo visitors (PLAN 19.1); cascades to all of their data.
+	DeleteDemoUsersCreatedBefore(ctx context.Context, cutoff time.Time) (int64, error)
 	// An annotation with nothing left (no group, no manual category, no note, no transfer override)
 	// is deleted (PLAN §4.4 "explicit clear").
 	DeleteEmptyAnnotations(ctx context.Context, userID uuid.UUID) (int64, error)
+	// The daily cleanup; the delete policy allows only rows past the retention anyway.
+	DeleteExpiredAuditEvents(ctx context.Context, userID uuid.UUID) (int64, error)
 	// Periodic cleanup: absolute expiry passed, or idle for longer than the idle timeout.
 	DeleteExpiredSessions(ctx context.Context, arg DeleteExpiredSessionsParams) (int64, error)
 	// Removes the group and its labels only (ON DELETE SET NULL on transactions and annotations).
@@ -160,6 +173,9 @@ type Querier interface {
 	// sidebar source labels b1, b2, … (task 6.12).
 	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
 	InsertAssistantMessage(ctx context.Context, arg InsertAssistantMessageParams) (InsertAssistantMessageRow, error)
+	// The audit log (PLAN task 17.6, migration 00010). Rows are only ever inserted, listed and, after
+	// the retention, deleted (the table's policies allow nothing else).
+	InsertAuditEvent(ctx context.Context, arg InsertAuditEventParams) error
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
@@ -178,6 +194,8 @@ type Querier interface {
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
 	ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]AssistantChat, error)
 	ListAssistantMessages(ctx context.Context, arg ListAssistantMessagesParams) ([]AssistantMessage, error)
+	// Newest first, a page at a time: rows with an id below before_id (0 = from the newest).
+	ListAuditEvents(ctx context.Context, arg ListAuditEventsParams) ([]ListAuditEventsRow, error)
 	ListBudgets(ctx context.Context, userID uuid.UUID) ([]ListBudgetsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
 	// Every bank category name with the category it now goes to (NULL: uncategorised), for the data export.
@@ -251,6 +269,9 @@ type Querier interface {
 	SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error
 	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
 	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
+	// Lets the planner use nested loops or not, for the rest of the transaction (set_config with
+	// is_local). The commit turns them off after a bulk insert (ledger/commit.go, afterBulkInsert).
+	SetEnableNestLoop(ctx context.Context, value string) error
 	// NULL removes the budget.
 	SetGroupBudget(ctx context.Context, arg SetGroupBudgetParams) (int64, error)
 	// Moves an import along previewed → committing → committed | failed. from_status guards the move,

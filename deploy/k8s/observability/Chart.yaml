@@ -1,0 +1,6 @@
+apiVersion: v2
+name: finuance-observability
+description: Finuance dashboards, SLO and alert rules, and the alert e-mail receiver (PLAN 17.3, 17.4)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

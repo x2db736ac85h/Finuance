@@ -20,14 +20,14 @@ Before that, the namespace needs the two basic-auth secrets of the database role
 
 | Object | Notes |
 |---|---|
-| Deployments `-api`, `-worker`, `-web` | non-root (distroless uid 65532, nginx uid 101), read-only root filesystem, no capabilities, seccomp `RuntimeDefault`, no service account token; rolling updates with `maxUnavailable: 0`; startup, readiness (`/readyz`) and liveness (`/healthz`) probes |
+| Deployments `-api`, `-worker`, `-web` | non-root (distroless uid 65532, nginx as uid 10101), read-only root filesystem, no capabilities, seccomp `RuntimeDefault`, no service account token; rolling updates with `maxUnavailable: 0`; startup, readiness (`/readyz`) and liveness (`/healthz`) probes |
 | Job `-migrate` | `finuance migrate up` as the owner role; Helm `pre-install,pre-upgrade` hook and Argo CD `PreSync` |
 | Services `-api` (8080 + metrics 9090), `-web` (8080) | the worker exposes only its metrics port, without a Service |
 | Ingress + Traefik Middleware | `/api/` → api, `/` → web; HSTS; TLS by cert-manager, Traefik's ACME resolver, an existing secret, or none |
 | HPA, PodDisruptionBudgets | api 2–4 pods at 70 % CPU; one pod of api and web always up |
 | NetworkPolicies | default deny; Traefik → web/api; api, worker, migrations → PostgreSQL; DNS; metrics from the monitoring namespace; api → the model servers only when the assistant is on; the OTLP collector when set |
 | ConfigMap `-env` | non-secret settings, including the password-less database URL (the password comes from `PGPASSWORD`) |
-| ServiceMonitor | optional, needs the Prometheus Operator |
+| PodMonitor (api + worker, `job` = `finuance-api` / `finuance-worker`) | optional, needs the Prometheus Operator |
 
 ## Values
 
@@ -46,11 +46,10 @@ Wrong settings stop the render with a message (no host, no issuer, a path in `pu
 
 ## Checks
 
-`make helm-lint` ([`tools/check-helm.sh`](../../../tools/check-helm.sh)) lints and renders the chart with [`ci/homelab-like-values.yaml`](ci/homelab-like-values.yaml) (every optional part on), [`ci/minimal-values.yaml`](ci/minimal-values.yaml) and the homelab values. It validates the output with `kubeconform -strict` (CRD schemas included) and checks that wrong settings fail. The CI `helm` job also scans the rendered manifests with `trivy config`, and HIGH or CRITICAL findings fail the build. The LOW/MEDIUM findings are deliberate:
+`make helm-lint` ([`tools/check-helm.sh`](../../../tools/check-helm.sh)) lints and renders the chart with [`ci/homelab-like-values.yaml`](ci/homelab-like-values.yaml) (every optional part on), [`ci/minimal-values.yaml`](ci/minimal-values.yaml) and the homelab values. It validates the output with `kubeconform -strict` (CRD schemas included) and checks that wrong settings fail. The CI `helm` job also scans the rendered manifests with `trivy config`, and HIGH or CRITICAL findings fail the build. The remaining LOW/MEDIUM findings are deliberate (reviewed in [docs/security-scan.md](../../../docs/security-scan.md)):
 - no CPU limits, so the pods aren't throttled;
-- nginx's fixed uid 101;
 - no `namespace:` in the rendered files (Helm sets it);
 - no registry allow-list;
 - `FINUANCE_MAX_UPLOAD_BYTES`, which the scanner reads as sensitive.
 
-Phase 17 reviews them with the chart scan.
+The web pod runs nginx as uid 10101 rather than the image's 101 (Phase 17 chart scan).

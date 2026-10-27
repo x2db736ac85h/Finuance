@@ -1,0 +1,41 @@
+# Dashboards, recording and alerting rules, and the e-mail receiver for one Finuance installation
+# (PLAN 17.3, 17.4; docs/SLO.md). Needs the Prometheus Operator CRDs and Grafana's dashboard
+# sidecar. The app chart's PodMonitor (podMonitor.enabled) and the database chart's
+# (cluster.podMonitor) must be on, so the series below exist.
+
+# Where Finuance runs: the namespace of the app and database charts.
+appNamespace: finuance
+
+dashboards:
+  enabled: true
+  # Labels Grafana's sidecar looks for (kube-prometheus-stack: grafana.sidecar.dashboards.label).
+  labels:
+    grafana_dashboard: "1"
+  # Grafana folder (sidecar folderAnnotation).
+  folder: Finuance
+  folderAnnotation: grafana_folder
+
+rules:
+  enabled: true
+  # Labels the Prometheus ruleSelector matches (kube-prometheus-stack: release: <release name>).
+  labels: {}
+  # Alerts on the database and its backups (off when the database isn't CloudNativePG with the
+  # Barman Cloud plugin).
+  database: true
+  backups: true
+  # Pods in CrashLoopBackOff (needs kube-state-metrics).
+  kubernetes: true
+
+alerting:
+  # An AlertmanagerConfig that sends every Finuance alert by e-mail (Phase 17 decision). The SMTP
+  # password comes from a Secret (sealed in Phase 18: tools/seal-secrets.sh).
+  email:
+    enabled: false
+    to: ""
+    from: ""
+    smarthost: ""            # host:port, e.g. smtp.example.com:587
+    authUsername: ""
+    passwordSecret: { name: finuance-alert-smtp, key: password }
+    requireTLS: true
+  # Labels the Alertmanager's alertmanagerConfigSelector matches.
+  labels: {}

@@ -65,10 +65,6 @@ spec:
     enablePodAntiAffinity: true
     topologyKey: kubernetes.io/hostname
     podAntiAffinityType: {{ $c.podAntiAffinityType }}
-  {{- if $c.podMonitor }}
-  monitoring:
-    enablePodMonitor: true
-  {{- end }}
   {{- if .Values.backup.enabled }}
   plugins:
     - name: {{ include "db.plugin" . }}

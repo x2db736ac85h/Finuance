@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"go.opentelemetry.io/otel/trace/noop"
@@ -78,24 +79,71 @@ func readPassword(r io.Reader) (string, error) {
 	return line, nil
 }
 
-// SeedDemo gives the user with this email the demo account and its committed demo year
-// (finuance seed-demo --email …). It refuses when the user already has a demo account.
-func SeedDemo(ctx context.Context, cfg config.Config, email string, out func(format string, args ...any)) error {
+// SeedInput is finuance seed-demo's input.
+type SeedInput struct {
+	Email string
+	// Rows: about this many demo rows instead of the demo year (0: the demo year).
+	Rows int
+	// Users > 0 seeds that many users for the load test (PLAN 17.5), named after Email with a
+	// number (loadtest@example.test → loadtest+001@example.test …), creating the missing ones with
+	// the password from Password; users that already have a demo account are skipped.
+	Users    int
+	Password io.Reader
+}
+
+// SeedDemo gives the user with this email the demo account and its committed demo data
+// (finuance seed-demo -email …). It refuses when the user already has a demo account. With
+// Users it seeds a whole set of load-test users.
+func SeedDemo(ctx context.Context, cfg config.Config, in SeedInput, out func(format string, args ...any)) error {
 	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider())
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
 	st := store.New(pool)
-	u, err := NewAuth(st, cfg).UserByEmail(ctx, email)
+	svc := NewAuth(st, cfg)
+	led := ledger.New(st, platform.SystemClock{})
+	days := 0
+	if in.Rows > 0 {
+		days = int(math.Ceil(float64(in.Rows) / ledger.DemoRowsPerDay))
+	}
+	seed := func(u auth.User) error {
+		s, err := led.SeedDemoDays(ctx, u.ID, days)
+		if err != nil {
+			return err
+		}
+		out("seeded %q for %s: %d transactions (%s – %s)", s.Account.Name, u.Email, s.Result.New, s.Account.FirstOn, s.Account.LastOn)
+		return nil
+	}
+	if in.Users <= 0 {
+		u, err := svc.UserByEmail(ctx, in.Email)
+		if err != nil {
+			return err
+		}
+		return seed(u)
+	}
+	password, err := readPassword(in.Password)
 	if err != nil {
 		return err
 	}
-	seed, err := ledger.New(st, platform.SystemClock{}).SeedDemo(ctx, u.ID)
-	if err != nil {
-		return err
+	local, domain, ok := strings.Cut(strings.TrimSpace(in.Email), "@")
+	if !ok || local == "" || domain == "" {
+		return fmt.Errorf("-email %q: want name@domain (the users become name+001@domain …)", in.Email)
 	}
-	acc, res := seed.Account, seed.Result
-	out("seeded %q for %s: %d transactions (%s – %s)", acc.Name, u.Email, res.New, acc.FirstOn, acc.LastOn)
+	for i := 1; i <= in.Users; i++ {
+		email := fmt.Sprintf("%s+%03d@%s", local, i, domain)
+		u, err := svc.UserByEmail(ctx, email)
+		if errors.Is(err, platform.ErrNotFound) {
+			u, err = svc.CreateUser(ctx, auth.SignupInput{Email: email, Password: password})
+		}
+		if err != nil {
+			return err
+		}
+		if err := seed(u); errors.Is(err, ledger.ErrConflict) {
+			out("%s already has demo data", email)
+		} else if err != nil {
+			return err
+		}
+	}
 	return nil
 }

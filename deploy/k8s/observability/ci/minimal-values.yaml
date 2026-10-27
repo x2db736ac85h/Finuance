@@ -1,0 +1,5 @@
+# CI render: no database or Kubernetes alerts (a database outside CloudNativePG).
+rules:
+  database: false
+  backups: false
+  kubernetes: false

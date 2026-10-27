@@ -55,3 +55,11 @@ change made by hand. The audit log arrives in Phase 17.
 - **Let the model write the rule in the filter language**: harder for small models and easy to
   get subtly wrong; "payee contains" and search words cover the common cases, and the user can
   edit the rule afterwards in Settings → Rules.
+
+## Update (2026-10-26, Phase 17)
+
+The log line is gone: an applied proposal is an `assistant.action_applied` event in the user's
+activity log (ADR 0021), with the chat as the entity and `{action, rows, proposal}` as its facts
+(still no names or filters). Each proposal carries a `key` (a hash of its stored form), the panel
+sends it as `X-Assistant-Proposal` with `X-Assistant-Chat`, and the chat detail lists the applied
+keys (`appliedProposals`), so a card stays "Applied" after a reload and on other devices.

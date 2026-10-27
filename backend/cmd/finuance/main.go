@@ -32,7 +32,9 @@ commands:
   worker                 run background jobs (River)
   migrate up|down|status|version
                          apply / roll back one / list / show schema migrations (owner role)
-  seed-demo -email=…     create demo data for a user
+  seed-demo -email=… [-rows=N] [-users=N -password-stdin]
+                         create demo data for a user (about N rows instead of the demo year), or
+                         for N load-test users email+001… (created with the password from stdin)
   admin create-user -email=… [-display-name=…] -password-stdin
                          create an account (works with signup disabled)
   admin set-password -email=… -password-stdin
@@ -62,9 +64,13 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	cmd, rest := args[0], args[1:]
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	email := ""
+	var seed app.SeedInput
+	seedPassword := false
 	if cmd == "seed-demo" {
-		fs.StringVar(&email, "email", "", "user to seed")
+		fs.StringVar(&seed.Email, "email", "", "user to seed (with -users: the name the users are numbered after)")
+		fs.IntVar(&seed.Rows, "rows", 0, "about this many demo rows instead of the demo year")
+		fs.IntVar(&seed.Users, "users", 0, "seed this many load-test users")
+		fs.BoolVar(&seedPassword, "password-stdin", false, "with -users: the users' password, from the first line of stdin")
 	}
 	if err := fs.Parse(rest); err != nil {
 		return 2
@@ -124,15 +130,18 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		}
 		return fail(app.Healthcheck(ctx, cfg))
 	case "seed-demo":
-		if email == "" || fs.NArg() != 0 {
-			fmt.Fprintln(stderr, "usage: finuance seed-demo -email=…")
+		if seed.Email == "" || fs.NArg() != 0 || seed.Rows < 0 || seed.Users < 0 || (seed.Users > 0) != seedPassword {
+			fmt.Fprintln(stderr, "usage: finuance seed-demo -email=… [-rows=N] [-users=N -password-stdin]")
 			return 2
+		}
+		if seedPassword {
+			seed.Password = stdin
 		}
 		cfg, ok := load(config.ForAdmin)
 		if !ok {
 			return 1
 		}
-		return fail(app.SeedDemo(ctx, cfg, email, func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
+		return fail(app.SeedDemo(ctx, cfg, seed, func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
 	case "admin":
 		return admin(ctx, fs.Args(), stdin, stdout, stderr, load, fail)
 	}

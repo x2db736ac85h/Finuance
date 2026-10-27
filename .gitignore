@@ -42,3 +42,5 @@ blob-report/
 
 # tools/rehearsal.sh work directory (kubeconfig, throwaway CA and keys, k6 output)
 /.rehearsal/
+loadtest/results/
+zap-reports/

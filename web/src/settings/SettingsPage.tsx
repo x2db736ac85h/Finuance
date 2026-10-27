@@ -4,6 +4,7 @@ import { Navigate, NavLink, useParams } from 'react-router';
 
 import { Icon } from '../ui/Icon';
 import { RulesSettings } from '../rules/RulesSettings';
+import { ActivitySettings } from './Activity';
 import { AppearanceControls } from './Appearance';
 import { CategoriesSettings } from './Categories';
 import { DataSettings } from './Data';
@@ -20,6 +21,7 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
   ),
   profile: ProfileSettings,
   sessions: SessionsSettings,
+  activity: ActivitySettings,
   categories: CategoriesSettings,
   rules: RulesSettings,
   data: DataSettings,

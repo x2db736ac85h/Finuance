@@ -1,0 +1,27 @@
+# Local observability (PLAN 17.3): `make up-observability` adds Grafana, Prometheus, Tempo and an
+# OpenTelemetry collector in one container (grafana/otel-lgtm) to the Compose stack. Prometheus
+# scrapes the api and worker and evaluates the chart's rules; the api and worker send their traces
+# over OTLP, so a request, the job it enqueued and their SQL show up as one trace in Tempo.
+# Grafana: http://localhost:3000 (anonymous admin, local only).
+services:
+  observability:
+    image: grafana/otel-lgtm:0.36.0@sha256:57c04cbd8e7022f32bb84c4ac005d79baf8b08e2c5be44facf11f5f1f9944ba2
+    ports:
+      - "127.0.0.1:3000:3000" # Grafana
+      - "127.0.0.1:9095:9090" # Prometheus (9090 is the api's admin port)
+    volumes:
+      - ./observability/prometheus.yaml:/otel-lgtm/prometheus.yaml:ro
+      - ./observability/rules.yaml:/finuance/rules.yaml:ro
+      - ./observability/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/finuance.yaml:ro
+      - ../k8s/observability/files/dashboards:/finuance/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:9090/-/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+  api:
+    environment:
+      FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: http://observability:4318/v1/traces
+  worker:
+    environment:
+      FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: http://observability:4318/v1/traces
