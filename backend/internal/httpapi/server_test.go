@@ -78,7 +78,7 @@ func TestMeta(t *testing.T) {
 func TestSecurityHeadersAndRequestID(t *testing.T) {
 	hs := newHarness(t, nil)
 	w := hs.do("GET", "/healthz", map[string]string{"X-Request-ID": "abc-123_XYZ"})
-	for k, v := range map[string]string{"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY",
+	for k, v := range map[string]string{"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Cross-Origin-Resource-Policy": "same-origin",
 		"Cache-Control": "no-store", "X-Request-ID": "abc-123_XYZ"} {
 		if got := w.Header().Get(k); got != v {
 			t.Errorf("%s = %q, want %q", k, got, v)
@@ -276,5 +276,26 @@ func TestProblemMapping(t *testing.T) {
 	}
 	if p := ProblemFor(platform.ErrNotFound, r, true); p.Detail == nil {
 		t.Error("prod should keep details of non-internal problems")
+	}
+}
+
+// TestClientGoneIsNotAServerError: a request whose client went away (its context canceled) is
+// answered 499 without a body and without an error log, so it never counts against the
+// availability SLO. A cancellation the client didn't cause stays a 500.
+func TestClientGoneIsNotAServerError(t *testing.T) {
+	var logs bytes.Buffer
+	ctx := observability.WithLogger(context.Background(), slog.New(slog.NewTextHandler(&logs, nil)))
+	gone, cancel := context.WithCancel(ctx)
+	cancel()
+	w := httptest.NewRecorder()
+	WriteProblem(w, httptest.NewRequest("PUT", "/api/v1/preferences", nil).WithContext(gone), fmt.Errorf("save: %w", context.Canceled), true)
+	if w.Code != StatusClientClosed || w.Body.Len() != 0 || logs.Len() != 0 {
+		t.Errorf("client gone: %d %q, log %q", w.Code, w.Body, logs.String())
+	}
+
+	w = httptest.NewRecorder()
+	WriteProblem(w, httptest.NewRequest("PUT", "/api/v1/preferences", nil).WithContext(ctx), fmt.Errorf("job: %w", context.Canceled), true)
+	if w.Code != http.StatusInternalServerError || !strings.Contains(logs.String(), "request failed") {
+		t.Errorf("own cancellation: %d, log %q", w.Code, logs.String())
 	}
 }

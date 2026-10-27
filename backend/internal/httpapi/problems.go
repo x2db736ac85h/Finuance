@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -90,8 +91,17 @@ func ProblemFor(err error, r *http.Request, prod bool) gen.Problem {
 	return p
 }
 
+// StatusClientClosed is nginx's "client closed request": the client went away before the answer.
+// It is not a server error, so the request log, the 5xx metrics and the availability SLO leave it
+// out.
+const StatusClientClosed = 499
+
 // WriteProblem writes err as application/problem+json and logs internal errors.
 func WriteProblem(w http.ResponseWriter, r *http.Request, err error, prod bool) {
+	if errors.Is(err, context.Canceled) && r.Context().Err() != nil {
+		w.WriteHeader(StatusClientClosed) // nobody reads a body
+		return
+	}
 	p := ProblemFor(err, r, prod)
 	if p.Status >= 500 {
 		observability.Logger(r.Context()).LogAttrs(r.Context(), slog.LevelError, "request failed", slog.String("error", err.Error()))

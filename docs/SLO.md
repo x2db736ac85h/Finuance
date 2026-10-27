@@ -17,7 +17,8 @@ dashboard shows both, the budget left and the burn rates.
   (`GET /healthz`, `GET /readyz`), unmatched paths and the assistant's routes. The assistant
   depends on a model server outside the app (ADR 0020); its failures are watched by
   `FinuanceAssistantModelErrors` instead, so a sleeping LM Studio doesn't burn the app's budget.
-  4xx answers are the client's (validation, conflicts, rate limits) and count as good.
+  4xx answers are the client's (validation, conflicts, rate limits) and count as good, as does
+  499 for a request whose client went away before the answer (a cancelled fetch).
 - **Latency** counts `POST /api/v1/transactions/query` and `POST /api/v1/insights/*`: the requests a
   user waits for while browsing the table and the charts. 300 ms is the target of PLAN §8.3 for
   100k-row users; the latency histogram has a bucket at exactly 0.3 s

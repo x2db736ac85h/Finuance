@@ -10,6 +10,8 @@ const ONCE = [
   'referrer-policy',
   'permissions-policy',
   'cross-origin-opener-policy',
+  'cross-origin-resource-policy',
+  'cross-origin-embedder-policy',
 ];
 
 test('each security header is sent once, on pages and on API responses', async ({ request }) => {
