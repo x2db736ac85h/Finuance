@@ -35,6 +35,24 @@ jobs:
             [ -f "$f" ] || continue
             jq -r --arg f "$f" '.site[].alerts[] | "::notice title=ZAP \($f | sub(".*/"; "") | sub(".json"; "")) \(.pluginid)::\(.alert) (\(.riskdesc)), \(.instances | length) instance(s), e.g. \(.instances[0].method) \(.instances[0].uri)"' "$f"
           done
+      # Server errors are bugs, so each one is named (reports can't be read from every session):
+      # ZAP's instances, nginx's status per path (502/504 = the api didn't answer) and the api's
+      # error lines (route, status, error kind; never bodies). Query strings are cut.
+      - name: Server errors as annotations
+        if: always()
+        run: |
+          for f in zap-reports/baseline.json zap-reports/api.json; do
+            [ -f "$f" ] || continue
+            jq -r '.site[].alerts[] | select(.alert | test("Server Error")) | .instances[] | "\(.method) \(.uri | sub("\\?.*"; ""))"' "$f"
+          done | sort | uniq -c | sort -rn | head -30 | sed 's/^ */::warning title=ZAP 5xx::/'
+          docker compose --env-file .env -f deploy/compose/compose.yaml logs --no-log-prefix web 2>/dev/null \
+            | awk '$9 ~ /^5/ { sub(/\?.*/, "", $7); print $9, $6, $7 }' | tr -d '"' | sort | uniq -c | sort -rn | head -30 \
+            | sed 's/^ */::warning title=nginx 5xx::/'
+          docker compose --env-file .env -f deploy/compose/compose.yaml logs --no-log-prefix api worker 2>/dev/null \
+            | grep -E 'level=(ERROR|WARN)' | sed -E 's/ (request_id|trace_id|client_ip|user)=[^ ]*//g; s/^time=[^ ]* //' \
+            | sort | uniq -c | sort -rn | head -30 | sed 's/^ */::warning title=api log::/'
+          docker compose --env-file .env -f deploy/compose/compose.yaml ps -a --format '{{.Service}} {{.State}} {{.Status}}' \
+            | sed 's/^/::notice title=containers::/'
       - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:

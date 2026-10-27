@@ -278,3 +278,24 @@ func TestProblemMapping(t *testing.T) {
 		t.Error("prod should keep details of non-internal problems")
 	}
 }
+
+// TestClientGoneIsNotAServerError: a request whose client went away (its context canceled) is
+// answered 499 without a body and without an error log, so it never counts against the
+// availability SLO. A cancellation the client didn't cause stays a 500.
+func TestClientGoneIsNotAServerError(t *testing.T) {
+	var logs bytes.Buffer
+	ctx := observability.WithLogger(context.Background(), slog.New(slog.NewTextHandler(&logs, nil)))
+	gone, cancel := context.WithCancel(ctx)
+	cancel()
+	w := httptest.NewRecorder()
+	WriteProblem(w, httptest.NewRequest("PUT", "/api/v1/preferences", nil).WithContext(gone), fmt.Errorf("save: %w", context.Canceled), true)
+	if w.Code != StatusClientClosed || w.Body.Len() != 0 || logs.Len() != 0 {
+		t.Errorf("client gone: %d %q, log %q", w.Code, w.Body, logs.String())
+	}
+
+	w = httptest.NewRecorder()
+	WriteProblem(w, httptest.NewRequest("PUT", "/api/v1/preferences", nil).WithContext(ctx), fmt.Errorf("job: %w", context.Canceled), true)
+	if w.Code != http.StatusInternalServerError || !strings.Contains(logs.String(), "request failed") {
+		t.Errorf("own cancellation: %d, log %q", w.Code, logs.String())
+	}
+}
