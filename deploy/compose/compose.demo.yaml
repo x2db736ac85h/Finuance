@@ -1,0 +1,9 @@
+# Demo-mode overlay (PLAN 19.1), on top of compose.ci.yaml: visitors start ephemeral demo users
+# from the sign-in page; no sign-ups, 2 MiB uploads, no assistant. Used by `make test-e2e-demo`
+# and the weekly workflow (the main E2E suite needs sign-ups, so it can't run in demo mode).
+name: finuance-ci
+services:
+  api:
+    environment:
+      FINUANCE_DEMO_MODE: "true"
+      FINUANCE_ALLOW_SIGNUP: "false"

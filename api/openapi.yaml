@@ -90,6 +90,30 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Problem"
+  /auth/demo:
+    post:
+      operationId: startDemo
+      summary: Try the demo
+      description: |
+        Only on a demo instance (`FINUANCE_DEMO_MODE`, see `GET /meta`): creates an ephemeral demo user
+        with the demo year imported, and signs it in. The user and all of its data are deleted
+        24 hours after creation. At most 5 per hour per client address. Elsewhere `404`.
+      tags: [auth]
+      security: []
+      responses:
+        "200":
+          description: Signed in as a new demo user; the session cookie is set.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetSessionCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
   /auth/logout:
     post:
       operationId: logout

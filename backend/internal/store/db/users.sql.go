@@ -50,6 +50,32 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteDemoUser = `-- name: DeleteDemoUser :execrows
+DELETE FROM users WHERE id = $1 AND is_demo
+`
+
+// Removes a demo user whose seeding failed; never touches a normal account.
+func (q *Queries) DeleteDemoUser(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDemoUser, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteDemoUsersCreatedBefore = `-- name: DeleteDemoUsersCreatedBefore :execrows
+DELETE FROM users WHERE is_demo AND created_at < $1
+`
+
+// Periodic cleanup of demo visitors (PLAN 19.1); cascades to all of their data.
+func (q *Queries) DeleteDemoUsersCreatedBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDemoUsersCreatedBefore, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteUser = `-- name: DeleteUser :execrows
 DELETE FROM users WHERE id = $1
 `

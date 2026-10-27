@@ -32,6 +32,18 @@ export function useLogin() {
   });
 }
 
+/** Starts a demo visitor's session (demo instances only, PLAN 19.1). */
+export function useStartDemo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => data(await api.POST('/auth/demo')),
+    onSuccess: (user) => {
+      qc.clear();
+      qc.setQueryData(keys.me, user);
+    },
+  });
+}
+
 export function useSignup() {
   const qc = useQueryClient();
   return useMutation({

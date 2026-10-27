@@ -166,3 +166,37 @@ func TestParsing(t *testing.T) {
 		t.Error("an origin with a path must be rejected")
 	}
 }
+
+// TestDemoMode: a demo instance takes no sign-ups, uploads of at most 2 MiB and no assistant
+// unless FINUANCE_DEMO_ASSISTANT turns it on; asking for sign-ups as well is a mistake.
+func TestDemoMode(t *testing.T) {
+	base := func(extra map[string]string) map[string]string {
+		m := map[string]string{"FINUANCE_DEMO_MODE": "true", "FINUANCE_AI_BASE_URL": "http://localhost:1234/v1"}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	c, err := Load(env(base(nil)), ForHealthcheck)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.AllowSignup || c.MaxUploadBytes != DemoMaxUploadBytes || len(c.AIConnections) != 0 || c.DemoAssistant {
+		t.Errorf("demo defaults: signup %v, upload %d, connections %d, assistant %v", c.AllowSignup, c.MaxUploadBytes, len(c.AIConnections), c.DemoAssistant)
+	}
+	c, err = Load(env(base(map[string]string{"FINUANCE_DEMO_ASSISTANT": "true", "FINUANCE_MAX_UPLOAD_BYTES": "1048576"})), ForHealthcheck)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.AIConnections) != 1 || c.MaxUploadBytes != 1<<20 {
+		t.Errorf("demo with assistant: connections %d, upload %d (a smaller limit stays)", len(c.AIConnections), c.MaxUploadBytes)
+	}
+	_, err = Load(env(base(map[string]string{"FINUANCE_ALLOW_SIGNUP": "1"})), ForHealthcheck)
+	if v := vars(err); len(v) != 1 || v[0] != "FINUANCE_ALLOW_SIGNUP" {
+		t.Errorf("demo with sign-up: %v", err)
+	}
+	c, err = Load(env(map[string]string{"FINUANCE_AI_BASE_URL": "http://localhost:1234/v1"}), ForHealthcheck)
+	if err != nil || !c.AllowSignup || c.MaxUploadBytes != 20<<20 || len(c.AIConnections) != 1 {
+		t.Errorf("not a demo: %+v, %v", c, err)
+	}
+}

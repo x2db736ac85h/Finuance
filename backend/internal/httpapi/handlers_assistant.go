@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
+	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
@@ -29,9 +30,17 @@ func (a *api) conns() *assistant.Connections {
 	return a.ai.Connections
 }
 
+// maxRows is the most rows one lookup may return: the legacy cap, or less in the demo (PLAN 19.1).
+func (a *api) maxRows() int {
+	if a.cfg.DemoMode {
+		return config.DemoMaxRows
+	}
+	return assistant.MaxRowsLimit
+}
+
 // AssistantStatus lists the connections and their chat models.
 func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusRequestObject) (gen.AssistantStatusResponseObject, error) {
-	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: assistant.MaxRowsLimit}
+	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: a.maxRows()}
 	for _, st := range a.conns().Status(ctx, req.Params.Refresh != nil && *req.Params.Refresh) {
 		c := gen.AssistantConnection{Name: st.Name, Label: st.Label, Api: gen.AssistantConnectionApi(st.API), Cloud: st.Cloud,
 			Reachable: st.Reachable, Models: make([]gen.AssistantModel, 0, len(st.Models)), Error: assistantError(st.Err)}
@@ -354,6 +363,11 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 	if err := a.limits.assistant.Allow(u.String()); err != nil {
 		return nil, err
 	}
+	if a.cfg.DemoMode {
+		if err := a.limits.demoAsk.Allow(u.String()); err != nil {
+			return nil, err
+		}
+	}
 	b := req.Body
 	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone)}
 	if s := b.Settings; s != nil {
@@ -370,6 +384,9 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 		if s.Toolset != nil {
 			r.Toolset = string(*s.Toolset)
 		}
+	}
+	if a.cfg.DemoMode && (r.MaxRows == 0 || r.MaxRows > config.DemoMaxRows) {
+		r.MaxRows = config.DemoMaxRows
 	}
 	if b.Scope != nil && *b.Scope == gen.AssistantMessageRequestScopeView {
 		r.View = true

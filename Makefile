@@ -101,6 +101,12 @@ test-e2e: $(ENV_FILE) web-dist ## Playwright against a fresh compose.ci.yaml sta
 	status=0; (cd web && E2E_BASE_URL=http://localhost:8000 npx playwright test) || status=$$?; \
 	  $(if $(KEEP),,$(COMPOSE_CI) down -v;) exit $$status
 
+.PHONY: test-e2e-demo
+test-e2e-demo: $(ENV_FILE) web-dist ## Playwright's demo-mode specs against compose.ci.yaml + compose.demo.yaml (KEEP=1 leaves it running)
+	VERSION=$(VERSION) $(COMPOSE_CI) -f deploy/compose/compose.demo.yaml up -d --build --wait
+	status=0; (cd web && E2E_DEMO=1 E2E_BASE_URL=http://localhost:8000 npx playwright test) || status=$$?; \
+	  $(if $(KEEP),,$(COMPOSE_CI) -f deploy/compose/compose.demo.yaml down -v;) exit $$status
+
 .PHONY: fuzz
 fuzz: ## All pure fuzz targets for FUZZTIME (default 30s each); *DB targets run in the nightly workflow
 	@cd backend && for pkg in $$(go list ./...); do \
@@ -260,6 +266,10 @@ loadtest: ## k6 load test against the running stack (PROFILE=load|smoke|ramp, LO
 	docker run --rm --network host -v "$(CURDIR)/loadtest:/scripts:ro" -v "$(CURDIR)/loadtest/results:/out" \
 	  -e BASE_URL=$(LOADTEST_BASE_URL) -e USERS=$(LOADTEST_USERS) -e PASSWORD="$(LOADTEST_PASSWORD)" -e PROFILE=$(PROFILE) \
 	  $(K6_IMAGE) run --quiet --summary-export=/out/summary-$(PROFILE).json /scripts/finuance.js
+
+.PHONY: zap
+zap: ## OWASP ZAP baseline + API scan against the running stack (needs sign-ups; rules in .zap/rules.tsv, reports in zap-reports/)
+	BASE_URL=$(LOADTEST_BASE_URL) tools/zap-scan.sh
 
 .PHONY: loadtest-seed
 loadtest-seed: $(ENV_FILE) ## Seed LOADTEST_USERS load-test users with LOADTEST_ROWS demo rows each (in the running api container)

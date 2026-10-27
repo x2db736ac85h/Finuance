@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -62,6 +63,10 @@ type Querier interface {
 	// Transactions keep existing with category_id NULL; budgets of the category go with it.
 	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error)
 	DeleteCategoryAlias(ctx context.Context, arg DeleteCategoryAliasParams) error
+	// Removes a demo user whose seeding failed; never touches a normal account.
+	DeleteDemoUser(ctx context.Context, id uuid.UUID) (int64, error)
+	// Periodic cleanup of demo visitors (PLAN 19.1); cascades to all of their data.
+	DeleteDemoUsersCreatedBefore(ctx context.Context, cutoff time.Time) (int64, error)
 	// An annotation with nothing left (no group, no manual category, no note, no transfer override)
 	// is deleted (PLAN §4.4 "explicit clear").
 	DeleteEmptyAnnotations(ctx context.Context, userID uuid.UUID) (int64, error)

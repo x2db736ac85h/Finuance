@@ -46,6 +46,49 @@ describe('login', () => {
   });
 });
 
+describe('demo', () => {
+  it('starts a demo visitor from the sign-in page and shows the demo banner', async () => {
+    db.demoMode = true;
+    db.signupEnabled = false;
+    server.use(
+      http.post(`${API}/auth/demo`, () => {
+        db.signedIn = true;
+        db.user = { ...db.user, email: 'demo-1@demo.invalid', isDemo: true };
+        return HttpResponse.json(db.user);
+      }),
+    );
+    const user = userEvent.setup();
+    const { router } = renderApp('/login');
+    expect(screen.queryByRole('link', { name: 'Create an account' })).toBeNull();
+    await user.click(await screen.findByRole('button', { name: 'Try the demo' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/t/all');
+    });
+    expect((await screen.findByText('Demo — your data is deleted after 24 hours.')).getAttribute('role')).toBe(
+      'status',
+    );
+  });
+
+  it('offers no demo on a normal instance, and no banner for a normal user', async () => {
+    renderApp('/login');
+    expect(await screen.findByRole('button', { name: 'Sign in' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Try the demo' })).toBeNull();
+  });
+
+  it('shows why the demo could not start', async () => {
+    db.demoMode = true;
+    server.use(
+      http.post(`${API}/auth/demo`, () =>
+        problem(429, 'rate_limited', 'Too many demos from this address; try again in an hour.'),
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp('/login');
+    await user.click(await screen.findByRole('button', { name: 'Try the demo' }));
+    expect(await screen.findByText('Too many demos from this address; try again in an hour.')).toBeTruthy();
+  });
+});
+
 describe('signup', () => {
   it('checks the password length, then creates the account and opens the app', async () => {
     let body: unknown;

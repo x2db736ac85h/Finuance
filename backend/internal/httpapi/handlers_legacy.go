@@ -33,6 +33,9 @@ func legacyBodyLimit(maxUpload int64) int64 {
 
 // CreateLegacyImport stores the manifest and files and enqueues the run.
 func (a *api) CreateLegacyImport(ctx context.Context, req gen.CreateLegacyImportRequestObject) (gen.CreateLegacyImportResponseObject, error) {
+	if a.cfg.DemoMode { // demo users are ephemeral, and the endpoint takes large uploads (PLAN 19.1)
+		return nil, fmt.Errorf("the migration from the single-file app isn't available in the demo: %w", platform.ErrForbidden)
+	}
 	u := identity(ctx).User.ID
 	man, files, err := a.readLegacyUpload(req)
 	if err != nil {

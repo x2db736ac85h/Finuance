@@ -24,6 +24,7 @@ var publicRoutes = map[string]bool{
 	"POST /api/v1/auth/signup": true,
 	"POST /api/v1/auth/login":  true,
 	"POST /api/v1/auth/logout": true,
+	"POST /api/v1/auth/demo":   true, // answers 404 outside demo mode
 }
 
 // requestAuth is what the session layer knows about a request: the raw cookie (login rotates it,

@@ -29,8 +29,10 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      # The image's own user is 101; the pod runs it as 10101, above the host's range of user ids
+      # (Trivy KSV-0020; nginx-unprivileged runs as any user, and everything it writes is mounted).
       securityContext:
-        {{- include "finuance.podSecurity" (dict "uid" 101) | nindent 8 }}
+        {{- include "finuance.podSecurity" (dict "uid" 10101) | nindent 8 }}
       containers:
         - name: web
           image: {{ include "finuance.image" (dict "root" . "name" .Values.image.web) }}

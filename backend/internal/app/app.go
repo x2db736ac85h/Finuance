@@ -122,10 +122,11 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	defer c.close(ctx)
 	led := ledger.New(c.store, platform.SystemClock{})
 	chats := assistant.NewChats(c.store, platform.SystemClock{}, cfg.AIMaxChats)
+	authSvc := NewAuth(c.store, cfg)
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
 		Logger: log,
 		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
-		Workers: jobs.Workers(jobs.Deps{Sessions: NewAuth(c.store, cfg), Ledger: led, Audit: led, Chats: chats,
+		Workers: jobs.Workers(jobs.Deps{Sessions: authSvc, Demo: authSvc, Ledger: led, Audit: led, Chats: chats,
 			Migrator: legacyimport.New(c.store, led, chats, platform.SystemClock{}),
 			Rules:    rules.New(c.store, platform.SystemClock{}),
 			Metrics:  jobs.NewImportMetrics(c.metrics.Registry)}),

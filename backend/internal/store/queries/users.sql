@@ -25,3 +25,11 @@ UPDATE users SET display_name = @display_name WHERE id = @id;
 -- name: DeleteUser :execrows
 -- Cascades to every user-owned table.
 DELETE FROM users WHERE id = @id;
+
+-- name: DeleteDemoUser :execrows
+-- Removes a demo user whose seeding failed; never touches a normal account.
+DELETE FROM users WHERE id = @id AND is_demo;
+
+-- name: DeleteDemoUsersCreatedBefore :execrows
+-- Periodic cleanup of demo visitors (PLAN 19.1); cascades to all of their data.
+DELETE FROM users WHERE is_demo AND created_at < @cutoff;

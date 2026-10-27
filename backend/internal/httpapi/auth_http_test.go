@@ -94,7 +94,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	st := store.New(tdb.App)
 	clk := &fakeClock{t: time.Now().UTC()}
 	svc := auth.New(st, clk, auth.Config{Params: auth.Params{MemoryKiB: 8 * 1024, Time: 1, Threads: 1},
-		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: true})
+		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: cfg.AllowSignup})
 	led := ledger.New(st, platform.SystemClock{})
 	legacy := legacyimport.New(st, led, assistant.NewChats(st, platform.SystemClock{}, 25), platform.SystemClock{})
 	rs := rules.New(st, platform.SystemClock{})

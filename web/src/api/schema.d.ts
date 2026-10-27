@@ -66,6 +66,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Try the demo
+         * @description Only on a demo instance (`FINUANCE_DEMO_MODE`, see `GET /meta`): creates an ephemeral demo user
+         *     with the demo year imported, and signs it in. The user and all of its data are deleted
+         *     24 hours after creation. At most 5 per hour per client address. Elsewhere `404`.
+         */
+        post: operations["startDemo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -2965,6 +2987,29 @@ export interface operations {
         };
         responses: {
             /** @description Signed in; the session cookie is set. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetSessionCookie"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    startDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed in as a new demo user; the session cookie is set. */
             200: {
                 headers: {
                     "Set-Cookie": components["headers"]["SetSessionCookie"];
