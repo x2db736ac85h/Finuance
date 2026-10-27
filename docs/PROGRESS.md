@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 17 — Observability and hardening (cluster-independent) · **Branch:** phase/17-observability-hardening · **Status:** all three pushes built; gate review next
+**Current phase:** 18 — Homelab rollout · **Branch:** — · **Status:** not planned yet (Phase 17 merged 2026-10-27)
 
 ## Decisions from our Product Engineer
 - Name: **Finuance** · GitHub owner: **x2db736ac85h** (module path `github.com/x2db736ac85h/finuance`) · License: **MIT**
@@ -38,6 +38,9 @@
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
+- Phase 18 is planned next (`/phase-start`); it needs the homelab answers listed under Follow-ups.
+
+## Phase 17 tasks (done)
 Push 1 (traces, job metrics, audit log, Activity page, CI security scans):
 - [x] 17.2 trace propagation into River jobs (`jobs.Telemetry`, River's insert/worker middleware: `traceparent` in the job metadata under `otel`, `job <kind>` consumer span as its child, SQL spans under it; no arguments or error text in spans) + `finuance_jobs_total{kind,result}` / `finuance_job_duration_seconds{kind}` on the worker; 0.3 s bucket on the HTTP latency histogram; `TestTelemetryCarriesTheTraceIntoTheJob`, `TestJobTraceEndToEnd` (request → real River insert → worker → job span → SQL span in one trace), `TestLatencyHistogramHasTheSLOBucket`
 - [x] 17.6a audit log (ADR 0021): migration `00010_audit_log.sql` (forced RLS with one policy per command: read/insert own rows, no backdating, delete only after 365 days; no UPDATE/TRUNCATE grant; cascade with the user), `ledger/audit.go`, events (sign-in, failed sign-in for an existing account via `auth.FailedLoginError`, sign-out, password change, session revoked, import committed — in the commit transaction —, import and account deleted, CSV and data export, rules applied, legacy migration, duplicate decisions, assistant proposal applied — replacing the log line, with the proposal's `key`, `X-Assistant-Proposal` and the chat's `appliedProposals`, ADR 0019 update), daily `cleanup_audit_log` job, `GET /me/activity`, `activity.json` in the data export, Settings → Activity page; tests: `TestAuditLogIsAppendOnly`, `TestAuditLog`, `TestCommitRecordsTheImport`, `TestActivityHTTP`, `TestActivityActionsMatchTheAPI`, `TestBrowserLabel`, `TestProposalKey`, proposal/duplicates/legacy/export/delete-me HTTP tests extended, RLS + schema guard tests, 3 Vitest + reopened-chat Vitest, e2e `activity.spec.ts` and the proposal staying applied after a reload, Activity in the axe pass
@@ -272,6 +275,7 @@ Second push (rehearsal and LLM decision):
 - [x] Makefile + CI: `make test` runs Go vet + tests, `make lint` checks gofmt, `fixtures-check` in `make check`; CI jobs `backend` and `oracle-fresh`
 
 ## Completed phases
+- Phase 17 — Observability and hardening (cluster-independent): gate approved 2026-10-27 (traces into jobs, dashboards and SLO alerts as code, load test with two bottlenecks fixed, activity log, demo mode, ZAP and scans at all severities, THREAT-MODEL v2); the weekly workflow (ZAP, k6 smoke, demo E2E) can run once it is on `main`; README and CHANGELOG (`[Unreleased]`) brought up to date for Phases 15–17; `phase/17-observability-hardening` merged with `--no-ff`.
 - Phase 16 — Deployment artifacts and rehearsal (homelab-independent): gate approved 2026-10-26 (chart, RUNBOOK, rehearsal: RTO 75 s, RPO 51 s, 0 failed requests during pod kills; rehearsal now weekly); deploy-by-PR and rollback-by-revert move to the Phase 18 gate; `phase/16-deploy-prep` merged with `--no-ff`.
 - Phase 15 — Product depth: categories, rules, transfers, assistant actions, group reports: gate approved 2026-10-24 with the hands-on checks deferred (see Follow-ups); `phase/15-product-depth` merged with `--no-ff`.
 - Phase 14 — Legacy migration and quality gate: gate approved 2026-10-23 with the hands-on checks deferred (see Follow-ups); `v0.1.0-rc.1` released; `phase/14-quality-gate` merged with `--no-ff`; `v0.1.0` is published from `main` by our Product Engineer.
@@ -461,6 +465,7 @@ Second push (rehearsal and LLM decision):
 - Overview under load (p95 1.2 s at 50 users in the sandbox): cache the month aggregates, size `shared_buffers` (docs/perf.md "Phase 17").
 
 ## Session log
+- 2026-10-27 — Phase 17 gate approved by our Product Engineer; README (features, status, testing, docs) and CHANGELOG `[Unreleased]` updated for Phases 15–17; merged. Next: plan Phase 18 (homelab rollout).
 - 2026-10-27 — Phase 17 push 3: demo mode (per-visitor demo users, limits, 24 h cleanup, *Try the demo* and the banner, demo E2E), the weekly workflow (ZAP baseline + signed-in API scan, k6 smoke, demo E2E), scans at all severities with `docs/security-scan.md` (fixed: duplicate security headers, an absolute redirect, the web pod's uid, the distroless base), THREAT-MODEL v2. 57 Playwright specs on a fresh stack plus the demo spec, 324 Vitest, `make test-integration` green. Next: the Phase 17 gate.
 - 2026-10-26 — Phase 17 push 2: six dashboards and the alert rules as code with promtool tests and a metric-name check, `docs/SLO.md`, PodMonitors for api, worker and database, the local Grafana profile (`make up-observability`), span names per route; k6 load test with seeded users. The load test found a quadratic first import (fixed: nested loops off after a bulk insert) and search cost growing with the instance (fixed: per-user trigram index, migration 00011 with `btree_gin`, approved); `load` p95 671 → 240–303 ms, 0 failures. Next: push 3 (demo mode, ZAP, scan triage, THREAT-MODEL v2).
 - 2026-10-26 — Phase 17 push 1 on `phase/17-observability-hardening`: traces from requests into River jobs and their SQL, job metrics, the SLO latency bucket; the audit log (append-only table, events, daily cleanup, `GET /me/activity`, export, Settings → Activity, ADR 0021) with assistant proposals read back as applied; CI `security` job and the release's HIGH + CRITICAL gate. Next: push 2 (dashboards, SLOs and alerts, local Grafana, load test).
