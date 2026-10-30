@@ -1,0 +1,16 @@
+# Example of the per-machine overlay that lives in the private environment repository
+# (finuance-env: homelab/host-values.yaml, ADR 0023). Argo CD applies it after values.yaml, so these
+# values win. `make helm-lint` renders the chart with values.yaml + this file to check the layering.
+# Placeholders: <host> = <machine>.<tailnet>.ts.net (Tailscale certifies only the machine's own name), <tailnet-ip> = 100.64.0.10.
+
+publicOrigin: https://machine.tailXXXXXX.ts.net
+ingress:
+  host: machine.tailXXXXXX.ts.net
+
+assistant:
+  # Ollama on the host (ADR 0020/0022), reached on the host's tailnet address.
+  connectionsFile: |
+    {"connections":[{"name":"ollama","label":"Ollama (homelab)","api":"openai","baseUrl":"http://100.64.0.10:11434/v1","defaultModel":"qwen3:4b","contextTokens":8192}]}
+  egress:
+    - cidr: 100.64.0.10/32
+      ports: [11434]

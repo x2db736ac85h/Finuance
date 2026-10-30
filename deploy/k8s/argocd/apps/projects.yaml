@@ -32,6 +32,8 @@ spec:
   description: The Finuance app, its PostgreSQL cluster and its sealed secrets.
   sourceRepos:
     - https://github.com/x2db736ac85h/Finuance.git
+    # the private environment repository with the per-machine overlay (ADR 0023)
+    - git@github.com:x2db736ac85h/finuance-env.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: finuance

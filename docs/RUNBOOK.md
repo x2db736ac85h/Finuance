@@ -230,6 +230,12 @@ ollama ps
 
 Use a prompt of a few thousand tokens too: on small GPUs prompt reading, not writing, decides how long an assistant turn with tool results takes. Ollama reuses an already-read prefix (system prompt, earlier turns), so follow-up rounds only read what is new.
 
+### 7. The per-machine overlay (private environment repository)
+
+Machine-specific values stay out of this repository (ADR 0023). The `finuance` Argo CD application reads the chart and [`homelab/values.yaml`](../deploy/environments/homelab/values.yaml) from here, then `homelab/host-values.yaml` from the private environment repository (`finuance-env`, second source `ref: env`); the later file wins. The overlay sets `publicOrigin` and `ingress.host` (`https://<host>`, the machine's own Tailscale name: Tailscale certifies nothing else) and the assistant's connections file and egress rule (`http://<tailnet-ip>:11434/v1`, `<tailnet-ip>/32` port 11434); [`host-values.example.yaml`](../deploy/environments/homelab/host-values.example.yaml) shows its shape.
+
+Clone the environment repository next to this one (`../finuance-env`). `make helm-lint` then renders the chart with the real overlay too (in memory, not kept), and `make check-env-details` reads its `private-patterns.txt`. Argo CD reads both repositories with read-only deploy keys (18.3).
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):

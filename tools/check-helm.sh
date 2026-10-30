@@ -43,7 +43,16 @@ must_fail() {
 app=deploy/helm/finuance
 db=deploy/k8s/db
 for f in "$app"/ci/*.yaml; do render "app-$(basename "$f" .yaml)" finuance "$app" finuance "$f"; done
-render app-homelab finuance "$app" finuance deploy/environments/homelab/values.yaml
+# the homelab layering as Argo CD applies it (ADR 0023): generic values, then the per-machine overlay;
+# the example stands in for the private one, which is rendered too when it is cloned next to this
+# repository (local runs only; its render is not kept)
+render app-homelab finuance "$app" finuance deploy/environments/homelab/values.yaml deploy/environments/homelab/host-values.example.yaml
+env_overlay="${FINUANCE_ENV_DIR:-../finuance-env}/homelab/host-values.yaml"
+if [ -f "$env_overlay" ]; then
+  echo "== $app with the private overlay"
+  helm lint "$app" --strict --kube-version "$K8S" -f deploy/environments/homelab/values.yaml -f "$env_overlay" >/dev/null
+  helm template finuance "$app" -n finuance --kube-version "$K8S" -f deploy/environments/homelab/values.yaml -f "$env_overlay" | validate -
+fi
 for f in "$db"/ci/*.yaml; do render "db-$(basename "$f" .yaml)" finuance-db "$db" finuance "$f"; done
 render db-homelab finuance-db "$db" finuance deploy/environments/homelab/db-values.yaml
 
