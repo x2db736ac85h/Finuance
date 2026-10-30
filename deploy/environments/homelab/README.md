@@ -9,7 +9,7 @@ The values for the self-hosted production install, used by the Argo CD applicati
 | [`host-values.example.yaml`](host-values.example.yaml) | the shape of the per-machine overlay (host name, model server address) that lives in the private environment repository and is applied after `values.yaml` (ADR 0023); rendered by `make helm-lint` |
 | [`argocd-values.yaml`](argocd-values.yaml) | Argo CD itself (chart `argo-cd`, installed once with helm; [RUNBOOK](../../../docs/RUNBOOK.md#bootstrap-on-single-node-k3s) step 5) |
 | [`secrets/`](secrets) | the SealedSecrets (made in Phase 18 with `tools/seal-secrets.sh homelab …`) |
-| [`host/`](host) | files installed on the k3s host itself, not in the cluster: the nftables table that keeps pods off the home network ([RUNBOOK](../../../docs/RUNBOOK.md#bootstrap-on-single-node-k3s), step 2), and `ollama.conf` for the model server; templates, the filled-in copies live in the private environment repository |
+| [`host/`](host) | files installed on the k3s host itself, not in the cluster: the nftables table that keeps pods off the home network ([RUNBOOK](../../../docs/RUNBOOK.md#bootstrap-on-single-node-k3s), step 2), `ollama.conf` for the model server, and `finuance-tls@.service`/`.timer` that renew the ingress certificate (step 9); templates, the filled-in copies live in the private environment repository |
 
 This folder is the GitOps promotion target. A merged pull request that changes it is what deploys; `release.yml` opens one per release that bumps `image.tag`. Reverting it rolls back.
 

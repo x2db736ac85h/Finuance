@@ -248,6 +248,22 @@ tools/seal-secrets.sh homelab backup-store   # finuance-db-backup (finuance) + r
 
 **Check** (2026-10-30, applied by hand into a scratch `s3` namespace with throwaway keys, then deleted): accepted under the `restricted` Pod Security Standard; volume bound; the job created the bucket, and after a pod restart a second run found it (the data is on the volume); a pod in `finuance` with `cnpg.io/cluster` reaches port 9000, the same pod without the label and a pod in `default` don't.
 
+### 9. TLS: the host's Tailscale certificate
+
+The ingress runs in TLS mode `secret`: [`tools/tailscale-cert.sh`](../tools/tailscale-cert.sh) fetches the certificate for `<host>` with `tailscale cert` (as the operator user, no root) and applies it as `finuance/finuance-tls` (the key only passes through a private temporary folder in memory; never on disk or in git). It creates the `finuance` namespace with the `restricted` Pod Security Standard when Argo CD hasn't yet. `tailscale cert` returns its cached certificate while it is fresh and renews it when about a third of its 90 days is left, so the script is safe to repeat; a weekly timer runs it ([`host/finuance-tls@.service`](../deploy/environments/homelab/host/finuance-tls@.service) and `.timer`, 10 minutes after boot and weekly). Traefik picks up a changed secret by itself.
+
+**The first run publishes `<host>` in the Certificate Transparency logs** (step 3).
+
+```sh
+tools/tailscale-cert.sh                                   # first certificate (asks for nothing)
+sudo install -m 755 tools/tailscale-cert.sh /usr/local/bin/finuance-tailscale-cert
+sudo install -m 644 'deploy/environments/homelab/host/finuance-tls@.service' 'deploy/environments/homelab/host/finuance-tls@.timer' /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now "finuance-tls@$USER.timer"
+sudo systemctl start "finuance-tls@$USER.service"         # one run through systemd
+```
+
+**Check** (2026-10-30): the secret is `kubernetes.io/tls` with a Let's Encrypt certificate for `<host>` (90 days) whose key matches; a second run kept the same certificate and left the secret untouched; the run through systemd succeeded and the timer is scheduled. `systemctl list-timers 'finuance-tls@*'` shows the next run, `journalctl -u "finuance-tls@$USER.service"` the last one.
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):

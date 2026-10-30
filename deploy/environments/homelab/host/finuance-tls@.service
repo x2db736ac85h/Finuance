@@ -1,0 +1,13 @@
+# Renews the ingress certificate: runs tools/tailscale-cert.sh (installed as
+# /usr/local/bin/finuance-tailscale-cert) as the user given after the @, with that user's kubeconfig.
+# docs/RUNBOOK.md "Bootstrap on single-node k3s".
+[Unit]
+Description=Tailscale certificate for Finuance's ingress (user %i)
+Wants=network-online.target
+After=network-online.target tailscaled.service k3s.service
+
+[Service]
+Type=oneshot
+User=%i
+Environment=KUBECONFIG=/home/%i/.kube/config
+ExecStart=/usr/local/bin/finuance-tailscale-cert
