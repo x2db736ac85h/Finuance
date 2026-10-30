@@ -8,8 +8,10 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/x2db736ac85h/Finuance.git
-    targetRevision: main
+    repoURL: git@github.com:x2db736ac85h/Finuance.git
+    # While a phase is being tried on the cluster, the apps follow its branch; everything that reaches
+    # main follows main again (tools/check-helm.sh fails otherwise).
+    targetRevision: phase/18-homelab-rollout
     path: deploy/k8s/argocd/apps
   destination:
     server: https://kubernetes.default.svc

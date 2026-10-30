@@ -69,6 +69,16 @@ echo "ok"
 echo "== Argo CD applications"
 validate deploy/k8s/argocd/root.yaml deploy/k8s/argocd/apps/
 
+# A phase may point the apps at its branch to try it on the cluster; what reaches main must follow main.
+branch=${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD)}}
+if [ "$branch" = main ]; then
+  echo "== Argo CD apps follow main"
+  off=$("$YQ" -N '(.spec.source, .spec.sources[]?) | select(. != null and (.repoURL | test("x2db736ac85h/")) and .targetRevision != "main")
+    | filename + ": " + .repoURL + " @ " + .targetRevision' deploy/k8s/argocd/root.yaml deploy/k8s/argocd/apps/*.yaml)
+  [ -z "$off" ] || { echo "check-helm: Argo CD apps must follow main on main:"; echo "$off"; exit 1; }
+  echo "ok"
+fi
+
 echo "== RustFS (in-cluster backup bucket)"
 validate deploy/k8s/rustfs/
 

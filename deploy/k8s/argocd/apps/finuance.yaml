@@ -14,8 +14,8 @@ spec:
   # The chart and the generic homelab values from this repository, then the per-machine overlay
   # (host name, model server address) from the private environment repository (ADR 0023).
   sources:
-    - repoURL: https://github.com/x2db736ac85h/Finuance.git
-      targetRevision: main
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: phase/18-homelab-rollout
       path: deploy/helm/finuance
       helm:
         releaseName: finuance

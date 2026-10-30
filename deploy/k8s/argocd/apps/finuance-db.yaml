@@ -10,8 +10,8 @@ metadata:
 spec:
   project: finuance
   source:
-    repoURL: https://github.com/x2db736ac85h/Finuance.git
-    targetRevision: main
+    repoURL: git@github.com:x2db736ac85h/Finuance.git
+    targetRevision: phase/18-homelab-rollout
     path: deploy/k8s/db
     helm:
       releaseName: finuance-db

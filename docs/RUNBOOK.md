@@ -278,6 +278,27 @@ No host firewall rule is needed: the load balancer's traffic is forwarded, not i
 
 **Check** (2026-10-30): before, the load balancer pods had `SRC_RANGES=0.0.0.0/0`; after, `100.64.0.0/10`. From the host, `https://<tailnet-ip>` and `https://<host>` reach Traefik and `<lan-ip>` on 80/443 is refused; from a phone on the home Wi-Fi without Tailscale, `<lan-ip>` doesn't connect. That the app sees the client's real address is checked once it runs (18.3: the sign-in's address in Settings → Activity).
 
+### 11. Argo CD reads the private repositories
+
+Both repositories are private, so Argo CD reads them over SSH with one **read-only deploy key** each. The key pairs are generated in a private temporary folder; the private halves go straight into Argo CD as repository secrets (`kubectl`, not git: the Sealed Secrets controller only arrives through Argo CD) and the files are deleted; the public halves are added to each repository as read-only deploy keys (*Settings → Deploy keys*, or `gh api`). A lost key is simply replaced the same way.
+
+```sh
+d=$(mktemp -d "$XDG_RUNTIME_DIR/argocd-keys.XXXXXX")
+for r in Finuance finuance-env; do
+  n=$(echo "$r" | tr 'A-Z' 'a-z')
+  ssh-keygen -q -t ed25519 -N '' -C "argocd-homelab-read-only@$n" -f "$d/$n"
+  kubectl -n argocd create secret generic "repo-$n" --from-literal=type=git \
+    --from-literal=url="git@github.com:x2db736ac85h/$r.git" --from-file=sshPrivateKey="$d/$n" --dry-run=client -o yaml \
+    | kubectl label --local -f - argocd.argoproj.io/secret-type=repository -o yaml | kubectl apply -f -
+  gh api -X POST "repos/x2db736ac85h/$r/keys" -f title="argocd-homelab (read-only)" -f key="$(cat "$d/$n.pub")" -F read_only=true
+done
+rm -rf "$d"
+```
+
+The Argo CD applications use the SSH URLs. **While a phase is tried on the cluster, they follow its branch** (`targetRevision: phase/NN-…` for this repository; the private overlay always follows `main`); `make helm-lint` fails on `main` and on pull requests into `main` unless every application follows `main` again.
+
+**Check** (2026-10-30): Argo CD's API reports both repositories `Successful` (`GET /api/v1/repositories?forceRefresh=true`).
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):
