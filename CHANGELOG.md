@@ -6,6 +6,11 @@ notes of their version.
 
 ## [Unreleased]
 
+## [0.2.0]
+
+Categories, rules and transfers, group reports, assistant actions, an activity log, demo mode, and
+what's needed to run Finuance on Kubernetes with observability and security scans.
+
 ### Added
 
 - **Categories and rules**: rename, merge or delete categories (re-imports follow); rules from any
@@ -37,6 +42,15 @@ notes of their version.
   to transactions for about 25 s per million rows.
 - A new user's first large import no longer slows down quadratically (20,000 rows: minutes → seconds).
 - The web container sends each security header once and uses relative redirects.
+
+### Security
+
+- `golang.org/x/net` 0.62.0 (GO-2026-6866, GO-2026-6860; not reachable from Finuance's code).
+- The web image upgrades zlib (CVE-2026-85091) and musl (CVE-2026-107891) from the Alpine mirror, since
+  its nginx base image hasn't been rebuilt with the fixes (`--build-arg APK_OFFLINE=1` skips this for
+  builds without network access).
+- Trivy, govulncheck and `npm audit` at every severity before the release: nothing open apart from
+  `golang.org/x/crypto` GO-2026-5932, which has no fix and isn't reachable ([docs/security-scan.md](docs/security-scan.md)).
 
 ## [0.1.0]
 
