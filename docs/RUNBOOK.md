@@ -137,7 +137,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now k3s-lan.service
 
 If the router or the LAN changes, edit the copy and repeat the install. `sudo nft list table inet k3s_lan` shows the drop counter.
 
-**Check:** the node is `Ready`; coredns, local-path-provisioner, metrics-server, traefik and its svclb pod run; `local-path` is the default storage class; Traefik's LoadBalancer is on `<lan-ip>` (80/443; restricted to the tailnet in 18.2); `kubectl top node` works. From a throwaway pod, DNS, the API service, another pod, the internet and the host itself are reachable, and the router is not (it was before the nftables table, on the reference machine):
+**Check:** the node is `Ready`; coredns, local-path-provisioner, metrics-server, traefik and its svclb pod run; `local-path` is the default storage class; Traefik's LoadBalancer is on `<lan-ip>` (80/443; restricted to the tailnet in step 10); `kubectl top node` works. From a throwaway pod, DNS, the API service, another pod, the internet and the host itself are reachable, and the router is not (it was before the nftables table, on the reference machine):
 
 ```sh
 kubectl create ns nettest && kubectl -n nettest run t --image=busybox:1.37 --restart=Never --command -- sleep 300
@@ -263,6 +263,20 @@ sudo systemctl start "finuance-tls@$USER.service"         # one run through syst
 ```
 
 **Check** (2026-10-30): the secret is `kubernetes.io/tls` with a Let's Encrypt certificate for `<host>` (90 days) whose key matches; a second run kept the same certificate and left the secret untouched; the run through systemd succeeded and the timer is scheduled. `systemctl list-timers 'finuance-tls@*'` shows the next run, `journalctl -u "finuance-tls@$USER.service"` the last one.
+
+### 10. Only the tailnet reaches the ingress
+
+k3s's service load balancer (klipper-lb) publishes Traefik's 80/443 on every host address, so anyone on the home network reached it, and it hid the client's address from Traefik. [`host/traefik-config.yaml`](../deploy/environments/homelab/host/traefik-config.yaml), a `HelmChartConfig` for the bundled Traefik, sets `loadBalancerSourceRanges: [100.64.0.0/10]` (Tailscale's range) and `externalTrafficPolicy: Local`:
+
+```sh
+kubectl apply -f deploy/environments/homelab/host/traefik-config.yaml
+kubectl -n kube-system get svc traefik -o jsonpath='{.spec.externalTrafficPolicy} {.spec.loadBalancerSourceRanges}'   # Local ["100.64.0.0/10"]
+kubectl -n kube-system get pods -l svccontroller.k3s.cattle.io/svcname=traefik -o yaml | grep -A1 SRC_RANGES                # 100.64.0.0/10
+```
+
+No host firewall rule is needed: the load balancer's traffic is forwarded, not input.
+
+**Check** (2026-10-30): before, the load balancer pods had `SRC_RANGES=0.0.0.0/0`; after, `100.64.0.0/10`. From the host, `https://<tailnet-ip>` and `https://<host>` reach Traefik and `<lan-ip>` on 80/443 is refused; from a phone on the home Wi-Fi without Tailscale, `<lan-ip>` doesn't connect. That the app sees the client's real address is checked once it runs (18.3: the sign-in's address in Settings → Activity).
 
 ### After a reboot
 

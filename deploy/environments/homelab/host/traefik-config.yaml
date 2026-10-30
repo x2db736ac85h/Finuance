@@ -1,0 +1,21 @@
+# Configures k3s's bundled Traefik (docs/RUNBOOK.md "Bootstrap on single-node k3s", step 10;
+# THREAT-MODEL T7). Applied once with `kubectl apply -f`; k3s's Helm controller re-renders Traefik.
+# Not part of the app-of-apps: it belongs to the k3s install, like the host files next to it.
+#
+# - loadBalancerSourceRanges: k3s's service load balancer (klipper-lb) publishes 80/443 on every
+#   host address; this limits them to the tailnet (Tailscale's CGNAT range), so the home network
+#   and anything else that reaches the host is refused.
+# - externalTrafficPolicy Local: without it the load balancer hides the client's address, so
+#   per-address rate limits and the activity log's IP would see one address for everyone.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      spec:
+        externalTrafficPolicy: Local
+        loadBalancerSourceRanges:
+          - 100.64.0.0/10
