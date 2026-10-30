@@ -44,7 +44,7 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private check-no-float check-compose-prod check-db-bootstrap ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, float, prod-Compose and k8s bootstrap checks
+check: lint typecheck test gen-check fixtures-check check-private check-env-details check-no-float check-compose-prod check-db-bootstrap ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, float, prod-Compose and k8s bootstrap checks
 	@echo "check: ok"
 
 .PHONY: check-compose-prod
@@ -54,6 +54,10 @@ check-compose-prod: ## compose.prod.yaml's inline database bootstrap equals depl
 .PHONY: check-db-bootstrap
 check-db-bootstrap: ## The CloudNativePG bootstrap SQL (deploy/k8s/db) matches deploy/db/bootstrap.sql
 	@tools/check-db-bootstrap.sh
+
+.PHONY: check-env-details
+check-env-details: ## Fail on private environment details (patterns from the private environment repository; skipped without it)
+	@tools/check-env-details.sh
 
 .PHONY: check-private
 check-private: ## Fail on IBAN-like numbers or files under testdata/private/
