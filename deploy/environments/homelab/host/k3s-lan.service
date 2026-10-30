@@ -1,0 +1,14 @@
+# Loads k3s-lan.nft before k3s starts (docs/RUNBOOK.md "Bootstrap on single-node k3s").
+[Unit]
+Description=Keep k3s pods off the home network
+Before=k3s.service
+After=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nft -f /etc/k3s-lan.nft
+ExecStop=/usr/bin/nft delete table inet k3s_lan
+
+[Install]
+WantedBy=multi-user.target

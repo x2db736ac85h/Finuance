@@ -68,6 +68,180 @@ Database logins are two CloudNativePG managed roles: `finuance_owner` (owns the 
 
 9. Open the public origin, sign in, import a file, and check `kubectl -n finuance get pods`: no restarts.
 
+## Bootstrap on single-node k3s
+
+The Phase 18 reference environment (ADR 0022): single-node k3s on a personal machine with a small NVIDIA GPU, reachable over Tailscale, with a host firewall (ufw) that drops input and forwarded traffic by default. Each step was run there; the versions are pinned. Machine-specific values (hardware, network, host name, measurements) live in the private environment repository (`finuance-env`); here they are placeholders:
+
+| Placeholder | Meaning | How to find it |
+|---|---|---|
+| `<host>` | the machine's tailnet name, `<machine>.<tailnet>.ts.net` | `tailscale status --json \| jq -r .Self.DNSName` |
+| `<tailnet-ip>` | its tailnet address | `tailscale ip -4` |
+| `<lan-ip>` | its address on the home network | `ip -br addr` |
+| `<router-ip>` | the DNS server CoreDNS forwards to (usually the router) | first `nameserver` in `/run/systemd/resolve/resolv.conf` |
+
+| Tool | Version | Installed with |
+|---|---|---|
+| helm | v3.18.4 | `go install helm.sh/helm/v3/cmd/helm@v3.18.4` |
+| kubeseal | v0.40.0 | `go install github.com/bitnami/sealed-secrets/cmd/kubeseal@v0.40.0` |
+| yq (mikefarah) | v4.54.1 | `go install github.com/mikefarah/yq/v4@v4.54.1` |
+| kubeconform | v0.7.0 | `go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0` |
+| k3s (+ `kubectl`) | v1.36.5+k3s1 | official install script, `INSTALL_K3S_VERSION` |
+| Tailscale | 1.104 | distribution package |
+| cert-manager | chart v1.21.3 | helm (`jetstack`) |
+| Argo CD | chart `argo-cd` 10.11.6 (v3.5.6) | helm (`argo`), `homelab/argocd-values.yaml` |
+| Ollama | 0.40 | distribution package (+ its Vulkan build for older NVIDIA cards), `host/ollama.conf` |
+| Model | `qwen3:4b` (Q4, 2.5 GB) | `ollama pull` |
+
+The commands use `pacman` (Arch); other distributions have the same packages under their own tool.
+
+### 1. Client tools (no root)
+
+The same versions as CI (`.github/workflows/ci.yml`), so `make helm-lint` behaves the same locally. Distribution packages may ship Helm 4 or a different `yq`, so they are not used.
+
+```sh
+go install helm.sh/helm/v3/cmd/helm@v3.18.4
+go install github.com/bitnami/sealed-secrets/cmd/kubeseal@v0.40.0
+go install github.com/mikefarah/yq/v4@v4.54.1
+go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
+```
+
+With Go from mise the binaries land in mise's Go `bin` directory (`go env GOBIN`), which is on `PATH`; reinstall them after switching Go versions. For `make check`, the repository's `mise.toml` selects Node 22 like CI (`mise install` once, `mise trust` for the file).
+
+### 2. k3s
+
+v1.36.5+k3s1 (k3s stable channel, 2026-10-30): CloudNativePG 1.30 supports Kubernetes 1.34–1.36. Bundled Traefik, `local-path` storage and metrics-server (the api's HPA) stay on; secrets are encrypted at rest. k3s runs with swap on (it doesn't set `failSwapOn`).
+
+```sh
+curl -sfL https://get.k3s.io | sudo INSTALL_K3S_VERSION='v1.36.5+k3s1' sh -s - server \
+  --secrets-encryption --write-kubeconfig-mode 600
+mkdir -p ~/.kube && sudo install -m 600 -o "$USER" -g "$USER" /etc/rancher/k3s/k3s.yaml ~/.kube/config
+export KUBECONFIG=~/.kube/config   # k3s's kubectl otherwise reads /etc/rancher/k3s/k3s.yaml (root only)
+```
+
+The script installs `kubectl` and `crictl` as links to the k3s binary (same version); an existing `ctr` is left alone.
+
+**Firewall.** ufw drops input and forwarded traffic by default. Pods must reach the host (DNS, the API server behind `10.43.0.1`, the kubelet for metrics-server, later Ollama), so one input rule allows the pod range on the bridge only. Port 6443 is **not** opened: `kubectl` on the machine uses `127.0.0.1`, and nothing else needs the API. The service range needs no rule (service addresses are rewritten before delivery).
+
+```sh
+sudo ufw allow in on cni0 from 10.42.0.0/16 comment 'k3s pods to host'
+```
+
+**Pods stay off the home network.** Without a NetworkPolicy, every pod can reach the router, the LAN and the Docker networks, masqueraded as the host. `ufw route deny` doesn't help: k3s puts `KUBE-ROUTER-FORWARD` (which accepts every pod packet no policy denies) at the top of `FORWARD`, before `ufw-before-forward` (`sudo iptables -S FORWARD` shows the order). [`host/k3s-lan.nft`](../deploy/environments/homelab/host/k3s-lan.nft) hooks forwarding at priority −10, ahead of both, and drops pod traffic to private, Docker, tailnet and link-local ranges, except DNS to `<router-ip>`. It is a template: copy it, set `UPSTREAM_DNS`, keep the copy with the environment's private files, and load it before k3s at every boot:
+
+```sh
+sudo nft -c -f k3s-lan.nft                                   # dry run of the filled-in copy
+sudo install -m 644 k3s-lan.nft /etc/k3s-lan.nft
+sudo install -m 644 deploy/environments/homelab/host/k3s-lan.service /etc/systemd/system/k3s-lan.service
+sudo systemctl daemon-reload && sudo systemctl enable --now k3s-lan.service
+```
+
+If the router or the LAN changes, edit the copy and repeat the install. `sudo nft list table inet k3s_lan` shows the drop counter.
+
+**Check:** the node is `Ready`; coredns, local-path-provisioner, metrics-server, traefik and its svclb pod run; `local-path` is the default storage class; Traefik's LoadBalancer is on `<lan-ip>` (80/443; restricted to the tailnet in 18.2); `kubectl top node` works. From a throwaway pod, DNS, the API service, another pod, the internet and the host itself are reachable, and the router is not (it was before the nftables table, on the reference machine):
+
+```sh
+kubectl create ns nettest && kubectl -n nettest run t --image=busybox:1.37 --restart=Never --command -- sleep 300
+kubectl -n nettest wait --for=condition=Ready pod/t
+kubectl -n nettest exec t -- nslookup github.com              # works
+kubectl -n nettest exec t -- nc -z -w5 github.com 443         # works
+kubectl -n nettest exec t -- nc -z -w5 <router-ip> 80         # must fail
+kubectl delete ns nettest
+```
+
+To remove k3s completely: `sudo /usr/local/bin/k3s-uninstall.sh`, then `sudo systemctl disable --now k3s-lan.service` and the ufw rule.
+
+### 3. Tailscale
+
+```sh
+sudo pacman -S --needed tailscale
+sudo systemctl enable --now tailscaled
+sudo tailscale up --operator="$USER"       # log in through the printed URL
+```
+
+In the admin console (DNS page): **MagicDNS** on, **HTTPS Certificates** on.
+
+**Names are public.** Tailscale's certificates come from Let's Encrypt, so the full name of every machine that gets one is written to the public Certificate Transparency logs for good (not its address, and the name only resolves inside the tailnet). Keep the tailnet's random name (`tailXXXXXX`, no custom or "fun" name), give the machine a meaningless one (no OS, project or personal name), and request a certificate on this machine only.
+
+**Machine names stay out of this repository** (`<host>`, `<tailnet-ip>`). The deployed host name lives in the private environment repository (18.2). A private CA would publish nothing but needs its root trusted on every device; an own domain with a wildcard certificate is the Phase 19 option.
+
+**Check:** `tailscale status` shows the machine online at `<tailnet-ip>`; MagicDNS on; one certificate domain. MagicDNS only adds a `ts.net` route to systemd-resolved (`tailscale0`: `100.100.100.100`), so CoreDNS still forwards to the router and the nftables table (which drops `100.64.0.0/10`) doesn't break pod DNS. A pod reaches `<tailnet-ip>` (local delivery, not forwarded), which the Ollama connection uses. No ufw rule for `tailscale0` yet: Traefik's traffic is forwarded, not input; 18.2 tests from a tailnet and a LAN device and adds only what that needs.
+
+### 4. cert-manager
+
+The Barman Cloud plugin needs it for its own certificates (the app's certificate comes from Tailscale, TLS mode `secret`). Same chart and settings as the CI rehearsal:
+
+```sh
+helm repo add jetstack https://charts.jetstack.io
+helm upgrade --install cert-manager jetstack/cert-manager --version v1.21.3 \
+  -n cert-manager --create-namespace --set crds.enabled=true --wait
+```
+
+**Check:** controller, cainjector and webhook running; a self-signed `Issuer` + `Certificate` in a scratch namespace becomes `Ready` with a `kubernetes.io/tls` secret.
+
+### 5. Argo CD
+
+Chart `argo-cd` 10.11.6 (Argo CD v3.5.6) with [`homelab/argocd-values.yaml`](../deploy/environments/homelab/argocd-values.yaml): the Application health check from [Bootstrap](#bootstrap-first-install) step 1 is part of the values (no hand edit of `argocd-cm`), no Dex (the built-in admin is the only user; sign-in through Dex and GitHub is planned for Phase 19, once the UI is reachable beyond the port-forward), no notifications (alerts go through Alertmanager), the unused ApplicationSet controller at 0 replicas. The chart's own NetworkPolicies stay on.
+
+```sh
+helm repo add argo https://argoproj.github.io/argo-helm
+helm upgrade --install argocd argo/argo-cd --version 10.11.6 -n argocd --create-namespace \
+  -f deploy/environments/homelab/argocd-values.yaml --wait
+```
+
+The UI and API are not exposed; reach them from the machine only:
+
+```sh
+kubectl -n argocd port-forward svc/argocd-server 8443:443        # https://localhost:8443, user admin
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+Change the admin password in the UI (*User Info → Update password*) and then delete `argocd-initial-admin-secret` (Argo CD's advice; it is only read once).
+
+**Check:** application controller, repo server, server and redis running; `/healthz` 200 and `/api/version` v3.5.6 through the port-forward; `argocd-cm` holds `resource.customizations.health.argoproj.io_Application`; 4 NetworkPolicies; ApplicationSet controller at 0 replicas. The health check is exercised in 18.3, when the root app's sync waves wait for the child apps.
+
+### 6. Ollama (model server on the host)
+
+Outside the cluster (ADR 0020/0022), from the distribution's packages.
+
+**Older NVIDIA cards.** CUDA 13 builds no longer support GPUs below compute capability 7.5 (generations before Turing). Such a card is skipped (*skipping CUDA device — compute capability not in compiled architectures* in the log) and the model runs on the CPU. Two ways onto the GPU:
+- the **Vulkan** build (Arch: `ollama-vulkan`; the NVIDIA driver ships the Vulkan driver): a distribution package with normal updates; this is what the reference environment runs;
+- a **CUDA 12** build (the upstream release's `cuda_v12` engine still includes those generations): on a 4 GB card it read prompts about twice as fast as Vulkan and wrote slightly slower, but it is installed outside the package manager and needs every layer forced onto the GPU (a derived model with `PARAMETER num_gpu 999`). Measured on the reference machine; the choice is made with the 18.5 evals.
+
+```sh
+sudo pacman -S --needed ollama-cuda ollama-vulkan
+sudo install -D -m 644 deploy/environments/homelab/host/ollama.conf /etc/systemd/system/ollama.service.d/finuance.conf
+sudo systemctl daemon-reload && sudo systemctl enable --now ollama
+ollama pull qwen3:4b
+journalctl -u ollama -b | grep 'inference compute'     # names the GPU and the library (CUDA or Vulkan)
+```
+
+[`host/ollama.conf`](../deploy/environments/homelab/host/ollama.conf):
+- listens on every address: pods reach it on `<tailnet-ip>:11434` (allowed by the `cni0` input rule), the LAN can't (ufw's default drop; check from a phone on the Wi-Fi without Tailscale), tailnet devices can (Tailscale accepts `tailscale0` before ufw; Ollama has no authentication, THREAT-MODEL §5);
+- flash attention + `q8_0` KV cache: with the default fp16 cache, a ~4B model at the app's 8,192-token context doesn't fit in 4 GB and spills layers to the CPU, which roughly halves the output speed;
+- keep-alive 30 min (a reload takes seconds).
+
+**Measure** on the machine (the reference machine's results are in the private environment repository): `ollama ps` must show `100% GPU` after a request with `num_ctx` 8192, and the generate API reports the speeds:
+
+```sh
+curl -s localhost:11434/api/generate -d '{"model":"qwen3:4b","prompt":"/no_think List three budget categories.","stream":false,"options":{"num_ctx":8192,"num_predict":128}}' \
+  | jq '{prompt_tok_s: (.prompt_eval_count/(.prompt_eval_duration/1e9)), output_tok_s: (.eval_count/(.eval_duration/1e9))}'
+ollama ps
+```
+
+Use a prompt of a few thousand tokens too: on small GPUs prompt reading, not writing, decides how long an assistant turn with tool results takes. Ollama reuses an already-read prefix (system prompt, earlier turns), so follow-up rounds only read what is new.
+
+### After a reboot
+
+On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):
+
+```sh
+systemctl show -p ActiveEnterTimestampMonotonic k3s-lan k3s   # k3s-lan must be the earlier one
+kubectl get nodes; kubectl get pods -A                         # Ready; Running/Completed only
+nvidia-smi; ollama ps                                          # GPU visible; model on the GPU after a request
+```
+
+Then repeat the pod test from step 2 (router blocked, DNS and internet working), check Argo CD's `/healthz` and run `make check`. On the reference machine everything came back by itself in the right order.
+
 ## Deploy
 
 1. A `vX.Y.Z` tag runs `release.yml`: images, scans, signatures, the GitHub release, then a pull request **chore(deploy): homelab to vX.Y.Z** that changes `image.tag` in `deploy/environments/homelab/values.yaml`. Release candidates (`-rc.N`) get no pull request.
