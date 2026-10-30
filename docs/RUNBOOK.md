@@ -105,7 +105,7 @@ go install github.com/mikefarah/yq/v4@v4.54.1
 go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
 ```
 
-With Go from mise the binaries land in mise's Go `bin` directory (`go env GOBIN`), which is on `PATH`; reinstall them after switching Go versions. For `make check`, the repository's `mise.toml` selects Node 22 like CI (`mise install` once, `mise trust` for the file).
+With Go from mise the binaries land in the active Go version's own `bin` folder and disappear when that version changes. A fixed `GOBIN` avoids it, e.g. in mise's global config: `[env]` `GOBIN = "{{env.HOME}}/go/bin"` and `_.path = ["{{env.HOME}}/go/bin"]` (otherwise reinstall the tools after a Go update). Inside this repository, `mise.toml` selects CI's Go (the `toolchain` in `backend/go.mod`) and Node 22 (`mise install` once, `mise trust` for the file); `make check-toolchain` fails when `go.mod`, `mise.toml` and `Dockerfile.backend` name different Go versions, and Renovate updates the three in one pull request.
 
 ### 2. k3s
 

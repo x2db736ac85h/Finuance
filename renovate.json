@@ -35,6 +35,12 @@
       "matchPackageNames": ["postgres"],
       "matchUpdateTypes": ["major"],
       "enabled": false
+    },
+    {
+      "description": "One Go version everywhere: go.mod's toolchain, mise.toml and the golang build image move together (tools/check-toolchain.sh); last, so the gomod and docker groups above don't split it",
+      "groupName": "go toolchain",
+      "matchDepNames": ["go", "golang"],
+      "matchManagers": ["gomod", "mise", "dockerfile"]
     }
   ],
   "gomod": { "postUpdateOptions": ["gomodTidy"] }
