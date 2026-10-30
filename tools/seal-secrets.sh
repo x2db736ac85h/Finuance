@@ -8,6 +8,8 @@
 #   tools/seal-secrets.sh <env> backup-store            a random key pair for the in-cluster RustFS, sealed twice:
 #                                                       finuance-db-backup (finuance) and rustfs (s3, into <env>/rustfs/)
 #   tools/seal-secrets.sh <env> assistant <file>        finuance-assistant from KEY=value lines (API keys)
+#   tools/seal-secrets.sh <env> pull                    ghcr-pull (image pull secret) from a token on stdin
+#                                                       (read:packages; GHCR_USER, default x2db736ac85h)
 #
 # kubeseal fetches the controller's public certificate from the cluster (kube-system /
 # sealed-secrets-controller); set SEAL_CERT=<file> to seal offline with a saved certificate
@@ -17,7 +19,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [ $# -ge 2 ] || usage
 env=$1 what=$2
 ns=${NAMESPACE:-finuance}
@@ -40,7 +42,7 @@ seal() {
     printf '  labels:\n    app.kubernetes.io/part-of: finuance\n'
     # CloudNativePG reloads a secret it uses (a role's password, the store's keys) on change only
     # when the secret carries this label.
-    [ "$what" = assistant ] || [ "$name" = rustfs ] || printf '    cnpg.io/reload: "true"\n'
+    [ "$what" = assistant ] || [ "$what" = pull ] || [ "$name" = rustfs ] || printf '    cnpg.io/reload: "true"\n'
     printf 'data:\n'
     while [ $# -gt 0 ]; do printf '  %s: %s\n' "$1" "$(b64 "$2")"; shift 2; done
   } | kubeseal "${seal_args[@]}" >"$out.tmp"
@@ -66,6 +68,17 @@ case $what in
     ns=s3 dir=${RUSTFS_SECRETS_DIR:-deploy/environments/$env/rustfs}
     [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
     seal rustfs Opaque RUSTFS_ACCESS_KEY "$key_id" RUSTFS_SECRET_KEY "$key_secret"
+    ;;
+  pull)
+    # The registry login for the private images: a token that may only read packages, typed or piped
+    # on stdin (never an argument or a file).
+    [ -t 0 ] && printf 'GitHub token (read:packages), not shown: ' >&2
+    IFS= read -rs token || true; [ -t 0 ] && echo >&2
+    [ -n "$token" ] || { echo "seal-secrets: no token on stdin" >&2; exit 2; }
+    user=${GHCR_USER:-x2db736ac85h}
+    auth=$(b64 "$user:$token")
+    config=$(printf '{"auths":{"ghcr.io":{"username":"%s","auth":"%s"}}}' "$user" "$auth")
+    seal ghcr-pull kubernetes.io/dockerconfigjson .dockerconfigjson "$config"
     ;;
   assistant)
     [ $# -eq 3 ] && [ -f "$3" ] || { echo "seal-secrets: give the KEY=value file (e.g. OPENAI_API_KEY=…)" >&2; exit 2; }

@@ -5,7 +5,11 @@
 
 image:
   # Bumped by release.yml (a pull request per release, vX.Y.Z tags only).
-  tag: "0.1.0"
+  tag: "0.2.0-rc.1"
+# The images are private: a registry login that may only read packages
+# (tools/seal-secrets.sh homelab pull → secrets/ghcr-pull.sealed.yaml).
+imagePullSecrets:
+  - name: ghcr-pull
 
 # Set by the private overlay (<host>); the placeholders here keep a render without it obviously wrong.
 publicOrigin: https://finuance.homelab.invalid
