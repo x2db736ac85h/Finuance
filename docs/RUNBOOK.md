@@ -293,6 +293,7 @@ Then repeat the pod test from step 2 (router blocked, DNS and internet working),
 ## Deploy
 
 1. A `vX.Y.Z` tag runs `release.yml`: images, scans, signatures, the GitHub release, then a pull request **chore(deploy): homelab to vX.Y.Z** that changes `image.tag` in `deploy/environments/homelab/values.yaml`. Release candidates (`-rc.N`) get no pull request.
+   Tag a commit whose message has no `[skip ci]`: GitHub skips every push-triggered workflow for such a commit, the tag push included, and the release never starts (it happened with the first `v0.2.0-rc.1` tag).
 2. The pull request is opened with the workflow token, so CI doesn't start on its own. Close and reopen it to run the checks.
 3. Merge it. Argo CD syncs `main` (within its polling interval, or press *Refresh*):
    - the migrations Job `finuance-migrate` runs first (Helm `pre-upgrade` hook = Argo CD `PreSync`; the previous Job is deleted before the new one starts);

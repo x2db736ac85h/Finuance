@@ -10,16 +10,25 @@ demo goes public.
 from the checkout, and the stack was `compose.ci.yaml` (sign-ups on, mock model). Trivy 0.76.0 ran
 with a vulnerability database of 2026-10-26.
 
+**Release scan before `v0.2.0-rc.1`: 2026-10-30**, on the reference machine, on `main` plus the release
+changes (branch `chore/release-0.2.0`), images built locally from it; Trivy 0.76.0 with that day's
+database, govulncheck 1.9.0 (`vuln.go.dev` reachable), `npm audit`. **New since Phase 17:**
+GO-2026-6866 and GO-2026-6860 in `golang.org/x/net` 0.61.0 (Trivy: CVE-2026-78661, CVE-2026-97045),
+not reachable: **fixed** by 0.62.0. zlib and musl in the web image: **fixed** by upgrading them in the
+Dockerfile (still no rebuilt base). After the changes: web image 0 findings; api image and
+repository only GO-2026-5932 (no fix exists); `npm audit` 0; govulncheck 0 reachable, 1 in a required
+module (GO-2026-5932). The repository's misconfiguration findings are unchanged (below).
+
 ## Summary
 
 | Scan | Result | Open |
 |---|---|---|
 | Trivy, api image | 2 findings; 1 fixed by a base image bump | 1 (UNKNOWN, not reachable) |
-| Trivy, web image | 3 findings (MEDIUM / UNKNOWN), no fixed base yet | 3 (not reachable) |
+| Trivy, web image | 3 findings (MEDIUM / UNKNOWN), no fixed base yet; fixed 2026-10-30 by upgrading zlib and musl in the Dockerfile | 0 |
 | Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; 5 LOW/MEDIUM in the rehearsal stand-ins | all deliberate |
 | Trivy config, rendered charts (all severities) | 2 LOW fixed (web uid); 4 kinds LOW/MEDIUM left | all deliberate |
 | `npm audit` (production and all) | 0 | – |
-| govulncheck | 0 (CI; `vuln.go.dev` is blocked in the sandbox) | – |
+| govulncheck | 0 reachable (CI; 2026-10-30 locally: 2 new `x/net` module findings, fixed by 0.62.0) | – |
 | gitleaks | 0 (CI) | – |
 | ZAP baseline | 0 WARN, 0 FAIL, 61 rules pass; the first Actions run added 90004 (fixed), 10106 and 10049 | 3 ignored with reasons |
 | ZAP API scan (active, signed in) | 0 WARN, 0 FAIL, 112 rules pass; ~100,000 requests, no 5xx | 2 INFO, 1 ignored |
@@ -31,8 +40,9 @@ with a vulnerability database of 2026-10-26.
 |---|---|---|---|
 | api | DSA-6572-1 `ca-certificates` 20250419 (fixed in 20250419+deb13u1) | UNKNOWN | **Fixed:** the distroless `static-debian13:nonroot` base moved to the rebuilt digest `sha256:18f4cc26…`, which scans clean. |
 | api | GO-2026-5932 `golang.org/x/crypto` v0.58.0: the `openpgp` package is unmaintained and unsafe | UNKNOWN | **Not reachable:** a module-level match. The binary uses `argon2` and, through the test tooling, `ssh`; `go list -deps ./...` contains no `openpgp`. govulncheck, which checks the call graph, reports nothing. No fixed version exists; it goes away with the next x/crypto that drops or splits the package. |
-| web | CVE-2026-85091 `zlib` 1.3.2-r0 (fixed in 1.3.2-r1) | MEDIUM | **Not reachable:** a heap overflow in `gzprintf`/`gzvprintf` after a stalled non-blocking `gzwrite`, i.e. the `gzFile` API. nginx's gzip filter uses the streaming `deflate` API. The nginx-unprivileged 1.30.6 base hasn't been rebuilt yet (stable-alpine still has the same digest), and the sandbox can't reach the Alpine mirror for an `apk upgrade`; the base bump picks it up (Renovate). |
-| web | CVE-2026-107891 `musl`, `musl-utils` 1.2.6-r2 (fixed in 1.2.6-r3) | UNKNOWN | **Open, no details published** (no description, no score). The same base bump fixes it; it becomes a blocker if it is rated HIGH before then. |
+| web | CVE-2026-85091 `zlib` 1.3.2-r0 (fixed in 1.3.2-r1) | MEDIUM | **Fixed 2026-10-30:** the Dockerfile upgrades zlib from the Alpine mirror (1.3.2-r1), since the base still isn't rebuilt. Before that: **Not reachable:** a heap overflow in `gzprintf`/`gzvprintf` after a stalled non-blocking `gzwrite`, i.e. the `gzFile` API. nginx's gzip filter uses the streaming `deflate` API. The nginx-unprivileged 1.30.6 base hasn't been rebuilt yet (stable-alpine still has the same digest), and the sandbox can't reach the Alpine mirror for an `apk upgrade`; the base bump picks it up (Renovate). |
+| api | GO-2026-6866 / GO-2026-6860 `golang.org/x/net` 0.61.0 (Trivy: CVE-2026-78661, CVE-2026-97045), found 2026-10-30 | UNKNOWN | **Fixed:** `golang.org/x/net` 0.62.0 (govulncheck: not called by Finuance's code before either). |
+| web | CVE-2026-107891 `musl`, `musl-utils` 1.2.6-r2 (fixed in 1.2.6-r3) | UNKNOWN | **Fixed 2026-10-30:** upgraded in the Dockerfile with zlib (1.2.6-r3). Before that: **Open, no details published** (no description, no score). The same base bump fixes it; it becomes a blocker if it is rated HIGH before then. |
 
 ## Trivy: repository
 
@@ -118,6 +128,6 @@ Informational alerts that ZAP never counts as warnings, for the record:
 ## Next
 
 - Phase 18: OpenVAS / Nessus against the deployed instance; an admission policy for the image
-  registry and signatures (KSV-0125); the nginx base bump for zlib and musl if it hasn't
-  happened by then.
+  registry and signatures (KSV-0125). When the nginx base is rebuilt with fixed zlib and musl, the
+  Dockerfile's upgrade step can go.
 - Phase 19 gate: repeat every scan above on the release candidate, with nothing open above LOW.
