@@ -1,0 +1,4 @@
+# Local toolchain for mise users: the same Node line as CI (.github/workflows/*.yml, node-version: 22)
+# and the web image's build stage. Moving to Node 26 LTS is in docs/PROGRESS.md (Backlog).
+[tools]
+node = "22"
