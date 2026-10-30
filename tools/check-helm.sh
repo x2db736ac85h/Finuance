@@ -69,6 +69,9 @@ echo "ok"
 echo "== Argo CD applications"
 validate deploy/k8s/argocd/root.yaml deploy/k8s/argocd/apps/
 
+echo "== RustFS (in-cluster backup bucket)"
+validate deploy/k8s/rustfs/
+
 # Wrong settings must stop the render with a message that says what to set.
 o=(--set publicOrigin=https://f.example.com --set ingress.host=f.example.com)
 must_fail "publicOrigin is empty" "publicOrigin" "$app" --set ingress.host=f.example.com

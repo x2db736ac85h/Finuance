@@ -249,6 +249,19 @@ jobs:
             kubeseal --recovery-unseal --recovery-private-key "$d/key.pem" <"$f" \
               | python3 -c 'import json,sys; s=json.load(sys.stdin); assert s["metadata"]["namespace"]=="finuance" and s["data"], s["metadata"]["name"]; print("unsealed", s["metadata"]["name"], sorted(s["data"]))'
           done
+          # backup-store: one random key pair, sealed for the database (finuance) and RustFS (s3)
+          mkdir -p "$d/store" "$d/store-s3"
+          SECRETS_DIR="$d/store" RUSTFS_SECRETS_DIR="$d/store-s3" tools/seal-secrets.sh homelab backup-store
+          unseal() { kubeseal --recovery-unseal --recovery-private-key "$d/key.pem" <"$1"; }
+          python3 - <(unseal "$d/store/finuance-db-backup.sealed.yaml") <(unseal "$d/store-s3/rustfs.sealed.yaml") <<'PY'
+          import json, sys
+          db, fs = (json.load(open(p)) for p in sys.argv[1:3])
+          assert db["metadata"]["namespace"] == "finuance" and fs["metadata"]["namespace"] == "s3"
+          assert db["data"]["ACCESS_KEY_ID"] == fs["data"]["RUSTFS_ACCESS_KEY"]
+          assert db["data"]["ACCESS_SECRET_KEY"] == fs["data"]["RUSTFS_SECRET_KEY"]
+          assert len(db["data"]["ACCESS_SECRET_KEY"]) >= 40  # 32 random characters, base64
+          print("backup-store: the same key pair in finuance-db-backup and s3/rustfs")
+          PY
 
   oracle-fresh:
     name: legacy oracle is fresh

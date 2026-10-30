@@ -1,0 +1,35 @@
+# The backup bucket inside the cluster (deploy/k8s/rustfs, ADR 0022): RustFS with its volume, the
+# bucket job and its NetworkPolicies, plus its SealedSecret (deploy/environments/homelab/rustfs).
+# Before the secrets (-2) and the database (-1), so WAL archiving finds the bucket from the start.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rustfs
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: finuance
+  sources:
+    - repoURL: https://github.com/x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/k8s/rustfs
+    - repoURL: https://github.com/x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/environments/homelab/rustfs
+      directory:
+        include: "*.sealed.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: s3
+  syncPolicy:
+    automated:
+      # the volume is also protected by its own Prune=false,Delete=false annotation
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/enforce-version: latest

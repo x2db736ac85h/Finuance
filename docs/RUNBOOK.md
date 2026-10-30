@@ -236,6 +236,18 @@ Machine-specific values stay out of this repository (ADR 0023). The `finuance` A
 
 Clone the environment repository next to this one (`../finuance-env`). `make helm-lint` then renders the chart with the real overlay too (in memory, not kept), and `make check-env-details` reads its `private-patterns.txt`. Argo CD reads both repositories with read-only deploy keys (18.3).
 
+### 8. The backup bucket in the cluster (RustFS)
+
+Without a bucket outside the machine, backups go to RustFS inside the cluster ([`deploy/k8s/rustfs`](../deploy/k8s/rustfs/rustfs.yaml), Argo CD application `rustfs`, namespace `s3`, wave −3 before the secrets and the database): RustFS 1.0.1 on a 20 Gi `local-path` volume (never pruned or deleted by Argo CD), a PostSync job that creates `finuance-backups` when it is missing, and default-deny NetworkPolicies (only PostgreSQL instance pods in `finuance` and `finuance-restore`, which run the Barman Cloud plugin's sidecar, and the bucket job reach port 9000; RustFS itself connects nowhere). **It shares the node's disk with the database**: it protects against mistakes and pod or volume loss, not against losing the disk; an off-machine bucket is the first change for an always-on host (`objectStore` in `homelab/db-values.yaml`).
+
+Its keys and the database's backup credentials are one random pair, sealed twice (18.3; values never shown or saved):
+
+```sh
+tools/seal-secrets.sh homelab backup-store   # finuance-db-backup (finuance) + rustfs (s3, deploy/environments/homelab/rustfs/)
+```
+
+**Check** (2026-10-30, applied by hand into a scratch `s3` namespace with throwaway keys, then deleted): accepted under the `restricted` Pod Security Standard; volume bound; the job created the bucket, and after a pod restart a second run found it (the data is on the volume); a pod in `finuance` with `cnpg.io/cluster` reaches port 9000, the same pod without the label and a pod in `default` don't.
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):

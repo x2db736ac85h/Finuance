@@ -44,6 +44,8 @@ with a vulnerability database of 2026-10-26.
 | GO-2026-5932 in `backend/go.mod` | UNKNOWN | As in the api image. |
 | `deploy/k8s/rehearsal/stand-ins.yaml`: KSV-0011, -0015, -0016, -0018 (no CPU/memory requests or limits) | LOW | **Deliberate:** the bucket and mock model of the CI rehearsal on kind, never deployed elsewhere; they are hardened like the app (non-root, read-only, no capabilities; Phase 17 push 1). |
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** Docker Hub images pinned by digest, in a throwaway kind cluster. |
+| `deploy/k8s/rustfs/rustfs.yaml` (Phase 18): KSV-0011 (CPU not limited) for RustFS and the bucket job | LOW | **Deliberate:** as for the app's pods: CPU requests set, memory limited. Otherwise hardened like the app (non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicies). |
+| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate for now:** Docker Hub images (`rustfs/rustfs`, `amazon/aws-cli`) pinned by digest; the cluster's admission policy is decided with the app's images (18.8). |
 
 A local checkout may hold `backend/vendor/` (gitignored, for offline image builds). Trivy finds
 dozens of npm and Python advisories in it: testcontainers' documentation `Pipfile.lock` and

@@ -5,6 +5,8 @@
 #
 #   tools/seal-secrets.sh <env> db                      random passwords for finuance-db-owner and finuance-db-app
 #   tools/seal-secrets.sh <env> backup                  finuance-db-backup from $ACCESS_KEY_ID and $ACCESS_SECRET_KEY
+#   tools/seal-secrets.sh <env> backup-store            a random key pair for the in-cluster RustFS, sealed twice:
+#                                                       finuance-db-backup (finuance) and rustfs (s3, into <env>/rustfs/)
 #   tools/seal-secrets.sh <env> assistant <file>        finuance-assistant from KEY=value lines (API keys)
 #
 # kubeseal fetches the controller's public certificate from the cluster (kube-system /
@@ -15,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [ $# -ge 2 ] || usage
 env=$1 what=$2
 ns=${NAMESPACE:-finuance}
@@ -38,7 +40,7 @@ seal() {
     printf '  labels:\n    app.kubernetes.io/part-of: finuance\n'
     # CloudNativePG reloads a secret it uses (a role's password, the store's keys) on change only
     # when the secret carries this label.
-    [ "$what" = assistant ] || printf '    cnpg.io/reload: "true"\n'
+    [ "$what" = assistant ] || [ "$name" = rustfs ] || printf '    cnpg.io/reload: "true"\n'
     printf 'data:\n'
     while [ $# -gt 0 ]; do printf '  %s: %s\n' "$1" "$(b64 "$2")"; shift 2; done
   } | kubeseal "${seal_args[@]}" >"$out.tmp"
@@ -55,6 +57,15 @@ case $what in
     : "${ACCESS_KEY_ID:?set ACCESS_KEY_ID (the backup store's access key)}"
     : "${ACCESS_SECRET_KEY:?set ACCESS_SECRET_KEY (the backup store's secret key)}"
     seal finuance-db-backup Opaque ACCESS_KEY_ID "$ACCESS_KEY_ID" ACCESS_SECRET_KEY "$ACCESS_SECRET_KEY"
+    ;;
+  backup-store)
+    # One key pair, generated here and never shown: the database's backup credentials and the
+    # store's own keys must be the same.
+    key_id=$(password | head -c 20) key_secret=$(password)
+    seal finuance-db-backup Opaque ACCESS_KEY_ID "$key_id" ACCESS_SECRET_KEY "$key_secret"
+    ns=s3 dir=${RUSTFS_SECRETS_DIR:-deploy/environments/$env/rustfs}
+    [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
+    seal rustfs Opaque RUSTFS_ACCESS_KEY "$key_id" RUSTFS_SECRET_KEY "$key_secret"
     ;;
   assistant)
     [ $# -eq 3 ] && [ -f "$3" ] || { echo "seal-secrets: give the KEY=value file (e.g. OPENAI_API_KEY=…)" >&2; exit 2; }
