@@ -48,7 +48,7 @@ Database logins are two CloudNativePG managed roles: `finuance_owner` (owns the 
    ```
 
 2. **Set the homelab values** in `deploy/environments/homelab/values.yaml` and `db-values.yaml` (every *Phase 18* comment: host, issuer, pod CIDR, storage class, bucket), then merge them to `main`.
-3. **Apply the root app** once: `kubectl apply -f deploy/k8s/argocd/root.yaml`. Argo CD creates the projects, the operators and the Sealed Secrets controller. `finuance-db` waits for a manual sync, so `finuance` (wave 0) waits too.
+3. **Apply the root app** once: `kubectl apply -f deploy/k8s/argocd/root.yaml`. Argo CD creates the projects, the operators and the Sealed Secrets controller. `finuance-db` waits for a manual sync, so `finuance` (wave 0) waits too: the Application health check counts a child app that has never synced (`Missing`) as `Progressing` (`homelab/argocd-values.yaml`); with Argo CD's documented snippet alone the next wave went ahead and the migrations Job ran before the database existed (Phase 18).
 4. **Back up the Sealed Secrets key** as soon as the controller runs (see [Secrets](#secrets)).
 5. **Seal the secrets** and commit them:
 
@@ -298,6 +298,10 @@ rm -rf "$d"
 The Argo CD applications use the SSH URLs. **While a phase is tried on the cluster, they follow its branch** (`targetRevision: phase/NN-…` for this repository; the private overlay always follows `main`); `make helm-lint` fails on `main` and on pull requests into `main` unless every application follows `main` again.
 
 **Check** (2026-10-30): Argo CD's API reports both repositories `Successful` (`GET /api/v1/repositories?forceRefresh=true`).
+
+### Note: NetworkPolicies on k3s and a pod's first connection
+
+k3s enforces NetworkPolicies with kube-router, which adds a new pod's address to a policy's allow lists about a second after the pod starts. Until then that pod's connections to a protected port (e.g. PostgreSQL's 5432, allowed only for the app's pods) are refused. The migrations Job connected within milliseconds and failed every attempt, because each retry was a new pod; it now uses `restartPolicy: OnFailure`, so a retry runs in the same pod (checked 2026-10-30: a probe pod's first connection refused, every one from 2 s later open). Long-running pods (api, worker) just retry their connection.
 
 ### After a reboot
 

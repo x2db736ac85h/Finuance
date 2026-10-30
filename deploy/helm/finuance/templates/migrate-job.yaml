@@ -27,7 +27,10 @@ spec:
         {{- include "finuance.labels" . | nindent 8 }}
         app.kubernetes.io/component: migrate
     spec:
-      restartPolicy: Never
+      # Retry in the same pod: on k3s (kube-router) a new pod's first connection to a
+      # NetworkPolicy-protected port can be refused until its address is in the policy's lists,
+      # about a second after it starts; a new pod per attempt would lose that race every time.
+      restartPolicy: OnFailure
       automountServiceAccountToken: false
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

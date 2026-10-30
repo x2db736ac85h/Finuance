@@ -19,6 +19,8 @@ configs:
   cm:
     # Applications get a health status, so the root app's sync waves wait for each child app
     # (Argo CD's documented snippet; docs/RUNBOOK.md "Bootstrap (first install)" step 1).
+    # "Missing" (a child app that hasn't synced yet, e.g. the manually synced finuance-db) counts as
+    # Progressing, so the next waves wait for it instead of going ahead.
     resource.customizations.health.argoproj.io_Application: |
       hs = {}
       hs.status = "Progressing"
@@ -26,5 +28,9 @@ configs:
       if obj.status ~= nil and obj.status.health ~= nil then
         hs.status = obj.status.health.status
         if obj.status.health.message ~= nil then hs.message = obj.status.health.message end
+      end
+      if hs.status == "Missing" then
+        hs.status = "Progressing"
+        hs.message = "waiting for the application's first sync"
       end
       return hs
