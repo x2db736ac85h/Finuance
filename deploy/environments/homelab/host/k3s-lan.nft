@@ -1,5 +1,5 @@
 #!/usr/sbin/nft -f
-# Keeps k3s pods off the home network (docs/RUNBOOK.md "Bootstrap on single-node k3s", ADR 0022).
+# Keeps k3s pods off the home network and the ingress on the tailnet (docs/RUNBOOK.md "Bootstrap on single-node k3s", ADR 0022).
 # k3s inserts its own accept rules at the top of the FORWARD chain, ahead of ufw, so a
 # `ufw route deny` never runs. This table hooks forwarding at priority -10, before the
 # iptables-nft filter chains (priority 0); a drop here is final.
@@ -25,6 +25,10 @@ table inet k3s_lan {
 
     # pod to pod and pod to service stay inside the cluster
     iifname "cni0" ip daddr { $POD_CIDR, $SERVICE_CIDR } accept
+
+    # The ingress (Traefik on host ports 80/443) answers the tailnet only: connections forwarded
+    # into the pod network for those ports must arrive on the Tailscale interface.
+    iifname != "tailscale0" ip daddr $POD_CIDR ct status dnat ct original proto-dst { 80, 443 } counter drop
 
     # CoreDNS forwards lookups upstream
     iifname "cni0" ip saddr $POD_CIDR ip daddr $UPSTREAM_DNS meta l4proto { tcp, udp } th dport 53 accept

@@ -16,6 +16,9 @@ EXPORT="${EXPORT:-$PWD/query-smoke-export.csv}"
 API="$BASE_URL/api/v1"
 EMAIL="query-smoke-$(date +%s)-$RANDOM@example.test"
 PASS="query smoke password"
+# An existing user instead of a sign-up, for instances with sign-up off (scripts/smoke-k8s.sh makes
+# a throwaway user per script); the password comes from the environment only.
+if [[ -n ${SMOKE_EMAIL:-} ]]; then EMAIL=$SMOKE_EMAIL; PASS=${SMOKE_PASSWORD:?set SMOKE_PASSWORD with SMOKE_EMAIL}; fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 work="$(mktemp -d)"
@@ -46,7 +49,11 @@ query() {
   printf 'ok %2d  %-46s total %6s  first: %s %s\n' "$step" "$1" "$(number total)" "$(field bookedOn)" "$(field payee)"
 }
 
-call POST /auth/signup 201 "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}"
+if [[ -n ${SMOKE_EMAIL:-} ]]; then
+  call POST /auth/login 200 "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}"
+else
+  call POST /auth/signup 201 "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}"
+fi
 call POST /accounts 201 '{"name":"Demo"}'
 account="$(field id)"
 check "$(curl_api -X POST -F "accountId=$account" -F "file=@$ROOT/testdata/fixtures/demo/demo-legacy.csv;type=text/csv" "$API/imports")" 201 "upload demo"

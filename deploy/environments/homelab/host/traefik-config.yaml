@@ -1,12 +1,15 @@
+# Template: set ingressEndpoint.ip; keep the filled-in copy with the environment's private files.
 # Configures k3s's bundled Traefik (docs/RUNBOOK.md "Bootstrap on single-node k3s", step 10;
 # THREAT-MODEL T7). Applied once with `kubectl apply -f`; k3s's Helm controller re-renders Traefik.
 # Not part of the app-of-apps: it belongs to the k3s install, like the host files next to it.
 #
-# - loadBalancerSourceRanges: k3s's service load balancer (klipper-lb) publishes 80/443 on every
-#   host address; this limits them to the tailnet (Tailscale's CGNAT range), so the home network
-#   and anything else that reaches the host is refused.
-# - externalTrafficPolicy Local: without it the load balancer hides the client's address, so
-#   per-address rate limits and the activity log's IP would see one address for everyone.
+# Traefik listens on host ports 80/443 and its service is ClusterIP, so k3s's service load balancer
+# (klipper-lb) isn't used: it forwards every connection from its own pod and replaces the client's
+# address with its own, so per-address rate limits and the activity log would see one address for
+# everyone. With host ports the client's address reaches Traefik, which passes it on in
+# X-Forwarded-For (it ignores the header from clients; the app trusts it from the pod network only).
+# Only the tailnet may connect: host/k3s-lan.nft drops forwarded 80/443 traffic that doesn't arrive
+# on the Tailscale interface.
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
@@ -16,6 +19,23 @@ spec:
   valuesContent: |-
     service:
       spec:
-        externalTrafficPolicy: Local
-        loadBalancerSourceRanges:
-          - 100.64.0.0/10
+        type: ClusterIP   # this chart (40.x) reads the type from service.spec
+    # Without a LoadBalancer service nothing fills in the Ingress status, and Argo CD reports an
+    # Ingress without an address as Progressing: Traefik writes the address the ingress answers on.
+    providers:
+      kubernetesIngress:
+        publishedService:
+          enabled: false
+        ingressEndpoint:
+          ip: 100.64.0.10   # template: the host's tailnet address (tailscale ip -4)
+    ports:
+      web:
+        hostPort: 80
+      websecure:
+        hostPort: 443
+    # One node can't run two pods holding the same host ports: replace, don't surge.
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 1
+        maxSurge: 0

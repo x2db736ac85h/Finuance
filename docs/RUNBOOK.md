@@ -264,19 +264,23 @@ sudo systemctl start "finuance-tls@$USER.service"         # one run through syst
 
 **Check** (2026-10-30): the secret is `kubernetes.io/tls` with a Let's Encrypt certificate for `<host>` (90 days) whose key matches; a second run kept the same certificate and left the secret untouched; the run through systemd succeeded and the timer is scheduled. `systemctl list-timers 'finuance-tls@*'` shows the next run, `journalctl -u "finuance-tls@$USER.service"` the last one.
 
-### 10. Only the tailnet reaches the ingress
+### 10. Only the tailnet reaches the ingress, with the client's real address
 
-k3s's service load balancer (klipper-lb) publishes Traefik's 80/443 on every host address, so anyone on the home network reached it, and it hid the client's address from Traefik. [`host/traefik-config.yaml`](../deploy/environments/homelab/host/traefik-config.yaml), a `HelmChartConfig` for the bundled Traefik, sets `loadBalancerSourceRanges: [100.64.0.0/10]` (Tailscale's range) and `externalTrafficPolicy: Local`:
+k3s publishes Traefik through its service load balancer (klipper-lb), which forwards every connection from its own pod and replaces the client's address with that pod's: the activity log and the per-address rate limits saw one address for everyone (found in 18.3), and `externalTrafficPolicy: Local` doesn't change that. [`host/traefik-config.yaml`](../deploy/environments/homelab/host/traefik-config.yaml) (a `HelmChartConfig` for the bundled Traefik; template, filled-in copy with the environment's private files) therefore:
+
+- runs Traefik on **host ports 80/443** with a `ClusterIP` service, so klipper-lb isn't used and the client's address reaches Traefik, which passes it in `X-Forwarded-For` (it ignores the header from clients; the app trusts it from the pod network only). In this chart version (40.x) the service type is `service.spec.type`; `service.type` is silently ignored. One node can't run two pods holding the same host ports, so the update strategy replaces the pod instead of surging (a few seconds without ingress on each Traefik change);
+- writes the host's tailnet address into the Ingress status (`providers.kubernetesIngress.ingressEndpoint.ip`, `publishedService` off): without a load balancer nothing else does, and Argo CD reports an Ingress without an address as `Progressing`.
+
+Only the tailnet may connect: the nftables table from step 2 drops connections forwarded into the pod network for ports 80/443 that don't arrive on `tailscale0`. Connections the host makes to itself aren't forwarded, so test from another device.
 
 ```sh
-kubectl apply -f deploy/environments/homelab/host/traefik-config.yaml
-kubectl -n kube-system get svc traefik -o jsonpath='{.spec.externalTrafficPolicy} {.spec.loadBalancerSourceRanges}'   # Local ["100.64.0.0/10"]
-kubectl -n kube-system get pods -l svccontroller.k3s.cattle.io/svcname=traefik -o yaml | grep -A1 SRC_RANGES                # 100.64.0.0/10
+sudo nft -c -f k3s-lan.nft && sudo install -m 644 k3s-lan.nft /etc/k3s-lan.nft && sudo systemctl restart k3s-lan
+kubectl apply -f traefik-config.yaml                     # the filled-in copy
+kubectl -n kube-system get svc traefik -o jsonpath='{.spec.type}'                       # ClusterIP
+kubectl -n finuance get ingress finuance -o jsonpath='{.status.loadBalancer.ingress}'   # [{"ip":"<tailnet-ip>"}]
 ```
 
-No host firewall rule is needed: the load balancer's traffic is forwarded, not input.
-
-**Check** (2026-10-30): before, the load balancer pods had `SRC_RANGES=0.0.0.0/0`; after, `100.64.0.0/10`. From the host, `https://<tailnet-ip>` and `https://<host>` reach Traefik and `<lan-ip>` on 80/443 is refused; from a phone on the home Wi-Fi without Tailscale, `<lan-ip>` doesn't connect. That the app sees the client's real address is checked once it runs (18.3: the sign-in's address in Settings → Activity).
+**Check** (2026-10-31): no `svclb-traefik` pod, Traefik holds 80→8000 and 443→8443; from a phone on the home Wi-Fi without Tailscale `<lan-ip>` doesn't connect, with Tailscale the app works; a new sign-in is recorded in Settings → Activity with the phone's tailnet address (before: the load balancer pod's address); the Ingress status holds `<tailnet-ip>` and Argo CD reports the app `Healthy`.
 
 ### 11. Argo CD reads the private repositories
 
@@ -302,6 +306,27 @@ The Argo CD applications use the SSH URLs. **While a phase is tried on the clust
 ### Note: NetworkPolicies on k3s and a pod's first connection
 
 k3s enforces NetworkPolicies with kube-router, which adds a new pod's address to a policy's allow lists about a second after the pod starts. Until then that pod's connections to a protected port (e.g. PostgreSQL's 5432, allowed only for the app's pods) are refused. The migrations Job connected within milliseconds and failed every attempt, because each retry was a new pod; it now uses `restartPolicy: OnFailure`, so a retry runs in the same pod (checked 2026-10-30: a probe pod's first connection refused, every one from 2 s later open). Long-running pods (api, worker) just retry their connection.
+
+### 12. GitOps bootstrap (Phase 18.3)
+
+The order that worked, with what to look at between the steps:
+
+1. **Root app:** `kubectl apply -f deploy/k8s/argocd/root.yaml`. The CNPG operator, the Barman Cloud plugin and the Sealed Secrets controller come up (wave −5/−4, about a minute); `rustfs` waits for its secret.
+2. **Back up the controller key** at once (see [Secrets](#back-up-the-controller-key)): into a file readable only by you (e.g. `~/.local/share/finuance/`, mode 600), outside both repositories, and the public certificate into `deploy/environments/homelab/sealed-secrets.pem`. The controller adds a key every 30 days: back up again from time to time.
+3. **Seal and commit:** `tools/seal-secrets.sh homelab db`, `… backup-store`, and `… pull` (a classic GitHub token with only `read:packages`, typed on stdin; note its expiry). Push.
+4. **RustFS and the secrets sync by themselves** (refresh in Argo CD). If `rustfs` started before its secret was in git, its sync retries the old revision until it gives up; it then syncs the new one.
+5. **Sync `finuance-db` by hand** after reading the diff (UI *Sync*, or `POST /api/v1/applications/finuance-db/sync`): 2 instances healthy in about 70 s, WAL archiving on, the immediate first backup completed. Check the bootstrap SQL: `citext`, `pg_trgm`, `textlike` leakproof, PUBLIC can't connect.
+6. **The app syncs by itself:** the migrations Job (may restart once, see the note above), then api, worker and web.
+7. **First account** (sign-up is off), the password typed without echo and passed on stdin:
+
+   ```sh
+   read -rsp 'Password: ' PW; echo
+   printf '%s' "$PW" | kubectl -n finuance exec -i deploy/finuance-api -- /finuance admin create-user --email you@example.com --password-stdin; unset PW
+   ```
+
+8. **Smoke tests through the ingress:** `BASE_URL=https://<host> scripts/smoke-k8s.sh` makes a throwaway user per script with `admin create-user`, runs the auth, import and query smoke scripts as that user over HTTPS and deletes it.
+
+**Check** (2026-10-31, `v0.2.0-rc.1`): every Argo CD application `Synced`/`Healthy`; schema version 11; `https://<host>` with the Let's Encrypt certificate (`curl` verifies it), CSP, HSTS, `nosniff`; smoke scripts 15 + 18 + 17 steps, no smoke user left; a pod with the api's NetworkPolicy reaches Ollama on `<tailnet-ip>:11434` and lists the model; api and worker restarted once at their first start (the kube-router race; Backlog).
 
 ### After a reboot
 
