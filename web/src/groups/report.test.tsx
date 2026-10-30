@@ -8,14 +8,14 @@ import type { Schemas } from '../api/client';
 import { useSelection } from '../stores/selectionStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { account, API, db, resetDb, server, txRow } from '../test/server';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 
 const ITALY = '00000000-0000-4000-8000-000000000001';
 const cat = (name: string) => ({ id: `cat-${name}`, name });
 
 let exports: Schemas['ExportRequest'][] = [];
 const clientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
   Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
     configurable: true,
@@ -25,6 +25,7 @@ beforeAll(() => {
   });
   URL.createObjectURL = vi.fn(() => 'blob:x');
   URL.revokeObjectURL = vi.fn();
+  await warmUpApp();
 });
 afterAll(() => {
   server.close();

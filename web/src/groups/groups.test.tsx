@@ -8,10 +8,10 @@ import { fmtMoney } from '../lib/format';
 import { useSelection } from '../stores/selectionStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { account, API, db, resetDb, server, txRow } from '../test/server';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 
 const clientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
   Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
     configurable: true,
@@ -19,6 +19,7 @@ beforeAll(() => {
       return this.classList.contains('grid-wrap') ? 600 : 0;
     },
   });
+  await warmUpApp();
 });
 afterAll(() => {
   server.close();

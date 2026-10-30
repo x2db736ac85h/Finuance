@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import type { ImportChanges, ImportDetail, ImportPreview } from '../api/hooks/imports';
 import { IMPORT_ID, preview, stagedRow } from '../test/importFixtures';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 import { account, API, db, problem, resetDb, server } from '../test/server';
 import { importFiles, resetQueue } from './queue';
 
@@ -41,8 +41,9 @@ const lines = {
   ],
 };
 
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
+  await warmUpApp();
 });
 beforeEach(() => {
   resetDb();

@@ -6,11 +6,11 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type { Schemas } from '../api/client';
 import { fmtMoney } from '../lib/format';
 import { account, API, db, resetDb, server, txRow } from '../test/server';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 
 // jsdom has no layout: give the grid's scroll element a height so the virtualiser renders rows.
 const clientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
   Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
     configurable: true,
@@ -18,6 +18,7 @@ beforeAll(() => {
       return this.classList.contains('grid-wrap') ? 600 : 0;
     },
   });
+  await warmUpApp();
 });
 beforeEach(() => {
   resetDb();

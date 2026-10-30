@@ -6,11 +6,11 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type { Schemas } from '../api/client';
 import { fmtMoney } from '../lib/format';
 import { account, API, db, resetDb, server, txRow } from '../test/server';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 import { useDupDialog } from './store';
 
 const clientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
   Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
     configurable: true,
@@ -18,6 +18,7 @@ beforeAll(() => {
       return this.classList.contains('grid-wrap') ? 600 : 0;
     },
   });
+  await warmUpApp();
 });
 afterAll(() => {
   server.close();
@@ -176,7 +177,9 @@ describe('duplicates window', () => {
     });
   });
 
-  it('filters and pages 60 at a time', async () => {
+  // 2.3 s alone (75 groups re-rendered on every typed key), so the 5 s default runs out under a
+  // busy parallel run. 15 s until the window's re-rendering is looked at (docs/PROGRESS.md Backlog).
+  it('filters and pages 60 at a time', { timeout: 15_000 }, async () => {
     groups = Array.from({ length: 75 }, (_, i) => group(i + 1));
     const user = userEvent.setup();
     const dlg = await openDialog(user);

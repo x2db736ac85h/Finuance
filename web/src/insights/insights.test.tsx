@@ -8,7 +8,7 @@ import { fmtMonthLong } from '../lib/dates';
 import { useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { account, API, db, resetDb, server, txRow } from '../test/server';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 import { stepped } from './PeriodPicker';
 import { clampHeight } from './InsightsPane';
 import { moved } from './ChartsMenu';
@@ -23,7 +23,7 @@ const sizes: [string, number, number][] = [
 const saved = ['clientWidth', 'clientHeight'].map(
   (p) => [p, Object.getOwnPropertyDescriptor(HTMLElement.prototype, p)] as const,
 );
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
   for (const [prop, i] of [
     ['clientWidth', 1],
@@ -37,6 +37,7 @@ beforeAll(() => {
       },
     });
   }
+  await warmUpApp();
 });
 afterAll(() => {
   server.close();
