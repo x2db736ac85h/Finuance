@@ -3420,7 +3420,12 @@ Record the results with Grafana screenshots in `docs/perf.md`. **Find, fix and d
 **Goal:** the Phase 16 and 17 artifacts running on our Product Engineer's k3s homelab (added by the
 2026-10-24 regrouping; needs physical or remote access to the homelab).
 
-**Read first:** Phase 16 and 17 above, `docs/RUNBOOK.md`, the ADRs written in Phases 16–17.
+> **Reference environment (2026-10-27, our Product Engineer, ADR 0022).** The homelab is still out of reach,
+> so Phase 18 runs on single-node k3s on a personal machine with a small NVIDIA GPU: Tailscale
+> `*.ts.net` TLS, RustFS in the cluster for backups, Ollama on the host. The hands-on work runs in a
+> Claude Code session on that machine; its details are in the private environment repository. The task list is in `docs/PROGRESS.md`.
+
+**Read first:** Phase 16 and 17 above, `docs/RUNBOOK.md`, the ADRs written in Phases 16–17, ADR 0022.
 
 **Tasks**
 * Homelab answers (§2.1 Q5): ingress (Traefik, confirmed), certificate issuer (Let's Encrypt with a
