@@ -20,10 +20,16 @@ LABEL org.opencontainers.image.source="https://github.com/x2db736ac85h/Finuance"
       org.opencontainers.image.licenses="MIT"
 # Packages the app doesn't use are removed, and with them their CVEs: curl (the healthcheck is
 # busybox wget) and the optional nginx modules (none is loaded), which bring libgd, freetype and
-# brotli-libs. Offline (`--no-network`), so the image still builds without a package mirror.
+# brotli-libs (offline, `--no-network`).
+# Then zlib and musl are upgraded from the Alpine mirror: the base image is rebuilt less often than
+# they get fixes (docs/security-scan.md). That step needs the network; an offline build skips it
+# only when asked to (--build-arg APK_OFFLINE=1), so a release can't end up unfixed by accident.
+ARG APK_OFFLINE=
 USER root
 RUN apk del --no-network --purge curl nginx-module-image-filter nginx-module-geoip nginx-module-njs nginx-module-xslt \
-    && ! apk info -e brotli-libs libgd freetype curl >/dev/null
+    && ! apk info -e brotli-libs libgd freetype curl >/dev/null \
+    && if [ -z "$APK_OFFLINE" ]; then apk upgrade --no-cache zlib musl musl-utils; \
+       else echo "APK_OFFLINE set: zlib and musl stay as in the base image"; fi
 USER 101
 # Only FINUANCE_* variables are substituted into the template, so nginx's own $variables stay.
 ENV NGINX_ENVSUBST_FILTER=FINUANCE_ \
