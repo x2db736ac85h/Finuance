@@ -269,6 +269,7 @@ sudo systemctl start "finuance-tls@$USER.service"         # one run through syst
 k3s publishes Traefik through its service load balancer (klipper-lb), which forwards every connection from its own pod and replaces the client's address with that pod's: the activity log and the per-address rate limits saw one address for everyone (found in 18.3), and `externalTrafficPolicy: Local` doesn't change that. [`host/traefik-config.yaml`](../deploy/environments/homelab/host/traefik-config.yaml) (a `HelmChartConfig` for the bundled Traefik; template, filled-in copy with the environment's private files) therefore:
 
 - runs Traefik on **host ports 80/443** with a `ClusterIP` service, so klipper-lb isn't used and the client's address reaches Traefik, which passes it in `X-Forwarded-For` (it ignores the header from clients; the app trusts it from the pod network only). In this chart version (40.x) the service type is `service.spec.type`; `service.type` is silently ignored. One node can't run two pods holding the same host ports, so the update strategy replaces the pod instead of surging (a few seconds without ingress on each Traefik change);
+- redirects plain HTTP to HTTPS permanently (`ports.web.http.redirections`; HSTS then keeps browsers on HTTPS);
 - writes the host's tailnet address into the Ingress status (`providers.kubernetesIngress.ingressEndpoint.ip`, `publishedService` off): without a load balancer nothing else does, and Argo CD reports an Ingress without an address as `Progressing`.
 
 Only the tailnet may connect: the nftables table from step 2 drops connections forwarded into the pod network for ports 80/443 that don't arrive on `tailscale0`. Connections the host makes to itself aren't forwarded, so test from another device.
@@ -280,7 +281,7 @@ kubectl -n kube-system get svc traefik -o jsonpath='{.spec.type}'               
 kubectl -n finuance get ingress finuance -o jsonpath='{.status.loadBalancer.ingress}'   # [{"ip":"<tailnet-ip>"}]
 ```
 
-**Check** (2026-10-31): no `svclb-traefik` pod, Traefik holds 80→8000 and 443→8443; from a phone on the home Wi-Fi without Tailscale `<lan-ip>` doesn't connect, with Tailscale the app works; a new sign-in is recorded in Settings → Activity with the phone's tailnet address (before: the load balancer pod's address); the Ingress status holds `<tailnet-ip>` and Argo CD reports the app `Healthy`.
+**Check** (2026-10-31): no `svclb-traefik` pod, Traefik holds 80→8000 and 443→8443; from a phone on the home Wi-Fi without Tailscale `<lan-ip>` doesn't connect, with Tailscale the app works; a new sign-in is recorded in Settings → Activity with the phone's tailnet address (before: the load balancer pod's address); the Ingress status holds `<tailnet-ip>` and Argo CD reports the app `Healthy`; `http://<host>/…` answers 301 to the same `https://` address.
 
 ### 11. Argo CD reads the private repositories
 

@@ -31,6 +31,13 @@ spec:
     ports:
       web:
         hostPort: 80
+        # plain HTTP only redirects to HTTPS (permanently; HSTS then keeps browsers on HTTPS)
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
+              permanent: true
       websecure:
         hostPort: 443
     # One node can't run two pods holding the same host ports: replace, don't surge.
