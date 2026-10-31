@@ -532,8 +532,9 @@ func Report(results []Result) string {
 	sort.Slice(results, func(i, j int) bool { return results[i].Label() < results[j].Label() })
 	b.WriteString("| Connection | Model | Thinking | Toolset | Correct | Tool | Arguments | Answer | p50 | p95 | ≈ tokens | Run |\n|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|\n")
 	cats := map[string]bool{}
-	for _, r := range results {
-		s := Summarize(r)
+	for k := range results {
+		r := &results[k]
+		s := Summarize(*r)
 		for c := range s.ByCategory {
 			cats[c] = true
 		}
@@ -553,8 +554,9 @@ func Report(results []Result) string {
 		b.WriteString(" " + c + " |")
 	}
 	b.WriteString("\n|---|" + strings.Repeat("---:|", len(names)) + "\n")
-	for _, r := range results {
-		s := Summarize(r)
+	for k := range results {
+		r := &results[k]
+		s := Summarize(*r)
 		b.WriteString("| " + r.Label() + " |")
 		for _, c := range names {
 			v := s.ByCategory[c]
@@ -562,7 +564,8 @@ func Report(results []Result) string {
 		}
 		b.WriteString("\n")
 	}
-	for _, r := range results {
+	for k := range results {
+		r := &results[k]
 		fmt.Fprintf(&b, "\n## Misses: %s\n\n", r.Label())
 		misses := 0
 		for i := range r.Cases {
