@@ -1,0 +1,51 @@
+# Finuance's changes to Greenbone Community Edition's compose.yaml (downloaded and checked by
+# tools/openvas-scan.sh; Phase 18.8, docs/security-scan.md "OpenVAS"):
+# - the software images pinned by digest (the feed images — the vulnerability tests and the CVE
+#   data — stay on their rolling tags on purpose: a scan should use today's tests);
+# - the web UI only on 127.0.0.1:9392 (upstream also takes 127.0.0.1:443, which Traefik's host
+#   port holds on a k3s node);
+# - the scanner on the host's network: the instance is only reachable from the tailnet (THREAT-MODEL
+#   T7), so a scanner behind Docker's bridge would see it as a LAN device does — closed. openvasd
+#   (Notus, for authenticated checks) is then reached on 127.0.0.1:3000.
+services:
+  pg-gvm:
+    image: registry.community.greenbone.net/community/pg-gvm@sha256:a18d9e2f0cbba7839e65547a2331ce8f984500e8c4fbe91d08f9a48036d03fa2
+  pg-gvm-migrator:
+    image: registry.community.greenbone.net/community/pg-gvm-migrator@sha256:8fc1cc11cac0481674527e01ec7610a8195110cf117d700bd47fe3af7012b34d
+  redis-server:
+    image: registry.community.greenbone.net/community/redis-server@sha256:6da6a7c7221aa3ab231961fd6ca001d552b6a2c7727ac6201c6d8a360baa963a
+  gvmd:
+    image: registry.community.greenbone.net/community/gvmd@sha256:e59a6a684b112ea77fe4ddd7e5ca35e6a07d36bf854f1b411d11d12f9b0c608a
+  gsa:
+    image: registry.community.greenbone.net/community/gsa@sha256:2868c871c719e3d5079117f9ad31a4c1356d4aecd455962b90509d5de9c45a16
+  gsad:
+    image: registry.community.greenbone.net/community/gsad@sha256:8b2d983d934981c5f1c5cf95e3165489595e36679ff899d60ba4a4fe565d3aec
+  gvm-config:
+    image: registry.community.greenbone.net/community/gvm-config@sha256:3eacb5ee4a1a1f28d1da139a7b2b1fcd33df041f4a187d16d1cdece2f44c1868
+  nginx:
+    image: registry.community.greenbone.net/community/nginx@sha256:b9b933d336c9b2f535cf8aa5aa2531cf6edf6beeb3a2caa5e5b2169f73ea9b92
+    ports: !override
+      - 127.0.0.1:9392:9392
+  configure-openvas:
+    image: registry.community.greenbone.net/community/openvas-scanner@sha256:7a7c440cf675a83ca1b6d8284eb28450893a8b05f5fed1f98e997df605792632
+    command: !override
+      - /bin/sh
+      - -c
+      - |
+        printf "table_driven_lsc = yes\nopenvasd_server = http://127.0.0.1:3000\n" > /mnt/openvas.conf
+        sed "s/127/128/" /etc/openvas/openvas_log.conf | sed 's/gvm/openvas/' > /mnt/openvas_log.conf
+        chmod 644 /mnt/openvas.conf
+        chmod 644 /mnt/openvas_log.conf
+        touch /var/log/openvas/openvas.log
+        chmod 666 /var/log/openvas/openvas.log
+  openvas:
+    image: registry.community.greenbone.net/community/openvas-scanner@sha256:7a7c440cf675a83ca1b6d8284eb28450893a8b05f5fed1f98e997df605792632
+  openvasd:
+    image: registry.community.greenbone.net/community/openvas-scanner@sha256:7a7c440cf675a83ca1b6d8284eb28450893a8b05f5fed1f98e997df605792632
+    ports:
+      - 127.0.0.1:3000:80
+  ospd-openvas:
+    image: registry.community.greenbone.net/community/ospd-openvas@sha256:31a85272abc77521c98451ce6834ed7d2f887e98ff1b26ff3fd94f00d000b169
+    network_mode: host
+  gvm-tools:
+    image: registry.community.greenbone.net/community/gvm-tools@sha256:53d294ab34b1a7fe3582826560aa8a6dcdfb395e396b195a03dd7d4b3b9cd885

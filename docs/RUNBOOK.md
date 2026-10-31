@@ -381,6 +381,31 @@ The first mail from a new sending account may land in spam: mark it *Not spam* o
 
 **Check** (2026-10-31): every app `Synced`/`Healthy`; all Prometheus targets up (api ×2, worker, database ×2, kubelet, API server, CoreDNS, node-exporter, kube-state-metrics, the stack's own); the 27 Finuance rules (6 groups) healthy, only `Watchdog` firing (it always fires, to show the pipeline works); Grafana with the six Finuance dashboards in the *Finuance* folder, Prometheus and Tempo data sources healthy, the default password refused; one trace in Tempo from `POST /api/v1/imports/{id}/commit` (api) through `job commit_import` and `job reclassify` (worker) with their SQL; the test alert sent by Alertmanager (1 e-mail, 0 failed).
 
+### 14. Security scans of the instance (Phase 18.8)
+
+OpenVAS (Greenbone Community Edition) in Docker on the host, plus a port scan from the LAN's point of
+view ([docs/security-scan.md](security-scan.md) "OpenVAS"):
+
+```sh
+tools/openvas-scan.sh up                          # ~14 GB of images; the feeds load 30-60 min on the first start
+tools/openvas-scan.sh scan <host> 80,443,11434    # waits for the feeds, then ~40 min; report in ~/.local/state/finuance-openvas/reports/
+tools/openvas-scan.sh lan-view <lan-ip>           # all TCP ports from Docker's bridge network (~30 min): expect none open
+tools/openvas-scan.sh down                        # --volumes also drops the feeds
+```
+
+`up` replaces gvmd's default `admin` password with a random one (in that folder, mode 600); the web
+UI is on `http://127.0.0.1:9392` only. The scanner uses the host's network, because the instance is
+reachable only from the tailnet. The script refuses a changed upstream compose file until its
+checksum (and the override) are reviewed.
+
+Traefik's TLS settings come from `host/traefik-config.yaml` (TLS 1.2 with ECDHE + AEAD suites, and
+TLS 1.3); check after a change:
+
+```sh
+echo | openssl s_client -connect <host>:443 -tls1_2 -cipher ECDHE-ECDSA-AES128-SHA   # must fail
+echo | openssl s_client -connect <host>:80                                            # must fail (port 80 only redirects)
+```
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):

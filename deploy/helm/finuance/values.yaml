@@ -109,6 +109,9 @@ migrations:
 ingress:
   enabled: true
   className: traefik
+  # Traefik entry points the routers attach to (e.g. [websecure]); empty: every entry point. A TLS
+  # router on the plain-HTTP entry point would also answer TLS on port 80 (OpenVAS, Phase 18.8).
+  entryPoints: []
   # The host name, e.g. finance.example.com or finuance.<tailnet>.ts.net. Required when enabled.
   host: ""
   tls:

@@ -15,6 +15,8 @@ imagePullSecrets:
 publicOrigin: https://finuance.homelab.invalid
 ingress:
   className: traefik
+  # k3s's Traefik: HTTPS only; port 80 ("web") just redirects (host/traefik-config.yaml)
+  entryPoints: [websecure]
   host: finuance.homelab.invalid
   tls:
     # The host's Tailscale *.ts.net certificate (ADR 0022), put into this secret by

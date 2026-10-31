@@ -32,7 +32,8 @@ module (GO-2026-5932). The repository's misconfiguration findings are unchanged 
 | gitleaks | 0 (CI) | – |
 | ZAP baseline | 0 WARN, 0 FAIL, 61 rules pass; the first Actions run added 90004 (fixed), 10106 and 10049 | 3 ignored with reasons |
 | ZAP API scan (active, signed in) | 0 WARN, 0 FAIL, 112 rules pass; ~100,000 requests, no 5xx | 2 INFO, 1 ignored |
-| OpenVAS / Nessus | – | Phase 18 |
+| OpenVAS (Greenbone CE, Full and fast) against the instance | 0 High, 0 Medium, 0 Low; 47 Log. From the Log entries: CBC-SHA suites under TLS 1.2 and TLS on port 80 (both fixed) | HSTS without `includeSubDomains`/`preload`, `Server: nginx`, Ollama on the tailnet (deliberate) |
+| Port scan from the LAN (all TCP ports) | 0 open | – |
 
 ## Trivy: images
 
@@ -127,9 +128,40 @@ Informational alerts that ZAP never counts as warnings, for the record:
 - *Authentication request identified*: the sign-in form.
 - *User agent fuzzer*: the same responses for every browser.
 
+## OpenVAS (Phase 18.8)
+
+**2026-10-31**, on the reference machine: Greenbone Community Edition (gvmd 26.43, ospd-openvas
+22.10.6, feed of 2026-10-30, 191,292 tests in "Full and fast") from Greenbone's compose file plus
+[`tools/openvas/compose.override.yaml`](../tools/openvas/compose.override.yaml) (software images by
+digest, web UI on localhost only, the scanner on the host's network), run by
+[`tools/openvas-scan.sh`](../tools/openvas-scan.sh). Target: the instance's tailnet host name, TCP
+80, 443 and 11434 (Ollama, reachable on the tailnet by design, ADR 0020/0022), unauthenticated
+(no SSH or Windows credentials: the host isn't the system under test). 38 minutes. Reports with the
+host name stay outside git (`~/.local/state/finuance-openvas/reports/`).
+
+**Result: 0 High, 0 Medium, 0 Low** (QoD ≥ 70); 47 Log entries (detections and inventories). The
+Log entries worth a decision:
+
+| Port | Entry | Decision |
+|---|---|---|
+| 443, 80 | *SSL/TLS: Report Medium Cipher Suites*: TLS 1.2 accepted `ECDHE-*-AES-*-CBC-SHA` (Traefik's defaults) | **Fixed:** Traefik's default `TLSOption` allows TLS 1.2 with ECDHE + AES-GCM / ChaCha20 only, and TLS 1.3 (`host/traefik-config.yaml`, Mozilla "intermediate"); checked with `openssl s_client`: CBC-SHA and TLS 1.1 refused |
+| 80 | *SSL/TLS: Version Detection* on port 80: a TLS handshake on the plain-HTTP port served the app, because the Ingress routers attached to every entry point | **Fixed:** chart value `ingress.entryPoints` (homelab: `[websecure]`); port 80 only redirects |
+| 443 | *`includeSubDomains` / `preload` Missing in HSTS Header* | **Deliberate for now:** the host is a single `*.ts.net` name; `preload` needs the registrable domain, which isn't ours. Decided again with the public demo's own domain (Phase 19) |
+| 80, 443 | *HTTP Server Banner*: `Server: nginx`, no version | Accepted: no version is disclosed (`server_tokens off`) |
+| 80 | *HSTS Missing* | Expected: port 80 only answers `301` to HTTPS; HSTS is sent over HTTPS |
+| 11434 | *HTTP Security Headers*, *Allowed HTTP Methods*: Ollama's API answers every tailnet device without authentication | **Deliberate** (ADR 0020/0022): only the tailnet reaches it (the LAN scan below finds it closed); a Tailscale ACL that limits port 11434 to this machine would narrow it to the cluster (our Product Engineer's tailnet settings) |
+| 443 | HPKP missing | Expected: HPKP is deprecated and removed from browsers |
+
+**Port scan from the LAN** (`tools/openvas-scan.sh lan-view`: nmap 7.95, all 65,535 TCP ports from
+Docker's bridge network, i.e. through the host's firewall like another device on the home network):
+**no open port** (27 minutes; closed ports drop). Confirms THREAT-MODEL T7 independently of the
+phone test in 18.2.
+
+**Image admission (KSV-0125):** see "Next".
+
 ## Next
 
-- Phase 18: OpenVAS / Nessus against the deployed instance; an admission policy for the image
-  registry and signatures (KSV-0125). When the nginx base is rebuilt with fixed zlib and musl, the
+- Phase 18: an admission policy for the image registry and signatures (KSV-0125), our Product
+  Engineer's decision pending. When the nginx base is rebuilt with fixed zlib and musl, the
   Dockerfile's upgrade step can go.
 - Phase 19 gate: repeat every scan above on the release candidate, with nothing open above LOW.
