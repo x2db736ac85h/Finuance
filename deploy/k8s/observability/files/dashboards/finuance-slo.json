@@ -542,7 +542,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (code) (rate(traefik_router_requests_total{job=\"traefik\",router=~\"$namespace-.*\"}[5m]))",
+          "expr": "sum by (code) (rate(traefik_router_requests_total{job=\"traefik\",router=~\"([a-z0-9]+-)?$namespace-.+\"}[5m]))",
           "legendFormat": "{{code}}",
           "refId": "A"
         }
@@ -596,7 +596,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(sum(rate(traefik_router_requests_total{job=\"traefik\",router=~\"$namespace-.*\",code=~\"5..\"}[5m])) or vector(0)) / (sum(rate(traefik_router_requests_total{job=\"traefik\",router=~\"$namespace-.*\"}[5m])))",
+          "expr": "(sum(rate(traefik_router_requests_total{job=\"traefik\",router=~\"([a-z0-9]+-)?$namespace-.+\",code=~\"5..\"}[5m])) or vector(0)) / (sum(rate(traefik_router_requests_total{job=\"traefik\",router=~\"([a-z0-9]+-)?$namespace-.+\"}[5m])))",
           "legendFormat": "ingress 5xx",
           "refId": "A"
         },

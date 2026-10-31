@@ -311,11 +311,11 @@ tests:
   # a share under 5 % don't.
   - interval: 1m
     input_series:
-      - series: 'traefik_router_requests_total{job="traefik",router="finuance-finuance-host@kubernetes",code="200"}'
+      - series: 'traefik_router_requests_total{job="traefik",router="websecure-finuance-finuance-host-api@kubernetes",code="200"}'
         values: '0+70x30'
-      - series: 'traefik_router_requests_total{job="traefik",router="finuance-finuance-host@kubernetes",code="503"}'
+      - series: 'traefik_router_requests_total{job="traefik",router="websecure-finuance-finuance-host-api@kubernetes",code="503"}'
         values: '0+2x10 20+30x10 320+2x10'
-      - series: 'traefik_router_requests_total{job="traefik",router="argocd-server@kubernetes",code="503"}'
+      - series: 'traefik_router_requests_total{job="traefik",router="websecure-argocd-argocd-server-host@kubernetes",code="503"}'
         values: '0+100x30'
     alert_rule_test:
       - { eval_time: 10m, alertname: FinuanceIngressErrors, exp_alerts: [] }

@@ -245,8 +245,8 @@ spec:
         # 5xx answered at the ingress for Finuance's routers, the requests refused there included.
         - alert: FinuanceIngressErrors
           expr: >-
-            (sum(rate(traefik_router_requests_total{job="traefik",router=~"{{ $ns }}-.*",code=~"5.."}[5m])) or vector(0))
-            / sum(rate(traefik_router_requests_total{job="traefik",router=~"{{ $ns }}-.*"}[5m])) > 0.05
+            (sum(rate(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?{{ $ns }}-.+",code=~"5.."}[5m])) or vector(0))
+            / sum(rate(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?{{ $ns }}-.+"}[5m])) > 0.05
           for: 5m
           labels: { severity: page }
           annotations:

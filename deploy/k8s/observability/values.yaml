@@ -33,7 +33,8 @@ ingress:
   traefik:
     # A PodMonitor for Traefik (job "traefik"), the "At the ingress" panels' data and the
     # FinuanceIngressErrors alert. Traefik must label its metrics per router
-    # (metrics.prometheus.addRoutersLabels); Finuance's routers are named "<appNamespace>-…".
+    # (metrics.prometheus.addRoutersLabels); Finuance's routers are named
+    # "[<entry point>-]<appNamespace>-<ingress>-…@kubernetes".
     enabled: false
     namespace: kube-system
     selector: { app.kubernetes.io/name: traefik }
