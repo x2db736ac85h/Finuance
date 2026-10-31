@@ -1,0 +1,11 @@
+# Example of the private overlay for the observability chart (finuance-env: homelab/
+# observability-values.yaml, ADR 0023): the alert e-mail's provider and addresses. With Gmail: an
+# account only for sending alerts, 2-Step Verification on, an app password sealed with
+# `tools/seal-secrets.sh homelab smtp` (RUNBOOK). `make helm-lint` renders the chart with it.
+alerting:
+  email:
+    enabled: true
+    smarthost: smtp.gmail.com:587
+    from: alerts@example.com
+    authUsername: alerts@example.com
+    to: you@example.com

@@ -43,9 +43,16 @@ assistant:
   enabled: true
 
 otel:
-  # Phase 18.6: the collector of the observability stack.
-  endpoint: ""
+  # Tempo in the monitoring namespace (OTLP over HTTP; deploy/k8s/argocd/apps/tempo.yaml).
+  endpoint: http://tempo.monitoring.svc:4318
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: tempo }
+      ports: [4318]
 
 podMonitor:
-  # Phase 18.6: on once the Prometheus Operator runs.
-  enabled: false
+  # kube-prometheus-stack (deploy/k8s/argocd/apps/kube-prometheus-stack.yaml) scrapes api and worker.
+  enabled: true

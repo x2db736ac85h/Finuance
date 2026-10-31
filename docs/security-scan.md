@@ -56,6 +56,8 @@ module (GO-2026-5932). The repository's misconfiguration findings are unchanged 
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** Docker Hub images pinned by digest, in a throwaway kind cluster. |
 | `deploy/k8s/rustfs/rustfs.yaml` (Phase 18): KSV-0011 (CPU not limited) for RustFS and the bucket job | LOW | **Deliberate:** as for the app's pods: CPU requests set, memory limited. Otherwise hardened like the app (non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicies). |
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate for now:** Docker Hub images (`rustfs/rustfs`, `amazon/aws-cli`) pinned by digest; the cluster's admission policy is decided with the app's images (18.8). |
+| `deploy/k8s/tempo/tempo.yaml` (Phase 18.6): KSV-0011 (CPU not limited) | LOW | **Deliberate:** as for the app's pods and RustFS: CPU request set, memory limited; non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicy (OTLP only from the app, queries only from Grafana). |
+| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate for now:** `grafana/tempo` pinned by digest; the admission policy is decided in 18.8. |
 
 A local checkout may hold `backend/vendor/` (gitignored, for offline image builds). Trivy finds
 dozens of npm and Python advisories in it: testcontainers' documentation `Pipfile.lock` and

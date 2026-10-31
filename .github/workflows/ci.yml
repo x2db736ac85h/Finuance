@@ -266,6 +266,14 @@ jobs:
           mkdir -p "$d/pull"
           printf 'fake-token' | SECRETS_DIR="$d/pull" tools/seal-secrets.sh homelab pull
           unseal "$d/pull/ghcr-pull.sealed.yaml" | python3 -c 'import base64,json,sys; s=json.load(sys.stdin); assert s["type"]=="kubernetes.io/dockerconfigjson"; c=json.loads(base64.b64decode(s["data"][".dockerconfigjson"])); a=base64.b64decode(c["auths"]["ghcr.io"]["auth"]).decode(); assert a.endswith(":fake-token"), "auth"; print("pull: ghcr.io login sealed as ghcr-pull")'
+          # smtp: an app password on stdin (spaces removed), bound to the monitoring namespace
+          mkdir -p "$d/smtp"
+          printf 'abcd efgh ijkl mnop' | SMTP_SECRETS_DIR="$d/smtp" tools/seal-secrets.sh homelab smtp
+          unseal "$d/smtp/finuance-alert-smtp.sealed.yaml" | python3 -c 'import base64,json,sys; s=json.load(sys.stdin); assert s["metadata"]["namespace"]=="monitoring"; assert base64.b64decode(s["data"]["password"])==b"abcdefghijklmnop"; print("smtp: app password sealed for monitoring")'
+          # grafana: admin + a random password, bound to the monitoring namespace
+          mkdir -p "$d/grafana"
+          GRAFANA_SECRETS_DIR="$d/grafana" tools/seal-secrets.sh homelab grafana
+          unseal "$d/grafana/grafana-admin.sealed.yaml" | python3 -c 'import base64,json,sys; s=json.load(sys.stdin); assert s["metadata"]["namespace"]=="monitoring"; assert base64.b64decode(s["data"]["admin-user"])==b"admin"; assert len(base64.b64decode(s["data"]["admin-password"]))==32; print("grafana: admin login sealed for monitoring")'
 
   oracle-fresh:
     name: legacy oracle is fresh

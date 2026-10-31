@@ -85,6 +85,9 @@ fi
 echo "== RustFS (in-cluster backup bucket)"
 validate deploy/k8s/rustfs/
 
+echo "== Tempo (traces)"
+validate deploy/k8s/tempo/
+
 # Wrong settings must stop the render with a message that says what to set.
 o=(--set publicOrigin=https://f.example.com --set ingress.host=f.example.com)
 must_fail "publicOrigin is empty" "publicOrigin" "$app" --set ingress.host=f.example.com

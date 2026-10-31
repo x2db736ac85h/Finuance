@@ -1,0 +1,24 @@
+# Traces for the homelab (Phase 18.6): Tempo in single-binary mode from deploy/k8s/tempo (Grafana's
+# single-binary chart is deprecated), OTLP over HTTP from the api and the worker, read by Grafana.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-6"
+spec:
+  project: platform
+  source:
+    repoURL: git@github.com:x2db736ac85h/Finuance.git
+    targetRevision: phase/18-homelab-rollout
+    path: deploy/k8s/tempo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

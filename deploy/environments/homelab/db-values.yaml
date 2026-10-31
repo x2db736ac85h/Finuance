@@ -4,6 +4,8 @@
 
 cluster:
   instances: 2
+  # scraped by kube-prometheus-stack (job finuance-db; dashboards and alerts: deploy/k8s/observability)
+  podMonitor: true
   storage:
     size: 10Gi
     # k3s's bundled storage class (a node-local volume).
@@ -25,3 +27,5 @@ backup:
 networkPolicy:
   enabled: true
   operatorNamespace: cnpg-system
+  # Prometheus scrapes the exporter on 9187
+  monitoringNamespace: monitoring

@@ -10,6 +10,9 @@
 #   tools/seal-secrets.sh <env> assistant <file>        finuance-assistant from KEY=value lines (API keys)
 #   tools/seal-secrets.sh <env> pull                    ghcr-pull (image pull secret) from a token on stdin
 #                                                       (read:packages; GHCR_USER, default x2db736ac85h)
+#   tools/seal-secrets.sh <env> smtp                    finuance-alert-smtp (monitoring) from the alert mail
+#                                                       account's app password on stdin
+#   tools/seal-secrets.sh <env> grafana                 grafana-admin (monitoring): user admin, a random password
 #
 # kubeseal fetches the controller's public certificate from the cluster (kube-system /
 # sealed-secrets-controller); set SEAL_CERT=<file> to seal offline with a saved certificate
@@ -19,7 +22,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [ $# -ge 2 ] || usage
 env=$1 what=$2
 ns=${NAMESPACE:-finuance}
@@ -42,7 +45,7 @@ seal() {
     printf '  labels:\n    app.kubernetes.io/part-of: finuance\n'
     # CloudNativePG reloads a secret it uses (a role's password, the store's keys) on change only
     # when the secret carries this label.
-    [ "$what" = assistant ] || [ "$what" = pull ] || [ "$name" = rustfs ] || printf '    cnpg.io/reload: "true"\n'
+    [ "$what" = assistant ] || [ "$what" = pull ] || [ "$what" = smtp ] || [ "$what" = grafana ] || [ "$name" = rustfs ] || printf '    cnpg.io/reload: "true"\n'
     printf 'data:\n'
     while [ $# -gt 0 ]; do printf '  %s: %s\n' "$1" "$(b64 "$2")"; shift 2; done
   } | kubeseal "${seal_args[@]}" >"$out.tmp"
@@ -79,6 +82,24 @@ case $what in
     auth=$(b64 "$user:$token")
     config=$(printf '{"auths":{"ghcr.io":{"username":"%s","auth":"%s"}}}' "$user" "$auth")
     seal ghcr-pull kubernetes.io/dockerconfigjson .dockerconfigjson "$config"
+    ;;
+  smtp)
+    # The password of the account that sends the alert e-mails (an app password), typed or piped on
+    # stdin; bound to the monitoring namespace, where the AlertmanagerConfig reads it.
+    [ -t 0 ] && printf 'SMTP (app) password, not shown: ' >&2
+    IFS= read -rs secret || true; [ -t 0 ] && echo >&2
+    [ -n "$secret" ] || { echo "seal-secrets: no password on stdin" >&2; exit 2; }
+    secret=${secret// /}   # Google shows app passwords in groups of four with spaces
+    ns=${NAMESPACE:-monitoring} dir=${SMTP_SECRETS_DIR:-deploy/environments/$env/monitoring}
+    [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
+    seal finuance-alert-smtp Opaque password "$secret"
+    ;;
+  grafana)
+    # Grafana's admin login (the chart's default password is public). Read it back with kubectl when
+    # needed (docs/RUNBOOK.md "Monitoring"); a new run replaces it.
+    ns=${NAMESPACE:-monitoring} dir=${GRAFANA_SECRETS_DIR:-deploy/environments/$env/monitoring}
+    [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
+    seal grafana-admin Opaque admin-user admin admin-password "$(password)"
     ;;
   assistant)
     [ $# -eq 3 ] && [ -f "$3" ] || { echo "seal-secrets: give the KEY=value file (e.g. OPENAI_API_KEY=…)" >&2; exit 2; }

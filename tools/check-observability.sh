@@ -36,6 +36,13 @@ for v in "" "$chart"/ci/*.yaml; do
   helm template obs "$chart" -n monitoring "${args[@]}" >"$work/render.yaml"
   kubeconform -strict -summary -kubernetes-version "$K8S" -schema-location default -schema-location "$CRDS" "$work/render.yaml"
 done
+# the homelab layering (ADR 0023): generic values, then the example overlay, and locally the private one
+H=deploy/environments/homelab
+for o in "$H/observability-values.example.yaml" "${FINUANCE_ENV_DIR:-../finuance-env}/homelab/observability-values.yaml"; do
+  [ -f "$o" ] || continue
+  helm template obs "$chart" -n monitoring --kube-version "$K8S" -f "$H/observability-values.yaml" -f "$o" \
+    | kubeconform -strict -summary -kubernetes-version "$K8S" -schema-location default -schema-location "$CRDS" -
+done
 if helm template obs "$chart" --kube-version "$K8S" --set alerting.email.enabled=true >/dev/null 2>&1; then
   echo "check-observability: the e-mail receiver rendered without an address"; exit 1
 fi
