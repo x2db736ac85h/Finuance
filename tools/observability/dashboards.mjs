@@ -173,7 +173,7 @@ const dashboards = {
     ts('Archiver failures', [[`sum by (pod) (increase(cnpg_pg_stat_archiver_failed_count{${DB}}[15m]))`, '{{pod}}']]),
     ts('Backup timestamps', [
       [`max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{${DB}}) * 1000`, 'last available'],
-      [`max(barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp{${DB}}) * 1000`, 'last failed'],
+      [`(max(barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp{${DB}}) > 0) * 1000`, 'last failed'], // absent until a backup fails (0 would pull the axis to 1970)
     ], { unit: 'dateTimeAsIso' }),
     row('Load'),
     ts('Connections', [[`sum by (pod, state) (cnpg_backends_total{${DB}})`, '{{pod}} {{state}}']], { stack: true }),

@@ -347,6 +347,15 @@ Before pushing the apps:
 3. **Addresses** (sender, recipient, `smtp.gmail.com:587`) in the overlay, committed to the private repository first: Argo CD can't render `finuance-observability` without it.
 4. The app's values point traces at Tempo with the **full URL** `http://tempo.monitoring.svc:4318/v1/traces` (the app sends to exactly that URL; the chart refuses one without a path) and turn the PodMonitors on; `db-values.yaml` turns on the database's PodMonitor and admits Prometheus in its NetworkPolicy.
 
+**Database metrics on a cluster created before Phase 18.6:** the bootstrap SQL revokes `CONNECT` from `PUBLIC`, and CloudNativePG's metrics role (`cnpg_metrics_exporter`, a `pg_monitor` member) runs its queries inside the `finuance` database, so connections, transactions, cache hit ratio, database size, replication lag and archiver panels stay empty (the instance logs `permission denied for database "finuance"`). New clusters get `GRANT CONNECT ON DATABASE finuance TO pg_monitor` from the bootstrap SQL; an existing one needs it once, on the primary:
+
+```sh
+P=$(kubectl -n finuance get cluster finuance-db -o jsonpath='{.status.currentPrimary}')
+kubectl -n finuance exec "$P" -c postgres -- psql -X -d finuance -c 'GRANT CONNECT ON DATABASE finuance TO pg_monitor;'
+```
+
+It replicates to the standby, and restores carry it. `pg_monitor` members read statistics only (no table grants; RLS).
+
 After the push the three apps sync by themselves (about 8 minutes on the reference machine). **`finuance-db` then shows `OutOfSync`** for its PodMonitor and NetworkPolicy only: sync those two (UI *Sync* with just them ticked); the PostgreSQL pods don't restart.
 
 **Access** (then `http://localhost:3000`, user `admin`):
