@@ -330,6 +330,48 @@ The order that worked, with what to look at between the steps:
 
 **Check** (2026-10-31, `v0.2.0-rc.1`): every Argo CD application `Synced`/`Healthy`; schema version 11; `https://<host>` with the Let's Encrypt certificate (`curl` verifies it), CSP, HSTS, `nosniff`; smoke scripts 15 + 18 + 17 steps, no smoke user left; a pod with the api's NetworkPolicy reaches Ollama on `<tailnet-ip>:11434` and lists the model; api and worker restarted once at their first start (the kube-router race; Backlog).
 
+### 13. Monitoring (Phase 18.6)
+
+Three Argo CD apps in the namespace `monitoring`, none of them exposed (port-forward only, like Argo CD):
+
+| App | Wave | What |
+|---|---|---|
+| `tempo` | −6 | Tempo 2.9.0 from `deploy/k8s/tempo` (the Helm chart is deprecated): OTLP/HTTP on 4318 only, traces kept 72 h on a 5 Gi volume, read-only as uid 10001; its NetworkPolicy admits 4318 from Finuance's api and worker and 3200 from Grafana |
+| `kube-prometheus-stack` | −4 | chart 92.16.1 with `homelab/monitoring-values.yaml`: Prometheus (7 days or 8 GB on a 10 Gi volume), Alertmanager, Grafana (dashboard sidecar, Tempo data source), kube-state-metrics, node-exporter; k3s's built-in etcd/scheduler/controller-manager/proxy aren't scraped (nothing separate to scrape). After Sealed Secrets, because it also syncs Grafana's sealed admin login |
+| `finuance-observability` | 1 | `deploy/k8s/observability` (the six dashboards, SLO and alert rules, the e-mail receiver) with `homelab/observability-values.yaml` and the overlay's addresses (`$env/homelab/observability-values.yaml`, template `observability-values.example.yaml`), plus the sealed SMTP password |
+
+Before pushing the apps:
+
+1. **A sending account for the alerts:** a separate mailbox only for sending (e.g. a new Gmail account with 2-step verification and an *app password*), so a leaked password can only send mail, and can be revoked without touching a personal account. Seal its app password: `tools/seal-secrets.sh homelab smtp` (asked without echo; spaces removed).
+2. **Grafana's admin login:** `tools/seal-secrets.sh homelab grafana` (user `admin`, 32 random characters). The chart's default password is public.
+3. **Addresses** (sender, recipient, `smtp.gmail.com:587`) in the overlay, committed to the private repository first: Argo CD can't render `finuance-observability` without it.
+4. The app's values point traces at Tempo with the **full URL** `http://tempo.monitoring.svc:4318/v1/traces` (the app sends to exactly that URL; the chart refuses one without a path) and turn the PodMonitors on; `db-values.yaml` turns on the database's PodMonitor and admits Prometheus in its NetworkPolicy.
+
+After the push the three apps sync by themselves (about 8 minutes on the reference machine). **`finuance-db` then shows `OutOfSync`** for its PodMonitor and NetworkPolicy only: sync those two (UI *Sync* with just them ticked); the PostgreSQL pods don't restart.
+
+**Access** (then `http://localhost:3000`, user `admin`):
+
+```sh
+kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d; echo
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090      # targets, rules
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093    # alerts, silences
+```
+
+**Test alert** (an e-mail now and a *resolved* one after about 5 minutes; Alertmanager's `alertmanager_notifications_total{integration="email"}` counts the sent ones, `…_failed_total` the failures by reason):
+
+```sh
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093 &
+curl -XPOST localhost:9093/api/v2/alerts -H 'Content-Type: application/json' -d "[{
+  \"labels\": {\"alertname\": \"FinuanceTestAlert\", \"severity\": \"ticket\", \"namespace\": \"finuance\"},
+  \"annotations\": {\"summary\": \"Test alert\", \"description\": \"Sent by hand to check e-mail delivery.\"},
+  \"endsAt\": \"$(date -u -d '+5 min' +%Y-%m-%dT%H:%M:%SZ)\"}]"
+```
+
+The first mail from a new sending account may land in spam: mark it *Not spam* once.
+
+**Check** (2026-10-31): every app `Synced`/`Healthy`; all Prometheus targets up (api ×2, worker, database ×2, kubelet, API server, CoreDNS, node-exporter, kube-state-metrics, the stack's own); the 27 Finuance rules (6 groups) healthy, only `Watchdog` firing (it always fires, to show the pipeline works); Grafana with the six Finuance dashboards in the *Finuance* folder, Prometheus and Tempo data sources healthy, the default password refused; one trace in Tempo from `POST /api/v1/imports/{id}/commit` (api) through `job commit_import` and `job reclassify` (worker) with their SQL; the test alert sent by Alertmanager (1 e-mail, 0 failed).
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):
@@ -391,6 +433,9 @@ All secrets are SealedSecrets in `deploy/environments/homelab/secrets/`. They ar
 |---|---|---|
 | `finuance-db-owner`, `finuance-db-app` | `tools/seal-secrets.sh homelab db` (32 random characters each) | below |
 | `finuance-db-backup` | `ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh homelab backup` | new key at the store, re-seal, merge; the plugin reloads it (`cnpg.io/reload`) |
+| `ghcr-pull` | `tools/seal-secrets.sh homelab pull` (a `read:packages` token on stdin) | new token before it expires, re-seal, merge |
+| `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, merge |
+| `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, merge, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
 | `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, merge, then `kubectl -n finuance rollout restart deploy/finuance-api` |
 
 ### Back up the controller key
