@@ -454,6 +454,8 @@ A restore creates a **new** cluster from the bucket (CNPG never restores in plac
 
 ### Restore drill (scratch namespace)
 
+**On a cluster with sign-up off, run the scripted drill:** `tools/homelab-drill.sh restore` (marker users made with the admin CLI, an on-demand backup between them, the restore with the bucket's keys and the registry login copied inside the cluster and fresh role passwords sealed for the scratch namespace, a temporary app reached by port-forward, both markers, LEAKPROOF, marker B's sign-in, `scripts/smoke-k8s.sh` against it; then the markers and the namespace are deleted, `KEEP_RESTORE=1` keeps the namespace). The manual steps below are what it does.
+
 ```sh
 kubectl create namespace finuance-restore
 kubectl label namespace finuance-restore pod-security.kubernetes.io/enforce=restricted
@@ -486,7 +488,16 @@ Record the times in the table below: **RTO** is from `helm install finuance-db` 
 | Drill | Where | Data | RTO | RPO | Notes |
 |---|---|---|---|---|---|
 | 2026-10-25 | CI rehearsal (kind, 3 nodes, RustFS bucket) | smoke-test data | 75 s (restored cluster ready after 56 s) | 51 s (a write until its WAL was archived; at most `archive_timeout`, 5 min) | on-demand base backup 159 s; both markers back (before the base backup, and only in the WAL after it); `textlike` still LEAKPROOF; the restored roles took the scratch namespace's new passwords |
-| — | homelab | real | *(Phase 18)* | | |
+| 2026-10-31 | reference machine (single-node k3s, RustFS in the cluster on the same disk; `tools/homelab-drill.sh restore`) | production database with one real account, two marker users | **71 s** (restored cluster ready after 55 s) | **96 s** (a write until its WAL was archived; at most `archive_timeout`, 5 min) | on-demand base backup 8 s; both markers back (before the base backup, and only in the WAL after it); `textlike` still LEAKPROOF; marker B signed in on the restored database; smoke scripts 15 + 18 + 17 steps on the temporary app; markers and namespace deleted afterwards |
+
+### Pod kills under load
+
+`tools/homelab-drill.sh podkill` runs k6 (`grafana/k6:1.8.2`, the rehearsal's `podkill.js` with a drill user made by the admin CLI and the certificate checked) through the ingress for 90 s while it deletes an api pod, rolls the api, deletes a web pod and rolls web and the worker. No request may fail (rollouts are `maxUnavailable: 0`, pods leave the endpoints before they stop, the api drains in-flight requests).
+
+| Drill | Where | Result |
+|---|---|---|
+| 2026-10-25 | CI rehearsal (kind, 3 nodes) | 19,241 requests, 0 failed, p95 66 ms |
+| 2026-10-31 | reference machine (single-node k3s, through Traefik on host ports, TLS verified) | **23,177 requests, 0 failed, p95 29 ms**, max 560 ms; the api's HPA scaled to 4 during the run |
 
 ### Point-in-time recovery
 

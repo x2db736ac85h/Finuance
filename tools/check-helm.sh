@@ -55,6 +55,9 @@ if [ -f "$env_overlay" ]; then
 fi
 for f in "$db"/ci/*.yaml; do render "db-$(basename "$f" .yaml)" finuance-db "$db" finuance "$f"; done
 render db-homelab finuance-db "$db" finuance deploy/environments/homelab/db-values.yaml
+# the restore drill on the homelab (tools/homelab-drill.sh)
+render db-homelab-restore finuance-db "$db" finuance-restore deploy/environments/homelab/restore-db-values.yaml
+render app-homelab-restore finuance "$app" finuance-restore deploy/environments/homelab/restore-app-values.yaml
 
 # The assistant's connections file: every container told to read it must mount it (the rehearsal
 # found the worker crash-looping on a path only the api had).
