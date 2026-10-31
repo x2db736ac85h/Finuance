@@ -44,3 +44,6 @@ blob-report/
 /.rehearsal/
 loadtest/results/
 zap-reports/
+
+# written by scripts/query-smoke.sh (an export to open in a spreadsheet)
+query-smoke-export.csv
