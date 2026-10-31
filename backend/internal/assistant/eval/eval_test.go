@@ -154,7 +154,7 @@ func TestRunWithMock(t *testing.T) {
 	clock := platform.FixedClock{T: time.Date(2025, 3, 20, 10, 0, 0, 0, time.UTC)}
 	a := assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clock, MaxChats: 100, MaxConcurrent: 1,
 		Connections: assistant.NewConnections([]config.AIConnection{{Name: "mock", API: llm.OpenAI, BaseURL: base, ContextTokens: 32768}},
-			10*time.Second, clock, nil)})
+			10*time.Second, 0, clock, nil)})
 	f, err := Load(questionsPath)
 	if err != nil {
 		t.Fatal(err)

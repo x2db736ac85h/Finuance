@@ -34,7 +34,7 @@ func TestEvalAssistant(t *testing.T) {
 		t.Fatal(err)
 	}
 	clock := platform.FixedClock{T: f.Today}
-	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, clock, nil)
+	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, cfg.AIIdleTimeout, clock, nil)
 	a := assistant.New(assistant.Config{Store: st, Query: query.New(st), Connections: conns, Clock: clock, MaxChats: 1000, MaxConcurrent: 1})
 	ctx := context.Background()
 	conn, model, err := conns.Resolve(ctx, os.Getenv("FINUANCE_EVAL_CONNECTION"), os.Getenv("FINUANCE_EVAL_MODEL"))

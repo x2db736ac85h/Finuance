@@ -81,7 +81,8 @@ If a server rejects tool definitions before any lookup, the chat switches to **p
 
 | Variable | Default | |
 |---|---|---|
-| `FINUANCE_AI_TIMEOUT` | `120s` | One model request; a stream that stays silent for 60 s also ends |
+| `FINUANCE_AI_TIMEOUT` | `120s` | One model request, first byte to last |
+| `FINUANCE_AI_IDLE_TIMEOUT` | `60s` | A model stream silent this long ends, also before its first token (at most `FINUANCE_AI_TIMEOUT`). A small GPU reading a long prompt (system prompt + tool results, ~8,000 tokens) can be silent for over a minute: raise both (e.g. `300s` / `150s` on a 4 GB card) |
 | `FINUANCE_AI_MAX_CONCURRENT` | `2` | Answers written at once per api replica (`503 assistant_busy` beyond) |
 | `FINUANCE_AI_RATE_PER_HOUR` | `30` | Questions per user per hour (`429`) |
 | `FINUANCE_AI_MAX_CHATS` | `25` | Chats kept per user; the oldest go first |
@@ -114,5 +115,5 @@ It lists each connection's chat models with their detected capabilities. Then it
 | *model_not_found* | Load the model in LM Studio, or `ollama pull` it; check the model allowlist |
 | *tools_rejected* | The model can't call tools: auto mode already switched to plan mode, or set `"tools": false` for it |
 | *context_too_long* | Load the model with a larger context (LM Studio), set `contextTokens`, or lower *rows per lookup* |
-| *timeout* | Slow hardware: raise `FINUANCE_AI_TIMEOUT`, choose a smaller model, or turn thinking off |
+| *timeout* | Slow hardware: raise `FINUANCE_AI_TIMEOUT` and `FINUANCE_AI_IDLE_TIMEOUT`, choose a smaller model, or turn thinking off |
 | a startup error about a public address | Mark the connection as `cloud` if that is intended, or fix the address |

@@ -45,6 +45,7 @@ type Config struct {
 	// AIConnections are the model servers the assistant may use; none = assistant disabled.
 	AIConnections   []AIConnection
 	AITimeout       time.Duration // one model request, first byte to last
+	AIIdleTimeout   time.Duration // a model stream silent this long ends (also before its first token)
 	AIMaxConcurrent int           // assistant runs at once per replica
 	AIMaxChats      int           // chats kept per user (the oldest go first)
 	AIRatePerHour   int           // messages per user per hour
@@ -116,6 +117,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		LogLevel:             p.level("FINUANCE_LOG_LEVEL", slog.LevelInfo),
 		TrustedProxies:       p.prefixes("FINUANCE_TRUSTED_PROXIES"),
 		AITimeout:            p.duration("FINUANCE_AI_TIMEOUT", 120*time.Second),
+		AIIdleTimeout:        p.duration("FINUANCE_AI_IDLE_TIMEOUT", 60*time.Second),
 		AIMaxConcurrent:      p.int("FINUANCE_AI_MAX_CONCURRENT", 2, 1, 64),
 		AIMaxChats:           p.int("FINUANCE_AI_MAX_CHATS", 25, 1, 1000),
 		AIRatePerHour:        p.int("FINUANCE_AI_RATE_PER_HOUR", 30, 1, 10000),
