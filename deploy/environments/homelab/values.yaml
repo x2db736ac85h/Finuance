@@ -44,7 +44,7 @@ assistant:
 
 otel:
   # Tempo in the monitoring namespace (OTLP over HTTP; deploy/k8s/argocd/apps/tempo.yaml).
-  endpoint: http://tempo.monitoring.svc:4318
+  endpoint: http://tempo.monitoring.svc:4318/v1/traces
   egress:
     - to:
         - namespaceSelector:

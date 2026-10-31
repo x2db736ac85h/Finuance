@@ -58,7 +58,9 @@ assistant:
   #    ports: [11434]
 
 otel:
-  # OTLP/HTTP endpoint, e.g. http://otel-collector.observability:4318 (Phase 17/18). Empty: off.
+  # The full OTLP/HTTP traces URL, path included, e.g. http://tempo.monitoring.svc:4318/v1/traces:
+  # the app sends to exactly this URL (a bare host:4318 gets 404 from the collector; the schema
+  # refuses it). Empty: off.
   endpoint: ""
   # NetworkPolicy egress to the collector: entries with ports and `to` (peers, e.g. a
   # namespaceSelector) or a `cidr` outside the cluster.

@@ -96,6 +96,7 @@ must_fail "the ingress host is empty" "ingress.host is required" "$app" --set pu
 must_fail "certManager has no issuer" "ingress.tls.clusterIssuer is required" "$app" "${o[@]}"
 must_fail "traefik TLS has no resolver" "ingress.tls.certResolver is required" "$app" "${o[@]}" --set ingress.tls.mode=traefik
 must_fail "an unknown TLS mode is set" "ingress.tls.mode" "$app" "${o[@]}" --set ingress.tls.mode=acme
+must_fail "the OTLP endpoint has no path" "otel.endpoint" "$app" "${o[@]}" --set ingress.tls.mode=none --set otel.endpoint=http://tempo.monitoring.svc:4318
 must_fail "extraEnv sets a non-FINUANCE variable" "extraEnv" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.PATH=/tmp
 must_fail "the backup has no bucket" "objectStore.destinationPath is required" "$db"
 must_fail "the backup schedule has 5 fields" "backup.schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"

@@ -14,7 +14,7 @@ assistant:
     - cidr: 192.168.1.20/32
       ports: [1234]
 otel:
-  endpoint: http://otel-collector.observability:4318
+  endpoint: http://otel-collector.observability:4318/v1/traces
   egress:
     - to:
         - namespaceSelector:
