@@ -512,3 +512,56 @@ Also found by the load test and fixed:
   handler ran); they are named after the route again (`TestSpanNamedAfterRoute`);
 - every k6 virtual user's sign-in rotated the previous user's session in a shared cookie jar (a
   test-script bug: each sign-in now has its own jar).
+
+## Phase 18: load test on the reference machine (task 18.7)
+
+Measured on 2026-10-31 on the reference environment (ADR 0022: single-node k3s on a
+machine with 8 CPU threads and a small NVIDIA GPU; details in the private environment repository): the released
+`0.2.0-rc.1` images behind Traefik over HTTPS (tailnet), 2–4 api replicas (HPA), the worker, two
+PostgreSQL 18.6 instances (CloudNativePG) on the same node, the monitoring stack (Prometheus,
+Grafana, Tempo) and k6 1.8.2 in Docker on the same machine. Same data and profiles as Phase 17: 50
+users × 20,187 transactions (`seed-demo -users=50 -rows=20000` in an api pod, 10 min 41 s), a 4.1 GB
+database. The users were deleted afterwards.
+
+### First run: a cascade (found and fixed)
+
+| | first run | after the fixes |
+|---|---|---|
+| requests (5 minutes of `load`) | 3,330 | 13,308 |
+| failed | **29 %** | **0** |
+| median / p95 (SLO routes) | 3.6 s / 23.7 s ✗ | 32 ms / **110 ms** ✓ |
+| throughput | 7.6 requests/s | 32 requests/s |
+| imports of 5,000 rows | 1 | 11 |
+| cache hit ratio (mean) | ≈ 60 % | 86 % |
+| longest transaction | 44 s | < 1 s |
+
+The database had the chart's 128 MB of shared buffers for 4 GB of data and read most pages from
+disk. Every api replica's `/readyz` checks the database through the same, now saturated, pool, and
+the probe allowed 1 s: both replicas failed it together, left the Service, and Traefik answered 503
+(974 times) to requests that never reached the api. The api's availability read 100 % throughout
+(it only counts what reaches it), which is why the ingress is now monitored too (docs/SLO.md,
+Phase 18.6). Fixes: PostgreSQL sized for the homelab (`homelab/db-values.yaml`: 1 GB shared buffers
+per instance, `effective_cache_size` 3 GB, `work_mem` 16 MB), readiness probes with 3 s, and
+`/readyz` reporting a check that only timed out within 30 s of its last success as `busy` instead of
+failing (in the next image; the rerun above ran without it).
+
+### Breaking point (`PROFILE=ramp`)
+
+Table views without think time, 10 → 320 per second. Rate and p95 of the SLO routes per minute,
+from Prometheus:
+
+| SLO requests/s | p95 | under 300 ms | node CPU busy |
+|---|---|---|---|
+| 13 | 98 ms | 97 % | 17 % |
+| 38 | 84 ms | 100 % | 26 % |
+| 77 | 91 ms | 100 % | 53 % |
+| 104 (saturated) | 4.9 s | 15 % | 100 % |
+
+Within the SLO up to about 77 requests/s (Phase 17 sandbox: 45), saturated at about 104 (57) with
+every CPU thread busy: the limit is now the machine's CPU (shared with k6 and the monitoring stack),
+not the database. No request failed at any rate, and the api replicas stayed ready (the HPA went
+from 3 to 4). Grafana walkthrough of both runs: `docs/screenshots/grafana/homelab/`.
+
+![SLOs during load and ramp](screenshots/grafana/homelab/finuance-slo.png)
+![API](screenshots/grafana/homelab/finuance-api.png)
+![PostgreSQL](screenshots/grafana/homelab/finuance-postgres.png)
