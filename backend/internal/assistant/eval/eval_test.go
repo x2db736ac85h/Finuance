@@ -180,13 +180,34 @@ func TestRunWithMock(t *testing.T) {
 	}
 	r := Result{Connection: "mock", Model: "mock-tools", Think: "auto", RanAt: clock.T, Cases: cases}
 	rep := Report([]Result{r})
-	for _, want := range []string{"| mock | mock-tools | auto | 1 / 2 (50 %)", "## Misses: mock-tools", "`cat-top-feb-en`: tool; arguments; answer"} {
+	for _, want := range []string{"| mock | mock-tools | auto | full | 1 / 2 (50 %)", "## Misses: mock-tools", "`cat-top-feb-en`: tool; arguments; answer"} {
 		if !strings.Contains(rep, want) {
 			t.Errorf("report lacks %q:\n%s", want, rep)
 		}
 	}
 	if s := Summarize(r); s.ByCategory["relative dates"] != [2]int{1, 1} {
 		t.Errorf("summary = %+v", s)
+	}
+}
+
+func TestRunsOfOneModelStayApart(t *testing.T) {
+	full := Result{Connection: "ollama", Model: "qwen3:4b", Think: "off"}
+	compact := full
+	compact.Toolset = "compact"
+	plan := full
+	plan.Mode = "plan"
+	if full.FileName() != "ollama__qwen3_4b__off.json" { // unchanged for the default toolset and mode
+		t.Errorf("full: %s", full.FileName())
+	}
+	if compact.FileName() != "ollama__qwen3_4b__off__compact.json" || plan.FileName() != "ollama__qwen3_4b__off__plan.json" {
+		t.Errorf("compact: %s, plan: %s", compact.FileName(), plan.FileName())
+	}
+	rep := Report([]Result{full, compact})
+	for _, want := range []string{"| ollama | qwen3:4b | off | full |", "| ollama | qwen3:4b | off | compact |",
+		"## Misses: qwen3:4b\n", "## Misses: qwen3:4b · compact\n"} {
+		if !strings.Contains(rep, want) {
+			t.Errorf("report lacks %q:\n%s", want, rep)
+		}
 	}
 }
 

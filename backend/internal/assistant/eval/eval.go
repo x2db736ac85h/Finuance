@@ -428,8 +428,44 @@ type Result struct {
 	Connection string    `json:"connection"`
 	Model      string    `json:"model"`
 	Think      string    `json:"think"`
+	Toolset    string    `json:"toolset,omitempty"` // "" = the default (full)
+	Mode       string    `json:"mode,omitempty"`    // "" = auto
 	RanAt      time.Time `json:"ranAt"`
 	Cases      []Case    `json:"cases"`
+}
+
+// toolset is the run's toolset as the report shows it.
+func (r Result) toolset() string {
+	if r.Toolset == "" {
+		return "full"
+	}
+	return r.Toolset
+}
+
+// Label tells runs of one model apart in the report: the model, plus the toolset and mode when they
+// aren't the defaults.
+func (r Result) Label() string {
+	l := r.Model
+	if r.Toolset != "" && r.Toolset != "full" {
+		l += " · " + r.Toolset
+	}
+	if r.Mode != "" && r.Mode != "auto" {
+		l += " · " + r.Mode
+	}
+	return l
+}
+
+// FileName is where a run's result is stored: one file per connection, model, thinking, and the
+// toolset and mode when they aren't the defaults (so those runs don't overwrite each other).
+func (r Result) FileName() string {
+	n := fmt.Sprintf("%s__%s__%s", r.Connection, r.Model, r.Think)
+	if r.Toolset != "" && r.Toolset != "full" {
+		n += "__" + r.Toolset
+	}
+	if r.Mode != "" && r.Mode != "auto" {
+		n += "__" + r.Mode
+	}
+	return strings.NewReplacer("/", "_", ":", "_", " ", "_").Replace(n) + ".json"
 }
 
 // Summary is a result's numbers.
@@ -493,15 +529,15 @@ func Report(results []Result) string {
 		b.WriteString("No runs yet. Run `make eval-assistant CONNECTION=… MODEL=…` against a real model.\n")
 		return b.String()
 	}
-	sort.Slice(results, func(i, j int) bool { return results[i].Model < results[j].Model })
-	b.WriteString("| Connection | Model | Thinking | Correct | Tool | Arguments | Answer | p50 | p95 | ≈ tokens | Run |\n|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|\n")
+	sort.Slice(results, func(i, j int) bool { return results[i].Label() < results[j].Label() })
+	b.WriteString("| Connection | Model | Thinking | Toolset | Correct | Tool | Arguments | Answer | p50 | p95 | ≈ tokens | Run |\n|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|\n")
 	cats := map[string]bool{}
 	for _, r := range results {
 		s := Summarize(r)
 		for c := range s.ByCategory {
 			cats[c] = true
 		}
-		fmt.Fprintf(&b, "| %s | %s | %s | %d / %d (%s) | %s | %s | %s | %.1f s | %.1f s | %d | %s |\n", r.Connection, r.Model, r.Think,
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %d / %d (%s) | %s | %s | %s | %.1f s | %.1f s | %d | %s |\n", r.Connection, r.Model, r.Think, r.toolset(),
 			s.OK, s.N, pct(s.OK, s.N), pct(s.ToolOK, s.N), pct(s.ArgsOK, s.N), pct(s.AnswerOK, s.N),
 			float64(s.P50)/1000, float64(s.P95)/1000, s.AvgTokens, r.RanAt.Format("2006-01-02"))
 	}
@@ -519,7 +555,7 @@ func Report(results []Result) string {
 	b.WriteString("\n|---|" + strings.Repeat("---:|", len(names)) + "\n")
 	for _, r := range results {
 		s := Summarize(r)
-		b.WriteString("| " + r.Model + " |")
+		b.WriteString("| " + r.Label() + " |")
 		for _, c := range names {
 			v := s.ByCategory[c]
 			fmt.Fprintf(&b, " %d / %d |", v[0], v[1])
@@ -527,7 +563,7 @@ func Report(results []Result) string {
 		b.WriteString("\n")
 	}
 	for _, r := range results {
-		fmt.Fprintf(&b, "\n## Misses: %s\n\n", r.Model)
+		fmt.Fprintf(&b, "\n## Misses: %s\n\n", r.Label())
 		misses := 0
 		for i := range r.Cases {
 			c := &r.Cases[i]
