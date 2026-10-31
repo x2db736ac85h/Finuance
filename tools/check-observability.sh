@@ -51,7 +51,7 @@ echo "== alert rules (promtool)"
 helm template obs "$chart" -n monitoring --kube-version "$K8S" -f "$chart/ci/email-values.yaml" >"$work/render-all.yaml"
 # RENDER_DIR: the CI helm job's Trivy config scan reads the renders there.
 if [ -n "${RENDER_DIR:-}" ]; then mkdir -p "$RENDER_DIR" && cp "$work/render-all.yaml" "$RENDER_DIR/observability.yaml"; fi
-helm template obs "$chart" -n monitoring --kube-version "$K8S" >"$work/render.yaml"
+helm template obs "$chart" -n monitoring --kube-version "$K8S" --set ingress.traefik.enabled=true >"$work/render.yaml"   # every rule group, for the tests
 "$YQ" 'select(.kind == "PrometheusRule") | .spec' "$work/render.yaml" >"$work/rules.yaml"
 cp "$chart/tests/rules.test.yaml" "$work/"
 promtool check rules --lint=all --lint-fatal rules.yaml

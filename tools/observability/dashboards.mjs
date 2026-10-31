@@ -239,6 +239,14 @@ const dashboards = {
       ts('Latency of the SLO routes', [
         [q95('http_server_request_duration_seconds', lat, ['route']), 'p95 {{route}}'],
       ], { unit: 's', w: 24 }),
+      row('At the ingress (Traefik; ingress.traefik in the chart)'),
+      ts('Requests at the ingress by status', [
+        ['sum by (code) (rate(traefik_router_requests_total{job="traefik",router=~"$namespace-.*"}[5m]))', '{{code}}'],
+      ], { unit: 'reqps', stack: true, desc: 'What users get, including requests the ingress refused before they reached the api (e.g. 503 when no api pod was ready). The SLOs above are measured at the api.' }),
+      ts('Failed at the ingress vs at the api', [
+        [ratio('sum(rate(traefik_router_requests_total{job="traefik",router=~"$namespace-.*",code=~"5.."}[5m]))', 'sum(rate(traefik_router_requests_total{job="traefik",router=~"$namespace-.*"}[5m]))'), 'ingress 5xx'],
+        [ratio(`sum(rate(http_server_requests_total{${API},status_class="5xx"}[5m]))`, `sum(rate(http_server_requests_total{${API}}[5m]))`), 'api 5xx'],
+      ], { unit: 'percentunit', desc: 'A gap between the two lines is requests that never reached the api. FinuanceIngressErrors pages above 5 %.' }),
       table('Firing Finuance alerts', 'ALERTS{alertname=~"Finuance.*",alertstate="firing"}', { h: 6 }),
     ];
   }, { tags: ['slo'] }),

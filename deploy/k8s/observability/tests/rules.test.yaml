@@ -1,4 +1,5 @@
-# promtool unit tests for templates/prometheusrule.yaml, rendered with the default values
+# promtool unit tests for templates/prometheusrule.yaml, rendered with the default values and the
+# ingress rules on (ingress.traefik.enabled)
 # (tools/check-observability.sh writes the rules to rules.yaml next to this file). Every alert
 # fires on a series that should trigger it and stays quiet below its threshold.
 rule_files: [rules.yaml]
@@ -285,3 +286,43 @@ tests:
             exp_annotations:
               summary: worker-1 (worker) is crash-looping
               description: kubectl -n finuance logs worker-1 -c worker --previous
+
+  # No api pod ready for a minute pages; the worker or another namespace doesn't.
+  - interval: 1m
+    input_series:
+      - series: 'kube_deployment_status_replicas_available{namespace="finuance",deployment="finuance-api"}'
+        values: '2x5 0x10 2x5'
+      - series: 'kube_deployment_status_replicas_available{namespace="finuance",deployment="finuance-worker"}'
+        values: '0x20'
+      - series: 'kube_deployment_status_replicas_available{namespace="other",deployment="other-api"}'
+        values: '0x20'
+    alert_rule_test:
+      - { eval_time: 5m, alertname: FinuanceApiNoReadyPods, exp_alerts: [] }
+      - eval_time: 8m
+        alertname: FinuanceApiNoReadyPods
+        exp_alerts:
+          - exp_labels: { severity: page, namespace: finuance, deployment: finuance-api }
+            exp_annotations:
+              summary: 'No finuance-api pod is ready: requests are refused at the ingress'
+              description: kubectl -n finuance get pods; curl the api's /readyz (docs/RUNBOOK.md "api not ready")
+      - { eval_time: 19m, alertname: FinuanceApiNoReadyPods, exp_alerts: [] }
+
+  # 5xx at the ingress: 30 % of Finuance's requests for 10 minutes pages; another app's 503s and
+  # a share under 5 % don't.
+  - interval: 1m
+    input_series:
+      - series: 'traefik_router_requests_total{job="traefik",router="finuance-finuance-host@kubernetes",code="200"}'
+        values: '0+70x30'
+      - series: 'traefik_router_requests_total{job="traefik",router="finuance-finuance-host@kubernetes",code="503"}'
+        values: '0+2x10 20+30x10 320+2x10'
+      - series: 'traefik_router_requests_total{job="traefik",router="argocd-server@kubernetes",code="503"}'
+        values: '0+100x30'
+    alert_rule_test:
+      - { eval_time: 10m, alertname: FinuanceIngressErrors, exp_alerts: [] }
+      - eval_time: 20m
+        alertname: FinuanceIngressErrors
+        exp_alerts:
+          - exp_labels: { severity: page }
+            exp_annotations:
+              summary: 30% of Finuance's requests fail at the ingress
+              description: 'Compare with the api''s 5xx (SLO dashboard): failures only here mean requests that never reached the api (no ready pod, timeouts).'

@@ -4,6 +4,10 @@
 # observability-values.example.yaml); its password is the SealedSecret monitoring/finuance-alert-smtp
 # (deploy/environments/homelab/monitoring/).
 appNamespace: finuance
+# k3s's bundled Traefik (kube-system), with router labels (host/traefik-config.yaml)
+ingress:
+  traefik:
+    enabled: true
 alerting:
   email:
     enabled: false

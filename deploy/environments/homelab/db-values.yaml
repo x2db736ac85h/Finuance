@@ -10,6 +10,18 @@ cluster:
     size: 10Gi
     # k3s's bundled storage class (a node-local volume).
     storageClass: local-path
+  # Sized for the Phase 18 load test (docs/perf.md "Phase 18"): 50 users × 20,000 transactions are a
+  # 4 GB database, and the chart's 128 MB of shared buffers gave a cache hit ratio of about 60 %
+  # under load. Both instances run on the one node, so each gets a quarter of the database.
+  resources:
+    requests: { cpu: 250m, memory: 2Gi }
+    limits: { memory: 4Gi }
+  parameters:
+    shared_buffers: 1GB
+    effective_cache_size: 3GB
+    work_mem: 16MB
+    maintenance_work_mem: 256MB
+    random_page_cost: "1.1"   # local SSD
 
 objectStore:
   # RustFS in the cluster (deploy/k8s/rustfs, ADR 0022). It shares the node's disk with the database:

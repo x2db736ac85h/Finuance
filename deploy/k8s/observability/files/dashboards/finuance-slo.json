@@ -516,6 +516,136 @@
     },
     {
       "id": 9,
+      "type": "row",
+      "title": "At the ingress (Traefik; ingress.traefik in the chart)",
+      "collapsed": false,
+      "gridPos": {
+        "w": 24,
+        "h": 1,
+        "x": 0,
+        "y": 21
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Requests at the ingress by status",
+      "description": "What users get, including requests the ingress refused before they reached the api (e.g. 503 when no api pod was ready). The SLOs above are measured at the api.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (code) (rate(traefik_router_requests_total{job=\"traefik\",router=~\"$namespace-.*\"}[5m]))",
+          "legendFormat": "{{code}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 0,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Failed at the ingress vs at the api",
+      "description": "A gap between the two lines is requests that never reached the api. FinuanceIngressErrors pages above 5 %.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(rate(traefik_router_requests_total{job=\"traefik\",router=~\"$namespace-.*\",code=~\"5..\"}[5m])) or vector(0)) / (sum(rate(traefik_router_requests_total{job=\"traefik\",router=~\"$namespace-.*\"}[5m])))",
+          "legendFormat": "ingress 5xx",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",status_class=\"5xx\"}[5m])) or vector(0)) / (sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "api 5xx",
+          "refId": "B"
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 12,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "fillOpacity": 8,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
       "type": "table",
       "title": "Firing Finuance alerts",
       "description": "",
@@ -540,7 +670,7 @@
         "w": 24,
         "h": 6,
         "x": 0,
-        "y": 21
+        "y": 30
       },
       "fieldConfig": {
         "defaults": {

@@ -6,7 +6,8 @@
 //
 // GRAFANA_URL (default http://localhost:3000), GRAFANA_USER (admin), GRAFANA_PASSWORD (required; on
 // the homelab: kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' |
-// base64 -d), FROM (default now-30m), THEME (dark), CHROMIUM_PATH (a Chromium binary when
+// base64 -d), FROM and TO (Grafana times: default now-30m and now; epoch milliseconds for a past
+// window such as a load test), THEME (dark), CHROMIUM_PATH (a Chromium binary when
 // Playwright's own build isn't installed, e.g. ~/.cache/ms-playwright/chromium-<n>/chrome-linux64/chrome).
 // Writes <out-dir>/<dashboard uid>.png, default docs/screenshots/grafana/homelab.
 import { createRequire } from 'node:module';
@@ -25,6 +26,7 @@ if (!password) {
   process.exit(2);
 }
 const from = process.env.FROM || 'now-30m';
+const to = process.env.TO || 'now';
 const theme = process.env.THEME || 'dark';
 const out = resolve(process.argv[2] || join(root, 'docs/screenshots/grafana/homelab'));
 mkdirSync(out, { recursive: true });
@@ -42,7 +44,7 @@ try {
   await page.waitForURL((u) => !u.pathname.startsWith('/login'));
 
   for (const uid of dashboards) {
-    await page.goto(`${url}/d/${uid}?orgId=1&from=${from}&to=now&theme=${theme}&kiosk`);
+    await page.goto(`${url}/d/${uid}?orgId=1&from=${from}&to=${to}&theme=${theme}&kiosk`);
     // Panels load lazily and query on their own: wait until no panel shows a loading bar any more.
     await page.waitForLoadState('networkidle');
     await page.waitForFunction(() => !document.querySelector('[aria-label="Panel loading bar"]'), null, { timeout: 30000 });

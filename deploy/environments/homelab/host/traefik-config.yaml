@@ -28,6 +28,11 @@ spec:
           enabled: false
         ingressEndpoint:
           ip: 100.64.0.10   # template: the host's tailnet address (tailscale ip -4)
+    # Per-router request metrics, so requests refused at the ingress (503 when no api pod is ready)
+    # count for Finuance's routers (deploy/k8s/observability ingress.traefik; Phase 18.6).
+    metrics:
+      prometheus:
+        addRoutersLabels: true
     ports:
       web:
         hostPort: 80

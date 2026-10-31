@@ -227,5 +227,32 @@ spec:
               {{`{{ $labels.pod }} ({{ $labels.container }}) is crash-looping`}}
             description: >-
               {{`kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }} -c {{ $labels.container }} --previous`}}
+        # No api replica ready: the ingress has nowhere to send requests and refuses them (503),
+        # which the api's own metrics never see (Phase 18 load test).
+        - alert: FinuanceApiNoReadyPods
+          expr: max by (namespace, deployment) (kube_deployment_status_replicas_available{namespace="{{ $ns }}",deployment=~".+-api"}) == 0
+          for: 1m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              {{`No {{ $labels.deployment }} pod is ready: requests are refused at the ingress`}}
+            description: >-
+              {{`kubectl -n {{ $labels.namespace }} get pods; curl the api's /readyz (docs/RUNBOOK.md "api not ready")`}}
+    {{- end }}
+    {{- if .Values.ingress.traefik.enabled }}
+    - name: finuance-ingress.alerts
+      rules:
+        # 5xx answered at the ingress for Finuance's routers, the requests refused there included.
+        - alert: FinuanceIngressErrors
+          expr: >-
+            (sum(rate(traefik_router_requests_total{job="traefik",router=~"{{ $ns }}-.*",code=~"5.."}[5m])) or vector(0))
+            / sum(rate(traefik_router_requests_total{job="traefik",router=~"{{ $ns }}-.*"}[5m])) > 0.05
+          for: 5m
+          labels: { severity: page }
+          annotations:
+            summary: >-
+              {{`{{ $value | humanizePercentage }} of Finuance's requests fail at the ingress`}}
+            description: >-
+              {{`Compare with the api's 5xx (SLO dashboard): failures only here mean requests that never reached the api (no ready pod, timeouts).`}}
     {{- end }}
 {{- end }}

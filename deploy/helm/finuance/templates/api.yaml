@@ -71,10 +71,14 @@ spec:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 2
             failureThreshold: 30
+          # /readyz gives its checks 2 s and reports a database that only answers slowly as busy, not
+          # down (httpapi busyGrace): under load every replica waits on the same database, and a 1 s
+          # probe took them all out of the Service at once (Phase 18 load test).
           readinessProbe:
             httpGet: { path: /readyz, port: http }
             periodSeconds: 5
-            failureThreshold: 2
+            timeoutSeconds: 3
+            failureThreshold: 3
           livenessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 10

@@ -25,7 +25,11 @@ dashboard shows both, the budget left and the burn rates.
   (`TestLatencyHistogramHasTheSLOBucket`). Exports, imports and the assistant are long by design and
   have their own dashboards.
 - Measured at the api, so time in Traefik and nginx isn't included; the load test (`make loadtest`)
-  measures end to end.
+  measures end to end. Requests the ingress refuses before they reach the api (503 when no api pod
+  is ready, timeouts) don't count either: the Phase 18 load test had 29 % of requests fail that way
+  while this availability read 100 %. Where the chart can read Traefik (`ingress.traefik`, the
+  homelab), the SLO dashboard's "At the ingress" row shows both, and `FinuanceIngressErrors` and
+  `FinuanceApiNoReadyPods` page on them.
 
 ## Alerts
 
@@ -43,7 +47,8 @@ The short window makes an alert stop soon after the problem does. Other alerts i
 targets down or absent, import commits failing after their retries, job kinds failing over 10 %,
 the connection pool over 90 %, assistant model errors, PostgreSQL down or absent, replication lag,
 WAL archiving failing, the last backup older than 26 hours (or none reported), pods in
-CrashLoopBackOff. Every alert goes by e-mail (Phase 17 decision): pages at once and every hour,
+CrashLoopBackOff, no api pod ready for a minute, and over 5 % of Finuance's requests failing at the
+ingress for 5 minutes (with `ingress.traefik`). Every alert goes by e-mail (Phase 17 decision): pages at once and every hour,
 tickets grouped and once a day (`alerting.email`, an `AlertmanagerConfig`).
 
 ## Error budget policy

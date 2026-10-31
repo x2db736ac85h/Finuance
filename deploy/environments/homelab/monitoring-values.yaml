@@ -50,9 +50,10 @@ alertmanager:
       type: None
 
 grafana:
+  # Grafana 13 used ~400 MiB at rest and stalled near a 512 MiB limit under load (Phase 18).
   resources:
-    requests: { cpu: 50m, memory: 128Mi }
-    limits: { memory: 512Mi }
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 1Gi }
   persistence:
     enabled: false   # dashboards come from ConfigMaps, the admin login from the sealed Secret below
   # The chart's default admin password is public: the login is a SealedSecret made by
