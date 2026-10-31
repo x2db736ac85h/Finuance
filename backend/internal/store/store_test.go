@@ -2,8 +2,10 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -158,5 +160,21 @@ func TestWhoMayConnect(t *testing.T) {
 	var tables bool
 	if err := super.QueryRow(ctx, `SELECT has_table_privilege('pg_monitor', 'transactions', 'SELECT')`).Scan(&tables); err != nil || tables {
 		t.Errorf("pg_monitor reads transactions = %v, %v; want false", tables, err)
+	}
+}
+
+// TestReadinessTimeoutsAreDeadlines: /readyz treats a check that only ran out of time as "busy"
+// (httpapi.TestReadyzBusyDatabase), which needs the store's checks to keep context.DeadlineExceeded
+// in their errors.
+func TestReadinessTimeoutsAreDeadlines(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	st := store.New(tdb.App)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	time.Sleep(time.Millisecond)
+	for name, probe := range map[string]func(context.Context) error{"Ping": st.Ping, "MigrationsCurrent": st.MigrationsCurrent} {
+		if err := probe(ctx); !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("%s with an expired deadline = %v, want context.DeadlineExceeded", name, err)
+		}
 	}
 }
