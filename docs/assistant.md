@@ -79,9 +79,10 @@ If a server rejects tool definitions before any lookup, the chat switches to **p
 
 ### Model notes (Phase 18)
 
-- **Qwen3 hybrid models on Ollama** (`qwen3:4b`, `qwen3:8b`, …, Ollama 0.40): thinking can't be switched off. `/no_think`, Ollama's `think: false` (OpenAI-compatible and native API) are ignored, and `reasoning_effort: none` only moves the thinking into the answer text. Every answer then carries the model's reasoning (30–50 s on a 4 GB GPU).
+- **`qwen3:4b` on Ollama is not the hybrid model any more**: Ollama's library tag now points at `qwen3:4b-thinking-2507` (the same model id in `ollama list`), which always thinks. That is why `/no_think`, Ollama's `think: false` (OpenAI-compatible and native API) and `reasoning_effort: none` changed nothing in Phase 18 (the last only moved the reasoning into the answer text). Name the 2507 models explicitly.
 - **Qwen3 2507 pairs** split this into two models of the same size: `qwen3:…-instruct-2507` never thinks, `qwen3:…-thinking-2507` always does. The assistant reads both names as Qwen3 with a `/no_think` switch, so give them `reasoning: none` in `caps` (`{"pattern": "*-instruct*", "reasoning": "none"}`, the same for `*-thinking*`); offer both in the connection so users can choose per question.
 - **Gemma** (planned as an alternative): some servers don't pass tool definitions to Gemma models; set `caps` `tools: false` for them (plan mode) if the status shows tool calls failing, and run the evals before making it the default.
+- **Evals on the reference machine** (2026-10-31, `docs/evals.md`; a 4 GB GPU through Vulkan): `qwen3:4b-thinking-2507` with the full toolset answered 46 of 53 correctly (87 %, arguments right 98 %), `qwen3:4b-instruct-2507` 35 (full) and 26 (compact). Thinking costs about twice the wait there (p50 112 s vs 60 s). The reference machine's connection offers both, thinking-2507 as the default; the full toolset is the default in tools mode already.
 - **Choose by answer quality**, not by the speed of a small test machine: the evals (`make eval-assistant`) on the server and model you'll actually use decide the default model and toolset.
 
 ## Limits and retention
