@@ -68,6 +68,10 @@ Run on the reference machine (ADR 0022). Each step goes into `docs/RUNBOOK.md` (
   - [x] pod kills under load: **23,177 requests, 0 failed**, p95 29 ms, max 560 ms (TLS verified)
   - [x] plain HTTP redirects to HTTPS (Traefik `ports.web.http.redirections`)
 - [ ] 18.5 LLM: `finuance admin llm-probe` against Ollama (recorded streams → `internal/llm` test cases), SSE through Traefik, one `make eval-assistant` run against the deployed instance → `docs/evals.md` (default toolset), the Phase 13/15 real-model checks
+  - [x] Ollama's context for OpenAI-style requests: 4,096 by default (the app plans with 8,192, so long prompts were cut silently) → `OLLAMA_CONTEXT_LENGTH=8192` in `host/ollama.conf`; still 100 % on the GPU
+  - [x] `llm-probe` against Ollama 0.40 + `qwen3:4b`: all five requests understood (correct tool call for groceries in February 2025, answer after the tool result, plan mode); two streams recorded as `internal/llm` test cases (`TestRecordedOllamaQwen3`, expected values read from the raw stream with jq)
+  - [x] SSE through Traefik: `tools/homelab-drill.sh sse`, 1,060 events spread over 50 s (unbuffered), stream ends with `done`
+  - [x] finding: with Ollama 0.40, `qwen3:4b` (the hybrid model) can't stop thinking: `/no_think`, Ollama's `think: false` (OpenAI and native API) are ignored, and `reasoning_effort: none` only moves the thinking into the answer text; every answer carries 30–50 s of reasoning. `qwen3:4b-instruct-2507` (no thinking) answers in about half the time; its first probe call asked for `2025-02-29` (the evals measure such slips). Default model and eval runs: our Product Engineer's decision
 - [ ] 18.6 observability: kube-prometheus-stack + Tempo, `deploy/k8s/observability`, email receiver (SMTP password sealed) and a test alert, Grafana walkthrough screenshots
 - [ ] 18.7 load test on the reference machine (`make loadtest` `load` + `ramp`) → `docs/perf.md` "Phase 18" (the hardware described in general terms)
 - [ ] 18.8 OpenVAS (Greenbone Community containers) against the instance → `docs/security-scan.md`; image admission policy (KSV-0125) decided or kept for Phase 19

@@ -218,6 +218,7 @@ journalctl -u ollama -b | grep 'inference compute'     # names the GPU and the l
 [`host/ollama.conf`](../deploy/environments/homelab/host/ollama.conf):
 - listens on every address: pods reach it on `<tailnet-ip>:11434` (allowed by the `cni0` input rule), the LAN can't (ufw's default drop; check from a phone on the Wi-Fi without Tailscale), tailnet devices can (Tailscale accepts `tailscale0` before ufw; Ollama has no authentication, THREAT-MODEL §5);
 - flash attention + `q8_0` KV cache: with the default fp16 cache, a ~4B model at the app's 8,192-token context doesn't fit in 4 GB and spills layers to the CPU, which roughly halves the output speed;
+- the context for OpenAI-style requests (`OLLAMA_CONTEXT_LENGTH=8192`): the app can't set it per request, and Ollama's default (4,096) silently cuts longer prompts;
 - keep-alive 30 min (a reload takes seconds).
 
 **Measure** on the machine (the reference machine's results are in the private environment repository): `ollama ps` must show `100% GPU` after a request with `num_ctx` 8192, and the generate API reports the speeds:

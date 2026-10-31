@@ -6,6 +6,9 @@
 #                                     markers, LEAKPROOF, sign-in, smoke scripts (RPO, RTO)
 #   tools/homelab-drill.sh podkill    k6 through the ingress while api/web pods are deleted and
 #                                     api/web/worker are rolled: no request may fail
+#   tools/homelab-drill.sh sse        one assistant question through the ingress (a drill user with the
+#                                     demo year): when each streamed event arrives, so a buffering
+#                                     proxy would show (everything at the end)
 #   tools/homelab-drill.sh all
 #
 # Every user it needs is made with `finuance admin create-user` (random passwords, kept in this
@@ -190,9 +193,36 @@ podkill() {
   return $status
 }
 
+sse() {
+  log "assistant answer streamed through the ingress"
+  local email pass jar="$work/sse-jar" h chat
+  email="drill-sse-$(date +%s)@example.test" pass=$(password)
+  mkuser finuance "$email" "$pass"; users+=("$email $pass $BASE $BASE")
+  [ "$(signin "$BASE" "$BASE" "$email" "$pass" "$jar")" = 200 ] || { echo "the drill user can't sign in" >&2; return 1; }
+  h=(-sS -b "$jar" -c "$jar" -H "X-Finuance-Client: web" -H "Origin: $BASE" -H "Content-Type: application/json")
+  curl "${h[@]}" -o /dev/null -X POST "$BASE/api/v1/demo-data"
+  chat=$(curl "${h[@]}" -X POST "$BASE/api/v1/assistant/chats" | jq -r .id)
+  # each line of the stream with the seconds since the request started
+  local t0 q=${SSE_QUESTION:-How much did I spend on groceries in February 2025?}
+  t0=$(date +%s.%N)
+  curl "${h[@]}" -N --max-time "${SSE_TIMEOUT:-600}" -X POST "$BASE/api/v1/assistant/chats/$chat/messages" \
+    --data "$(jq -cn --arg q "$q" '{text: $q, timeZone: "Europe/Warsaw", settings: {connection: "ollama", think: "off"}}')" \
+    | while IFS= read -r line; do printf '%s\t%s\n' "$(awk -v a="$(date +%s.%N)" -v b="$t0" 'BEGIN { printf "%.2f", a - b }')" "$line"; done >"$work/sse.tsv"
+  local events first content last kinds
+  events=$(grep -c $'\tevent:' "$work/sse.tsv" || true)
+  first=$(grep -m1 $'\tevent:' "$work/sse.tsv" | cut -f1)
+  content=$(grep -m1 $'\tevent: content' "$work/sse.tsv" | cut -f1)
+  last=$(grep $'\tevent:' "$work/sse.tsv" | tail -1 | cut -f1)
+  kinds=$(grep -o $'\tevent: [a-z]*' "$work/sse.tsv" | cut -d' ' -f2 | sort | uniq -c | awk '{printf "%s %s, ", $1, $2}')
+  grep -q $'\tevent: done' "$work/sse.tsv" || { echo "the stream didn't end with done:" >&2; tail -5 "$work/sse.tsv" >&2; return 1; }
+  result "SSE through the ingress" "$(printf '%s events (%s) first after %.1f s, first answer text after %.1f s, done after %.1f s' "$events" "${kinds%, }" "$first" "${content:-0}" "$last")"
+  result "SSE answer (first 200 characters)" "$(grep -A1 $'\tevent: content' "$work/sse.tsv" | grep -o $'\tdata: .*' | cut -d' ' -f2- | jq -rj '.delta // empty' 2>/dev/null | tr '\n' ' ' | cut -c1-200)"
+}
+
 case ${1:-} in
   restore) restore ;;
   podkill) podkill ;;
-  all) restore; podkill ;;
-  *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  sse) sse ;;
+  all) restore; podkill; sse ;;
+  *) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
