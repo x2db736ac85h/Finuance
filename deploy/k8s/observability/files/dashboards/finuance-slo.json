@@ -605,8 +605,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",status_class=\"5xx\"}[5m])) or vector(0)) / (sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\"}[5m])))",
-          "legendFormat": "api 5xx",
+          "expr": "(sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\",status_class=\"5xx\"}[5m])) or vector(0)) / (sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\"}[5m])))",
+          "legendFormat": "api 5xx (SLO routes)",
           "refId": "B"
         }
       ],
