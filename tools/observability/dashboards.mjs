@@ -21,12 +21,12 @@ const target = (expr, legend = '', i = 0) => ({ datasource: ds, expr, legendForm
 const targets = (qs) => qs.map(([expr, legend], i) => target(expr, legend, i));
 
 /** A time series panel; qs = [[expr, legend], …]. */
-function ts(title, qs, { unit = 'short', w = 12, h = 8, stack = false, desc = '', min } = {}) {
+function ts(title, qs, { unit = 'short', w = 12, h = 8, stack = false, desc = '', min, softMax } = {}) {
   return {
     id: nextId++, type: 'timeseries', title, description: desc, datasource: ds, targets: targets(qs),
     gridPos: { w, h },
     fieldConfig: {
-      defaults: { unit, ...(min === undefined ? {} : { min }), custom: { fillOpacity: stack ? 30 : 8, lineWidth: 1, stacking: { mode: stack ? 'normal' : 'none' } } },
+      defaults: { unit, ...(min === undefined ? {} : { min }), custom: { fillOpacity: stack ? 30 : 8, lineWidth: 1, stacking: { mode: stack ? 'normal' : 'none' }, ...(softMax === undefined ? {} : { axisSoftMax: softMax }) } },
       overrides: [],
     },
     options: { legend: { displayMode: 'table', placement: 'bottom', calcs: ['mean', 'max'] }, tooltip: { mode: 'multi', sort: 'desc' } },
@@ -246,7 +246,7 @@ const dashboards = {
       ts('Failed at the ingress vs at the api', [
         [ratio('sum(rate(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?$namespace-.+",code=~"5.."}[5m]))', 'sum(rate(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?$namespace-.+"}[5m]))'), 'ingress 5xx'],
         [ratio(`sum(rate(http_server_requests_total{${avail},status_class="5xx"}[5m]))`, `sum(rate(http_server_requests_total{${avail}}[5m]))`), 'api 5xx (SLO routes)'],
-      ], { unit: 'percentunit', desc: 'A gap between the two lines is requests that never reached the api. FinuanceIngressErrors pages above 5 %.' }),
+      ], { unit: 'percentunit', min: 0, softMax: 0.1, desc: 'A gap between the two lines is requests that never reached the api. FinuanceIngressErrors pages above 5 %.' }),
       table('Firing Finuance alerts', 'ALERTS{alertname=~"Finuance.*",alertstate="firing"}', { h: 6 }),
     ];
   }, { tags: ['slo'] }),

@@ -619,12 +619,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
+          "min": 0,
           "custom": {
             "fillOpacity": 8,
             "lineWidth": 1,
             "stacking": {
               "mode": "none"
-            }
+            },
+            "axisSoftMax": 0.1
           }
         },
         "overrides": []
