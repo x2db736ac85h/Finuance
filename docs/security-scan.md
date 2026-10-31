@@ -136,7 +136,7 @@ Informational alerts that ZAP never counts as warnings, for the record:
 digest, web UI on localhost only, the scanner on the host's network), run by
 [`tools/openvas-scan.sh`](../tools/openvas-scan.sh). Target: the instance's tailnet host name, TCP
 80, 443 and 11434 (Ollama, reachable on the tailnet by design, ADR 0020/0022), unauthenticated
-(no SSH or Windows credentials: the host isn't the system under test). 38 minutes. Reports with the
+(no SSH or Windows credentials: the host isn't the system under test). 38 minutes; a rescan of 80/443 after the fixes (35 minutes) found 0 High, 0 Medium, 0 Low, 39 Log. Reports with the
 host name stay outside git (`~/.local/state/finuance-openvas/reports/`).
 
 **Result: 0 High, 0 Medium, 0 Low** (QoD ≥ 70); 47 Log entries (detections and inventories). The
@@ -144,8 +144,8 @@ Log entries worth a decision:
 
 | Port | Entry | Decision |
 |---|---|---|
-| 443, 80 | *SSL/TLS: Report Medium Cipher Suites*: TLS 1.2 accepted `ECDHE-*-AES-*-CBC-SHA` (Traefik's defaults) | **Fixed:** Traefik's default `TLSOption` allows TLS 1.2 with ECDHE + AES-GCM / ChaCha20 only, and TLS 1.3 (`host/traefik-config.yaml`, Mozilla "intermediate"); checked with `openssl s_client`: CBC-SHA and TLS 1.1 refused |
-| 80 | *SSL/TLS: Version Detection* on port 80: a TLS handshake on the plain-HTTP port served the app, because the Ingress routers attached to every entry point | **Fixed:** chart value `ingress.entryPoints` (homelab: `[websecure]`); port 80 only redirects |
+| 443, 80 | *SSL/TLS: Report Medium Cipher Suites*: TLS 1.2 accepted `ECDHE-*-AES-*-CBC-SHA` (Traefik's defaults) | **Fixed:** Traefik's default `TLSOption` allows TLS 1.2 with ECDHE + AES-GCM / ChaCha20 only, and TLS 1.3 (`host/traefik-config.yaml`, Mozilla "intermediate"); checked with `openssl s_client`: CBC-SHA and TLS 1.1 refused. The rescan's "medium" list now holds only AES-GCM suites (TLS 1.2 ECDHE-ECDSA AES-128/256-GCM, TLS 1.3 AES-128-GCM): Greenbone's strength label for them, not a weakness; they are the recommended suites |
+| 80 | *SSL/TLS: Version Detection* on port 80: a TLS handshake on the plain-HTTP port served the app, because the Ingress routers attached to every entry point | **Fixed:** chart value `ingress.entryPoints` (homelab: `[websecure]`): over TLS on port 80 every request now gets `404` (plain HTTP gets the `301` to HTTPS). Traefik still completes the TLS handshake there (it detects TLS on every entry point and picks the certificate by name; that can't be switched off per entry point), but serves nothing |
 | 443 | *`includeSubDomains` / `preload` Missing in HSTS Header* | **Deliberate for now:** the host is a single `*.ts.net` name; `preload` needs the registrable domain, which isn't ours. Decided again with the public demo's own domain (Phase 19) |
 | 80, 443 | *HTTP Server Banner*: `Server: nginx`, no version | Accepted: no version is disclosed (`server_tokens off`) |
 | 80 | *HSTS Missing* | Expected: port 80 only answers `301` to HTTPS; HSTS is sent over HTTPS |

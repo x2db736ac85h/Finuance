@@ -403,7 +403,7 @@ TLS 1.3); check after a change:
 
 ```sh
 echo | openssl s_client -connect <host>:443 -tls1_2 -cipher ECDHE-ECDSA-AES128-SHA   # must fail
-echo | openssl s_client -connect <host>:80                                            # must fail (port 80 only redirects)
+curl -sk -o /dev/null -w '%{http_code}\n' https://<host>:80/                       # 404: no router on port 80 (plain HTTP: 301)
 ```
 
 ### After a reboot
