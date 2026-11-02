@@ -7,7 +7,8 @@
 # no QEMU), Trivy runs as the pinned container the CI image job uses, cosign and syft are installed
 # with `go install` at pinned versions (verified by the Go checksum database).
 #
-# Tag a commit whose message doesn't contain [skip ci] (or [ci skip], [no ci], …): GitHub skips every
+# Tag a commit whose message doesn't contain [skip ci] (or [ci skip], [no ci], …) anywhere, the body
+# included: GitHub skips every
 # push-triggered workflow for such a commit, the tag push included, so the release would never start.
 #
 # GitOps (PLAN 16.4): a final release (not an rc) then opens a pull request that sets the image tag
