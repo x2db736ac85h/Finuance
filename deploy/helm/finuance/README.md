@@ -38,11 +38,17 @@ Everything is documented in [`values.yaml`](values.yaml) and checked by [`values
 | `publicOrigin` | the address users open (`https://host`, no path); cookies and the CSRF origin check depend on it |
 | `ingress.host` | the same host |
 | `ingress.tls.mode` | `certManager` (+ `clusterIssuer`), `traefik` (+ `certResolver`), `secret` (+ `secretName`), or `none` |
+| `ingress.entryPoints` | Traefik entry points the routers attach to (e.g. `[websecure]`, so port 80 only redirects); empty: all |
 | `trustedProxies` | the pod CIDR of the ingress controller, so rate limits see the client address |
 | `database.*` | host (default `finuance-db-rw`), roles and their secrets |
 | `assistant.*` | off by default; the connections file, a secret with API keys, and the egress to the model servers |
+| `otel.endpoint` | the full OTLP/HTTP traces URL, path included (`http://tempo.monitoring.svc:4318/v1/traces`); a bare `host:4318` is refused |
+| `podMonitor.enabled` | PodMonitors for api and worker (`job` = `finuance-api` / `finuance-worker`) |
+| `extraEnv` | further `FINUANCE_*` settings, e.g. `FINUANCE_AI_TIMEOUT` / `FINUANCE_AI_IDLE_TIMEOUT` for a slow model server |
 
-Wrong settings stop the render with a message (no host, no issuer, a path in `publicOrigin`, a non-`FINUANCE_*` name in `extraEnv`, …).
+Wrong settings stop the render with a message (no host, no issuer, a path in `publicOrigin`, a non-`FINUANCE_*` name in `extraEnv`, an OTLP endpoint without a path, …).
+
+The api's readiness probe (`/readyz`: database and migration version, 3 s) treats a database that only answers slowly as busy for 30 s, so a busy database doesn't take every replica out of the Service at once; a real error or migrations behind still fail at once.
 
 ## Checks
 

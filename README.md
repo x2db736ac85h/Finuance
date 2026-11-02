@@ -153,12 +153,13 @@ make dev-api & make dev-web               # API on :8080 and the Vite dev server
 - Verify an image: `cosign verify ghcr.io/x2db736ac85h/finuance-api:<version> --certificate-identity-regexp 'https://github.com/x2db736ac85h/Finuance/' --certificate-oidc-issuer https://token.actions.githubusercontent.com`.
 - Back up the database volume regularly. It holds your original CSV files too.
 
-**Kubernetes with Helm, CloudNativePG and Argo CD** (rehearsed weekly in CI on a kind cluster, including a backup restore and pod kills; homelab rollout in Phase 18):
+**Kubernetes with Helm, CloudNativePG and Argo CD** (rehearsed weekly in CI on a kind cluster, including a backup restore and pod kills; running on a reference environment, single-node k3s with a small NVIDIA GPU, since Phase 18):
 - The app chart [`deploy/helm/finuance`](deploy/helm/finuance) runs the api (with an HPA), the worker, the web front end, a migrations Job before every upgrade, and NetworkPolicies.
 - The database chart [`deploy/k8s/db`](deploy/k8s/db) runs a CloudNativePG cluster, with WAL archiving and daily backups to S3-compatible storage.
 - [`deploy/k8s/argocd`](deploy/k8s/argocd) is an Argo CD app-of-apps with Sealed Secrets.
 - A release opens a pull request that bumps the image tag in [`deploy/environments/homelab`](deploy/environments/homelab), and merging it deploys.
-- [`deploy/k8s/observability`](deploy/k8s/observability) holds six Grafana dashboards and the alert rules as code: SLO burn rates ([docs/SLO.md](docs/SLO.md)), failing jobs and imports, PostgreSQL, WAL archiving and backup age, with an e-mail receiver.
+- [`deploy/k8s/observability`](deploy/k8s/observability) holds six Grafana dashboards and the alert rules as code: SLO burn rates ([docs/SLO.md](docs/SLO.md)), failing jobs and imports, PostgreSQL, WAL archiving and backup age, failures at the ingress, with an e-mail receiver. The homelab runs it with kube-prometheus-stack and Tempo, all through Argo CD.
+- Single-node k3s step by step (Tailscale certificates, an in-cluster backup bucket, the model server on the host, the per-machine values in a private repository, an image admission policy): [RUNBOOK](docs/RUNBOOK.md#bootstrap-on-single-node-k3s). Measured there: restore in 71 s (RPO 96 s), no failed request while pods are killed, the latency SLO held up to about 77 table requests per second, an OpenVAS scan with nothing above "Log" ([docs/perf.md](docs/perf.md), [docs/security-scan.md](docs/security-scan.md)).
 
 Operating it: [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
@@ -173,6 +174,8 @@ make test-e2e-demo      # the demo-mode specs against a demo-mode stack
 make helm-lint          # render and validate the charts, dashboards and alert rules (promtool unit tests)
 make loadtest           # k6 against the running stack (after make loadtest-seed); PROFILE=smoke|load|ramp
 make zap                # OWASP ZAP baseline and signed-in API scan against the running stack
+tools/homelab-drill.sh   # restore drill, pod kills under load and SSE timing on a cluster (restore|podkill|sse)
+tools/openvas-scan.sh    # OpenVAS (Greenbone) against a deployed instance, and a port scan from the LAN
 ```
 
 What the tests cover:
@@ -202,7 +205,7 @@ Performance notes and measurements, including the load test: [docs/perf.md](docs
 | 15 | Category rules, transfer detection, group reports, assistant actions | ✅ done |
 | 16 | Kubernetes deployment: Helm, CloudNativePG, Argo CD, rehearsed in CI | ✅ done |
 | 17 | Observability, load tests, activity log, security scans, demo mode | ✅ done |
-| 18 | Homelab rollout | 🚧 planned |
+| 18 | Homelab rollout on a reference environment: GitOps, TLS, backups and restore drill, monitoring and alerts, load test, OpenVAS, image admission | 🚧 hands-on checks and gate |
 | 19 | Public demo, documentation, v1.0.0 | 🚧 planned |
 
 The detailed task list and every decision taken so far are in [docs/PROGRESS.md](docs/PROGRESS.md); the full specification is [docs/PLAN.md](docs/PLAN.md).

@@ -82,8 +82,9 @@ flowchart TB
         secrets["Secrets from SealedSecrets<br/>finuance-db-app / -owner / -backup"]
     end
     s3[("S3-compatible bucket<br/>WAL + daily base backups")]
-    llm["Model server (LM Studio, ADR 0020)"]
+    llm["Model server outside the cluster<br/>(Ollama or LM Studio, ADR 0020)"]
     argo["Argo CD<br/>app-of-apps, syncs main"]
+    mon["namespace monitoring<br/>Prometheus, Alertmanager (e-mail),<br/>Grafana, Tempo"]
 
     traefik -- "/ " --> web
     traefik -- "/api/" --> api
@@ -94,6 +95,9 @@ flowchart TB
     api -. "assistant on: one address:port" .-> llm
     secrets -. "PGPASSWORD" .-> api
     argo -. "Helm charts + values" .-> ns
+    api -. "metrics, OTLP traces" .-> mon
+    worker -. "metrics, OTLP traces" .-> mon
+    traefik -. "metrics" .-> mon
 ```
 
 - **Same origin, two routes.** The Ingress sends `/api/` straight to the api (streamed assistant answers need no buffering) and everything else to web. Under Compose, nginx does that split.
@@ -103,6 +107,10 @@ flowchart TB
 - **Backups** are continuous WAL archiving plus a daily base backup through the Barman Cloud plugin, with a 14-day recovery window. A restore is a new cluster from the bucket, optionally to a point in time.
 - **GitOps.** A release opens a pull request that bumps the image tag in the homelab values; merging it deploys, reverting it rolls back. The database application syncs only by hand.
 - **The rehearsal** (`tools/rehearsal.sh`, the `k8s-rehearsal` workflow) runs all of this on a kind cluster, with RustFS as the bucket and the mock model server.
+- **Readiness under load.** `/readyz` checks the database and the migration version, but a check that only times out within 30 s of its last success counts as busy: every replica shares the database, and failing them all at once would turn slow answers into refused ones at the ingress (Phase 18 load test).
+- **Monitoring** (Phase 18): kube-prometheus-stack scrapes the api, the worker, the database and Traefik; Finuance's dashboards, SLO rules and e-mail receiver come from `deploy/k8s/observability`; traces go to Tempo over OTLP/HTTP. Availability is measured at the api and, separately, at the ingress.
+- **Image admission** (Phase 18): a built-in `ValidatingAdmissionPolicy` admits pods in Finuance's namespaces only with images from the registries listed per namespace (Finuance's own only from `ghcr.io/x2db736ac85h`); signature checks follow in Phase 19.
+- **Single-node k3s** (the reference environment, ADR 0022): Traefik on host ports and reachable only from the tailnet (an nftables table on the host), a Tailscale `*.ts.net` certificate, RustFS in the cluster as the backup bucket, the model server on the host; the machine-specific values come from a private repository (ADR 0023).
 
 ## Data model
 
