@@ -8,8 +8,8 @@
 # with `go install` at pinned versions (verified by the Go checksum database).
 #
 # Tag a commit whose message doesn't contain [skip ci] (or [ci skip], [no ci], …) anywhere, the body
-# included: GitHub skips every
-# push-triggered workflow for such a commit, the tag push included, so the release would never start.
+# included: GitHub skips every push-triggered workflow for such a commit, the tag push included, so
+# the release would never start.
 #
 # GitOps (PLAN 16.4): a final release (not an rc) then opens a pull request that sets the image tag
 # in deploy/environments/homelab/values.yaml. Merging it deploys (Argo CD syncs main); reverting it
