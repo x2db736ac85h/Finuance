@@ -44,7 +44,7 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private check-env-details check-toolchain check-no-float check-compose-prod check-db-bootstrap ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, toolchain, float, prod-Compose and k8s bootstrap checks
+check: lint typecheck test gen-check fixtures-check check-private check-env-details check-sealed check-toolchain check-no-float check-compose-prod check-db-bootstrap ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, sealed-secret, toolchain, float, prod-Compose and k8s bootstrap checks
 	@echo "check: ok"
 
 .PHONY: check-compose-prod
@@ -58,6 +58,10 @@ check-db-bootstrap: ## The CloudNativePG bootstrap SQL (deploy/k8s/db) matches d
 .PHONY: check-toolchain
 check-toolchain: ## Fail when go.mod's toolchain, mise.toml and Dockerfile.backend name different Go versions
 	@tools/check-toolchain.sh
+
+.PHONY: check-sealed
+check-sealed: ## Every *.sealed.yaml is a SealedSecret without plain values (gitleaks allowlists these files)
+	@tools/check-sealed.sh
 
 .PHONY: check-env-details
 check-env-details: ## Fail on private environment details (patterns from the private environment repository; skipped without it)
