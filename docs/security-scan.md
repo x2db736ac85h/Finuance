@@ -10,6 +10,12 @@ demo goes public.
 from the checkout, and the stack was `compose.ci.yaml` (sign-ups on, mock model). Trivy 0.76.0 ran
 with a vulnerability database of 2026-10-26.
 
+**Release scan before `v0.2.0-rc.2`: 2026-11-02**, on the reference machine, on the Phase 18 branch;
+images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`. Web
+image 0 findings; api image and repository GO-2026-5932 as before (no fix, not reachable);
+govulncheck 0 reachable; `npm audit --omit=dev` 0. **New:** `minimatch` (MEDIUM, development tools
+only, below) and KSV-0037 for the k3s Traefik config (deliberate, below).
+
 **Release scan before `v0.2.0-rc.1`: 2026-10-30**, on the reference machine, on `main` plus the release
 changes (branch `chore/release-0.2.0`), images built locally from it; Trivy 0.76.0 with that day's
 database, govulncheck 1.9.0 (`vuln.go.dev` reachable), `npm audit`. **New since Phase 17:**
@@ -25,7 +31,7 @@ module (GO-2026-5932). The repository's misconfiguration findings are unchanged 
 |---|---|---|
 | Trivy, api image | 2 findings; 1 fixed by a base image bump | 1 (UNKNOWN, not reachable) |
 | Trivy, web image | 3 findings (MEDIUM / UNKNOWN), no fixed base yet; fixed 2026-10-30 by upgrading zlib and musl in the Dockerfile | 0 |
-| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; 5 LOW/MEDIUM in the rehearsal stand-ins | all deliberate |
+| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` (MEDIUM, development tools, 2026-11-02) | deliberate; `minimatch` not reachable, open for Phase 19 |
 | Trivy config, rendered charts (all severities) | 2 LOW fixed (web uid); 4 kinds LOW/MEDIUM left | all deliberate |
 | `npm audit` (production and all) | 0 | – |
 | govulncheck | 0 reachable (CI; 2026-10-30 locally: 2 new `x/net` module findings, fixed by 0.62.0) | – |
@@ -59,6 +65,8 @@ module (GO-2026-5932). The repository's misconfiguration findings are unchanged 
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** Docker Hub images (`rustfs/rustfs`, `amazon/aws-cli`) pinned by digest; on the homelab the admission policy (`deploy/k8s/admission`, 18.8) admits only these two, and only by digest, in `s3`. |
 | `deploy/k8s/tempo/tempo.yaml` (Phase 18.6): KSV-0011 (CPU not limited) | LOW | **Deliberate:** as for the app's pods and RustFS: CPU request set, memory limited; non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicy (OTLP only from the app, queries only from Grafana). |
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** `grafana/tempo` pinned by digest; the admission policy (18.8) requires its digest in `monitoring`. |
+| `deploy/environments/homelab/host/traefik-config.yaml` (Phase 18): KSV-0037 (resource in `kube-system`) | MEDIUM | **Deliberate:** a k3s `HelmChartConfig` for its bundled Traefik; k3s reads it only in `kube-system`. It holds chart values, no workload. |
+| `web/package-lock.json`: CVE-2026-118764 / GHSA-g3hv-75wg-m249 in `minimatch` 10.2.6 and 5.1.9 (new 2026-11-02) | MEDIUM | **Not reachable, open for the Phase 19 gate:** development tools only (ESLint, and openapi-typescript's `@redocly/openapi-core`), nothing in the built app (`npm audit --omit=dev`: 0); the denial of service needs crafted glob patterns, and only our own lint and codegen configuration supplies them. The fix (11.0.1) is a major version that ESLint 10 and openapi-typescript 7 don't accept yet; re-check when they release, before the gate's "nothing above LOW". |
 
 A local checkout may hold `backend/vendor/` (gitignored, for offline image builds). Trivy finds
 dozens of npm and Python advisories in it: testcontainers' documentation `Pipfile.lock` and
