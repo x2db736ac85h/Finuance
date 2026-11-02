@@ -21,10 +21,10 @@ spec:
         valueFiles:
           - $values/deploy/environments/homelab/monitoring-values.yaml
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
-      targetRevision: phase/18-homelab-rollout
+      targetRevision: main
       ref: values
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
-      targetRevision: phase/18-homelab-rollout
+      targetRevision: main
       path: deploy/environments/homelab/monitoring
       directory:
         include: grafana-admin.sealed.yaml

@@ -457,6 +457,19 @@ Then repeat the pod test from step 2 (router blocked, DNS and internet working),
 
 A change to the chart or to the values deploys the same way: any merged change under `deploy/helm/finuance` or `deploy/environments/homelab/values.yaml`.
 
+### Back to main after a phase
+
+A phase can point the Argo CD apps at its branch (`targetRevision`) to try changes on the cluster;
+`make helm-lint` refuses that on `main` and in pull requests into it. Switching back without a gap:
+
+1. Pause the root app, so the switch doesn't reach the cluster before the merge (the child apps keep
+   running as they are): `kubectl -n argocd patch application finuance-root --type json -p '[{"op":"remove","path":"/spec/syncPolicy/automated"}]'`.
+2. On the branch, set every `targetRevision` in `deploy/k8s/argocd/root.yaml` and `apps/` back to
+   `main`; open the pull request; merge it after the gate.
+3. Apply the root app from `main` (`kubectl apply -f deploy/k8s/argocd/root.yaml` on a checkout of
+   `main`): it follows `main` with auto-sync again, re-points the child apps at `main`, and their
+   content is the same as before, so nothing restarts.
+
 ## Rollback
 
 **Revert the pull request** that deployed the version and merge the revert. Argo CD rolls the Deployments back to the previous image.

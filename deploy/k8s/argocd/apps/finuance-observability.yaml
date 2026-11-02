@@ -12,7 +12,7 @@ spec:
   project: finuance
   sources:
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
-      targetRevision: phase/18-homelab-rollout
+      targetRevision: main
       path: deploy/k8s/observability
       helm:
         releaseName: finuance-observability
@@ -23,7 +23,7 @@ spec:
       targetRevision: main
       ref: env
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
-      targetRevision: phase/18-homelab-rollout
+      targetRevision: main
       path: deploy/environments/homelab/monitoring
       directory:
         include: finuance-alert-smtp.sealed.yaml   # grafana-admin belongs to kube-prometheus-stack

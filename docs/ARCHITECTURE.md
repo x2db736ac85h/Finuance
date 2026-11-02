@@ -109,7 +109,7 @@ flowchart TB
 - **The rehearsal** (`tools/rehearsal.sh`, the `k8s-rehearsal` workflow) runs all of this on a kind cluster, with RustFS as the bucket and the mock model server.
 - **Readiness under load.** `/readyz` checks the database and the migration version, but a check that only times out within 30 s of its last success counts as busy: every replica shares the database, and failing them all at once would turn slow answers into refused ones at the ingress (Phase 18 load test).
 - **Monitoring** (Phase 18): kube-prometheus-stack scrapes the api, the worker, the database and Traefik; Finuance's dashboards, SLO rules and e-mail receiver come from `deploy/k8s/observability`; traces go to Tempo over OTLP/HTTP. Availability is measured at the api and, separately, at the ingress.
-- **Image admission** (Phase 18): a built-in `ValidatingAdmissionPolicy` admits pods in Finuance's namespaces only with images from the registries listed per namespace (Finuance's own only from `ghcr.io/x2db736ac85h`); signature checks follow in Phase 19.
+- **Image admission** (Phase 18): a built-in `ValidatingAdmissionPolicy` admits pods in Finuance's namespaces only with images from the registries listed per namespace (Finuance's own only from `ghcr.io/x2db736ac85h`); signature checks follow in Phase 19 (ADR 0024).
 - **Single-node k3s** (the reference environment, ADR 0022): Traefik on host ports and reachable only from the tailnet (an nftables table on the host), a Tailscale `*.ts.net` certificate, RustFS in the cluster as the backup bucket, the model server on the host; the machine-specific values come from a private repository (ADR 0023).
 
 ## Data model

@@ -15,7 +15,7 @@ spec:
   # (host name, model server address) from the private environment repository (ADR 0023).
   sources:
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
-      targetRevision: phase/18-homelab-rollout
+      targetRevision: main
       path: deploy/helm/finuance
       helm:
         releaseName: finuance

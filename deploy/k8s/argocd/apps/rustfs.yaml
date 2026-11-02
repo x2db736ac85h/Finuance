@@ -12,10 +12,10 @@ spec:
   project: finuance
   sources:
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
-      targetRevision: phase/18-homelab-rollout
+      targetRevision: main
       path: deploy/k8s/rustfs
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
-      targetRevision: phase/18-homelab-rollout
+      targetRevision: main
       path: deploy/environments/homelab/rustfs
       directory:
         include: "*.sealed.yaml"
