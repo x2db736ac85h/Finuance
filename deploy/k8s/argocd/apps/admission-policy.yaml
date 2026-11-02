@@ -1,0 +1,21 @@
+# The image admission policy (deploy/k8s/admission, Phase 18.8): before anything that starts pods in
+# Finuance's namespaces, so every pod is checked from the start.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: admission-policy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-8"
+spec:
+  project: platform
+  source:
+    repoURL: git@github.com:x2db736ac85h/Finuance.git
+    targetRevision: phase/18-homelab-rollout
+    path: deploy/k8s/admission
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

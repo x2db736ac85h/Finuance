@@ -88,6 +88,9 @@ validate deploy/k8s/rustfs/
 echo "== Tempo (traces)"
 validate deploy/k8s/tempo/
 
+echo "== image admission policy"
+validate deploy/k8s/admission/
+
 # Wrong settings must stop the render with a message that says what to set.
 o=(--set publicOrigin=https://f.example.com --set ingress.host=f.example.com)
 must_fail "publicOrigin is empty" "publicOrigin" "$app" --set ingress.host=f.example.com

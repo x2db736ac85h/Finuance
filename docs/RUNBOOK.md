@@ -406,6 +406,23 @@ echo | openssl s_client -connect <host>:443 -tls1_2 -cipher ECDHE-ECDSA-AES128-S
 curl -sk -o /dev/null -w '%{http_code}\n' https://<host>:80/                       # 404: no router on port 80 (plain HTTP: 301)
 ```
 
+### 15. Image admission (Phase 18.8)
+
+The Argo CD app `admission-policy` (wave −8) installs a built-in `ValidatingAdmissionPolicy`
+(`deploy/k8s/admission/image-policy.yaml`): pods in `finuance`, `finuance-restore`, `s3` and
+`monitoring` may only use images from the registries listed for their namespace, and RustFS, the AWS
+CLI and Tempo only by digest. A refused pod appears as a `FailedCreate` event on its ReplicaSet, Job
+or CloudNativePG cluster, naming the image. Before a chart upgrade brings an image from a new
+registry, add its prefix to the policy. Check with server-side dry runs (nothing is created):
+
+```sh
+pod() { printf '{"apiVersion":"v1","kind":"Pod","metadata":{"name":"admission-check"},"spec":{"containers":[{"name":"c","image":"%s","securityContext":{"allowPrivilegeEscalation":false,"runAsNonRoot":true,"capabilities":{"drop":["ALL"]},"seccompProfile":{"type":"RuntimeDefault"}}}]}}' "$2" \
+  | kubectl -n "$1" apply --dry-run=server -f - 2>&1 | tail -1; }
+pod finuance ghcr.io/x2db736ac85h/finuance-api:0.2.0-rc.1   # created (server dry run)
+pod finuance docker.io/library/busybox:1.37                   # denied: image not allowed in namespace finuance
+pod s3 rustfs/rustfs:1.0.1                                    # denied: image must be pinned by digest
+```
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):

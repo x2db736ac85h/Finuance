@@ -56,9 +56,9 @@ module (GO-2026-5932). The repository's misconfiguration findings are unchanged 
 | `deploy/k8s/rehearsal/stand-ins.yaml`: KSV-0011, -0015, -0016, -0018 (no CPU/memory requests or limits) | LOW | **Deliberate:** the bucket and mock model of the CI rehearsal on kind, never deployed elsewhere; they are hardened like the app (non-root, read-only, no capabilities; Phase 17 push 1). |
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** Docker Hub images pinned by digest, in a throwaway kind cluster. |
 | `deploy/k8s/rustfs/rustfs.yaml` (Phase 18): KSV-0011 (CPU not limited) for RustFS and the bucket job | LOW | **Deliberate:** as for the app's pods: CPU requests set, memory limited. Otherwise hardened like the app (non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicies). |
-| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate for now:** Docker Hub images (`rustfs/rustfs`, `amazon/aws-cli`) pinned by digest; the cluster's admission policy is decided with the app's images (18.8). |
+| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** Docker Hub images (`rustfs/rustfs`, `amazon/aws-cli`) pinned by digest; on the homelab the admission policy (`deploy/k8s/admission`, 18.8) admits only these two, and only by digest, in `s3`. |
 | `deploy/k8s/tempo/tempo.yaml` (Phase 18.6): KSV-0011 (CPU not limited) | LOW | **Deliberate:** as for the app's pods and RustFS: CPU request set, memory limited; non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicy (OTLP only from the app, queries only from Grafana). |
-| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate for now:** `grafana/tempo` pinned by digest; the admission policy is decided in 18.8. |
+| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** `grafana/tempo` pinned by digest; the admission policy (18.8) requires its digest in `monitoring`. |
 
 A local checkout may hold `backend/vendor/` (gitignored, for offline image builds). Trivy finds
 dozens of npm and Python advisories in it: testcontainers' documentation `Pipfile.lock` and
@@ -75,7 +75,7 @@ Rendered with every values file by `tools/check-helm.sh` and `tools/check-observ
 | KSV-0020 / KSV-0021: runs with UID / GID ≤ 10000 | LOW | web | **Fixed:** the web pod runs nginx as 10101:10101 (the image's own user, 101, stays for Compose). Checked: nginx starts with a read-only root filesystem and serves the app and its assets. |
 | KSV-0011: CPU not limited | LOW | api, worker, web, migrations | **Deliberate:** CPU limits throttle the Go runtime and the imports; the pods have CPU requests, and the HPA scales the api. Memory is limited. |
 | KSV-0110: workloads in the default namespace | LOW | all | **False positive:** the templates carry no `namespace:` and Helm/Argo CD install them into `finuance`. |
-| KSV-0125: images from an untrusted registry | MEDIUM | all | **Deliberate for now:** the images are `ghcr.io/x2db736ac85h/*`, signed with cosign. An admission policy that allows only this registry and verifies the signatures belongs to the cluster (Phase 18 decides). |
+| KSV-0125: images from an untrusted registry | MEDIUM | all | **Handled in the cluster:** the images are `ghcr.io/x2db736ac85h/*`, signed with cosign. Since 18.8 a `ValidatingAdmissionPolicy` (`deploy/k8s/admission`) admits in `finuance` only that registry and CloudNativePG's; signature verification and deployment by digest follow in Phase 19 (Trivy reports the rule from the manifest alone, so it stays listed). |
 | KSV-01010: ConfigMap with sensitive content | MEDIUM | `finuance-env` | **False positive:** the flagged key is `FINUANCE_MAX_UPLOAD_BYTES`; the ConfigMap holds no secret (passwords come from the CloudNativePG secrets as `PGPASSWORD`). |
 
 The observability and database charts have no findings at any severity.
@@ -157,11 +157,19 @@ Docker's bridge network, i.e. through the host's firewall like another device on
 **no open port** (27 minutes; closed ports drop). Confirms THREAT-MODEL T7 independently of the
 phone test in 18.2.
 
-**Image admission (KSV-0125):** see "Next".
+**Image admission (KSV-0125), decided 2026-11-02 by our Product Engineer:** Kubernetes' built-in
+`ValidatingAdmissionPolicy` (`deploy/k8s/admission/image-policy.yaml`, Argo CD app
+`admission-policy`; no extra component) checks every pod created in `finuance`, `finuance-restore`,
+`s3` and `monitoring`: only images from the registries listed for that namespace (Finuance's own only
+from `ghcr.io/x2db736ac85h/`, CloudNativePG's from `ghcr.io/cloudnative-pg/`), and the images we pin
+ourselves (RustFS, the AWS CLI, Tempo) only by digest. "Digests only" for everything isn't possible
+yet: Finuance's images, CloudNativePG's PostgreSQL and the monitoring stack's charts deploy by tag.
+**Phase 19:** cosign signature verification for Finuance's images, deployed by digest (the release
+already records the digests it signs). Checked with server-side dry runs (RUNBOOK step 15).
 
 ## Next
 
-- Phase 18: an admission policy for the image registry and signatures (KSV-0125), our Product
-  Engineer's decision pending. When the nginx base is rebuilt with fixed zlib and musl, the
+- Phase 19: signature verification (cosign) for Finuance's images in the admission policy, and the
+  images deployed by digest. When the nginx base is rebuilt with fixed zlib and musl, the
   Dockerfile's upgrade step can go.
 - Phase 19 gate: repeat every scan above on the release candidate, with nothing open above LOW.
