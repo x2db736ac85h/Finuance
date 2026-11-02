@@ -177,9 +177,7 @@ describe('duplicates window', () => {
     });
   });
 
-  // 2.3 s alone (75 groups re-rendered on every typed key), so the 5 s default runs out under a
-  // busy parallel run. 15 s until the window's re-rendering is looked at (docs/PROGRESS.md Backlog).
-  it('filters and pages 60 at a time', { timeout: 15_000 }, async () => {
+  it('filters and pages 60 at a time', async () => {
     groups = Array.from({ length: 75 }, (_, i) => group(i + 1));
     const user = userEvent.setup();
     const dlg = await openDialog(user);

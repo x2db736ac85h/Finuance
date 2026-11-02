@@ -4,7 +4,7 @@
 // version the data shows. Use this version prefers that import; Keep both / Merge again switch
 // merging off and on. Each decision rebuilds the transactions before the window updates.
 
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 import { useAccounts } from '../api/hooks/accounts';
 import {
@@ -59,17 +59,34 @@ export function DuplicatesDialog() {
   );
 }
 
-function Body({ accountIds }: { accountIds: string[] | undefined }) {
+/** The filter field. It keeps the typed text itself and passes on the query 200 ms after the last
+ * key, so typing doesn't re-render the groups (60 or more tables) on every key. */
+function Filter({ onQuery }: { onQuery: (q: string) => void }) {
   const [text, setText] = useState('');
-  const [q, setQ] = useState('');
   useEffect(() => {
     const t = setTimeout(() => {
-      setQ(text.trim());
+      onQuery(text.trim());
     }, 200);
     return () => {
       clearTimeout(t);
     };
-  }, [text]);
+  }, [text, onQuery]);
+  return (
+    <TextInput
+      aria-label="Filter duplicates"
+      placeholder="Filter by payee, title, amount…"
+      autoComplete="off"
+      spellCheck={false}
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+      }}
+    />
+  );
+}
+
+function Body({ accountIds }: { accountIds: string[] | undefined }) {
+  const [q, setQ] = useState('');
   const list = useDuplicates(accountIds, q);
   const accounts = useAccounts().data ?? [];
   const groups = list.data?.pages.flatMap((p) => p.groups) ?? [];
@@ -85,16 +102,7 @@ function Body({ accountIds }: { accountIds: string[] | undefined }) {
           version marked ✓. Choose <b>Use this version</b> to show another import's copy, or <b>Keep both</b> if they
           are really different transactions. Differences are highlighted. Duplicates are found per account.
         </div>
-        <TextInput
-          aria-label="Filter duplicates"
-          placeholder="Filter by payee, title, amount…"
-          autoComplete="off"
-          spellCheck={false}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-          }}
-        />
+        <Filter onQuery={setQ} />
       </div>
       <div className="dup-b" aria-busy={list.isFetching}>
         {list.isError ? (
@@ -125,7 +133,8 @@ function Body({ accountIds }: { accountIds: string[] | undefined }) {
   );
 }
 
-function Group({ g, account }: { g: DuplicateGroup; account: string }) {
+// A group re-renders only when its own data changes (the query keeps unchanged groups' objects).
+const Group = memo(function Group({ g, account }: { g: DuplicateGroup; account: string }) {
   const decide = useDecideDuplicate();
   const reset = useResetDuplicate();
   const busy = decide.isPending || reset.isPending;
@@ -238,4 +247,4 @@ function Group({ g, account }: { g: DuplicateGroup; account: string }) {
       </div>
     </section>
   );
-}
+});
