@@ -15,6 +15,7 @@ spec:
     path: deploy/k8s/admission
   destination:
     server: https://kubernetes.default.svc
+    namespace: kube-system   # the policy is cluster-scoped; the project needs a namespace it allows
   syncPolicy:
     automated:
       prune: true
