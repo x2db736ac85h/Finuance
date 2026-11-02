@@ -423,6 +423,16 @@ pod finuance docker.io/library/busybox:1.37                   # denied: image no
 pod s3 rustfs/rustfs:1.0.1                                    # denied: image must be pinned by digest
 ```
 
+**Check** (2026-11-02): nine dry-run cases as expected (Finuance's and CloudNativePG's images admitted
+in `finuance`, Docker Hub and another ghcr.io owner refused; RustFS refused without a digest and
+admitted with one; a foreign image refused in `monitoring`; `kube-system` unaffected); the web pods
+restarted under the policy; type checking clean.
+
+**Note (Argo CD):** an app-of-apps sync waits for each child app to become healthy. A new child app
+whose spec Argo CD rejects (here: a destination namespace the project doesn't allow) never does, so
+the root's sync waits forever and doesn't pick up the fix from git either. Apply the fixed
+Application once by hand (`kubectl apply -f deploy/k8s/argocd/apps/<app>.yaml`); the root continues.
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):
