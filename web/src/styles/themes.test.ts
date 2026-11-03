@@ -55,6 +55,43 @@ describe('built-in themes', () => {
   });
 });
 
+/** a hex or rgba() colour laid over an opaque hex background, as #rrggbb. */
+function lay(top: string, bottom: string): string {
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const m = /rgba?\(([^)]+)\)/.exec(top);
+  const parts = m
+    ? (m[1] ?? '').split(',').map(Number)
+    : [...rgb(top), top.length === 9 ? parseInt(top.slice(7), 16) / 255 : 1];
+  const a = parts[3] ?? 1;
+  const b = rgb(bottom);
+  return `#${[0, 1, 2]
+    .map((i) =>
+      Math.round((parts[i] ?? 0) * a + (b[i] ?? 0) * (1 - a))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+}
+
+describe('colours outside the contract', () => {
+  const combos = BUILTIN_THEMES.flatMap((t) => (['dark', 'light'] as const).map((mode) => [t.id, mode] as const));
+
+  // The column-type badge (.tt) draws the syntax colours on --hover-strong over the header's --bg-2.
+  it.each(combos)('%s %s: the syntax colours reach 4.5:1 on the column-type badge', (id, mode) => {
+    const t = { ...cssTokens('indigo', mode), ...cssTokens(id, mode) };
+    const badge = lay(t['hover-strong'] ?? '', t['bg-2'] ?? '');
+    for (const k of ['c-num', 'c-date', 'c-text'])
+      expect(contrast(t[k] ?? '', badge), `${id} ${mode} --${k}`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // A hovered row's secondary text: muted gives way to text there (.lg:hover .pc).
+  it.each(combos)('%s %s: text reaches 4.5:1 on a hovered card row', (id, mode) => {
+    const t = { ...cssTokens('indigo', mode), ...cssTokens(id, mode) };
+    for (const s of ['bg', 'panel', 'elev'])
+      expect(contrast(t['text'] ?? '', lay(t['hover-strong'] ?? '', t[s] ?? ''))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe('contrast', () => {
   it('matches known WCAG values', () => {
     expect(contrast('#000000', '#ffffff')).toBeCloseTo(21, 2);

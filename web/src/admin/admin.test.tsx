@@ -131,13 +131,13 @@ describe('administration', () => {
 
   it('saves the instance defaults and switches', async () => {
     let put: Schemas['InstanceSettingsDoc'] | undefined;
+    let stored: Schemas['InstanceSettingsDoc'] = { version: 3, defaults: {}, features: {}, limits: {} };
     server.use(
-      http.get(`${API}/admin/settings`, () =>
-        HttpResponse.json({ version: 3, defaults: {}, features: {}, limits: {} }),
-      ),
+      http.get(`${API}/admin/settings`, () => HttpResponse.json(stored)),
       http.put(`${API}/admin/settings`, async ({ request }) => {
         put = (await request.json()) as Schemas['InstanceSettingsDoc'];
-        return HttpResponse.json({ ...put, version: 4 });
+        stored = { ...put, version: 4 };
+        return HttpResponse.json(stored);
       }),
     );
     renderApp('/admin/instance');
@@ -153,6 +153,8 @@ describe('administration', () => {
         limits: { maxAccounts: 3 },
       });
     });
+    // the saved version remounts the form; the confirmation still comes
+    expect(await screen.findByText('Saved the instance settings')).toBeTruthy();
   });
 
   it('edits a theme: approval waits for every pair to pass', async () => {
@@ -196,6 +198,7 @@ describe('administration', () => {
     await waitFor(() => {
       expect(theme.tokens.light['muted']).toBe('#555555');
     });
+    expect(await screen.findByText('Saved Sea')).toBeTruthy();
     const approve = await screen.findByRole('button', { name: 'Approve' });
     await waitFor(() => {
       expect(approve.hasAttribute('disabled')).toBe(false);
@@ -204,6 +207,8 @@ describe('administration', () => {
     await waitFor(() => {
       expect(approved).toBe(true);
     });
+    // queued behind "Saved Sea" (one toast at a time)
+    expect(await screen.findByText(/everyone can pick it now/, {}, { timeout: 4000 })).toBeTruthy();
   });
 
   it('shows a limit as a sentence', async () => {

@@ -279,15 +279,10 @@ function ThemeEditor({ theme }: { theme: AdminTheme }) {
     toast(errorMessage(e), { kind: 'error' });
   };
   const save = () => {
-    update.mutate(
-      { id: theme.id, body: { version: theme.version, name: name.trim(), tokens } },
-      {
-        onSuccess: () => {
-          toast(`Saved ${name}`);
-        },
-        onError: fail,
-      },
-    );
+    // mutateAsync: the new version remounts the editor, and mutate()'s callbacks would be dropped
+    void update.mutateAsync({ id: theme.id, body: { version: theme.version, name: name.trim(), tokens } }).then(() => {
+      toast(`Saved ${name}`);
+    }, fail);
   };
   return (
     <div className="set-card">
@@ -384,15 +379,11 @@ function ThemeEditor({ theme }: { theme: AdminTheme }) {
             disabled={dirty || failing.length > 0 || !valid || status.isPending}
             title={dirty ? 'Save first' : failing.length > 0 ? 'Fix the colour pairs below 4.5:1 first' : undefined}
             onClick={() => {
-              status.mutate(
-                { id: theme.id, body: { version: theme.version, status: 'approved' } },
-                {
-                  onSuccess: () => {
-                    toast(`Approved ${theme.name}; everyone can pick it now`);
-                  },
-                  onError: fail,
-                },
-              );
+              void status
+                .mutateAsync({ id: theme.id, body: { version: theme.version, status: 'approved' } })
+                .then(() => {
+                  toast(`Approved ${theme.name}; everyone can pick it now`);
+                }, fail);
             }}
           >
             Approve

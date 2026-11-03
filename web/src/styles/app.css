@@ -606,6 +606,11 @@ input[type='checkbox'] {
   color: var(--muted);
   text-align: right;
 }
+/* muted text drops below 4.5:1 on a hover or selection tint */
+.lg:hover .pc,
+.lg.on .pc {
+  color: var(--text);
+}
 .hbars {
   height: 100%;
   overflow: auto;

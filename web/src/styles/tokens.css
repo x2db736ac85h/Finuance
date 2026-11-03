@@ -82,7 +82,7 @@
   --neg: #c5372c;
   --pos: #1a7a35; /* legacy #1e8e3e: 4.5:1 on grey surfaces */
   --mark: rgba(250, 204, 21, 0.45);
-  --c-num: #0070c1;
+  --c-num: #0065ae; /* legacy #0070c1: 4.5:1 on the column-type badge */
   --c-date: #795e26;
   --c-text: #a31515;
   --scroll: rgba(0, 0, 0, 0.16);
@@ -118,7 +118,8 @@
 /*
   Colour themes (Phase 19, ADR 0026). The blocks above are Indigo, the default look. Each
   built-in theme below overrides the theme contract's tokens (theme-contract.json) plus the three
-  secondary surfaces; chart, heat-map and syntax colours stay the same in every theme. Values are
+  secondary surfaces, and the syntax colours where Indigo's would read below 4.5:1 on the column-type
+  badge; chart and heat-map colours stay the same in every theme. Values are
   kept equal to BUILTIN_THEMES in themes.ts (themes.test.ts) and pass WCAG AA in every pair.
 */
 /* Fjord: cool frost blue on polar night (after Nord) */
@@ -142,6 +143,7 @@
   --bg-2: #292e39;
   --border-2: #4c566a;
   --text-2: #c4cbd7;
+  --c-text: #dba18c;
 }
 [data-theme-id='fjord'][data-theme='light'] {
   --bg: #eceff4;
@@ -163,6 +165,8 @@
   --bg-2: #e3e7ee;
   --border-2: #c2cad8;
   --text-2: #434c5e;
+  --c-num: #2e5f8a;
+  --c-date: #6f5418;
 }
 /* Grove: sage and aqua on warm forest tones (after Everforest) */
 [data-theme-id='grove'][data-theme='dark'] {
@@ -185,6 +189,7 @@
   --bg-2: #232a2e;
   --border-2: #4f5b58;
   --text-2: #bdb59e;
+  --c-text: #e69875;
 }
 [data-theme-id='grove'][data-theme='light'] {
   --bg: #fdf6e3;
@@ -206,6 +211,8 @@
   --bg-2: #efebd4;
   --border-2: #d2cdb5;
   --text-2: #4f5b58;
+  --c-num: #2a5f8a;
+  --c-date: #6e5410;
 }
 /* Ember: warm gold on charcoal (after Gruvbox) */
 [data-theme-id='ember'][data-theme='dark'] {
@@ -249,4 +256,6 @@
   --bg-2: #ebdbb2;
   --border-2: #cbbd94;
   --text-2: #504945;
+  --c-num: #0b5f70;
+  --c-date: #6f4f08;
 }

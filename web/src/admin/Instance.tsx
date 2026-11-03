@@ -19,7 +19,7 @@ const CARD_LABEL: Record<(typeof CARD_KEYS)[number], string> = {
   sum: 'Summary',
   cat: 'Spending by category',
   flow: 'Cash flow by month',
-  pace: 'Spending pace',
+  pace: 'Month pace',
   payee: 'Top payees',
   heat: 'Daily spending',
 };
@@ -66,15 +66,13 @@ function SettingsForm({ doc }: { doc: Doc }) {
       toast(parsed, { kind: 'error' });
       return;
     }
-    put.mutate(
-      { version: doc.version, defaults: d, features: f, limits: parsed },
-      {
-        onSuccess: () => {
-          toast('Saved the instance settings');
-        },
-        onError: (e) => {
-          toast(errorMessage(e), { kind: 'error' });
-        },
+    // mutateAsync: the saved version remounts this form, and mutate()'s callbacks would be dropped
+    void put.mutateAsync({ version: doc.version, defaults: d, features: f, limits: parsed }).then(
+      () => {
+        toast('Saved the instance settings');
+      },
+      (e: unknown) => {
+        toast(errorMessage(e), { kind: 'error' });
       },
     );
   };
