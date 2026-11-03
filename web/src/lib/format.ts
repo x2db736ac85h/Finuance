@@ -113,3 +113,17 @@ export function parseMoneyInput(text: string, currency: string): number | null {
   if ((frac[exp] ?? '0') >= '5') v += 1;
   return m[1] === '-' && v !== 0 ? -v : v;
 }
+
+const oneDecimal = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+
+/** A size in binary units: 2048 → "2 KiB", 20971520 → "20 MiB". */
+export function fmtBytes(n: number): string {
+  const units = ['bytes', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let v = n;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${i === 0 ? fmtInt(v) : oneDecimal.format(v)} ${units[i] ?? ''}`;
+}

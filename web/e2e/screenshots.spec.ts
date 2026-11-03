@@ -49,3 +49,23 @@ test('screenshots of the main screens in both themes', async ({ page }) => {
   await page.goto('/settings/appearance');
   await shoot(page, 'settings');
 });
+
+// Phase 19: the table in each built-in colour theme, both modes (theme-<id>-dark/light.png).
+test('screenshots of every colour theme', async ({ page }) => {
+  test.setTimeout(120_000);
+  mkdirSync(DIR, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signUp(page);
+  await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
+  for (const theme of ['Indigo', 'Fjord', 'Grove', 'Ember']) {
+    await page.goto('/settings/appearance');
+    await page
+      .getByRole('radiogroup', { name: 'Colour theme' })
+      .getByRole('radio', { name: new RegExp(theme) })
+      .click();
+    await page.goto('/t/all');
+    await expect(page.locator('tr[data-i]').first()).toBeVisible();
+    await expect(page.locator('.card').first()).toBeVisible();
+    await shoot(page, `theme-${theme.toLowerCase()}`);
+  }
+});

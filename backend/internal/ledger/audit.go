@@ -34,12 +34,28 @@ const (
 	AuditDuplicateDecided = "duplicates.decided"
 	AuditDuplicateReset   = "duplicates.reset"
 	AuditAssistantApplied = "assistant.action_applied"
+	// Administrators' actions (ADR 0025): in the administrator's log with the account's e-mail,
+	// and in the affected account's log with {"by": "administrator"}.
+	AuditAdminUserCreated     = "admin.user_created"
+	AuditAdminRoleChanged     = "admin.role_changed"
+	AuditAdminUserDisabled    = "admin.user_disabled"
+	AuditAdminUserEnabled     = "admin.user_enabled"
+	AuditAdminPasswordReset   = "admin.password_reset"
+	AuditAdminSessionsRevoked = "admin.sessions_revoked"
+	AuditAdminLimitsChanged   = "admin.limits_changed"
+	AuditAdminUserDeleted     = "admin.user_deleted"
+	AuditAdminSettingsChanged = "admin.settings_changed"
+	AuditAdminThemeApproved   = "admin.theme_approved"
+	AuditAdminThemeRetired    = "admin.theme_retired"
 )
 
 // AuditActions lists every action above.
 var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPasswordChanged, AuditSessionRevoked,
 	AuditImportCommitted, AuditImportDeleted, AuditAccountDeleted, AuditExportCSV, AuditExportData,
-	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied}
+	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied,
+	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,
+	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
+	AuditAdminThemeApproved, AuditAdminThemeRetired}
 
 // AuditRetention is how long events are kept; the table's delete policy says the same.
 const AuditRetention = 365 * 24 * time.Hour

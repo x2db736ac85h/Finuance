@@ -22,6 +22,12 @@ var (
 	ErrPayloadTooLarge     = errors.New("payload too large")
 	ErrUnsupportedFile     = errors.New("unsupported file")
 	ErrNotImplemented      = errors.New("not implemented")
+	// Phase 19: instance administration (ADR 0025).
+	ErrLimitReached           = errors.New("limit reached")
+	ErrPasswordChangeRequired = errors.New("password change required")
+	ErrAccountDisabled        = errors.New("account disabled")
+	ErrLastAdmin              = errors.New("last administrator")
+	ErrContrast               = errors.New("contrast too low")
 )
 
 // FieldError is one invalid input field.

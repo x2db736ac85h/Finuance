@@ -20,10 +20,13 @@
   --muted: #919198; /* legacy #6e6e77: raised to 4.5:1 on every surface (WCAG AA, Phase 14) */
   --accent: #9789f7; /* legacy #8b7cf6: 4.5:1 as text on the selected-row tint */
   --accent-solid: #6d5ce7; /* filled buttons with white text (4.8:1) */
-  --accent-soft: rgba(139, 124, 246, 0.16);
+  --on-accent: #ffffff;
+  --logo-a: #a191ff;
+  --logo-b: #6d5ce7;
+  --accent-soft: #8b7cf629;
   --hover: rgba(255, 255, 255, 0.035);
   --hover-strong: rgba(255, 255, 255, 0.07);
-  --sel: rgba(139, 124, 246, 0.17);
+  --sel: #8b7cf62b;
   --neg: #f28b82;
   --pos: #81c995;
   --mark: rgba(250, 204, 21, 0.32);
@@ -69,14 +72,17 @@
   --muted: #68686e; /* legacy #8e8e97: raised to 4.5:1 on every surface (WCAG AA, Phase 14) */
   --accent: #6354d2; /* legacy #6d5ce7: 4.5:1 as text on grey surfaces */
   --accent-solid: #6354d2;
-  --accent-soft: rgba(109, 92, 231, 0.1);
+  --on-accent: #ffffff;
+  --logo-a: #a191ff;
+  --logo-b: #6d5ce7;
+  --accent-soft: #6d5ce71a;
   --hover: rgba(0, 0, 0, 0.025);
   --hover-strong: rgba(0, 0, 0, 0.05);
-  --sel: rgba(109, 92, 231, 0.1);
+  --sel: #6d5ce71a;
   --neg: #c5372c;
   --pos: #1a7a35; /* legacy #1e8e3e: 4.5:1 on grey surfaces */
   --mark: rgba(250, 204, 21, 0.45);
-  --c-num: #0070c1;
+  --c-num: #0065ae; /* legacy #0070c1: 4.5:1 on the column-type badge */
   --c-date: #795e26;
   --c-text: #a31515;
   --scroll: rgba(0, 0, 0, 0.16);
@@ -107,4 +113,149 @@
   --st-good: #0ca30c;
   --st-warn: #fab219;
   --st-crit: #d03b3b;
+}
+
+/*
+  Colour themes (Phase 19, ADR 0026). The blocks above are Indigo, the default look. Each
+  built-in theme below overrides the theme contract's tokens (theme-contract.json) plus the three
+  secondary surfaces, and the syntax colours where Indigo's would read below 4.5:1 on the column-type
+  badge; chart and heat-map colours stay the same in every theme. Values are
+  kept equal to BUILTIN_THEMES in themes.ts (themes.test.ts) and pass WCAG AA in every pair.
+*/
+/* Fjord: cool frost blue on polar night (after Nord) */
+[data-theme-id='fjord'][data-theme='dark'] {
+  --bg: #2e3440;
+  --panel: #323a47;
+  --elev: #3b4252;
+  --input: #272c36;
+  --border: #434c5e;
+  --text: #e5e9f0;
+  --muted: #a7b0c0;
+  --accent: #88c0d0;
+  --accent-solid: #4c6f99;
+  --on-accent: #ffffff;
+  --accent-soft: #88c0d024;
+  --sel: #88c0d026;
+  --pos: #a3be8c;
+  --neg: #eb959a;
+  --logo-a: #8fbcbb;
+  --logo-b: #5e81ac;
+  --bg-2: #292e39;
+  --border-2: #4c566a;
+  --text-2: #c4cbd7;
+  --c-text: #dba18c;
+}
+[data-theme-id='fjord'][data-theme='light'] {
+  --bg: #eceff4;
+  --panel: #e5e9f0;
+  --elev: #f4f6f9;
+  --input: #ffffff;
+  --border: #d1d8e3;
+  --text: #2e3440;
+  --muted: #545e70;
+  --accent: #38658f;
+  --accent-solid: #38658f;
+  --on-accent: #ffffff;
+  --accent-soft: #5e81ac1f;
+  --sel: #5e81ac21;
+  --pos: #3f6b2a;
+  --neg: #a33a44;
+  --logo-a: #8fbcbb;
+  --logo-b: #5e81ac;
+  --bg-2: #e3e7ee;
+  --border-2: #c2cad8;
+  --text-2: #434c5e;
+  --c-num: #2e5f8a;
+  --c-date: #6f5418;
+}
+/* Grove: sage and aqua on warm forest tones (after Everforest) */
+[data-theme-id='grove'][data-theme='dark'] {
+  --bg: #272e33;
+  --panel: #2d353b;
+  --elev: #343f44;
+  --input: #1e2326;
+  --border: #3d484d;
+  --text: #d3c6aa;
+  --muted: #a6ae9f;
+  --accent: #83c0b7;
+  --accent-solid: #3f7a73;
+  --on-accent: #ffffff;
+  --accent-soft: #7fbbb324;
+  --sel: #7fbbb326;
+  --pos: #a7c080;
+  --neg: #e98a8c;
+  --logo-a: #a7c080;
+  --logo-b: #3f7a73;
+  --bg-2: #232a2e;
+  --border-2: #4f5b58;
+  --text-2: #bdb59e;
+  --c-text: #e69875;
+}
+[data-theme-id='grove'][data-theme='light'] {
+  --bg: #fdf6e3;
+  --panel: #f4f0d9;
+  --elev: #fffbef;
+  --input: #fffdf5;
+  --border: #e0dcc7;
+  --text: #404d4a;
+  --muted: #5b6661;
+  --accent: #2b6b64;
+  --accent-solid: #2b6b64;
+  --on-accent: #ffffff;
+  --accent-soft: #35a77c1f;
+  --sel: #35a77c21;
+  --pos: #4d6b1d;
+  --neg: #b13a3a;
+  --logo-a: #8da101;
+  --logo-b: #35a77c;
+  --bg-2: #efebd4;
+  --border-2: #d2cdb5;
+  --text-2: #4f5b58;
+  --c-num: #2a5f8a;
+  --c-date: #6e5410;
+}
+/* Ember: warm gold on charcoal (after Gruvbox) */
+[data-theme-id='ember'][data-theme='dark'] {
+  --bg: #282828;
+  --panel: #2f2c2b;
+  --elev: #3c3836;
+  --input: #1d2021;
+  --border: #504945;
+  --text: #ebdbb2;
+  --muted: #bdae93;
+  --accent: #fabd2f;
+  --accent-solid: #d79921;
+  --on-accent: #282828;
+  --accent-soft: #fabd2f1f;
+  --sel: #fabd2f21;
+  --pos: #b8bb26;
+  --neg: #fb7f6c;
+  --logo-a: #fabd2f;
+  --logo-b: #d65d0e;
+  --bg-2: #1d2021;
+  --border-2: #665c54;
+  --text-2: #d5c4a1;
+}
+[data-theme-id='ember'][data-theme='light'] {
+  --bg: #fbf1c7;
+  --panel: #f2e5bc;
+  --elev: #fdf6dd;
+  --input: #fffbea;
+  --border: #dccfa8;
+  --text: #3c3836;
+  --muted: #665c54;
+  --accent: #8a4f08;
+  --accent-solid: #d79921;
+  --on-accent: #282828;
+  --accent-soft: #d799211f;
+  --sel: #d7992124;
+  --pos: #5f6a0e;
+  --neg: #9d0006;
+  --logo-a: #fabd2f;
+  --logo-b: #d65d0e;
+  --bg-2: #ebdbb2;
+  --border-2: #cbbd94;
+  --text-2: #504945;
+  --c-num: #0b5f70;
+  --c-date: #6f4f08;
 }

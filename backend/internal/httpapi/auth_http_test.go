@@ -23,10 +23,12 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/admin"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
@@ -61,6 +63,8 @@ type authEnv struct {
 	st    *store.Store
 	clock *fakeClock
 	logs  *syncBuffer
+	auth  *auth.Service
+	adm   *admin.Service
 }
 
 type syncBuffer struct {
@@ -96,6 +100,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	svc := auth.New(st, clk, auth.Config{Params: auth.Params{MemoryKiB: 8 * 1024, Time: 1, Threads: 1},
 		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: cfg.AllowSignup})
 	led := ledger.New(st, platform.SystemClock{})
+	adm := admin.New(st, svc, clk, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour)})
 	legacy := legacyimport.New(st, led, assistant.NewChats(st, platform.SystemClock{}, 25), platform.SystemClock{})
 	rs := rules.New(st, platform.SystemClock{})
 	rc := &river.Config{Workers: jobs.Workers(jobs.Deps{Sessions: svc, Ledger: led, Migrator: legacy, Rules: rs})}
@@ -120,7 +125,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
 		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
 			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})})
 	if err != nil {
@@ -128,7 +133,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
-	return &authEnv{t: t, srv: srv, st: st, clock: clk, logs: logs}
+	return &authEnv{t: t, srv: srv, st: st, clock: clk, logs: logs, auth: svc, adm: adm}
 }
 
 // browser is an HTTP client with a cookie jar that sends the CSRF header like the web app does.

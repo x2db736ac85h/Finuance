@@ -2,7 +2,7 @@
 # Kubernetes' built-in ValidatingAdmissionPolicy (no extra component). Every pod in Finuance's
 # namespaces may only run images from the registries listed for its namespace, and the images we pin
 # by digest ourselves must keep their digest. Finuance's own images come only from
-# ghcr.io/x2db736ac85h. Phase 19 adds signature checks (cosign) and deploys Finuance's images by
+# ghcr.io/x2db736ac85h. Phase 21 adds signature checks (cosign) and deploys Finuance's images by
 # digest (ADR 0024). A refused pod shows up as a FailedCreate event on its ReplicaSet, Job or Cluster.
 #
 # Adding an image from a new registry (a chart upgrade, a new tool): add its prefix below first.

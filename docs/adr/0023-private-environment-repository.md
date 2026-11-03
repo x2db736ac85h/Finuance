@@ -45,7 +45,7 @@ access to the private repository. `make check-env-details` fails when the enviro
   in the environment repository too. The example overlay and its render check make that visible.
 - Argo CD needs credentials for a second repository (another sealed deploy key).
 - Deploying from a fresh clone needs both repositories; the RUNBOOK says so.
-- Follow-up: the Phase 19 demo host gets its own folder in the environment repository.
+- Follow-up: the Phase 21 demo host gets its own folder in the environment repository.
 
 ## Alternatives considered
 
@@ -55,3 +55,5 @@ access to the private repository. `make check-env-details` fails when the enviro
   longer in git and self-heal would fight manual edits.
 - **Encrypting the overlay in this repository** (e.g. SOPS): hides the values but still ties the
   public history to the machine and adds a decryption plugin to Argo CD.
+
+*Note (2026-11-03): the follow-up phase was renumbered from 19 to 21 when Phases 19–20 were added (PLAN Rev 4).*

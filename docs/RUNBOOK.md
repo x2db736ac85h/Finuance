@@ -63,8 +63,12 @@ Database logins are two CloudNativePG managed roles: `finuance_owner` (owns the 
 8. **Create the first account** (sign-up is off):
 
    ```sh
-   kubectl -n finuance exec -i deploy/finuance-api -- /finuance admin create-user --email you@example.com --password-stdin <<<'a long password'
+   kubectl -n finuance exec -i deploy/finuance-api -- /finuance admin create-user --email you@example.com --admin --password-stdin <<<'a long password'
    ```
+
+   `--admin` makes it the instance's first administrator (Administration in the account menu,
+   docs/admin.md). An instance that already has accounts gets one with
+   `/finuance admin grant-admin --email you@example.com`.
 
 9. Open the public origin, sign in, import a file, and check `kubectl -n finuance get pods`: no restarts.
 
@@ -162,7 +166,7 @@ In the admin console (DNS page): **MagicDNS** on, **HTTPS Certificates** on.
 
 **Names are public.** Tailscale's certificates come from Let's Encrypt, so the full name of every machine that gets one is written to the public Certificate Transparency logs for good (not its address, and the name only resolves inside the tailnet). Keep the tailnet's random name (`tailXXXXXX`, no custom or "fun" name), give the machine a meaningless one (no OS, project or personal name), and request a certificate on this machine only.
 
-**Machine names stay out of this repository** (`<host>`, `<tailnet-ip>`). The deployed host name lives in the private environment repository (18.2). A private CA would publish nothing but needs its root trusted on every device; an own domain with a wildcard certificate is the Phase 19 option.
+**Machine names stay out of this repository** (`<host>`, `<tailnet-ip>`). The deployed host name lives in the private environment repository (18.2). A private CA would publish nothing but needs its root trusted on every device; an own domain with a wildcard certificate is the Phase 21 option.
 
 **Check:** `tailscale status` shows the machine online at `<tailnet-ip>`; MagicDNS on; one certificate domain. MagicDNS only adds a `ts.net` route to systemd-resolved (`tailscale0`: `100.100.100.100`), so CoreDNS still forwards to the router and the nftables table (which drops `100.64.0.0/10`) doesn't break pod DNS. A pod reaches `<tailnet-ip>` (local delivery, not forwarded), which the Ollama connection uses. No ufw rule for `tailscale0` yet: Traefik's traffic is forwarded, not input; 18.2 tests from a tailnet and a LAN device and adds only what that needs.
 
@@ -180,7 +184,7 @@ helm upgrade --install cert-manager jetstack/cert-manager --version v1.21.3 \
 
 ### 5. Argo CD
 
-Chart `argo-cd` 10.11.6 (Argo CD v3.5.6) with [`homelab/argocd-values.yaml`](../deploy/environments/homelab/argocd-values.yaml): the Application health check from [Bootstrap](#bootstrap-first-install) step 1 is part of the values (no hand edit of `argocd-cm`), no Dex (the built-in admin is the only user; sign-in through Dex and GitHub is planned for Phase 19, once the UI is reachable beyond the port-forward), no notifications (alerts go through Alertmanager), the unused ApplicationSet controller at 0 replicas. The chart's own NetworkPolicies stay on.
+Chart `argo-cd` 10.11.6 (Argo CD v3.5.6) with [`homelab/argocd-values.yaml`](../deploy/environments/homelab/argocd-values.yaml): the Application health check from [Bootstrap](#bootstrap-first-install) step 1 is part of the values (no hand edit of `argocd-cm`), no Dex (the built-in admin is the only user; sign-in through Dex and GitHub is planned for Phase 21, once the UI is reachable beyond the port-forward), no notifications (alerts go through Alertmanager), the unused ApplicationSet controller at 0 replicas. The chart's own NetworkPolicies stay on.
 
 ```sh
 helm repo add argo https://argoproj.github.io/argo-helm

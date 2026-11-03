@@ -117,7 +117,7 @@ kbd {
 .btn.primary {
   background: var(--accent-solid);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-accent);
 }
 .btn.primary:hover {
   filter: brightness(1.08);

@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Navigate, useOutletContext, useParams } from 'react-router';
 
 import { useAccounts } from '../api/hooks/accounts';
+import { useMeta } from '../api/hooks/me';
 import { Overview } from '../overview/Overview';
 import { useUi } from '../stores/uiStore';
 import { Table } from '../table/Table';
@@ -27,6 +28,8 @@ function View({ mode }: { mode: 'table' | 'ov' }) {
   useEffect(() => {
     if (useUi.getState().mode !== mode) useUi.getState().setMode(mode);
   }, [mode]);
+  const overviewOn = useMeta().data?.features.overview ?? true;
+  if (mode === 'ov' && !overviewOn) return <Navigate to={`/t/${viewId}`} replace />;
   if (!accounts.data) return null;
   if (!hasData) return <EmptyState />;
   const account = accounts.data.find((a) => a.id === viewId);

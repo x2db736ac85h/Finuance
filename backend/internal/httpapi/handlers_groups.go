@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/admin"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 )
@@ -40,6 +41,9 @@ func (a *api) ListGroups(ctx context.Context, _ gen.ListGroupsRequestObject) (ge
 // CreateGroup adds a group; without a colour it takes the first unused slot.
 func (a *api) CreateGroup(ctx context.Context, req gen.CreateGroupRequestObject) (gen.CreateGroupResponseObject, error) {
 	userID := identity(ctx).User.ID
+	if err := a.checkCount(ctx, admin.LimitGroups); err != nil {
+		return nil, err
+	}
 	color := -1
 	if req.Body.Color != nil {
 		color = *req.Body.Color

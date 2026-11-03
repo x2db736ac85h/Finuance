@@ -12,7 +12,7 @@ import { configureImports } from '../import/queue';
 import { escapeSelection, extendSelection, moveSelection } from '../table/controller';
 import { Inspector } from '../table/Inspector';
 import { TableStatus } from '../table/TableStatus';
-import type { User } from '../api/hooks/me';
+import { useMeta, type User } from '../api/hooks/me';
 import { sidebarShown, useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { TooltipLayer } from '../ui/Tooltip';
@@ -27,7 +27,7 @@ import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
 
-export type ShellContext = { hasData: boolean };
+export type ShellContext = { hasData: boolean; user: User };
 
 // The assistant panel is its own chunk, loaded the first time it opens.
 const ChatPanel = lazy(async () => ({ default: (await import('../assistant/ChatPanel')).ChatPanel }));
@@ -42,7 +42,9 @@ export function AppShell({ user }: { user: User }) {
   const sbShown = useUi(sidebarShown);
   const mode = useUi((s) => s.mode);
   const vizOpen = useUi((s) => s.vizOpen);
-  const aiOpen = useUi((s) => s.ai.open);
+  // an assistant an administrator switched off (Phase 19) never opens
+  const assistantOn = useMeta().data?.features.assistant !== false;
+  const aiOpen = useUi((s) => s.ai.open) && assistantOn;
   const aiMax = useUi((s) => s.ai.max);
   const searchRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
@@ -76,7 +78,8 @@ export function AppShell({ user }: { user: User }) {
   const total = list.reduce((n, a) => n + a.txCount, 0);
   const hasData = total > 0;
   const rows = viewId === 'all' ? total : (list.find((a) => a.id === viewId)?.txCount ?? 0);
-  const inSettings = location.pathname.startsWith('/settings');
+  // settings and the admin panel share the settings layout
+  const inSettings = location.pathname.startsWith('/settings') || location.pathname.startsWith('/admin');
   // The table's inspector and status bar, for a view that exists (Views redirects the others).
   const tableShown =
     mode === 'table' && hasData && !inSettings && (viewId === 'all' || list.some((a) => a.id === viewId));
@@ -97,6 +100,7 @@ export function AppShell({ user }: { user: User }) {
     },
     openFiles: openFilePicker,
     toggleAssistant: () => {
+      if (!assistantOn) return;
       const s = useUi.getState();
       s.setAiOpen(!s.ai.open);
     },
@@ -133,7 +137,7 @@ export function AppShell({ user }: { user: User }) {
       <div className="main">
         <Sidebar accounts={list} total={total} email={user.email} />
         <section className="content">
-          <Outlet context={{ hasData } satisfies ShellContext} />
+          <Outlet context={{ hasData, user } satisfies ShellContext} />
         </section>
         {tableShown && <Inspector key={viewId} viewId={viewId} />}
         {aiOpen && (

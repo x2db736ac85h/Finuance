@@ -141,6 +141,46 @@ describe('settings', () => {
   });
 });
 
+describe('colour themes', () => {
+  it('offers the built-in and approved themes and saves the choice', async () => {
+    const tokens = {
+      dark: { bg: '#000000', panel: '#111111', text: '#ffffff', accent: '#ffff00' },
+      light: { bg: '#ffffff' },
+    };
+    db.themes = [{ id: 'sea', name: 'Sea', tokens }];
+    renderApp('/settings/appearance');
+    const group = await screen.findByRole('radiogroup', { name: 'Colour theme' });
+    await waitFor(() => {
+      const names = within(group)
+        .getAllByRole('radio')
+        .map((r) => r.textContent);
+      expect(names).toEqual(['AaAaIndigo', 'AaAaFjord', 'AaAaGrove', 'AaAaEmber', 'AaAaSea']);
+    });
+    expect(
+      within(group)
+        .getByRole('radio', { name: /Indigo/ })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
+    await userEvent.click(within(group).getByRole('radio', { name: /Grove/ }));
+    expect(document.documentElement.dataset['themeId']).toBe('grove');
+    await waitFor(() => {
+      expect(db.puts.at(-1)?.prefs['themeId']).toBe('grove');
+    });
+    await userEvent.click(within(group).getByRole('radio', { name: /Sea/ }));
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#ffff00');
+  });
+
+  it('starts from the instance default theme', async () => {
+    db.defaults = { themeId: 'ember' };
+    renderApp('/settings/appearance');
+    const group = await screen.findByRole('radiogroup', { name: 'Colour theme' });
+    await waitFor(() => {
+      expect(within(group).getByRole('radio', { name: /Ember/ }).getAttribute('aria-checked')).toBe('true');
+    });
+    expect(document.documentElement.dataset['themeId']).toBe('ember');
+  });
+});
+
 describe('browserName', () => {
   it('names common browsers', () => {
     expect(browserName(FF)).toBe('Firefox on macOS');

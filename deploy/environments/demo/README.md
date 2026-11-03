@@ -1,5 +1,5 @@
 # Demo environment
 
-🚧 **Under construction — arrives in Phase 19 (public demo).**
+🚧 **Under construction — arrives in Phase 21 (public release).**
 
 The Helm values for the public demo (its own namespace and database, smaller resources, extra rate limits).

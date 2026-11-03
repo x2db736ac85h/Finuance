@@ -12,6 +12,10 @@ export type Db = {
   signedIn: boolean;
   signupEnabled: boolean;
   demoMode: boolean;
+  /** GET /meta: switches, view defaults and approved themes (Phase 19). */
+  features: Schemas['Features'];
+  defaults: Schemas['ViewDefaults'];
+  themes: Schemas['PublicTheme'][];
   user: Schemas['User'];
   prefs: Schemas['Preferences'];
   accounts: Schemas['Account'][];
@@ -63,12 +67,18 @@ export const freshDb = (): Db => ({
   signedIn: true,
   signupEnabled: true,
   demoMode: false,
+  features: { overview: true, assistant: true, friends: true, sharedGroups: true },
+  defaults: {},
+  themes: [],
   user: {
     id: '00000000-0000-4000-8000-000000000001',
     email: 'alex@example.com',
     displayName: 'Alex',
     isDemo: false,
     createdAt: '2026-10-01T10:00:00Z',
+    isAdmin: false,
+    mustChangePassword: false,
+    limits: { maxUploadBytes: 20 << 20, importsPerDay: 0, maxAccounts: 0, maxGroups: 0, assistantPerHour: 30 },
   },
   prefs: { version: 0, prefs: {} },
   accounts: [],
@@ -130,7 +140,10 @@ export const server = setupServer(
       signupEnabled: db.signupEnabled,
       demoMode: db.demoMode,
       assistantEnabled: false,
-    }),
+      features: db.features,
+      defaults: db.defaults,
+      themes: db.themes,
+    } satisfies Schemas['Meta']),
   ),
   http.get(`${API}/me`, () => authed(() => HttpResponse.json(db.user))),
   http.get(`${API}/preferences`, () => authed(() => HttpResponse.json(db.prefs))),

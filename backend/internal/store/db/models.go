@@ -193,6 +193,14 @@ type ImportRow struct {
 	TransactionID       *uuid.UUID
 }
 
+type InstanceSetting struct {
+	ID        int16
+	Version   int32
+	Doc       []byte
+	UpdatedAt time.Time
+	UpdatedBy *uuid.UUID
+}
+
 type InvestmentPosition struct {
 	ID                uuid.UUID
 	UserID            uuid.UUID
@@ -260,6 +268,19 @@ type Session struct {
 	Ip         *netip.Addr
 }
 
+type Theme struct {
+	ID        uuid.UUID
+	Slug      string
+	Name      string
+	BasedOn   string
+	Tokens    []byte
+	Status    string
+	Version   int32
+	CreatedBy *uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type Transaction struct {
 	ID                  uuid.UUID
 	Seq                 *int64
@@ -318,13 +339,17 @@ type TxAnnotation struct {
 }
 
 type User struct {
-	ID           uuid.UUID
-	Email        string
-	PasswordHash string
-	DisplayName  string
-	IsDemo       bool
-	CreatedAt    time.Time
-	LastLoginAt  *time.Time
+	ID                 uuid.UUID
+	Email              string
+	PasswordHash       string
+	DisplayName        string
+	IsDemo             bool
+	CreatedAt          time.Time
+	LastLoginAt        *time.Time
+	IsAdmin            bool
+	DisabledAt         *time.Time
+	MustChangePassword bool
+	Limits             []byte
 }
 
 type UserPreference struct {

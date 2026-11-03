@@ -30,8 +30,8 @@
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 0.4375rem;
-  background: linear-gradient(135deg, #a191ff, #6d5ce7);
-  color: #fff;
+  background: linear-gradient(135deg, var(--logo-a), var(--logo-b));
+  color: var(--on-accent);
   display: grid;
   place-items: center;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -605,6 +605,11 @@ input[type='checkbox'] {
   font: 0.6562rem var(--mono);
   color: var(--muted);
   text-align: right;
+}
+/* muted text drops below 4.5:1 on a hover or selection tint */
+.lg:hover .pc,
+.lg.on .pc {
+  color: var(--text);
 }
 .hbars {
   height: 100%;
@@ -2875,15 +2880,15 @@ body.has-qbar .toast {
   padding: 0.25rem 0;
 }
 .chat-in .ib {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  color: var(--on-accent);
   width: 1.875rem;
   height: 1.875rem;
 }
 .chat-in .ib:hover {
-  background: var(--accent);
+  background: var(--accent-solid);
   filter: brightness(1.1);
-  color: #fff;
+  color: var(--on-accent);
 }
 .chat-hint {
   font-size: 0.65rem;

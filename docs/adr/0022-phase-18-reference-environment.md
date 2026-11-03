@@ -57,7 +57,7 @@ Every tool is pinned by version in `docs/RUNBOOK.md`. None of them is an app dep
   an image pull secret, both sealed.
 - Machine-specific values (hardware, network, host name, measurements) are kept out of this
   repository; the RUNBOOK uses placeholders and the host files are templates.
-- Follow-up: Phase 19 chooses an always-on host for the instance and the public demo. These values
+- Follow-up: Phase 21 chooses an always-on host for the instance and the public demo. These values
   then move there with only host, storage and bucket changing.
 
 ## Alternatives considered
@@ -66,3 +66,5 @@ Every tool is pinned by version in `docs/RUNBOOK.md`. None of them is an app dep
 - **kind on the same machine:** the CI rehearsal already covers kind. k3s is what the homelab runs,
   with its Traefik, storage and networking.
 - **A cloud VM:** costs money, holds the real data off-premises, and has no GPU for the model.
+
+*Note (2026-11-03): the follow-up phase was renumbered from 19 to 21 when Phases 19–20 were added (PLAN Rev 4).*

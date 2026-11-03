@@ -7,12 +7,15 @@ INSERT INTO sessions (token_hash, user_id, created_at, last_seen_at, expires_at,
 VALUES (@token_hash, @user_id, @now, @now, @expires_at, @user_agent, sqlc.narg(ip));
 
 -- name: GetSession :one
--- A live session and its user: not past the absolute expiry and seen after idle_cutoff.
+-- A live session and its user: not past the absolute expiry, seen after idle_cutoff, and the
+-- account not disabled (disabling also deletes the sessions; this covers a race with a request).
 SELECT s.token_hash, s.user_id, s.created_at, s.last_seen_at, s.expires_at,
-       u.email, u.display_name, u.is_demo, u.created_at AS user_created_at
+       u.email, u.display_name, u.is_demo, u.created_at AS user_created_at,
+       u.is_admin, u.must_change_password, u.limits
 FROM sessions s
 JOIN users u ON u.id = s.user_id
-WHERE s.token_hash = @token_hash AND s.expires_at > @now AND s.last_seen_at > @idle_cutoff;
+WHERE s.token_hash = @token_hash AND s.expires_at > @now AND s.last_seen_at > @idle_cutoff
+  AND u.disabled_at IS NULL;
 
 -- name: TouchSession :exec
 -- Records activity (idle expiry). The caller throttles it to once every few minutes.

@@ -1831,8 +1831,318 @@ paths:
                 $ref: "#/components/schemas/DemoData"
         default:
           $ref: "#/components/responses/Problem"
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      summary: Accounts, newest first (administrators)
+      description: |
+        Administrators only; anyone else gets `404`. Each account carries counts of its data, never
+        the data itself (ADR 0025).
+      tags: [admin]
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Part of the e-mail address.
+          schema:
+            type: string
+            maxLength: 254
+        - name: cursor
+          in: query
+          required: false
+          description: The `next` value of the previous page.
+          schema:
+            type: string
+            maxLength: 100
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: One page of accounts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUsersPage"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: adminCreateUser
+      summary: Create an account
+      description: |
+        Works when sign-up is off. Without a password a one-time password is generated, returned once,
+        and must be replaced at the first sign-in.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateUserRequest"
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCreatedUser"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/AdminUserId"
+    get:
+      operationId: adminGetUser
+      summary: One account with its usage
+      tags: [admin]
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: adminUpdateUser
+      summary: Change an account's role, state, name or limits
+      description: |
+        Disabling signs the account out everywhere. The last active administrator can't be demoted
+        or disabled (`409 last_admin`); you can't disable yourself.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateUserRequest"
+      responses:
+        "200":
+          description: The account as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: adminDeleteUser
+      summary: Delete an account and all of its data
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminDeleteUserRequest"
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/reset-password:
+    parameters:
+      - $ref: "#/components/parameters/AdminUserId"
+    post:
+      operationId: adminResetPassword
+      summary: Give an account a new one-time password
+      description: Signs the account out everywhere; the password is returned once and must be replaced at the next sign-in.
+      tags: [admin]
+      responses:
+        "200":
+          description: The one-time password.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OneTimePassword"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/revoke-sessions:
+    parameters:
+      - $ref: "#/components/parameters/AdminUserId"
+    post:
+      operationId: adminRevokeSessions
+      summary: Sign an account out everywhere
+      tags: [admin]
+      responses:
+        "200":
+          description: How many sessions ended.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevokedSessions"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/settings:
+    get:
+      operationId: adminGetSettings
+      summary: The instance settings (defaults, features, limits)
+      tags: [admin]
+      responses:
+        "200":
+          description: The document and its version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstanceSettingsDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: adminPutSettings
+      summary: Replace the instance settings
+      description: Send the version you read; a mismatch is `409 stale_version`.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstanceSettingsDoc"
+      responses:
+        "200":
+          description: Saved; `version` is the new version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstanceSettingsDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/usage:
+    get:
+      operationId: adminUsage
+      summary: How the instance is used (counts only)
+      tags: [admin]
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+            default: 30
+      responses:
+        "200":
+          description: Totals and the last days' activity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstanceUsage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/themes:
+    get:
+      operationId: adminListThemes
+      summary: Administrator-made themes (drafts, approved and retired)
+      tags: [admin]
+      responses:
+        "200":
+          description: Themes by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Theme"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: adminCreateTheme
+      summary: Create a draft theme
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThemeCreateRequest"
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Theme"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/themes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ThemeId"
+    put:
+      operationId: adminUpdateTheme
+      summary: Change a theme's name and colours
+      description: An approved theme keeps being offered, so its new colours must pass the contrast check (`422 contrast_failed`).
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThemeUpdateRequest"
+      responses:
+        "200":
+          description: The theme as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Theme"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: adminDeleteTheme
+      summary: Delete a draft
+      tags: [admin]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/themes/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/ThemeId"
+    put:
+      operationId: adminSetThemeStatus
+      summary: Approve, retire or reopen a theme
+      description: Approval needs every text colour to reach 4.5:1 on its surfaces in both variants (`422 contrast_failed` lists the pairs).
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThemeStatusRequest"
+      responses:
+        "200":
+          description: The theme as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Theme"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   parameters:
+    AdminUserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ThemeId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     AssistantChatHeader:
       name: X-Assistant-Chat
       in: header
@@ -1898,8 +2208,17 @@ components:
     Meta:
       type: object
       additionalProperties: false
-      required: [version, signupEnabled, demoMode, assistantEnabled]
+      required: [version, signupEnabled, demoMode, assistantEnabled, features, defaults, themes]
       properties:
+        features:
+          $ref: "#/components/schemas/Features"
+        defaults:
+          $ref: "#/components/schemas/ViewDefaults"
+        themes:
+          type: array
+          description: Themes an administrator approved, offered next to the built-in ones.
+          items:
+            $ref: "#/components/schemas/PublicTheme"
         version:
           type: string
           description: Build version of the server.
@@ -1916,8 +2235,15 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, email, displayName, isDemo, createdAt]
+      required: [id, email, displayName, isDemo, createdAt, isAdmin, mustChangePassword, limits]
       properties:
+        isAdmin:
+          type: boolean
+        mustChangePassword:
+          type: boolean
+          description: Signed in with a one-time password; every route but `/me`, `/me/password` and sign-out answers `403 password_change_required` until it is changed.
+        limits:
+          $ref: "#/components/schemas/EffectiveLimits"
         id:
           type: string
           format: uuid
@@ -2020,6 +2346,17 @@ components:
             - duplicates.decided
             - duplicates.reset
             - assistant.action_applied
+            - admin.user_created
+            - admin.role_changed
+            - admin.user_disabled
+            - admin.user_enabled
+            - admin.password_reset
+            - admin.sessions_revoked
+            - admin.limits_changed
+            - admin.user_deleted
+            - admin.settings_changed
+            - admin.theme_approved
+            - admin.theme_retired
         entityId:
           type: string
           description: The affected record (import, account, session, chat …), if any.
@@ -4720,6 +5057,11 @@ components:
         - assistant_busy
         - assistant_unavailable
         - migration_running
+        - limit_reached
+        - password_change_required
+        - account_disabled
+        - last_admin
+        - contrast_failed
         - internal
     FieldError:
       type: object
@@ -4759,3 +5101,446 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FieldError"
+        limit:
+          $ref: "#/components/schemas/ProblemLimit"
+        contrast:
+          type: array
+          description: The colour pairs below 4.5:1 (`contrast_failed`).
+          items:
+            $ref: "#/components/schemas/ContrastFailure"
+    Features:
+      type: object
+      additionalProperties: false
+      description: Parts of the app the instance offers (an administrator can switch them off).
+      required: [overview, assistant, friends, sharedGroups]
+      properties:
+        overview:
+          type: boolean
+        assistant:
+          type: boolean
+        friends:
+          type: boolean
+        sharedGroups:
+          type: boolean
+    ViewDefaults:
+      type: object
+      additionalProperties: false
+      description: |
+        The preferences a view starts from; the web app applies them under the user's own saved
+        preferences, so only keys the user never saved take them (names as in `Preferences.prefs`).
+      properties:
+        themeId:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{0,31}$"
+        theme:
+          type: string
+          enum: [system, dark, light]
+        ui:
+          type: string
+          enum: [auto, "0.9", "1", "1.1", "1.2", "1.3"]
+        noViz:
+          type: boolean
+          description: Insights pane hidden.
+        sbOpen:
+          type: boolean
+        cards:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+            enum: [sum, cat, flow, pace, payee, heat]
+        cardOrder:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+            enum: [sum, cat, flow, pace, payee, heat]
+        importFastPath:
+          type: boolean
+    LimitOverrides:
+      type: object
+      additionalProperties: false
+      description: Limits; a missing value means the next level decides (user → instance → the server's bound or none).
+      properties:
+        maxUploadBytes:
+          type: integer
+          format: int64
+          minimum: 1024
+        importsPerDay:
+          type: integer
+          format: int64
+          minimum: 1
+        maxAccounts:
+          type: integer
+          format: int64
+          minimum: 1
+        maxGroups:
+          type: integer
+          format: int64
+          minimum: 1
+        assistantPerHour:
+          type: integer
+          format: int64
+          minimum: 1
+    EffectiveLimits:
+      type: object
+      additionalProperties: false
+      description: The limits that apply to the signed-in user; 0 means no limit.
+      required: [maxUploadBytes, importsPerDay, maxAccounts, maxGroups, assistantPerHour]
+      properties:
+        maxUploadBytes:
+          type: integer
+          format: int64
+        importsPerDay:
+          type: integer
+          format: int64
+        maxAccounts:
+          type: integer
+          format: int64
+        maxGroups:
+          type: integer
+          format: int64
+        assistantPerHour:
+          type: integer
+          format: int64
+    InstanceSettingsDoc:
+      type: object
+      additionalProperties: false
+      required: [version, defaults, features, limits]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 0
+        defaults:
+          $ref: "#/components/schemas/ViewDefaults"
+        features:
+          type: object
+          additionalProperties: false
+          description: Switches that are off; a missing one is on.
+          properties:
+            overview:
+              type: boolean
+            assistant:
+              type: boolean
+            friends:
+              type: boolean
+            sharedGroups:
+              type: boolean
+        limits:
+          $ref: "#/components/schemas/LimitOverrides"
+        updatedAt:
+          type: string
+          format: date-time
+    UserUsage:
+      type: object
+      additionalProperties: false
+      description: Counts of an account's data (never the data).
+      required: [accounts, transactions, imports, storedBytes, chats]
+      properties:
+        accounts:
+          type: integer
+          format: int64
+        transactions:
+          type: integer
+          format: int64
+        imports:
+          type: integer
+          format: int64
+        storedBytes:
+          type: integer
+          format: int64
+        chats:
+          type: integer
+          format: int64
+        lastActivity:
+          type: string
+          format: date-time
+    AdminUser:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, isDemo, isAdmin, disabled, mustChangePassword, createdAt, limits, usage]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        displayName:
+          type: string
+        isDemo:
+          type: boolean
+        isAdmin:
+          type: boolean
+        disabled:
+          type: boolean
+        mustChangePassword:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+        limits:
+          $ref: "#/components/schemas/LimitOverrides"
+        usage:
+          $ref: "#/components/schemas/UserUsage"
+    UserTotals:
+      type: object
+      additionalProperties: false
+      required: [users, admins, disabled, demo, active7, active30]
+      properties:
+        users:
+          type: integer
+          format: int64
+        admins:
+          type: integer
+          format: int64
+        disabled:
+          type: integer
+          format: int64
+        demo:
+          type: integer
+          format: int64
+        active7:
+          type: integer
+          format: int64
+          description: Signed in during the last 7 days.
+        active30:
+          type: integer
+          format: int64
+    AdminUsersPage:
+      type: object
+      additionalProperties: false
+      required: [users, totals]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+        next:
+          type: string
+          description: Cursor of the next page; absent on the last one.
+        totals:
+          $ref: "#/components/schemas/UserTotals"
+    AdminCreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        displayName:
+          type: string
+          maxLength: 80
+        password:
+          type: string
+          maxLength: 1024
+          description: Omit to generate a one-time password.
+        admin:
+          type: boolean
+    AdminCreatedUser:
+      type: object
+      additionalProperties: false
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/AdminUser"
+        oneTimePassword:
+          type: string
+          description: Shown once; present when no password was sent.
+    AdminUpdateUserRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        admin:
+          type: boolean
+        disabled:
+          type: boolean
+        displayName:
+          type: string
+          maxLength: 80
+        limits:
+          $ref: "#/components/schemas/LimitOverrides"
+    AdminDeleteUserRequest:
+      type: object
+      additionalProperties: false
+      required: [confirmEmail]
+      properties:
+        confirmEmail:
+          type: string
+          maxLength: 254
+          description: The account's e-mail address, repeated.
+    OneTimePassword:
+      type: object
+      additionalProperties: false
+      required: [oneTimePassword]
+      properties:
+        oneTimePassword:
+          type: string
+    RevokedSessions:
+      type: object
+      additionalProperties: false
+      required: [revoked]
+      properties:
+        revoked:
+          type: integer
+          format: int64
+    DayUsage:
+      type: object
+      additionalProperties: false
+      required: [day, imports, questions]
+      properties:
+        day:
+          type: string
+          format: date
+        imports:
+          type: integer
+          format: int64
+        questions:
+          type: integer
+          format: int64
+          description: Questions asked to the assistant.
+    InstanceUsage:
+      type: object
+      additionalProperties: false
+      required: [totals, accounts, transactions, imports, storedBytes, days]
+      properties:
+        totals:
+          $ref: "#/components/schemas/UserTotals"
+        accounts:
+          type: integer
+          format: int64
+        transactions:
+          type: integer
+          format: int64
+        imports:
+          type: integer
+          format: int64
+        storedBytes:
+          type: integer
+          format: int64
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayUsage"
+    ThemeColours:
+      type: object
+      description: Token → colour (`#rrggbb` or `#rrggbbaa`); every key of the theme contract (ADR 0026).
+      additionalProperties:
+        type: string
+        pattern: "^#[0-9a-f]{6}([0-9a-f]{2})?$"
+    ThemeTokens:
+      type: object
+      additionalProperties: false
+      required: [dark, light]
+      properties:
+        dark:
+          $ref: "#/components/schemas/ThemeColours"
+        light:
+          $ref: "#/components/schemas/ThemeColours"
+    Theme:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name, basedOn, tokens, status, version, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          description: The id stored in preferences (`themeId`).
+        name:
+          type: string
+        basedOn:
+          type: string
+        tokens:
+          $ref: "#/components/schemas/ThemeTokens"
+        status:
+          type: string
+          enum: [draft, approved, retired]
+        version:
+          type: integer
+          format: int32
+        updatedAt:
+          type: string
+          format: date-time
+    PublicTheme:
+      type: object
+      additionalProperties: false
+      required: [id, name, tokens]
+      properties:
+        id:
+          type: string
+          description: The slug.
+        name:
+          type: string
+        tokens:
+          $ref: "#/components/schemas/ThemeTokens"
+    ThemeCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [slug, name, basedOn, tokens]
+      properties:
+        slug:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 40
+        basedOn:
+          type: string
+          enum: [indigo, fjord, grove, ember]
+        tokens:
+          $ref: "#/components/schemas/ThemeTokens"
+    ThemeUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [version, name, tokens]
+      properties:
+        version:
+          type: integer
+          format: int32
+        name:
+          type: string
+          maxLength: 40
+        tokens:
+          $ref: "#/components/schemas/ThemeTokens"
+    ThemeStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [version, status]
+      properties:
+        version:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum: [draft, approved, retired]
+    ContrastFailure:
+      type: object
+      additionalProperties: false
+      required: [mode, fg, bg, ratio]
+      properties:
+        mode:
+          type: string
+        fg:
+          type: string
+        bg:
+          type: string
+        ratio:
+          type: number
+          format: double
+    ProblemLimit:
+      type: object
+      additionalProperties: false
+      required: [name, value]
+      properties:
+        name:
+          type: string
+          description: The `EffectiveLimits` field that was reached.
+        value:
+          type: integer
+          format: int64

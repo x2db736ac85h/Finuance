@@ -13,7 +13,7 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 </picture>
 
 > [!NOTE]
-> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 20 planned phases (0–19). **v0.1.0** (Phases 0–14) has every feature of the prototype: importing, the transaction table, groups, duplicate review, the insight charts, the monthly overview, the AI assistant and migration from the prototype's backups. Since then (on `main`, not yet released): category rules and transfer detection, the Kubernetes deployment (rehearsed in CI), monitoring with dashboards and alerts, an activity log and a demo mode. Next: the rollout on a homelab cluster, then the public demo. See [Status](#status).
+> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 22 planned phases (0–21). **v0.1.0** (Phases 0–14) has every feature of the prototype: importing, the transaction table, groups, duplicate review, the insight charts, the monthly overview, the AI assistant and migration from the prototype's backups. **v0.2.0** (Phases 15–18) adds category rules and transfer detection, the Kubernetes deployment, monitoring with dashboards and alerts, an activity log and a demo mode, and runs on a homelab cluster. Next: sharing expenses with friends, an admin panel and colour themes (Phase 19), an assistant that can act on your behalf (Phase 20), then the public release (Phase 21). See [Status](#status).
 
 ## Contents
 
@@ -47,9 +47,11 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 - **Group transactions.** Select rows by dragging, Shift-click or ⌘/Ctrl-click, then add them to a colour-coded group such as "Italy trip". A quick bar shows the count and the total of the selection. Groups filter the table and are kept when you delete and re-import a file. Each group has its own report (totals, span, spending per day, categories, top payees, an optional budget) and a CSV export.
 - **Move over from the prototype.** Settings → Data reads a backup of the single-file app (a locked one is decrypted in your browser) and brings its files, groups and labels, duplicate decisions, budgets, investments and chats, with a report of anything that didn't match. See [docs/migration.md](docs/migration.md).
 - **Share an instance.** Several people can use one server. Each person's data is isolated in the database itself (row-level security), not just in the application code.
+- **Run the instance for others.** Administrators create and manage accounts (one-time passwords, disable, reset), set limits, choose where a new user's view starts, switch parts of the app off and see usage, all without seeing anyone's transactions. See [docs/admin.md](docs/admin.md).
+- **Pick a colour theme.** Indigo, Fjord, Grove or Ember, each in a dark and a light variant, all readable to WCAG AA; administrators can make and approve more.
 - **See what happened in your account.** Settings → Activity lists sign-ins (failed ones too), password changes, revoked sessions, imports, deletions, exports and applied assistant proposals, with the address and browser of each, for a year.
 
-Coming next (🚧): the rollout on a homelab cluster, then a public demo and v1.0.0. See [Status](#status).
+Coming next (🚧): shared groups with friends (splits, balances, settling up), an admin panel and colour themes; then an assistant that can add expenses, read receipts and track goals, and a CLI; then a public demo and v1.0.0. See [Status](#status).
 
 ## Screenshots
 
@@ -206,7 +208,9 @@ Performance notes and measurements, including the load test: [docs/perf.md](docs
 | 16 | Kubernetes deployment: Helm, CloudNativePG, Argo CD, rehearsed in CI | ✅ done |
 | 17 | Observability, load tests, activity log, security scans, demo mode | ✅ done |
 | 18 | Homelab rollout on a reference environment: GitOps, TLS, backups and restore drill, monitoring and alerts, load test, OpenVAS, image admission, v0.2.0 | ✅ done |
-| 19 | Public demo, documentation, v1.0.0 | 🚧 planned |
+| 19 | Admin panel, colour themes, friends, shared groups with balances and a Shared tab | 🚧 in progress |
+| 20 | Assistant that can act (with undo), receipts by photo, goals, digests, advice library, CLI | 🚧 planned |
+| 21 | Public release: privacy clean-up, security scanning, signed images, public demo, documentation, v1.0.0 | 🚧 planned |
 
 The detailed task list and every decision taken so far are in [docs/PROGRESS.md](docs/PROGRESS.md); the full specification is [docs/PLAN.md](docs/PLAN.md).
 

@@ -11,6 +11,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
@@ -39,6 +40,11 @@ var problemTable = []problemKind{
 	{platform.ErrPayloadTooLarge, gen.PayloadTooLarge, http.StatusRequestEntityTooLarge, "Payload too large"},
 	{platform.ErrUnsupportedFile, gen.UnsupportedFile, http.StatusUnsupportedMediaType, "Unsupported file"},
 	{platform.ErrNotImplemented, gen.NotImplemented, http.StatusNotImplemented, "Not implemented yet"},
+	{platform.ErrLimitReached, gen.LimitReached, http.StatusUnprocessableEntity, "A limit of your account was reached"},
+	{platform.ErrPasswordChangeRequired, gen.PasswordChangeRequired, http.StatusForbidden, "Choose a new password first"},
+	{platform.ErrAccountDisabled, gen.AccountDisabled, http.StatusForbidden, "This account is disabled"},
+	{platform.ErrLastAdmin, gen.LastAdmin, http.StatusConflict, "The instance needs an administrator"},
+	{platform.ErrContrast, gen.ContrastFailed, http.StatusUnprocessableEntity, "Some colours are too hard to read"},
 	{assistant.ErrConsent, gen.ConsentRequired, http.StatusForbidden, "Agreement needed for a cloud connection"},
 	{assistant.ErrRunning, gen.RunInProgress, http.StatusConflict, "A reply is still being written"},
 	{assistant.ErrBusy, gen.AssistantBusy, http.StatusServiceUnavailable, "The assistant is busy"},
@@ -75,6 +81,18 @@ func ProblemFor(err error, r *http.Request, prod bool) gen.Problem {
 				break
 			}
 		}
+	}
+	var le *instance.LimitError
+	if errors.As(err, &le) {
+		p.Limit = &gen.ProblemLimit{Name: le.Limit, Value: le.Value}
+	}
+	var ce *instance.ContrastError
+	if errors.As(err, &ce) {
+		fails := make([]gen.ContrastFailure, 0, len(ce.Failures))
+		for _, f := range ce.Failures {
+			fails = append(fails, gen.ContrastFailure{Mode: f.Mode, Fg: f.FG, Bg: f.BG, Ratio: f.Ratio})
+		}
+		p.Contrast = &fails
 	}
 	p.Type = "/problems/" + string(p.Code)
 	if p.Code != gen.Internal || !prod {

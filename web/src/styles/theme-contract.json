@@ -1,0 +1,30 @@
+{
+  "$comment": "Colour-theme contract (ADR 0026): the tokens a theme sets and the text/surface pairs that must reach WCAG AA (4.5:1). Read by web/src/styles/themes.ts and checked against backend/internal/instance/theme.go by TestThemeContractMatchesTheWeb. A surface written \"a/b\" is a translucent token a over b.",
+  "minRatio": 4.5,
+  "keys": [
+    "bg",
+    "panel",
+    "elev",
+    "input",
+    "border",
+    "text",
+    "muted",
+    "accent",
+    "accent-solid",
+    "on-accent",
+    "accent-soft",
+    "sel",
+    "pos",
+    "neg",
+    "logo-a",
+    "logo-b"
+  ],
+  "pairs": [
+    { "fg": "text", "bg": ["bg", "panel", "elev", "input", "sel/bg"] },
+    { "fg": "muted", "bg": ["bg", "panel", "elev"] },
+    { "fg": "accent", "bg": ["bg", "panel", "elev", "sel/bg", "accent-soft/bg"] },
+    { "fg": "on-accent", "bg": ["accent-solid"] },
+    { "fg": "pos", "bg": ["bg", "panel"] },
+    { "fg": "neg", "bg": ["bg", "panel"] }
+  ]
+}
