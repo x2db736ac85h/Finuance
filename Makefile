@@ -108,8 +108,14 @@ test-integration: ## All Go tests incl. testcontainers (Docker required)
 	cd backend && go test ./...
 
 .PHONY: test-e2e
+# The E2E administrator (admin.spec.ts, Phase 19): created with the CLI, as on a real instance.
+E2E_ADMIN_EMAIL ?= admin@example.test
+E2E_ADMIN_PASSWORD ?= e2e admin password long enough
+
 test-e2e: $(ENV_FILE) web-dist ## Playwright against a fresh compose.ci.yaml stack on :8000 (KEEP=1 leaves it running)
 	VERSION=$(VERSION) $(COMPOSE_CI) up -d --build --wait
+	printf '%s\n' '$(E2E_ADMIN_PASSWORD)' | $(COMPOSE_CI) exec -T api /finuance admin create-user -admin \
+	  -email=$(E2E_ADMIN_EMAIL) -display-name=Admin -password-stdin || true # already there with KEEP=1
 	status=0; (cd web && E2E_BASE_URL=http://localhost:8000 npx playwright test) || status=$$?; \
 	  $(if $(KEEP),,$(COMPOSE_CI) down -v;) exit $$status
 

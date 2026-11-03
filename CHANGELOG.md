@@ -6,6 +6,22 @@ notes of their version.
 
 ## [Unreleased]
 
+### Added
+
+- **Administrators** (Phase 19): an admin panel for accounts (create with a one-time password,
+  role, disable, reset password, sign out everywhere, delete), per-account and default limits
+  (accounts, groups, imports per day, largest file, assistant questions per hour), where a new
+  user's view starts, feature switches (Overview, Assistant) and instance usage. Administrators see
+  counts, never anyone's financial data; their actions appear in the affected account's Activity.
+  `finuance admin grant-admin|revoke-admin` and `create-user -admin`.
+- **Colour themes**: Indigo, Fjord, Grove and Ember, each dark and light, picked in Settings →
+  Appearance; administrators make more in a theme editor with a live preview and approve them only
+  when every text colour reaches WCAG AA.
+
+### Changed
+
+- The assistant's send button uses the solid accent colour, like the other filled buttons.
+
 ## [0.2.0]
 
 Categories, rules and transfers, group reports, assistant actions, an activity log, demo mode, and

@@ -14,6 +14,7 @@
 | [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3) |
 | [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities, limits, retention, the probe and the evals |
 | [migration.md](migration.md) | Moving a backup of the single-file app into Finuance |
+| [admin.md](admin.md) | Administrators: the first one, the panel (accounts, limits, defaults and features, colour themes, usage) |
 | [evals.md](evals.md) | Assistant quality per model, thinking mode and toolset on the 53 golden questions |
 | [perf.md](perf.md) | Performance measurements: parsing, staging, queries, the table, charts and overview with 100k rows, the bundle, the load tests (Compose and the reference cluster) |
 | [a11y.md](a11y.md) | Accessibility: what axe checks on every screen, what was fixed, the keyboard-only checklist |

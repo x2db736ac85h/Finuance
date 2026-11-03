@@ -44,7 +44,8 @@ cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {
 | `store` | The database: the pool, migrations, sqlc queries (`store/queries/*.sql` → `store/db`), and the only entry points to user data (`WithUser`, `WithUserReadOnly`, `WithoutUser`). |
 | `ledger` | Accounts, categories, groups, imports, transactions, annotations, budgets and profiles. Every method runs through `WithUser` and returns domain types, never sqlc rows. |
 | `legacyimport` | Migration of single-file app backups (Phase 14, ADR 0016): rebuilds the legacy tables and keys, runs each file through the import pipeline, moves labels, duplicate decisions, budgets, investments and chats, writes the report. |
-| `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. |
+| `instance`, `admin` | Instance administration (Phase 19, ADR 0025). `instance` is pure: the settings document (view defaults, feature switches, limits resolved user → instance → environment) and the colour-theme contract with its WCAG check (ADR 0026). `admin` manages accounts, settings and themes through `WithoutUser` (those tables are outside RLS, like `users`); it can't import the financial packages and reads user-owned tables only for counts, under each user's own context. |
+| `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. `httpapi`'s session layer also gates `/admin` (administrators only, else `404`), the one-time-password change and switched-off features. |
 
 A guard test (`store/guard_test.go`) parses every non-test file outside `internal/store`. It fails on direct `Query`/`Exec`/`Begin` calls, and on building a sqlc querier (`db.New`) that would bypass `WithUser`.
 
