@@ -27,6 +27,9 @@ metadata:
     {{- if ne $tls.mode "none" }}
     traefik.ingress.kubernetes.io/router.tls: "true"
     {{- end }}
+    {{- with .Values.ingress.entryPoints }}
+    traefik.ingress.kubernetes.io/router.entrypoints: {{ join "," . | quote }}
+    {{- end }}
     {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}

@@ -34,6 +34,18 @@ what's needed to run Finuance on Kubernetes with observability and security scan
   dashboards and SLO alert rules as code, and a local Grafana profile (`make up-observability`).
 - **Load test** (k6, `make loadtest`) and **security scans**: OWASP ZAP weekly, Trivy on images and
   the repository at HIGH and CRITICAL, `npm audit` ([docs/security-scan.md](docs/security-scan.md)).
+- **Running on single-node k3s** (the reference environment, step by step in
+  [docs/RUNBOOK.md](docs/RUNBOOK.md#bootstrap-on-single-node-k3s)): a Tailscale `*.ts.net` certificate
+  renewed by a host timer, the ingress reachable only from the tailnet, an in-cluster backup bucket
+  (RustFS), per-machine values from a private repository as a second Argo CD source, the monitoring
+  stack (kube-prometheus-stack, Tempo, Finuance's dashboards and e-mail alerts) through Argo CD, and
+  an image admission policy (a built-in `ValidatingAdmissionPolicy`: per-namespace registries).
+- `FINUANCE_AI_IDLE_TIMEOUT` (default 60 s): how long a model stream may stay silent, for model
+  servers that read a long prompt for over a minute before the first token.
+- Ingress monitoring: Traefik's request metrics, an "At the ingress" row on the SLO dashboard, and
+  alerts when requests fail at the ingress or no api pod is ready.
+- Drills and scans for a deployed cluster: `tools/homelab-drill.sh` (restore, pod kills under load,
+  SSE timing) and `tools/openvas-scan.sh` (Greenbone OpenVAS, and a port scan from the LAN).
 
 ### Changed
 
@@ -42,6 +54,15 @@ what's needed to run Finuance on Kubernetes with observability and security scan
   to transactions for about 25 s per million rows.
 - A new user's first large import no longer slows down quadratically (20,000 rows: minutes → seconds).
 - The web container sends each security header once and uses relative redirects.
+- The api's readiness check reports a database that only answers slowly as busy for 30 seconds
+  instead of failing, so a busy database no longer takes every replica out of the Service at once
+  (the probe also allows 3 s); a real error or a schema behind still fails at once.
+- The database bootstrap lets PostgreSQL's monitoring role (`pg_monitor`, statistics only) connect,
+  so CloudNativePG's database metrics work. An existing cluster needs the grant once (RUNBOOK
+  "Monitoring").
+- Helm chart: `ingress.entryPoints` (e.g. HTTPS only); `otel.endpoint` must be the full traces URL;
+  the migrations Job retries in the same pod.
+- The duplicates window no longer re-renders every group while you type in its filter.
 
 ### Security
 

@@ -495,7 +495,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max(barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp{job=\"finuance-db\",namespace=\"$namespace\"}) * 1000",
+          "expr": "(max(barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp{job=\"finuance-db\",namespace=\"$namespace\"}) > 0) * 1000",
           "legendFormat": "last failed",
           "refId": "B"
         }

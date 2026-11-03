@@ -10,7 +10,7 @@ import { uiDefaults, useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { chipsOf, cleared, withoutChip } from '../table/chips';
 import { contextOf } from '../table/context';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 import { account, API, db, problem, resetDb, server } from '../test/server';
 import { applyEvent, useChat, type AiTurn } from './chatStore';
 
@@ -19,6 +19,7 @@ beforeAll(async () => {
   // The shell loads the panel lazily; transform its chunk here, so the first test's findBy waits
   // for the render and not for a cold import under a busy parallel run.
   await import('./ChatPanel');
+  await warmUpApp();
 });
 afterAll(() => {
   server.close();

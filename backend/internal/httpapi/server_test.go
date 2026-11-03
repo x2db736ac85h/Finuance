@@ -170,6 +170,49 @@ func TestReadyz(t *testing.T) {
 	}
 }
 
+// TestReadyzBusyDatabase: a check that only times out (a busy database) keeps the replica ready for
+// busyGrace after its last success, so every replica doesn't leave the Service at once under load;
+// a real error, a timeout without an earlier success, or one past the grace still fails.
+func TestReadyzBusyDatabase(t *testing.T) {
+	clock := &fakeClock{t: time.Date(2026, 10, 31, 5, 0, 0, 0, time.UTC)}
+	var probeErr error
+	db := Check{Name: "database", Probe: func(context.Context) error { return probeErr }}
+	h := readyz([]Check{db}, clock)
+	get := func() (int, string) {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/readyz", nil))
+		return w.Code, w.Body.String()
+	}
+	timeout := fmt.Errorf("ping: %w", context.DeadlineExceeded)
+
+	probeErr = timeout
+	if code, body := get(); code != 503 {
+		t.Errorf("timeout before any success: %d %s", code, body)
+	}
+	probeErr = nil
+	if code, _ := get(); code != 200 {
+		t.Fatalf("ok: %d", code)
+	}
+	clock.Add(busyGrace)
+	probeErr = timeout
+	if code, body := get(); code != 200 || !strings.Contains(body, `"database":"busy"`) {
+		t.Errorf("timeout within the grace: %d %s", code, body)
+	}
+	probeErr = errors.New("connection refused")
+	if code, body := get(); code != 503 || !strings.Contains(body, `"database":"fail"`) {
+		t.Errorf("a real error within the grace: %d %s", code, body)
+	}
+	clock.Add(time.Second)
+	probeErr = timeout
+	if code, body := get(); code != 503 {
+		t.Errorf("timeout past the grace: %d %s", code, body)
+	}
+	probeErr = nil
+	if code, _ := get(); code != 200 {
+		t.Errorf("recovered: %d", code)
+	}
+}
+
 func TestBodyLimit(t *testing.T) {
 	hs := newHarness(t, func(d *Deps) {
 		d.Extra = func(m *http.ServeMux) {

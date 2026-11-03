@@ -1,0 +1,16 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: finuance-alert-smtp
+  namespace: monitoring
+spec:
+  encryptedData:
+    password: AgBgJGsXQOWs+kKfJ7fmvsu4nu1LntUAB7SPjMbYcVp6qm3Sdhg0Nls2j1Zymgo+TMjuGjTNv686GxLYAJh/Sn0LprnF/nFePPZdUF0i6hPnISHqrHhtZCJD0gGtl3FwnoqJzqekoT46P1MFtssgNKm/OvEe6ShBVqEhjWBejTbp+lmyOkbcBKUu4/TbgPVdWCMzcJjx8EBxYTHAzVswNDUOovYOlNixQx89OTTa2oEt6tzP91nVoEWoRySHAGPjUIuY6zCROfZusyifgrWbLYFWeEwjT19HjIlfnJvJHwBVM9A96NpuODWWqtb4B0sbkU/agvfgGi4D/7JVm1Baks/rofsv+6cOxyDOHq6s6bUvayIv1WgkSKPO4zq9ZAGeH/0zbST8blgQtz4/r4fbpdmXLM3DYMetR0qvKQ2tXU02FmpG5QybgjshryZUGRQA4UPwdNjYzxlpO3no98GPnyW4U23+MxbezTKp4JXmuFlsWp2+KXgIFSRHqhOv+9g/Fe6gTITy6DJIiuQqLbbr/B40Mn4ztUGOyzt+FUaJqxiQ8hXMmYuntmpqVac4bjqqnkkZW0eX26SGLWM8AvcXLcINg5ewchnEKd/5aYRfRIh6rehtQ4W9qY3E0jQEtlT9BKxtzGtmnPowsJMmS/6zwT+H2qE8yEaS5jS2yQNFjgu4phfqrCjD/E2cypMf7aTpeKuyqGS5QV6j4supzBFJp8x1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: finuance
+      name: finuance-alert-smtp
+      namespace: monitoring
+    type: Opaque

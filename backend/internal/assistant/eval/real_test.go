@@ -5,7 +5,6 @@ package eval
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +34,7 @@ func TestEvalAssistant(t *testing.T) {
 		t.Fatal(err)
 	}
 	clock := platform.FixedClock{T: f.Today}
-	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, clock, nil)
+	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, cfg.AIIdleTimeout, clock, nil)
 	a := assistant.New(assistant.Config{Store: st, Query: query.New(st), Connections: conns, Clock: clock, MaxChats: 1000, MaxConcurrent: 1})
 	ctx := context.Background()
 	conn, model, err := conns.Resolve(ctx, os.Getenv("FINUANCE_EVAL_CONNECTION"), os.Getenv("FINUANCE_EVAL_MODEL"))
@@ -64,12 +63,13 @@ func TestEvalAssistant(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res := Result{Connection: conn.Name, Model: model.ID, Think: think, RanAt: time.Now().UTC(), Cases: cases}
+	res := Result{Connection: conn.Name, Model: model.ID, Think: think, Toolset: req.Toolset, Mode: req.Mode,
+		RanAt: time.Now().UTC(), Cases: cases}
 	dir := filepath.Join("..", "..", "..", "..", "evals", "assistant", "results")
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	name := strings.NewReplacer("/", "_", ":", "_", " ", "_").Replace(fmt.Sprintf("%s__%s__%s.json", conn.Name, model.ID, think))
+	name := res.FileName()
 	b, _ := json.MarshalIndent(res, "", "  ")
 	if err := os.WriteFile(filepath.Join(dir, name), append(b, '\n'), 0o600); err != nil {
 		t.Fatal(err)

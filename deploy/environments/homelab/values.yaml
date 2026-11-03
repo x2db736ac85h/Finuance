@@ -1,26 +1,31 @@
 # Homelab values for the Finuance chart (deploy/helm/finuance), applied by the Argo CD application
 # deploy/k8s/argocd/apps/finuance.yaml. A merged change to this file is what deploys (GitOps).
-# Values marked "Phase 18" are not known yet and are set during the homelab rollout.
+# Per-machine values (host name, the model server's address) come from the private environment
+# repository as a second Argo CD source (ADR 0023; example: host-values.example.yaml) and win.
 
 image:
   # Bumped by release.yml (a pull request per release, vX.Y.Z tags only).
-  tag: "0.1.0"
+  tag: "0.2.0-rc.2"
+# The images are private: a registry login that may only read packages
+# (tools/seal-secrets.sh homelab pull → secrets/ghcr-pull.sealed.yaml).
+imagePullSecrets:
+  - name: ghcr-pull
 
-# Phase 18: the real host name (a bought domain, or finuance.<tailnet>.ts.net).
+# Set by the private overlay (<host>); the placeholders here keep a render without it obviously wrong.
 publicOrigin: https://finuance.homelab.invalid
 ingress:
   className: traefik
-  # Phase 18: the same host as publicOrigin.
+  # k3s's Traefik: HTTPS only; port 80 ("web") just redirects (host/traefik-config.yaml)
+  entryPoints: [websecure]
   host: finuance.homelab.invalid
   tls:
-    # Let's Encrypt through cert-manager (decision 2026-10-24). Phase 18: the ClusterIssuer's name
-    # once it exists (or tls.mode traefik with Traefik's ACME resolver, or tls.mode secret with a
-    # Tailscale *.ts.net certificate).
-    mode: certManager
-    clusterIssuer: letsencrypt-prod
+    # The host's Tailscale *.ts.net certificate (ADR 0022), put into this secret by
+    # tools/tailscale-cert.sh on the host and renewed by its timer (docs/RUNBOOK.md).
+    mode: secret
+    secretName: finuance-tls
 
 allowSignup: false
-# Phase 18: the cluster's pod CIDR (k3s: 10.42.0.0/16), where Traefik's pods live.
+# The cluster's pod CIDR (k3s), where Traefik's pods live.
 trustedProxies: "10.42.0.0/16"
 
 database:
@@ -28,7 +33,7 @@ database:
 
 networkPolicy:
   enabled: true
-  # Phase 18: check the namespace and labels of the cluster's Traefik (k3s installs it in kube-system).
+  # k3s's bundled Traefik (checked on the cluster: kube-system, app.kubernetes.io/name=traefik).
   ingressController:
     namespaceSelector:
       matchLabels: { kubernetes.io/metadata.name: kube-system }
@@ -36,13 +41,20 @@ networkPolicy:
       matchLabels: { app.kubernetes.io/name: traefik }
 
 assistant:
-  # Phase 18: the LM Studio address (ADR 0020); enable with its connections file and egress.
-  enabled: false
+  # Ollama on the host (ADR 0020/0022); its connections file and egress rule come from the overlay.
+  enabled: true
 
 otel:
-  # Phase 18: the collector of the observability stack.
-  endpoint: ""
+  # Tempo in the monitoring namespace (OTLP over HTTP; deploy/k8s/argocd/apps/tempo.yaml).
+  endpoint: http://tempo.monitoring.svc:4318/v1/traces
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: tempo }
+      ports: [4318]
 
 podMonitor:
-  # Phase 18: on once the Prometheus Operator runs.
-  enabled: false
+  # kube-prometheus-stack (deploy/k8s/argocd/apps/kube-prometheus-stack.yaml) scrapes api and worker.
+  enabled: true

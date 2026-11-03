@@ -21,12 +21,12 @@ const target = (expr, legend = '', i = 0) => ({ datasource: ds, expr, legendForm
 const targets = (qs) => qs.map(([expr, legend], i) => target(expr, legend, i));
 
 /** A time series panel; qs = [[expr, legend], …]. */
-function ts(title, qs, { unit = 'short', w = 12, h = 8, stack = false, desc = '', min } = {}) {
+function ts(title, qs, { unit = 'short', w = 12, h = 8, stack = false, desc = '', min, softMax } = {}) {
   return {
     id: nextId++, type: 'timeseries', title, description: desc, datasource: ds, targets: targets(qs),
     gridPos: { w, h },
     fieldConfig: {
-      defaults: { unit, ...(min === undefined ? {} : { min }), custom: { fillOpacity: stack ? 30 : 8, lineWidth: 1, stacking: { mode: stack ? 'normal' : 'none' } } },
+      defaults: { unit, ...(min === undefined ? {} : { min }), custom: { fillOpacity: stack ? 30 : 8, lineWidth: 1, stacking: { mode: stack ? 'normal' : 'none' }, ...(softMax === undefined ? {} : { axisSoftMax: softMax }) } },
       overrides: [],
     },
     options: { legend: { displayMode: 'table', placement: 'bottom', calcs: ['mean', 'max'] }, tooltip: { mode: 'multi', sort: 'desc' } },
@@ -173,7 +173,7 @@ const dashboards = {
     ts('Archiver failures', [[`sum by (pod) (increase(cnpg_pg_stat_archiver_failed_count{${DB}}[15m]))`, '{{pod}}']]),
     ts('Backup timestamps', [
       [`max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{${DB}}) * 1000`, 'last available'],
-      [`max(barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp{${DB}}) * 1000`, 'last failed'],
+      [`(max(barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp{${DB}}) > 0) * 1000`, 'last failed'], // absent until a backup fails (0 would pull the axis to 1970)
     ], { unit: 'dateTimeAsIso' }),
     row('Load'),
     ts('Connections', [[`sum by (pod, state) (cnpg_backends_total{${DB}})`, '{{pod}} {{state}}']], { stack: true }),
@@ -239,6 +239,14 @@ const dashboards = {
       ts('Latency of the SLO routes', [
         [q95('http_server_request_duration_seconds', lat, ['route']), 'p95 {{route}}'],
       ], { unit: 's', w: 24 }),
+      row('At the ingress (Traefik; ingress.traefik in the chart)'),
+      ts('Requests at the ingress by status', [
+        ['sum by (code) (rate(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?$namespace-.+"}[5m]))', '{{code}}'],
+      ], { unit: 'reqps', stack: true, desc: 'What users get, including requests the ingress refused before they reached the api (e.g. 503 when no api pod was ready). The SLOs above are measured at the api.' }),
+      ts('Failed at the ingress vs at the api', [
+        [ratio('sum(rate(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?$namespace-.+",code=~"5.."}[5m]))', 'sum(rate(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?$namespace-.+"}[5m]))'), 'ingress 5xx'],
+        [ratio(`sum(rate(http_server_requests_total{${avail},status_class="5xx"}[5m]))`, `sum(rate(http_server_requests_total{${avail}}[5m]))`), 'api 5xx (SLO routes)'],
+      ], { unit: 'percentunit', min: 0, softMax: 0.1, desc: 'A gap between the two lines is requests that never reached the api. FinuanceIngressErrors pages above 5 %.' }),
       table('Firing Finuance alerts', 'ALERTS{alertname=~"Finuance.*",alertstate="firing"}', { h: 6 }),
     ];
   }, { tags: ['slo'] }),

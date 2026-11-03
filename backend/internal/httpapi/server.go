@@ -76,7 +76,6 @@ func NewHandler(d Deps) (http.Handler, error) {
 	prod := d.Config.Env == config.EnvProd
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthz)
-	mux.Handle("GET /readyz", readyz(d.Ready))
 
 	spec, err := gen.GetSpec()
 	if err != nil {
@@ -98,6 +97,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if clock == nil {
 		clock = platform.SystemClock{}
 	}
+	mux.Handle("GET /readyz", readyz(d.Ready, clock))
 	var ins *insights.Service
 	if d.Query != nil {
 		ins = insights.New(d.Query)

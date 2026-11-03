@@ -50,6 +50,7 @@ spec:
           readinessProbe:
             httpGet: { path: /readyz, port: metrics }
             periodSeconds: 10
+            timeoutSeconds: 3
           livenessProbe:
             httpGet: { path: /healthz, port: metrics }
             periodSeconds: 10

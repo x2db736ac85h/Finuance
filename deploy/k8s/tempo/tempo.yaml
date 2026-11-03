@@ -1,0 +1,140 @@
+# Tempo in single-binary mode for the homelab's traces (Phase 18.6; Argo CD app
+# deploy/k8s/argocd/apps/tempo.yaml, namespace monitoring). Grafana's single-binary Helm chart is
+# deprecated and tempo-distributed runs six services on object storage, too much for one machine:
+# these manifests run the same binary, hardened like the app's pods. Only OTLP over HTTP (4318, from
+# the app's api and worker) and the query API (3200, from Grafana) are open.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo
+  namespace: monitoring
+data:
+  tempo.yaml: |
+    server:
+      http_listen_port: 3200
+      log_level: info
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            http:
+              endpoint: 0.0.0.0:4318
+    ingester:
+      max_block_duration: 5m
+    querier:
+      frontend_worker:
+        frontend_address: 127.0.0.1:9095
+    compactor:
+      compaction:
+        block_retention: 72h
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+    usage_report:
+      reporting_enabled: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tempo-data
+  namespace: monitoring
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: monitoring
+  labels: { app.kubernetes.io/name: tempo }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }   # one pod owns the ReadWriteOnce volume
+  selector:
+    matchLabels: { app.kubernetes.io/name: tempo }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: tempo }
+      annotations:
+        # restart when the configuration changes (Argo CD applies the ConfigMap first)
+        finuance.dev/config-version: "1"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001 # the image's tempo user
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.9.0@sha256:65a5789759435f1ef696f1953258b9bbdb18eb571d5ce711ff812d2e128288a4
+          args: ["-config.file=/conf/tempo.yaml"]
+          ports:
+            - { name: http, containerPort: 3200 }
+            - { name: otlp-http, containerPort: 4318 }
+          readinessProbe:
+            httpGet: { path: /ready, port: http }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 1Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: config, mountPath: /conf, readOnly: true }
+            - { name: data, mountPath: /var/tempo }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: config
+          configMap: { name: tempo }
+        - name: data
+          persistentVolumeClaim: { claimName: tempo-data }
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: monitoring
+spec:
+  selector: { app.kubernetes.io/name: tempo }
+  ports:
+    - { name: http, port: 3200, targetPort: http }
+    - { name: otlp-http, port: 4318, targetPort: otlp-http }
+---
+# Traces only from the app's api and worker, queries only from Grafana; Tempo connects nowhere.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tempo
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: tempo }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: finuance }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: finuance }
+      ports:
+        - { port: 4318, protocol: TCP }
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: grafana }
+      ports:
+        - { port: 3200, protocol: TCP }
+  egress: []

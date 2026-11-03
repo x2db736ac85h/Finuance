@@ -4,12 +4,13 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { ActivityAction, ActivityEvent } from '../api/hooks/activity';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 import { API, resetDb, server } from '../test/server';
 import { describeActivity } from './Activity';
 
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
+  await warmUpApp();
 });
 beforeEach(() => {
   resetDb();

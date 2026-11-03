@@ -7,13 +7,14 @@ import locked from '../../../testdata/fixtures/legacy-backup/backup-locked.json?
 import plain from '../../../testdata/fixtures/legacy-backup/backup-plain.json?raw';
 import type { LegacyImport } from '../api/hooks/legacy';
 import { useUi } from '../stores/uiStore';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 import { API, db, resetDb, server } from '../test/server';
 import { openBackup, parseBackup, fileInfo } from './backup';
 import { defaultPlan } from './LegacyWizard';
 
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
+  await warmUpApp();
 });
 beforeEach(() => {
   resetDb();

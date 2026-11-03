@@ -86,7 +86,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)
 	}
-	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, platform.SystemClock{}, nil)
+	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, cfg.AIIdleTimeout, platform.SystemClock{}, nil)
 	warnings, err := conns.CheckHosts(ctx, nil)
 	if err != nil {
 		return err

@@ -36,6 +36,13 @@ for v in "" "$chart"/ci/*.yaml; do
   helm template obs "$chart" -n monitoring "${args[@]}" >"$work/render.yaml"
   kubeconform -strict -summary -kubernetes-version "$K8S" -schema-location default -schema-location "$CRDS" "$work/render.yaml"
 done
+# the homelab layering (ADR 0023): generic values, then the example overlay, and locally the private one
+H=deploy/environments/homelab
+for o in "$H/observability-values.example.yaml" "${FINUANCE_ENV_DIR:-../finuance-env}/homelab/observability-values.yaml"; do
+  [ -f "$o" ] || continue
+  helm template obs "$chart" -n monitoring --kube-version "$K8S" -f "$H/observability-values.yaml" -f "$o" \
+    | kubeconform -strict -summary -kubernetes-version "$K8S" -schema-location default -schema-location "$CRDS" -
+done
 if helm template obs "$chart" --kube-version "$K8S" --set alerting.email.enabled=true >/dev/null 2>&1; then
   echo "check-observability: the e-mail receiver rendered without an address"; exit 1
 fi
@@ -44,7 +51,7 @@ echo "== alert rules (promtool)"
 helm template obs "$chart" -n monitoring --kube-version "$K8S" -f "$chart/ci/email-values.yaml" >"$work/render-all.yaml"
 # RENDER_DIR: the CI helm job's Trivy config scan reads the renders there.
 if [ -n "${RENDER_DIR:-}" ]; then mkdir -p "$RENDER_DIR" && cp "$work/render-all.yaml" "$RENDER_DIR/observability.yaml"; fi
-helm template obs "$chart" -n monitoring --kube-version "$K8S" >"$work/render.yaml"
+helm template obs "$chart" -n monitoring --kube-version "$K8S" --set ingress.traefik.enabled=true >"$work/render.yaml"   # every rule group, for the tests
 "$YQ" 'select(.kind == "PrometheusRule") | .spec' "$work/render.yaml" >"$work/rules.yaml"
 cp "$chart/tests/rules.test.yaml" "$work/"
 promtool check rules --lint=all --lint-fatal rules.yaml

@@ -1,0 +1,23 @@
+# The restore drill (tools/homelab-drill.sh restore, docs/RUNBOOK.md "Restore drill"): a one-instance
+# cluster in the namespace finuance-restore, recovered from finuance-db's backups in the in-cluster
+# bucket. It doesn't archive or back up (a scratch copy; a real switch-over would, into a new folder).
+cluster:
+  instances: 1
+  storage:
+    size: 5Gi
+    storageClass: local-path
+  resources:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 1Gi }
+objectStore:
+  destinationPath: s3://finuance-backups/
+  endpointURL: http://rustfs.s3.svc:9000
+  credentialsSecret: finuance-db-backup
+backup:
+  enabled: false
+recovery:
+  enabled: true
+  serverName: finuance-db
+networkPolicy:
+  enabled: true
+  operatorNamespace: cnpg-system

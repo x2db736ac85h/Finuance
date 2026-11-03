@@ -1,0 +1,13 @@
+# Weekly check of the ingress certificate; `tailscale cert` renews it with about a month left.
+# docs/RUNBOOK.md "Bootstrap on single-node k3s".
+[Unit]
+Description=Weekly Tailscale certificate check for Finuance's ingress (user %i)
+
+[Timer]
+OnBootSec=10min
+OnCalendar=weekly
+RandomizedDelaySec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

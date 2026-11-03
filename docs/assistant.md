@@ -77,11 +77,20 @@ For each model the assistant works out whether it calls tools, how its thinking 
 
 If a server rejects tool definitions before any lookup, the chat switches to **plan mode**: the model writes its lookups as JSON, the server runs them and then asks for the answer. The model is remembered as plan-only until the api restarts. If a server rejects the temperature or the reasoning setting, the request is retried once without it.
 
+### Model notes (Phase 18)
+
+- **`qwen3:4b` on Ollama is not the hybrid model any more**: Ollama's library tag now points at `qwen3:4b-thinking-2507` (the same model id in `ollama list`), which always thinks. That is why `/no_think`, Ollama's `think: false` (OpenAI-compatible and native API) and `reasoning_effort: none` changed nothing in Phase 18 (the last only moved the reasoning into the answer text). Name the 2507 models explicitly.
+- **Qwen3 2507 pairs** split this into two models of the same size: `qwen3:…-instruct-2507` never thinks, `qwen3:…-thinking-2507` always does. The assistant reads both names as Qwen3 with a `/no_think` switch, so give them `reasoning: none` in `caps` (`{"pattern": "*-instruct*", "reasoning": "none"}`, the same for `*-thinking*`); offer both in the connection so users can choose per question.
+- **Gemma** (planned as an alternative): some servers don't pass tool definitions to Gemma models; set `caps` `tools: false` for them (plan mode) if the status shows tool calls failing, and run the evals before making it the default.
+- **Evals on the reference machine** (2026-10-31, `docs/evals.md`; a 4 GB GPU through Vulkan): `qwen3:4b-thinking-2507` with the full toolset answered 46 of 53 correctly (87 %, arguments right 98 %), `qwen3:4b-instruct-2507` 35 (full) and 26 (compact). Thinking costs about twice the wait there (p50 112 s vs 60 s). The reference machine's connection offers both, thinking-2507 as the default; the full toolset is the default in tools mode already.
+- **Choose by answer quality**, not by the speed of a small test machine: the evals (`make eval-assistant`) on the server and model you'll actually use decide the default model and toolset.
+
 ## Limits and retention
 
 | Variable | Default | |
 |---|---|---|
-| `FINUANCE_AI_TIMEOUT` | `120s` | One model request; a stream that stays silent for 60 s also ends |
+| `FINUANCE_AI_TIMEOUT` | `120s` | One model request, first byte to last |
+| `FINUANCE_AI_IDLE_TIMEOUT` | `60s` | A model stream silent this long ends, also before its first token (at most `FINUANCE_AI_TIMEOUT`). A small GPU reading a long prompt (system prompt + tool results, ~8,000 tokens) can be silent for over a minute: raise both (e.g. `300s` / `150s` on a 4 GB card) |
 | `FINUANCE_AI_MAX_CONCURRENT` | `2` | Answers written at once per api replica (`503 assistant_busy` beyond) |
 | `FINUANCE_AI_RATE_PER_HOUR` | `30` | Questions per user per hour (`429`) |
 | `FINUANCE_AI_MAX_CHATS` | `25` | Chats kept per user; the oldest go first |
@@ -114,5 +123,5 @@ It lists each connection's chat models with their detected capabilities. Then it
 | *model_not_found* | Load the model in LM Studio, or `ollama pull` it; check the model allowlist |
 | *tools_rejected* | The model can't call tools: auto mode already switched to plan mode, or set `"tools": false` for it |
 | *context_too_long* | Load the model with a larger context (LM Studio), set `contextTokens`, or lower *rows per lookup* |
-| *timeout* | Slow hardware: raise `FINUANCE_AI_TIMEOUT`, choose a smaller model, or turn thinking off |
+| *timeout* | Slow hardware: raise `FINUANCE_AI_TIMEOUT` and `FINUANCE_AI_IDLE_TIMEOUT`, choose a smaller model, or turn thinking off |
 | a startup error about a public address | Mark the connection as `cloud` if that is intended, or fix the address |

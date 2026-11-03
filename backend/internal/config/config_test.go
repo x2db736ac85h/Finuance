@@ -39,6 +39,7 @@ func TestDefaults(t *testing.T) {
 		{"LogLevel", c.LogLevel, slog.LevelInfo},
 		{"AIConnections", len(c.AIConnections), 0},
 		{"AITimeout", c.AITimeout, 120 * time.Second},
+		{"AIIdleTimeout", c.AIIdleTimeout, 60 * time.Second},
 		{"AIMaxConcurrent", c.AIMaxConcurrent, 2},
 		{"AIMaxChats", c.AIMaxChats, 25},
 		{"AIRatePerHour", c.AIRatePerHour, 30},
@@ -98,6 +99,7 @@ func TestInvalidValuesAllReported(t *testing.T) {
 		"FINUANCE_TRUSTED_PROXIES":   "10.0.0.0/8, nonsense",
 		"FINUANCE_AI_BASE_URL":       "ftp://x",
 		"FINUANCE_AI_TIMEOUT":        "soon",
+		"FINUANCE_AI_IDLE_TIMEOUT":   "-5s",
 		"FINUANCE_MAX_UPLOAD_BYTES":  "lots",
 		"FINUANCE_AI_MAX_CONCURRENT": "1000",
 		"FINUANCE_AI_MAX_CHATS":      "-3",
@@ -109,7 +111,7 @@ func TestInvalidValuesAllReported(t *testing.T) {
 	want := []string{"FINUANCE_HTTP_ADDR", "FINUANCE_ADMIN_ADDR", "FINUANCE_PUBLIC_ORIGIN", "FINUANCE_DATABASE_URL",
 		"FINUANCE_DB_MAX_CONNS", "FINUANCE_SESSION_TTL", "FINUANCE_SESSION_IDLE_TTL", "FINUANCE_ALLOW_SIGNUP", "FINUANCE_DEMO_MODE",
 		"FINUANCE_MAX_UPLOAD_BYTES", "FINUANCE_LOG_LEVEL", "FINUANCE_TRUSTED_PROXIES", "FINUANCE_AI_BASE_URL", "FINUANCE_AI_ALLOW_REMOTE",
-		"FINUANCE_AI_TIMEOUT", "FINUANCE_AI_MAX_CONCURRENT", "FINUANCE_AI_MAX_CHATS", "FINUANCE_ENV",
+		"FINUANCE_AI_TIMEOUT", "FINUANCE_AI_IDLE_TIMEOUT", "FINUANCE_AI_MAX_CONCURRENT", "FINUANCE_AI_MAX_CHATS", "FINUANCE_ENV",
 		"FINUANCE_AI_API", "FINUANCE_AI_RATE_PER_HOUR"}
 	got := map[string]bool{}
 	for _, v := range vars(err) {

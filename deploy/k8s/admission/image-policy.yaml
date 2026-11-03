@@ -1,0 +1,70 @@
+# Image admission for the homelab (Phase 18.8, THREAT-MODEL E3, docs/security-scan.md KSV-0125):
+# Kubernetes' built-in ValidatingAdmissionPolicy (no extra component). Every pod in Finuance's
+# namespaces may only run images from the registries listed for its namespace, and the images we pin
+# by digest ourselves must keep their digest. Finuance's own images come only from
+# ghcr.io/x2db736ac85h. Phase 19 adds signature checks (cosign) and deploys Finuance's images by
+# digest (ADR 0024). A refused pod shows up as a FailedCreate event on its ReplicaSet, Job or Cluster.
+#
+# Adding an image from a new registry (a chart upgrade, a new tool): add its prefix below first.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: finuance-images
+  labels: { app.kubernetes.io/part-of: finuance }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        resources: [pods]
+        operations: [CREATE, UPDATE]
+  variables:
+    - name: images
+      expression: >-
+        object.spec.containers.map(c, c.image)
+        + (has(object.spec.initContainers) ? object.spec.initContainers.map(c, c.image) : [])
+        + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers.map(c, c.image) : [])
+    # image name prefixes allowed per namespace
+    - name: allowed
+      expression: >-
+        {
+          'finuance': ['ghcr.io/x2db736ac85h/', 'ghcr.io/cloudnative-pg/'],
+          'finuance-restore': ['ghcr.io/x2db736ac85h/', 'ghcr.io/cloudnative-pg/'],
+          's3': ['rustfs/rustfs:', 'docker.io/rustfs/rustfs:', 'amazon/aws-cli:', 'docker.io/amazon/aws-cli:'],
+          'monitoring': ['quay.io/prometheus/', 'quay.io/prometheus-operator/', 'quay.io/kiwigrid/k8s-sidecar:',
+                         'registry.k8s.io/kube-state-metrics/', 'docker.io/grafana/grafana:',
+                         'ghcr.io/jkroepke/kube-webhook-certgen:', 'grafana/tempo:', 'docker.io/grafana/tempo:']
+        }[request.namespace]
+    # prefixes whose images must carry a digest (the ones we pin ourselves)
+    - name: pinned
+      expression: >-
+        ['rustfs/rustfs:', 'docker.io/rustfs/rustfs:', 'amazon/aws-cli:', 'docker.io/amazon/aws-cli:',
+         'grafana/tempo:', 'docker.io/grafana/tempo:']
+  validations:
+    - expression: variables.images.all(i, variables.allowed.exists(p, i.startsWith(p)))
+      messageExpression: >-
+        'image not allowed in namespace ' + request.namespace + ': '
+        + variables.images.filter(i, !variables.allowed.exists(p, i.startsWith(p))).join(', ')
+        + ' (deploy/k8s/admission/image-policy.yaml lists the allowed registries)'
+      reason: Forbidden
+    - expression: variables.images.all(i, !variables.pinned.exists(p, i.startsWith(p)) || i.contains('@sha256:'))
+      messageExpression: >-
+        'image must be pinned by digest: '
+        + variables.images.filter(i, variables.pinned.exists(p, i.startsWith(p)) && !i.contains('@sha256:')).join(', ')
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: finuance-images
+  labels: { app.kubernetes.io/part-of: finuance }
+spec:
+  policyName: finuance-images
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: [finuance, finuance-restore, s3, monitoring]

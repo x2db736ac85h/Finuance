@@ -10,6 +10,12 @@ demo goes public.
 from the checkout, and the stack was `compose.ci.yaml` (sign-ups on, mock model). Trivy 0.76.0 ran
 with a vulnerability database of 2026-10-26.
 
+**Release scan before `v0.2.0-rc.2`: 2026-11-02**, on the reference machine, on the Phase 18 branch;
+images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`. Web
+image 0 findings; api image and repository GO-2026-5932 as before (no fix, not reachable);
+govulncheck 0 reachable; `npm audit --omit=dev` 0. **New:** `minimatch` (MEDIUM, development tools
+only, below) and KSV-0037 for the k3s Traefik config (deliberate, below).
+
 **Release scan before `v0.2.0-rc.1`: 2026-10-30**, on the reference machine, on `main` plus the release
 changes (branch `chore/release-0.2.0`), images built locally from it; Trivy 0.76.0 with that day's
 database, govulncheck 1.9.0 (`vuln.go.dev` reachable), `npm audit`. **New since Phase 17:**
@@ -25,14 +31,15 @@ module (GO-2026-5932). The repository's misconfiguration findings are unchanged 
 |---|---|---|
 | Trivy, api image | 2 findings; 1 fixed by a base image bump | 1 (UNKNOWN, not reachable) |
 | Trivy, web image | 3 findings (MEDIUM / UNKNOWN), no fixed base yet; fixed 2026-10-30 by upgrading zlib and musl in the Dockerfile | 0 |
-| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; 5 LOW/MEDIUM in the rehearsal stand-ins | all deliberate |
+| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` (MEDIUM, development tools, 2026-11-02) | deliberate; `minimatch` not reachable, open for Phase 19 |
 | Trivy config, rendered charts (all severities) | 2 LOW fixed (web uid); 4 kinds LOW/MEDIUM left | all deliberate |
 | `npm audit` (production and all) | 0 | – |
 | govulncheck | 0 reachable (CI; 2026-10-30 locally: 2 new `x/net` module findings, fixed by 0.62.0) | – |
 | gitleaks | 0 (CI) | – |
 | ZAP baseline | 0 WARN, 0 FAIL, 61 rules pass; the first Actions run added 90004 (fixed), 10106 and 10049 | 3 ignored with reasons |
 | ZAP API scan (active, signed in) | 0 WARN, 0 FAIL, 112 rules pass; ~100,000 requests, no 5xx | 2 INFO, 1 ignored |
-| OpenVAS / Nessus | – | Phase 18 |
+| OpenVAS (Greenbone CE, Full and fast) against the instance | 0 High, 0 Medium, 0 Low; 47 Log. From the Log entries: CBC-SHA suites under TLS 1.2 and TLS on port 80 (both fixed) | HSTS without `includeSubDomains`/`preload`, `Server: nginx`, Ollama on the tailnet (deliberate) |
+| Port scan from the LAN (all TCP ports) | 0 open | – |
 
 ## Trivy: images
 
@@ -54,6 +61,12 @@ module (GO-2026-5932). The repository's misconfiguration findings are unchanged 
 | GO-2026-5932 in `backend/go.mod` | UNKNOWN | As in the api image. |
 | `deploy/k8s/rehearsal/stand-ins.yaml`: KSV-0011, -0015, -0016, -0018 (no CPU/memory requests or limits) | LOW | **Deliberate:** the bucket and mock model of the CI rehearsal on kind, never deployed elsewhere; they are hardened like the app (non-root, read-only, no capabilities; Phase 17 push 1). |
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** Docker Hub images pinned by digest, in a throwaway kind cluster. |
+| `deploy/k8s/rustfs/rustfs.yaml` (Phase 18): KSV-0011 (CPU not limited) for RustFS and the bucket job | LOW | **Deliberate:** as for the app's pods: CPU requests set, memory limited. Otherwise hardened like the app (non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicies). |
+| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** Docker Hub images (`rustfs/rustfs`, `amazon/aws-cli`) pinned by digest; on the homelab the admission policy (`deploy/k8s/admission`, 18.8) admits only these two, and only by digest, in `s3`. |
+| `deploy/k8s/tempo/tempo.yaml` (Phase 18.6): KSV-0011 (CPU not limited) | LOW | **Deliberate:** as for the app's pods and RustFS: CPU request set, memory limited; non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicy (OTLP only from the app, queries only from Grafana). |
+| same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** `grafana/tempo` pinned by digest; the admission policy (18.8) requires its digest in `monitoring`. |
+| `deploy/environments/homelab/host/traefik-config.yaml` (Phase 18): KSV-0037 (resource in `kube-system`) | MEDIUM | **Deliberate:** a k3s `HelmChartConfig` for its bundled Traefik; k3s reads it only in `kube-system`. It holds chart values, no workload. |
+| `web/package-lock.json`: CVE-2026-118764 / GHSA-g3hv-75wg-m249 in `minimatch` 10.2.6 and 5.1.9 (new 2026-11-02) | MEDIUM | **Not reachable, open for the Phase 19 gate:** development tools only (ESLint, and openapi-typescript's `@redocly/openapi-core`), nothing in the built app (`npm audit --omit=dev`: 0); the denial of service needs crafted glob patterns, and only our own lint and codegen configuration supplies them. The fix (11.0.1) is a major version that ESLint 10 and openapi-typescript 7 don't accept yet; re-check when they release, before the gate's "nothing above LOW". |
 
 A local checkout may hold `backend/vendor/` (gitignored, for offline image builds). Trivy finds
 dozens of npm and Python advisories in it: testcontainers' documentation `Pipfile.lock` and
@@ -70,7 +83,7 @@ Rendered with every values file by `tools/check-helm.sh` and `tools/check-observ
 | KSV-0020 / KSV-0021: runs with UID / GID ≤ 10000 | LOW | web | **Fixed:** the web pod runs nginx as 10101:10101 (the image's own user, 101, stays for Compose). Checked: nginx starts with a read-only root filesystem and serves the app and its assets. |
 | KSV-0011: CPU not limited | LOW | api, worker, web, migrations | **Deliberate:** CPU limits throttle the Go runtime and the imports; the pods have CPU requests, and the HPA scales the api. Memory is limited. |
 | KSV-0110: workloads in the default namespace | LOW | all | **False positive:** the templates carry no `namespace:` and Helm/Argo CD install them into `finuance`. |
-| KSV-0125: images from an untrusted registry | MEDIUM | all | **Deliberate for now:** the images are `ghcr.io/x2db736ac85h/*`, signed with cosign. An admission policy that allows only this registry and verifies the signatures belongs to the cluster (Phase 18 decides). |
+| KSV-0125: images from an untrusted registry | MEDIUM | all | **Handled in the cluster:** the images are `ghcr.io/x2db736ac85h/*`, signed with cosign. Since 18.8 a `ValidatingAdmissionPolicy` (`deploy/k8s/admission`) admits in `finuance` only that registry and CloudNativePG's; signature verification and deployment by digest follow in Phase 19, ADR 0024 (Trivy reports the rule from the manifest alone, so it stays listed). |
 | KSV-01010: ConfigMap with sensitive content | MEDIUM | `finuance-env` | **False positive:** the flagged key is `FINUANCE_MAX_UPLOAD_BYTES`; the ConfigMap holds no secret (passwords come from the CloudNativePG secrets as `PGPASSWORD`). |
 
 The observability and database charts have no findings at any severity.
@@ -123,9 +136,48 @@ Informational alerts that ZAP never counts as warnings, for the record:
 - *Authentication request identified*: the sign-in form.
 - *User agent fuzzer*: the same responses for every browser.
 
+## OpenVAS (Phase 18.8)
+
+**2026-10-31**, on the reference machine: Greenbone Community Edition (gvmd 26.43, ospd-openvas
+22.10.6, feed of 2026-10-30, 191,292 tests in "Full and fast") from Greenbone's compose file plus
+[`tools/openvas/compose.override.yaml`](../tools/openvas/compose.override.yaml) (software images by
+digest, web UI on localhost only, the scanner on the host's network), run by
+[`tools/openvas-scan.sh`](../tools/openvas-scan.sh). Target: the instance's tailnet host name, TCP
+80, 443 and 11434 (Ollama, reachable on the tailnet by design, ADR 0020/0022), unauthenticated
+(no SSH or Windows credentials: the host isn't the system under test). 38 minutes; a rescan of 80/443 after the fixes (35 minutes) found 0 High, 0 Medium, 0 Low, 39 Log. Reports with the
+host name stay outside git (`~/.local/state/finuance-openvas/reports/`).
+
+**Result: 0 High, 0 Medium, 0 Low** (QoD ≥ 70); 47 Log entries (detections and inventories). The
+Log entries worth a decision:
+
+| Port | Entry | Decision |
+|---|---|---|
+| 443, 80 | *SSL/TLS: Report Medium Cipher Suites*: TLS 1.2 accepted `ECDHE-*-AES-*-CBC-SHA` (Traefik's defaults) | **Fixed:** Traefik's default `TLSOption` allows TLS 1.2 with ECDHE + AES-GCM / ChaCha20 only, and TLS 1.3 (`host/traefik-config.yaml`, Mozilla "intermediate"); checked with `openssl s_client`: CBC-SHA and TLS 1.1 refused. The rescan's "medium" list now holds only AES-GCM suites (TLS 1.2 ECDHE-ECDSA AES-128/256-GCM, TLS 1.3 AES-128-GCM): Greenbone's strength label for them, not a weakness; they are the recommended suites |
+| 80 | *SSL/TLS: Version Detection* on port 80: a TLS handshake on the plain-HTTP port served the app, because the Ingress routers attached to every entry point | **Fixed:** chart value `ingress.entryPoints` (homelab: `[websecure]`): over TLS on port 80 every request now gets `404` (plain HTTP gets the `301` to HTTPS). Traefik still completes the TLS handshake there (it detects TLS on every entry point and picks the certificate by name; that can't be switched off per entry point), but serves nothing |
+| 443 | *`includeSubDomains` / `preload` Missing in HSTS Header* | **Deliberate for now:** the host is a single `*.ts.net` name; `preload` needs the registrable domain, which isn't ours. Decided again with the public demo's own domain (Phase 19) |
+| 80, 443 | *HTTP Server Banner*: `Server: nginx`, no version | Accepted: no version is disclosed (`server_tokens off`) |
+| 80 | *HSTS Missing* | Expected: port 80 only answers `301` to HTTPS; HSTS is sent over HTTPS |
+| 11434 | *HTTP Security Headers*, *Allowed HTTP Methods*: Ollama's API answers every tailnet device without authentication | **Deliberate** (ADR 0020/0022): only the tailnet reaches it (the LAN scan below finds it closed); a Tailscale ACL that limits port 11434 to this machine would narrow it to the cluster (our Product Engineer's tailnet settings) |
+| 443 | HPKP missing | Expected: HPKP is deprecated and removed from browsers |
+
+**Port scan from the LAN** (`tools/openvas-scan.sh lan-view`: nmap 7.95, all 65,535 TCP ports from
+Docker's bridge network, i.e. through the host's firewall like another device on the home network):
+**no open port** (27 minutes; closed ports drop). Confirms THREAT-MODEL T7 independently of the
+phone test in 18.2.
+
+**Image admission (KSV-0125), decided 2026-11-02 by our Product Engineer:** Kubernetes' built-in
+`ValidatingAdmissionPolicy` (`deploy/k8s/admission/image-policy.yaml`, Argo CD app
+`admission-policy`; no extra component) checks every pod created in `finuance`, `finuance-restore`,
+`s3` and `monitoring`: only images from the registries listed for that namespace (Finuance's own only
+from `ghcr.io/x2db736ac85h/`, CloudNativePG's from `ghcr.io/cloudnative-pg/`), and the images we pin
+ourselves (RustFS, the AWS CLI, Tempo) only by digest. "Digests only" for everything isn't possible
+yet: Finuance's images, CloudNativePG's PostgreSQL and the monitoring stack's charts deploy by tag.
+**Phase 19:** cosign signature verification for Finuance's images, deployed by digest (the release
+already records the digests it signs). Checked with server-side dry runs (RUNBOOK step 15).
+
 ## Next
 
-- Phase 18: OpenVAS / Nessus against the deployed instance; an admission policy for the image
-  registry and signatures (KSV-0125). When the nginx base is rebuilt with fixed zlib and musl, the
+- Phase 19: signature verification (cosign) for Finuance's images in the admission policy, and the
+  images deployed by digest. When the nginx base is rebuilt with fixed zlib and musl, the
   Dockerfile's upgrade step can go.
 - Phase 19 gate: repeat every scan above on the release candidate, with nothing open above LOW.

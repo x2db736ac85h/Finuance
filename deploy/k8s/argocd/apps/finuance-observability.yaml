@@ -1,0 +1,36 @@
+# Finuance's dashboards, SLO and alert rules and the e-mail receiver (deploy/k8s/observability) with
+# the homelab values, the private overlay (addresses, ADR 0023) and the sealed SMTP password. After
+# the app (wave 0).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance-observability
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: finuance
+  sources:
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/k8s/observability
+      helm:
+        releaseName: finuance-observability
+        valueFiles:
+          - ../../environments/homelab/observability-values.yaml
+          - $env/homelab/observability-values.yaml
+    - repoURL: git@github.com:x2db736ac85h/finuance-env.git
+      targetRevision: main
+      ref: env
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/environments/homelab/monitoring
+      directory:
+        include: finuance-alert-smtp.sealed.yaml   # grafana-admin belongs to kube-prometheus-stack
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

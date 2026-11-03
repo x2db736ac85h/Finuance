@@ -1,0 +1,39 @@
+#!/usr/sbin/nft -f
+# Keeps k3s pods off the home network and the ingress on the tailnet (docs/RUNBOOK.md "Bootstrap on single-node k3s", ADR 0022).
+# k3s inserts its own accept rules at the top of the FORWARD chain, ahead of ufw, so a
+# `ufw route deny` never runs. This table hooks forwarding at priority -10, before the
+# iptables-nft filter chains (priority 0); a drop here is final.
+# Traffic from pods to the host itself (API server, kubelet, Ollama) is not forwarded
+# and is unaffected; the host firewall's input rules still govern it.
+#
+# Template: set UPSTREAM_DNS to the server CoreDNS forwards to (the first `nameserver` in
+# /run/systemd/resolve/resolv.conf, usually the router) and keep the filled-in copy with the
+# environment's private files. `sudo nft -c -f <file>` checks it without loading it.
+
+define POD_CIDR = 10.42.0.0/16
+define SERVICE_CIDR = 10.43.0.0/16
+define UPSTREAM_DNS = 192.0.2.1    # placeholder (TEST-NET-1): replace with your DNS server
+# private, Docker, tailnet (CGNAT) and link-local ranges pods may not reach
+define PRIVATE = { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16 }
+
+table inet k3s_lan
+delete table inet k3s_lan
+
+table inet k3s_lan {
+  chain forward {
+    type filter hook forward priority -10; policy accept;
+
+    # pod to pod and pod to service stay inside the cluster
+    iifname "cni0" ip daddr { $POD_CIDR, $SERVICE_CIDR } accept
+
+    # The ingress (Traefik on host ports 80/443) answers the tailnet only: connections forwarded
+    # into the pod network for those ports must arrive on the Tailscale interface.
+    iifname != "tailscale0" ip daddr $POD_CIDR ct status dnat ct original proto-dst { 80, 443 } counter drop
+
+    # CoreDNS forwards lookups upstream
+    iifname "cni0" ip saddr $POD_CIDR ip daddr $UPSTREAM_DNS meta l4proto { tcp, udp } th dport 53 accept
+
+    # nothing else private
+    iifname "cni0" ip saddr $POD_CIDR ip daddr $PRIVATE counter drop
+  }
+}

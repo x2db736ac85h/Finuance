@@ -2,8 +2,12 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
@@ -119,5 +123,58 @@ func TestLikeIsLeakproof(t *testing.T) {
 	var leakproof bool
 	if err := tdb.App.QueryRow(context.Background(), `SELECT proleakproof FROM pg_proc WHERE oid = 'pg_catalog.textlike(text, text)'::regprocedure`).Scan(&leakproof); err != nil || !leakproof {
 		t.Fatalf("textlike leakproof = %v, %v (deploy/db/bootstrap.sql)", leakproof, err)
+	}
+}
+
+// TestWhoMayConnect: bootstrap.sql lets only the two Finuance roles and monitoring (pg_monitor
+// members, such as CloudNativePG's cnpg_metrics_exporter) connect to the database; any other role
+// can't, and pg_monitor gets no table access.
+func TestWhoMayConnect(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	ctx := context.Background()
+	super, err := pgx.Connect(ctx, tdb.SuperDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer super.Close(ctx)
+	for _, q := range []string{
+		`CREATE ROLE who_may_connect_stranger LOGIN`,
+		`CREATE ROLE who_may_connect_exporter LOGIN IN ROLE pg_monitor`,
+	} {
+		if _, err := super.Exec(ctx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() {
+		_, _ = super.Exec(context.Background(), `DROP ROLE who_may_connect_stranger, who_may_connect_exporter`)
+	})
+	for role, want := range map[string]bool{
+		"finuance_owner": true, "finuance_app": true,
+		"who_may_connect_exporter": true, "who_may_connect_stranger": false,
+	} {
+		var got bool
+		if err := super.QueryRow(ctx, `SELECT has_database_privilege($1, 'finuance', 'CONNECT')`, role).Scan(&got); err != nil || got != want {
+			t.Errorf("%s may connect = %v, %v; want %v", role, got, err, want)
+		}
+	}
+	var tables bool
+	if err := super.QueryRow(ctx, `SELECT has_table_privilege('pg_monitor', 'transactions', 'SELECT')`).Scan(&tables); err != nil || tables {
+		t.Errorf("pg_monitor reads transactions = %v, %v; want false", tables, err)
+	}
+}
+
+// TestReadinessTimeoutsAreDeadlines: /readyz treats a check that only ran out of time as "busy"
+// (httpapi.TestReadyzBusyDatabase), which needs the store's checks to keep context.DeadlineExceeded
+// in their errors.
+func TestReadinessTimeoutsAreDeadlines(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	st := store.New(tdb.App)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	time.Sleep(time.Millisecond)
+	for name, probe := range map[string]func(context.Context) error{"Ping": st.Ping, "MigrationsCurrent": st.MigrationsCurrent} {
+		if err := probe(ctx); !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("%s with an expired deadline = %v, want context.DeadlineExceeded", name, err)
+		}
 	}
 }

@@ -1,0 +1,40 @@
+# Monitoring for the homelab (Phase 18.6): Prometheus, Alertmanager, Grafana (dashboard sidecar),
+# kube-state-metrics, node-exporter. Values: deploy/environments/homelab/monitoring-values.yaml.
+# After Sealed Secrets (Grafana's admin login is a SealedSecret, synced here so Grafana can start) and
+# before the database and the app (their PodMonitors need its CRDs). Server-side apply: the CRDs are
+# too large for a client-side apply's annotation.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 92.16.1 # Prometheus Operator v0.94.2
+      helm:
+        releaseName: kube-prometheus-stack
+        valueFiles:
+          - $values/deploy/environments/homelab/monitoring-values.yaml
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: main
+      ref: values
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/environments/homelab/monitoring
+      directory:
+        include: grafana-admin.sealed.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

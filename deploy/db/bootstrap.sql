@@ -8,9 +8,11 @@ CREATE ROLE finuance_owner LOGIN PASSWORD :'owner_password';   -- owns schema, r
 CREATE ROLE finuance_app   LOGIN PASSWORD :'app_password';     -- used by api + worker; subject to RLS
 CREATE DATABASE finuance OWNER finuance_owner;
 
--- Only the two Finuance roles may connect.
+-- Only the two Finuance roles may connect, plus monitoring (members of the built-in pg_monitor,
+-- e.g. CloudNativePG's cnpg_metrics_exporter, read statistics only: no table grants, and RLS).
 REVOKE ALL ON DATABASE finuance FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE finuance TO finuance_owner, finuance_app;
+GRANT CONNECT ON DATABASE finuance TO pg_monitor;
 
 \connect finuance
 

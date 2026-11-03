@@ -1,0 +1,88 @@
+# kube-prometheus-stack for the homelab (Phase 18.6; Argo CD app deploy/k8s/argocd/apps/
+# kube-prometheus-stack.yaml): Prometheus, Alertmanager, Grafana, kube-state-metrics and
+# node-exporter, sized for one machine. Finuance's dashboards, rules and alert receiver come from
+# deploy/k8s/observability. Grafana and Prometheus aren't exposed: port-forward (RUNBOOK).
+crds:
+  enabled: true
+
+# k3s runs etcd, the scheduler, the controller manager and kube-proxy inside its own process: there is
+# nothing separate to scrape, and their rules would only alert that the targets are down.
+kubeEtcd: { enabled: false }
+kubeScheduler: { enabled: false }
+kubeControllerManager: { enabled: false }
+kubeProxy: { enabled: false }
+defaultRules:
+  rules:
+    etcd: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeControllerManager: false
+    kubeProxy: false
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    retentionSize: 8GB
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits: { memory: 1536Mi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: [ReadWriteOnce]
+          resources: { requests: { storage: 10Gi } }
+    # Finuance's PodMonitors and PrometheusRule carry no release label: select every one
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 10m, memory: 64Mi }
+      limits: { memory: 256Mi }
+    # Finuance's AlertmanagerConfig (deploy/k8s/observability) lives in this namespace, but its alerts
+    # carry namespace=finuance: don't restrict a config's routes to its own namespace
+    alertmanagerConfigSelector:
+      matchLabels: { app.kubernetes.io/part-of: finuance }
+    alertmanagerConfigMatcherStrategy:
+      type: None
+
+grafana:
+  # Grafana 13 used ~400 MiB at rest and stalled near a 512 MiB limit under load (Phase 18).
+  resources:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 1Gi }
+  persistence:
+    enabled: false   # dashboards come from ConfigMaps, the admin login from the sealed Secret below
+  # The chart's default admin password is public: the login is a SealedSecret made by
+  # `tools/seal-secrets.sh homelab grafana` (monitoring/grafana-admin.sealed.yaml, synced by this app).
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+  additionalDataSources:
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      url: http://tempo.monitoring.svc:3200
+      access: proxy
+
+kube-state-metrics:
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }

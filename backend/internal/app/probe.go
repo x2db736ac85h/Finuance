@@ -38,7 +38,7 @@ func Probe(ctx context.Context, cfg config.Config, in ProbeInput, out func(forma
 			return err
 		}
 	}
-	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, platform.SystemClock{}, func(c llm.Config) llm.Client {
+	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, cfg.AIIdleTimeout, platform.SystemClock{}, func(c llm.Config) llm.Client {
 		c.HTTPClient = &http.Client{Transport: rec.wrap(llm.Transport(c.AllowRemote))}
 		return llm.New(c)
 	})

@@ -55,7 +55,11 @@
     "otel": {
       "type": "object",
       "properties": {
-        "endpoint": { "type": "string" },
+        "endpoint": {
+          "type": "string",
+          "description": "The full OTLP/HTTP traces URL, path included (…:4318/v1/traces); empty turns tracing off",
+          "pattern": "^$|^https?://[^/]+/[^/].*$"
+        },
         "egress": { "$ref": "#/definitions/egress" }
       }
     },
@@ -68,6 +72,7 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "className": { "type": "string" },
+        "entryPoints": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9-]+$" } },
         "host": { "type": "string" },
         "tls": {
           "type": "object",

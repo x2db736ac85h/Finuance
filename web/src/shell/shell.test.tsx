@@ -4,10 +4,11 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { account, API, db, problem, resetDb, server } from '../test/server';
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
+  await warmUpApp();
 });
 beforeEach(() => {
   resetDb();
@@ -160,7 +161,8 @@ describe('shell', () => {
         return HttpResponse.json(db.user);
       }),
     );
-    await user.type(screen.getByRole('textbox', { name: 'Email' }), 'alex@example.com');
+    // the address changes a moment before the sign-in page has rendered (a race under load)
+    await user.type(await screen.findByRole('textbox', { name: 'Email' }), 'alex@example.com');
     await user.type(screen.getByLabelText('Password'), 'correct horse battery');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('heading', { name: 'Profile' })).toBeTruthy();

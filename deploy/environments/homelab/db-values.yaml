@@ -1,18 +1,34 @@
 # Homelab values for the database chart (deploy/k8s/db), applied by the Argo CD application
 # deploy/k8s/argocd/apps/finuance-db.yaml (synced by hand, never automatically).
-# Values marked "Phase 18" are not known yet and are set during the homelab rollout.
+# Per-machine values come from the private environment repository as a second source (ADR 0023).
 
 cluster:
   instances: 2
+  # scraped by kube-prometheus-stack (job finuance-db; dashboards and alerts: deploy/k8s/observability)
+  podMonitor: true
   storage:
     size: 10Gi
-    # Phase 18: the cluster's storage class (k3s ships local-path).
+    # k3s's bundled storage class (a node-local volume).
     storageClass: local-path
+  # Sized for the Phase 18 load test (docs/perf.md "Phase 18"): 50 users × 20,000 transactions are a
+  # 4 GB database, and the chart's 128 MB of shared buffers gave a cache hit ratio of about 60 %
+  # under load. Both instances run on the one node, so each gets a quarter of the database.
+  resources:
+    requests: { cpu: 250m, memory: 2Gi }
+    limits: { memory: 4Gi }
+  parameters:
+    shared_buffers: 1GB
+    effective_cache_size: 3GB
+    work_mem: 16MB
+    maintenance_work_mem: 256MB
+    random_page_cost: "1.1"   # local SSD
 
 objectStore:
-  # Phase 18: the backup target (bucket and endpoint). Off-site or at least off the cluster's disks.
+  # RustFS in the cluster (deploy/k8s/rustfs, ADR 0022). It shares the node's disk with the database:
+  # it protects against mistakes and pod or volume loss, not against losing the disk; an
+  # off-machine bucket is the first change for an always-on host.
   destinationPath: s3://finuance-backups/
-  endpointURL: ""
+  endpointURL: http://rustfs.s3.svc:9000
   credentialsSecret: finuance-db-backup
   retention: 14d
 
@@ -23,3 +39,5 @@ backup:
 networkPolicy:
   enabled: true
   operatorNamespace: cnpg-system
+  # Prometheus scrapes the exporter on 9187
+  monitoringNamespace: monitoring

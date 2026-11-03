@@ -1,0 +1,17 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: grafana-admin
+  namespace: monitoring
+spec:
+  encryptedData:
+    admin-password: AgB+QQ3UGcvbmbyHGZ1fUaMkteBxIF91K4hAVXWDZIHwF/+6mAm6b2jDKglDYqI7bFpLyXGV7zeod358Sc8x0i/jtoebMh1ncYO0REwpWZNfxy2P1EQ6mDN2i6a0X+dIiL6itISSNwvi2pb4FhnoWQeCYws6+IZXC/AwZrztyXjTj7chJkQ8rhsjxUj1/KpTE2MTTFZ3sfvkY6kaN2ALUGStRmDWULa8DocYFzc/5vlLKuXoyKr3J3wILXxojmJdoEP6dJ7XoXqEGlp5eEaR94PFQAiyID6hyGd0a5qooBwD7iwazMEqfhOaHRIGgZjVH2L1q9XcYxzRUPbi0JlJVCCkSoYSEH/E7gJzV/+ucAdWwAvAtVRoR4r4umsa+qekqV0d97I2PxFRyy9di94UdNJV8XR1zo3r5m3/M37xJ5UJrlTbXRFTtteFP6OlFAdQvOJtmiBeV81qBtHjMOZDRJIPUBAIy5JGXILgr1zS27vBDdgv78MBbT/WGaNBAloLpw++uPggq+JnoIPt0El/7kGJNyNFTdF1hrCJk2KOUqIzN/iuUucXwv2nMya11Q4sPuN00/cC7GPHuR2eXwprquCYY6EdbX0iD94cWTmspXF0pCGQkRLt/RPbkohqGOVpiIVEOM/3t+Bs87k6xoz8w/MjJkHeFqfP6KaV3+2s0OmC/4G2cs0xkjHsZ0WsVCyo4mSjUABkb4uapiFTT1OdG+LFlZQgbkjP6oQjgTDn+ZOA5g==
+    admin-user: AgDKmegSkJItpDJ1uqQJYnq15pQ0xwCQIUnI1sWCj41rvT46Bu8loz2Un9uYRlbfXHd9ScCCc+bMjqvsg6Fs4gcxLEYC0h+2edi6lbAngizuaSGY7IkAk/ESsmulKfw/uROa1hj2tbcWU45k4utYG8M8qQUegPzunE2amfHyhaNxm9zuwSuvTmH/XrwIX6kw21q5uzuapH9EVVBpEpjnvaESvBtqQaF1msFrTNWfoSEA45B9aT0Gs1e0RtfX3LYgzVNJfIG8R3702/gHhCKRYlAikMYHMAoj7u5cJT5GhIzg4iCbMvZ8yAYtdxg/CkjXcv7C77hUk01hxMlH72HjaPybImgUDFlsg86FBbe9F+CDTSM4RAHOQMJfu+BZnOuCRk8IYXZrdBgiRXhuhJAoc3L8mWJOkfBibdZFaKjuWuhEVO3Lk+v8jQ8QW/LUIZsY25eECsGvhz7QEeYGQq5/HsE6ETp0UZGMKzwXME3rdLvQ6hM/zXd8csLeFmBIXU0goqcVScO8nO29EazN8d8KMTzjqTsju/rQAKgDED1Dk8cnE3X08dkS/MF8R25Wji2y6pKryBvrx/eZql3RnyQkzKAk62uQwlaYeCIVy1IncGmccYnsZ/5+zbtzfuPTakdIMe8jhfK24bAVDY871TDb2fUfpfgCxxE1tO+or+TnBI9Dv+U0Ma4hxt2tGa26+XA4OvPG1ppjag==
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: finuance
+      name: grafana-admin
+      namespace: monitoring
+    type: Opaque

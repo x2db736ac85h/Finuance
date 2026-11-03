@@ -1,6 +1,7 @@
 # The app (deploy/helm/finuance) with the homelab values. Automated: a merged pull request that
 # changes the chart or deploy/environments/homelab/values.yaml (e.g. release.yml's image tag bump)
-# deploys; reverting it rolls back. Migrations run first as a PreSync hook.
+# deploys; reverting it rolls back. A change to the private overlay (finuance-env) deploys too.
+# Migrations run first as a PreSync hook.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -10,14 +11,20 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 spec:
   project: finuance
-  source:
-    repoURL: https://github.com/x2db736ac85h/Finuance.git
-    targetRevision: main
-    path: deploy/helm/finuance
-    helm:
-      releaseName: finuance
-      valueFiles:
-        - ../../environments/homelab/values.yaml
+  # The chart and the generic homelab values from this repository, then the per-machine overlay
+  # (host name, model server address) from the private environment repository (ADR 0023).
+  sources:
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/helm/finuance
+      helm:
+        releaseName: finuance
+        valueFiles:
+          - ../../environments/homelab/values.yaml
+          - $env/homelab/host-values.yaml
+    - repoURL: git@github.com:x2db736ac85h/finuance-env.git
+      targetRevision: main
+      ref: env
   destination:
     server: https://kubernetes.default.svc
     namespace: finuance

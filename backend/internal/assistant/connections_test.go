@@ -57,7 +57,7 @@ func conn(name, base string, mod func(*config.AIConnection)) config.AIConnection
 }
 
 func newTestConnections(clock *fakeClock, servers map[string]*fakeServer, cfgs ...config.AIConnection) *Connections {
-	return NewConnections(cfgs, time.Minute, clock, func(c llm.Config) llm.Client {
+	return NewConnections(cfgs, time.Minute, 0, clock, func(c llm.Config) llm.Client {
 		for i := range cfgs {
 			if cfgs[i].BaseURL.String() == c.BaseURL {
 				return servers[cfgs[i].Name]
@@ -183,17 +183,35 @@ func TestCheckHosts(t *testing.T) {
 		conn("local", "http://127.0.0.1:1234/v1", nil),
 		conn("cloud", "https://api.openai.com/v1", func(c *config.AIConnection) { c.Cloud = true }),
 		conn("nowhere", "http://does-not-exist.invalid:1234/v1", nil),
-	}, time.Minute, clock, nil)
+	}, time.Minute, 0, clock, nil)
 	warn, err := cs.CheckHosts(context.Background(), nil)
 	if err != nil || len(warn) != 1 || !strings.Contains(warn[0], "does-not-exist.invalid") {
 		t.Errorf("warn %v err %v", warn, err)
 	}
-	cs = NewConnections([]config.AIConnection{conn("pub", "http://8.8.8.8/v1", nil)}, time.Minute, clock, nil)
+	cs = NewConnections([]config.AIConnection{conn("pub", "http://8.8.8.8/v1", nil)}, time.Minute, 0, clock, nil)
 	if _, err := cs.CheckHosts(context.Background(), nil); err == nil || !strings.Contains(err.Error(), "public address") {
 		t.Errorf("public: %v", err)
 	}
 	var none *Connections
 	if none.Enabled() || len(none.Status(context.Background(), false)) != 0 {
 		t.Error("nil connections")
+	}
+}
+
+// TestIdleTimeout: FINUANCE_AI_IDLE_TIMEOUT reaches the model client, at most the request timeout,
+// and 60 s when unset (a slow GPU reading a long prompt stays silent longer than that).
+func TestIdleTimeout(t *testing.T) {
+	cases := []struct{ timeout, idle, want time.Duration }{
+		{5 * time.Minute, 3 * time.Minute, 3 * time.Minute},
+		{time.Minute, 3 * time.Minute, time.Minute},
+		{5 * time.Minute, 0, 60 * time.Second},
+	}
+	for _, c := range cases {
+		var got llm.Config
+		NewConnections([]config.AIConnection{conn("local", "http://127.0.0.1:11434/v1", nil)}, c.timeout, c.idle,
+			&fakeClock{}, func(cfg llm.Config) llm.Client { got = cfg; return &fakeServer{} })
+		if got.Timeout != c.timeout || got.IdleTimeout != c.want {
+			t.Errorf("timeout %s, idle %s: client got %s / %s, want idle %s", c.timeout, c.idle, got.Timeout, got.IdleTimeout, c.want)
+		}
 	}
 }

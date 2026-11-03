@@ -26,6 +26,20 @@ rules:
   # Pods in CrashLoopBackOff (needs kube-state-metrics).
   kubernetes: true
 
+# The ingress in front of Finuance, measured where users connect: a request the ingress refuses
+# (e.g. 503 when no api pod is ready) never reaches the api's own metrics, so the SLO panels and
+# rules (measured at the api) can't see it (Phase 18 load test).
+ingress:
+  traefik:
+    # A PodMonitor for Traefik (job "traefik"), the "At the ingress" panels' data and the
+    # FinuanceIngressErrors alert. Traefik must label its metrics per router
+    # (metrics.prometheus.addRoutersLabels); Finuance's routers are named
+    # "[<entry point>-]<appNamespace>-<ingress>-…@kubernetes".
+    enabled: false
+    namespace: kube-system
+    selector: { app.kubernetes.io/name: traefik }
+    port: metrics
+
 alerting:
   # An AlertmanagerConfig that sends every Finuance alert by e-mail (Phase 17 decision). The SMTP
   # password comes from a Secret (sealed in Phase 18: tools/seal-secrets.sh).

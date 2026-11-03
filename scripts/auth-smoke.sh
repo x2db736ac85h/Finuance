@@ -14,6 +14,9 @@ API="$BASE_URL/api/v1"
 EMAIL="smoke-$(date +%s)-$RANDOM@example.test"
 PASS1="smoke password one"
 PASS2="smoke password two"
+# An existing user instead of a sign-up, for instances with sign-up off (scripts/smoke-k8s.sh makes
+# a throwaway user per script); the password comes from the environment only.
+if [[ -n ${SMOKE_EMAIL:-} ]]; then EMAIL=$SMOKE_EMAIL; PASS1=${SMOKE_PASSWORD:?set SMOKE_PASSWORD with SMOKE_EMAIL}; fi
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -40,8 +43,12 @@ call() {
 
 : > "$jar"
 call GET  /meta 200
-call POST /auth/signup 201 "{\"email\":\"$EMAIL\",\"password\":\"$PASS1\",\"displayName\":\"Smoke\"}"
-grep -q '"displayName":"Smoke"' "$work/body"
+if [[ -n ${SMOKE_EMAIL:-} ]]; then
+  call POST /auth/login 200 "{\"email\":\"$EMAIL\",\"password\":\"$PASS1\"}"
+else
+  call POST /auth/signup 201 "{\"email\":\"$EMAIL\",\"password\":\"$PASS1\",\"displayName\":\"Smoke\"}"
+  grep -q '"displayName":"Smoke"' "$work/body"
+fi
 call GET  /me 200
 grep -q "\"email\":\"$EMAIL\"" "$work/body"
 call POST /auth/logout 204

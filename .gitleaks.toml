@@ -7,3 +7,7 @@ useDefault = true
 [[allowlists]]
 description = "Generated OpenAPI server: oapi-codegen embeds the spec as gzip+base64 chunks, which can look like API keys. Its source, api/openapi.yaml, is scanned as usual."
 paths = ['''^backend/internal/httpapi/gen/gen\.go$''']
+
+[[allowlists]]
+description = "SealedSecrets: encryptedData is ciphertext that only the cluster's controller can decrypt; committing it is the point (docs/RUNBOOK.md \"Secrets\"). tools/check-sealed.sh (make check) makes sure every file with this name is a SealedSecret without plain data."
+paths = ['''\.sealed\.yaml$''']

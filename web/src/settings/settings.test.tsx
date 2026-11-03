@@ -3,12 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { renderApp } from '../test/render';
+import { renderApp, warmUpApp } from '../test/render';
 import { API, db, problem, resetDb, server } from '../test/server';
 import { browserName } from './Sessions';
 
-beforeAll(() => {
+beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
+  await warmUpApp();
 });
 beforeEach(() => {
   resetDb();

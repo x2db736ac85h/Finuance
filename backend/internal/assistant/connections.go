@@ -78,16 +78,21 @@ type flight struct {
 	st   ConnectionStatus
 }
 
-// NewConnections builds a client per connection. newClient is llm.New in production.
-func NewConnections(cfgs []config.AIConnection, timeout time.Duration, clock platform.Clock, newClient func(llm.Config) llm.Client) *Connections {
+// NewConnections builds a client per connection. timeout bounds one model request; idle ends a
+// stream that stays silent that long (also before the first token: a slow GPU reading a long prompt
+// needs more than the default), at most timeout; 0 = 60 s. newClient is llm.New in production.
+func NewConnections(cfgs []config.AIConnection, timeout, idle time.Duration, clock platform.Clock, newClient func(llm.Config) llm.Client) *Connections {
 	if newClient == nil {
 		newClient = llm.New
+	}
+	if idle <= 0 {
+		idle = 60 * time.Second
 	}
 	cs := &Connections{clock: clock, cache: map[string]statusEntry{}, flights: map[string]*flight{}, learned: map[string]llm.Caps{}}
 	for i := range cfgs {
 		c := &cfgs[i]
 		cl := newClient(llm.Config{API: c.API, BaseURL: c.BaseURL.String(), APIKey: c.APIKey, AllowRemote: c.Cloud,
-			Timeout: timeout, IdleTimeout: min(timeout, 60*time.Second)})
+			Timeout: timeout, IdleTimeout: min(timeout, idle)})
 		cs.list = append(cs.list, &Connection{AIConnection: *c, Client: cl})
 	}
 	return cs

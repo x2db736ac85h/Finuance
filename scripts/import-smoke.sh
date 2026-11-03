@@ -16,6 +16,9 @@ METRICS_URL="${METRICS_URL:-http://localhost:9091/metrics}"
 API="$BASE_URL/api/v1"
 EMAIL="import-smoke-$(date +%s)-$RANDOM@example.test"
 PASS="import smoke password"
+# An existing user instead of a sign-up, for instances with sign-up off (scripts/smoke-k8s.sh makes
+# a throwaway user per script); the password comes from the environment only.
+if [[ -n ${SMOKE_EMAIL:-} ]]; then EMAIL=$SMOKE_EMAIL; PASS=${SMOKE_PASSWORD:?set SMOKE_PASSWORD with SMOKE_EMAIL}; fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FIX="$ROOT/testdata/fixtures/synthetic/overlap"
 ORACLE="$ROOT/testdata/oracle/dedupe"
@@ -70,7 +73,11 @@ expect_tx() { # expect_tx COUNT
   printf 'ok %2d  %-40s → %s\n' "$step" "account holds $1 transactions" "$1"
 }
 
-call POST /auth/signup 201 "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}"
+if [[ -n ${SMOKE_EMAIL:-} ]]; then
+  call POST /auth/login 200 "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}"
+else
+  call POST /auth/signup 201 "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}"
+fi
 call POST /accounts 201 '{"name":"Import smoke"}'
 account="$(field id)"
 

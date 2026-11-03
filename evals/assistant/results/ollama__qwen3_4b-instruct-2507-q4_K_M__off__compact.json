@@ -1,0 +1,930 @@
+{
+  "connection": "ollama",
+  "model": "qwen3:4b-instruct-2507-q4_K_M",
+  "think": "off",
+  "toolset": "compact",
+  "ranAt": "2026-10-31T03:09:32.921189542Z",
+  "cases": [
+    {
+      "id": "rel-last-month-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 47338,
+      "approxTokens": 1788,
+      "answer": "I'll find out how much you spent last month. Since today is 2025-03-20, last month would be February 2025.\n\n\n\nFor last month (February 2025), you spent a total of 5,569.62 PLN.\n\nThis total is based on 49 transactions from February 1, 2025, to February 28, 2025. There were no income transactions during this period."
+    },
+    {
+      "id": "rel-last-month-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 37872,
+      "approxTokens": 1757,
+      "answer": "W zeszłym miesiącu (styczeń 2025) wydałeś 5569,62 PLN.  \n\n**Data range:** 2025-02-01 do 2025-02-28.  \n(Noted: The query asked about \"last month\", which is February 2025, not January. The data shows February 2025 transactions.)"
+    },
+    {
+      "id": "rel-last-week-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 26623,
+      "approxTokens": 1755,
+      "answer": "Last week (2025-03-10 to 2025-03-16), you spent a total of **932.95 PLN**."
+    },
+    {
+      "id": "rel-last-week-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 35230,
+      "approxTokens": 1756,
+      "answer": "W zeszłym tygodniu (od 2025-03-10 do 2025-03-16) wydałeś 932,95 PLN."
+    },
+    {
+      "id": "rel-this-month-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 39938,
+      "approxTokens": 1796,
+      "answer": "I'll find out how much you've spent this month so far. Since today is 2025-03-20, \"this month\" means from the 1st to today.\n\n\n\nDate range: 2025-03-01 to 2025-03-20\n\nThis month so far, you've spent a total of 5,151.82 PLN."
+    },
+    {
+      "id": "rel-this-week-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 26860,
+      "approxTokens": 1752,
+      "answer": "W tym tygodniu (od 16 marca 2025 do 20 marca 2025) wydałeś 98,07 PLN."
+    },
+    {
+      "id": "rel-january-income-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 27113,
+      "approxTokens": 1749,
+      "answer": "W styczniu 2025 roku zarobiłeś 9213 PLN.  \n\nData range: 2025-01-01 do 2025-01-31."
+    },
+    {
+      "id": "rel-mar-2-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 51856,
+      "approxTokens": 1897,
+      "answer": "I'll find out what you spent on 2 March 2025 by looking up transactions on that specific date.\n\n\n\nOn 2 March 2025, you spent a total of 2,974.11 PLN, broken down as follows:\n\n- 48.82 PLN at MARKETPLACE OMEGA (Zakupy przez internet)\n- 75.29 PLN at DELIKATESY POD LIPĄ WARSZAWA (Artykuły spożywcze)\n- 2,850.00 PLN to WSPÓLNOTA MIESZKANIOWA (Mieszkanie)"
+    },
+    {
+      "id": "out-yesterday-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "mention 2025-03-17|17.03.2025|17 march|march 17|17th"
+      ],
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 27138,
+      "approxTokens": 1741,
+      "answer": "I'll find out what you spent yesterday, which is 2025-03-19.\n\n\n\nI checked your transactions for yesterday (2025-03-19), but found no expenses. You spent PLN 0.00 yesterday."
+    },
+    {
+      "id": "out-dec-2023-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "mention 2024-01-01|01.01.2024|january 2024|2025-03-17|17.03.2025"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 21955,
+      "approxTokens": 1736,
+      "answer": "No transactions were found for December 2023. The data range starts from January 1, 2024."
+    },
+    {
+      "id": "out-april-pl",
+      "category": "out of range",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 26049,
+      "approxTokens": 1732,
+      "answer": "W kwietniu 2025 nie ma żadnych transakcji w danych. Ostatnia dostępna data to 2025-03-17."
+    },
+    {
+      "id": "out-2026-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [],
+      "mode": "tools",
+      "ms": 13277,
+      "approxTokens": 810,
+      "answer": "There is no data available for the year 2026, as the latest transaction date in your records is 2025-03-17. Therefore, I cannot provide any information about income for 2026."
+    },
+    {
+      "id": "merch-kawiarnia-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 60711,
+      "approxTokens": 3035,
+      "answer": "You spent a total of **2021.48 PLN** at Kawiarnia Podwórko (also listed as \"KAWIARNIA PODWÓRKO WARSZAWA\") across all transactions.\n\n**Date range used:** 2024-06-09 to 2025-02-25."
+    },
+    {
+      "id": "merch-kino-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 30484,
+      "approxTokens": 1746,
+      "answer": "W kinie wydałeś 813,72 PLN.  \n\nTo dotyczy 10 transakcji z kategorii \"KINO\" (np. \"KINO POD GWIAZDAMI\").  \nData range: 2024-01-01 do 2025-03-17."
+    },
+    {
+      "id": "merch-taxi-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "find_values"
+      ],
+      "mode": "tools",
+      "ms": 13089,
+      "approxTokens": 1706,
+      "answer": "You paid for 40 taxi rides through \"TAXI MIEJSKIE\"."
+    },
+    {
+      "id": "merch-bakery-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "find_values"
+      ],
+      "mode": "tools",
+      "ms": 22026,
+      "approxTokens": 1707,
+      "answer": "Płaciłeś w piekarni 128 razy.  \n\nW danych znajduje się tylko jedna wpisana nazwa: **PIEKARNIA ZIARNO**, która wystąpiła 128 razy."
+    },
+    {
+      "id": "merch-energy-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 35151,
+      "approxTokens": 1775,
+      "answer": "In 2024, you paid a total of **3,026.33 PLN** to the energy supplier (\"DOSTAWCA ENERGII\").  \n\nDate range: 2024-01-01 to 2024-12-31."
+    },
+    {
+      "id": "merch-spelling-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "find_values"
+      ],
+      "mode": "tools",
+      "ms": 17827,
+      "approxTokens": 1715,
+      "answer": "In your data, the pizzeria you go to is spelled **\"PIZZERIA SŁONECZNA\"**. This appears 62 times in your transactions."
+    },
+    {
+      "id": "merch-pharmacy-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:total_spent"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 36322,
+      "approxTokens": 1760,
+      "answer": "W aptece (kategoria \"Zdrowie i uroda\") wydałeś 2197,43 PLN.  \n\nTo dotyczy wszystkich transakcji w tej kategorii w okresie od 2024-01-01 do 2025-03-17."
+    },
+    {
+      "id": "cat-groceries-feb-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:total_spent"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 42898,
+      "approxTokens": 1802,
+      "answer": "I'll find out how much you spent on groceries in February 2025. Let me check the transactions for that period.\n\n\n\nDate range: February 1, 2025 to February 29, 2025\n\nYou spent a total of 2,379.99 PLN on groceries in February 2025. This includes 42 transactions in the \"Artykuły spożywcze\" (Groceries) category."
+    },
+    {
+      "id": "cat-transport-2024-pl",
+      "category": "categories",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 29198,
+      "approxTokens": 1765,
+      "answer": "W 2024 roku wydałeś na transport **5448,99 PLN**.\n\n**Data range used:** 2024-01-01 do 2024-12-31."
+    },
+    {
+      "id": "cat-top-feb-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 47025,
+      "approxTokens": 1980,
+      "answer": "I'll find your biggest spending category from last month. Since today is 2025-03-20, last month would be February 2025 (2025-02-01 to 2025-02-28).\n\n\n\nDate range: 2025-02-01 to 2025-02-28\n\nYour biggest spending category last month was **Mieszkanie** with a total of 2,850.00 PLN spent."
+    },
+    {
+      "id": "cat-restaurants-mar-pl",
+      "category": "categories",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 29176,
+      "approxTokens": 1767,
+      "answer": "W marcu (2025-03-01 do 2025-03-20) wydałeś 72,63 PLN na restauracje i kawiarnie."
+    },
+    {
+      "id": "cat-top3-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:groups.2.key"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 56509,
+      "approxTokens": 2019,
+      "answer": "I'll find the three categories where you spend the most overall. Let me check the transaction data for category spending.\n\n\n\nBased on the transaction data from 2024-01-01 to 2025-03-17, your three largest spending categories are:\n\n1. **Mieszkanie** (Housing) - ₴42,750.00  \n2. **Artykuły spożywcze** (Food \u0026 Groceries) - ₴19,771.41  \n3. **Transport** (Transportation) - ₴6,961.79  \n\nThese categories represent the top three in terms of total spending. All amounts are in Polish Złoty (PLN)."
+    },
+    {
+      "id": "grp-holiday-en",
+      "category": "groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 41448,
+      "approxTokens": 1798,
+      "answer": "I'll find out how much the seaside holiday cost you by looking at transactions with the group label \"Wakacje nad morzem\".\n\n\n\nThe seaside holiday (\"Wakacje nad morzem\") cost you a total of 3,126.90 PLN. \n\nThis total is based on 54 transactions from January 1, 2024, to March 17, 2025. There were no income transactions in this group."
+    },
+    {
+      "id": "grp-remont-pl",
+      "category": "groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 26805,
+      "approxTokens": 1756,
+      "answer": "Wszystkie transakcje z grupy \"Remont\" (łącznie 15 transakcji) kosztowały 758,29 PLN."
+    },
+    {
+      "id": "grp-holiday-count-pl",
+      "category": "groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 32281,
+      "approxTokens": 1753,
+      "answer": "W grupie „Wakacje nad morzem” jest 54 transakcji.  \nCałkowity wydatek wynosi 3126,90 PLN, a dochód to 0 PLN.  \nNetto: -3126,90 PLN.  \n\nData range: 2024-01-01 do 2025-03-17."
+    },
+    {
+      "id": "grp-holiday-food-en",
+      "category": "groups",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:total_spent"
+      ],
+      "tools": [
+        "search_transactions",
+        "find_values",
+        "find_values",
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 208299,
+      "approxTokens": 6320,
+      "answer": "I'll find out how much was spent on groceries during the seaside holiday. Let me break this down:\n\nFirst, I need to identify the relevant transactions - groceries during a specific trip.\n\n\n\nI couldn't find any transactions matching \"groceries\" during the \"Wakacje nad morzem\" (seaside holiday) period. \n\nThe search returned 0 matched transactions with a total spent of 0 PLN. \n\nThis could mean either:\n- The groceries category is not properly spelled in the data\n- The seaside holiday group doesn't contain any grocery-related transactions\n- There are no grocery purchases during this trip in the data\n\nI should check if \"groceries\" is the correct term for the category in the bank data, or if there's another way to identify grocery purchases. Let me look up the actual category names for groceries.\n\n\n\n\nI couldn't find any category names containing \"groceries\" in the data. \n\nThis suggests that either:\n- The category name for groceries is different in the bank data (e.g., \"Artykuły spożywcze\" might be the actual category)\n- There are no grocery-related transactions during the seaside holiday\n\nLet me check what the actual grocery category is in the data by looking at the available categories.\n\n\n\n\nI've found that the actual category for groceries in the data is \"Artykuły spożywcze\" (which translates to \"Food items\").\n\nNow I'll search for transactions in the \"Artykuły spożywcze\" category during the \"Wakacje nad morzem\" (seaside holiday) period.\n\n\n\n\nDuring the \"Wakacje nad morzem\" (seaside holiday) period, you spent a total of 317.57 PLN on groceries (category \"Artykuły spożywcze\").\n\nThe transactions were:\n- 98.07 PLN on 2025-03-17 at PIEKARNIA ZIARNO WARSZAWA\n- 57.12 PLN on 2025-03-09 at MARKET NA ROGU WARSZAWA\n- 15.72 PLN on 2025-01-31 at PIEKARNIA ZIARNO WARSZAWA\n- 101.80 PLN on 2025-01-16 at DELIKATESY POD LIPĄ WARSZAWA\n- 44.86 PLN on 2025-01-09 at DELIKATESY POD LIPĄ WARSZAWA\n\nDate range: 2025-01-01 to 2025-03-20"
+    },
+    {
+      "id": "rank-payees-2024-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 61275,
+      "approxTokens": 1841,
+      "answer": "I'll find your top 3 payees by spending in 2024. Let me retrieve that data.\n\n\n\nBased on transactions from 2024-01-01 to 2024-12-31, your top 3 payees by spending are:\n\n| Payee | Total Spent (PLN) |\n|-------|-------------------|\n| WSPÓLNOTA MIESZKANIOWA | 34,200.00 |\n| DELIKATESY POD LIPĄ | 5,631.07 |\n| MARKET NA ROGU | 5,412.54 |\n\nNote: The data shows only the top 3 payees, with 20 other payees omitted from this list. All amounts are in PLN."
+    },
+    {
+      "id": "rank-month-2024-pl",
+      "category": "rankings and trends",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:argmax(groups,spent).spent"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 44971,
+      "approxTokens": 1996,
+      "answer": "W miesiącu 2024 roku, w którym wydałem najwięcej, to **kwiecień (2024-04)**, z całkowitym wydatkiem w wysokości **7 119,27 PLN**.  \n\nData range: 2024-01-01 do 2024-12-31."
+    },
+    {
+      "id": "rank-weekday-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 86059,
+      "approxTokens": 1965,
+      "answer": "I will determine on which day of the week you spend the most by analyzing your transaction data. To do this, I'll use the `aggregate_transactions` tool with a group_by parameter of \"weekday\" to get spending totals by day of the week.\n\nFirst, I'll run the aggregation to get spending by weekday.\n\n\n\nThe data shows your spending by day of the week, based on transactions from 2024-01-01 to 2025-03-17.\n\nYou spend the most on **Sunday**, with a total of **15,813.01 PLN**.\n\nHere's a breakdown of your weekly spending:\n\n| Day       | Amount (PLN) |\n|-----------|--------------|\n| Monday    | 12,575.84    |\n| Tuesday   | 16,385.46    |\n| Wednesday | 11,600.73    |\n| Thursday  | 13,412.75    |\n| Friday    | 13,738.86    |\n| Saturday  | 13,487.81    |\n| Sunday    | **15,813.01** |\n\nDate range: 2024-01-01 to 2025-03-17."
+    },
+    {
+      "id": "rank-largest-feb-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:rows.0.amount"
+      ],
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 63329,
+      "approxTokens": 1779,
+      "answer": "I'll find your largest single expense in February 2025. Let me search for transactions in that month.\n\n\n\nI couldn't find any expenses in February 2025. The search returned 0 transactions with the specified criteria.\n\nThis could be because:\n- February 2025 has no transactions in your data (the latest data available is 2025-03-17)\n- There are no expenses in that month\n- The search criteria might need adjustment\n\nSince the data range ends at 2025-03-17, and February 2025 falls within that range, I would expect to see some transactions. However, the search returned no results.\n\nI recommend checking if there are any transactions in early March 2025, or if there might be a data gap for February 2025."
+    },
+    {
+      "id": "rank-largest-2025-pl",
+      "category": "rankings and trends",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:rows.0.amount",
+        "0:rows.1.amount",
+        "0:rows.2.amount"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 52880,
+      "approxTokens": 1767,
+      "answer": "W 2025 roku (od 2025-01-01 do 2025-03-20) Twoje 3 największe wydatki to:\n\n| Wydatek | Kwota (PLN) |\n|--------|-------------|\n| DELIKATESY POD LIPĄ | 3 980,00 |\n| MARKET NA ROGU | 2 450,00 |\n| PIEKARNIA ZIARNO | 1 966,59 |\n\n*Uwaga: Dane są z 152 transakcji. Wydatki są uporządkowane według wartości.*"
+    },
+    {
+      "id": "trend-months-2025-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 45114,
+      "approxTokens": 1801,
+      "answer": "Date range: 2025-01-01 to 2025-03-20\n\nSpending per month (PLN):\n- January 2025: 6,675.15\n- February 2025: 5,569.62\n- March 2025: 5,151.82\n\nTotal spent in 2025 (up to March 20): 17,396.59 PLN."
+    },
+    {
+      "id": "cmp-jan-feb-en",
+      "category": "comparisons",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 92413,
+      "approxTokens": 1981,
+      "answer": "I'll check your spending for January and February 2025 to determine which month had higher expenses.\n\nFirst, I need to identify the date ranges for these months:\n\n- January 2025: 2025-01-01 to 2025-01-31\n- February 2025: 2025-02-01 to 2025-02-28\n\nI'll use the aggregate_transactions tool to get the total spending for each month.\n\n\n\nDate range: January 2025 (2025-01-01 to 2025-01-31) and February 2025 (2025-02-01 to 2025-02-28).\n\nIn January 2025, you spent 6,675.15 PLN.\nIn February 2025, you spent 5,569.62 PLN.\n\nYou spent more in January 2025 than in February 2025."
+    },
+    {
+      "id": "cmp-transport-pl",
+      "category": "comparisons",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 66307,
+      "approxTokens": 1902,
+      "answer": "Z porównania wydatków na transport w styczniu i lutym 2025:\n\n- **Styczeń 2025 (01.01 – 01.31)**:  \n  Całkowity wydatek: **433,71 PLN** (8 transakcji)\n\n- **Luty 2025 (02.01 – 02.28)**:  \n  Całkowity wydatek: **649,77 PLN** (9 transakcji)\n\nW lutym wydatki na transport były o **216,06 PLN** wyższe niż w styczniu."
+    },
+    {
+      "id": "cmp-income-q1-en",
+      "category": "comparisons",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:total_income",
+        "1:total_income"
+      ],
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions",
+        "aggregate_transactions",
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 339825,
+      "approxTokens": 8189,
+      "answer": "I'll compare your total income in Q1 2024 and Q1 2025. First, I need to identify the date ranges for these quarters.\n\nQ1 2024: 2024-01-01 to 2024-03-31\nQ1 2025: 2025-01-01 to 2025-03-31\n\nSince the data only goes up to 2025-03-17, I'll use the available data for Q1 2025 up to that date.\n\nI'll use the aggregate_transactions tool to get the total income for each quarter.\n\n\n\nI see that I need to filter by specific date ranges for Q1 2024 and Q1 2025. Let me get the income data for each quarter separately.\n\nFirst, I'll get the total income for Q1 2024 (2024-01-01 to 2024-03-31).\n\n\n\n\nI notice that the data shows only 15 transactions with total income of 141,197 PLN for the entire period from 2024-01-01 to 2025-03-17. This suggests that the income data is not properly segmented by quarter.\n\nLet me try to get the income data specifically for Q1 2024 (2024-01-01 to 2024-03-31) and Q1 2025 (2025-01-01 to 2025-03-17) by filtering with date ranges.\n\n\n\n\nI see that the data shows only 15 transactions with total income of 141,197 PLN for the entire period from 2024-01-01 to 2025-03-17. This suggests that the income data is not properly segmented by quarter.\n\nLet me try to get the income data specifically for Q1 2024 (2024-01-01 to 2024-03-31) and Q1 2025 (2025-01-01 to 2025-03-17) by filtering with date ranges.\n\n\n\n\nI notice that no matter how I query, the data shows only 15 transactions with a total income of 141,197 PLN for the entire period from 2024-01-01 to 2025-03-17. This suggests that the income data is not properly segmented by quarter.\n\nLet me try to get the income data for Q1 2024 specifically (2024-01-01 to 2024-03-31) with a date filter.\n\n\n\n\n\nI see that I'm not able to get the income data segmented by quarter. The data shows only 15 transactions with a total income of 141,197 PLN for the entire period from 2024-01-01 to 2025-03-17.\n\nThis suggests that either:\n1. The income data is not properly segmented by quarter in the database\n2. There is no income data in the period I'm looking for\n\nSince I cannot retrieve the specific income data for Q1 2024 and Q1 2025 separately, I cannot provide a comparison between these quarters.\n\nThe available data shows a total income of 141,197 PLN from 2024-01-01 to 2025-03-17, but I cannot break this down by quarter. Therefore, I cannot compare the total income for Q1 2024 and Q1 2025."
+    },
+    {
+      "id": "items-coffee-en",
+      "category": "items vs transactions",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:matched"
+      ],
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 43206,
+      "approxTokens": 1770,
+      "answer": "I'll help you find out how many coffees you bought at Kawiarnia Podwórko. Let me check the transactions data for this specific merchant and product.\n\n\n\nI checked the transactions data for purchases at Kawiarnia Podwórko containing \"coffee\" in the description, but found no matching transactions. \n\nThe search returned 0 results, meaning there are no recorded transactions at Kawiarnia Podwórko that include \"coffee\" in the description or title.\n\nNote: This doesn't necessarily mean you didn't buy coffee there - it could be that the description doesn't contain the word \"coffee\" or that the transaction was categorized differently."
+    },
+    {
+      "id": "items-bread-pl",
+      "category": "items vs transactions",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:matched"
+      ],
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 24053,
+      "approxTokens": 1725,
+      "answer": "W danych nie ma żadnej transakcji zawierającej \"bułka\" w piekarni. Nie ma żadnych wpisów o kupowaniu bułek w piekarniach."
+    },
+    {
+      "id": "inc-2024-en",
+      "category": "income and savings",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:total_income"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 35451,
+      "approxTokens": 1754,
+      "answer": "In 2024, your total income was **141,197 PLN**.\n\nThis total is derived from 15 transactions, all of which were income (positive amounts), and no expenses were included. The data covers the full year 2024 (from 2024-01-01 to 2024-12-31)."
+    },
+    {
+      "id": "net-feb-pl",
+      "category": "income and savings",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:net"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 52677,
+      "approxTokens": 1757,
+      "answer": "W lutym 2025 roku zaoszczędziłeś 0 PLN.  \n\n**Data range used:** 2025-02-01 do 2025-02-28.  \n- Całkowite wydatki: 5 569,62 PLN  \n- Przychody: 0 PLN  \n- Netto: -5 569,62 PLN (czyli wydatki bez przychodu).  \n\nZatem nie było żadnych przychódów, a wydatki były tylko w kategorii wydatków. W związku z tym nie zaoszczędzono nic."
+    },
+    {
+      "id": "inc-salary-mar-en",
+      "category": "income and savings",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 38260,
+      "approxTokens": 1787,
+      "answer": "I'll find out how much salary you received in March 2025. Let me check the transactions for that period.\n\n\n\nIn March 2025 (2025-03-01 to 2025-03-31), you received a total of 9,323.00 PLN from salary income. This is the only income transaction in that period."
+    },
+    {
+      "id": "rec-list-en",
+      "category": "overview and recurring",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:payments.0.payee"
+      ],
+      "tools": [],
+      "mode": "tools",
+      "ms": 38717,
+      "approxTokens": 816,
+      "answer": "I don't have access to any data about recurring payments or subscriptions in your bank transactions. The available data includes categories like \"Artykuły spożywcze\", \"Restauracje i kawiarnie\", \"Transport\", etc., and payees such as \"DELIKATESY POD LIPĄ\" or \"PIEKARNIA ZIARNO\", but no explicit information about recurring subscriptions or automatic payments.\n\nTo identify recurring payments, you would need to look for transactions with:\n- Regular intervals (e.g., every month or week)\n- Consistent payees or descriptions (e.g., \"Netflix\", \"Insurance\", \"Internet\")\n- Fixed amounts\n\nIf you'd like, I can help search for specific payees or categories that might indicate subscriptions. Let me know!"
+    },
+    {
+      "id": "rec-internet-pl",
+      "category": "overview and recurring",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:find(payments,payee=OPERATOR INTERNETU).yearly_cost"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 37918,
+      "approxTokens": 1765,
+      "answer": "W Twoich danych kategoria „Zdrowie i uroda” ma 35 transakcji, łączna kwota wydatków to 2197,43 PLN. Brak przychodu w tej kategorii.  \n\n**Data range:** 2024-01-01 do 2025-03-17."
+    },
+    {
+      "id": "month-progress-pl",
+      "category": "overview and recurring",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:spent"
+      ],
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 113568,
+      "approxTokens": 2000,
+      "answer": "I'll help you compare your current month with the previous month. Let me analyze your transaction data for both months.\n\nFirst, I need to determine the exact date ranges for this month and last month.\n\nThis month (March 2025) runs from 2025-01-01 to 2025-03-20 (today).\nLast month (February 2025) runs from 2025-02-01 to 2025-02-29.\n\nI'll get the total spending and income for both months to compare.\n\n\n\nDate range used: March 2025 (2025-01-01 to 2025-03-20) vs February 2025 (2025-02-01 to 2025-02-29).\n\nHere's how your spending compares:\n\n- February 2025: Total spent = 10,721.44 PLN (82 transactions)\n- March 2025: Total spent = 17,396.59 PLN (152 transactions)\n\nYour spending in March 2025 is significantly higher than in February 2025, increasing by approximately 6,675.15 PLN (about 62% more).\n\nThis suggests a notable increase in spending during March compared to February. The data shows no income transactions in either month."
+    },
+    {
+      "id": "month-summary-en",
+      "category": "overview and recurring",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:total_spent",
+        "0:total_income"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 60436,
+      "approxTokens": 1804,
+      "answer": "I'll provide a summary of February 2025 transactions. Since the data only goes up to March 17, 2025, I'll use the full February 2025 period (2025-02-01 to 2025-02-29).\n\n\n\nDate range: 2025-02-01 to 2025-02-29\n\nSummary:\n- Total transactions: 84\n- Total spent: 10,721.44 PLN\n- Total income: 18,903 PLN\n- Net balance: 8,181.56 PLN (positive, indicating income exceeds spending)\n\nThis shows a positive financial flow in February 2025, with income significantly higher than expenses."
+    },
+    {
+      "id": "budget-now-pl",
+      "category": "budgets and groups",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:categories.0.category"
+      ],
+      "tools": [],
+      "mode": "tools",
+      "ms": 50515,
+      "approxTokens": 815,
+      "answer": "Aby odpowiedzieć na Twoje pytanie, muszę sprawdzić, czy Twoje wydatki w tym miesiącu przekraczają ustawiony budżet. Jednak w Twoim zapytaniu nie podano żadnego konkretnego budżetu (np. kwoty miesięcznej).  \n\nMożesz mi powiedzieć, ile miesięcznie chcesz wydawać? Następnie przeanalizuję Twoje transakcje z tego miesiąca (styczeń 2025) i pokażę, czy przekraczasz ten limit.  \n\nDane są dostępne do 2025-03-17.  \n**Data zakresu:** 2025-01-01 do 2025-03-20 (ten miesiąc – styczeń 2025).  \n\nProszę o podanie kwoty budżetu."
+    },
+    {
+      "id": "budget-feb-en",
+      "category": "budgets and groups",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:categories.0.category"
+      ],
+      "tools": [],
+      "mode": "tools",
+      "ms": 29469,
+      "approxTokens": 821,
+      "answer": "I don't have access to a defined \"budget\" for any category, nor do I have data on budget limits or spending thresholds. Therefore, I cannot determine which categories went over budget or by how much in February 2025.\n\nAdditionally, the data available only includes transactions from January 1, 2024, to March 17, 2025, and does not contain budget information or financial targets for any category.\n\nIf you have a specific budget amount or a different query (e.g., total spending per category), I can help with that."
+    },
+    {
+      "id": "grp-holiday-days-en",
+      "category": "budgets and groups",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:days",
+        "0:spent_per_day"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 118208,
+      "approxTokens": 2913,
+      "answer": "I need to find out how many days the seaside holiday lasted and what was spent per day. This requires looking at transactions with the user-defined group \"Wakacje nad morzem\" (seaside holiday).\n\nFirst, I'll check how many transactions are in this group to determine the duration.\n\n\n\nI need to determine how many days the seaside holiday lasted and what was spent per day. The data shows transactions grouped by day under the \"Wakacje nad morzem\" group.\n\nFrom the result, I can see that there are 54 days with transactions (each day has one transaction). The total amount spent across all these days is 3,126.90 PLN.\n\nTo find the average daily spending:\n- Total spent: 3,126.90 PLN\n- Number of days: 54\n\nAverage daily spending = 3,126.90 / 54 = 57.94 PLN\n\nThe date range used is from 2024-01-08 to 2025-03-17.\n\n**Answer:**\n- The seaside holiday lasted 54 days.\n- Average spending per day: 57.94 PLN."
+    },
+    {
+      "id": "grp-remont-payee-pl",
+      "category": "budgets and groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 49972,
+      "approxTokens": 1803,
+      "answer": "I'll find where you spent the most during your \"remont\" (renovation) period. Let me check the transaction data for this specific group.\n\n\n\nW ciągu okresu od 2024-01-01 do 2025-03-17, najwięcej wydałeś na **CENTRUM OGRODNICZE** w ramach grupy \"Remont\", gdzie 15 transakcji łącznie wydały 758,29 PLN.\n\nData range: 2024-01-01 to 2025-03-17"
+    },
+    {
+      "id": "prop-category-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Apply|confirm|review|card"
+      ],
+      "tools": [],
+      "mode": "tools",
+      "ms": 19033,
+      "approxTokens": 821,
+      "answer": "I cannot create or modify categories in the bank transaction data. This task requires changes to the database or financial app configuration, which is outside the scope of the available tools and functions.\n\nIf you'd like, I can help analyze existing transactions related to \"OPERATOR INTERNETU\" or provide a list of such payments. Let me know how you'd like to proceed!"
+    },
+    {
+      "id": "prop-rule-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Zastosuj|Apply|potwierdź|zatwierdź|kart"
+      ],
+      "tools": [],
+      "mode": "tools",
+      "ms": 32318,
+      "approxTokens": 823,
+      "answer": "Nie mogę utworzyć ani zmienić reguł kategorii w danych bankowych, ponieważ to działanie poza moją funkcjonalnością. Kategorie w danych są przypisane automatycznie na podstawie nazw transakcji i nie mogą być edytowane lub przypisane ręcznie.\n\nJeśli chcesz, mogę sprawdzić, ile transakcji z KLUB FITNESS RUCH znajduje się w kategorii Sport, lub pokazać, jak wygląda ta kategoria w danych. Czy chcesz, żebym to zrobił?"
+    },
+    {
+      "id": "prop-group-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Apply|confirm|review|card"
+      ],
+      "tools": [],
+      "mode": "tools",
+      "ms": 22243,
+      "approxTokens": 816,
+      "answer": "I cannot label transactions with a group because that requires modifying the data, which is not supported by the available tools or functions. The current data and tools only allow querying and analyzing existing transactions, not updating or reassigning transaction groups.\n\nIf you'd like, I can help you find or list your TEATR MAŁY visits or analyze spending in that category. Let me know how you'd like to proceed!"
+    }
+  ]
+}

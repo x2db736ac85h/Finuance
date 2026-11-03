@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -54,6 +55,56 @@ func joined(ds []Delta) (content, reasoning string) {
 		r.WriteString(d.Reasoning)
 	}
 	return c.String(), r.String()
+}
+
+// TestRecordedOllamaQwen3 replays two streams recorded with `finuance admin llm-probe` against
+// Ollama 0.40 and qwen3:4b on a small GPU (Phase 18.5; the probe's made-up data, never a user's):
+// thinking is on by default and streams thousands of characters in Ollama's reasoning field before
+// the tool call or the answer. The expected calls and answer were read from the raw stream with jq.
+func TestRecordedOllamaQwen3(t *testing.T) {
+	cases := []struct {
+		name, file, content, reasoningStart string
+		reasoningRunes                      int
+		calls                               []ToolCall
+		stop                                string
+	}{
+		{name: "tool call after long reasoning", file: "openai-ollama-qwen3-toolcall.sse",
+			reasoningStart: "Okay, let's see. The user is asking how much they ", reasoningRunes: 2950,
+			calls: []ToolCall{{ID: "call_sqm7qmun", Name: "aggregate_transactions",
+				Arguments: `{"category":"Artykuły spożywcze","date_from":"2025-02-01","date_to":"2025-02-28","group_by":"none","type":"expense"}`}},
+			stop: "tool_calls"},
+		{name: "answer after the tool result", file: "openai-ollama-qwen3-answer.sse",
+			content:        "In February 2025 (2025-02-01 to 2025-02-28), you spent **1095.12 PLN** on groceries across 58 transactions.",
+			reasoningStart: "Okay, let's see. The user asked how much they spen", reasoningRunes: 2022, stop: "stop"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			srv, _ := serve(t, 200, "text/event-stream; charset=utf-8", c.file)
+			res, deltas, err := run(t, client(OpenAI, srv.URL), Request{Model: "qwen3:4b"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Content != c.content {
+				t.Errorf("content %q, want %q", res.Content, c.content)
+			}
+			if !strings.HasPrefix(res.Reasoning, c.reasoningStart) || utf8.RuneCountInString(res.Reasoning) != c.reasoningRunes {
+				t.Errorf("reasoning (%d runes) %.60q…, want %d runes starting %q",
+					utf8.RuneCountInString(res.Reasoning), res.Reasoning, c.reasoningRunes, c.reasoningStart)
+			}
+			if strings.Contains(res.Content, "<think>") || strings.Contains(res.Content, "</think>") {
+				t.Errorf("thinking leaked into the answer: %q", res.Content)
+			}
+			if dc, dr := joined(deltas); dc != res.Content || dr != res.Reasoning {
+				t.Errorf("the streamed deltas differ from the result")
+			}
+			if diff := cmp.Diff(c.calls, res.ToolCalls); diff != "" {
+				t.Errorf("tool calls (-want +got):\n%s", diff)
+			}
+			if res.StopReason != c.stop {
+				t.Errorf("stop %q, want %q", res.StopReason, c.stop)
+			}
+		})
+	}
 }
 
 func TestRecordedStreams(t *testing.T) {

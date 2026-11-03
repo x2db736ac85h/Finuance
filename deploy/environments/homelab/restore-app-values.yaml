@@ -1,0 +1,20 @@
+# The temporary app on the restored database (tools/homelab-drill.sh restore): no ingress (only the
+# host's own name has a certificate), reached through port-forwards; the image tag comes from
+# values.yaml (--set image.tag=…). Sign-up stays off: the drill makes its users with the admin CLI.
+publicOrigin: http://localhost:18080
+ingress:
+  enabled: false
+imagePullSecrets:
+  - name: ghcr-pull
+allowSignup: false
+trustedProxies: "10.42.0.0/16"
+database:
+  host: finuance-db-rw
+api:
+  replicas: 1
+  autoscaling:
+    enabled: false
+web:
+  replicas: 1
+assistant:
+  enabled: false

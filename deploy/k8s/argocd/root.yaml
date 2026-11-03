@@ -8,7 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    repoURL: git@github.com:x2db736ac85h/Finuance.git
+    # While a phase is being tried on the cluster, the apps follow its branch; everything that reaches
+    # main follows main again (tools/check-helm.sh fails otherwise).
     targetRevision: main
     path: deploy/k8s/argocd/apps
   destination:

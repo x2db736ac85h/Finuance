@@ -1,0 +1,187 @@
+# RustFS, the S3-compatible bucket for the database backups inside the cluster (ADR 0022; Argo CD
+# application deploy/k8s/argocd/apps/rustfs.yaml, namespace s3). Hardened like the app's pods and
+# the CI rehearsal's stand-in (non-root, read-only root, no capabilities, RuntimeDefault seccomp).
+# Its keys come from the SealedSecret `rustfs` (tools/seal-secrets.sh <env> backup-store).
+# It shares the node's disk with the database: it protects against mistakes and pod or volume
+# loss, not against losing the disk (docs/RUNBOOK.md).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustfs-data
+  namespace: s3
+  annotations:
+    # The backups live here: never pruned or deleted by Argo CD.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  namespace: s3
+  labels: { app.kubernetes.io/name: rustfs }
+spec:
+  replicas: 1
+  # one pod owns the ReadWriteOnce volume
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: rustfs }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: rustfs }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001 # the image's rustfs user
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
+          args: ["/data"]
+          envFrom:
+            - secretRef: { name: rustfs }
+          ports:
+            - { name: s3, containerPort: 9000 }
+          readinessProbe:
+            tcpSocket: { port: s3 }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: s3 }
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 1Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: logs, mountPath: /logs }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: rustfs-data }
+        - name: logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: s3
+spec:
+  selector: { app.kubernetes.io/name: rustfs }
+  ports:
+    - { name: s3, port: 9000, targetPort: s3 }
+---
+# Creates the backup bucket once (idempotent: does nothing when it exists). Runs after every sync.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rustfs-bucket
+  namespace: s3
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: rustfs-bucket }
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: bucket
+          image: amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868ddee1f611b73be795a9cc2e706bfd
+          command: ["/bin/sh", "-c"]
+          args:
+            - aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || aws s3 mb "s3://$BUCKET"
+          env:
+            - { name: BUCKET, value: finuance-backups }
+            - { name: AWS_ENDPOINT_URL, value: "http://rustfs.s3.svc:9000" }
+            - { name: AWS_DEFAULT_REGION, value: us-east-1 }
+            - { name: HOME, value: /tmp }
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: { secretKeyRef: { name: rustfs, key: RUSTFS_ACCESS_KEY } }
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: rustfs, key: RUSTFS_SECRET_KEY } }
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+# Default deny. RustFS takes S3 requests only from PostgreSQL instance pods (the Barman Cloud
+# plugin's sidecar archives WAL and takes backups from there; finuance-restore is the restore
+# drill's namespace) and from the bucket job. It opens no connections itself.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rustfs
+  namespace: s3
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: rustfs }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - { key: kubernetes.io/metadata.name, operator: In, values: [finuance, finuance-restore] }
+          podSelector:
+            matchExpressions:
+              - { key: cnpg.io/cluster, operator: Exists }
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: rustfs-bucket }
+      ports:
+        - { port: 9000, protocol: TCP }
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rustfs-bucket
+  namespace: s3
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: rustfs-bucket }
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: rustfs }
+      ports:
+        - { port: 9000, protocol: TCP }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
