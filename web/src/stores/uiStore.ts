@@ -24,6 +24,8 @@ export const NARROW_PX = 900;
 
 export type UiState = {
   themePref: ThemePref;
+  /** Colour theme id ('' = the instance's default). */
+  themeId: string;
   uiScalePref: UiScalePref;
   mode: Mode;
   /** The user's choice (persisted as sbOpen). Hidden by default (v7). */
@@ -43,6 +45,7 @@ export type UiState = {
   keysOpen: boolean;
 
   setTheme: (t: ThemePref) => void;
+  setThemeId: (id: string) => void;
   setUiScale: (s: UiScalePref) => void;
   /** The title-bar toggle: shows or hides the sidebar and forgets any auto-collapse. */
   toggleSidebar: () => void;
@@ -68,6 +71,7 @@ export type UiState = {
 
 export const uiDefaults = {
   themePref: 'system',
+  themeId: '',
   uiScalePref: 'auto',
   mode: 'table',
   sidebarOpen: false,
@@ -88,6 +92,9 @@ export const useUi = create<UiState>()((set) => ({
   ...uiDefaults,
   setTheme: (themePref) => {
     set({ themePref });
+  },
+  setThemeId: (themeId) => {
+    set({ themeId });
   },
   setUiScale: (uiScalePref) => {
     set({ uiScalePref });
@@ -145,6 +152,7 @@ export const useUi = create<UiState>()((set) => ({
   hydrate: (p, narrow) => {
     set((s) => ({
       themePref: p.theme ?? s.themePref,
+      themeId: p.themeId ?? s.themeId,
       uiScalePref: p.ui ?? s.uiScalePref,
       mode: p.mode ?? s.mode,
       sidebarOpen: p.sbOpen ?? s.sidebarOpen,
@@ -167,6 +175,7 @@ export const useUi = create<UiState>()((set) => ({
 export function collectUi(s: UiState): Omit<PrefsDoc, 'v' | 'views'> {
   return {
     theme: s.themePref,
+    themeId: s.themeId,
     ui: s.uiScalePref,
     vizH: s.paneHeight,
     noViz: !s.vizOpen,

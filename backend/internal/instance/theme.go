@@ -21,9 +21,9 @@ var (
 	// ContrastPairs are the text colours and the surfaces they are drawn on. A surface "a/b" is
 	// the translucent token a laid over b.
 	ContrastPairs = []ContrastPair{
-		{FG: "text", BG: []string{"bg", "panel", "elev", "input", "sel/panel"}},
+		{FG: "text", BG: []string{"bg", "panel", "elev", "input", "sel/bg"}},
 		{FG: "muted", BG: []string{"bg", "panel", "elev"}},
-		{FG: "accent", BG: []string{"bg", "panel", "elev", "sel/panel", "accent-soft/panel"}},
+		{FG: "accent", BG: []string{"bg", "panel", "elev", "sel/bg", "accent-soft/bg"}},
 		{FG: "on-accent", BG: []string{"accent-solid"}},
 		{FG: "pos", BG: []string{"bg", "panel"}},
 		{FG: "neg", BG: []string{"bg", "panel"}},

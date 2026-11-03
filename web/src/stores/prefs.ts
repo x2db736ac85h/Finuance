@@ -65,6 +65,8 @@ export type PersistedView = {
 export type PrefsDoc = {
   v: 1;
   theme: ThemePref;
+  /** Colour theme (Phase 19): a built-in or approved theme id; '' = the instance's default. */
+  themeId: string;
   ui: UiScalePref;
   /** Insights pane height, a CSS length ('' = default, half the window). */
   vizH: string;
@@ -202,6 +204,8 @@ export function parsePrefs(raw: unknown): ParsedPrefs {
   const out: ParsedPrefs = {};
   const theme = parseTheme(raw['theme']);
   if (theme) out.theme = theme;
+  if (typeof raw['themeId'] === 'string' && /^([a-z0-9][a-z0-9-]{0,31})?$/.test(raw['themeId']))
+    out.themeId = raw['themeId'];
   const ui = parseScale(raw['ui']);
   if (ui !== undefined) out.ui = ui;
   if (typeof raw['vizH'] === 'string' && /^(\d+(\.\d+)?px)?$/.test(raw['vizH'])) out.vizH = raw['vizH'];

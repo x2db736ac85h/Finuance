@@ -20,9 +20,9 @@
     "logo-b"
   ],
   "pairs": [
-    { "fg": "text", "bg": ["bg", "panel", "elev", "input", "sel/panel"] },
+    { "fg": "text", "bg": ["bg", "panel", "elev", "input", "sel/bg"] },
     { "fg": "muted", "bg": ["bg", "panel", "elev"] },
-    { "fg": "accent", "bg": ["bg", "panel", "elev", "sel/panel", "accent-soft/panel"] },
+    { "fg": "accent", "bg": ["bg", "panel", "elev", "sel/bg", "accent-soft/bg"] },
     { "fg": "on-accent", "bg": ["accent-solid"] },
     { "fg": "pos", "bg": ["bg", "panel"] },
     { "fg": "neg", "bg": ["bg", "panel"] }

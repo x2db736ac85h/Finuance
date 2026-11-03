@@ -80,6 +80,13 @@ describe('parsePrefs', () => {
     expect(parsePrefs({ ui: 'auto' }).ui).toBe('auto');
   });
 
+  it('keeps a colour theme id and drops one that is not an id', () => {
+    expect(parsePrefs({ themeId: 'fjord' }).themeId).toBe('fjord');
+    expect(parsePrefs({ themeId: '' }).themeId).toBe('');
+    expect(parsePrefs({ themeId: 'Bad Theme' }).themeId).toBeUndefined();
+    expect(parsePrefs({ themeId: 7 }).themeId).toBeUndefined();
+  });
+
   it('returns nothing for a non-object', () => {
     expect(parsePrefs(null)).toEqual({});
     expect(parsePrefs([1])).toEqual({});
