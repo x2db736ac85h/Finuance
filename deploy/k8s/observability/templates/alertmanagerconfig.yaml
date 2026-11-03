@@ -1,3 +1,19 @@
+{{- /* The one e-mail receiver, shared by the routes below. */ -}}
+{{- define "obs.emailReceiver" -}}
+- name: email
+  emailConfigs:
+    - to: {{ .to | quote }}
+      from: {{ .from | quote }}
+      smarthost: {{ .smarthost | quote }}
+      {{- with .authUsername }}
+      authUsername: {{ . | quote }}
+      authPassword:
+        name: {{ $.passwordSecret.name }}
+        key: {{ $.passwordSecret.key }}
+      {{- end }}
+      requireTLS: {{ .requireTLS }}
+      sendResolved: true
+{{- end }}
 {{- with .Values.alerting.email }}
 {{- if .enabled }}
 {{- if not (and .to .from .smarthost) }}
@@ -31,18 +47,67 @@ spec:
         groupWait: 10s
         repeatInterval: 1h
   receivers:
-    - name: email
-      emailConfigs:
-        - to: {{ .to | quote }}
-          from: {{ .from | quote }}
-          smarthost: {{ .smarthost | quote }}
-          {{- with .authUsername }}
-          authUsername: {{ . | quote }}
-          authPassword:
-            name: {{ $.Values.alerting.email.passwordSecret.name }}
-            key: {{ $.Values.alerting.email.passwordSecret.key }}
-          {{- end }}
-          requireTLS: {{ .requireTLS }}
-          sendResolved: true
+    {{- include "obs.emailReceiver" . | nindent 4 }}
+{{- with $.Values.alerting.platform }}
+{{- if .severities }}
+---
+# The monitoring stack's own alerts (kube-prometheus-stack: nodes, disks, Kubernetes, Prometheus)
+# of these severities go by e-mail too, repeated every 4 hours; the warnings stay on the dashboards.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ $.Release.Name }}-platform
+  labels:
+    {{- include "obs.labels" $ | nindent 4 }}
+    {{- with $.Values.alerting.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  route:
+    receiver: email
+    matchers:
+      - { name: severity, matchType: "=~", value: {{ join "|" .severities | quote }} }
+      - { name: alertname, matchType: "!~", value: "Finuance.*|Watchdog|InfoInhibitor" }
+    groupBy: [alertname, namespace]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+  receivers:
+    {{- include "obs.emailReceiver" $.Values.alerting.email | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- with $.Values.alerting.heartbeat }}
+{{- if .enabled }}
+---
+# A sign of life: the always-firing Watchdog alert by e-mail once a week (the active window, UTC,
+# with a 24-hour repeat). If it doesn't arrive, the path is broken (machine, Alertmanager, SMTP).
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ $.Release.Name }}-heartbeat
+  labels:
+    {{- include "obs.labels" $ | nindent 4 }}
+    {{- with $.Values.alerting.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  route:
+    receiver: email
+    matchers:
+      - { name: alertname, matchType: "=", value: Watchdog }
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 24h
+    activeTimeIntervals: [heartbeat-window]
+  muteTimeIntervals:
+    - name: heartbeat-window
+      timeIntervals:
+        - weekdays: [{{ .weekday | quote }}]
+          times:
+            - { startTime: {{ .startTime | quote }}, endTime: {{ .endTime | quote }} }
+  receivers:
+    {{- include "obs.emailReceiver" $.Values.alerting.email | nindent 4 }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}

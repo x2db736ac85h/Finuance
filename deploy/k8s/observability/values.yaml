@@ -51,5 +51,16 @@ alerting:
     authUsername: ""
     passwordSecret: { name: finuance-alert-smtp, key: password }
     requireTLS: true
+  # With the e-mail receiver on: the monitoring stack's own alerts (kube-prometheus-stack) of these
+  # severities by e-mail too (Phase 18: only Finuance's were routed). Empty: none.
+  platform:
+    severities: [critical]
+  # A weekly sign of life: the always-firing Watchdog alert by e-mail in this window (UTC), so a
+  # broken path (machine off, Alertmanager down, SMTP refused) doesn't look like a quiet week.
+  heartbeat:
+    enabled: true
+    weekday: monday
+    startTime: "06:00"
+    endTime: "08:00"
   # Labels the Alertmanager's alertmanagerConfigSelector matches.
   labels: {}

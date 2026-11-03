@@ -64,6 +64,24 @@
             "requireTLS": { "type": "boolean" }
           }
         },
+        "platform": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "severities": { "type": "array", "items": { "type": "string", "enum": ["critical", "warning", "info"] } }
+          }
+        },
+        "heartbeat": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "weekday", "startTime", "endTime"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "weekday": { "type": "string", "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] },
+            "startTime": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+            "endTime": { "type": "string", "pattern": "^([01][0-9]|2[0-4]):[0-5][0-9]$" }
+          }
+        },
         "labels": { "type": "object", "additionalProperties": { "type": "string" } }
       }
     }
