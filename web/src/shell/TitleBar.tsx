@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useNavigate } from 'react-router';
 
-import type { User } from '../api/hooks/me';
+import { useMeta, type User } from '../api/hooks/me';
 import { sidebarShown, useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { Icon } from '../ui/Icon';
@@ -38,6 +38,8 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
   const account = usePopover();
   const signOut = useSignOut();
   const navigate = useNavigate();
+  // parts of the app an administrator switched off (Phase 19) have no button
+  const features = useMeta().data?.features;
 
   return (
     <header className="titlebar">
@@ -59,32 +61,36 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
           toggleViz();
         }}
       />
-      <IconButton
-        icon="dash"
-        title="Personal finance overview"
-        on={mode === 'ov'}
-        aria-pressed={mode === 'ov'}
-        onClick={() => {
-          onToggleMode(mode === 'ov' ? 'table' : 'ov');
-        }}
-      />
+      {features?.overview !== false && (
+        <IconButton
+          icon="dash"
+          title="Personal finance overview"
+          on={mode === 'ov'}
+          aria-pressed={mode === 'ov'}
+          onClick={() => {
+            onToggleMode(mode === 'ov' ? 'table' : 'ov');
+          }}
+        />
+      )}
       <div className="brand">
         <Logo />
         <span className="name">Finuance</span>
       </div>
       <SearchBox key={viewId} viewId={viewId} disabled={!hasData} inputRef={searchRef} />
-      <button
-        type="button"
-        className={aiOpen ? 'btn sm aibtn on' : 'btn sm aibtn'}
-        title={`AI assistant (${modKey('J')})`}
-        aria-pressed={aiOpen}
-        onClick={() => {
-          setAiOpen(!aiOpen);
-        }}
-      >
-        <Icon name="ai" />
-        <span className="bl">Assistant</span>
-      </button>
+      {features?.assistant !== false && (
+        <button
+          type="button"
+          className={aiOpen ? 'btn sm aibtn on' : 'btn sm aibtn'}
+          title={`AI assistant (${modKey('J')})`}
+          aria-pressed={aiOpen}
+          onClick={() => {
+            setAiOpen(!aiOpen);
+          }}
+        >
+          <Icon name="ai" />
+          <span className="bl">Assistant</span>
+        </button>
+      )}
       <IconButton icon="cog" title="Settings" aria-expanded={settings.open} onClick={settings.toggle} />
       <button
         type="button"
@@ -120,6 +126,17 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
         >
           Sessions
         </MenuItem>
+        {user.isAdmin && (
+          <MenuItem
+            icon="cog"
+            onSelect={() => {
+              account.close();
+              void navigate('/admin/users');
+            }}
+          >
+            Administration
+          </MenuItem>
+        )}
         <MenuItem
           icon="x"
           onSelect={() => {

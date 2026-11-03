@@ -1026,3 +1026,231 @@ textarea.inp.ins-note {
 .theme-name {
   font-weight: 500;
 }
+
+/* Administration (/admin, Phase 19): the settings layout, wider for the tables. */
+.set-body.adm-body {
+  max-width: 64rem;
+}
+.adm-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.adm-toolbar .inp {
+  flex: 1;
+  max-width: 20rem;
+}
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7812rem;
+}
+.adm-table th,
+.adm-table td {
+  padding: 0.375rem 0.5rem;
+  border-top: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+.adm-table th {
+  color: var(--muted);
+  font-weight: 500;
+  border-top: none;
+}
+.adm-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.adm-table tr.on td {
+  background-image: linear-gradient(var(--sel), var(--sel));
+}
+.adm-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.adm-link:hover {
+  text-decoration: underline;
+}
+.adm-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.lbl.sub {
+  margin-top: 0.375rem;
+}
+.adm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.adm-onetime {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--accent-soft);
+  font-size: 0.7812rem;
+}
+.adm-onetime p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.adm-onetime code {
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+}
+.adm-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.5rem 0.75rem;
+}
+.adm-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+.adm-cards legend {
+  padding: 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.adm-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+.adm-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--elev);
+}
+.adm-tile b {
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+.adm-days td.num {
+  position: relative;
+}
+.adm-bar {
+  position: absolute;
+  inset: 0.25rem 0 0.25rem auto;
+  max-width: 100%;
+  border-radius: 0.1875rem;
+  background: var(--accent-soft);
+}
+.adm-bar.alt {
+  background: var(--sel);
+}
+.adm-editor {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+.adm-variant {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.adm-colour {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+.adm-colour input[type='color'] {
+  width: 1.75rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: none;
+}
+.adm-colour label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.adm-colour .inp {
+  width: 7.5rem;
+}
+.adm-colour .inp[aria-invalid='true'] {
+  border-color: var(--neg);
+}
+/* the preview uses the edited tokens, which its inline style sets on this element only */
+.adm-preview {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.75rem;
+}
+.adm-pv-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.adm-pv-chip {
+  margin-left: auto;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.75rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.adm-pv-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.adm-pv-row.sel {
+  background-image: linear-gradient(var(--sel), var(--sel));
+}
+.adm-pv-neg {
+  color: var(--neg);
+}
+.adm-pv-pos {
+  color: var(--pos);
+}
+.adm-pv-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  background: var(--elev);
+}
+.adm-pv-muted {
+  color: var(--muted);
+}
+.adm-pv-link {
+  color: var(--accent);
+}
+.adm-pv-btn {
+  margin-left: auto;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.3125rem;
+  background: var(--accent-solid);
+  color: var(--on-accent);
+}

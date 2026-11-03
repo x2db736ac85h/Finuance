@@ -32,6 +32,9 @@ export const routes: RouteObject[] = [
       { path: '/imports/:importId', element: <ImportRoute /> },
       { path: '/settings', element: <Navigate to="/settings/appearance" replace /> },
       { path: '/settings/:section', element: <SettingsPage /> },
+      { path: '/admin', element: <Navigate to="/admin/users" replace /> },
+      // the admin panel is its own chunk (Phase 19)
+      { path: '/admin/:section', lazy: async () => ({ Component: (await import('./admin/AdminPage')).AdminPage }) },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

@@ -1,6 +1,7 @@
 // TanStack Query keys (PLAN §7.4). Mutations invalidate by these prefixes.
 export const keys = {
   meta: ['meta'] as const,
+  admin: ['admin'] as const,
   me: ['me'] as const,
   prefs: ['prefs'] as const,
   accounts: ['accounts'] as const,

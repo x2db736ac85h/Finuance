@@ -33,7 +33,12 @@ export const usePrefsReady = create<{ userId: string | null }>()(() => ({ userId
  * Hydrates the stores from doc and saves every later change. Returns the function that stops it.
  * onError reports failed saves (not conflicts, which are merged).
  */
-export function startPrefsSync(userId: string, doc: Preferences, onError?: (e: unknown) => void): () => void {
+export function startPrefsSync(
+  userId: string,
+  doc: Preferences,
+  onError?: (e: unknown) => void,
+  defaults?: Record<string, unknown>,
+): () => void {
   current?.stop();
   resetStores();
   const sync = new PrefsSync({
@@ -42,7 +47,9 @@ export function startPrefsSync(userId: string, doc: Preferences, onError?: (e: u
     apply: applyPrefs,
     ...(onError ? { onError } : {}),
   });
-  sync.start(doc);
+  // Instance defaults (an administrator's, Phase 19) under the saved document: only keys the user
+  // never saved take them; the first save then keeps them like any other setting.
+  sync.start(defaults ? { ...doc, prefs: { ...defaults, ...doc.prefs } } : doc);
   current = sync;
   usePrefsReady.setState({ userId });
   const unsubUi = useUi.subscribe(() => {
