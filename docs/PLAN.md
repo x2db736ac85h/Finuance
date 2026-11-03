@@ -27,6 +27,21 @@
 
 ## Revision history
 
+### Rev 4 — 2026-11-03 · regrouping after Phase 18
+
+Phase 18 (homelab rollout) is complete. Before the public release, the maintainer wants more product
+work, so two phases are added and the public release moves to the end:
+
+| Phase | Content |
+|---|---|
+| **19** (new) | Admin panel (users, limits, instance defaults, feature toggles, usage) without access to anyone's financial data; colour themes with an admin theme editor; friends through hourly friend codes; manual cash expenses; **shared groups** (expenses shared with friends, splits, balances, settling up) and a Shared tab with a timeline of trips |
+| **20** (new) | Agentic assistant (proposals applied on a click or automatically by opt-in, every change marked as AI-made and revertible; receipts by photo; goals in plain language; daily/weekly digests), an advice library, the admin's assistant section (connections, tuning, token budgets), personal access tokens and a CLI for agents |
+| **21** (was 19, before that 18) | Public release: privacy clean-up of the tree and history, security scanning in CI, signed images only, the public demo host, documentation and write-ups, a new public repository, `v1.0.0` |
+
+The domain, schema and API sections (§4–§7) describe Phases 0–18. Phases 19 and 20 record their
+designs in ADRs and in the docs they add (`docs/admin.md`, `docs/sharing.md`, …); the task lists live
+in `docs/PROGRESS.md`. Items in Appendix J that these phases schedule are marked there.
+
 ### Rev 3 — 2026-10-20 · Finuance release + consistency review
 
 **What changed in the legacy app** (design doc §32; the file is now `finuance.html`, ~4,100 lines):
@@ -2064,7 +2079,9 @@ Write `docs/THREAT-MODEL.md` in Phase 5 and update it in Phase 16. Baseline cont
 | **M2 Frontend parity** | 8 FE foundation · 9 Import UX · 10 Table view + groups · 11 Insights · 12 Overview + investments · 13 AI assistant | Feature parity with legacy v7, multi-user |
 | **M3 Quality gate** | 14 Legacy migration + E2E + parity harness | `v0.1.0` tagged |
 | **M4 Product depth** | 15 Categories, rules, transfers, assistant actions, group reports (+ FX stretch) | Features the legacy app could not have |
-| **M5 Production** | 16 Deploy (Helm, CNPG, Argo CD, LLM endpoint) · 17 Observability, load, security · 18 Demo + docs | `v1.0.0` live on the homelab + public demo |
+| **M5 Production** | 16 Deploy (Helm, CNPG, Argo CD, LLM endpoint) · 17 Observability, load, security · 18 Homelab rollout | Running on the homelab with GitOps, backups, monitoring and alerts (`v0.2.0`) |
+| **M6 Sharing and agents** | 19 Admin, themes, friends, shared groups · 20 Agentic assistant, advice library, CLI | Several people share expenses; the assistant can act (with consent and undo); agents use the app |
+| **M7 Public release** | 21 Privacy clean-up, security CI, signed images, public demo, docs | `v1.0.0` in a public repository + public demo |
 
 Each phase below lists: **Goal · Size · Read first · Tasks · Acceptance criteria · Gate**. Tasks are ordered. Each numbered task should be its own commit, or a few commits.
 
@@ -3288,7 +3305,8 @@ Tests:
 > the Compose stack, 17.6 audit log, Activity page, chart scan, ZAP baseline, THREAT-MODEL v2) plus
 > the demo-mode code of 18.1. The new **Phase 18 — Homelab rollout** deploys everything on the real
 > cluster. The old Phase 18 (public demo, documentation, v1.0.0) becomes **Phase 19**, and its gate
-> carries the full security scan with nothing ignored.
+> carries the full security scan with nothing ignored. (Regrouped again on 2026-11-03: that phase is
+> now **Phase 21**; see the note at Phase 19.)
 
 
 **Goal:** a GitOps deployment on our Product Engineer's k3s homelab with HA-ish API, managed Postgres, backups and a tested restore.
@@ -3438,7 +3456,7 @@ Record the results with Grafana screenshots in `docs/perf.md`. **Find, fix and d
 * 17.1 observability stack (reuse what the homelab already runs), 17.3 dashboards provisioned,
   17.4 alert receiver and a test alert, 17.5 load test on the homelab hardware.
 * 17.6 OpenVAS / Nessus scans of the deployed instance, triaged in `docs/security-scan.md`.
-* 18.2 (now 19.2) the demo environment can be prepared here or in Phase 19.
+* 18.2 (now 21.8) the demo environment can be prepared here or in Phase 21.
 * Every deferred gate check of Phases 13–17 that needs the homelab or the real data.
 
 **Gate (our Product Engineer):** watch a deploy via PR merge, roll back via revert, read the restore
@@ -3446,26 +3464,178 @@ drill notes, a Grafana walkthrough.
 
 ---
 
-### Phase 19 — Public demo, documentation, v1.0.0 · Size M (was Phase 18)
+### Phase 19 — Admin, themes, friends and shared groups · Size L–XL (new, 2026-11-03)
 
-**Goal:** something a recruiter can click on, plus documents that make the engineering visible.
+> **Phase regrouping (2026-11-03, our Product Engineer).** Phase 18 is done. Before the public
+> release, two product phases are added: **Phase 19** (this one) and **Phase 20** (agentic assistant,
+> advice library, CLI). The public release (demo, documentation, v1.0.0), until now Phase 19, becomes
+> **Phase 21**. The task list with files, tests and checks is in `docs/PROGRESS.md`.
+
+**Goal:** several people on one instance can share expenses with each other, and an administrator can
+run the instance (users, limits, defaults, themes) without ever seeing anyone's financial data.
+
+**Read first:** §4.7 (groups), §5.3 (RLS), ADR 0007 (multi-tenancy), ADR 0017 (rules and category
+identity), ADR 0021 (audit log), §7.5 (tokens and scaling), §7.8 (charts), `docs/a11y.md`.
+
+**Tasks** (three pull requests into `main`, each with full CI and our Product Engineer's OK)
+
+*PR 1 — admin and themes*
+
+19.1 **Admin role without financial data.** `users.is_admin`, disabled users, a one-time password that
+must be changed; `instance_settings` and `user_limits`; `store.WithAdmin` reaches only the admin tables
+(users, limits, settings, themes, sessions), never a user-owned financial table; usage as counts from
+one `SECURITY DEFINER` function; first admin through `finuance admin grant-admin`; the last admin
+can't be removed; every admin action is an audit event for the admin and for the affected user.
+
+19.2 **Instance defaults, feature toggles and limits.** Defaults under each user's own preferences
+(theme, size, charts and order, insights pane, sidebar, Overview); features users can't override
+(Overview, Shared groups, Friends, Assistant); limit defaults (upload size, imports per day, accounts,
+groups). Environment variables stay the outer bound. Enforced on the server (`404` for a feature
+that is off, `422 limit_reached`).
+
+19.3 **Admin panel** `/admin/:section`: users, defaults (with a preview), features, themes, usage.
+
+19.4 **Colour themes.** Per-theme token sets; `--on-accent` and the logo follow the theme; the
+categorical chart palette stays shared. Four built-in themes with dark and light variants:
+**Indigo** (today's look), **Fjord** (cool blue, after Nord), **Grove** (sage and aqua, after
+Everforest), **Ember** (warm gold, after Gruvbox). Every pair passes WCAG AA (unit test + axe over
+every theme and mode).
+
+19.5 **Theme editor** (admins): colour tokens of both variants with a live preview and a contrast
+report; approval needs AA everywhere (checked again on the server); only known keys and hex colours
+(no CSS); approved themes are offered to users.
+
+*PR 2 — manual expenses, friends, notifications*
+
+19.6 **Manual cash expenses**: cash accounts with transactions entered by hand (`origin = 'manual'`),
+editable and deletable, never touched by imports or re-materialisation. Manual entries in bank
+accounts (with merging when the import arrives) come with receipts in Phase 20.
+
+19.7 **Friends**: an 8-character friend code per user that changes every hour; entering a friend's
+code makes you friends; rate-limited and audited; friends see a display name, never an e-mail.
+
+19.8 **In-app notifications** (bell in the title bar), used by friends, sharing and Phase 20's digests.
+
+*PR 3 — shared groups and the Shared tab*
+
+19.9 **Shared groups.** A personal group can be shared with friends. Each shared transaction becomes a
+**copy** in the group (date, amount, payee, category, note, who paid); members never see accounts, bank
+descriptions or raw rows. The copy is updated in the same transaction as the group assignment and
+survives delete + re-import (keyed like annotations, in a member-private link table). Expenses without
+a transaction (cash), splits (equal by default; shares, exact amounts), balances, "who owes whom" with
+a minimal-transfer simplification, settlements. RLS by membership through a `SECURITY DEFINER`
+function; the group currency only (FX stays in the backlog). A deleted user's expenses stay as
+"Former member", so the others' balances don't change.
+
+19.10 **Shared tab** after Overview (⇄ icon): a timeline of trips and other groups (personal and
+shared) with per-year totals, a comparison across trips and "next time" hints; a group page laid out
+like insights + table, with balances and *Settle up*.
+
+19.11 ADRs (admin, themes, friends, shared groups and membership RLS, manual transactions),
+THREAT-MODEL (a boundary between users, admin abuse, friend-code guessing, CSS injection through
+themes), `docs/admin.md`, `docs/sharing.md`, release `v0.3.0` deployed to the homelab.
+
+**Acceptance criteria**
+- [ ] An admin context reads no financial table (RLS test over every user-owned table).
+- [ ] RLS suite for shared data: non-member, invited, active, left and former member; the private links stay hidden.
+- [ ] Balance property test: the sum is zero, the simplification keeps every net balance, at most n−1 transfers.
+- [ ] E2E with two users: friends by code → share a trip → both add expenses → balances → settle up; neither sees the other's accounts.
+- [ ] axe: zero serious/critical violations on table, overview, settings and the Shared tab in every built-in theme and mode.
+
+**Gate (our Product Engineer):** with a second account, share a trip and settle up; walk through the
+admin panel; create, approve and pick a theme; watch the homelab deploy of `v0.3.0`.
+
+---
+
+### Phase 20 — Agentic assistant, advice library, CLI · Size L (new, 2026-11-03)
+
+**Goal:** the assistant can do things for you (with your consent and an undo), and agents can use the
+app through a CLI.
+
+**Read first:** §4.8, ADR 0015, ADR 0019, `docs/assistant.md`, `docs/evals.md`, Phase 19's ADRs.
+
+**Outline** (planned in detail when the phase starts; decided 2026-11-03: proposals plus opt-in
+auto-apply in the panel, tools stay read-only, background digests only propose)
+
+1. **Proposals v2 and auto-apply**: `add_expense`, `set_budget`, `create_goal`/`update_goal`,
+   `add_to_shared_group`, `split_expense`; applied by the panel through the normal endpoints, on a
+   click or automatically for the action types the user opts into. Every applied change is recorded
+   (`ai_changes`, before and after) and can be **reverted** with one click; a `Source` column, an
+   "AI assisted" chip and ✦ badges show what the assistant changed.
+2. **Receipts by photo**: image attachments (re-encoded in the browser, which removes EXIF and the
+   location), content parts in `llm.Message`, vision capability detection; a receipt matches an
+   imported transaction or becomes a manual expense; manual ↔ import merge suggestions.
+3. **Goals in plain language** → structured goals, a `goal_status` tool, an Overview card.
+4. **Digests**: a daily or weekly server-side run with read-only tools; results as notifications with
+   proposals waiting for *Apply*; within the user's token budget; off in the demo.
+5. **Advice library**: admin-edited documents searched with PostgreSQL full-text search through a
+   `search_advice` tool; an admin addition to the system prompt; a starter library with a
+   "not financial advice" note.
+6. **Admin → Assistant**: connections edited in the UI (in the database, API keys encrypted under an
+   instance key; the connections file stays as the starting point), per-model tuning, token budgets,
+   usage per user (never prompt text). No model training.
+7. **Personal access tokens and the `fin` CLI** (generated client, JSON/CSV/table output); optionally an
+   MCP server (`fin mcp`).
+8. Evals for every new action, receipts, goals and digests; ADRs; THREAT-MODEL.
+
+**Gate (our Product Engineer):** receipts, goals and a digest with the real model; revert an AI change;
+the CLI against the homelab.
+
+---
+
+### Phase 21 — Public release: privacy clean-up, security, demo, documentation, v1.0.0 · Size L (was Phase 19, before that Phase 18)
+
+**Goal:** a public repository and something a recruiter can click on, plus documents that make the
+engineering visible.
+
+**Decided 2026-11-03** (the full plan and the private-data audit are in `docs/PROGRESS.md`): publish into
+a **new repository** with one clean root commit (the current one stays private as the archive);
+replace the anonymised real bank exports with **synthetic** look-alikes; process documents "honest and
+tidy" (this plan and the full progress log go to the archive, a lean progress file and a roadmap stay,
+a short note says how the project is built); the demo runs on a **small VPS with single-node k3s**
+through the same charts and Argo CD. Demo mode itself was built in Phase 17.
 
 **Tasks**
 
-18.1 **Demo mode** (`FINUANCE_DEMO_MODE=true`):
-* signup disabled;
-* the login page shows "Try the demo". `POST /auth/demo` creates an **ephemeral per-visitor demo user** (`is_demo`), seeds the demo year via the normal import pipeline, and logs them in;
-* limits:
-  * demo creation rate-limited per IP (5/h);
-  * upload size reduced to 2 MiB;
-  * a periodic job deletes demo users older than 24 h;
-* a banner says "Demo — your data is deleted after 24 hours".
-* **assistant in the demo:** off by default. Turn it on only if the homelab can serve a small model, with 10 messages per visitor and `maxRows` 25. Otherwise the README shows a recorded GIF of a real session.
-* **legacy import:** disabled in demo mode. Demo users are ephemeral, and the endpoint accepts large uploads.
+21.0 Re-run the private-data audit on the tree Phases 19–20 leave behind.
 
-18.2 **Demo environment:** `deploy/environments/demo/values.yaml` (separate namespace and DB cluster, smaller resources), exposed per our Product Engineer's choice (§2.1 Q4). Run a basic DoS sanity check: a rate limit at the ingress as well.
+21.1 **Private-data guardrails**: the existing `tools/check-env-details.sh` (patterns kept outside the
+repository, in the private environment repository) also covers personal terms and commit authors,
+prints only file and line, and runs in CI with the patterns from a repository secret; `tools/check-private.sh` also catches e-mail addresses outside
+reserved domains, `*.ts.net` names other than `example.ts.net`, card patterns and real postcodes in
+`testdata/`; matching gitleaks rules.
 
-18.3 **Documentation:**
+21.2 **Synthetic bank look-alikes** replace `testdata/fixtures/real/` (each reproduces every quirk of
+the bank's layout); oracle and golden files regenerated, the header-fix tests moved onto them.
+
+21.3 **Legacy app**: the built-in `SAMPLE` becomes clearly synthetic (same layout).
+
+21.4 **Tidy the repository**: neutral wording instead of role names; `docs/DOMAIN.md` from §4 as built;
+this plan and the full progress log archived; a lean `docs/PROGRESS.md` and `docs/ROADMAP.md`; the
+agent instruction files trimmed; no references to commits or pull requests of the old history.
+
+21.5 **Security in CI**: actions pinned by commit SHA; CodeQL (Go, TypeScript, Actions); dependency
+review with a license allowlist; zizmor and actionlint for the workflows; osv-scanner; trufflehog
+over the history; Trivy results as SARIF in code scanning; OpenSSF Scorecard once public.
+
+21.6 `SECURITY.md` for 1.x, THREAT-MODEL v3 (the internet-facing demo, DoS at the ingress, the public
+repository's supply chain), `docs/security-scan.md`.
+
+21.7 **Signed images only**: images deployed by digest (chart value, the bump pull request writes it);
+Sigstore policy-controller verifies the release workflow's keyless signature on the homelab, the demo
+and the kind rehearsal; the pull secret goes once the images are public.
+
+21.8 **Demo environment** `deploy/environments/demo/` (own namespace and database, small resources, demo
+mode, assistant off): its own Argo CD, Let's Encrypt, rate limits at the ingress (and optionally a CDN
+proxy), SSH only over the tailnet, the Sealed Secrets keys copied off the machines, a daily smoke test
+of the public URL.
+
+21.9 **Publish**: `tools/publish-public.sh` creates the single root commit after every guard has
+passed and refuses a remote that already has history; the RUNBOOK's move procedure (Argo CD switched
+first, old repository renamed and kept private, rulesets, secret scanning with push protection,
+private vulnerability reporting, packages made public).
+
+21.10 **Documentation**:
 * `README.md` final:
   * one-line pitch;
   * screenshot/GIF;
@@ -3474,23 +3644,28 @@ drill notes, a Grafana walkthrough.
   * architecture diagram;
   * stack table;
   * quick start;
-  * an **"Engineering highlights"** section linking ADRs and write-ups: a privacy-preserving LLM assistant (tool calling under RLS, with an eval suite), labels that survive re-imports, duplicate review via re-materialisation with a property test, migration from the single-file app, idempotent de-dupe via a unique constraint, filter DSL → parameterised SQL, RLS multi-tenancy, transactional job enqueue, differential testing against the legacy app with a headless browser, fuzzing, GitOps, SLOs and load testing.
+  * an **"Engineering highlights"** section linking ADRs and write-ups: a privacy-preserving LLM assistant (tool calling under RLS, with an eval suite), labels that survive re-imports, duplicate review via re-materialisation with a property test, migration from the single-file app, idempotent de-dupe via a unique constraint, filter DSL → parameterised SQL, RLS multi-tenancy (and sharing across tenants), transactional job enqueue, differential testing against the legacy app with a headless browser, fuzzing, GitOps, SLOs and load testing, signed images.
 * `docs/ARCHITECTURE.md` complete; ADR index; `CONTRIBUTING.md`; `SECURITY.md`.
 
-18.4 **Write-ups** in `docs/writeups/`, 600–1200 words each, with diagrams and code excerpts:
+21.11 **Write-ups** in `docs/writeups/`, 600–1200 words each, with diagrams and code excerpts:
 1. "De-duplicating overlapping bank exports with one unique constraint";
 2. "Porting a 2,600-line single-file app with a headless-browser oracle";
 3. "From a filter mini-language to safe parameterised SQL";
-4. "Running it like production on a homelab: GitOps, CNPG, SLOs".
-5. "Letting a local LLM query your bank data without seeing it: tools, RLS and evals".
-6. "Migrating users off a single-file app: client-side decryption and replay through the import pipeline".
+4. "Running it like production on a homelab: GitOps, CNPG, SLOs";
+5. "Letting a local LLM query your bank data without seeing it: tools, RLS and evals";
+6. "Migrating users off a single-file app: client-side decryption and replay through the import pipeline";
+7. (optional) "Sharing expenses across tenants under row-level security".
 
-18.5 Final PARITY and PROGRESS update. `CHANGELOG`. Tag **v1.0.0**.
+21.12 Screenshots in every theme; a GIF of the assistant with a real model (the demo's assistant is off).
+
+21.13 Final PARITY and PROGRESS update. `CHANGELOG`. Tag **v1.0.0** in the public repository.
 
 **Acceptance criteria**
+- [ ] The public repository has one commit; the denylist, gitleaks, trufflehog and CodeQL find nothing.
+- [ ] A full scan at every severity with nothing ignored: Trivy, govulncheck, `npm audit`, osv-scanner, CodeQL, ZAP and OpenVAS against the demo, an outside port scan (only 80/443 open).
 - [ ] The public demo works from a phone and a laptop; the 24 h cleanup is verified.
 - [ ] README reviewed by our Product Engineer; all write-ups present.
-- [ ] `v1.0.0` released with signed images and deployed via GitOps.
+- [ ] `v1.0.0` released with signed images and deployed via GitOps by digest, with signatures enforced.
 
 **Gate (our Product Engineer):** final review, then share the link.
 
@@ -3759,9 +3934,9 @@ Template `docs/adr/0000-template.md`:
 ### Appendix J — Backlog (not scheduled)
 
 * OIDC login (Authentik/Keycloak/Zitadel); WebAuthn passkeys.
-* Household sharing (multiple users per account with roles).
-* Manual transactions and split transactions; attachments (receipts).
-* Budgets per month with rollover; savings goals.
+* Household sharing (multiple users per account with roles). *(Phase 19 shares groups of expenses between friends instead; shared accounts stay here.)*
+* Manual transactions and split transactions; attachments (receipts). *(Manual cash expenses and splits in shared groups: Phase 19; receipts: Phase 20.)*
+* Budgets per month with rollover; savings goals. *(Goals: Phase 20.)*
 * Bank profile presets shipped with the app (PKO BP, mBank, ING, Santander, Pekao, Millennium…).
 * Local-LLM categorisation suggestions behind the rules engine (builds on Phases 13 and 15).
 * Multi-label tags (many-to-many) in addition to the single group.
@@ -3770,8 +3945,8 @@ Template `docs/adr/0000-template.md`:
 * Embedding-based payee clustering to merge merchant spelling variants.
 * Investments: price feeds, broker statement import, net worth over time.
 * Duplicate review across accounts (e.g. the same card appearing in two exports).
-* Import from email attachments, e.g. an n8n workflow posting statements to `POST /imports`, with an API token.
-* Anomaly alerts (unusual spend, new subscription detected), email/ntfy notifications.
+* Import from email attachments, e.g. an n8n workflow posting statements to `POST /imports`, with an API token. *(API tokens: Phase 20.)*
+* Anomaly alerts (unusual spend, new subscription detected), email/ntfy notifications. *(In-app notifications: Phase 19; assistant digests: Phase 20.)*
 * Re-import of `GET /me/export` archives (full restore).
 * PWA / offline read-only cache; mobile layout.
 * Desktop app (Wails v3) reusing the SPA. Explicitly out of scope for this plan.
