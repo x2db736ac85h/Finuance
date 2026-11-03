@@ -205,7 +205,7 @@ Performance notes and measurements, including the load test: [docs/perf.md](docs
 | 15 | Category rules, transfer detection, group reports, assistant actions | ✅ done |
 | 16 | Kubernetes deployment: Helm, CloudNativePG, Argo CD, rehearsed in CI | ✅ done |
 | 17 | Observability, load tests, activity log, security scans, demo mode | ✅ done |
-| 18 | Homelab rollout on a reference environment: GitOps, TLS, backups and restore drill, monitoring and alerts, load test, OpenVAS, image admission | 🚧 hands-on checks and gate |
+| 18 | Homelab rollout on a reference environment: GitOps, TLS, backups and restore drill, monitoring and alerts, load test, OpenVAS, image admission, v0.2.0 | ✅ done |
 | 19 | Public demo, documentation, v1.0.0 | 🚧 planned |
 
 The detailed task list and every decision taken so far are in [docs/PROGRESS.md](docs/PROGRESS.md); the full specification is [docs/PLAN.md](docs/PLAN.md).
