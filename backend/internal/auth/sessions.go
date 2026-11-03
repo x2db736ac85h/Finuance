@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
@@ -100,8 +101,10 @@ func (s *Service) Resolve(ctx context.Context, token string) (Identity, error) {
 		if err != nil {
 			return err
 		}
+		limits, _ := instance.ParseLimits(row.Limits)
 		id = Identity{TokenHash: hash, User: User{ID: row.UserID, Email: row.Email, DisplayName: row.DisplayName,
-			IsDemo: row.IsDemo, CreatedAt: row.UserCreatedAt}}
+			IsDemo: row.IsDemo, CreatedAt: row.UserCreatedAt, IsAdmin: row.IsAdmin,
+			MustChangePassword: row.MustChangePassword, Limits: limits}}
 		if now.Sub(row.LastSeenAt) >= touchEvery {
 			return q.TouchSession(ctx, db.TouchSessionParams{TokenHash: hash[:], Now: now})
 		}

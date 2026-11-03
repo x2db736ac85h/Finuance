@@ -108,10 +108,12 @@ func (q *Queries) DeleteUserSessions(ctx context.Context, arg DeleteUserSessions
 
 const getSession = `-- name: GetSession :one
 SELECT s.token_hash, s.user_id, s.created_at, s.last_seen_at, s.expires_at,
-       u.email, u.display_name, u.is_demo, u.created_at AS user_created_at
+       u.email, u.display_name, u.is_demo, u.created_at AS user_created_at,
+       u.is_admin, u.must_change_password, u.limits
 FROM sessions s
 JOIN users u ON u.id = s.user_id
 WHERE s.token_hash = $1 AND s.expires_at > $2 AND s.last_seen_at > $3
+  AND u.disabled_at IS NULL
 `
 
 type GetSessionParams struct {
@@ -121,18 +123,22 @@ type GetSessionParams struct {
 }
 
 type GetSessionRow struct {
-	TokenHash     []byte
-	UserID        uuid.UUID
-	CreatedAt     time.Time
-	LastSeenAt    time.Time
-	ExpiresAt     time.Time
-	Email         string
-	DisplayName   string
-	IsDemo        bool
-	UserCreatedAt time.Time
+	TokenHash          []byte
+	UserID             uuid.UUID
+	CreatedAt          time.Time
+	LastSeenAt         time.Time
+	ExpiresAt          time.Time
+	Email              string
+	DisplayName        string
+	IsDemo             bool
+	UserCreatedAt      time.Time
+	IsAdmin            bool
+	MustChangePassword bool
+	Limits             []byte
 }
 
-// A live session and its user: not past the absolute expiry and seen after idle_cutoff.
+// A live session and its user: not past the absolute expiry, seen after idle_cutoff, and the
+// account not disabled (disabling also deletes the sessions; this covers a race with a request).
 func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error) {
 	row := q.db.QueryRow(ctx, getSession, arg.TokenHash, arg.Now, arg.IdleCutoff)
 	var i GetSessionRow
@@ -146,6 +152,9 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (GetSess
 		&i.DisplayName,
 		&i.IsDemo,
 		&i.UserCreatedAt,
+		&i.IsAdmin,
+		&i.MustChangePassword,
+		&i.Limits,
 	)
 	return i, err
 }

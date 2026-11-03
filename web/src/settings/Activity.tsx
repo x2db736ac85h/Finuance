@@ -43,7 +43,35 @@ const DESCRIBE: Record<ActivityAction, (m: Meta) => string> = {
   'assistant.action_applied': (m) =>
     `Applied an assistant proposal: ${PROPOSAL[str(m, 'action')] ?? 'a change'}` +
     (str(m, 'action') === 'create_rule' ? '' : ` for ${plural(int(m, 'rows'), 'transaction')}`),
+  // Administrators' actions: the administrator's own log names the account (`email`); the
+  // account's log only says an administrator did it (`by`).
+  'admin.user_created': (m) =>
+    byAdmin(m) ? 'An administrator created this account' : `Created the account ${str(m, 'email')}`,
+  'admin.role_changed': (m) =>
+    byAdmin(m)
+      ? 'An administrator changed your role'
+      : `${m['admin'] === true ? 'Made' : 'Removed'} ${str(m, 'email')} ${m['admin'] === true ? 'an administrator' : 'as administrator'}`,
+  'admin.user_disabled': (m) =>
+    byAdmin(m) ? 'An administrator disabled this account' : `Disabled the account ${str(m, 'email')}`,
+  'admin.user_enabled': (m) =>
+    byAdmin(m) ? 'An administrator enabled this account again' : `Enabled the account ${str(m, 'email')}`,
+  'admin.password_reset': (m) =>
+    byAdmin(m)
+      ? 'An administrator reset your password (all browsers were signed out)'
+      : `Reset the password of ${str(m, 'email')}`,
+  'admin.sessions_revoked': (m) =>
+    byAdmin(m) ? 'An administrator signed you out everywhere' : `Signed ${str(m, 'email')} out everywhere`,
+  'admin.limits_changed': (m) =>
+    byAdmin(m) ? 'An administrator changed your limits' : `Changed the limits of ${str(m, 'email')}`,
+  'admin.user_deleted': (m) => `Deleted the account ${str(m, 'email')} and all of its data`,
+  'admin.settings_changed': () => 'Changed the instance settings',
+  'admin.theme_approved': (m) => `Approved the theme ${str(m, 'theme')}`,
+  'admin.theme_retired': (m) => `Retired the theme ${str(m, 'theme')}`,
 };
+
+function byAdmin(m: Meta): boolean {
+  return str(m, 'by') === 'administrator';
+}
 
 export function describeActivity(e: ActivityEvent): string {
   return DESCRIBE[e.action](e.meta ?? {});

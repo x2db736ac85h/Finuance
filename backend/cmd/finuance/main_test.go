@@ -36,6 +36,10 @@ func TestDispatch(t *testing.T) {
 		{[]string{"admin", "create-user", "-email=a@b.c"}, 2, "", "usage: finuance admin"},          // no -password-stdin
 		{[]string{"admin", "set-password", "-email=a@b.c", "-password-stdin", "x"}, 2, "", "usage"}, // stray argument
 		{[]string{"admin", "create-user", "-email=a@b.c", "-password-stdin"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
+		{[]string{"admin", "grant-admin", "-email=a@b.c", "-password-stdin"}, 2, "", "usage"},            // no password for a role change
+		{[]string{"admin", "set-password", "-email=a@b.c", "-admin", "-password-stdin"}, 2, "", "usage"}, // -admin only with create-user
+		{[]string{"admin", "grant-admin", "-email=a@b.c"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
+		{[]string{"admin", "create-user", "-email=a@b.c", "-admin", "-password-stdin"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
 		{[]string{"serve", "-nope"}, 2, "", "flag provided but not defined"},
 	} {
 		code, out, errOut := runArgs(nil, tc.args...)

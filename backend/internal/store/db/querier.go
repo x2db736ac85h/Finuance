@@ -15,6 +15,13 @@ type Querier interface {
 	// Transaction count and date range per account (GET /accounts).
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
+	AdminCountUsers(ctx context.Context, arg AdminCountUsersParams) (AdminCountUsersRow, error)
+	// Instance administration (ADR 0025). users, instance_settings and themes are outside RLS and are
+	// reached through store.WithoutUser by the auth and admin packages only. The usage counts at the
+	// end read user-owned tables and run under each user's own context (store.WithUserReadOnly), one
+	// user at a time; they return numbers, never rows.
+	// One page of accounts, newest first, optionally filtered by part of the e-mail address.
+	AdminListUsers(ctx context.Context, arg AdminListUsersParams) ([]User, error)
 	// The data export: every row of the user, oldest first.
 	AllAuditEvents(ctx context.Context, userID uuid.UUID) ([]AllAuditEventsRow, error)
 	// The proposal keys of one chat that the user applied (the panel's "Applied" state).
@@ -27,12 +34,18 @@ type Querier interface {
 	// by rules, and the bank names that map to it (its own name excluded).
 	CategoryStats(ctx context.Context, userID uuid.UUID) ([]CategoryStatsRow, error)
 	ClearDedupeOverride(ctx context.Context, arg ClearDedupeOverrideParams) (int64, error)
+	CountAccounts(ctx context.Context, userID uuid.UUID) (int64, error)
+	// Locks the administrators' rows, so two requests can't demote the last two at the same time.
+	CountActiveAdmins(ctx context.Context) (int64, error)
 	// Valid staged rows whose (fingerprint, occurrence) the account already has: the preview's
 	// "duplicates" estimate before the commit.
 	CountDuplicateEstimate(ctx context.Context, arg CountDuplicateEstimateParams) (int64, error)
 	// How many staged rows step 1 of the commit may insert; the caller generates that many ids.
 	CountEligibleImportRows(ctx context.Context, arg CountEligibleImportRowsParams) (int64, error)
+	CountGroups(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountImportRows(ctx context.Context, arg CountImportRowsParams) (CountImportRowsRow, error)
+	// For the imports-per-day limit (run under the user's context).
+	CountImportsSince(ctx context.Context, arg CountImportsSinceParams) (int64, error)
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateAssistantChat(ctx context.Context, arg CreateAssistantChatParams) (AssistantChat, error)
@@ -49,9 +62,11 @@ type Querier interface {
 	// expiry (created + FINUANCE_SESSION_TTL); the idle expiry is last_seen_at + FINUANCE_SESSION_IDLE_TTL,
 	// passed in as idle_cutoff. Time comes from the caller (platform.Clock), so both are testable.
 	CreateSession(ctx context.Context, arg CreateSessionParams) error
+	CreateTheme(ctx context.Context, arg CreateThemeParams) (Theme, error)
 	// users and sessions are outside RLS (PLAN §5.3); only the auth package uses these queries,
 	// through store.WithoutUser.
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateUserWithRole(ctx context.Context, arg CreateUserWithRoleParams) (User, error)
 	// The planner's enable_nestloop setting (to restore it after SetEnableNestLoop).
 	CurrentEnableNestLoop(ctx context.Context) (string, error)
 	// Cascades to the account's imports, transactions, annotations and overrides.
@@ -67,6 +82,7 @@ type Querier interface {
 	DeleteDemoUser(ctx context.Context, id uuid.UUID) (int64, error)
 	// Periodic cleanup of demo visitors (PLAN 19.1); cascades to all of their data.
 	DeleteDemoUsersCreatedBefore(ctx context.Context, cutoff time.Time) (int64, error)
+	DeleteDraftTheme(ctx context.Context, id uuid.UUID) (int64, error)
 	// An annotation with nothing left (no group, no manual category, no note, no transfer override)
 	// is deleted (PLAN §4.4 "explicit clear").
 	DeleteEmptyAnnotations(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -108,6 +124,8 @@ type Querier interface {
 	DuplicateGroupRows(ctx context.Context, arg DuplicateGroupRowsParams) ([]DuplicateGroupRowsRow, error)
 	// "N duplicates skipped" for a set of accounts: linked staged rows − import-origin transactions.
 	DuplicatesSkipped(ctx context.Context, arg DuplicatesSkippedParams) (int64, error)
+	// The migration seeds the row; this restores it if it was ever removed (tests truncate tables).
+	EnsureInstanceSettings(ctx context.Context) error
 	// Queries for the personal data export (GET /me/export, PLAN task 7.10).
 	ExportAnnotations(ctx context.Context, userID uuid.UUID) ([]TxAnnotation, error)
 	ExportDedupeOverrides(ctx context.Context, userID uuid.UUID) ([]DedupeOverride, error)
@@ -148,6 +166,7 @@ type Querier interface {
 	GetImportFile(ctx context.Context, arg GetImportFileParams) ([]byte, error)
 	// Import profiles: a remembered mapping per file layout (PLAN §4.4).
 	GetImportProfile(ctx context.Context, arg GetImportProfileParams) (ImportProfile, error)
+	GetInstanceSettings(ctx context.Context) (InstanceSetting, error)
 	// Manual investment data (PLAN §4.9). The repository comes with the investments API.
 	GetInvestmentProfile(ctx context.Context, userID uuid.UUID) (InvestmentProfile, error)
 	// Without the manifest (the job reads it with GetLegacyImportManifest).
@@ -155,8 +174,10 @@ type Querier interface {
 	GetLegacyImportManifest(ctx context.Context, arg GetLegacyImportManifestParams) ([]byte, error)
 	GetPreferences(ctx context.Context, userID uuid.UUID) (UserPreference, error)
 	GetRule(ctx context.Context, arg GetRuleParams) (GetRuleRow, error)
-	// A live session and its user: not past the absolute expiry and seen after idle_cutoff.
+	// A live session and its user: not past the absolute expiry, seen after idle_cutoff, and the
+	// account not disabled (disabling also deletes the sessions; this covers a race with a request).
 	GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error)
+	GetTheme(ctx context.Context, id uuid.UUID) (Theme, error)
 	// Detail view: the transaction with its category and group names, the rule that set the category
 	// and the other half of a transfer pair.
 	GetTransaction(ctx context.Context, arg GetTransactionParams) (GetTransactionRow, error)
@@ -192,6 +213,7 @@ type Querier interface {
 	// Commit step 2: link every staged row to its transaction, new or pre-existing (provenance).
 	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
+	ListApprovedThemes(ctx context.Context) ([]Theme, error)
 	ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]AssistantChat, error)
 	ListAssistantMessages(ctx context.Context, arg ListAssistantMessagesParams) ([]AssistantMessage, error)
 	// Newest first, a page at a time: rows with an id below before_id (0 = from the newest).
@@ -217,6 +239,7 @@ type Querier interface {
 	// Rules and transfers (PLAN tasks 15.2, 15.3). The dynamic part, a rule's match, is compiled by
 	// internal/query; these are the fixed statements around it.
 	ListRules(ctx context.Context, userID uuid.UUID) ([]ListRulesRow, error)
+	ListThemes(ctx context.Context) ([]Theme, error)
 	// Users in id order, a page at a time (the retention job visits every user under its own RLS
 	// context; users is not under RLS).
 	ListUserIDsAfter(ctx context.Context, arg ListUserIDsAfterParams) ([]uuid.UUID, error)
@@ -243,6 +266,8 @@ type Querier interface {
 	// Mark detected pairs: out_ids[i] and in_ids[i] point at each other.
 	PairTransfers(ctx context.Context, arg PairTransfersParams) (int64, error)
 	Ping(ctx context.Context) (int32, error)
+	// Versioned: only the document the administrator read can be replaced.
+	PutInstanceSettings(ctx context.Context, arg PutInstanceSettingsParams) (int64, error)
 	RenameCategory(ctx context.Context, arg RenameCategoryParams) (Category, error)
 	// Reclassify step 2: transfers marked by rules, and pairs that lost their other half (deleted or
 	// re-imported), become unmarked again. Pairs whose both halves remain stay as they are.
@@ -284,9 +309,16 @@ type Querier interface {
 	SetManualTransfer(ctx context.Context, arg SetManualTransferParams) ([]SetManualTransferRow, error)
 	// Reorder: ids in their new order (positions 0, 1, …).
 	SetRulePositions(ctx context.Context, arg SetRulePositionsParams) (int64, error)
+	SetThemeStatus(ctx context.Context, arg SetThemeStatusParams) (Theme, error)
+	SetUserAdmin(ctx context.Context, arg SetUserAdminParams) (int64, error)
+	SetUserDisabled(ctx context.Context, arg SetUserDisabledParams) (int64, error)
 	SetUserDisplayName(ctx context.Context, arg SetUserDisplayNameParams) error
 	SetUserLastLogin(ctx context.Context, arg SetUserLastLoginParams) error
+	SetUserLimits(ctx context.Context, arg SetUserLimitsParams) (int64, error)
+	SetUserMustChangePassword(ctx context.Context, arg SetUserMustChangePasswordParams) error
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
+	// An administrator's reset: a new one-time password the user has to replace at the next sign-in.
+	SetUserPasswordMustChange(ctx context.Context, arg SetUserPasswordMustChangeParams) error
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
 	// The staged rows (one per import that contains this transaction), oldest import first.
@@ -311,6 +343,8 @@ type Querier interface {
 	UpdateImportPreview(ctx context.Context, arg UpdateImportPreviewParams) (Import, error)
 	UpdateInvestmentPosition(ctx context.Context, arg UpdateInvestmentPositionParams) (InvestmentPosition, error)
 	UpdateRule(ctx context.Context, arg UpdateRuleParams) (int64, error)
+	// Versioned like the settings; status changes go through SetThemeStatus.
+	UpdateTheme(ctx context.Context, arg UpdateThemeParams) (Theme, error)
 	// The user-editable fields of a set of transactions (ledger.Annotate). Each set_* flag says whether
 	// that field is part of the patch. Resetting the category (set_category with a NULL category_id)
 	// falls back to the bank category. Returns the dedupe identity and the new values, which the caller
@@ -332,6 +366,10 @@ type Querier interface {
 	// check category_aliases first (ResolveBankCategory).
 	UpsertCategory(ctx context.Context, arg UpsertCategoryParams) (uuid.UUID, error)
 	UpsertImportProfile(ctx context.Context, arg UpsertImportProfileParams) error
+	// Imports and assistant questions per day since a date, for the instance usage page.
+	UserActivityByDay(ctx context.Context, arg UserActivityByDayParams) ([]UserActivityByDayRow, error)
+	// Run under the user's own RLS context: counts only.
+	UserUsage(ctx context.Context, userID uuid.UUID) (UserUsageRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

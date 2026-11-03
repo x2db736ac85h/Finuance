@@ -360,7 +360,7 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 		return nil, errAssistantOff
 	}
 	u := identity(ctx).User.ID
-	if err := a.limits.assistant.Allow(u.String()); err != nil {
+	if err := a.limits.assistantFor(a.effectiveLimits(ctx, identity(ctx).User).AssistantPerHour).Allow(u.String()); err != nil {
 		return nil, err
 	}
 	if a.cfg.DemoMode {

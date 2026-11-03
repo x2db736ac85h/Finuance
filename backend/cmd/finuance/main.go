@@ -152,7 +152,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 // admin parses `finuance admin <command> [flags]`; the flags follow the command.
 func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer,
 	load func(config.Requirement) (config.Config, bool), fail func(error) int) int {
-	const adminUsage = "usage: finuance admin create-user|set-password -email=… [-display-name=…] -password-stdin\n" +
+	const adminUsage = "usage: finuance admin create-user|set-password -email=… [-display-name=…] [-admin] -password-stdin\n" +
+		"       finuance admin grant-admin|revoke-admin -email=…\n" +
 		"       finuance admin llm-probe [-connection=…] [-model=…] [-out=dir]"
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, adminUsage)
@@ -180,15 +181,19 @@ func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	in := app.AdminInput{Command: args[0]}
 	fs.StringVar(&in.Email, "email", "", "the user's email")
 	fs.StringVar(&in.DisplayName, "display-name", "", "display name (create-user)")
+	fs.BoolVar(&in.Admin, "admin", false, "make the new user an administrator (create-user)")
 	fromStdin := fs.Bool("password-stdin", false, "read the password from the first line of stdin")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}
-	if in.Email == "" || !*fromStdin || fs.NArg() != 0 {
+	role := args[0] == "grant-admin" || args[0] == "revoke-admin"
+	if in.Email == "" || fs.NArg() != 0 || role == *fromStdin || (in.Admin && args[0] != "create-user") {
 		fmt.Fprintln(stderr, adminUsage)
 		return 2
 	}
-	in.Password = stdin
+	if *fromStdin {
+		in.Password = stdin
+	}
 	cfg, ok := load(config.ForAdmin)
 	if !ok {
 		return 1

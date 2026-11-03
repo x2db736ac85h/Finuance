@@ -1294,11 +1294,208 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Accounts, newest first (administrators)
+         * @description Administrators only; anyone else gets `404`. Each account carries counts of its data, never
+         *     the data itself (ADR 0025).
+         */
+        get: operations["adminListUsers"];
+        put?: never;
+        /**
+         * Create an account
+         * @description Works when sign-up is off. Without a password a one-time password is generated, returned once,
+         *     and must be replaced at the first sign-in.
+         */
+        post: operations["adminCreateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        /** One account with its usage */
+        get: operations["adminGetUser"];
+        put?: never;
+        post?: never;
+        /** Delete an account and all of its data */
+        delete: operations["adminDeleteUser"];
+        options?: never;
+        head?: never;
+        /**
+         * Change an account's role, state, name or limits
+         * @description Disabling signs the account out everywhere. The last active administrator can't be demoted
+         *     or disabled (`409 last_admin`); you can't disable yourself.
+         */
+        patch: operations["adminUpdateUser"];
+        trace?: never;
+    };
+    "/admin/users/{id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Give an account a new one-time password
+         * @description Signs the account out everywhere; the password is returned once and must be replaced at the next sign-in.
+         */
+        post: operations["adminResetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/revoke-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign an account out everywhere */
+        post: operations["adminRevokeSessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The instance settings (defaults, features, limits) */
+        get: operations["adminGetSettings"];
+        /**
+         * Replace the instance settings
+         * @description Send the version you read; a mismatch is `409 stale_version`.
+         */
+        put: operations["adminPutSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How the instance is used (counts only) */
+        get: operations["adminUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Administrator-made themes (drafts, approved and retired) */
+        get: operations["adminListThemes"];
+        put?: never;
+        /** Create a draft theme */
+        post: operations["adminCreateTheme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/themes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ThemeId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a theme's name and colours
+         * @description An approved theme keeps being offered, so its new colours must pass the contrast check (`422 contrast_failed`).
+         */
+        put: operations["adminUpdateTheme"];
+        post?: never;
+        /** Delete a draft */
+        delete: operations["adminDeleteTheme"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/themes/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ThemeId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Approve, retire or reopen a theme
+         * @description Approval needs every text colour to reach 4.5:1 on its surfaces in both variants (`422 contrast_failed` lists the pairs).
+         */
+        put: operations["adminSetThemeStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Meta: {
+            features: components["schemas"]["Features"];
+            defaults: components["schemas"]["ViewDefaults"];
+            /** @description Themes an administrator approved, offered next to the built-in ones. */
+            themes: components["schemas"]["PublicTheme"][];
             /**
              * @description Build version of the server.
              * @example v0.1.0
@@ -1312,6 +1509,10 @@ export interface components {
             demoMode: boolean;
         };
         User: {
+            isAdmin: boolean;
+            /** @description Signed in with a one-time password; every route but `/me`, `/me/password` and sign-out answers `403 password_change_required` until it is changed. */
+            mustChangePassword: boolean;
+            limits: components["schemas"]["EffectiveLimits"];
             /** Format: uuid */
             id: string;
             /** @example alex@example.com */
@@ -1355,7 +1556,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -2861,7 +3062,7 @@ export interface components {
          * @description Stable machine-readable error code.
          * @enum {string}
          */
-        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "internal";
+        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "internal";
         FieldError: {
             /** @description Dotted path of the offending field, e.g. `mapping.amount`. */
             field: string;
@@ -2884,6 +3085,241 @@ export interface components {
             instance?: string;
             requestId?: string;
             errors?: components["schemas"]["FieldError"][];
+            limit?: components["schemas"]["ProblemLimit"];
+            /** @description The colour pairs below 4.5:1 (`contrast_failed`). */
+            contrast?: components["schemas"]["ContrastFailure"][];
+        };
+        /** @description Parts of the app the instance offers (an administrator can switch them off). */
+        Features: {
+            overview: boolean;
+            assistant: boolean;
+            friends: boolean;
+            sharedGroups: boolean;
+        };
+        /**
+         * @description The preferences a view starts from; the web app applies them under the user's own saved
+         *     preferences, so only keys the user never saved take them (names as in `Preferences.prefs`).
+         */
+        ViewDefaults: {
+            themeId?: string;
+            /** @enum {string} */
+            theme?: "system" | "dark" | "light";
+            /** @enum {string} */
+            ui?: "auto" | "0.9" | "1" | "1.1" | "1.2" | "1.3";
+            /** @description Insights pane hidden. */
+            noViz?: boolean;
+            sbOpen?: boolean;
+            cards?: ("sum" | "cat" | "flow" | "pace" | "payee" | "heat")[];
+            cardOrder?: ("sum" | "cat" | "flow" | "pace" | "payee" | "heat")[];
+            importFastPath?: boolean;
+        };
+        /** @description Limits; a missing value means the next level decides (user → instance → the server's bound or none). */
+        LimitOverrides: {
+            /** Format: int64 */
+            maxUploadBytes?: number;
+            /** Format: int64 */
+            importsPerDay?: number;
+            /** Format: int64 */
+            maxAccounts?: number;
+            /** Format: int64 */
+            maxGroups?: number;
+            /** Format: int64 */
+            assistantPerHour?: number;
+        };
+        /** @description The limits that apply to the signed-in user; 0 means no limit. */
+        EffectiveLimits: {
+            /** Format: int64 */
+            maxUploadBytes: number;
+            /** Format: int64 */
+            importsPerDay: number;
+            /** Format: int64 */
+            maxAccounts: number;
+            /** Format: int64 */
+            maxGroups: number;
+            /** Format: int64 */
+            assistantPerHour: number;
+        };
+        InstanceSettingsDoc: {
+            /** Format: int32 */
+            version: number;
+            defaults: components["schemas"]["ViewDefaults"];
+            /** @description Switches that are off; a missing one is on. */
+            features: {
+                overview?: boolean;
+                assistant?: boolean;
+                friends?: boolean;
+                sharedGroups?: boolean;
+            };
+            limits: components["schemas"]["LimitOverrides"];
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        /** @description Counts of an account's data (never the data). */
+        UserUsage: {
+            /** Format: int64 */
+            accounts: number;
+            /** Format: int64 */
+            transactions: number;
+            /** Format: int64 */
+            imports: number;
+            /** Format: int64 */
+            storedBytes: number;
+            /** Format: int64 */
+            chats: number;
+            /** Format: date-time */
+            lastActivity?: string;
+        };
+        AdminUser: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            displayName: string;
+            isDemo: boolean;
+            isAdmin: boolean;
+            disabled: boolean;
+            mustChangePassword: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastLoginAt?: string;
+            limits: components["schemas"]["LimitOverrides"];
+            usage: components["schemas"]["UserUsage"];
+        };
+        UserTotals: {
+            /** Format: int64 */
+            users: number;
+            /** Format: int64 */
+            admins: number;
+            /** Format: int64 */
+            disabled: number;
+            /** Format: int64 */
+            demo: number;
+            /**
+             * Format: int64
+             * @description Signed in during the last 7 days.
+             */
+            active7: number;
+            /** Format: int64 */
+            active30: number;
+        };
+        AdminUsersPage: {
+            users: components["schemas"]["AdminUser"][];
+            /** @description Cursor of the next page; absent on the last one. */
+            next?: string;
+            totals: components["schemas"]["UserTotals"];
+        };
+        AdminCreateUserRequest: {
+            email: string;
+            displayName?: string;
+            /** @description Omit to generate a one-time password. */
+            password?: string;
+            admin?: boolean;
+        };
+        AdminCreatedUser: {
+            user: components["schemas"]["AdminUser"];
+            /** @description Shown once; present when no password was sent. */
+            oneTimePassword?: string;
+        };
+        AdminUpdateUserRequest: {
+            admin?: boolean;
+            disabled?: boolean;
+            displayName?: string;
+            limits?: components["schemas"]["LimitOverrides"];
+        };
+        AdminDeleteUserRequest: {
+            /** @description The account's e-mail address, repeated. */
+            confirmEmail: string;
+        };
+        OneTimePassword: {
+            oneTimePassword: string;
+        };
+        RevokedSessions: {
+            /** Format: int64 */
+            revoked: number;
+        };
+        DayUsage: {
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            imports: number;
+            /**
+             * Format: int64
+             * @description Questions asked to the assistant.
+             */
+            questions: number;
+        };
+        InstanceUsage: {
+            totals: components["schemas"]["UserTotals"];
+            /** Format: int64 */
+            accounts: number;
+            /** Format: int64 */
+            transactions: number;
+            /** Format: int64 */
+            imports: number;
+            /** Format: int64 */
+            storedBytes: number;
+            days: components["schemas"]["DayUsage"][];
+        };
+        /** @description Token → colour (`#rrggbb` or `#rrggbbaa`); every key of the theme contract (ADR 0026). */
+        ThemeColours: {
+            [key: string]: string;
+        };
+        ThemeTokens: {
+            dark: components["schemas"]["ThemeColours"];
+            light: components["schemas"]["ThemeColours"];
+        };
+        Theme: {
+            /** Format: uuid */
+            id: string;
+            /** @description The id stored in preferences (`themeId`). */
+            slug: string;
+            name: string;
+            basedOn: string;
+            tokens: components["schemas"]["ThemeTokens"];
+            /** @enum {string} */
+            status: "draft" | "approved" | "retired";
+            /** Format: int32 */
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PublicTheme: {
+            /** @description The slug. */
+            id: string;
+            name: string;
+            tokens: components["schemas"]["ThemeTokens"];
+        };
+        ThemeCreateRequest: {
+            slug: string;
+            name: string;
+            /** @enum {string} */
+            basedOn: "indigo" | "fjord" | "grove" | "ember";
+            tokens: components["schemas"]["ThemeTokens"];
+        };
+        ThemeUpdateRequest: {
+            /** Format: int32 */
+            version: number;
+            name: string;
+            tokens: components["schemas"]["ThemeTokens"];
+        };
+        ThemeStatusRequest: {
+            /** Format: int32 */
+            version: number;
+            /** @enum {string} */
+            status: "draft" | "approved" | "retired";
+        };
+        ContrastFailure: {
+            mode: string;
+            fg: string;
+            bg: string;
+            /** Format: double */
+            ratio: number;
+        };
+        ProblemLimit: {
+            /** @description The `EffectiveLimits` field that was reached. */
+            name: string;
+            /** Format: int64 */
+            value: number;
         };
     };
     responses: {
@@ -2908,6 +3344,8 @@ export interface components {
         };
     };
     parameters: {
+        AdminUserId: string;
+        ThemeId: string;
         /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
         AssistantChatHeader: string;
         /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). */
@@ -4943,6 +5381,369 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DemoData"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListUsers: {
+        parameters: {
+            query?: {
+                /** @description Part of the e-mail address. */
+                search?: string;
+                /** @description The `next` value of the previous page. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of accounts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUsersPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminCreateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCreatedUser"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminGetUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The account. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminDeleteUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminDeleteUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUpdateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description The account as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminResetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The one-time password. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OneTimePassword"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminRevokeSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many sessions ended. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokedSessions"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminGetSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document and its version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceSettingsDoc"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminPutSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstanceSettingsDoc"];
+            };
+        };
+        responses: {
+            /** @description Saved; `version` is the new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceSettingsDoc"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUsage: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Totals and the last days' activity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceUsage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListThemes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Themes by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Theme"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminCreateTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Theme"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ThemeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description The theme as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Theme"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminDeleteTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ThemeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminSetThemeStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ThemeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description The theme as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Theme"];
                 };
             };
             default: components["responses"]["Problem"];

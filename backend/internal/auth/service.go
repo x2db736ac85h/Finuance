@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
@@ -54,10 +55,17 @@ type User struct {
 	DisplayName string
 	IsDemo      bool
 	CreatedAt   time.Time
+	// Phase 19 (ADR 0025): the administrator flag, a pending forced password change (after a
+	// one-time password) and the per-user limit overrides.
+	IsAdmin            bool
+	MustChangePassword bool
+	Limits             instance.Limits
 }
 
 func userOf(u db.User) User {
-	return User{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, CreatedAt: u.CreatedAt}
+	limits, _ := instance.ParseLimits(u.Limits) // the admin service validated them when it stored them
+	return User{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, CreatedAt: u.CreatedAt,
+		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword, Limits: limits}
 }
 
 // Service implements signup, login, sessions and the /me operations.
@@ -107,6 +115,9 @@ type SignupInput struct {
 	Email       string
 	Password    string
 	DisplayName string
+	// Set only by administrators (finuance admin create-user -admin, the admin panel).
+	Admin              bool
+	MustChangePassword bool
 }
 
 // cleanEmail trims the address and checks it is one plain address (no display name, no list).
@@ -183,7 +194,8 @@ func (s *Service) createUser(ctx context.Context, in SignupInput) (User, error) 
 	}
 	var out User
 	err = s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		u, err := q.CreateUser(ctx, db.CreateUserParams{ID: platform.NewID(), Email: email, PasswordHash: phc, DisplayName: name})
+		u, err := q.CreateUserWithRole(ctx, db.CreateUserWithRoleParams{ID: platform.NewID(), Email: email, PasswordHash: phc,
+			DisplayName: name, IsAdmin: in.Admin, MustChangePassword: in.MustChangePassword})
 		out = userOf(u)
 		return err
 	})
@@ -222,6 +234,9 @@ func (s *Service) Login(ctx context.Context, email, password, previousToken stri
 	}
 	if !ok {
 		return User{}, "", &FailedLoginError{UserID: u.ID}
+	}
+	if u.DisabledAt != nil { // only after the right password, so this reveals no more than a failure
+		return User{}, "", fmt.Errorf("this account has been disabled by an administrator: %w", platform.ErrAccountDisabled)
 	}
 	var rehash string
 	if NeedsRehash(u.PasswordHash, s.cfg.Params) {
@@ -286,6 +301,10 @@ func (s *Service) ChangePassword(ctx context.Context, id Identity, current, next
 	if err := s.checkCurrentPassword(ctx, id.User.ID, "currentPassword", current); err != nil {
 		return "", err
 	}
+	if next == current && id.User.MustChangePassword {
+		ve.Add("newPassword", "must differ from the one-time password")
+		return "", ve
+	}
 	return s.setPassword(ctx, id.User.ID, next, &c)
 }
 
@@ -333,6 +352,11 @@ func (s *Service) setPassword(ctx context.Context, userID uuid.UUID, password st
 		if err := q.SetUserPassword(ctx, db.SetUserPasswordParams{ID: userID, PasswordHash: phc}); err != nil {
 			return err
 		}
+		if c != nil { // the user chose this password themselves: a pending forced change is done
+			if err := q.SetUserMustChangePassword(ctx, db.SetUserMustChangePasswordParams{ID: userID, MustChange: false}); err != nil {
+				return err
+			}
+		}
 		if _, err := q.DeleteUserSessions(ctx, db.DeleteUserSessionsParams{UserID: userID, KeepTokenHash: []byte{}}); err != nil {
 			return err
 		}
@@ -372,7 +396,46 @@ func (s *Service) DeleteAccount(ctx context.Context, id Identity, password strin
 		return err
 	}
 	return s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		if err := GuardLastAdmin(ctx, q, id.User.ID); err != nil {
+			return err
+		}
 		_, err := q.DeleteUser(ctx, id.User.ID)
 		return err
 	})
+}
+
+// GuardLastAdmin fails with platform.ErrLastAdmin when userID is the only active administrator,
+// so the instance never loses its last one (to a deletion, a demotion or disabling). It locks the
+// administrators' rows for the rest of the transaction.
+func GuardLastAdmin(ctx context.Context, q *db.Queries, userID uuid.UUID) error {
+	u, err := q.GetUser(ctx, userID)
+	if err != nil || !u.IsAdmin || u.DisabledAt != nil {
+		return err
+	}
+	n, err := q.CountActiveAdmins(ctx)
+	if err != nil {
+		return err
+	}
+	if n <= 1 {
+		return fmt.Errorf("this is the only administrator; make someone else an administrator first: %w", platform.ErrLastAdmin)
+	}
+	return nil
+}
+
+// HashPassword checks a new password's length and hashes it (the admin service's one-time and
+// administrator-set passwords).
+func (s *Service) HashPassword(ctx context.Context, field, password string) (string, error) {
+	ve := &platform.ValidationError{}
+	checkPassword(field, password, ve)
+	if err := ve.Err(); err != nil {
+		return "", err
+	}
+	return s.hash(ctx, password)
+}
+
+// CheckDisplayName validates a display name the way sign-up does.
+func CheckDisplayName(name string) (string, error) {
+	ve := &platform.ValidationError{}
+	name = cleanDisplayName(name, ve)
+	return name, ve.Err()
 }

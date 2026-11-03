@@ -11,7 +11,7 @@ import (
 
 // GetMe returns the signed-in user.
 func (a *api) GetMe(ctx context.Context, _ gen.GetMeRequestObject) (gen.GetMeResponseObject, error) {
-	return gen.GetMe200JSONResponse(userDTO(identity(ctx).User)), nil
+	return gen.GetMe200JSONResponse(a.userDTO(ctx, identity(ctx).User)), nil
 }
 
 // UpdateMe changes the display name.
@@ -20,7 +20,7 @@ func (a *api) UpdateMe(ctx context.Context, req gen.UpdateMeRequestObject) (gen.
 	if err != nil {
 		return nil, err
 	}
-	return gen.UpdateMe200JSONResponse(userDTO(u)), nil
+	return gen.UpdateMe200JSONResponse(a.userDTO(ctx, u)), nil
 }
 
 // ChangePassword checks the current password, revokes every session and signs this browser in

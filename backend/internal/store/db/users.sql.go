@@ -16,7 +16,7 @@ const createUser = `-- name: CreateUser :one
 
 INSERT INTO users (id, email, password_hash, display_name, is_demo)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at
+RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits
 `
 
 type CreateUserParams struct {
@@ -46,6 +46,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsDemo,
 		&i.CreatedAt,
 		&i.LastLoginAt,
+		&i.IsAdmin,
+		&i.DisabledAt,
+		&i.MustChangePassword,
+		&i.Limits,
 	)
 	return i, err
 }
@@ -90,7 +94,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) (int64, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at FROM users WHERE id = $1
+SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -104,12 +108,16 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.IsDemo,
 		&i.CreatedAt,
 		&i.LastLoginAt,
+		&i.IsAdmin,
+		&i.DisabledAt,
+		&i.MustChangePassword,
+		&i.Limits,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at FROM users WHERE email = $1
+SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits FROM users WHERE email = $1
 `
 
 // email is citext, so the lookup ignores case.
@@ -124,6 +132,10 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.IsDemo,
 		&i.CreatedAt,
 		&i.LastLoginAt,
+		&i.IsAdmin,
+		&i.DisabledAt,
+		&i.MustChangePassword,
+		&i.Limits,
 	)
 	return i, err
 }

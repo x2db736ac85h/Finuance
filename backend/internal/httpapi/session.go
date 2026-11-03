@@ -4,13 +4,17 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/admin"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
@@ -49,7 +53,7 @@ func identity(ctx context.Context) auth.Identity { return authFrom(ctx).identity
 
 // requireSession resolves the session cookie. It runs per matched API route (r.Pattern is set), so
 // unknown paths still answer 404. Public routes pass without a session; protected ones answer 401.
-func requireSession(svc *auth.Service, prod bool) func(http.Handler) http.Handler {
+func requireSession(svc *auth.Service, adm *admin.Service, prod bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ra := &requestAuth{client: auth.Client{UserAgent: r.UserAgent()}}
@@ -77,6 +81,10 @@ func requireSession(svc *auth.Service, prod bool) func(http.Handler) http.Handle
 			ra.identity = id
 			sum := sha256.Sum256(id.User.ID[:])
 			mw.FromContext(ctx).UserHash = hex.EncodeToString(sum[:8])
+			if err := gate(ctx, r.Pattern, id.User, adm); err != nil {
+				WriteProblem(w, r, err, prod)
+				return
+			}
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -106,4 +114,49 @@ func (c cookies) cookie(value string, maxAge int) *string {
 	ck.Secure = c.secure
 	s := ck.String()
 	return &s
+}
+
+// passwordChangeRoutes are all a user with a one-time password may use until they replace it.
+var passwordChangeRoutes = map[string]bool{
+	"GET /api/v1/me":           true,
+	"POST /api/v1/me/password": true,
+	"GET /api/v1/preferences":  true, // the app loads it while showing the password screen
+}
+
+// featureRoutes are the routes of a feature an administrator can switch off (ADR 0025). A route
+// matches when its pattern's path starts with the prefix.
+var featureRoutes = []struct {
+	prefix string
+	on     func(instance.EffectiveFeatures) bool
+}{
+	{"/api/v1/overview", func(f instance.EffectiveFeatures) bool { return f.Overview }},
+	{"/api/v1/assistant/", func(f instance.EffectiveFeatures) bool { return f.Assistant }},
+}
+
+// gate applies what the account and the instance allow on a protected route: administrators
+// only on /admin (anyone else gets 404, so the routes don't announce themselves), nothing but the
+// password change while a one-time password is pending, and no route of a switched-off feature.
+func gate(ctx context.Context, pattern string, u auth.User, adm *admin.Service) error {
+	_, path, _ := strings.Cut(pattern, " ")
+	if strings.HasPrefix(path, "/api/v1/admin/") && (!u.IsAdmin || adm == nil) {
+		return fmt.Errorf("%s: %w", path, platform.ErrNotFound)
+	}
+	if u.MustChangePassword && !passwordChangeRoutes[pattern] {
+		return fmt.Errorf("choose a new password first: %w", platform.ErrPasswordChangeRequired)
+	}
+	if adm == nil {
+		return nil
+	}
+	for _, fr := range featureRoutes {
+		if strings.HasPrefix(path, fr.prefix) {
+			f, err := adm.Features(ctx)
+			if err != nil {
+				return err
+			}
+			if !fr.on(f) {
+				return fmt.Errorf("%s is switched off on this instance: %w", path, platform.ErrNotFound)
+			}
+		}
+	}
+	return nil
 }

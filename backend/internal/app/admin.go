@@ -20,38 +20,59 @@ import (
 
 // AdminInput is one `finuance admin` command.
 type AdminInput struct {
-	Command     string // create-user | set-password
+	Command     string // create-user | set-password | grant-admin | revoke-admin
 	Email       string
 	DisplayName string
-	Password    io.Reader // stdin; the first line is the password
+	Admin       bool      // create-user -admin
+	Password    io.Reader // stdin; the first line is the password (create-user, set-password)
 }
 
 // Admin runs a user-administration command against the database (app role, like the api):
 //
-//	finuance admin create-user --email … [--display-name …] --password-stdin
+//	finuance admin create-user --email … [--display-name …] [--admin] --password-stdin
 //	finuance admin set-password --email … --password-stdin
+//	finuance admin grant-admin|revoke-admin --email …
 //
 // create-user works even when FINUANCE_ALLOW_SIGNUP=false (personal instances). set-password is the
 // way to recover a forgotten password — there is no email sending — and signs the user out
 // everywhere. The password is read from stdin so it never appears in shell history or ps.
 func Admin(ctx context.Context, cfg config.Config, in AdminInput, out func(format string, args ...any)) error {
-	password, err := readPassword(in.Password)
-	if err != nil {
-		return err
+	var password string
+	if in.Command == "create-user" || in.Command == "set-password" {
+		var err error
+		if password, err = readPassword(in.Password); err != nil {
+			return err
+		}
 	}
 	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider())
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
-	svc := NewAuth(store.New(pool), cfg)
+	st := store.New(pool)
+	svc := NewAuth(st, cfg)
 	switch in.Command {
 	case "create-user":
-		u, err := svc.CreateUser(ctx, auth.SignupInput{Email: in.Email, Password: password, DisplayName: in.DisplayName})
+		u, err := svc.CreateUser(ctx, auth.SignupInput{Email: in.Email, Password: password, DisplayName: in.DisplayName, Admin: in.Admin})
 		if err != nil {
 			return err
 		}
-		out("created user %s (%s)", u.Email, u.ID)
+		role := "user"
+		if u.IsAdmin {
+			role = "administrator"
+		}
+		out("created %s %s (%s)", role, u.Email, u.ID)
+		return nil
+	case "grant-admin", "revoke-admin":
+		u, err := NewAdmin(st, svc, cfg).SetAdminByEmail(ctx, in.Email, in.Command == "grant-admin")
+		if err != nil {
+			return err
+		}
+		if u.IsAdmin {
+			out("%s is an administrator", u.Email)
+		} else {
+			out("%s is no longer an administrator", u.Email)
+		}
 		return nil
 	case "set-password":
 		if err := svc.SetPassword(ctx, in.Email, password); err != nil {
@@ -60,7 +81,7 @@ func Admin(ctx context.Context, cfg config.Config, in AdminInput, out func(forma
 		out("password set for %s; all of their sessions were signed out", strings.TrimSpace(in.Email))
 		return nil
 	}
-	return fmt.Errorf("unknown admin command %q (want create-user or set-password)", in.Command)
+	return fmt.Errorf("unknown admin command %q (want create-user, set-password, grant-admin or revoke-admin)", in.Command)
 }
 
 // readPassword takes the first line of r, without the line ending.

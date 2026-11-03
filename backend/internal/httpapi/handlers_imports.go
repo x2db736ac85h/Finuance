@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/admin"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
@@ -35,6 +36,9 @@ func (a *api) ListAccounts(ctx context.Context, _ gen.ListAccountsRequestObject)
 
 // CreateAccount adds an account.
 func (a *api) CreateAccount(ctx context.Context, req gen.CreateAccountRequestObject) (gen.CreateAccountResponseObject, error) {
+	if err := a.checkCount(ctx, admin.LimitAccounts); err != nil {
+		return nil, err
+	}
 	acc, err := a.ledger.CreateAccount(ctx, identity(ctx).User.ID, accountInput(*req.Body))
 	if err != nil {
 		return nil, err
@@ -91,6 +95,12 @@ func (a *api) UploadImport(ctx context.Context, req gen.UploadImportRequestObjec
 	}
 	up, err := a.readUpload(req)
 	if err != nil {
+		return nil, err
+	}
+	if err := a.checkUpload(ctx, int64(len(up.Content))); err != nil {
+		return nil, err
+	}
+	if err := a.checkCount(ctx, admin.LimitImportsPerDay); err != nil {
 		return nil, err
 	}
 	p, err := a.ledger.CreatePreview(ctx, u, up)

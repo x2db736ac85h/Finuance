@@ -17,6 +17,7 @@ import (
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/riverqueue/river"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/admin"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 
@@ -67,6 +68,9 @@ type Deps struct {
 	Legacy *legacyimport.Migrator
 	// Rules stores the categorisation rules. Nil in tests of the bare server.
 	Rules *rules.Service
+	// Admin runs the instance settings, limits, themes and the admin routes (ADR 0025). Nil in tests
+	// of the bare server: every feature on, limits from the environment, admin routes 404.
+	Admin *admin.Service
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -102,7 +106,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	impl := &api{admin: d.Admin, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}
@@ -117,7 +121,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 		// Per matched route; the last one runs first: CSRF → session → request validation → handler.
 		Middlewares: []gen.MiddlewareFunc{
 			validator,
-			requireSession(d.Auth, prod),
+			requireSession(d.Auth, d.Admin, prod),
 			gen.MiddlewareFunc(mw.CSRF(d.Config.PublicOrigin, func(w http.ResponseWriter, r *http.Request, err error) {
 				WriteProblem(w, r, fmt.Errorf("%w: %w", platform.ErrForbidden, err), prod)
 			})),
