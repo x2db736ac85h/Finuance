@@ -379,6 +379,18 @@ curl -XPOST localhost:9093/api/v2/alerts -H 'Content-Type: application/json' -d 
 
 The first mail from a new sending account may land in spam: mark it *Not spam* once.
 
+What goes by e-mail (`deploy/k8s/observability`, `alerting.*`): every `Finuance*` alert (pages at
+once and hourly, tickets daily), the monitoring stack's own `critical` alerts (nodes, disks,
+Kubernetes, Prometheus; every 4 hours while they last), and once a week, on Monday 06:00–08:00 UTC,
+the always-firing `Watchdog` as a sign of life: **if that Monday mail doesn't come, the alert path is
+broken** (machine off, Alertmanager down, the app password revoked). Warnings stay on the dashboards.
+Which route an alert takes, checked inside Alertmanager:
+
+```sh
+kubectl -n monitoring exec alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- \
+  amtool config routes test --config.file=/etc/alertmanager/config_out/alertmanager.env.yaml alertname=Watchdog
+```
+
 **Check** (2026-10-31): every app `Synced`/`Healthy`; all Prometheus targets up (api ×2, worker, database ×2, kubelet, API server, CoreDNS, node-exporter, kube-state-metrics, the stack's own); the 27 Finuance rules (6 groups) healthy, only `Watchdog` firing (it always fires, to show the pipeline works); Grafana with the six Finuance dashboards in the *Finuance* folder, Prometheus and Tempo data sources healthy, the default password refused; one trace in Tempo from `POST /api/v1/imports/{id}/commit` (api) through `job commit_import` and `job reclassify` (worker) with their SQL; the test alert sent by Alertmanager (1 e-mail, 0 failed).
 
 ### 14. Security scans of the instance (Phase 18.8)

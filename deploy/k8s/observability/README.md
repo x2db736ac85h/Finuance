@@ -22,7 +22,7 @@ homelab's values: `deploy/environments/homelab/observability-values.yaml`.
 | `files/dashboards/*.json` | Six Grafana dashboards (API, imports and jobs, assistant, PostgreSQL, Go runtime and pool, SLOs), written by `tools/observability/dashboards.mjs`; ConfigMaps labelled for the Grafana sidecar |
 | `templates/prometheusrule.yaml` | SLO recording rules (5 m … 3 d), burn-rate alerts, app, database, backup and pod alerts (crash loops, no api pod ready), and the ingress alert; groups switched by `rules.database`, `rules.backups`, `rules.kubernetes`, `ingress.traefik.enabled` |
 | `templates/traefik-podmonitor.yaml` | Traefik's request metrics (`ingress.traefik`) |
-| `templates/alertmanagerconfig.yaml` | Every `Finuance*` alert by e-mail; the SMTP password from a Secret |
+| `templates/alertmanagerconfig.yaml` | Every `Finuance*` alert by e-mail; the monitoring stack's own alerts of `alerting.platform.severities` (default `critical`); a weekly `Watchdog` mail as a sign of life (`alerting.heartbeat`, Mondays 06:00–08:00 UTC); the SMTP password from a Secret |
 | `tests/rules.test.yaml` | promtool unit tests: each alert fires on the right series and stays quiet below its threshold |
 | `metrics.txt`, `external-metrics.txt` | The metrics the dashboards and rules may use (ours from `TestMetricNames`; CloudNativePG 1.30.1, Barman Cloud plugin v0.15.1, kube-state-metrics, Traefik) |
 
