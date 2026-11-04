@@ -12,6 +12,7 @@ const actions = () =>
     extend: vi.fn<KeyActions['extend']>(() => true),
     escape: vi.fn(() => true),
     addTransaction: vi.fn(() => true),
+    toggleShared: vi.fn(() => true),
   }) satisfies KeyActions;
 
 const key = (k: string, init: KeyboardEventInit = {}) =>
@@ -40,6 +41,13 @@ describe('handleKey', () => {
     handleKey(n, a, none);
     expect(a.addTransaction).toHaveBeenCalled();
     expect(n.defaultPrevented).toBe(true);
+    const s = key('s');
+    handleKey(s, a, none);
+    expect(a.toggleShared).toHaveBeenCalled();
+    expect(s.defaultPrevented).toBe(true);
+    // not with ⌘/Ctrl (the browser's save) and not while typing
+    handleKey(key('s', { ctrlKey: true }), a, none);
+    expect(a.toggleShared).toHaveBeenCalledTimes(1);
   });
 
   it('leaves ⌘F to the browser when there is nothing to search', () => {

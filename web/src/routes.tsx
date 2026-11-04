@@ -30,6 +30,9 @@ export const routes: RouteObject[] = [
       { path: '/t/:viewId', element: <TableView /> },
       { path: '/o/:viewId', element: <OverviewView /> },
       { path: '/imports/:importId', element: <ImportRoute /> },
+      // the Shared tab is its own chunk (Phase 19, ADR 0028)
+      { path: '/s', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
+      { path: '/s/:groupId', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
       { path: '/settings', element: <Navigate to="/settings/appearance" replace /> },
       { path: '/settings/:section', element: <SettingsPage /> },
       { path: '/admin', element: <Navigate to="/admin/users" replace /> },

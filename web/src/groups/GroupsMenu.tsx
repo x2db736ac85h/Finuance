@@ -5,8 +5,11 @@
 // only, after a confirmation), New group, Show all.
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import { useDeleteGroup, useGroups, type Group } from '../api/hooks/groups';
+import { useMe, useMeta } from '../api/hooks/me';
+import { ShareDialog } from '../shared/dialogs';
 import { errorMessage } from '../lib/errors';
 import { fmtInt, fmtMoney, plural } from '../lib/format';
 import { without } from '../lib/objects';
@@ -28,7 +31,13 @@ export function GroupsButton({ viewId }: { viewId: string }) {
   const [form, setForm] = useState<{ group?: Group } | null>(null);
   const [del, setDel] = useState<Group | null>(null);
   const [report, setReport] = useState<Group | null>(null);
+  const [share, setShare] = useState<Group | null>(null);
   const groups = useGroups().data ?? [];
+  const navigate = useNavigate();
+  // Share… (Phase 19): only where shared groups are on and never in the demo
+  const sharedOn = useMeta().data?.features.sharedGroups !== false;
+  const isDemo = useMe().data?.isDemo === true;
+  const canShare = sharedOn && !isDemo;
   const cond = useViews((s) => viewOf(s.views, viewId).filters.group?.cond ?? '');
   const active = cond.startsWith('=') ? cond.slice(1) : null;
   const patch = useViews((s) => s.patch);
@@ -84,6 +93,7 @@ export function GroupsButton({ viewId }: { viewId: string }) {
                   >
                     <i className="gdot-i" style={{ background: groupColor(g.color) }} />
                     <span className="gn">{g.name}</span>
+                    {g.sharedGroupId && <span className="sh-badge">shared</span>}
                     <span className="gc">
                       {fmtInt(g.count)} · {fmtMoney(g.spent, { whole: true })}
                     </span>
@@ -98,6 +108,19 @@ export function GroupsButton({ viewId }: { viewId: string }) {
                       setReport(g);
                     }}
                   />
+                  {canShare && (
+                    <IconButton
+                      icon="swap"
+                      size="sm"
+                      title={g.sharedGroupId ? `Open the shared group ${g.name}` : `Share ${g.name}…`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpen(false);
+                        if (g.sharedGroupId) void navigate(`/s/${g.sharedGroupId}`);
+                        else setShare(g);
+                      }}
+                    />
+                  )}
                   <IconButton
                     icon="pen"
                     size="sm"
@@ -174,6 +197,14 @@ export function GroupsButton({ viewId }: { viewId: string }) {
           onShow={() => {
             if (activeGroup(viewId) !== report.name) toggleGroupFilter(viewId, report.name);
             setReport(null);
+          }}
+        />
+      )}
+      {share && (
+        <ShareDialog
+          from={{ id: share.id, name: share.name, color: share.color, currency: share.spent.currency }}
+          onClose={() => {
+            setShare(null);
           }}
         />
       )}

@@ -27,9 +27,12 @@ type Props = {
   hasData: boolean;
   searchRef: RefObject<HTMLInputElement | null>;
   onToggleMode: (mode: 'table' | 'ov') => void;
+  /** On the Shared tab (/s…). */
+  inShared: boolean;
+  onToggleShared: () => void;
 };
 
-export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Props) {
+export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inShared, onToggleShared }: Props) {
   const mode = useUi((s) => s.mode);
   const vizOpen = useUi((s) => s.vizOpen);
   const sbShown = useUi(sidebarShown);
@@ -55,10 +58,10 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
       <IconButton
         icon="chart"
         title="Charts pane (list view)"
-        on={mode !== 'ov' && vizOpen}
-        aria-pressed={mode !== 'ov' && vizOpen}
+        on={mode !== 'ov' && vizOpen && !inShared}
+        aria-pressed={mode !== 'ov' && vizOpen && !inShared}
         onClick={() => {
-          if (mode === 'ov') onToggleMode('table');
+          if (mode === 'ov' || inShared) onToggleMode('table');
           toggleViz();
         }}
       />
@@ -66,11 +69,20 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
         <IconButton
           icon="dash"
           title="Personal finance overview"
-          on={mode === 'ov'}
-          aria-pressed={mode === 'ov'}
+          on={mode === 'ov' && !inShared}
+          aria-pressed={mode === 'ov' && !inShared}
           onClick={() => {
-            onToggleMode(mode === 'ov' ? 'table' : 'ov');
+            onToggleMode(mode === 'ov' && !inShared ? 'table' : 'ov');
           }}
+        />
+      )}
+      {features?.sharedGroups !== false && !user.isDemo && (
+        <IconButton
+          icon="swap"
+          title="Shared: trips and groups with friends (S)"
+          on={inShared}
+          aria-pressed={inShared}
+          onClick={onToggleShared}
         />
       )}
       <div className="brand">

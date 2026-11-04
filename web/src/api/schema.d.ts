@@ -2765,6 +2765,7 @@ export interface components {
         };
         TimelineYear: {
             year: number;
+            currency: string;
             groups: number;
             /**
              * Format: int64

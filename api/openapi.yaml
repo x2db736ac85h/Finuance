@@ -4268,10 +4268,12 @@ components:
     TimelineYear:
       type: object
       additionalProperties: false
-      required: [year, groups, spentMinor, days]
+      required: [year, groups, spentMinor, currency, days]
       properties:
         year:
           type: integer
+        currency:
+          type: string
         groups:
           type: integer
         spentMinor:

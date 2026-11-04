@@ -66,10 +66,11 @@ type TimelineGroup struct {
 
 // TimelineYear sums a year's groups (by the group's last day).
 type TimelineYear struct {
-	Year   int
-	Groups int
-	Spent  int64 // in the year's most common currency; groups in another currency are left out
-	Days   int
+	Year     int
+	Groups   int
+	Spent    int64 // in the year's most common currency; groups in another currency are left out
+	Currency string
+	Days     int
 }
 
 // Hint is a "next time" fact.
@@ -187,7 +188,7 @@ func years(groups []TimelineGroup) []TimelineYear {
 				cur = c
 			}
 		}
-		out = append(out, TimelineYear{Year: y, Groups: a.groups, Spent: a.byCur[cur], Days: a.days})
+		out = append(out, TimelineYear{Year: y, Groups: a.groups, Spent: a.byCur[cur], Currency: cur, Days: a.days})
 	}
 	slices.SortFunc(out, func(a, b TimelineYear) int { return cmp.Compare(b.Year, a.Year) })
 	return out

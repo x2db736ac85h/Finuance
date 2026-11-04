@@ -441,7 +441,7 @@ func (a *api) GroupsTimeline(ctx context.Context, _ gen.GroupsTimelineRequestObj
 		out.Groups = append(out.Groups, x)
 	}
 	for _, y := range tl.Years {
-		out.Years = append(out.Years, gen.TimelineYear{Year: y.Year, Groups: y.Groups, SpentMinor: y.Spent, Days: y.Days})
+		out.Years = append(out.Years, gen.TimelineYear{Year: y.Year, Groups: y.Groups, SpentMinor: y.Spent, Currency: y.Currency, Days: y.Days})
 	}
 	for _, h := range tl.Hints {
 		x := gen.TimelineHint{GroupId: h.GroupID, Kind: gen.TimelineHintKind(h.Kind), Ratio: h.Ratio}
