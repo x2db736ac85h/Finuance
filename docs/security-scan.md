@@ -10,6 +10,13 @@ demo goes public.
 from the checkout, and the stack was `compose.ci.yaml` (sign-ups on, mock model). Trivy 0.76.0 ran
 with a vulnerability database of 2026-10-26.
 
+**Release scan before `v0.3.0-rc.1`: 2026-11-04**, on the reference machine, on `main` at `9ae8f60`;
+images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`.
+Unchanged since v0.2.0 (no dependency changes in Phase 19): web image 0 findings; api image and
+repository GO-2026-5932 (no fix, not reachable); govulncheck 0 reachable; `npm audit --omit=dev` 0;
+`minimatch` (MEDIUM, development tools only) still open; no secrets; the misconfiguration findings
+as documented below.
+
 **Release scan before `v0.2.0-rc.2`: 2026-11-02**, on the reference machine, on the Phase 18 branch;
 images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`. Web
 image 0 findings; api image and repository GO-2026-5932 as before (no fix, not reachable);
