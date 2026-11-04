@@ -67,6 +67,17 @@ const DESCRIBE: Record<ActivityAction, (m: Meta) => string> = {
   'admin.settings_changed': () => 'Changed the instance settings',
   'admin.theme_approved': (m) => `Approved the theme ${str(m, 'theme')}`,
   'admin.theme_retired': (m) => `Retired the theme ${str(m, 'theme')}`,
+  // Transactions added by hand to a cash account: no amounts or payees in the log.
+  'transaction.added': () => 'Added a transaction by hand',
+  'transaction.edited': () => 'Changed a transaction added by hand',
+  'transaction.deleted': () => 'Deleted a transaction added by hand',
+  // Friends: the other side's log says the friend did it (`by`).
+  'friend.added': (m) =>
+    str(m, 'by') === 'friend'
+      ? `${str(m, 'name') || 'Someone'} entered your friend code; you are friends now`
+      : `Became friends with ${str(m, 'name') || 'someone'}`,
+  'friend.removed': (m) => (str(m, 'by') === 'friend' ? 'A friend removed you' : 'Removed a friend'),
+  'friend.code_failed': () => 'Entered a friend code that was wrong or had expired',
 };
 
 function byAdmin(m: Meta): boolean {

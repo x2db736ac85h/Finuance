@@ -1,6 +1,7 @@
 -- name: CreateAccount :one
-INSERT INTO accounts (id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo)
-VALUES (@id, @user_id, @name, @name_n, @currency, sqlc.narg(number_hint), @opening_balance_minor, @is_demo)
+-- kind (bank | cash) is chosen here and never changes (ADR 0029).
+INSERT INTO accounts (id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, kind)
+VALUES (@id, @user_id, @name, @name_n, @currency, sqlc.narg(number_hint), @opening_balance_minor, @is_demo, @kind)
 RETURNING *;
 
 -- name: GetAccount :one

@@ -23,6 +23,7 @@ type ExportAccount struct {
 	ID                  uuid.UUID  `json:"id"`
 	Name                string     `json:"name"`
 	Currency            string     `json:"currency"`
+	Kind                string     `json:"kind"` // bank or cash; a cash account's rows were typed by hand (ADR 0029)
 	NumberHint          string     `json:"numberHint,omitempty"`
 	OpeningBalanceMinor int64      `json:"openingBalanceMinor"`
 	IsDemo              bool       `json:"isDemo"`
@@ -150,7 +151,7 @@ func (l *Ledger) Export(ctx context.Context, userID uuid.UUID) (map[string]any, 
 		accounts := make([]ExportAccount, len(accs))
 		for i := range accs {
 			a := &accs[i]
-			accounts[i] = ExportAccount{ID: a.ID, Name: a.Name, Currency: a.Currency, NumberHint: deref(a.NumberHint),
+			accounts[i] = ExportAccount{ID: a.ID, Name: a.Name, Currency: a.Currency, Kind: a.Kind, NumberHint: deref(a.NumberHint),
 				OpeningBalanceMinor: a.OpeningBalanceMinor, IsDemo: a.IsDemo, ArchivedAt: a.ArchivedAt, CreatedAt: a.CreatedAt}
 		}
 		out["accounts.json"] = accounts

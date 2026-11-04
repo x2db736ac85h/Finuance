@@ -14,9 +14,15 @@ import (
 // reference to another user-owned row therefore checks, in the same transaction, that the row is
 // the caller's. Under WithUser another user's row is invisible, so the lookup fails as not found.
 
-func ownAccount(ctx context.Context, q *db.Queries, userID, id uuid.UUID) error {
-	if _, err := q.GetAccount(ctx, db.GetAccountParams{UserID: userID, ID: id}); err != nil {
+// importAccount is ownAccount for an import's account: only bank accounts take files, a cash
+// account holds typed expenses (ADR 0029).
+func importAccount(ctx context.Context, q *db.Queries, userID, id uuid.UUID) error {
+	a, err := q.GetAccount(ctx, db.GetAccountParams{UserID: userID, ID: id})
+	if err != nil {
 		return fmt.Errorf("account %s: %w", id, err)
+	}
+	if a.Kind == KindCash {
+		return invalidf("%s is a cash account: add its expenses by hand, files go into a bank account", a.Name)
 	}
 	return nil
 }

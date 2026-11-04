@@ -54,7 +54,7 @@ func TestRegistry(t *testing.T) {
 	if (CleanupDemoUsersArgs{}).Kind() != "cleanup_demo_users" || (CleanupDemoUsersArgs{}).InsertOpts().MaxAttempts != 3 {
 		t.Error("demo cleanup kind or options changed")
 	}
-	if len(PeriodicJobs()) != 4 { // sessions, assistant chats and demo users hourly, the audit log daily
+	if len(PeriodicJobs()) != 6 { // sessions, assistant chats, demo users and friend codes hourly; the audit log and notifications daily
 		t.Errorf("periodic jobs = %d", len(PeriodicJobs()))
 	}
 	if Workers(Deps{Sessions: &fakeCleaner{}}) == nil {

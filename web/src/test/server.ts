@@ -124,6 +124,7 @@ const authed = <T>(fn: () => T) => (db.signedIn ? fn() : problem(401, 'unauthent
 export const account = (over: Partial<Schemas['Account']> = {}): Schemas['Account'] => ({
   id: '00000000-0000-4000-8000-0000000000a1',
   name: 'Konto',
+  kind: 'bank',
   currency: 'PLN',
   openingBalance: { amountMinor: 0, currency: 'PLN' },
   txCount: 0,

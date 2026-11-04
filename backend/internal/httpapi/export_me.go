@@ -16,6 +16,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/notify"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 )
@@ -29,7 +30,7 @@ const ExportFormatVersion = 1
 //	<entity>.json           accounts, categories, groups, budgets, annotations, dedupe overrides,
 //	                        imports (metadata), investments, preferences, assistant (settings and
 //	                        chats with their turns), rules, category aliases, activity (the
-//	                        audit log)
+//	                        audit log), friends (display names only), notifications
 //	transactions.csv        every transaction of every account (the CSV export format, all columns)
 //	imports/<id>/<filename> the original files
 //
@@ -52,6 +53,28 @@ func (a *api) ExportMe(ctx context.Context, _ gen.ExportMeRequestObject) (gen.Ex
 			return nil, err
 		}
 		docs["assistant.json"] = doc
+	}
+	if a.friends != nil {
+		list, err := a.friends.List(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]gen.Friend, len(list))
+		for i, f := range list {
+			out[i] = friendDTO(f)
+		}
+		docs["friends.json"] = out
+	}
+	if a.notify != nil {
+		list, _, err := a.notify.List(ctx, u, notify.MaxList)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]gen.Notification, len(list))
+		for i, n := range list {
+			out[i] = gen.Notification{Id: n.ID, Kind: gen.NotificationKind(n.Kind), Data: n.Data, CreatedAt: n.CreatedAt, ReadAt: n.ReadAt}
+		}
+		docs["notifications.json"] = out
 	}
 	a.audit(ctx, u, ledger.AuditExportData, "", nil)
 	now := time.Now().UTC()

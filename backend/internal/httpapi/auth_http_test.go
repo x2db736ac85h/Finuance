@@ -3,6 +3,7 @@ package httpapi
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,12 +28,14 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
+	"github.com/x2db736ac85h/finuance/backend/internal/notify"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -103,6 +106,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	adm := admin.New(st, svc, clk, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour)})
 	legacy := legacyimport.New(st, led, assistant.NewChats(st, platform.SystemClock{}, 25), platform.SystemClock{})
 	rs := rules.New(st, platform.SystemClock{})
+	notes := notify.New(st, clk)
 	rc := &river.Config{Workers: jobs.Workers(jobs.Deps{Sessions: svc, Ledger: led, Migrator: legacy, Rules: rs})}
 	if withWorkers {
 		rc.Queues = map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}}
@@ -125,7 +129,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
 		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
 			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})})
 	if err != nil {
@@ -467,15 +471,15 @@ func userTables(t *testing.T) []string {
 	return out
 }
 
-// countRows counts u's rows per table. Sessions (outside RLS) are counted without a user; the rest
-// under WithUser, so RLS can't hide a leftover from another user.
+// countRows counts u's rows per table. Sessions and friend codes (outside RLS) are counted without
+// a user; the rest under WithUser, so RLS can't hide a leftover from another user.
 func countRows(t *testing.T, st *store.Store, u uuid.UUID, tables []string) map[string]int {
 	t.Helper()
 	out := map[string]int{}
 	ctx := context.Background()
 	for _, tb := range tables {
 		run := st.WithUser
-		if tb == "sessions" {
+		if tb == "sessions" || tb == "friend_codes" {
 			run = func(ctx context.Context, _ uuid.UUID, fn store.TxFunc) error { return st.WithoutUser(ctx, fn) }
 		}
 		var n int
@@ -580,6 +584,15 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		t.Fatal("no transactions committed")
 	}
 	if _, err := l.Annotate(ctx, u, txIDs[:1], ledger.AnnotationPatch{SetGroup: true, GroupID: &g.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if err := notify.New(st, platform.SystemClock{}).Send(ctx, u, notify.FriendAdded, map[string]string{"name": "Bo"}); err != nil {
+		t.Fatal(err)
+	}
+	code := sha256.Sum256(u[:]) // any 32 bytes: the table only keeps hashes
+	if err := st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		return q.SetFriendCode(ctx, db.SetFriendCodeParams{UserID: u, CodeHash: code[:], ExpiresAt: time.Now().Add(time.Hour), Now: time.Now()})
+	}); err != nil {
 		t.Fatal(err)
 	}
 }

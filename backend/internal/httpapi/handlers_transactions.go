@@ -74,10 +74,53 @@ func (a *api) GetTransaction(ctx context.Context, req gen.GetTransactionRequestO
 	return gen.GetTransaction200JSONResponse(d), nil
 }
 
-// UpdateTransaction sets the category or the note of one transaction.
+// AddTransaction adds a transaction by hand to a cash account (ADR 0029).
+func (a *api) AddTransaction(ctx context.Context, req gen.AddTransactionRequestObject) (gen.AddTransactionResponseObject, error) {
+	u, b := identity(ctx).User.ID, req.Body
+	in := ledger.ManualInput{AccountID: b.AccountId, BookedOn: *dateIn(&b.BookedOn), AmountMinor: b.AmountMinor, Payee: b.Payee,
+		Description: deref(b.Description), CategoryID: b.CategoryId, CategoryName: b.CategoryName, GroupID: b.GroupId, Note: deref(b.Note)}
+	id, err := a.ledger.AddManual(ctx, u, in)
+	if err != nil {
+		return nil, err
+	}
+	a.audit(ctx, u, ledger.AuditTransactionAdded, id.String(), map[string]any{"account": b.AccountId.String()})
+	a.reclassifyAfter(ctx, u) // rules and transfer pairing see the new row
+	d, err := a.transactionDetail(ctx, u, id)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AddTransaction201JSONResponse(d), nil
+}
+
+// DeleteTransaction deletes a transaction added by hand.
+func (a *api) DeleteTransaction(ctx context.Context, req gen.DeleteTransactionRequestObject) (gen.DeleteTransactionResponseObject, error) {
+	u := identity(ctx).User.ID
+	account, err := a.ledger.DeleteManual(ctx, u, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	a.audit(ctx, u, ledger.AuditTransactionDeleted, req.Id.String(), map[string]any{"account": account.String()})
+	a.reclassifyAfter(ctx, u) // a transfer pair may have lost its other half
+	return gen.DeleteTransaction204Response{}, nil
+}
+
+// UpdateTransaction sets the category or the note of one transaction, and the typed fields of one
+// added by hand.
 func (a *api) UpdateTransaction(ctx context.Context, req gen.UpdateTransactionRequestObject) (gen.UpdateTransactionResponseObject, error) {
 	u, b := identity(ctx).User.ID, req.Body
-	if b.CategoryId != nil || b.CategoryName != nil || deref(b.ResetCategory) || b.Note != nil || b.Transfer == nil {
+	edit := ledger.ManualEdit{BookedOn: dateIn(b.BookedOn), AmountMinor: b.AmountMinor, Payee: b.Payee, Description: b.Description}
+	if !edit.Empty() {
+		if err := a.ledger.EditManual(ctx, u, req.Id, edit); err != nil {
+			return nil, err
+		}
+		t, err := a.ledger.GetTransaction(ctx, u, req.Id)
+		if err != nil {
+			return nil, err
+		}
+		a.audit(ctx, u, ledger.AuditTransactionEdited, req.Id.String(), map[string]any{"account": t.AccountID.String()})
+		a.reclassifyAfter(ctx, u)
+	}
+	if b.CategoryId != nil || b.CategoryName != nil || deref(b.ResetCategory) || b.Note != nil || (b.Transfer == nil && edit.Empty()) {
 		if _, err := a.ledger.UpdateTransaction(ctx, u, req.Id, ledger.TransactionPatch{CategoryID: b.CategoryId, CategoryName: b.CategoryName,
 			ResetCategory: deref(b.ResetCategory), Note: b.Note}); err != nil {
 			return nil, err

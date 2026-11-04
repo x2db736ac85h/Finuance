@@ -24,6 +24,7 @@ type Account struct {
 	IsDemo              bool
 	ArchivedAt          *time.Time
 	CreatedAt           time.Time
+	Kind                string
 }
 
 type AssistantChat struct {
@@ -106,6 +107,19 @@ type DedupeOverride struct {
 	Mode              string
 	PreferredImportID *uuid.UUID
 	UpdatedAt         time.Time
+}
+
+type FriendCode struct {
+	UserID    uuid.UUID
+	CodeHash  []byte
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
+type Friendship struct {
+	UserA     uuid.UUID
+	UserB     uuid.UUID
+	CreatedAt time.Time
 }
 
 type GooseDbVersion struct {
@@ -243,6 +257,15 @@ type LegacyImportFile struct {
 	Position       int32
 	UserID         uuid.UUID
 	Content        []byte
+}
+
+type Notification struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Kind      string
+	Data      []byte
+	CreatedAt time.Time
+	ReadAt    *time.Time
 }
 
 type Rule struct {

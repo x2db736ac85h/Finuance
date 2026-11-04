@@ -53,7 +53,7 @@ func TestExportMeHTTP(t *testing.T) {
 	files := unzip(t, r.raw)
 	for _, name := range []string{"manifest.json", "accounts.json", "categories.json", "groups.json", "budgets.json", "annotations.json",
 		"dedupe-overrides.json", "imports.json", "investments.json", "preferences.json", "assistant.json", "transactions.csv",
-		"rules.json", "category-aliases.json", "activity.json"} {
+		"rules.json", "category-aliases.json", "activity.json", "friends.json", "notifications.json"} {
 		if _, ok := files[name]; !ok {
 			t.Errorf("missing %s (have %d files)", name, len(files))
 		}
@@ -67,7 +67,7 @@ func TestExportMeHTTP(t *testing.T) {
 	_ = json.Unmarshal(files["accounts.json"], &accounts)
 	_ = json.Unmarshal(files["annotations.json"], &annotations)
 	_ = json.Unmarshal(files["imports.json"], &imports)
-	if len(accounts) != 1 || accounts[0]["id"] != accID || len(annotations) != 1 || annotations[0]["note"] != "zakupy" ||
+	if len(accounts) != 1 || accounts[0]["id"] != accID || accounts[0]["kind"] != "bank" || len(annotations) != 1 || annotations[0]["note"] != "zakupy" ||
 		len(imports) != 1 || imports[0]["status"] != "committed" {
 		t.Errorf("accounts %s\nannotations %s\nimports %s", files["accounts.json"], files["annotations.json"], files["imports.json"])
 	}
@@ -107,7 +107,7 @@ func TestExportMeHTTP(t *testing.T) {
 	o := other.do("GET", "/me/export", nil)
 	expect(t, o, 200, "")
 	of := unzip(t, o.raw)
-	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 15 ||
+	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 17 ||
 		string(of["rules.json"]) != "[]\n" || string(of["category-aliases.json"]) != "[]\n" || string(of["activity.json"]) != "[]\n" {
 		t.Errorf("other user's export: accounts %s, %d files", of["accounts.json"], len(of))
 	}

@@ -47,44 +47,50 @@ func (l *Ledger) Annotate(ctx context.Context, userID uuid.UUID, ids []uuid.UUID
 		return 0, invalidf("note longer than %d characters", maxNote)
 	}
 	var changed int
-	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		if patch.SetGroup && patch.GroupID != nil {
-			if err := ownGroup(ctx, q, userID, *patch.GroupID); err != nil {
-				return err
-			}
-		}
-		if patch.SetCategory && patch.CategoryID != nil {
-			if err := ownCategory(ctx, q, userID, *patch.CategoryID); err != nil {
-				return err
-			}
-		}
-		now := l.clock.Now()
-		rows, err := q.UpdateTransactionAnnotations(ctx, db.UpdateTransactionAnnotationsParams{
-			UserID: userID, Ids: ids, Now: now,
-			SetGroup: patch.SetGroup, GroupID: patch.GroupID,
-			SetCategory: patch.SetCategory, CategoryID: patch.CategoryID,
-			SetNote: patch.SetNote, Note: patch.Note, NoteN: nameKey(patch.Note),
-		})
-		if err != nil {
-			return err
-		}
-		for i := range rows {
-			r := &rows[i]
-			var manual *uuid.UUID // annotations hold manual categories only
-			if r.CategorySource == "manual" {
-				manual = r.CategoryID
-			}
-			if err := q.UpsertAnnotation(ctx, db.UpsertAnnotationParams{AccountID: r.AccountID, Fingerprint: r.Fingerprint,
-				Occurrence: r.Occurrence, SplitScope: r.SplitScope, UserID: userID, GroupID: r.GroupID, CategoryID: manual,
-				Note: r.Note, NoteN: r.NoteN, Now: now}); err != nil {
-				return fmt.Errorf("annotation of %s: %w", r.ID, err)
-			}
-		}
-		if _, err := q.DeleteEmptyAnnotations(ctx, userID); err != nil {
-			return err
-		}
-		changed = len(rows)
-		return nil
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) (err error) {
+		changed, err = l.annotateTx(ctx, q, userID, ids, patch)
+		return err
 	})
 	return changed, dbErr("annotate", err)
+}
+
+// annotateTx is Annotate inside the caller's transaction (also used by AddManual, so a new
+// expense and its category, group and note are written together).
+func (l *Ledger) annotateTx(ctx context.Context, q *db.Queries, userID uuid.UUID, ids []uuid.UUID, patch AnnotationPatch) (int, error) {
+	if patch.SetGroup && patch.GroupID != nil {
+		if err := ownGroup(ctx, q, userID, *patch.GroupID); err != nil {
+			return 0, err
+		}
+	}
+	if patch.SetCategory && patch.CategoryID != nil {
+		if err := ownCategory(ctx, q, userID, *patch.CategoryID); err != nil {
+			return 0, err
+		}
+	}
+	now := l.clock.Now()
+	rows, err := q.UpdateTransactionAnnotations(ctx, db.UpdateTransactionAnnotationsParams{
+		UserID: userID, Ids: ids, Now: now,
+		SetGroup: patch.SetGroup, GroupID: patch.GroupID,
+		SetCategory: patch.SetCategory, CategoryID: patch.CategoryID,
+		SetNote: patch.SetNote, Note: patch.Note, NoteN: nameKey(patch.Note),
+	})
+	if err != nil {
+		return 0, err
+	}
+	for i := range rows {
+		r := &rows[i]
+		var manual *uuid.UUID // annotations hold manual categories only
+		if r.CategorySource == "manual" {
+			manual = r.CategoryID
+		}
+		if err := q.UpsertAnnotation(ctx, db.UpsertAnnotationParams{AccountID: r.AccountID, Fingerprint: r.Fingerprint,
+			Occurrence: r.Occurrence, SplitScope: r.SplitScope, UserID: userID, GroupID: r.GroupID, CategoryID: manual,
+			Note: r.Note, NoteN: r.NoteN, Now: now}); err != nil {
+			return 0, fmt.Errorf("annotation of %s: %w", r.ID, err)
+		}
+	}
+	if _, err := q.DeleteEmptyAnnotations(ctx, userID); err != nil {
+		return 0, err
+	}
+	return len(rows), nil
 }

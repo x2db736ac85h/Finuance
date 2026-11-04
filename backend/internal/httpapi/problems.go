@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
+	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
@@ -45,6 +46,9 @@ var problemTable = []problemKind{
 	{platform.ErrAccountDisabled, gen.AccountDisabled, http.StatusForbidden, "This account is disabled"},
 	{platform.ErrLastAdmin, gen.LastAdmin, http.StatusConflict, "The instance needs an administrator"},
 	{platform.ErrContrast, gen.ContrastFailed, http.StatusUnprocessableEntity, "Some colours are too hard to read"},
+	{platform.ErrDisplayNameRequired, gen.DisplayNameRequired, http.StatusUnprocessableEntity, "Set a display name first"},
+	{friends.ErrInvalid, gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"},
+	{friends.ErrAlready, gen.Conflict, http.StatusConflict, "Conflict"},
 	{assistant.ErrConsent, gen.ConsentRequired, http.StatusForbidden, "Agreement needed for a cloud connection"},
 	{assistant.ErrRunning, gen.RunInProgress, http.StatusConflict, "A reply is still being written"},
 	{assistant.ErrBusy, gen.AssistantBusy, http.StatusServiceUnavailable, "The assistant is busy"},
