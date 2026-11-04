@@ -6,6 +6,11 @@ notes of their version.
 
 ## [Unreleased]
 
+## [0.3.0]
+
+Administrators, colour themes, cash accounts, friends, notifications and shared groups with
+settle-up.
+
 ### Added
 
 - **Administrators** (Phase 19): an admin panel for accounts (create with a one-time password,
