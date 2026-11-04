@@ -56,6 +56,17 @@ const (
 	AuditFriendAdded      = "friend.added"
 	AuditFriendRemoved    = "friend.removed"
 	AuditFriendCodeFailed = "friend.code_failed"
+	// Shared groups (ADR 0028): the entity is the shared group; the meta names it (and the other
+	// member), never amounts, payees or notes.
+	AuditSharedCreated       = "shared.created"
+	AuditSharedDeleted       = "shared.deleted"
+	AuditSharedArchived      = "shared.archived"
+	AuditSharedInvited       = "shared.invited"
+	AuditSharedJoined        = "shared.joined"
+	AuditSharedDeclined      = "shared.declined"
+	AuditSharedLeft          = "shared.left"
+	AuditSharedMemberRemoved = "shared.member_removed"
+	AuditSharedSettled       = "shared.settled"
 )
 
 // AuditActions lists every action above.
@@ -66,7 +77,8 @@ var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPass
 	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
 	AuditAdminThemeApproved, AuditAdminThemeRetired,
 	AuditTransactionAdded, AuditTransactionEdited, AuditTransactionDeleted,
-	AuditFriendAdded, AuditFriendRemoved, AuditFriendCodeFailed}
+	AuditFriendAdded, AuditFriendRemoved, AuditFriendCodeFailed,
+	AuditSharedCreated, AuditSharedDeleted, AuditSharedArchived, AuditSharedInvited, AuditSharedJoined, AuditSharedDeclined, AuditSharedLeft, AuditSharedMemberRemoved, AuditSharedSettled}
 
 // AuditRetention is how long events are kept; the table's delete policy says the same.
 const AuditRetention = 365 * 24 * time.Hour

@@ -93,7 +93,7 @@ func (q *Queries) GetGroup(ctx context.Context, arg GetGroupParams) (Group, erro
 }
 
 const groupStats = `-- name: GroupStats :many
-SELECT g.id, g.name, g.color, g.created_at, g.budget_minor,
+SELECT g.id, g.name, g.color, g.created_at, g.budget_minor, g.shared_group_id,
        count(t.id)::bigint AS tx_count,
        coalesce(sum(-t.amount_minor) FILTER (WHERE t.amount_minor < 0), 0)::bigint AS spent_minor,
        coalesce(sum(t.amount_minor) FILTER (WHERE t.amount_minor > 0), 0)::bigint AS income_minor,
@@ -108,17 +108,18 @@ ORDER BY g.name COLLATE pl_natural, g.id
 `
 
 type GroupStatsRow struct {
-	ID          uuid.UUID
-	Name        string
-	Color       int16
-	CreatedAt   time.Time
-	BudgetMinor *int64
-	TxCount     int64
-	SpentMinor  int64
-	IncomeMinor int64
-	FirstOn     platform.Date
-	LastOn      platform.Date
-	Currency    string
+	ID            uuid.UUID
+	Name          string
+	Color         int16
+	CreatedAt     time.Time
+	BudgetMinor   *int64
+	SharedGroupID *uuid.UUID
+	TxCount       int64
+	SpentMinor    int64
+	IncomeMinor   int64
+	FirstOn       platform.Date
+	LastOn        platform.Date
+	Currency      string
 }
 
 // Every group with its transactions over all the user's accounts, ignoring filters (PLAN §4.7):
@@ -139,6 +140,7 @@ func (q *Queries) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStat
 			&i.Color,
 			&i.CreatedAt,
 			&i.BudgetMinor,
+			&i.SharedGroupID,
 			&i.TxCount,
 			&i.SpentMinor,
 			&i.IncomeMinor,

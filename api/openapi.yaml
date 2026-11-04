@@ -1281,6 +1281,362 @@ paths:
                 $ref: "#/components/schemas/Group"
         default:
           $ref: "#/components/responses/Problem"
+  /groups/timeline:
+    get:
+      operationId: groupsTimeline
+      summary: Personal and shared groups on one timeline
+      description: >-
+        Every personal group with transactions and every shared group the user is an active member
+        of, newest first by their last day, with totals, the largest category and "next time" hints
+        that compare a group with the others of the same kind (PLAN 19.9). A personal group linked
+        to a shared group appears once, as the shared group. Totals of a shared group are the
+        group's (every member's expenses).
+      tags: [shared]
+      responses:
+        "200":
+          description: The timeline.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupTimeline"
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups:
+    get:
+      operationId: listSharedGroups
+      summary: Your shared groups and invitations
+      description: >-
+        Shared groups the user owns, is a member of or is invited to (ADR 0028). `404` when the
+        instance switched shared groups off and in demo mode.
+      tags: [shared]
+      responses:
+        "200":
+          description: The groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SharedGroup"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createSharedGroup
+      summary: Create a shared group
+      description: >-
+        The caller becomes its owner. With `fromGroupId` the personal group is linked: its
+        transactions are copied into the shared group (date, amount, payee, category, note; never
+        the account or the bank's description) and follow it. `422 limit_reached` at the
+        `maxSharedGroups` limit; `422` when a transaction of the group is in another currency.
+      tags: [shared]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SharedGroupInput"
+      responses:
+        "201":
+          description: The new group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedGroup"
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getSharedGroup
+      summary: A shared group with members, expenses, settlements and balances
+      description: >-
+        An invited user sees the group and its members only. Balances are paid − share − paid out
+        + received per member and sum to zero; `transfers` settle them in at most n − 1 payments.
+      tags: [shared]
+      responses:
+        "200":
+          description: The group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedGroupDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateSharedGroup
+      summary: Change or archive a shared group (owner)
+      tags: [shared]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SharedGroupInput"
+      responses:
+        "200":
+          description: The group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedGroup"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteSharedGroup
+      summary: Delete a shared group (owner, only while nobody else joined)
+      description: Once someone joined, archive the group instead (`409 conflict`).
+      tags: [shared]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/invites:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: inviteToSharedGroup
+      summary: Invite a friend (owner)
+      description: Only friends can be invited (`422`), and someone who is or was in the group only once (`409`).
+      tags: [shared]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [friendId]
+              properties:
+                friendId:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: The invited member.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedMember"
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/accept:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: acceptSharedGroup
+      summary: Accept an invitation
+      description: >-
+        Joins the group and creates a personal group of the same name linked to it (or
+        "<name> (shared)" when the name is taken), so the user can put their own transactions in.
+      tags: [shared]
+      responses:
+        "200":
+          description: The group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedGroup"
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/decline:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: declineSharedGroup
+      summary: Decline an invitation
+      tags: [shared]
+      responses:
+        "204":
+          description: Declined.
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/leave:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: leaveSharedGroup
+      summary: Leave a shared group
+      description: >-
+        Needs a zero balance (`409 conflict`: settle up first); the owner archives instead.
+        What the user shared stays in the group; their personal group is unlinked.
+      tags: [shared]
+      responses:
+        "204":
+          description: Left.
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/members/{memberId}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: removeSharedMember
+      summary: Withdraw an invitation or remove a member with a zero balance (owner)
+      tags: [shared]
+      responses:
+        "204":
+          description: Removed.
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/expenses:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: addSharedExpense
+      summary: Add an expense without a transaction
+      description: >-
+        Typed in the group, in its currency; split equally between the active members unless
+        `split` says otherwise. The other members are notified.
+      tags: [shared]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SharedExpenseInput"
+      responses:
+        "201":
+          description: The new expense's id.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/expenses/{expenseId}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - name: expenseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateSharedExpense
+      summary: Change your own expense
+      description: >-
+        A typed expense takes every field (send them all); a copy of a transaction only its split
+        (the rest follows the transaction). `403` for someone else's expense.
+      tags: [shared]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SharedExpenseInput"
+      responses:
+        "204":
+          description: Changed.
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteSharedExpense
+      summary: Delete your own typed expense
+      description: A copy goes when its transaction leaves the group (`409 conflict` here).
+      tags: [shared]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/settlements:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: addSharedSettlement
+      summary: Record a payment between two members (settle up)
+      description: The caller must be the payer or the payee; the other one is notified.
+      tags: [shared]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SharedSettlementInput"
+      responses:
+        "201":
+          description: The payment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedSettlement"
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/settlements/{settlementId}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - name: settlementId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteSharedSettlement
+      summary: Delete a payment you recorded
+      tags: [shared]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/report:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: sharedGroupReport
+      summary: A shared group's report (the group page's cards)
+      description: >-
+        Computed from the group's expenses: totals and span, spending per day, per category, top
+        payees, the largest expenses and paid vs share per member.
+      tags: [shared]
+      responses:
+        "200":
+          description: The report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedGroupReport"
+        default:
+          $ref: "#/components/responses/Problem"
+  /shared-groups/{id}/export:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: exportSharedGroup
+      summary: The group's expenses as CSV
+      description: >-
+        UTF-8 with BOM, `;`-separated: date, payee, category, amount, paid by, note and one column
+        per member with their share; formula characters are neutralised like every export.
+      tags: [shared]
+      responses:
+        "200":
+          description: CSV.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Problem"
   /groups/{id}/report:
     parameters:
       - $ref: "#/components/parameters/Id"
@@ -2511,6 +2867,15 @@ components:
             - friend.added
             - friend.removed
             - friend.code_failed
+            - shared.created
+            - shared.deleted
+            - shared.archived
+            - shared.invited
+            - shared.joined
+            - shared.declined
+            - shared.left
+            - shared.member_removed
+            - shared.settled
         entityId:
           type: string
           description: The affected record (import, account, session, chat …), if any.
@@ -3465,6 +3830,494 @@ components:
     NotificationKind:
       type: string
       enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled]
+    SharedGroupKind:
+      type: string
+      enum: [trip, household, event, other]
+    SharedMember:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, role, state, isMe, former]
+      description: Someone in a group as the others see them; never an e-mail address.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The member id (not a user id).
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [owner, member]
+        state:
+          type: string
+          enum: [invited, active, left]
+        isMe:
+          type: boolean
+        former:
+          type: boolean
+          description: The user deleted their account ("Former member").
+    SharedGroup:
+      type: object
+      additionalProperties: false
+      required: [id, name, color, currency, kind, archived, createdAt, me]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: integer
+          minimum: 0
+          maximum: 7
+        currency:
+          type: string
+        kind:
+          $ref: "#/components/schemas/SharedGroupKind"
+        startsOn:
+          type: string
+          format: date
+        endsOn:
+          type: string
+          format: date
+        budgetMinor:
+          type: integer
+          format: int64
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        me:
+          $ref: "#/components/schemas/SharedMember"
+        linkedGroupId:
+          type: string
+          format: uuid
+          description: The caller's own personal group linked to this one, if any.
+    SharedGroupInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        color:
+          type: integer
+          minimum: 0
+          maximum: 7
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: Create only (default PLN, or the linked group's currency).
+        kind:
+          $ref: "#/components/schemas/SharedGroupKind"
+        startsOn:
+          type: string
+          format: date
+        endsOn:
+          type: string
+          format: date
+        budgetMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        archived:
+          type: boolean
+          description: Update only.
+        fromGroupId:
+          type: string
+          format: uuid
+          description: Create only; the personal group to share.
+    SharedShare:
+      type: object
+      additionalProperties: false
+      required: [memberId, shareMinor]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        shareMinor:
+          type: integer
+          format: int64
+        weight:
+          type: integer
+    SharedExpense:
+      type: object
+      additionalProperties: false
+      required: [id, addedBy, paidBy, bookedOn, amountMinor, payee, category, note, origin, splitMode, shares, mine, sourceMissing]
+      properties:
+        id:
+          type: string
+          format: uuid
+        addedBy:
+          type: string
+          format: uuid
+        paidBy:
+          type: string
+          format: uuid
+        bookedOn:
+          type: string
+          format: date
+        amountMinor:
+          type: integer
+          format: int64
+          description: Positive = money spent for the group.
+        payee:
+          type: string
+        category:
+          type: string
+        note:
+          type: string
+        origin:
+          type: string
+          enum: [transaction, typed]
+        splitMode:
+          type: string
+          enum: [equal, shares, exact]
+        shares:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedShare"
+        mine:
+          type: boolean
+        sourceMissing:
+          type: boolean
+          description: Your own copy whose transaction is gone (shown to you only).
+    SharedSplit:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum: [equal, shares, exact]
+        members:
+          type: array
+          maxItems: 100
+          description: Equal and shares; equal without members is every active member.
+          items:
+            type: string
+            format: uuid
+        weights:
+          type: array
+          maxItems: 100
+          items:
+            type: integer
+            minimum: 1
+            maximum: 1000
+        exact:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [memberId, shareMinor]
+            properties:
+              memberId:
+                type: string
+                format: uuid
+              shareMinor:
+                type: integer
+                format: int64
+    SharedExpenseInput:
+      type: object
+      additionalProperties: false
+      properties:
+        bookedOn:
+          type: string
+          format: date
+        amountMinor:
+          type: integer
+          format: int64
+        payee:
+          type: string
+          maxLength: 200
+        category:
+          type: string
+          maxLength: 80
+        note:
+          type: string
+          maxLength: 2000
+        paidBy:
+          type: string
+          format: uuid
+          description: A member id; default the caller.
+        split:
+          $ref: "#/components/schemas/SharedSplit"
+    SharedSettlement:
+      type: object
+      additionalProperties: false
+      required: [id, from, to, amountMinor, settledOn, note, mine]
+      properties:
+        id:
+          type: string
+          format: uuid
+        from:
+          type: string
+          format: uuid
+        to:
+          type: string
+          format: uuid
+        amountMinor:
+          type: integer
+          format: int64
+        settledOn:
+          type: string
+          format: date
+        note:
+          type: string
+        mine:
+          type: boolean
+    SharedSettlementInput:
+      type: object
+      additionalProperties: false
+      required: [from, to, amountMinor, settledOn]
+      properties:
+        from:
+          type: string
+          format: uuid
+        to:
+          type: string
+          format: uuid
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        settledOn:
+          type: string
+          format: date
+        note:
+          type: string
+          maxLength: 500
+    SharedBalance:
+      type: object
+      additionalProperties: false
+      required: [memberId, balanceMinor]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        balanceMinor:
+          type: integer
+          format: int64
+          description: Positive = the others owe this member.
+    SharedTransfer:
+      type: object
+      additionalProperties: false
+      required: [from, to, amountMinor]
+      properties:
+        from:
+          type: string
+          format: uuid
+        to:
+          type: string
+          format: uuid
+        amountMinor:
+          type: integer
+          format: int64
+    SharedGroupDetail:
+      type: object
+      additionalProperties: false
+      required: [group, members, expenses, settlements, balances, transfers]
+      properties:
+        group:
+          $ref: "#/components/schemas/SharedGroup"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedMember"
+        expenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedExpense"
+        settlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedSettlement"
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedBalance"
+        transfers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedTransfer"
+    NamedSpend:
+      type: object
+      additionalProperties: false
+      required: [name, spentMinor, count]
+      properties:
+        name:
+          type: string
+          description: A category or payee; empty for uncategorised.
+        spentMinor:
+          type: integer
+          format: int64
+        count:
+          type: integer
+          format: int64
+    MemberPaidShare:
+      type: object
+      additionalProperties: false
+      required: [memberId, paidMinor, shareMinor]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        paidMinor:
+          type: integer
+          format: int64
+        shareMinor:
+          type: integer
+          format: int64
+    SharedGroupReport:
+      type: object
+      additionalProperties: false
+      required: [currency, totalMinor, count, days, avgPerDayMinor, daily, categories, payees, largest, members]
+      properties:
+        currency:
+          type: string
+        totalMinor:
+          type: integer
+          format: int64
+        count:
+          type: integer
+          format: int64
+        firstOn:
+          type: string
+          format: date
+        lastOn:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: The group's dates when set, else from the first to the last expense, inclusive (1 when empty).
+        avgPerDayMinor:
+          type: integer
+          format: int64
+        daily:
+          type: array
+          items:
+            $ref: "#/components/schemas/DaySpend"
+        categories:
+          type: array
+          description: Largest first.
+          items:
+            $ref: "#/components/schemas/NamedSpend"
+        payees:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/NamedSpend"
+        largest:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/SharedExpense"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberPaidShare"
+    TimelineGroup:
+      type: object
+      additionalProperties: false
+      required: [id, source, name, color, kind, currency, spentMinor, count, days, perDayMinor]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: A personal group id or a shared group id (see `source`).
+        source:
+          type: string
+          enum: [personal, shared]
+        name:
+          type: string
+        color:
+          type: integer
+        kind:
+          type: string
+          enum: [personal, trip, household, event, other]
+        currency:
+          type: string
+        firstOn:
+          type: string
+          format: date
+        lastOn:
+          type: string
+          format: date
+        days:
+          type: integer
+        spentMinor:
+          type: integer
+          format: int64
+        count:
+          type: integer
+          format: int64
+        perDayMinor:
+          type: integer
+          format: int64
+        budgetMinor:
+          type: integer
+          format: int64
+        topCategory:
+          $ref: "#/components/schemas/NamedSpend"
+        topCategoryShare:
+          type: number
+          format: double
+    TimelineYear:
+      type: object
+      additionalProperties: false
+      required: [year, groups, spentMinor, days]
+      properties:
+        year:
+          type: integer
+        groups:
+          type: integer
+        spentMinor:
+          type: integer
+          format: int64
+          description: In the most common currency of the year's groups (others are left out).
+        days:
+          type: integer
+    TimelineHint:
+      type: object
+      additionalProperties: false
+      required: [groupId, kind, ratio]
+      description: >-
+        A "next time" fact; the browser writes the sentence. `category_high`: this group's
+        spending per day on `category` was `ratio` × the average of the other groups of its kind.
+        `per_day_high`: its spending per day was `ratio` × their median. `over_budget`: spent
+        `ratio` × its budget.
+      properties:
+        groupId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [category_high, per_day_high, over_budget]
+        category:
+          type: string
+        ratio:
+          type: number
+          format: double
+    GroupTimeline:
+      type: object
+      additionalProperties: false
+      required: [groups, years, hints]
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineGroup"
+        years:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineYear"
+        hints:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineHint"
     Notification:
       type: object
       additionalProperties: false
@@ -3715,6 +4568,10 @@ components:
           format: int64
           minimum: 1
           description: The money out the group should stay under (e.g. a trip budget), in `spent`'s currency; absent without a budget.
+        sharedGroupId:
+          type: string
+          format: uuid
+          description: The shared group this personal group is linked to (its transactions are copied there).
     GroupInput:
       type: object
       additionalProperties: false
@@ -5476,6 +6333,11 @@ components:
           type: integer
           format: int64
           minimum: 1
+        maxSharedGroups:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Shared groups the user owns (archived ones don't count).
         assistantPerHour:
           type: integer
           format: int64
@@ -5484,7 +6346,7 @@ components:
       type: object
       additionalProperties: false
       description: The limits that apply to the signed-in user; 0 means no limit.
-      required: [maxUploadBytes, importsPerDay, maxAccounts, maxGroups, assistantPerHour]
+      required: [maxUploadBytes, importsPerDay, maxAccounts, maxGroups, maxSharedGroups, assistantPerHour]
       properties:
         maxUploadBytes:
           type: integer
@@ -5496,6 +6358,9 @@ components:
           type: integer
           format: int64
         maxGroups:
+          type: integer
+          format: int64
+        maxSharedGroups:
           type: integer
           format: int64
         assistantPerHour:

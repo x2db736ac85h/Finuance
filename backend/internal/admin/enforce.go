@@ -17,6 +17,7 @@ const (
 	LimitImportsPerDay = "importsPerDay"
 	LimitAccounts      = "maxAccounts"
 	LimitGroups        = "maxGroups"
+	LimitSharedGroups  = "maxSharedGroups"
 )
 
 // CheckUpload refuses a file larger than the user's upload limit.
@@ -31,14 +32,14 @@ func (s *Service) CheckUpload(ctx context.Context, u auth.User, size int64) erro
 	return nil
 }
 
-// CheckCount refuses one more import today, account or group when the user is at the limit. The
+// CheckCount refuses one more import today, account, group or shared group when the user is at the limit. The
 // count runs under the user's own context and returns a number.
 func (s *Service) CheckCount(ctx context.Context, u auth.User, limit string) error {
 	l, err := s.Limits(ctx, u)
 	if err != nil {
 		return err
 	}
-	max := map[string]int64{LimitImportsPerDay: l.ImportsPerDay, LimitAccounts: l.MaxAccounts, LimitGroups: l.MaxGroups}[limit]
+	max := map[string]int64{LimitImportsPerDay: l.ImportsPerDay, LimitAccounts: l.MaxAccounts, LimitGroups: l.MaxGroups, LimitSharedGroups: l.MaxSharedGroups}[limit]
 	if max == 0 {
 		return nil
 	}
@@ -51,6 +52,8 @@ func (s *Service) CheckCount(ctx context.Context, u auth.User, limit string) err
 			n, err = q.CountAccounts(ctx, u.ID)
 		case LimitGroups:
 			n, err = q.CountGroups(ctx, u.ID)
+		case LimitSharedGroups:
+			n, err = q.CountOwnedSharedGroups(ctx, &u.ID)
 		}
 		return err
 	})

@@ -7,6 +7,7 @@ const LIMIT_TEXT: Record<string, (v: number) => string> = {
   importsPerDay: (v) => `${fmtInt(v)} imports a day`,
   maxAccounts: (v) => `${fmtInt(v)} account${v === 1 ? '' : 's'}`,
   maxGroups: (v) => `${fmtInt(v)} group${v === 1 ? '' : 's'}`,
+  maxSharedGroups: (v) => `${fmtInt(v)} shared group${v === 1 ? '' : 's'}`,
   assistantPerHour: (v) => `${fmtInt(v)} assistant questions an hour`,
 };
 

@@ -272,6 +272,48 @@ func (q *Queries) GetSharedMember(ctx context.Context, arg GetSharedMemberParams
 	return i, err
 }
 
+const groupCategorySpend = `-- name: GroupCategorySpend :many
+SELECT t.group_id::uuid AS group_id, coalesce(c.name, '')::text AS category,
+       sum(-t.amount_minor)::bigint AS spent_minor, count(*)::bigint AS tx_count
+FROM transactions t
+LEFT JOIN categories c ON c.id = t.category_id
+WHERE t.user_id = $1 AND t.group_id IS NOT NULL AND t.amount_minor < 0
+GROUP BY t.group_id, c.name
+`
+
+type GroupCategorySpendRow struct {
+	GroupID    uuid.UUID
+	Category   string
+	SpentMinor int64
+	TxCount    int64
+}
+
+// Money out per personal group and category (the timeline's largest categories and hints).
+func (q *Queries) GroupCategorySpend(ctx context.Context, userID uuid.UUID) ([]GroupCategorySpendRow, error) {
+	rows, err := q.db.Query(ctx, groupCategorySpend, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupCategorySpendRow
+	for rows.Next() {
+		var i GroupCategorySpendRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.Category,
+			&i.SpentMinor,
+			&i.TxCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const groupLinkedTo = `-- name: GroupLinkedTo :one
 SELECT id FROM groups WHERE user_id = $1 AND shared_group_id = $2
 `
@@ -464,28 +506,30 @@ func (q *Queries) LinkGroupToShared(ctx context.Context, arg LinkGroupToSharedPa
 }
 
 const listMySharedGroups = `-- name: ListMySharedGroups :many
-SELECT g.id, g.owner_id, g.name, g.color, g.currency, g.kind, g.starts_on, g.ends_on, g.budget_minor, g.archived_at, g.created_at, m.id AS member_id, m.role, m.state
+SELECT g.id, g.owner_id, g.name, g.color, g.currency, g.kind, g.starts_on, g.ends_on, g.budget_minor, g.archived_at, g.created_at, m.id AS member_id, m.role, m.state, pg.id AS linked_group_id
 FROM shared_groups g
 JOIN shared_group_members m ON m.group_id = g.id AND m.user_id = $1
+LEFT JOIN groups pg ON pg.shared_group_id = g.id AND pg.user_id = $1
 WHERE m.state <> 'left'
 ORDER BY g.archived_at NULLS FIRST, coalesce(g.starts_on, g.created_at::date) DESC, g.id
 `
 
 type ListMySharedGroupsRow struct {
-	ID          uuid.UUID
-	OwnerID     *uuid.UUID
-	Name        string
-	Color       int16
-	Currency    string
-	Kind        string
-	StartsOn    *platform.Date
-	EndsOn      *platform.Date
-	BudgetMinor *int64
-	ArchivedAt  *time.Time
-	CreatedAt   time.Time
-	MemberID    uuid.UUID
-	Role        string
-	State       string
+	ID            uuid.UUID
+	OwnerID       *uuid.UUID
+	Name          string
+	Color         int16
+	Currency      string
+	Kind          string
+	StartsOn      *platform.Date
+	EndsOn        *platform.Date
+	BudgetMinor   *int64
+	ArchivedAt    *time.Time
+	CreatedAt     time.Time
+	MemberID      uuid.UUID
+	Role          string
+	State         string
+	LinkedGroupID *uuid.UUID
 }
 
 // The groups the user is in or invited to, with their own membership.
@@ -513,6 +557,7 @@ func (q *Queries) ListMySharedGroups(ctx context.Context, userID *uuid.UUID) ([]
 			&i.MemberID,
 			&i.Role,
 			&i.State,
+			&i.LinkedGroupID,
 		); err != nil {
 			return nil, err
 		}
@@ -715,6 +760,45 @@ func (q *Queries) SetSharedMemberState(ctx context.Context, arg SetSharedMemberS
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const sharedCategorySpend = `-- name: SharedCategorySpend :many
+SELECT e.group_id, e.category_name AS category, sum(e.amount_minor)::bigint AS spent_minor, count(*)::bigint AS expenses
+FROM shared_expenses e
+GROUP BY e.group_id, e.category_name
+`
+
+type SharedCategorySpendRow struct {
+	GroupID    uuid.UUID
+	Category   string
+	SpentMinor int64
+	Expenses   int64
+}
+
+// Spending per shared group and category name, over the groups the user can see.
+func (q *Queries) SharedCategorySpend(ctx context.Context) ([]SharedCategorySpendRow, error) {
+	rows, err := q.db.Query(ctx, sharedCategorySpend)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SharedCategorySpendRow
+	for rows.Next() {
+		var i SharedCategorySpendRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.Category,
+			&i.SpentMinor,
+			&i.Expenses,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const sharedCopiesFrom = `-- name: SharedCopiesFrom :many

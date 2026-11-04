@@ -98,6 +98,15 @@ const (
 	ActivityEventActionImportDeleted          ActivityEventAction = "import.deleted"
 	ActivityEventActionLegacyImportStarted    ActivityEventAction = "legacy.import_started"
 	ActivityEventActionRulesApplied           ActivityEventAction = "rules.applied"
+	ActivityEventActionSharedArchived         ActivityEventAction = "shared.archived"
+	ActivityEventActionSharedCreated          ActivityEventAction = "shared.created"
+	ActivityEventActionSharedDeclined         ActivityEventAction = "shared.declined"
+	ActivityEventActionSharedDeleted          ActivityEventAction = "shared.deleted"
+	ActivityEventActionSharedInvited          ActivityEventAction = "shared.invited"
+	ActivityEventActionSharedJoined           ActivityEventAction = "shared.joined"
+	ActivityEventActionSharedLeft             ActivityEventAction = "shared.left"
+	ActivityEventActionSharedMemberRemoved    ActivityEventAction = "shared.member_removed"
+	ActivityEventActionSharedSettled          ActivityEventAction = "shared.settled"
 	ActivityEventActionTransactionAdded       ActivityEventAction = "transaction.added"
 	ActivityEventActionTransactionDeleted     ActivityEventAction = "transaction.deleted"
 	ActivityEventActionTransactionEdited      ActivityEventAction = "transaction.edited"
@@ -163,6 +172,24 @@ func (e ActivityEventAction) Valid() bool {
 	case ActivityEventActionLegacyImportStarted:
 		return true
 	case ActivityEventActionRulesApplied:
+		return true
+	case ActivityEventActionSharedArchived:
+		return true
+	case ActivityEventActionSharedCreated:
+		return true
+	case ActivityEventActionSharedDeclined:
+		return true
+	case ActivityEventActionSharedDeleted:
+		return true
+	case ActivityEventActionSharedInvited:
+		return true
+	case ActivityEventActionSharedJoined:
+		return true
+	case ActivityEventActionSharedLeft:
+		return true
+	case ActivityEventActionSharedMemberRemoved:
+		return true
+	case ActivityEventActionSharedSettled:
 		return true
 	case ActivityEventActionTransactionAdded:
 		return true
@@ -1183,6 +1210,129 @@ func (e ResolvedPeriodKind) Valid() bool {
 	}
 }
 
+// Defines values for SharedExpenseOrigin.
+const (
+	Transaction SharedExpenseOrigin = "transaction"
+	Typed       SharedExpenseOrigin = "typed"
+)
+
+// Valid indicates whether the value is a known member of the SharedExpenseOrigin enum.
+func (e SharedExpenseOrigin) Valid() bool {
+	switch e {
+	case Transaction:
+		return true
+	case Typed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedExpenseSplitMode.
+const (
+	SharedExpenseSplitModeEqual  SharedExpenseSplitMode = "equal"
+	SharedExpenseSplitModeExact  SharedExpenseSplitMode = "exact"
+	SharedExpenseSplitModeShares SharedExpenseSplitMode = "shares"
+)
+
+// Valid indicates whether the value is a known member of the SharedExpenseSplitMode enum.
+func (e SharedExpenseSplitMode) Valid() bool {
+	switch e {
+	case SharedExpenseSplitModeEqual:
+		return true
+	case SharedExpenseSplitModeExact:
+		return true
+	case SharedExpenseSplitModeShares:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedGroupKind.
+const (
+	SharedGroupKindEvent     SharedGroupKind = "event"
+	SharedGroupKindHousehold SharedGroupKind = "household"
+	SharedGroupKindOther     SharedGroupKind = "other"
+	SharedGroupKindTrip      SharedGroupKind = "trip"
+)
+
+// Valid indicates whether the value is a known member of the SharedGroupKind enum.
+func (e SharedGroupKind) Valid() bool {
+	switch e {
+	case SharedGroupKindEvent:
+		return true
+	case SharedGroupKindHousehold:
+		return true
+	case SharedGroupKindOther:
+		return true
+	case SharedGroupKindTrip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMemberRole.
+const (
+	Member SharedMemberRole = "member"
+	Owner  SharedMemberRole = "owner"
+)
+
+// Valid indicates whether the value is a known member of the SharedMemberRole enum.
+func (e SharedMemberRole) Valid() bool {
+	switch e {
+	case Member:
+		return true
+	case Owner:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMemberState.
+const (
+	Active  SharedMemberState = "active"
+	Invited SharedMemberState = "invited"
+	Left    SharedMemberState = "left"
+)
+
+// Valid indicates whether the value is a known member of the SharedMemberState enum.
+func (e SharedMemberState) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Invited:
+		return true
+	case Left:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedSplitMode.
+const (
+	SharedSplitModeEqual  SharedSplitMode = "equal"
+	SharedSplitModeExact  SharedSplitMode = "exact"
+	SharedSplitModeShares SharedSplitMode = "shares"
+)
+
+// Valid indicates whether the value is a known member of the SharedSplitMode enum.
+func (e SharedSplitMode) Valid() bool {
+	switch e {
+	case SharedSplitModeEqual:
+		return true
+	case SharedSplitModeExact:
+		return true
+	case SharedSplitModeShares:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SortDir.
 const (
 	Asc  SortDir = "asc"
@@ -1261,6 +1411,72 @@ func (e ThemeStatusRequestStatus) Valid() bool {
 	case ThemeStatusRequestStatusDraft:
 		return true
 	case ThemeStatusRequestStatusRetired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TimelineGroupKind.
+const (
+	TimelineGroupKindEvent     TimelineGroupKind = "event"
+	TimelineGroupKindHousehold TimelineGroupKind = "household"
+	TimelineGroupKindOther     TimelineGroupKind = "other"
+	TimelineGroupKindPersonal  TimelineGroupKind = "personal"
+	TimelineGroupKindTrip      TimelineGroupKind = "trip"
+)
+
+// Valid indicates whether the value is a known member of the TimelineGroupKind enum.
+func (e TimelineGroupKind) Valid() bool {
+	switch e {
+	case TimelineGroupKindEvent:
+		return true
+	case TimelineGroupKindHousehold:
+		return true
+	case TimelineGroupKindOther:
+		return true
+	case TimelineGroupKindPersonal:
+		return true
+	case TimelineGroupKindTrip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TimelineGroupSource.
+const (
+	TimelineGroupSourcePersonal TimelineGroupSource = "personal"
+	TimelineGroupSourceShared   TimelineGroupSource = "shared"
+)
+
+// Valid indicates whether the value is a known member of the TimelineGroupSource enum.
+func (e TimelineGroupSource) Valid() bool {
+	switch e {
+	case TimelineGroupSourcePersonal:
+		return true
+	case TimelineGroupSourceShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TimelineHintKind.
+const (
+	CategoryHigh TimelineHintKind = "category_high"
+	OverBudget   TimelineHintKind = "over_budget"
+	PerDayHigh   TimelineHintKind = "per_day_high"
+)
+
+// Valid indicates whether the value is a known member of the TimelineHintKind enum.
+func (e TimelineHintKind) Valid() bool {
+	switch e {
+	case CategoryHigh:
+		return true
+	case OverBudget:
+		return true
+	case PerDayHigh:
 		return true
 	default:
 		return false
@@ -2267,6 +2483,7 @@ type EffectiveLimits struct {
 	ImportsPerDay    int64 `json:"importsPerDay"`
 	MaxAccounts      int64 `json:"maxAccounts"`
 	MaxGroups        int64 `json:"maxGroups"`
+	MaxSharedGroups  int64 `json:"maxSharedGroups"`
 	MaxUploadBytes   int64 `json:"maxUploadBytes"`
 }
 
@@ -2355,7 +2572,10 @@ type Group struct {
 	Income      Money               `json:"income"`
 	LastOn      *openapi_types.Date `json:"lastOn,omitempty"`
 	Name        string              `json:"name"`
-	Spent       Money               `json:"spent"`
+
+	// SharedGroupId The shared group this personal group is linked to (its transactions are copied there).
+	SharedGroupId *openapi_types.UUID `json:"sharedGroupId,omitempty"`
+	Spent         Money               `json:"spent"`
 }
 
 // GroupInput defines model for GroupInput.
@@ -2387,6 +2607,13 @@ type GroupReport struct {
 
 	// Payees The 10 payee groups with the most money out.
 	Payees []PayeeSpend `json:"payees"`
+}
+
+// GroupTimeline defines model for GroupTimeline.
+type GroupTimeline struct {
+	Groups []TimelineGroup `json:"groups"`
+	Hints  []TimelineHint  `json:"hints"`
+	Years  []TimelineYear  `json:"years"`
 }
 
 // Highlight One highlight sentence's facts; the client writes the sentence. Fields a kind doesn't use are 0 or empty.
@@ -2801,7 +3028,10 @@ type LimitOverrides struct {
 	ImportsPerDay    *int64 `json:"importsPerDay,omitempty"`
 	MaxAccounts      *int64 `json:"maxAccounts,omitempty"`
 	MaxGroups        *int64 `json:"maxGroups,omitempty"`
-	MaxUploadBytes   *int64 `json:"maxUploadBytes,omitempty"`
+
+	// MaxSharedGroups Shared groups the user owns (archived ones don't count).
+	MaxSharedGroups *int64 `json:"maxSharedGroups,omitempty"`
+	MaxUploadBytes  *int64 `json:"maxUploadBytes,omitempty"`
 }
 
 // LoginRequest defines model for LoginRequest.
@@ -2829,6 +3059,13 @@ type ManualTransactionInput struct {
 
 // Mapping Columns per canonical role (PLAN §4.3). An absent role is not mapped.
 type Mapping = ledger.MappingDoc
+
+// MemberPaidShare defines model for MemberPaidShare.
+type MemberPaidShare struct {
+	MemberId   openapi_types.UUID `json:"memberId"`
+	PaidMinor  int64              `json:"paidMinor"`
+	ShareMinor int64              `json:"shareMinor"`
+}
 
 // Meta defines model for Meta.
 type Meta struct {
@@ -2895,6 +3132,15 @@ type MonthTotals struct {
 type NamedRef struct {
 	Id   openapi_types.UUID `json:"id"`
 	Name string             `json:"name"`
+}
+
+// NamedSpend defines model for NamedSpend.
+type NamedSpend struct {
+	Count int64 `json:"count"`
+
+	// Name A category or payee; empty for uncategorised.
+	Name       string `json:"name"`
+	SpentMinor int64  `json:"spentMinor"`
 }
 
 // Notification defines model for Notification.
@@ -3288,6 +3534,194 @@ type Session struct {
 	UserAgent  string    `json:"userAgent"`
 }
 
+// SharedBalance defines model for SharedBalance.
+type SharedBalance struct {
+	// BalanceMinor Positive = the others owe this member.
+	BalanceMinor int64              `json:"balanceMinor"`
+	MemberId     openapi_types.UUID `json:"memberId"`
+}
+
+// SharedExpense defines model for SharedExpense.
+type SharedExpense struct {
+	AddedBy openapi_types.UUID `json:"addedBy"`
+
+	// AmountMinor Positive = money spent for the group.
+	AmountMinor int64               `json:"amountMinor"`
+	BookedOn    openapi_types.Date  `json:"bookedOn"`
+	Category    string              `json:"category"`
+	Id          openapi_types.UUID  `json:"id"`
+	Mine        bool                `json:"mine"`
+	Note        string              `json:"note"`
+	Origin      SharedExpenseOrigin `json:"origin"`
+	PaidBy      openapi_types.UUID  `json:"paidBy"`
+	Payee       string              `json:"payee"`
+	Shares      []SharedShare       `json:"shares"`
+
+	// SourceMissing Your own copy whose transaction is gone (shown to you only).
+	SourceMissing bool                   `json:"sourceMissing"`
+	SplitMode     SharedExpenseSplitMode `json:"splitMode"`
+}
+
+// SharedExpenseOrigin defines model for SharedExpense.Origin.
+type SharedExpenseOrigin string
+
+// SharedExpenseSplitMode defines model for SharedExpense.SplitMode.
+type SharedExpenseSplitMode string
+
+// SharedExpenseInput defines model for SharedExpenseInput.
+type SharedExpenseInput struct {
+	AmountMinor *int64              `json:"amountMinor,omitempty"`
+	BookedOn    *openapi_types.Date `json:"bookedOn,omitempty"`
+	Category    *string             `json:"category,omitempty"`
+	Note        *string             `json:"note,omitempty"`
+
+	// PaidBy A member id; default the caller.
+	PaidBy *openapi_types.UUID `json:"paidBy,omitempty"`
+	Payee  *string             `json:"payee,omitempty"`
+	Split  *SharedSplit        `json:"split,omitempty"`
+}
+
+// SharedGroup defines model for SharedGroup.
+type SharedGroup struct {
+	Archived    bool                `json:"archived"`
+	BudgetMinor *int64              `json:"budgetMinor,omitempty"`
+	Color       int                 `json:"color"`
+	CreatedAt   time.Time           `json:"createdAt"`
+	Currency    string              `json:"currency"`
+	EndsOn      *openapi_types.Date `json:"endsOn,omitempty"`
+	Id          openapi_types.UUID  `json:"id"`
+	Kind        SharedGroupKind     `json:"kind"`
+
+	// LinkedGroupId The caller's own personal group linked to this one, if any.
+	LinkedGroupId *openapi_types.UUID `json:"linkedGroupId,omitempty"`
+
+	// Me Someone in a group as the others see them; never an e-mail address.
+	Me       SharedMember        `json:"me"`
+	Name     string              `json:"name"`
+	StartsOn *openapi_types.Date `json:"startsOn,omitempty"`
+}
+
+// SharedGroupDetail defines model for SharedGroupDetail.
+type SharedGroupDetail struct {
+	Balances    []SharedBalance    `json:"balances"`
+	Expenses    []SharedExpense    `json:"expenses"`
+	Group       SharedGroup        `json:"group"`
+	Members     []SharedMember     `json:"members"`
+	Settlements []SharedSettlement `json:"settlements"`
+	Transfers   []SharedTransfer   `json:"transfers"`
+}
+
+// SharedGroupInput defines model for SharedGroupInput.
+type SharedGroupInput struct {
+	// Archived Update only.
+	Archived    *bool  `json:"archived,omitempty"`
+	BudgetMinor *int64 `json:"budgetMinor,omitempty"`
+	Color       *int   `json:"color,omitempty"`
+
+	// Currency Create only (default PLN, or the linked group's currency).
+	Currency *string             `json:"currency,omitempty"`
+	EndsOn   *openapi_types.Date `json:"endsOn,omitempty"`
+
+	// FromGroupId Create only; the personal group to share.
+	FromGroupId *openapi_types.UUID `json:"fromGroupId,omitempty"`
+	Kind        *SharedGroupKind    `json:"kind,omitempty"`
+	Name        string              `json:"name"`
+	StartsOn    *openapi_types.Date `json:"startsOn,omitempty"`
+}
+
+// SharedGroupKind defines model for SharedGroupKind.
+type SharedGroupKind string
+
+// SharedGroupReport defines model for SharedGroupReport.
+type SharedGroupReport struct {
+	AvgPerDayMinor int64 `json:"avgPerDayMinor"`
+
+	// Categories Largest first.
+	Categories []NamedSpend `json:"categories"`
+	Count      int64        `json:"count"`
+	Currency   string       `json:"currency"`
+	Daily      []DaySpend   `json:"daily"`
+
+	// Days The group's dates when set, else from the first to the last expense, inclusive (1 when empty).
+	Days       int                 `json:"days"`
+	FirstOn    *openapi_types.Date `json:"firstOn,omitempty"`
+	Largest    []SharedExpense     `json:"largest"`
+	LastOn     *openapi_types.Date `json:"lastOn,omitempty"`
+	Members    []MemberPaidShare   `json:"members"`
+	Payees     []NamedSpend        `json:"payees"`
+	TotalMinor int64               `json:"totalMinor"`
+}
+
+// SharedMember Someone in a group as the others see them; never an e-mail address.
+type SharedMember struct {
+	DisplayName string `json:"displayName"`
+
+	// Former The user deleted their account ("Former member").
+	Former bool `json:"former"`
+
+	// Id The member id (not a user id).
+	Id    openapi_types.UUID `json:"id"`
+	IsMe  bool               `json:"isMe"`
+	Role  SharedMemberRole   `json:"role"`
+	State SharedMemberState  `json:"state"`
+}
+
+// SharedMemberRole defines model for SharedMember.Role.
+type SharedMemberRole string
+
+// SharedMemberState defines model for SharedMember.State.
+type SharedMemberState string
+
+// SharedSettlement defines model for SharedSettlement.
+type SharedSettlement struct {
+	AmountMinor int64              `json:"amountMinor"`
+	From        openapi_types.UUID `json:"from"`
+	Id          openapi_types.UUID `json:"id"`
+	Mine        bool               `json:"mine"`
+	Note        string             `json:"note"`
+	SettledOn   openapi_types.Date `json:"settledOn"`
+	To          openapi_types.UUID `json:"to"`
+}
+
+// SharedSettlementInput defines model for SharedSettlementInput.
+type SharedSettlementInput struct {
+	AmountMinor int64              `json:"amountMinor"`
+	From        openapi_types.UUID `json:"from"`
+	Note        *string            `json:"note,omitempty"`
+	SettledOn   openapi_types.Date `json:"settledOn"`
+	To          openapi_types.UUID `json:"to"`
+}
+
+// SharedShare defines model for SharedShare.
+type SharedShare struct {
+	MemberId   openapi_types.UUID `json:"memberId"`
+	ShareMinor int64              `json:"shareMinor"`
+	Weight     *int               `json:"weight,omitempty"`
+}
+
+// SharedSplit defines model for SharedSplit.
+type SharedSplit struct {
+	Exact *[]struct {
+		MemberId   openapi_types.UUID `json:"memberId"`
+		ShareMinor int64              `json:"shareMinor"`
+	} `json:"exact,omitempty"`
+
+	// Members Equal and shares; equal without members is every active member.
+	Members *[]openapi_types.UUID `json:"members,omitempty"`
+	Mode    *SharedSplitMode      `json:"mode,omitempty"`
+	Weights *[]int                `json:"weights,omitempty"`
+}
+
+// SharedSplitMode defines model for SharedSplit.Mode.
+type SharedSplitMode string
+
+// SharedTransfer defines model for SharedTransfer.
+type SharedTransfer struct {
+	AmountMinor int64              `json:"amountMinor"`
+	From        openapi_types.UUID `json:"from"`
+	To          openapi_types.UUID `json:"to"`
+}
+
 // SignupRequest defines model for SignupRequest.
 type SignupRequest struct {
 	DisplayName *string `json:"displayName,omitempty"`
@@ -3442,6 +3876,54 @@ type ThemeUpdateRequest struct {
 	Name    string      `json:"name"`
 	Tokens  ThemeTokens `json:"tokens"`
 	Version int32       `json:"version"`
+}
+
+// TimelineGroup defines model for TimelineGroup.
+type TimelineGroup struct {
+	BudgetMinor *int64              `json:"budgetMinor,omitempty"`
+	Color       int                 `json:"color"`
+	Count       int64               `json:"count"`
+	Currency    string              `json:"currency"`
+	Days        int                 `json:"days"`
+	FirstOn     *openapi_types.Date `json:"firstOn,omitempty"`
+
+	// Id A personal group id or a shared group id (see `source`).
+	Id               openapi_types.UUID  `json:"id"`
+	Kind             TimelineGroupKind   `json:"kind"`
+	LastOn           *openapi_types.Date `json:"lastOn,omitempty"`
+	Name             string              `json:"name"`
+	PerDayMinor      int64               `json:"perDayMinor"`
+	Source           TimelineGroupSource `json:"source"`
+	SpentMinor       int64               `json:"spentMinor"`
+	TopCategory      *NamedSpend         `json:"topCategory,omitempty"`
+	TopCategoryShare *float64            `json:"topCategoryShare,omitempty"`
+}
+
+// TimelineGroupKind defines model for TimelineGroup.Kind.
+type TimelineGroupKind string
+
+// TimelineGroupSource defines model for TimelineGroup.Source.
+type TimelineGroupSource string
+
+// TimelineHint A "next time" fact; the browser writes the sentence. `category_high`: this group's spending per day on `category` was `ratio` × the average of the other groups of its kind. `per_day_high`: its spending per day was `ratio` × their median. `over_budget`: spent `ratio` × its budget.
+type TimelineHint struct {
+	Category *string            `json:"category,omitempty"`
+	GroupId  openapi_types.UUID `json:"groupId"`
+	Kind     TimelineHintKind   `json:"kind"`
+	Ratio    float64            `json:"ratio"`
+}
+
+// TimelineHintKind defines model for TimelineHint.Kind.
+type TimelineHintKind string
+
+// TimelineYear defines model for TimelineYear.
+type TimelineYear struct {
+	Days   int `json:"days"`
+	Groups int `json:"groups"`
+
+	// SpentMinor In the most common currency of the year's groups (others are left out).
+	SpentMinor int64 `json:"spentMinor"`
+	Year       int   `json:"year"`
 }
 
 // ToolFilter The assistant's lookup filter (PLAN §4.8), shown as a removable chip.
@@ -3833,6 +4315,11 @@ type PreviewRuleJSONBody struct {
 	Match RuleMatch `json:"match"`
 }
 
+// InviteToSharedGroupJSONBody defines parameters for InviteToSharedGroup.
+type InviteToSharedGroupJSONBody struct {
+	FriendId openapi_types.UUID `json:"friendId"`
+}
+
 // BulkUpdateTransactionsParams defines parameters for BulkUpdateTransactions.
 type BulkUpdateTransactionsParams struct {
 	// XAssistantChat Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one.
@@ -3970,6 +4457,24 @@ type PreviewRuleJSONRequestBody PreviewRuleJSONBody
 
 // UpdateRuleJSONRequestBody defines body for UpdateRule for application/json ContentType.
 type UpdateRuleJSONRequestBody = RuleInput
+
+// CreateSharedGroupJSONRequestBody defines body for CreateSharedGroup for application/json ContentType.
+type CreateSharedGroupJSONRequestBody = SharedGroupInput
+
+// UpdateSharedGroupJSONRequestBody defines body for UpdateSharedGroup for application/json ContentType.
+type UpdateSharedGroupJSONRequestBody = SharedGroupInput
+
+// AddSharedExpenseJSONRequestBody defines body for AddSharedExpense for application/json ContentType.
+type AddSharedExpenseJSONRequestBody = SharedExpenseInput
+
+// UpdateSharedExpenseJSONRequestBody defines body for UpdateSharedExpense for application/json ContentType.
+type UpdateSharedExpenseJSONRequestBody = SharedExpenseInput
+
+// InviteToSharedGroupJSONRequestBody defines body for InviteToSharedGroup for application/json ContentType.
+type InviteToSharedGroupJSONRequestBody InviteToSharedGroupJSONBody
+
+// AddSharedSettlementJSONRequestBody defines body for AddSharedSettlement for application/json ContentType.
+type AddSharedSettlementJSONRequestBody = SharedSettlementInput
 
 // AddTransactionJSONRequestBody defines body for AddTransaction for application/json ContentType.
 type AddTransactionJSONRequestBody = ManualTransactionInput
@@ -4144,6 +4649,9 @@ type ServerInterface interface {
 	// CreateGroup Create a group
 	// (POST /groups)
 	CreateGroup(w http.ResponseWriter, r *http.Request)
+	// GroupsTimeline Personal and shared groups on one timeline
+	// (GET /groups/timeline)
+	GroupsTimeline(w http.ResponseWriter, r *http.Request)
 	// DeleteGroup Delete a group (its labels only, never transactions)
 	// (DELETE /groups/{id})
 	DeleteGroup(w http.ResponseWriter, r *http.Request, id Id)
@@ -4282,6 +4790,57 @@ type ServerInterface interface {
 	// UpdateRule Replace a rule (its position stays)
 	// (PUT /rules/{id})
 	UpdateRule(w http.ResponseWriter, r *http.Request, id Id)
+	// ListSharedGroups Your shared groups and invitations
+	// (GET /shared-groups)
+	ListSharedGroups(w http.ResponseWriter, r *http.Request)
+	// CreateSharedGroup Create a shared group
+	// (POST /shared-groups)
+	CreateSharedGroup(w http.ResponseWriter, r *http.Request)
+	// DeleteSharedGroup Delete a shared group (owner, only while nobody else joined)
+	// (DELETE /shared-groups/{id})
+	DeleteSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// GetSharedGroup A shared group with members, expenses, settlements and balances
+	// (GET /shared-groups/{id})
+	GetSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// UpdateSharedGroup Change or archive a shared group (owner)
+	// (PATCH /shared-groups/{id})
+	UpdateSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// AcceptSharedGroup Accept an invitation
+	// (POST /shared-groups/{id}/accept)
+	AcceptSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// DeclineSharedGroup Decline an invitation
+	// (POST /shared-groups/{id}/decline)
+	DeclineSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// AddSharedExpense Add an expense without a transaction
+	// (POST /shared-groups/{id}/expenses)
+	AddSharedExpense(w http.ResponseWriter, r *http.Request, id Id)
+	// DeleteSharedExpense Delete your own typed expense
+	// (DELETE /shared-groups/{id}/expenses/{expenseId})
+	DeleteSharedExpense(w http.ResponseWriter, r *http.Request, id Id, expenseId openapi_types.UUID)
+	// UpdateSharedExpense Change your own expense
+	// (PATCH /shared-groups/{id}/expenses/{expenseId})
+	UpdateSharedExpense(w http.ResponseWriter, r *http.Request, id Id, expenseId openapi_types.UUID)
+	// ExportSharedGroup The group's expenses as CSV
+	// (GET /shared-groups/{id}/export)
+	ExportSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// InviteToSharedGroup Invite a friend (owner)
+	// (POST /shared-groups/{id}/invites)
+	InviteToSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// LeaveSharedGroup Leave a shared group
+	// (POST /shared-groups/{id}/leave)
+	LeaveSharedGroup(w http.ResponseWriter, r *http.Request, id Id)
+	// RemoveSharedMember Withdraw an invitation or remove a member with a zero balance (owner)
+	// (DELETE /shared-groups/{id}/members/{memberId})
+	RemoveSharedMember(w http.ResponseWriter, r *http.Request, id Id, memberId openapi_types.UUID)
+	// SharedGroupReport A shared group's report (the group page's cards)
+	// (GET /shared-groups/{id}/report)
+	SharedGroupReport(w http.ResponseWriter, r *http.Request, id Id)
+	// AddSharedSettlement Record a payment between two members (settle up)
+	// (POST /shared-groups/{id}/settlements)
+	AddSharedSettlement(w http.ResponseWriter, r *http.Request, id Id)
+	// DeleteSharedSettlement Delete a payment you recorded
+	// (DELETE /shared-groups/{id}/settlements/{settlementId})
+	DeleteSharedSettlement(w http.ResponseWriter, r *http.Request, id Id, settlementId openapi_types.UUID)
 	// AddTransaction Add a transaction by hand to a cash account
 	// (POST /transactions)
 	AddTransaction(w http.ResponseWriter, r *http.Request)
@@ -5450,6 +6009,20 @@ func (siw *ServerInterfaceWrapper) CreateGroup(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GroupsTimeline operation middleware
+func (siw *ServerInterfaceWrapper) GroupsTimeline(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GroupsTimeline(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteGroup operation middleware
 func (siw *ServerInterfaceWrapper) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 
@@ -6467,6 +7040,460 @@ func (siw *ServerInterfaceWrapper) UpdateRule(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListSharedGroups operation middleware
+func (siw *ServerInterfaceWrapper) ListSharedGroups(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSharedGroups(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) CreateSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSharedGroup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) GetSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) AcceptSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeclineSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeclineSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclineSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddSharedExpense operation middleware
+func (siw *ServerInterfaceWrapper) AddSharedExpense(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddSharedExpense(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSharedExpense operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSharedExpense(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "expenseId" -------------
+	var expenseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "expenseId", r.PathValue("expenseId"), &expenseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expenseId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSharedExpense(w, r, id, expenseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSharedExpense operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSharedExpense(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "expenseId" -------------
+	var expenseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "expenseId", r.PathValue("expenseId"), &expenseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expenseId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSharedExpense(w, r, id, expenseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) ExportSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// InviteToSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) InviteToSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.InviteToSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LeaveSharedGroup operation middleware
+func (siw *ServerInterfaceWrapper) LeaveSharedGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LeaveSharedGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveSharedMember operation middleware
+func (siw *ServerInterfaceWrapper) RemoveSharedMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "memberId" -------------
+	var memberId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "memberId", r.PathValue("memberId"), &memberId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "memberId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveSharedMember(w, r, id, memberId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SharedGroupReport operation middleware
+func (siw *ServerInterfaceWrapper) SharedGroupReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SharedGroupReport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddSharedSettlement operation middleware
+func (siw *ServerInterfaceWrapper) AddSharedSettlement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddSharedSettlement(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSharedSettlement operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSharedSettlement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "settlementId" -------------
+	var settlementId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "settlementId", r.PathValue("settlementId"), &settlementId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "settlementId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSharedSettlement(w, r, id, settlementId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AddTransaction operation middleware
 func (siw *ServerInterfaceWrapper) AddTransaction(w http.ResponseWriter, r *http.Request) {
 
@@ -6852,6 +7879,24 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/rules/{id}", wrapper.UpdateRule)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/groups", wrapper.ListGroups)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/groups", wrapper.CreateGroup)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/groups/timeline", wrapper.GroupsTimeline)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/shared-groups", wrapper.ListSharedGroups)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/shared-groups", wrapper.CreateSharedGroup)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/shared-groups/{id}", wrapper.DeleteSharedGroup)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/shared-groups/{id}", wrapper.GetSharedGroup)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/shared-groups/{id}", wrapper.UpdateSharedGroup)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/shared-groups/{id}/invites", wrapper.InviteToSharedGroup)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/shared-groups/{id}/accept", wrapper.AcceptSharedGroup)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/shared-groups/{id}/decline", wrapper.DeclineSharedGroup)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/shared-groups/{id}/leave", wrapper.LeaveSharedGroup)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/shared-groups/{id}/members/{memberId}", wrapper.RemoveSharedMember)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/shared-groups/{id}/expenses", wrapper.AddSharedExpense)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/shared-groups/{id}/expenses/{expenseId}", wrapper.DeleteSharedExpense)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/shared-groups/{id}/expenses/{expenseId}", wrapper.UpdateSharedExpense)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/shared-groups/{id}/settlements", wrapper.AddSharedSettlement)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/shared-groups/{id}/settlements/{settlementId}", wrapper.DeleteSharedSettlement)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/shared-groups/{id}/report", wrapper.SharedGroupReport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/shared-groups/{id}/export", wrapper.ExportSharedGroup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/groups/{id}/report", wrapper.GroupReport)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/groups/{id}", wrapper.DeleteGroup)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/groups/{id}", wrapper.UpdateGroup)
@@ -8954,6 +9999,44 @@ func (response CreateGroupdefaultApplicationProblemPlusJSONResponse) VisitCreate
 	return err
 }
 
+type GroupsTimelineRequestObject struct {
+}
+
+type GroupsTimelineResponseObject interface {
+	VisitGroupsTimelineResponse(w http.ResponseWriter) error
+}
+
+type GroupsTimeline200JSONResponse GroupTimeline
+
+func (response GroupsTimeline200JSONResponse) VisitGroupsTimelineResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GroupsTimelinedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GroupsTimelinedefaultApplicationProblemPlusJSONResponse) VisitGroupsTimelineResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteGroupRequestObject struct {
 	Id Id `json:"id"`
 }
@@ -10856,6 +11939,651 @@ func (response UpdateRuledefaultApplicationProblemPlusJSONResponse) VisitUpdateR
 	return err
 }
 
+type ListSharedGroupsRequestObject struct {
+}
+
+type ListSharedGroupsResponseObject interface {
+	VisitListSharedGroupsResponse(w http.ResponseWriter) error
+}
+
+type ListSharedGroups200JSONResponse []SharedGroup
+
+func (response ListSharedGroups200JSONResponse) VisitListSharedGroupsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSharedGroupsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListSharedGroupsdefaultApplicationProblemPlusJSONResponse) VisitListSharedGroupsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSharedGroupRequestObject struct {
+	Body *CreateSharedGroupJSONRequestBody
+}
+
+type CreateSharedGroupResponseObject interface {
+	VisitCreateSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type CreateSharedGroup201JSONResponse SharedGroup
+
+func (response CreateSharedGroup201JSONResponse) VisitCreateSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitCreateSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSharedGroupRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type DeleteSharedGroupResponseObject interface {
+	VisitDeleteSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type DeleteSharedGroup204Response struct {
+}
+
+func (response DeleteSharedGroup204Response) VisitDeleteSharedGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitDeleteSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedGroupRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type GetSharedGroupResponseObject interface {
+	VisitGetSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type GetSharedGroup200JSONResponse SharedGroupDetail
+
+func (response GetSharedGroup200JSONResponse) VisitGetSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitGetSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSharedGroupRequestObject struct {
+	Id   Id `json:"id"`
+	Body *UpdateSharedGroupJSONRequestBody
+}
+
+type UpdateSharedGroupResponseObject interface {
+	VisitUpdateSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type UpdateSharedGroup200JSONResponse SharedGroup
+
+func (response UpdateSharedGroup200JSONResponse) VisitUpdateSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitUpdateSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptSharedGroupRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type AcceptSharedGroupResponseObject interface {
+	VisitAcceptSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type AcceptSharedGroup200JSONResponse SharedGroup
+
+func (response AcceptSharedGroup200JSONResponse) VisitAcceptSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AcceptSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitAcceptSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeclineSharedGroupRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type DeclineSharedGroupResponseObject interface {
+	VisitDeclineSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type DeclineSharedGroup204Response struct {
+}
+
+func (response DeclineSharedGroup204Response) VisitDeclineSharedGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeclineSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeclineSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitDeclineSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSharedExpenseRequestObject struct {
+	Id   Id `json:"id"`
+	Body *AddSharedExpenseJSONRequestBody
+}
+
+type AddSharedExpenseResponseObject interface {
+	VisitAddSharedExpenseResponse(w http.ResponseWriter) error
+}
+
+type AddSharedExpense201JSONResponse struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+func (response AddSharedExpense201JSONResponse) VisitAddSharedExpenseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSharedExpensedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AddSharedExpensedefaultApplicationProblemPlusJSONResponse) VisitAddSharedExpenseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSharedExpenseRequestObject struct {
+	Id        Id                 `json:"id"`
+	ExpenseId openapi_types.UUID `json:"expenseId"`
+}
+
+type DeleteSharedExpenseResponseObject interface {
+	VisitDeleteSharedExpenseResponse(w http.ResponseWriter) error
+}
+
+type DeleteSharedExpense204Response struct {
+}
+
+func (response DeleteSharedExpense204Response) VisitDeleteSharedExpenseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteSharedExpensedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteSharedExpensedefaultApplicationProblemPlusJSONResponse) VisitDeleteSharedExpenseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSharedExpenseRequestObject struct {
+	Id        Id                 `json:"id"`
+	ExpenseId openapi_types.UUID `json:"expenseId"`
+	Body      *UpdateSharedExpenseJSONRequestBody
+}
+
+type UpdateSharedExpenseResponseObject interface {
+	VisitUpdateSharedExpenseResponse(w http.ResponseWriter) error
+}
+
+type UpdateSharedExpense204Response struct {
+}
+
+func (response UpdateSharedExpense204Response) VisitUpdateSharedExpenseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateSharedExpensedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateSharedExpensedefaultApplicationProblemPlusJSONResponse) VisitUpdateSharedExpenseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportSharedGroupRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type ExportSharedGroupResponseObject interface {
+	VisitExportSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type ExportSharedGroup200ResponseHeaders struct {
+	ContentDisposition *string
+}
+
+type ExportSharedGroup200TextcsvResponse struct {
+	Body          io.Reader
+	Headers       ExportSharedGroup200ResponseHeaders
+	ContentLength int64
+}
+
+func (response ExportSharedGroup200TextcsvResponse) VisitExportSharedGroupResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/csv")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type ExportSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ExportSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitExportSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InviteToSharedGroupRequestObject struct {
+	Id   Id `json:"id"`
+	Body *InviteToSharedGroupJSONRequestBody
+}
+
+type InviteToSharedGroupResponseObject interface {
+	VisitInviteToSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type InviteToSharedGroup201JSONResponse SharedMember
+
+func (response InviteToSharedGroup201JSONResponse) VisitInviteToSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InviteToSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response InviteToSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitInviteToSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LeaveSharedGroupRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type LeaveSharedGroupResponseObject interface {
+	VisitLeaveSharedGroupResponse(w http.ResponseWriter) error
+}
+
+type LeaveSharedGroup204Response struct {
+}
+
+func (response LeaveSharedGroup204Response) VisitLeaveSharedGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type LeaveSharedGroupdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response LeaveSharedGroupdefaultApplicationProblemPlusJSONResponse) VisitLeaveSharedGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveSharedMemberRequestObject struct {
+	Id       Id                 `json:"id"`
+	MemberId openapi_types.UUID `json:"memberId"`
+}
+
+type RemoveSharedMemberResponseObject interface {
+	VisitRemoveSharedMemberResponse(w http.ResponseWriter) error
+}
+
+type RemoveSharedMember204Response struct {
+}
+
+func (response RemoveSharedMember204Response) VisitRemoveSharedMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveSharedMemberdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RemoveSharedMemberdefaultApplicationProblemPlusJSONResponse) VisitRemoveSharedMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SharedGroupReportRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type SharedGroupReportResponseObject interface {
+	VisitSharedGroupReportResponse(w http.ResponseWriter) error
+}
+
+type SharedGroupReport200JSONResponse SharedGroupReport
+
+func (response SharedGroupReport200JSONResponse) VisitSharedGroupReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SharedGroupReportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SharedGroupReportdefaultApplicationProblemPlusJSONResponse) VisitSharedGroupReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSharedSettlementRequestObject struct {
+	Id   Id `json:"id"`
+	Body *AddSharedSettlementJSONRequestBody
+}
+
+type AddSharedSettlementResponseObject interface {
+	VisitAddSharedSettlementResponse(w http.ResponseWriter) error
+}
+
+type AddSharedSettlement201JSONResponse SharedSettlement
+
+func (response AddSharedSettlement201JSONResponse) VisitAddSharedSettlementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSharedSettlementdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AddSharedSettlementdefaultApplicationProblemPlusJSONResponse) VisitAddSharedSettlementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSharedSettlementRequestObject struct {
+	Id           Id                 `json:"id"`
+	SettlementId openapi_types.UUID `json:"settlementId"`
+}
+
+type DeleteSharedSettlementResponseObject interface {
+	VisitDeleteSharedSettlementResponse(w http.ResponseWriter) error
+}
+
+type DeleteSharedSettlement204Response struct {
+}
+
+func (response DeleteSharedSettlement204Response) VisitDeleteSharedSettlementResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteSharedSettlementdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteSharedSettlementdefaultApplicationProblemPlusJSONResponse) VisitDeleteSharedSettlementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddTransactionRequestObject struct {
 	Body *AddTransactionJSONRequestBody
 }
@@ -11369,6 +13097,9 @@ type StrictServerInterface interface {
 	// CreateGroup Create a group
 	// (POST /groups)
 	CreateGroup(ctx context.Context, request CreateGroupRequestObject) (CreateGroupResponseObject, error)
+	// GroupsTimeline Personal and shared groups on one timeline
+	// (GET /groups/timeline)
+	GroupsTimeline(ctx context.Context, request GroupsTimelineRequestObject) (GroupsTimelineResponseObject, error)
 	// DeleteGroup Delete a group (its labels only, never transactions)
 	// (DELETE /groups/{id})
 	DeleteGroup(ctx context.Context, request DeleteGroupRequestObject) (DeleteGroupResponseObject, error)
@@ -11507,6 +13238,57 @@ type StrictServerInterface interface {
 	// UpdateRule Replace a rule (its position stays)
 	// (PUT /rules/{id})
 	UpdateRule(ctx context.Context, request UpdateRuleRequestObject) (UpdateRuleResponseObject, error)
+	// ListSharedGroups Your shared groups and invitations
+	// (GET /shared-groups)
+	ListSharedGroups(ctx context.Context, request ListSharedGroupsRequestObject) (ListSharedGroupsResponseObject, error)
+	// CreateSharedGroup Create a shared group
+	// (POST /shared-groups)
+	CreateSharedGroup(ctx context.Context, request CreateSharedGroupRequestObject) (CreateSharedGroupResponseObject, error)
+	// DeleteSharedGroup Delete a shared group (owner, only while nobody else joined)
+	// (DELETE /shared-groups/{id})
+	DeleteSharedGroup(ctx context.Context, request DeleteSharedGroupRequestObject) (DeleteSharedGroupResponseObject, error)
+	// GetSharedGroup A shared group with members, expenses, settlements and balances
+	// (GET /shared-groups/{id})
+	GetSharedGroup(ctx context.Context, request GetSharedGroupRequestObject) (GetSharedGroupResponseObject, error)
+	// UpdateSharedGroup Change or archive a shared group (owner)
+	// (PATCH /shared-groups/{id})
+	UpdateSharedGroup(ctx context.Context, request UpdateSharedGroupRequestObject) (UpdateSharedGroupResponseObject, error)
+	// AcceptSharedGroup Accept an invitation
+	// (POST /shared-groups/{id}/accept)
+	AcceptSharedGroup(ctx context.Context, request AcceptSharedGroupRequestObject) (AcceptSharedGroupResponseObject, error)
+	// DeclineSharedGroup Decline an invitation
+	// (POST /shared-groups/{id}/decline)
+	DeclineSharedGroup(ctx context.Context, request DeclineSharedGroupRequestObject) (DeclineSharedGroupResponseObject, error)
+	// AddSharedExpense Add an expense without a transaction
+	// (POST /shared-groups/{id}/expenses)
+	AddSharedExpense(ctx context.Context, request AddSharedExpenseRequestObject) (AddSharedExpenseResponseObject, error)
+	// DeleteSharedExpense Delete your own typed expense
+	// (DELETE /shared-groups/{id}/expenses/{expenseId})
+	DeleteSharedExpense(ctx context.Context, request DeleteSharedExpenseRequestObject) (DeleteSharedExpenseResponseObject, error)
+	// UpdateSharedExpense Change your own expense
+	// (PATCH /shared-groups/{id}/expenses/{expenseId})
+	UpdateSharedExpense(ctx context.Context, request UpdateSharedExpenseRequestObject) (UpdateSharedExpenseResponseObject, error)
+	// ExportSharedGroup The group's expenses as CSV
+	// (GET /shared-groups/{id}/export)
+	ExportSharedGroup(ctx context.Context, request ExportSharedGroupRequestObject) (ExportSharedGroupResponseObject, error)
+	// InviteToSharedGroup Invite a friend (owner)
+	// (POST /shared-groups/{id}/invites)
+	InviteToSharedGroup(ctx context.Context, request InviteToSharedGroupRequestObject) (InviteToSharedGroupResponseObject, error)
+	// LeaveSharedGroup Leave a shared group
+	// (POST /shared-groups/{id}/leave)
+	LeaveSharedGroup(ctx context.Context, request LeaveSharedGroupRequestObject) (LeaveSharedGroupResponseObject, error)
+	// RemoveSharedMember Withdraw an invitation or remove a member with a zero balance (owner)
+	// (DELETE /shared-groups/{id}/members/{memberId})
+	RemoveSharedMember(ctx context.Context, request RemoveSharedMemberRequestObject) (RemoveSharedMemberResponseObject, error)
+	// SharedGroupReport A shared group's report (the group page's cards)
+	// (GET /shared-groups/{id}/report)
+	SharedGroupReport(ctx context.Context, request SharedGroupReportRequestObject) (SharedGroupReportResponseObject, error)
+	// AddSharedSettlement Record a payment between two members (settle up)
+	// (POST /shared-groups/{id}/settlements)
+	AddSharedSettlement(ctx context.Context, request AddSharedSettlementRequestObject) (AddSharedSettlementResponseObject, error)
+	// DeleteSharedSettlement Delete a payment you recorded
+	// (DELETE /shared-groups/{id}/settlements/{settlementId})
+	DeleteSharedSettlement(ctx context.Context, request DeleteSharedSettlementRequestObject) (DeleteSharedSettlementResponseObject, error)
 	// AddTransaction Add a transaction by hand to a cash account
 	// (POST /transactions)
 	AddTransaction(ctx context.Context, request AddTransactionRequestObject) (AddTransactionResponseObject, error)
@@ -12969,6 +14751,30 @@ func (sh *strictHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GroupsTimeline operation middleware
+func (sh *strictHandler) GroupsTimeline(w http.ResponseWriter, r *http.Request) {
+	var request GroupsTimelineRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GroupsTimeline(ctx, request.(GroupsTimelineRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GroupsTimeline")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GroupsTimelineResponseObject); ok {
+		if err := validResponse.VisitGroupsTimelineResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // DeleteGroup operation middleware
 func (sh *strictHandler) DeleteGroup(w http.ResponseWriter, r *http.Request, id Id) {
 	var request DeleteGroupRequestObject
@@ -14279,6 +16085,490 @@ func (sh *strictHandler) UpdateRule(w http.ResponseWriter, r *http.Request, id I
 	}
 }
 
+// ListSharedGroups operation middleware
+func (sh *strictHandler) ListSharedGroups(w http.ResponseWriter, r *http.Request) {
+	var request ListSharedGroupsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSharedGroups(ctx, request.(ListSharedGroupsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSharedGroups")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSharedGroupsResponseObject); ok {
+		if err := validResponse.VisitListSharedGroupsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateSharedGroup operation middleware
+func (sh *strictHandler) CreateSharedGroup(w http.ResponseWriter, r *http.Request) {
+	var request CreateSharedGroupRequestObject
+
+	var body CreateSharedGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateSharedGroup(ctx, request.(CreateSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateSharedGroupResponseObject); ok {
+		if err := validResponse.VisitCreateSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteSharedGroup operation middleware
+func (sh *strictHandler) DeleteSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request DeleteSharedGroupRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteSharedGroup(ctx, request.(DeleteSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteSharedGroupResponseObject); ok {
+		if err := validResponse.VisitDeleteSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSharedGroup operation middleware
+func (sh *strictHandler) GetSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request GetSharedGroupRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSharedGroup(ctx, request.(GetSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSharedGroupResponseObject); ok {
+		if err := validResponse.VisitGetSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSharedGroup operation middleware
+func (sh *strictHandler) UpdateSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request UpdateSharedGroupRequestObject
+
+	request.Id = id
+
+	var body UpdateSharedGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSharedGroup(ctx, request.(UpdateSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateSharedGroupResponseObject); ok {
+		if err := validResponse.VisitUpdateSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptSharedGroup operation middleware
+func (sh *strictHandler) AcceptSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AcceptSharedGroupRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptSharedGroup(ctx, request.(AcceptSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptSharedGroupResponseObject); ok {
+		if err := validResponse.VisitAcceptSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeclineSharedGroup operation middleware
+func (sh *strictHandler) DeclineSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request DeclineSharedGroupRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeclineSharedGroup(ctx, request.(DeclineSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeclineSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeclineSharedGroupResponseObject); ok {
+		if err := validResponse.VisitDeclineSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddSharedExpense operation middleware
+func (sh *strictHandler) AddSharedExpense(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AddSharedExpenseRequestObject
+
+	request.Id = id
+
+	var body AddSharedExpenseJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddSharedExpense(ctx, request.(AddSharedExpenseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddSharedExpense")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddSharedExpenseResponseObject); ok {
+		if err := validResponse.VisitAddSharedExpenseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteSharedExpense operation middleware
+func (sh *strictHandler) DeleteSharedExpense(w http.ResponseWriter, r *http.Request, id Id, expenseId openapi_types.UUID) {
+	var request DeleteSharedExpenseRequestObject
+
+	request.Id = id
+	request.ExpenseId = expenseId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteSharedExpense(ctx, request.(DeleteSharedExpenseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteSharedExpense")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteSharedExpenseResponseObject); ok {
+		if err := validResponse.VisitDeleteSharedExpenseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSharedExpense operation middleware
+func (sh *strictHandler) UpdateSharedExpense(w http.ResponseWriter, r *http.Request, id Id, expenseId openapi_types.UUID) {
+	var request UpdateSharedExpenseRequestObject
+
+	request.Id = id
+	request.ExpenseId = expenseId
+
+	var body UpdateSharedExpenseJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSharedExpense(ctx, request.(UpdateSharedExpenseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSharedExpense")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateSharedExpenseResponseObject); ok {
+		if err := validResponse.VisitUpdateSharedExpenseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportSharedGroup operation middleware
+func (sh *strictHandler) ExportSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request ExportSharedGroupRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportSharedGroup(ctx, request.(ExportSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ExportSharedGroupResponseObject); ok {
+		if err := validResponse.VisitExportSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// InviteToSharedGroup operation middleware
+func (sh *strictHandler) InviteToSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request InviteToSharedGroupRequestObject
+
+	request.Id = id
+
+	var body InviteToSharedGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.InviteToSharedGroup(ctx, request.(InviteToSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "InviteToSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(InviteToSharedGroupResponseObject); ok {
+		if err := validResponse.VisitInviteToSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LeaveSharedGroup operation middleware
+func (sh *strictHandler) LeaveSharedGroup(w http.ResponseWriter, r *http.Request, id Id) {
+	var request LeaveSharedGroupRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LeaveSharedGroup(ctx, request.(LeaveSharedGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LeaveSharedGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LeaveSharedGroupResponseObject); ok {
+		if err := validResponse.VisitLeaveSharedGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveSharedMember operation middleware
+func (sh *strictHandler) RemoveSharedMember(w http.ResponseWriter, r *http.Request, id Id, memberId openapi_types.UUID) {
+	var request RemoveSharedMemberRequestObject
+
+	request.Id = id
+	request.MemberId = memberId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveSharedMember(ctx, request.(RemoveSharedMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveSharedMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveSharedMemberResponseObject); ok {
+		if err := validResponse.VisitRemoveSharedMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SharedGroupReport operation middleware
+func (sh *strictHandler) SharedGroupReport(w http.ResponseWriter, r *http.Request, id Id) {
+	var request SharedGroupReportRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SharedGroupReport(ctx, request.(SharedGroupReportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SharedGroupReport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SharedGroupReportResponseObject); ok {
+		if err := validResponse.VisitSharedGroupReportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddSharedSettlement operation middleware
+func (sh *strictHandler) AddSharedSettlement(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AddSharedSettlementRequestObject
+
+	request.Id = id
+
+	var body AddSharedSettlementJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddSharedSettlement(ctx, request.(AddSharedSettlementRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddSharedSettlement")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddSharedSettlementResponseObject); ok {
+		if err := validResponse.VisitAddSharedSettlementResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteSharedSettlement operation middleware
+func (sh *strictHandler) DeleteSharedSettlement(w http.ResponseWriter, r *http.Request, id Id, settlementId openapi_types.UUID) {
+	var request DeleteSharedSettlementRequestObject
+
+	request.Id = id
+	request.SettlementId = settlementId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteSharedSettlement(ctx, request.(DeleteSharedSettlementRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteSharedSettlement")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteSharedSettlementResponseObject); ok {
+		if err := validResponse.VisitDeleteSharedSettlementResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AddTransaction operation middleware
 func (sh *strictHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
 	var request AddTransactionRequestObject
@@ -14557,458 +16847,512 @@ func (sh *strictHandler) UpdateTransaction(w http.ResponseWriter, r *http.Reques
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"I8Da//8HAA==",
+	"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",
+	"/gR7yojy1u/CqiwGzwcHfCYPbo/Abfb/DQA=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

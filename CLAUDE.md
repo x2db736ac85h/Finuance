@@ -23,7 +23,7 @@ It is a rebuild of the single-file legacy app in `legacy/`.
   Change `api/openapi.yaml` or `backend/internal/store/queries/*.sql`, then run `make gen`.
 - No new dependencies without asking. No float64 for money. No `innerHTML`/`dangerouslySetInnerHTML`.
 - Assistant tools are read-only and run under `store.WithUserReadOnly`. Never log prompts, model output or tool results.
-- All user-data DB access goes through `store.WithUser`. Every query filters by `user_id` (for `friendships`, by either side; ADR 0027).
+- All user-data DB access goes through `store.WithUser`. Every query filters by `user_id` (for `friendships`, by either side; ADR 0027) or, for shared tables, by membership (`shared_member_role`; ADR 0028).
 - Never open, print or commit anything under `testdata/private/`.
 - Conventional Commits. Branch `phase/NN-name`. Update `docs/PROGRESS.md` after each task.
 - New architectural decision → ADR in `docs/adr/` (template `0000-template.md`).

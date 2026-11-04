@@ -205,7 +205,7 @@ func (l *Ledger) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStat,
 		for i := range rows {
 			r := &rows[i]
 			st := GroupStat{
-				Group:      Group{ID: r.ID, Name: r.Name, Color: int(r.Color), BudgetMinor: r.BudgetMinor, CreatedAt: r.CreatedAt},
+				Group:      Group{ID: r.ID, Name: r.Name, Color: int(r.Color), BudgetMinor: r.BudgetMinor, CreatedAt: r.CreatedAt, SharedGroupID: r.SharedGroupID},
 				Count:      int(r.TxCount),
 				SpentMinor: r.SpentMinor, IncomeMinor: r.IncomeMinor, Currency: r.Currency,
 			}

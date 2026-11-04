@@ -56,6 +56,8 @@ type Group struct {
 	Archived    bool
 	CreatedAt   time.Time
 	Me          Member
+	// LinkedGroupID is the caller's personal group linked to this one, if any.
+	LinkedGroupID *uuid.UUID
 }
 
 // Member is someone in a group as the others see them: a display name, never an e-mail.
@@ -285,7 +287,9 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Group, error) {
 			r := &rows[i]
 			g := db.SharedGroup{ID: r.ID, OwnerID: r.OwnerID, Name: r.Name, Color: r.Color, Currency: r.Currency, Kind: r.Kind,
 				StartsOn: r.StartsOn, EndsOn: r.EndsOn, BudgetMinor: r.BudgetMinor, ArchivedAt: r.ArchivedAt, CreatedAt: r.CreatedAt}
-			out = append(out, groupOf(g, db.SharedGroupMember{ID: r.MemberID, UserID: &userID, Role: r.Role, State: r.State}, userID))
+			x := groupOf(g, db.SharedGroupMember{ID: r.MemberID, UserID: &userID, Role: r.Role, State: r.State}, userID)
+			x.LinkedGroupID = r.LinkedGroupID
+			out = append(out, x)
 		}
 		return err
 	})
@@ -302,6 +306,11 @@ func (s *Service) Get(ctx context.Context, userID, groupID uuid.UUID) (Detail, e
 			return err
 		}
 		out.Group = groupOf(g, me, userID)
+		if linked, err := q.GroupLinkedTo(ctx, db.GroupLinkedToParams{UserID: userID, SharedGroupID: &groupID}); err == nil {
+			out.Group.LinkedGroupID = &linked
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
 		members, err := q.ListSharedMembers(ctx, groupID)
 		if err != nil {
 			return err

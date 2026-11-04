@@ -24,7 +24,7 @@ DELETE FROM groups WHERE user_id = @user_id AND id = @id;
 -- Every group with its transactions over all the user's accounts, ignoring filters (PLAN §4.7):
 -- count, money out and in (minor units, transfers included as in the legacy), first and last day.
 -- The currency is the most common one among the group's transactions.
-SELECT g.id, g.name, g.color, g.created_at, g.budget_minor,
+SELECT g.id, g.name, g.color, g.created_at, g.budget_minor, g.shared_group_id,
        count(t.id)::bigint AS tx_count,
        coalesce(sum(-t.amount_minor) FILTER (WHERE t.amount_minor < 0), 0)::bigint AS spent_minor,
        coalesce(sum(t.amount_minor) FILTER (WHERE t.amount_minor > 0), 0)::bigint AS income_minor,

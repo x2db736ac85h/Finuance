@@ -12,9 +12,10 @@ SELECT * FROM shared_groups WHERE id = @id;
 
 -- name: ListMySharedGroups :many
 -- The groups the user is in or invited to, with their own membership.
-SELECT g.*, m.id AS member_id, m.role, m.state
+SELECT g.*, m.id AS member_id, m.role, m.state, pg.id AS linked_group_id
 FROM shared_groups g
 JOIN shared_group_members m ON m.group_id = g.id AND m.user_id = @user_id
+LEFT JOIN groups pg ON pg.shared_group_id = g.id AND pg.user_id = @user_id
 WHERE m.state <> 'left'
 ORDER BY g.archived_at NULLS FIRST, coalesce(g.starts_on, g.created_at::date) DESC, g.id;
 
@@ -160,6 +161,21 @@ SELECT e.group_id, count(*)::bigint AS expenses, coalesce(sum(e.amount_minor), 0
        min(e.booked_on)::date AS first_on, max(e.booked_on)::date AS last_on
 FROM shared_expenses e
 GROUP BY e.group_id;
+
+-- name: GroupCategorySpend :many
+-- Money out per personal group and category (the timeline's largest categories and hints).
+SELECT t.group_id::uuid AS group_id, coalesce(c.name, '')::text AS category,
+       sum(-t.amount_minor)::bigint AS spent_minor, count(*)::bigint AS tx_count
+FROM transactions t
+LEFT JOIN categories c ON c.id = t.category_id
+WHERE t.user_id = @user_id AND t.group_id IS NOT NULL AND t.amount_minor < 0
+GROUP BY t.group_id, c.name;
+
+-- name: SharedCategorySpend :many
+-- Spending per shared group and category name, over the groups the user can see.
+SELECT e.group_id, e.category_name AS category, sum(e.amount_minor)::bigint AS spent_minor, count(*)::bigint AS expenses
+FROM shared_expenses e
+GROUP BY e.group_id, e.category_name;
 
 -- name: SharedSplitsOf :many
 SELECT * FROM shared_expense_splits WHERE expense_id = @expense_id ORDER BY member_id;

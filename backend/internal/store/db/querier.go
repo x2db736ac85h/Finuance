@@ -213,6 +213,8 @@ type Querier interface {
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	// email is citext, so the lookup ignores case.
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// Money out per personal group and category (the timeline's largest categories and hints).
+	GroupCategorySpend(ctx context.Context, userID uuid.UUID) ([]GroupCategorySpendRow, error)
 	GroupLinkedTo(ctx context.Context, arg GroupLinkedToParams) (uuid.UUID, error)
 	// Every group with its transactions over all the user's accounts, ignoring filters (PLAN §4.7):
 	// count, money out and in (minor units, transfers included as in the legacy), first and last day.
@@ -382,6 +384,8 @@ type Querier interface {
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
 	// An administrator's reset: a new one-time password the user has to replace at the next sign-in.
 	SetUserPasswordMustChange(ctx context.Context, arg SetUserPasswordMustChangeParams) error
+	// Spending per shared group and category name, over the groups the user can see.
+	SharedCategorySpend(ctx context.Context) ([]SharedCategorySpendRow, error)
 	// The user's copies in a group and whether their source transaction still exists (a missing source
 	// is shown to its owner only).
 	SharedCopiesFrom(ctx context.Context, arg SharedCopiesFromParams) ([]SharedCopiesFromRow, error)
