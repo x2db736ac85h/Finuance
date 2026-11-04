@@ -3464,7 +3464,7 @@ components:
           description: Case, spaces and dashes don't matter.
     NotificationKind:
       type: string
-      enum: [friend.added, friend.removed]
+      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled]
     Notification:
       type: object
       additionalProperties: false

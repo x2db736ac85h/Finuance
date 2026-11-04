@@ -2212,7 +2212,7 @@ export interface components {
             code: string;
         };
         /** @enum {string} */
-        NotificationKind: "friend.added" | "friend.removed";
+        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled";
         Notification: {
             /** Format: uuid */
             id: string;

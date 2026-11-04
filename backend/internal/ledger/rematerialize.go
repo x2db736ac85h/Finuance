@@ -176,6 +176,14 @@ func rematerialize(ctx context.Context, q *db.Queries, userID, accountID uuid.UU
 			return 0, err
 		}
 	}
+	// the fingerprint's transactions may have new values or be new: their shared copies follow
+	touched := make([]uuid.UUID, 0, len(txOf))
+	for _, id := range txOf {
+		touched = append(touched, id)
+	}
+	if err := syncShared(ctx, q, userID, touched, now, false); err != nil {
+		return 0, err
+	}
 	return len(inserted), nil
 }
 

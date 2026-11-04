@@ -15,7 +15,7 @@ import (
 
 const createGroup = `-- name: CreateGroup :one
 
-INSERT INTO groups (id, user_id, name, name_n, color) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, name, name_n, color, created_at, budget_minor
+INSERT INTO groups (id, user_id, name, name_n, color) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, name, name_n, color, created_at, budget_minor, shared_group_id
 `
 
 type CreateGroupParams struct {
@@ -44,6 +44,7 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.Color,
 		&i.CreatedAt,
 		&i.BudgetMinor,
+		&i.SharedGroupID,
 	)
 	return i, err
 }
@@ -67,7 +68,7 @@ func (q *Queries) DeleteGroup(ctx context.Context, arg DeleteGroupParams) (int64
 }
 
 const getGroup = `-- name: GetGroup :one
-SELECT id, user_id, name, name_n, color, created_at, budget_minor FROM groups WHERE user_id = $1 AND id = $2
+SELECT id, user_id, name, name_n, color, created_at, budget_minor, shared_group_id FROM groups WHERE user_id = $1 AND id = $2
 `
 
 type GetGroupParams struct {
@@ -86,6 +87,7 @@ func (q *Queries) GetGroup(ctx context.Context, arg GetGroupParams) (Group, erro
 		&i.Color,
 		&i.CreatedAt,
 		&i.BudgetMinor,
+		&i.SharedGroupID,
 	)
 	return i, err
 }
@@ -155,7 +157,7 @@ func (q *Queries) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStat
 }
 
 const listGroups = `-- name: ListGroups :many
-SELECT id, user_id, name, name_n, color, created_at, budget_minor FROM groups WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
+SELECT id, user_id, name, name_n, color, created_at, budget_minor, shared_group_id FROM groups WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
 `
 
 func (q *Queries) ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, error) {
@@ -175,6 +177,7 @@ func (q *Queries) ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, er
 			&i.Color,
 			&i.CreatedAt,
 			&i.BudgetMinor,
+			&i.SharedGroupID,
 		); err != nil {
 			return nil, err
 		}
@@ -206,7 +209,7 @@ func (q *Queries) SetGroupBudget(ctx context.Context, arg SetGroupBudgetParams) 
 }
 
 const updateGroup = `-- name: UpdateGroup :one
-UPDATE groups SET name = $1, name_n = $2, color = $3 WHERE user_id = $4 AND id = $5 RETURNING id, user_id, name, name_n, color, created_at, budget_minor
+UPDATE groups SET name = $1, name_n = $2, color = $3 WHERE user_id = $4 AND id = $5 RETURNING id, user_id, name, name_n, color, created_at, budget_minor, shared_group_id
 `
 
 type UpdateGroupParams struct {
@@ -234,6 +237,7 @@ func (q *Queries) UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group
 		&i.Color,
 		&i.CreatedAt,
 		&i.BudgetMinor,
+		&i.SharedGroupID,
 	)
 	return i, err
 }

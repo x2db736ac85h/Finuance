@@ -84,6 +84,10 @@ func (l *Ledger) CommitImport(ctx context.Context, userID, importID uuid.UUID) (
 			if _, err := q.ApplyAnnotations(ctx, db.ApplyAnnotationsParams{UserID: userID, Ids: inserted}); err != nil {
 				return err
 			}
+			// re-imported rows find their shared copies again (ADR 0028)
+			if err := syncShared(ctx, q, userID, inserted, now, false); err != nil {
+				return err
+			}
 		}
 		// After a bulk insert, steps 2–5 run without nested loops (afterBulkInsert).
 		restore, err := afterBulkInsert(ctx, q, len(inserted))

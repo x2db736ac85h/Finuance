@@ -39,8 +39,14 @@ func tenantTables(t *testing.T, tdb *testutil.DB) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return slices.DeleteFunc(all, func(s string) bool { return slices.Contains(notTenantTables, s) })
+	return slices.DeleteFunc(all, func(s string) bool {
+		return slices.Contains(notTenantTables, s) || slices.Contains(membershipTables, s)
+	})
 }
+
+// membershipTables have a user_id column but are shared by membership, not owned by one user:
+// shared_group_members (ADR 0028). TestSharedGroupRLS covers them.
+var membershipTables = []string{"shared_group_members"}
 
 // tenantData is what seed created for one user.
 type tenantData struct {
@@ -137,6 +143,9 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		}
 		if err := q.InsertNotification(ctx, db.InsertNotificationParams{ID: platform.NewID(), UserID: u, Kind: "friend.added", Data: []byte(`{}`), Now: now}); err != nil {
 			return fmt.Errorf("notification: %w", err)
+		}
+		if err := seedSharedLink(ctx, tx, u, d.account); err != nil {
+			return fmt.Errorf("shared expense link: %w", err)
 		}
 		return nil
 	})
@@ -378,4 +387,27 @@ func TestPolishNaturalCollation(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Errorf("ORDER BY … COLLATE pl_natural:\n got %q\nwant %q", got, want)
 	}
+}
+
+// seedSharedLink gives u a shared group of their own with one expense and the private link to it
+// (test-only SQL: the sharing package's queries come with it).
+func seedSharedLink(ctx context.Context, tx pgx.Tx, u, account uuid.UUID) error {
+	g, m, e := platform.NewID(), platform.NewID(), platform.NewID()
+	for _, stmt := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO shared_groups (id, owner_id, name, currency) VALUES ($1, $2, 'Trip', 'PLN')`, []any{g, u}},
+		{`INSERT INTO shared_group_members (id, group_id, user_id, role, state, display_name) VALUES ($1, $2, $3, 'owner', 'active', 'Me')`, []any{m, g, u}},
+		{`INSERT INTO shared_expenses (id, group_id, added_by, added_member, paid_by, booked_on, amount_minor, payee, origin)
+		  VALUES ($1, $2, $3, $4, $4, '2025-01-02', 100, 'Kawa', 'transaction')`, []any{e, g, u, m}},
+		{`INSERT INTO shared_expense_splits (expense_id, group_id, member_id, share_minor) VALUES ($1, $2, $3, 100)`, []any{e, g, m}},
+		{`INSERT INTO shared_expense_links (user_id, account_id, fingerprint, occurrence, split_scope, expense_id)
+		  VALUES ($1, $2, '\x07', 1, '00000000-0000-0000-0000-000000000000', $3)`, []any{u, account, e}},
+	} {
+		if _, err := tx.Exec(ctx, stmt.sql, stmt.args...); err != nil {
+			return err
+		}
+	}
+	return nil
 }

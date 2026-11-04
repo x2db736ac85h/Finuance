@@ -14,13 +14,29 @@ import { Popover, usePopover } from '../ui/Popover';
 const SAY: Record<Notification['kind'], (d: Record<string, string>) => string> = {
   'friend.added': (d) => `${d['name'] || 'Someone'} entered your code: you are friends now`,
   'friend.removed': (d) => `${d['name'] || 'A friend'} removed you as a friend`,
+  'shared.invited': (d) => `${d['name'] || 'A friend'} invited you to ${d['group'] || 'a shared group'}`,
+  'shared.joined': (d) => `${d['name'] || 'A friend'} joined ${d['group'] || 'your shared group'}`,
+  'shared.left': (d) => `${d['name'] || 'A member'} left ${d['group'] || 'your shared group'}`,
+  'shared.expense_added': (d) => `${d['name'] || 'A member'} added an expense to ${d['group'] || 'a shared group'}`,
+  'shared.settled': (d) => `${d['name'] || 'A member'} recorded a payment in ${d['group'] || 'a shared group'}`,
 };
 
 /** Where a notification leads. */
 const LINK: Record<Notification['kind'], string> = {
   'friend.added': '/settings/friends',
   'friend.removed': '/settings/friends',
+  'shared.invited': '/s',
+  'shared.joined': '/s',
+  'shared.left': '/s',
+  'shared.expense_added': '/s',
+  'shared.settled': '/s',
 };
+
+/** Where a notification leads: a shared-group notification opens its group. */
+function linkOf(n: Notification): string {
+  const g = n.data['groupId'];
+  return n.kind.startsWith('shared.') && g && n.kind !== 'shared.left' ? `/s/${g}` : LINK[n.kind];
+}
 
 export function describeNotification(n: Notification): string {
   return SAY[n.kind](n.data);
@@ -68,7 +84,7 @@ export function NotificationsButton() {
                     type="button"
                     onClick={() => {
                       pop.close();
-                      void navigate(LINK[n.kind]);
+                      void navigate(linkOf(n));
                     }}
                   >
                     <span>{describeNotification(n)}</span>

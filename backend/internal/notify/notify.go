@@ -24,10 +24,16 @@ import (
 const (
 	FriendAdded   = "friend.added"
 	FriendRemoved = "friend.removed"
+	// Shared groups (ADR 0028): data holds the group's id and name and the other member's name.
+	SharedInvited      = "shared.invited"
+	SharedJoined       = "shared.joined"
+	SharedLeft         = "shared.left"
+	SharedExpenseAdded = "shared.expense_added"
+	SharedSettled      = "shared.settled"
 )
 
 // Kinds lists every kind above.
-var Kinds = []string{FriendAdded, FriendRemoved}
+var Kinds = []string{FriendAdded, FriendRemoved, SharedInvited, SharedJoined, SharedLeft, SharedExpenseAdded, SharedSettled}
 
 // Retention is how long a notification is kept.
 const Retention = 90 * 24 * time.Hour

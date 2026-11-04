@@ -130,13 +130,14 @@ type GooseDbVersion struct {
 }
 
 type Group struct {
-	ID          uuid.UUID
-	UserID      uuid.UUID
-	Name        string
-	NameN       string
-	Color       int16
-	CreatedAt   time.Time
-	BudgetMinor *int64
+	ID            uuid.UUID
+	UserID        uuid.UUID
+	Name          string
+	NameN         string
+	Color         int16
+	CreatedAt     time.Time
+	BudgetMinor   *int64
+	SharedGroupID *uuid.UUID
 }
 
 type Import struct {
@@ -289,6 +290,79 @@ type Session struct {
 	ExpiresAt  time.Time
 	UserAgent  string
 	Ip         *netip.Addr
+}
+
+type SharedExpense struct {
+	ID           uuid.UUID
+	GroupID      uuid.UUID
+	AddedBy      *uuid.UUID
+	AddedMember  uuid.UUID
+	PaidBy       uuid.UUID
+	BookedOn     platform.Date
+	AmountMinor  int64
+	Payee        string
+	CategoryName string
+	Note         string
+	Origin       string
+	SplitMode    string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type SharedExpenseLink struct {
+	UserID      uuid.UUID
+	AccountID   uuid.UUID
+	Fingerprint []byte
+	Occurrence  int32
+	SplitScope  uuid.UUID
+	ExpenseID   uuid.UUID
+}
+
+type SharedExpenseSplit struct {
+	ExpenseID  uuid.UUID
+	GroupID    uuid.UUID
+	MemberID   uuid.UUID
+	ShareMinor int64
+	Weight     *int32
+}
+
+type SharedGroup struct {
+	ID          uuid.UUID
+	OwnerID     *uuid.UUID
+	Name        string
+	Color       int16
+	Currency    string
+	Kind        string
+	StartsOn    *platform.Date
+	EndsOn      *platform.Date
+	BudgetMinor *int64
+	ArchivedAt  *time.Time
+	CreatedAt   time.Time
+}
+
+type SharedGroupMember struct {
+	ID          uuid.UUID
+	GroupID     uuid.UUID
+	UserID      *uuid.UUID
+	Role        string
+	State       string
+	DisplayName string
+	InvitedBy   *uuid.UUID
+	CreatedAt   time.Time
+	JoinedAt    *time.Time
+	LeftAt      *time.Time
+}
+
+type SharedSettlement struct {
+	ID          uuid.UUID
+	GroupID     uuid.UUID
+	FromMember  uuid.UUID
+	ToMember    uuid.UUID
+	AmountMinor int64
+	SettledOn   platform.Date
+	Note        string
+	CreatedBy   *uuid.UUID
+	CreatedAt   time.Time
 }
 
 type Theme struct {
