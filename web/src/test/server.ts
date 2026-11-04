@@ -21,6 +21,9 @@ export type Db = {
   accounts: Schemas['Account'][];
   sessions: Schemas['Session'][];
   imports: Schemas['ImportSummary'][];
+  friends: Schemas['Friend'][];
+  notifications: Schemas['Notification'][];
+  notificationsRead: number;
   /** Rows the fake query endpoint pages through (no filtering). */
   transactions: Schemas['TransactionRow'][];
   duplicatesSkipped: number;
@@ -68,6 +71,9 @@ export const freshDb = (): Db => ({
   signupEnabled: true,
   demoMode: false,
   features: { overview: true, assistant: true, friends: true, sharedGroups: true },
+  friends: [],
+  notifications: [],
+  notificationsRead: 0,
   defaults: {},
   themes: [],
   user: {
@@ -157,6 +163,19 @@ export const server = setupServer(
   }),
   http.get(`${API}/accounts`, () => authed(() => HttpResponse.json(db.accounts))),
   http.get(`${API}/me/sessions`, () => authed(() => HttpResponse.json(db.sessions))),
+  http.get(`${API}/friends`, () => authed(() => HttpResponse.json(db.friends))),
+  http.get(`${API}/notifications`, () =>
+    authed(() =>
+      HttpResponse.json({ items: db.notifications, unread: db.notifications.filter((n) => !n.readAt).length }),
+    ),
+  ),
+  http.post(`${API}/notifications/read`, () =>
+    authed(() => {
+      db.notificationsRead++;
+      db.notifications = db.notifications.map((n) => ({ ...n, readAt: n.readAt ?? '2026-11-03T12:00:00Z' }));
+      return new HttpResponse(null, { status: 204 });
+    }),
+  ),
   http.get(`${API}/imports`, () => authed(() => HttpResponse.json(db.imports))),
   http.post(`${API}/transactions/query`, async ({ request }) => {
     const q = (await request.json()) as Schemas['TransactionQuery'];

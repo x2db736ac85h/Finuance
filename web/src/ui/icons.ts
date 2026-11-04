@@ -142,4 +142,24 @@ export const ICONS = {
   ],
 } as const satisfies Record<string, readonly Shape[]>;
 
-export type IconName = keyof typeof ICONS;
+/**
+ * Icons the legacy app didn't have (Phase 19 and later), drawn in the same style: a 24 × 24 box,
+ * 1.75 stroke, round caps. Kept apart so ICONS stays the exact legacy set (Icon.test.tsx).
+ */
+export const APP_ICONS = {
+  // friends
+  users: [
+    ['circle', { cx: '9', cy: '8', r: '3.5' }],
+    ['path', { d: 'M2.5 20a6.5 6.5 0 0 1 13 0' }],
+    ['path', { d: 'M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8' }],
+  ],
+  // notifications
+  bell: [
+    ['path', { d: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9' }],
+    ['path', { d: 'M10 20a2 2 0 0 0 4 0' }],
+  ],
+} as const satisfies Record<string, readonly Shape[]>;
+
+export const ALL_ICONS = { ...ICONS, ...APP_ICONS };
+
+export type IconName = keyof typeof ALL_ICONS;

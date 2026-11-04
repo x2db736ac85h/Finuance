@@ -9,6 +9,20 @@ export function fmtDateTime(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : dateTime.format(d);
 }
 
+const ago = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+/** An instant relative to now: "now", "5 minutes ago", "yesterday"; older than a week as a date. */
+export function fmtAgo(iso: string, now: number = Date.now()): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return iso;
+  const s = Math.round((t - now) / 1000);
+  if (s > -45) return ago.format(0, 'second');
+  if (s > -3600) return ago.format(Math.round(s / 60), 'minute');
+  if (s > -86_400) return ago.format(Math.round(s / 3600), 'hour');
+  if (s > -7 * 86_400) return ago.format(Math.round(s / 86_400), 'day');
+  return fmtDateTime(iso);
+}
+
 /** A date-only value (YYYY-MM-DD) as dd.mm.yyyy, the fixed display form (Phase 7 decision). */
 export function fmtDay(iso: string | undefined): string {
   if (!iso) return '';

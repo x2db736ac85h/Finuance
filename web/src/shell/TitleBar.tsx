@@ -14,6 +14,7 @@ import { modKey } from '../ui/Kbd';
 import { Logo } from '../ui/Logo';
 import { Menu, MenuItem } from '../ui/Menu';
 import { usePopover } from '../ui/Popover';
+import { NotificationsButton } from './Notifications';
 import { SettingsPopover } from './SettingsPopover';
 import { useSignOut } from './useSignOut';
 
@@ -91,6 +92,7 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode }: Pro
           <span className="bl">Assistant</span>
         </button>
       )}
+      <NotificationsButton />
       <IconButton icon="cog" title="Settings" aria-expanded={settings.open} onClick={settings.toggle} />
       <button
         type="button"

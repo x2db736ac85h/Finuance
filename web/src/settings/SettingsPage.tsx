@@ -2,12 +2,14 @@
 
 import { Navigate, NavLink, useParams } from 'react-router';
 
+import { useMeta } from '../api/hooks/me';
 import { Icon } from '../ui/Icon';
 import { RulesSettings } from '../rules/RulesSettings';
 import { ActivitySettings } from './Activity';
 import { AppearanceControls } from './Appearance';
 import { CategoriesSettings } from './Categories';
 import { DataSettings } from './Data';
+import { FriendsSettings } from './Friends';
 import { ProfileSettings } from './Profile';
 import { SECTIONS, type SectionId } from './sections';
 import { SessionsSettings } from './Sessions';
@@ -22,6 +24,7 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
   profile: ProfileSettings,
   sessions: SessionsSettings,
   activity: ActivitySettings,
+  friends: FriendsSettings,
   categories: CategoriesSettings,
   rules: RulesSettings,
   data: DataSettings,
@@ -29,14 +32,17 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
 
 export function SettingsPage() {
   const { section } = useParams();
-  const current = SECTIONS.find((s) => s.id === section);
+  const meta = useMeta().data;
+  // Friends only where the instance has them: switched on, and not a demo (ADR 0027)
+  const sections = SECTIONS.filter((s) => s.id !== 'friends' || (meta?.features.friends !== false && !meta?.demoMode));
+  const current = sections.find((s) => s.id === section);
   if (!current) return <Navigate to="/settings/appearance" replace />;
   const Body = BODY[current.id];
   return (
     <div className="settings">
       <nav className="set-nav" aria-label="Settings">
         <div className="sec-h">Settings</div>
-        {SECTIONS.map((s) => (
+        {sections.map((s) => (
           <NavLink key={s.id} to={`/settings/${s.id}`} className={({ isActive }) => (isActive ? 'mi on' : 'mi')}>
             <Icon name={s.icon} />
             {s.label}
