@@ -21,11 +21,13 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi"
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
+	"github.com/x2db736ac85h/finuance/backend/internal/notify"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -96,9 +98,10 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	for _, w := range warnings {
 		log.Warn(w)
 	}
+	notes := notify.New(c.store, platform.SystemClock{})
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: authSvc, Admin: NewAdmin(c.store, authSvc, cfg), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
+		Auth: authSvc, Admin: NewAdmin(c.store, authSvc, cfg), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
 		Legacy: legacyimport.New(c.store, led, nil, platform.SystemClock{}),
 		Rules:  rules.New(c.store, platform.SystemClock{}),
 		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
@@ -131,6 +134,8 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 		Workers: jobs.Workers(jobs.Deps{Sessions: authSvc, Demo: authSvc, Ledger: led, Audit: led, Chats: chats,
 			Migrator: legacyimport.New(c.store, led, chats, platform.SystemClock{}),
 			Rules:    rules.New(c.store, platform.SystemClock{}),
+			Friends:  friends.New(c.store, platform.SystemClock{}, notify.New(c.store, platform.SystemClock{})),
+			Notify:   notify.New(c.store, platform.SystemClock{}),
 			Metrics:  jobs.NewImportMetrics(c.metrics.Registry)}),
 		PeriodicJobs: jobs.PeriodicJobs(),
 		Middleware: []rivertype.Middleware{jobs.NewTelemetry(c.tracing.Provider, c.tracing.Propagator,

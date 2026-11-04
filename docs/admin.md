@@ -60,7 +60,8 @@ reload (`409`).
   them are shown, the sidebar. These lie under each person's own preferences, so they apply to
   everything a person hasn't changed yet; their own choices always win.
 - **Features**: switching Overview or the Assistant off hides it for everyone and its API answers
-  `404`. (Friends and Shared groups arrive later in Phase 19.)
+  `404`. Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); Shared
+  groups follow with the rest of Phase 19.
 - **Default limits** for every account without its own.
 
 ### Limits

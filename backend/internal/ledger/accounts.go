@@ -20,6 +20,7 @@ type Account struct {
 	NumberHint          string // last four digits of the account number, or ""
 	OpeningBalanceMinor int64
 	IsDemo              bool
+	Kind                string // KindBank or KindCash (ADR 0029)
 	ArchivedAt          *time.Time
 	CreatedAt           time.Time
 	// Filled by ListAccounts and GetAccount: transactions and their date range (zero when empty).
@@ -33,9 +34,16 @@ type AccountInput struct {
 	Currency            string // ISO 4217; "" means PLN
 	NumberHint          string
 	OpeningBalanceMinor int64
-	Archived            bool // update only
-	IsDemo              bool // create only
+	Archived            bool   // update only
+	IsDemo              bool   // create only
+	Kind                string // create only: KindBank (the default) or KindCash
 }
+
+// Account kinds: a bank account takes imported files, a cash account typed expenses (ADR 0029).
+const (
+	KindBank = "bank"
+	KindCash = "cash"
+)
 
 const maxAccountName = 80
 
@@ -46,6 +54,13 @@ func (in AccountInput) clean() (AccountInput, error) {
 	}
 	if in.Currency == "" {
 		in.Currency = defaultCurrency
+	}
+	switch in.Kind {
+	case "":
+		in.Kind = KindBank
+	case KindBank, KindCash:
+	default:
+		return in, invalidf("account kind must be %q or %q", KindBank, KindCash)
 	}
 	if _, ok := money.Exponent(in.Currency); !ok {
 		return in, invalidf("unknown currency %q", in.Currency)
@@ -58,7 +73,7 @@ func (in AccountInput) clean() (AccountInput, error) {
 
 func accountOf(a db.Account) Account {
 	out := Account{ID: a.ID, Name: a.Name, Currency: a.Currency, OpeningBalanceMinor: a.OpeningBalanceMinor,
-		IsDemo: a.IsDemo, ArchivedAt: a.ArchivedAt, CreatedAt: a.CreatedAt}
+		IsDemo: a.IsDemo, Kind: a.Kind, ArchivedAt: a.ArchivedAt, CreatedAt: a.CreatedAt}
 	if a.NumberHint != nil {
 		out.NumberHint = *a.NumberHint
 	}
@@ -83,7 +98,7 @@ func (l *Ledger) CreateAccount(ctx context.Context, userID uuid.UUID, in Account
 	err = l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 		a, err := q.CreateAccount(ctx, db.CreateAccountParams{ID: platform.NewID(), UserID: userID, Name: in.Name,
 			NameN: nameKey(in.Name), Currency: in.Currency, NumberHint: optional(in.NumberHint),
-			OpeningBalanceMinor: in.OpeningBalanceMinor, IsDemo: in.IsDemo})
+			OpeningBalanceMinor: in.OpeningBalanceMinor, IsDemo: in.IsDemo, Kind: in.Kind})
 		out = accountOf(a)
 		return err
 	})

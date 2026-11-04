@@ -28,7 +28,7 @@ func moneyDTO(minor *int64, currency string) *gen.Money {
 }
 
 func accountDTO(a ledger.Account) gen.Account {
-	out := gen.Account{Id: a.ID, Name: a.Name, Currency: a.Currency, OpeningBalance: gen.Money{AmountMinor: a.OpeningBalanceMinor, Currency: a.Currency},
+	out := gen.Account{Id: a.ID, Name: a.Name, Kind: gen.AccountKind(a.Kind), Currency: a.Currency, OpeningBalance: gen.Money{AmountMinor: a.OpeningBalanceMinor, Currency: a.Currency},
 		TxCount: a.TxCount, FirstOn: dateDTO(a.FirstOn), LastOn: dateDTO(a.LastOn), IsDemo: a.IsDemo, Archived: a.ArchivedAt != nil, CreatedAt: a.CreatedAt}
 	if a.NumberHint != "" {
 		h := a.NumberHint
@@ -50,6 +50,9 @@ func accountInput(in gen.AccountInput) ledger.AccountInput {
 	}
 	if in.Archived != nil {
 		out.Archived = *in.Archived
+	}
+	if in.Kind != nil {
+		out.Kind = string(*in.Kind)
 	}
 	return out
 }

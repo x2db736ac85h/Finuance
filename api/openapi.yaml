@@ -727,6 +727,30 @@ paths:
                 $ref: "#/components/schemas/ImportDetail"
         default:
           $ref: "#/components/responses/Problem"
+  /transactions:
+    post:
+      operationId: addTransaction
+      summary: Add a transaction by hand to a cash account
+      description: >-
+        For cash accounts only (`422` for a bank account, whose transactions come from files). The
+        transaction can be edited and deleted later; rules and transfer detection treat it like an
+        imported one, but a category set here is a manual one and wins (ADR 0029).
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualTransactionInput"
+      responses:
+        "201":
+          description: The new transaction.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionDetail"
+        default:
+          $ref: "#/components/responses/Problem"
   /transactions/query:
     post:
       operationId: queryTransactions
@@ -872,11 +896,12 @@ paths:
           $ref: "#/components/responses/Problem"
     patch:
       operationId: updateTransaction
-      summary: Set the category or the note
+      summary: Set the category or the note, or change a transaction added by hand
       description: >-
         `categoryName` creates the category when it doesn't exist. A set category becomes a manual
         one; `resetCategory` goes back to the bank's category. Edits are kept as annotations, so they
-        survive deleting and re-importing the file.
+        survive deleting and re-importing the file. `bookedOn`, `amountMinor`, `payee` and
+        `description` change transactions added by hand only.
       tags: [transactions]
       requestBody:
         required: true
@@ -891,6 +916,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TransactionDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteTransaction
+      summary: Delete a transaction added by hand
+      description: An imported transaction goes with its import (`409 conflict`).
+      tags: [transactions]
+      responses:
+        "204":
+          description: Deleted.
         default:
           $ref: "#/components/responses/Problem"
   /categories:
@@ -1831,6 +1866,119 @@ paths:
                 $ref: "#/components/schemas/DemoData"
         default:
           $ref: "#/components/responses/Problem"
+  /friends:
+    get:
+      operationId: listFriends
+      summary: Your friends
+      description: >-
+        Friends see each other's display name, never the e-mail address (ADR 0027). `404` when the
+        instance switched friends off, and in demo mode.
+      tags: [friends]
+      responses:
+        "200":
+          description: Newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Friend"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: addFriend
+      summary: Become friends by entering someone's code
+      description: >-
+        A wrong, expired or own code is `422 validation_failed` (one answer for all); friends already
+        is `409 conflict`; without a display name `422 display_name_required`. At most 10 tries an
+        hour per user and per address (`429`). The code's owner gets a notification, and the code is
+        used up.
+      tags: [friends]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriendCodeInput"
+      responses:
+        "201":
+          description: The new friend.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Friend"
+        default:
+          $ref: "#/components/responses/Problem"
+  /friends/code:
+    post:
+      operationId: newFriendCode
+      summary: Make a code a friend can enter
+      description: >-
+        8 characters, valid until the end of this clock hour plus 10 minutes. Only its hash is
+        stored, so it is shown once; a new code replaces the previous one.
+      tags: [friends]
+      responses:
+        "201":
+          description: The code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendCode"
+        default:
+          $ref: "#/components/responses/Problem"
+  /friends/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    delete:
+      operationId: removeFriend
+      summary: Remove a friend
+      description: Either side can end a friendship; the other side gets a notification.
+      tags: [friends]
+      responses:
+        "204":
+          description: Removed.
+        default:
+          $ref: "#/components/responses/Problem"
+  /notifications:
+    get:
+      operationId: listNotifications
+      summary: Your notifications, newest first, with the unread count
+      description: In the app only (no e-mail); kept 90 days.
+      tags: [notifications]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: The notifications.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationList"
+        default:
+          $ref: "#/components/responses/Problem"
+  /notifications/read:
+    post:
+      operationId: markNotificationsRead
+      summary: Mark notifications read
+      description: The given ones, or every unread one when `ids` is left out.
+      tags: [notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationsRead"
+      responses:
+        "204":
+          description: Marked.
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/users:
     get:
       operationId: adminListUsers
@@ -2357,6 +2505,12 @@ components:
             - admin.settings_changed
             - admin.theme_approved
             - admin.theme_retired
+            - transaction.added
+            - transaction.edited
+            - transaction.deleted
+            - friend.added
+            - friend.removed
+            - friend.code_failed
         entityId:
           type: string
           description: The affected record (import, account, session, chat …), if any.
@@ -2422,13 +2576,15 @@ components:
     Account:
       type: object
       additionalProperties: false
-      required: [id, name, currency, openingBalance, txCount, isDemo, archived, createdAt]
+      required: [id, name, kind, currency, openingBalance, txCount, isDemo, archived, createdAt]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
+        kind:
+          $ref: "#/components/schemas/AccountKind"
         currency:
           type: string
         numberHint:
@@ -2472,6 +2628,14 @@ components:
           format: int64
         archived:
           type: boolean
+        kind:
+          $ref: "#/components/schemas/AccountKind"
+    AccountKind:
+      type: string
+      enum: [bank, cash]
+      description: >-
+        A bank account takes imported files; a cash account takes transactions added by hand
+        (ADR 0029). Chosen when the account is created (default `bank`); later changes are ignored.
     ColRef:
       type: object
       additionalProperties: false
@@ -3248,6 +3412,139 @@ components:
           description: >-
             The user's transfer decision: `yes` marks it, `no` says it isn't one (a detected pair is
             unpaired on both sides), `auto` hands it back to the rules and the detection.
+        bookedOn:
+          type: string
+          format: date
+          description: Transactions added by hand only (`422` for imported ones), like the three below.
+        amountMinor:
+          type: integer
+          format: int64
+          description: Negative = money out; never zero.
+        payee:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 500
+    Friend:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, since]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        since:
+          type: string
+          format: date-time
+    FriendCode:
+      type: object
+      additionalProperties: false
+      required: [code, expiresAt]
+      properties:
+        code:
+          type: string
+          pattern: "^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$"
+          example: K7Q4-9MZD
+        expiresAt:
+          type: string
+          format: date-time
+    FriendCodeInput:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Case, spaces and dashes don't matter.
+    NotificationKind:
+      type: string
+      enum: [friend.added, friend.removed]
+    Notification:
+      type: object
+      additionalProperties: false
+      required: [id, kind, data, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/NotificationKind"
+        data:
+          type: object
+          description: Ids and display names the message is written from (never e-mail addresses).
+          additionalProperties:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+    NotificationList:
+      type: object
+      additionalProperties: false
+      required: [items, unread]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        unread:
+          type: integer
+          format: int64
+    NotificationsRead:
+      type: object
+      additionalProperties: false
+      properties:
+        ids:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            format: uuid
+    ManualTransactionInput:
+      type: object
+      additionalProperties: false
+      required: [accountId, bookedOn, amountMinor, payee]
+      description: A transaction added by hand to a cash account, in the account's currency.
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        bookedOn:
+          type: string
+          format: date
+        amountMinor:
+          type: integer
+          format: int64
+          description: Negative = money out; never zero.
+        payee:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 500
+        categoryId:
+          type: string
+          format: uuid
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Created when missing; set at most one of `categoryId` and `categoryName`.
+        groupId:
+          type: string
+          format: uuid
+        note:
+          type: string
+          maxLength: 2000
     Category:
       type: object
       additionalProperties: false
@@ -5062,6 +5359,7 @@ components:
         - account_disabled
         - last_admin
         - contrast_failed
+        - display_name_required
         - internal
     FieldError:
       type: object

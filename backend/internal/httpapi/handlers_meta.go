@@ -14,10 +14,12 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
+	"github.com/x2db736ac85h/finuance/backend/internal/notify"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 )
 
@@ -28,6 +30,8 @@ type api struct {
 	prod     bool
 	auth     *auth.Service
 	admin    *admin.Service
+	friends  *friends.Service
+	notify   *notify.Service
 	ledger   *ledger.Ledger
 	legacy   *legacyimport.Migrator
 	rules    *rules.Service

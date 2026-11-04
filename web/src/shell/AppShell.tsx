@@ -17,6 +17,9 @@ import { sidebarShown, useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
 import { TooltipLayer } from '../ui/Tooltip';
 import { Toaster } from '../ui/Toast';
+import { CashAccountDialog } from '../cash/CashAccountDialog';
+import { useCashDialogs } from '../cash/store';
+import { TransactionDialog } from '../cash/TransactionDialog';
 import { DropOverlay } from './DropOverlay';
 import { useAppearance, useSidebarAutoCollapse } from './effects';
 import { FILE_ACCEPT, importFiles, openFilePicker, registerPicker } from './files';
@@ -49,9 +52,6 @@ export function AppShell({ user }: { user: User }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const viewAccount = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    viewAccount.current = viewId === 'all' ? undefined : viewId;
-  }, [viewId]);
 
   // The overview's chunk loads once the app is idle, so switching to it doesn't wait (PLAN §7.12).
   useEffect(() => {
@@ -74,9 +74,15 @@ export function AppShell({ user }: { user: User }) {
   }, [navigate, qc]);
 
   const accounts = useAccounts();
+  const viewCash = accounts.data?.find((a) => a.id === viewId && a.kind === 'cash');
+  useEffect(() => {
+    // files dropped while looking at a cash account don't go into it (ADR 0029)
+    viewAccount.current = viewId === 'all' || viewCash ? undefined : viewId;
+  }, [viewId, viewCash]);
   const list = accounts.data ?? [];
   const total = list.reduce((n, a) => n + a.txCount, 0);
-  const hasData = total > 0;
+  // a cash account is data even before its first transaction: its table is where they are added
+  const hasData = total > 0 || list.some((a) => a.kind === 'cash');
   const rows = viewId === 'all' ? total : (list.find((a) => a.id === viewId)?.txCount ?? 0);
   // settings and the admin panel share the settings layout
   const inSettings = location.pathname.startsWith('/settings') || location.pathname.startsWith('/admin');
@@ -106,6 +112,11 @@ export function AppShell({ user }: { user: User }) {
     },
     openShortcuts: () => {
       useUi.getState().setKeysOpen(true);
+    },
+    addTransaction: () => {
+      if (!viewCash || inSettings || mode !== 'table') return false;
+      useCashDialogs.getState().openTransaction({ accountId: viewCash.id, currency: viewCash.currency });
+      return true;
     },
     move: moveSelection,
     extend: extendSelection,
@@ -152,6 +163,8 @@ export function AppShell({ user }: { user: User }) {
       <DropOverlay onFiles={importFiles} />
       <KeyboardShortcuts />
       <DuplicatesDialog />
+      <CashAccountDialog />
+      <TransactionDialog />
       <Toaster />
       <TooltipLayer />
       <input

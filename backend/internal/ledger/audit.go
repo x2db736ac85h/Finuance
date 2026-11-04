@@ -47,6 +47,15 @@ const (
 	AuditAdminSettingsChanged = "admin.settings_changed"
 	AuditAdminThemeApproved   = "admin.theme_approved"
 	AuditAdminThemeRetired    = "admin.theme_retired"
+	// Transactions added by hand to a cash account (ADR 0029): the entity is the transaction, the
+	// meta names the account; never amounts or payees.
+	AuditTransactionAdded   = "transaction.added"
+	AuditTransactionEdited  = "transaction.edited"
+	AuditTransactionDeleted = "transaction.deleted"
+	// Friends (ADR 0027): the entity is the friend's user id; a failed code is recorded without it.
+	AuditFriendAdded      = "friend.added"
+	AuditFriendRemoved    = "friend.removed"
+	AuditFriendCodeFailed = "friend.code_failed"
 )
 
 // AuditActions lists every action above.
@@ -55,7 +64,9 @@ var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPass
 	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied,
 	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,
 	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
-	AuditAdminThemeApproved, AuditAdminThemeRetired}
+	AuditAdminThemeApproved, AuditAdminThemeRetired,
+	AuditTransactionAdded, AuditTransactionEdited, AuditTransactionDeleted,
+	AuditFriendAdded, AuditFriendRemoved, AuditFriendCodeFailed}
 
 // AuditRetention is how long events are kept; the table's delete policy says the same.
 const AuditRetention = 365 * 24 * time.Hour

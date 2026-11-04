@@ -3,7 +3,8 @@
 // CommitImport and RematerializeFingerprint are the import pipeline's (Phase 6); LegacyImport
 // migrates a legacy backup (Phase 14); Reclassify applies rules and finds transfers (Phase 15);
 // CleanupAuditLog keeps the activity log to its retention and CleanupDemoUsers removes demo
-// visitors after a day (Phase 17).
+// visitors after a day (Phase 17); CleanupFriendCodes and CleanupNotifications keep Phase 19's
+// friend codes and notifications to theirs.
 package jobs
 
 import (
@@ -48,6 +49,8 @@ type Deps struct {
 	Demo     DemoCleaner
 	Migrator Migrator
 	Rules    Reclassifier
+	Friends  Cleaner        // expired friend codes
+	Notify   Cleaner        // old notifications
 	Metrics  *ImportMetrics // nil: unregistered metrics
 }
 
@@ -68,6 +71,8 @@ func Workers(d Deps) *river.Workers {
 	river.AddWorker(w, &ReclassifyWorker{Rules: d.Rules})
 	river.AddWorker(w, &CleanupAuditLogWorker{Audit: d.Audit})
 	river.AddWorker(w, &CleanupDemoUsersWorker{Demo: d.Demo})
+	river.AddWorker(w, &CleanupFriendCodesWorker{Friends: d.Friends})
+	river.AddWorker(w, &CleanupNotificationsWorker{Notifications: d.Notify})
 	return w
 }
 
@@ -85,6 +90,12 @@ func PeriodicJobs() []*river.PeriodicJob {
 			&river.PeriodicJobOpts{RunOnStart: true}),
 		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
 			func() (river.JobArgs, *river.InsertOpts) { return CleanupDemoUsersArgs{}, nil },
+			&river.PeriodicJobOpts{RunOnStart: true}),
+		river.NewPeriodicJob(river.PeriodicInterval(time.Hour),
+			func() (river.JobArgs, *river.InsertOpts) { return CleanupFriendCodesArgs{}, nil },
+			&river.PeriodicJobOpts{RunOnStart: true}),
+		river.NewPeriodicJob(river.PeriodicInterval(24*time.Hour),
+			func() (river.JobArgs, *river.InsertOpts) { return CleanupNotificationsArgs{}, nil },
 			&river.PeriodicJobOpts{RunOnStart: true}),
 	}
 }

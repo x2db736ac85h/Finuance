@@ -14,6 +14,7 @@ import (
 type Querier interface {
 	// Transaction count and date range per account (GET /accounts).
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
+	AddFriendship(ctx context.Context, arg AddFriendshipParams) (int64, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
 	AdminCountUsers(ctx context.Context, arg AdminCountUsersParams) (AdminCountUsersRow, error)
 	// Instance administration (ADR 0025). users, instance_settings and themes are outside RLS and are
@@ -47,6 +48,8 @@ type Querier interface {
 	// For the imports-per-day limit (run under the user's context).
 	CountImportsSince(ctx context.Context, arg CountImportsSinceParams) (int64, error)
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountUnreadNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
+	// kind (bank | cash) is chosen here and never changes (ADR 0029).
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateAssistantChat(ctx context.Context, arg CreateAssistantChatParams) (AssistantChat, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
@@ -71,6 +74,7 @@ type Querier interface {
 	CurrentEnableNestLoop(ctx context.Context) (string, error)
 	// Cascades to the account's imports, transactions, annotations and overrides.
 	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
+	DeleteAnnotation(ctx context.Context, arg DeleteAnnotationParams) error
 	DeleteAssistantChat(ctx context.Context, arg DeleteAssistantChatParams) (int64, error)
 	// Retention: chats whose last message is older than the cutoff.
 	DeleteAssistantChatsBefore(ctx context.Context, arg DeleteAssistantChatsBeforeParams) (int64, error)
@@ -88,8 +92,11 @@ type Querier interface {
 	DeleteEmptyAnnotations(ctx context.Context, userID uuid.UUID) (int64, error)
 	// The daily cleanup; the delete policy allows only rows past the retention anyway.
 	DeleteExpiredAuditEvents(ctx context.Context, userID uuid.UUID) (int64, error)
+	DeleteExpiredFriendCodes(ctx context.Context, now time.Time) (int64, error)
 	// Periodic cleanup: absolute expiry passed, or idle for longer than the idle timeout.
 	DeleteExpiredSessions(ctx context.Context, arg DeleteExpiredSessionsParams) (int64, error)
+	DeleteFriendCode(ctx context.Context, userID uuid.UUID) error
+	DeleteFriendship(ctx context.Context, arg DeleteFriendshipParams) (int64, error)
 	// Removes the group and its labels only (ON DELETE SET NULL on transactions and annotations).
 	DeleteGroup(ctx context.Context, arg DeleteGroupParams) (int64, error)
 	// Cascades to import_files and import_rows. Transactions are cleaned up by DeleteOrphanTransactions.
@@ -101,6 +108,9 @@ type Querier interface {
 	// PUT /investments replaces the whole list in one transaction.
 	DeleteInvestmentPositions(ctx context.Context, userID uuid.UUID) error
 	DeleteLegacyImportFiles(ctx context.Context, arg DeleteLegacyImportFilesParams) error
+	// Deletes a manual row and returns its identity, so its annotation goes too.
+	DeleteManualTransaction(ctx context.Context, arg DeleteManualTransactionParams) (DeleteManualTransactionRow, error)
+	DeleteOldNotifications(ctx context.Context, arg DeleteOldNotificationsParams) (int64, error)
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
 	DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphanTransactionsParams) (int64, error)
@@ -133,6 +143,7 @@ type Querier interface {
 	ExportImportIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	// Account suggestion (PLAN §4.4): last four digits of the own-account column.
 	FindAccountsByNumberHint(ctx context.Context, arg FindAccountsByNumberHintParams) ([]Account, error)
+	FindFriendCode(ctx context.Context, codeHash []byte) (FindFriendCodeRow, error)
 	// Exact duplicate file check (PLAN §4.4): an earlier non-failed import with the same bytes.
 	FindImportBySHA(ctx context.Context, arg FindImportBySHAParams) (uuid.UUID, error)
 	// The non-errored staged rows of one fingerprint in the account's committed imports, earliest
@@ -151,6 +162,8 @@ type Querier interface {
 	FingerprintsWithRows(ctx context.Context, arg FingerprintsWithRowsParams) ([][]byte, error)
 	// The end of a run: the report (or the error), and the manifest and files are no longer needed.
 	FinishLegacyImport(ctx context.Context, arg FinishLegacyImportParams) error
+	// The display name of a user (friends never see each other's e-mail).
+	FriendDisplayName(ctx context.Context, id uuid.UUID) (string, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
@@ -198,6 +211,13 @@ type Querier interface {
 	// the retention, deleted (the table's policies allow nothing else).
 	InsertAuditEvent(ctx context.Context, arg InsertAuditEventParams) error
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
+	// Manual transactions (Phase 19, ADR 0029): expenses typed into a cash account. They have
+	// origin = 'manual' and a random fingerprint, so no import ever matches them; re-materialisation,
+	// import deletes and the duplicate counts only touch origin = 'import' rows.
+	InsertManualTransaction(ctx context.Context, arg InsertManualTransactionParams) error
+	// In-app notifications (Phase 19, 19.8). User-owned with forced RLS; another user's action writes
+	// a notification under the recipient's own context (internal/notify).
+	InsertNotification(ctx context.Context, arg InsertNotificationParams) error
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
 	InsertTransactionFromRow(ctx context.Context, arg InsertTransactionFromRowParams) error
@@ -225,6 +245,8 @@ type Querier interface {
 	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
 	// The overrides of the given (account, fingerprint) pairs.
 	ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error)
+	// The user's friends with their display names, newest first.
+	ListFriends(ctx context.Context, userID uuid.UUID) ([]ListFriendsRow, error)
 	ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, error)
 	ListImportProfiles(ctx context.Context, userID uuid.UUID) ([]ImportProfile, error)
 	// Staged rows are inserted by store.InsertImportRows (hand-written unnest, see importrows.go).
@@ -236,6 +258,7 @@ type Querier interface {
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
 	ListLegacyImports(ctx context.Context, userID uuid.UUID) ([]ListLegacyImportsRow, error)
+	ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]ListNotificationsRow, error)
 	// Rules and transfers (PLAN tasks 15.2, 15.3). The dynamic part, a rule's match, is compiled by
 	// internal/query; these are the fixed statements around it.
 	ListRules(ctx context.Context, userID uuid.UUID) ([]ListRulesRow, error)
@@ -251,6 +274,8 @@ type Querier interface {
 	// Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
 	// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
 	LockUserAccounts(ctx context.Context, userID uuid.UUID) error
+	// Marks the given notifications read, or every unread one when ids is NULL.
+	MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) (int64, error)
 	MergeCategoryAnnotations(ctx context.Context, arg MergeCategoryAnnotationsParams) error
 	// The merged category's budget moves over when the target has none (else the target's stays).
 	MergeCategoryBudget(ctx context.Context, arg MergeCategoryBudgetParams) error
@@ -297,6 +322,13 @@ type Querier interface {
 	// Lets the planner use nested loops or not, for the rest of the transaction (set_config with
 	// is_local). The commit turns them off after a bulk insert (ledger/commit.go, afterBulkInsert).
 	SetEnableNestLoop(ctx context.Context, value string) error
+	// Friends (Phase 19, 19.7, ADR 0027).
+	//
+	// friend_codes is outside RLS (like sessions): a code is a bearer secret looked up by its SHA-256
+	// before the other user is known, reached only by internal/friends through store.WithoutUser.
+	// friendships has forced RLS: either side sees, adds and removes the pair (user_a < user_b).
+	// One code per user: a new one replaces the previous.
+	SetFriendCode(ctx context.Context, arg SetFriendCodeParams) error
 	// NULL removes the budget.
 	SetGroupBudget(ctx context.Context, arg SetGroupBudgetParams) (int64, error)
 	// Moves an import along previewed → committing → committed | failed. from_status guards the move,
@@ -342,6 +374,9 @@ type Querier interface {
 	// (expected_status guards which).
 	UpdateImportPreview(ctx context.Context, arg UpdateImportPreviewParams) (Import, error)
 	UpdateInvestmentPosition(ctx context.Context, arg UpdateInvestmentPositionParams) (InvestmentPosition, error)
+	// The typed fields of a manual row; imported rows are never matched (origin), so their bank
+	// values stay as the file had them.
+	UpdateManualTransaction(ctx context.Context, arg UpdateManualTransactionParams) (int64, error)
 	UpdateRule(ctx context.Context, arg UpdateRuleParams) (int64, error)
 	// Versioned like the settings; status changes go through SetThemeStatus.
 	UpdateTheme(ctx context.Context, arg UpdateThemeParams) (Theme, error)

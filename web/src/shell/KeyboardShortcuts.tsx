@@ -31,6 +31,7 @@ export const KEYS: [section: string, rows: Row[]][] = [
       [['Shift', 'Click'], 'Select a range of rows'],
       [['Shift', '↑', '↓'], 'Grow or shrink the selected range'],
       [[MOD, 'Click'], 'Add / remove a row from the selection'],
+      [['N'], 'Add a transaction (in a cash account)'],
     ],
   ],
   [

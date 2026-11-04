@@ -131,6 +131,7 @@ var featureRoutes = []struct {
 }{
 	{"/api/v1/overview", func(f instance.EffectiveFeatures) bool { return f.Overview }},
 	{"/api/v1/assistant/", func(f instance.EffectiveFeatures) bool { return f.Assistant }},
+	{"/api/v1/friends", func(f instance.EffectiveFeatures) bool { return f.Friends }},
 }
 
 // gate applies what the account and the instance allow on a protected route: administrators

@@ -7,7 +7,7 @@ import { useAppearance } from '../shell/effects';
 import { Button } from './Button';
 import { Icon } from './Icon';
 import { IconButton } from './IconButton';
-import { ICONS, type IconName } from './icons';
+import { ALL_ICONS, type IconName } from './icons';
 import { Checkbox, Select, TextInput } from './inputs';
 import { Kbd, MOD } from './Kbd';
 import { Logo } from './Logo';
@@ -119,7 +119,7 @@ export function Gallery() {
       <section>
         <h2>Icons</h2>
         <div className="gal-icons">
-          {(Object.keys(ICONS) as IconName[]).map((n) => (
+          {(Object.keys(ALL_ICONS) as IconName[]).map((n) => (
             <span key={n} title={n}>
               <Icon name={n} />
               {n}

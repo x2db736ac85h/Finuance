@@ -22,11 +22,13 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
+	"github.com/x2db736ac85h/finuance/backend/internal/notify"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -71,6 +73,10 @@ type Deps struct {
 	// Admin runs the instance settings, limits, themes and the admin routes (ADR 0025). Nil in tests
 	// of the bare server: every feature on, limits from the environment, admin routes 404.
 	Admin *admin.Service
+	// Friends runs friend codes and friendships, Notify the in-app notifications (Phase 19). Nil in
+	// tests of the bare server: the routes answer 404.
+	Friends *friends.Service
+	Notify  *notify.Service
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
 	Extra func(*http.ServeMux)
 }
@@ -106,7 +112,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{admin: d.Admin, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	impl := &api{admin: d.Admin, friends: d.Friends, notify: d.Notify, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

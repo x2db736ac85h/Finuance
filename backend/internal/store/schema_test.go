@@ -9,8 +9,8 @@ import (
 )
 
 // notTenantTables have a user_id column but are deliberately outside RLS (PLAN §5.3): sessions are
-// resolved before the user is known.
-var notTenantTables = []string{"sessions"}
+// resolved before the user is known, and so are friend codes (looked up by their hash, ADR 0027).
+var notTenantTables = []string{"friend_codes", "sessions"}
 
 // ownPolicies are tables whose policies differ from the single "<table>_tenant" policy: the audit
 // log has one per command, so it can be read and appended to but never updated, and only expired
@@ -66,7 +66,7 @@ func TestEveryUserTableHasForcedRLS(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"accounts", "assistant_chats", "assistant_messages", "assistant_settings", "audit_log", "budgets", "categories", "category_aliases", "dedupe_overrides", "groups", "import_files", "import_profiles",
-		"import_rows", "imports", "investment_positions", "investment_profile", "legacy_import_files", "legacy_imports", "rules", "transactions", "tx_annotations", "user_preferences"}
+		"import_rows", "imports", "investment_positions", "investment_profile", "legacy_import_files", "legacy_imports", "notifications", "rules", "transactions", "tx_annotations", "user_preferences"}
 	if !slices.Equal(tenant, want) {
 		t.Errorf("tenant tables = %v, want %v", tenant, want)
 	}

@@ -35,6 +35,15 @@ function View({ mode }: { mode: 'table' | 'ov' }) {
   const account = accounts.data.find((a) => a.id === viewId);
   if (viewId !== 'all' && !account) return <Navigate to={`/${mode === 'ov' ? 'o' : 't'}/all`} replace />;
   const name = account?.name ?? 'All accounts';
-  if (mode === 'table') return <Table key={viewId} viewId={viewId} title={name} icon={account ? 'folder' : 'layers'} />;
+  if (mode === 'table')
+    return (
+      <Table
+        key={viewId}
+        viewId={viewId}
+        title={name}
+        icon={account ? 'folder' : 'layers'}
+        cash={account?.kind === 'cash' ? { accountId: account.id, currency: account.currency } : undefined}
+      />
+    );
   return <Overview key={viewId} viewId={viewId} />;
 }

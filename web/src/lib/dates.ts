@@ -9,11 +9,31 @@ export function fmtDateTime(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : dateTime.format(d);
 }
 
+const ago = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+/** An instant relative to now: "now", "5 minutes ago", "yesterday"; older than a week as a date. */
+export function fmtAgo(iso: string, now: number = Date.now()): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return iso;
+  const s = Math.round((t - now) / 1000);
+  if (s > -45) return ago.format(0, 'second');
+  if (s > -3600) return ago.format(Math.round(s / 60), 'minute');
+  if (s > -86_400) return ago.format(Math.round(s / 3600), 'hour');
+  if (s > -7 * 86_400) return ago.format(Math.round(s / 86_400), 'day');
+  return fmtDateTime(iso);
+}
+
 /** A date-only value (YYYY-MM-DD) as dd.mm.yyyy, the fixed display form (Phase 7 decision). */
 export function fmtDay(iso: string | undefined): string {
   if (!iso) return '';
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
+}
+
+/** Today in the browser's time zone as YYYY-MM-DD (a new expense's default date). */
+export function todayISO(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${String(now.getFullYear())}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
 }
 
 /** A YYYY-MM-DD date plus n days (calendar arithmetic in UTC, no time zone shifts). */

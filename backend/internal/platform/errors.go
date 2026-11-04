@@ -28,6 +28,7 @@ var (
 	ErrAccountDisabled        = errors.New("account disabled")
 	ErrLastAdmin              = errors.New("last administrator")
 	ErrContrast               = errors.New("contrast too low")
+	ErrDisplayNameRequired    = errors.New("display name required")
 )
 
 // FieldError is one invalid input field.

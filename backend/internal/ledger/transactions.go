@@ -145,21 +145,9 @@ func (l *Ledger) UpdateTransaction(ctx context.Context, userID, id uuid.UUID, p 
 	}
 	patch := AnnotationPatch{SetCategory: n == 1, CategoryID: p.CategoryID}
 	if p.CategoryName != nil {
-		name, err := cleanName("category", *p.CategoryName, maxCategoryName)
+		cid, err := l.categoryByName(ctx, userID, *p.CategoryName)
 		if err != nil {
 			return Transaction{}, err
-		}
-		ids, err := l.EnsureCategories(ctx, userID, []string{name})
-		if err != nil {
-			return Transaction{}, err
-		}
-		cid, ok := ids[nameKey(name)]
-		if !ok { // the name of a deleted category: typing it asks for that category again
-			c, err := l.CreateCategory(ctx, userID, name)
-			if err != nil {
-				return Transaction{}, err
-			}
-			cid = c.ID
 		}
 		patch.CategoryID = &cid
 	}
@@ -170,4 +158,22 @@ func (l *Ledger) UpdateTransaction(ctx context.Context, userID, id uuid.UUID, p 
 		return Transaction{}, err
 	}
 	return l.GetTransaction(ctx, userID, id)
+}
+
+// categoryByName returns the id of the category a user typed, creating it when missing.
+func (l *Ledger) categoryByName(ctx context.Context, userID uuid.UUID, typed string) (uuid.UUID, error) {
+	name, err := cleanName("category", typed, maxCategoryName)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	ids, err := l.EnsureCategories(ctx, userID, []string{name})
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	if cid, ok := ids[nameKey(name)]; ok {
+		return cid, nil
+	}
+	// the name of a deleted category: typing it asks for that category again
+	c, err := l.CreateCategory(ctx, userID, name)
+	return c.ID, err
 }

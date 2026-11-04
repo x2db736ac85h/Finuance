@@ -59,7 +59,7 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if _, err := q.SavePreferences(ctx, db.SavePreferencesParams{UserID: u, Prefs: []byte(`{"theme":"dark"}`), Now: now}); err != nil {
 			return fmt.Errorf("preferences: %w", err)
 		}
-		if _, err := q.CreateAccount(ctx, db.CreateAccountParams{ID: d.account, UserID: u, Name: "Konto", NameN: "konto", Currency: "PLN"}); err != nil {
+		if _, err := q.CreateAccount(ctx, db.CreateAccountParams{ID: d.account, UserID: u, Name: "Konto", NameN: "konto", Currency: "PLN", Kind: "bank"}); err != nil {
 			return fmt.Errorf("account: %w", err)
 		}
 		cat, err := q.CreateCategory(ctx, db.CreateCategoryParams{ID: platform.NewID(), UserID: u, Name: "Food", NameN: "food"})
@@ -134,6 +134,9 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		}
 		if err := q.InsertAuditEvent(ctx, db.InsertAuditEventParams{UserID: u, Action: "auth.login", Meta: []byte(`{}`)}); err != nil {
 			return fmt.Errorf("audit event: %w", err)
+		}
+		if err := q.InsertNotification(ctx, db.InsertNotificationParams{ID: platform.NewID(), UserID: u, Kind: "friend.added", Data: []byte(`{}`), Now: now}); err != nil {
+			return fmt.Errorf("notification: %w", err)
 		}
 		return nil
 	})
@@ -249,7 +252,7 @@ func TestRLSWithCheckRejectsOtherUserID(t *testing.T) {
 	now := time.Now()
 	inserts := map[string]func(q *db.Queries, tx pgx.Tx) error{
 		"accounts": func(q *db.Queries, _ pgx.Tx) error {
-			_, err := q.CreateAccount(ctx, db.CreateAccountParams{ID: platform.NewID(), UserID: b.user, Name: "x", NameN: "x2", Currency: "PLN"})
+			_, err := q.CreateAccount(ctx, db.CreateAccountParams{ID: platform.NewID(), UserID: b.user, Name: "x", NameN: "x2", Currency: "PLN", Kind: "bank"})
 			return err
 		},
 		"categories": func(q *db.Queries, _ pgx.Tx) error {

@@ -29,5 +29,7 @@ export const keys = {
   chats: ['chats'] as const,
   chat: (id: string) => ['chat', id] as const,
   legacyImports: ['legacyImports'] as const,
+  friends: ['friends'] as const,
+  notifications: ['notifications'] as const,
   legacyImport: (id: string) => ['legacyImport', id] as const,
 };

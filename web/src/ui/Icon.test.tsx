@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Icon } from './Icon';
 import legacy from '../../../legacy/finuance.html?raw';
-import { ICONS, type IconName } from './icons';
+import { ALL_ICONS, APP_ICONS, ICONS, type IconName } from './icons';
 
 describe('Icon', () => {
   it('ports every legacy icon', () => {
@@ -16,10 +16,14 @@ describe('Icon', () => {
     expect(Object.keys(ICONS).sort()).toEqual([...names].sort());
   });
 
-  it.each(Object.keys(ICONS) as IconName[])('%s renders its shapes', (name) => {
+  it('adds new icons without renaming a legacy one', () => {
+    for (const k of Object.keys(APP_ICONS)) expect(Object.keys(ICONS)).not.toContain(k);
+  });
+
+  it.each(Object.keys(ALL_ICONS) as IconName[])('%s renders its shapes', (name) => {
     const { container } = render(<Icon name={name} />);
     const svg = container.querySelector('span.ico > svg');
     expect(svg?.getAttribute('viewBox')).toBe('0 0 24 24');
-    expect(svg?.children.length).toBe(ICONS[name].length);
+    expect(svg?.children.length).toBe(ALL_ICONS[name].length);
   });
 });

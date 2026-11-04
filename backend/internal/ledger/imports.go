@@ -118,7 +118,7 @@ func (l *Ledger) CreateImport(ctx context.Context, userID uuid.UUID, in NewImpor
 			return err
 		}
 		if in.AccountID != nil {
-			if err := ownAccount(ctx, q, userID, *in.AccountID); err != nil {
+			if err := importAccount(ctx, q, userID, *in.AccountID); err != nil {
 				return err
 			}
 		}
@@ -333,7 +333,7 @@ func (l *Ledger) Restage(ctx context.Context, userID, id uuid.UUID, s Staging, e
 		switch status {
 		case StatusPreviewed:
 			if account != nil {
-				if err := ownAccount(ctx, q, userID, *account); err != nil {
+				if err := importAccount(ctx, q, userID, *account); err != nil {
 					return err
 				}
 			}

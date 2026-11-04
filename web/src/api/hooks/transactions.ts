@@ -62,8 +62,55 @@ export function usePatchTransaction(id: string) {
       data(await api.PATCH('/transactions/{id}', { params: { path: { id } }, body })),
     onSuccess: (detail) => {
       qc.setQueryData(keys.transaction(id), detail);
-      for (const k of [keys.tx, keys.categories, keys.insight, keys.overview, keys.ruleSuggestions])
-        void qc.invalidateQueries({ queryKey: k });
+      invalidateRows(qc);
+    },
+  });
+}
+
+/** Everything a changed transaction shows up in: the grid, counts, charts and the overview. */
+function invalidateRows(qc: ReturnType<typeof useQueryClient>) {
+  for (const k of [keys.tx, keys.accounts, keys.categories, keys.insight, keys.overview, keys.ruleSuggestions])
+    void qc.invalidateQueries({ queryKey: k });
+}
+
+export type ManualTransactionInput = Schemas['ManualTransactionInput'];
+
+/** POST /transactions: a transaction typed into a cash account (ADR 0029). */
+export function useAddTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: ManualTransactionInput) => data(await api.POST('/transactions', { body })),
+    onSuccess: (detail) => {
+      qc.setQueryData(keys.transaction(detail.id), detail);
+      invalidateRows(qc);
+    },
+  });
+}
+
+/** PATCH /transactions/{id} without a fixed id (the add/edit dialog edits whichever row it opened). */
+export function useEditTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: TransactionPatch }) =>
+      data(await api.PATCH('/transactions/{id}', { params: { path: { id } }, body })),
+    onSuccess: (detail) => {
+      qc.setQueryData(keys.transaction(detail.id), detail);
+      invalidateRows(qc);
+    },
+  });
+}
+
+/** DELETE /transactions/{id}: a transaction added by hand. */
+export function useDeleteTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      data(await api.DELETE('/transactions/{id}', { params: { path: { id } } }));
+      return id;
+    },
+    onSuccess: (id) => {
+      qc.removeQueries({ queryKey: keys.transaction(id) });
+      invalidateRows(qc);
     },
   });
 }

@@ -52,9 +52,9 @@ func (q *Queries) AccountStats(ctx context.Context, userID uuid.UUID) ([]Account
 }
 
 const createAccount = `-- name: CreateAccount :one
-INSERT INTO accounts (id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at
+INSERT INTO accounts (id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, kind)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at, kind
 `
 
 type CreateAccountParams struct {
@@ -66,8 +66,10 @@ type CreateAccountParams struct {
 	NumberHint          *string
 	OpeningBalanceMinor int64
 	IsDemo              bool
+	Kind                string
 }
 
+// kind (bank | cash) is chosen here and never changes (ADR 0029).
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error) {
 	row := q.db.QueryRow(ctx, createAccount,
 		arg.ID,
@@ -78,6 +80,7 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		arg.NumberHint,
 		arg.OpeningBalanceMinor,
 		arg.IsDemo,
+		arg.Kind,
 	)
 	var i Account
 	err := row.Scan(
@@ -91,6 +94,7 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		&i.IsDemo,
 		&i.ArchivedAt,
 		&i.CreatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -114,7 +118,7 @@ func (q *Queries) DeleteAccount(ctx context.Context, arg DeleteAccountParams) (i
 }
 
 const findAccountsByNumberHint = `-- name: FindAccountsByNumberHint :many
-SELECT id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at FROM accounts WHERE user_id = $1 AND number_hint = $2 AND archived_at IS NULL ORDER BY created_at
+SELECT id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at, kind FROM accounts WHERE user_id = $1 AND number_hint = $2 AND archived_at IS NULL ORDER BY created_at
 `
 
 type FindAccountsByNumberHintParams struct {
@@ -143,6 +147,7 @@ func (q *Queries) FindAccountsByNumberHint(ctx context.Context, arg FindAccounts
 			&i.IsDemo,
 			&i.ArchivedAt,
 			&i.CreatedAt,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -155,7 +160,7 @@ func (q *Queries) FindAccountsByNumberHint(ctx context.Context, arg FindAccounts
 }
 
 const getAccount = `-- name: GetAccount :one
-SELECT id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at FROM accounts WHERE user_id = $1 AND id = $2
+SELECT id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at, kind FROM accounts WHERE user_id = $1 AND id = $2
 `
 
 type GetAccountParams struct {
@@ -177,12 +182,13 @@ func (q *Queries) GetAccount(ctx context.Context, arg GetAccountParams) (Account
 		&i.IsDemo,
 		&i.ArchivedAt,
 		&i.CreatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const listAccounts = `-- name: ListAccounts :many
-SELECT id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at FROM accounts WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
+SELECT id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at, kind FROM accounts WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
 `
 
 func (q *Queries) ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error) {
@@ -205,6 +211,7 @@ func (q *Queries) ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account
 			&i.IsDemo,
 			&i.ArchivedAt,
 			&i.CreatedAt,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -240,7 +247,7 @@ UPDATE accounts
 SET name = $1, name_n = $2, currency = $3, number_hint = $4,
     opening_balance_minor = $5, archived_at = $6
 WHERE user_id = $7 AND id = $8
-RETURNING id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at
+RETURNING id, user_id, name, name_n, currency, number_hint, opening_balance_minor, is_demo, archived_at, created_at, kind
 `
 
 type UpdateAccountParams struct {
@@ -277,6 +284,7 @@ func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (A
 		&i.IsDemo,
 		&i.ArchivedAt,
 		&i.CreatedAt,
+		&i.Kind,
 	)
 	return i, err
 }

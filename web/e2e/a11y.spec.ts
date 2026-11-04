@@ -33,7 +33,7 @@ test('table, import preview, overview, settings, assistant', async ({ page }) =>
   await expect(page.getByText('Recurring payments').first()).toBeVisible();
   await check(page, 'overview');
 
-  for (const s of ['appearance', 'profile', 'sessions', 'activity', 'data']) {
+  for (const s of ['appearance', 'profile', 'sessions', 'activity', 'friends', 'data']) {
     await page.goto(`/settings/${s}`);
     await expect(page.locator('.set-body')).toBeVisible();
     await check(page, `settings ${s}`);
@@ -41,6 +41,16 @@ test('table, import preview, overview, settings, assistant', async ({ page }) =>
 
   await page.goto('/t/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
+  await page.getByRole('button', { name: /^Notifications/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Notifications' })).toBeVisible();
+  await check(page, 'notifications');
+  await page.keyboard.press('Escape');
+  const sidebar = page.getByRole('button', { name: 'Toggle sidebar' });
+  if ((await sidebar.getAttribute('aria-pressed')) !== 'true') await sidebar.click(); // collapsed at this width
+  await page.getByRole('button', { name: 'New cash account' }).click();
+  await expect(page.getByRole('dialog', { name: 'New cash account' })).toBeVisible();
+  await check(page, 'new cash account', '[role=dialog]');
+  await page.keyboard.press('Escape');
   await page.keyboard.press('ControlOrMeta+j');
   await expect(page.getByRole('complementary', { name: 'Assistant' })).toBeVisible();
   await check(page, 'assistant');

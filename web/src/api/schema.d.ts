@@ -485,6 +485,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a transaction by hand to a cash account
+         * @description For cash accounts only (`422` for a bank account, whose transactions come from files). The transaction can be edited and deleted later; rules and transfer detection treat it like an imported one, but a category set here is a manual one and wins (ADR 0029).
+         */
+        post: operations["addTransaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions/query": {
         parameters: {
             query?: never;
@@ -595,12 +615,16 @@ export interface paths {
         get: operations["getTransaction"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a transaction added by hand
+         * @description An imported transaction goes with its import (`409 conflict`).
+         */
+        delete: operations["deleteTransaction"];
         options?: never;
         head?: never;
         /**
-         * Set the category or the note
-         * @description `categoryName` creates the category when it doesn't exist. A set category becomes a manual one; `resetCategory` goes back to the bank's category. Edits are kept as annotations, so they survive deleting and re-importing the file.
+         * Set the category or the note, or change a transaction added by hand
+         * @description `categoryName` creates the category when it doesn't exist. A set category becomes a manual one; `resetCategory` goes back to the bank's category. Edits are kept as annotations, so they survive deleting and re-importing the file. `bookedOn`, `amountMinor`, `payee` and `description` change transactions added by hand only.
          */
         patch: operations["updateTransaction"];
         trace?: never;
@@ -1294,6 +1318,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your friends
+         * @description Friends see each other's display name, never the e-mail address (ADR 0027). `404` when the instance switched friends off, and in demo mode.
+         */
+        get: operations["listFriends"];
+        put?: never;
+        /**
+         * Become friends by entering someone's code
+         * @description A wrong, expired or own code is `422 validation_failed` (one answer for all); friends already is `409 conflict`; without a display name `422 display_name_required`. At most 10 tries an hour per user and per address (`429`). The code's owner gets a notification, and the code is used up.
+         */
+        post: operations["addFriend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/friends/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a code a friend can enter
+         * @description 8 characters, valid until the end of this clock hour plus 10 minutes. Only its hash is stored, so it is shown once; a new code replaces the previous one.
+         */
+        post: operations["newFriendCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/friends/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a friend
+         * @description Either side can end a friendship; the other side gets a notification.
+         */
+        delete: operations["removeFriend"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your notifications, newest first, with the unread count
+         * @description In the app only (no e-mail); kept 90 days.
+         */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark notifications read
+         * @description The given ones, or every unread one when `ids` is left out.
+         */
+        post: operations["markNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -1556,7 +1686,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "friend.added" | "friend.removed" | "friend.code_failed";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -1606,6 +1736,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            kind: components["schemas"]["AccountKind"];
             currency: string;
             /** @description Last four digits of the account number. */
             numberHint?: string;
@@ -1629,7 +1760,13 @@ export interface components {
             /** Format: int64 */
             openingBalanceMinor?: number;
             archived?: boolean;
+            kind?: components["schemas"]["AccountKind"];
         };
+        /**
+         * @description A bank account takes imported files; a cash account takes transactions added by hand (ADR 0029). Chosen when the account is created (default `bank`); later changes are ignored.
+         * @enum {string}
+         */
+        AccountKind: "bank" | "cash";
         ColRef: {
             index: number;
             header: string;
@@ -2044,6 +2181,79 @@ export interface components {
              * @enum {string}
              */
             transfer?: "yes" | "no" | "auto";
+            /**
+             * Format: date
+             * @description Transactions added by hand only (`422` for imported ones), like the three below.
+             */
+            bookedOn?: string;
+            /**
+             * Format: int64
+             * @description Negative = money out; never zero.
+             */
+            amountMinor?: number;
+            payee?: string;
+            description?: string;
+        };
+        Friend: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            /** Format: date-time */
+            since: string;
+        };
+        FriendCode: {
+            /** @example K7Q4-9MZD */
+            code: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        FriendCodeInput: {
+            /** @description Case, spaces and dashes don't matter. */
+            code: string;
+        };
+        /** @enum {string} */
+        NotificationKind: "friend.added" | "friend.removed";
+        Notification: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["NotificationKind"];
+            /** @description Ids and display names the message is written from (never e-mail addresses). */
+            data: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt?: string;
+        };
+        NotificationList: {
+            items: components["schemas"]["Notification"][];
+            /** Format: int64 */
+            unread: number;
+        };
+        NotificationsRead: {
+            ids?: string[];
+        };
+        /** @description A transaction added by hand to a cash account, in the account's currency. */
+        ManualTransactionInput: {
+            /** Format: uuid */
+            accountId: string;
+            /** Format: date */
+            bookedOn: string;
+            /**
+             * Format: int64
+             * @description Negative = money out; never zero.
+             */
+            amountMinor: number;
+            payee: string;
+            description?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            /** @description Created when missing; set at most one of `categoryId` and `categoryName`. */
+            categoryName?: string;
+            /** Format: uuid */
+            groupId?: string;
+            note?: string;
         };
         Category: {
             /** Format: uuid */
@@ -3062,7 +3272,7 @@ export interface components {
          * @description Stable machine-readable error code.
          * @enum {string}
          */
-        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "internal";
+        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "display_name_required" | "internal";
         FieldError: {
             /** @description Dotted path of the offending field, e.g. `mapping.amount`. */
             field: string;
@@ -4164,6 +4374,31 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    addTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualTransactionInput"];
+            };
+        };
+        responses: {
+            /** @description The new transaction. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     queryTransactions: {
         parameters: {
             query?: never;
@@ -4314,6 +4549,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TransactionDetail"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };
@@ -5382,6 +5638,140 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DemoData"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listFriends: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Friend"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addFriend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FriendCodeInput"];
+            };
+        };
+        responses: {
+            /** @description The new friend. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Friend"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    newFriendCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The code. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendCode"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeFriend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The notifications. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    markNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationsRead"];
+            };
+        };
+        responses: {
+            /** @description Marked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };
