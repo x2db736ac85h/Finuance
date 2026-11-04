@@ -10,6 +10,7 @@ import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { modKey } from '../ui/Kbd';
 import { toast } from '../ui/toastStore';
+import { useCashDialogs } from '../cash/store';
 import { openFilePicker } from './files';
 
 export function EmptyState() {
@@ -50,6 +51,15 @@ export function EmptyState() {
             title="Creates a demo account with 14 months of fictional transactions to preview the charts"
           >
             {demo.isPending ? 'Loading demo data…' : 'Load demo data'}
+          </Button>
+          <Button
+            icon="plus"
+            onClick={() => {
+              useCashDialogs.getState().openNewAccount();
+            }}
+            title="A wallet for cash: you add its expenses by hand"
+          >
+            New cash account
           </Button>
         </div>
         <div className="tips">

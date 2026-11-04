@@ -8,6 +8,7 @@ import { Link } from 'react-router';
 
 import {
   useCategories,
+  useDeleteTransaction,
   usePatchTransaction,
   useTransaction,
   type TransactionDetail,
@@ -24,7 +25,9 @@ import { useViews, viewOf } from '../stores/viewStore';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
+import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
+import { useCashDialogs } from '../cash/store';
 import { COLUMNS, type ColumnDef } from './columns';
 import { useQueryContext } from './context';
 import { escapeSelection, moveSelection } from './controller';
@@ -75,6 +78,7 @@ export function Inspector({ viewId }: { viewId: string }) {
         )}
       </div>
       <div className="ins-f">
+        {d?.origin === 'manual' && <ManualActions d={d} viewId={viewId} />}
         <Button
           icon="copy"
           disabled={!d}
@@ -86,6 +90,75 @@ export function Inspector({ viewId }: { viewId: string }) {
         </Button>
       </div>
     </aside>
+  );
+}
+
+/** Edit and Delete for a transaction added by hand (ADR 0029); imported ones are the bank's. */
+function ManualActions({ d, viewId }: { d: TransactionDetail; viewId: string }) {
+  const [confirm, setConfirm] = useState(false);
+  const del = useDeleteTransaction();
+  return (
+    <>
+      <Button
+        icon="pen"
+        onClick={() => {
+          useCashDialogs
+            .getState()
+            .openTransaction({ accountId: d.accountId, currency: d.amount.currency, editId: d.id });
+        }}
+      >
+        Edit
+      </Button>
+      <Button
+        icon="x"
+        onClick={() => {
+          setConfirm(true);
+        }}
+      >
+        Delete
+      </Button>
+      <Modal
+        open={confirm}
+        onClose={() => {
+          setConfirm(false);
+        }}
+        title="Delete this transaction?"
+        size="sm"
+        actions={
+          <>
+            <Button
+              onClick={() => {
+                setConfirm(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={del.isPending}
+              onClick={() => {
+                del.mutate(d.id, {
+                  onSuccess: () => {
+                    setConfirm(false);
+                    useViews.getState().patch(viewId, { selectedId: null, selectedIndex: null });
+                    toast(`Deleted ${d.payee}`);
+                  },
+                  onError: (e) => {
+                    toast(errorMessage(e), { kind: 'error' });
+                  },
+                });
+              }}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p>
+          {d.payee}, {fmtMoney(d.amount)} on {fmtDay(d.bookedOn)}. It was added by hand, so nothing brings it back.
+        </p>
+      </Modal>
+    </>
   );
 }
 

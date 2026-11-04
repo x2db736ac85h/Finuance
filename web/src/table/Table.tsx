@@ -20,9 +20,15 @@ import { RuleSuggestionCard } from '../rules/RuleSuggestion';
 import { Toolbar } from './Toolbar';
 import { useGridController } from './controller';
 
-type Props = { viewId: string; title: string; icon: 'layers' | 'folder' };
+type Props = {
+  viewId: string;
+  title: string;
+  icon: 'layers' | 'folder';
+  /** A cash account's view: its toolbar adds transactions by hand (ADR 0029). */
+  cash?: { accountId: string; currency: string } | undefined;
+};
 
-export function Table({ viewId, title, icon }: Props) {
+export function Table({ viewId, title, icon, cash }: Props) {
   const q = useQueryContext(viewId);
   const statColumn = useViews((s) => viewOf(s.views, viewId).statColumn);
   const hidden = useViews((s) => viewOf(s.views, viewId).hidden);
@@ -85,6 +91,7 @@ export function Table({ viewId, title, icon }: Props) {
         periodLabel={head.data?.period?.label}
         columns={columns}
         visible={visible}
+        cash={cash}
       />
       <RuleSuggestionCard />
       <Grid

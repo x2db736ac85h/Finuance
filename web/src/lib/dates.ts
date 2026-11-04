@@ -16,6 +16,12 @@ export function fmtDay(iso: string | undefined): string {
   return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
 }
 
+/** Today in the browser's time zone as YYYY-MM-DD (a new expense's default date). */
+export function todayISO(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${String(now.getFullYear())}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
 /** A YYYY-MM-DD date plus n days (calendar arithmetic in UTC, no time zone shifts). */
 export function addDays(iso: string, n: number): string {
   const [y, m, d] = iso.split('-').map(Number);

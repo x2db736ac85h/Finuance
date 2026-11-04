@@ -35,3 +35,13 @@ export function useCreateAccount() {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.accounts }),
   });
 }
+
+/** POST /accounts for a cash account (ADR 0029): transactions are typed into it by hand. */
+export function useCreateCashAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { name: string; currency: string }) =>
+      data(await api.POST('/accounts', { body: { ...body, kind: 'cash' } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.accounts }),
+  });
+}

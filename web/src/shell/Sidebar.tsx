@@ -9,6 +9,7 @@ import { useImports, type ImportSummary } from '../api/hooks/imports';
 import { fmtInt } from '../lib/format';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
+import { useCashDialogs } from '../cash/store';
 import { openFilePicker } from './files';
 import { ImportHistory } from './ImportHistory';
 
@@ -50,6 +51,17 @@ export function Sidebar({ accounts, total, email }: Props) {
         ) : (
           <div className="fi-empty">No accounts yet</div>
         )}
+        <button
+          type="button"
+          className="sb-add"
+          onClick={() => {
+            useCashDialogs.getState().openNewAccount();
+          }}
+          title="A wallet for cash: you add its expenses by hand"
+        >
+          <Icon name="plus" />
+          <span>New cash account</span>
+        </button>
         <button type="button" className="mini-drop" onClick={openFilePicker}>
           <Icon name="upload" />
           <span>
@@ -87,6 +99,11 @@ function AccountItem({ account: a, imports }: { account: Account; imports: Impor
         <NavLink to={`/t/${a.id}`} className="fi-link" title={accountTitle(a)}>
           <Icon name="folder" />
           <span className="fn">{a.name}</span>
+          {a.kind === 'cash' && (
+            <span className="tag" title="A cash account: its transactions are added by hand">
+              cash
+            </span>
+          )}
           {a.isDemo && (
             <span className="tag" title="Demo data — fictional transactions">
               demo

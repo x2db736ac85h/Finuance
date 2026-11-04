@@ -18,6 +18,7 @@ import { ColumnsMenu } from './ColumnsMenu';
 import { GroupsButton } from '../groups/GroupsMenu';
 import { RuleEditor, type RuleDraft } from '../rules/RuleEditor';
 import type { ViewQuery } from './context';
+import { useCashDialogs } from '../cash/store';
 
 type Props = {
   viewId: string;
@@ -28,6 +29,7 @@ type Props = {
   periodLabel: string | undefined;
   columns: readonly ColumnDef[];
   visible: readonly ColumnDef[];
+  cash?: { accountId: string; currency: string } | undefined;
 };
 
 /** Saves a Blob under a file name (an <a download> made with the DOM API, never HTML strings). */
@@ -43,7 +45,7 @@ export function saveBlob(blob: Blob, filename: string): void {
   }, 2000);
 }
 
-export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, visible }: Props) {
+export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, visible, cash }: Props) {
   const v = useViews((s) => viewOf(s.views, viewId));
   const patch = useViews((s) => s.patch);
   const cols = usePopover();
@@ -111,6 +113,18 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
         )}
       </div>
       <div className="tools">
+        {cash && (
+          <Button
+            variant="primary"
+            icon="plus"
+            title="Add a transaction to this cash account (N)"
+            onClick={() => {
+              useCashDialogs.getState().openTransaction(cash);
+            }}
+          >
+            Add
+          </Button>
+        )}
         {draft && (
           <Button
             icon="sliders"

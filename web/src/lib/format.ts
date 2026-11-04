@@ -114,6 +114,14 @@ export function parseMoneyInput(text: string, currency: string): number | null {
   return m[1] === '-' && v !== 0 ? -v : v;
 }
 
+/** Minor units as text to edit, without grouping: 2450 → "24,50" (parseMoneyInput reads it back). */
+export function moneyInputText(minor: number, currency: string): string {
+  const exp = currencyExponent(currency);
+  const digits = String(Math.abs(minor)).padStart(exp + 1, '0');
+  const text = exp ? `${digits.slice(0, -exp)},${digits.slice(-exp)}` : digits;
+  return minor < 0 ? `-${text}` : text;
+}
+
 const oneDecimal = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 
 /** A size in binary units: 2048 → "2 KiB", 20971520 → "20 MiB". */

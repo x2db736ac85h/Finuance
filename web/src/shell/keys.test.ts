@@ -11,6 +11,7 @@ const actions = () =>
     move: vi.fn<KeyActions['move']>(() => true),
     extend: vi.fn<KeyActions['extend']>(() => true),
     escape: vi.fn(() => true),
+    addTransaction: vi.fn(() => true),
   }) satisfies KeyActions;
 
 const key = (k: string, init: KeyboardEventInit = {}) =>
@@ -35,6 +36,10 @@ describe('handleKey', () => {
     expect(a.focusSearch).toHaveBeenCalledTimes(2);
     handleKey(key('?'), a, none);
     expect(a.openShortcuts).toHaveBeenCalled();
+    const n = key('n');
+    handleKey(n, a, none);
+    expect(a.addTransaction).toHaveBeenCalled();
+    expect(n.defaultPrevented).toBe(true);
   });
 
   it('leaves ⌘F to the browser when there is nothing to search', () => {
