@@ -46,7 +46,7 @@
 - Known MVP failures to reproduce: mBank's header is not on line 1 (long preamble); PKO BP column names are not picked up correctly.
 
 ## Current phase tasks
-Phase 19 — Admin, themes, friends and shared groups (PLAN §9 Phase 19). Branch `phase/19-sharing-admin`; three pull requests into `main` (full CI, merged on our Product Engineer's OK; the head commit never `[skip ci]`); `minimatch` re-checked at every PR (PR 1, 2026-11-03: still blocked by ESLint 10.14 and openapi-typescript 7.13). No new dependencies expected (ask first if one is needed).
+Phase 19 — Admin, themes, friends and shared groups (PLAN §9 Phase 19). Branch `phase/19-sharing-admin`; three pull requests into `main` (full CI, merged on our Product Engineer's OK; the head commit never `[skip ci]`); `minimatch` re-checked at every PR (PR 1, 2026-11-03, and PR 2, 2026-11-04: still blocked by ESLint 10.14 and openapi-typescript 7.13). No new dependencies expected (ask first if one is needed).
 - [x] 19.0 regrouping hand-off: PLAN Rev 4 and §9 (new Phases 19–20, the public release → Phase 21), this list, Phase 20 outline, Phase 21 plan with the private-data audit, "Phase 19" references retargeted
 
 PR 1 — admin and themes:
