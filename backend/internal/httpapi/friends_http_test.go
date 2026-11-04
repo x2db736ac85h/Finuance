@@ -85,7 +85,7 @@ func TestFriendsHTTP(t *testing.T) {
 	if err != nil || exp.Minute() != 10 || exp.Second() != 0 {
 		t.Fatalf("expiresAt = %v (%v)", fresh.body["expiresAt"], err)
 	}
-	e.clock.Add(time.Until(exp) + time.Second)
+	e.clock.Add(exp.Sub(e.clock.Now()) + time.Second) // from the fake clock, not the wall clock
 	expect(t, late.do("POST", "/friends", map[string]any{"code": fresh.body["code"]}), 422, "validation_failed")
 
 	// removing tells the other side
