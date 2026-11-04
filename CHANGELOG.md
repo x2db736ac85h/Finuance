@@ -17,6 +17,13 @@ notes of their version.
 - **Colour themes**: Indigo, Fjord, Grove and Ember, each dark and light, picked in Settings →
   Appearance; administrators make more in a theme editor with a live preview and approve them only
   when every text colour reaches WCAG AA.
+- **Cash accounts**: a wallet whose transactions you add by hand (Add or `N` in its toolbar; edit
+  and delete in the inspector). Rules categorise them and an ATM withdrawal pairs with the cash it
+  put in the wallet; files go into bank accounts only.
+- **Friends**: show a short code (valid for the hour) or enter someone's in Settings → Friends;
+  friends see each other's display name, never the e-mail address. Administrators can switch it
+  off; it is off in demo mode.
+- **Notifications** in the title bar (a bell with the unread count): a friend added or removed you.
 
 ### Changed
 
