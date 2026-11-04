@@ -30,7 +30,8 @@ const ExportFormatVersion = 1
 //	<entity>.json           accounts, categories, groups, budgets, annotations, dedupe overrides,
 //	                        imports (metadata), investments, preferences, assistant (settings and
 //	                        chats with their turns), rules, category aliases, activity (the
-//	                        audit log), friends (display names only), notifications
+//	                        audit log), friends (display names only), notifications, shared
+//	                        groups (as the user sees them: members, expenses, settlements)
 //	transactions.csv        every transaction of every account (the CSV export format, all columns)
 //	imports/<id>/<filename> the original files
 //
@@ -75,6 +76,21 @@ func (a *api) ExportMe(ctx context.Context, _ gen.ExportMeRequestObject) (gen.Ex
 			out[i] = gen.Notification{Id: n.ID, Kind: gen.NotificationKind(n.Kind), Data: n.Data, CreatedAt: n.CreatedAt, ReadAt: n.ReadAt}
 		}
 		docs["notifications.json"] = out
+	}
+	if a.sharing != nil {
+		list, err := a.sharing.List(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]gen.SharedGroupDetail, 0, len(list))
+		for i := range list {
+			d, err := a.sharing.Get(ctx, u, list[i].ID)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, sharedDetailDTO(&d))
+		}
+		docs["shared-groups.json"] = out
 	}
 	a.audit(ctx, u, ledger.AuditExportData, "", nil)
 	now := time.Now().UTC()

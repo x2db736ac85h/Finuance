@@ -15,7 +15,16 @@ var notTenantTables = []string{"friend_codes", "sessions"}
 // ownPolicies are tables whose policies differ from the single "<table>_tenant" policy: the audit
 // log has one per command, so it can be read and appended to but never updated, and only expired
 // rows can be deleted (migration 00010, TestAuditLogIsAppendOnly).
-var ownPolicies = map[string][]string{"audit_log": {"audit_log_expire", "audit_log_read", "audit_log_write"}}
+var ownPolicies = map[string][]string{
+	"audit_log": {"audit_log_expire", "audit_log_read", "audit_log_write"},
+	"shared_group_members": {"shared_group_members_change", "shared_group_members_invite", "shared_group_members_read",
+		"shared_group_members_withdraw"},
+}
+
+// notForced have RLS enabled but not forced, with the reason: shared_group_members is read by the
+// SECURITY DEFINER membership function, which FORCE RLS would blind (migration 00014, ADR 0028).
+// The app role is still bound by its policies.
+var notForced = map[string]string{"shared_group_members": "read by shared_member_role()"}
 
 // TestEveryUserTableHasForcedRLS reads the catalog instead of a hand-kept list, so a table added in a
 // later migration fails here until it gets its policy.
@@ -51,7 +60,11 @@ func TestEveryUserTableHasForcedRLS(t *testing.T) {
 			continue
 		}
 		tenant = append(tenant, name)
-		if !enabled || !forced {
+		if _, ok := notForced[name]; ok {
+			if !enabled || forced {
+				t.Errorf("%s: row level security enabled=%v forced=%v, want enabled and not forced", name, enabled, forced)
+			}
+		} else if !enabled || !forced {
 			t.Errorf("%s: row level security enabled=%v forced=%v, want both", name, enabled, forced)
 		}
 		want := []string{name + "_tenant"}
@@ -66,7 +79,7 @@ func TestEveryUserTableHasForcedRLS(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"accounts", "assistant_chats", "assistant_messages", "assistant_settings", "audit_log", "budgets", "categories", "category_aliases", "dedupe_overrides", "groups", "import_files", "import_profiles",
-		"import_rows", "imports", "investment_positions", "investment_profile", "legacy_import_files", "legacy_imports", "notifications", "rules", "transactions", "tx_annotations", "user_preferences"}
+		"import_rows", "imports", "investment_positions", "investment_profile", "legacy_import_files", "legacy_imports", "notifications", "rules", "shared_expense_links", "shared_group_members", "transactions", "tx_annotations", "user_preferences"}
 	if !slices.Equal(tenant, want) {
 		t.Errorf("tenant tables = %v, want %v", tenant, want)
 	}

@@ -78,6 +78,16 @@ const DESCRIBE: Record<ActivityAction, (m: Meta) => string> = {
       : `Became friends with ${str(m, 'name') || 'someone'}`,
   'friend.removed': (m) => (str(m, 'by') === 'friend' ? 'A friend removed you' : 'Removed a friend'),
   'friend.code_failed': () => 'Entered a friend code that was wrong or had expired',
+  // Shared groups: the group's name, never amounts or payees.
+  'shared.created': (m) => `Created the shared group ${str(m, 'group') || ''}`.trim(),
+  'shared.deleted': () => 'Deleted a shared group',
+  'shared.archived': (m) => `Archived the shared group ${str(m, 'group') || ''}`.trim(),
+  'shared.invited': (m) => `Invited ${str(m, 'name') || 'a friend'} to a shared group`,
+  'shared.joined': (m) => `Joined the shared group ${str(m, 'group') || ''}`.trim(),
+  'shared.declined': () => 'Declined an invitation to a shared group',
+  'shared.left': () => 'Left a shared group',
+  'shared.member_removed': () => 'Removed someone from a shared group',
+  'shared.settled': () => 'Recorded a payment in a shared group',
 };
 
 function byAdmin(m: Meta): boolean {

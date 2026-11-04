@@ -41,6 +41,33 @@ export async function importViaApi(
   return { accountId, importIds: await importInto(page, accountId, ...rel) };
 }
 
+/** A shared group with a few typed expenses (the signed-in user alone), for screenshots and axe. */
+export async function sharedGroupViaApi(page: Page): Promise<string> {
+  // sharing needs a display name (the members see it)
+  const me = await page.request.patch('/api/v1/me', { headers: API_HEADERS, data: { displayName: 'Alex' } });
+  expect(me.status()).toBe(200);
+  const g = await page.request.post('/api/v1/shared-groups', {
+    headers: API_HEADERS,
+    data: { name: 'Mazury', kind: 'trip', startsOn: '2026-07-01', endsOn: '2026-07-05', budgetMinor: 300000 },
+  });
+  expect(g.status()).toBe(201);
+  const id = ((await g.json()) as { id: string }).id;
+  const rows: [string, number, string, string][] = [
+    ['2026-07-01', 48000, 'Przystań Sztynort', 'Nocleg'],
+    ['2026-07-02', 12450, 'Tawerna', 'Jedzenie'],
+    ['2026-07-03', 6000, 'Wypożyczalnia kajaków', 'Atrakcje'],
+    ['2026-07-04', 9800, 'Stacja paliw', 'Transport'],
+  ];
+  for (const [bookedOn, amountMinor, payee, category] of rows) {
+    const r = await page.request.post(`/api/v1/shared-groups/${id}/expenses`, {
+      headers: API_HEADERS,
+      data: { bookedOn, amountMinor, payee, category },
+    });
+    expect(r.status()).toBe(201);
+  }
+  return `/s/${id}`;
+}
+
 /** Imports fixture files into an existing account and waits until they are committed. */
 export async function importInto(page: Page, accountId: string, ...rel: string[]): Promise<string[]> {
   const importIds: string[] = [];

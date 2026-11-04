@@ -37,6 +37,8 @@ type ExportNamed struct {
 	Name        string    `json:"name"`
 	Color       *int      `json:"color,omitempty"`
 	BudgetMinor *int64    `json:"budgetMinor,omitempty"` // groups (Phase 15)
+	// SharedGroupID is the shared group a personal group is linked to (Phase 19, ADR 0028).
+	SharedGroupID *uuid.UUID `json:"sharedGroupId,omitempty"`
 }
 
 // ExportRule is a categorisation rule (Phase 15): what it matches, in the table's filter
@@ -173,7 +175,7 @@ func (l *Ledger) Export(ctx context.Context, userID uuid.UUID) (map[string]any, 
 		groups := make([]ExportNamed, len(grps))
 		for i, g := range grps {
 			c := int(g.Color)
-			groups[i] = ExportNamed{ID: g.ID, Name: g.Name, Color: &c, BudgetMinor: g.BudgetMinor}
+			groups[i] = ExportNamed{ID: g.ID, Name: g.Name, Color: &c, BudgetMinor: g.BudgetMinor, SharedGroupID: g.SharedGroupID}
 		}
 		out["groups.json"] = groups
 

@@ -24,10 +24,13 @@ type Group struct {
 	Color       int    // 0…7
 	BudgetMinor *int64 // the money out the group should stay under (PLAN 15.9); nil: no budget
 	CreatedAt   time.Time
+	// SharedGroupID is the shared group this group is linked to (ADR 0028): putting a transaction
+	// into the group shares a copy there.
+	SharedGroupID *uuid.UUID
 }
 
 func groupOf(g db.Group) Group {
-	return Group{ID: g.ID, Name: g.Name, Color: int(g.Color), BudgetMinor: g.BudgetMinor, CreatedAt: g.CreatedAt}
+	return Group{ID: g.ID, Name: g.Name, Color: int(g.Color), BudgetMinor: g.BudgetMinor, CreatedAt: g.CreatedAt, SharedGroupID: g.SharedGroupID}
 }
 
 // Budget arguments of CreateGroupWith and EditGroup: KeepBudget leaves it as it is, NoBudget
@@ -202,7 +205,7 @@ func (l *Ledger) GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStat,
 		for i := range rows {
 			r := &rows[i]
 			st := GroupStat{
-				Group:      Group{ID: r.ID, Name: r.Name, Color: int(r.Color), BudgetMinor: r.BudgetMinor, CreatedAt: r.CreatedAt},
+				Group:      Group{ID: r.ID, Name: r.Name, Color: int(r.Color), BudgetMinor: r.BudgetMinor, CreatedAt: r.CreatedAt, SharedGroupID: r.SharedGroupID},
 				Count:      int(r.TxCount),
 				SpentMinor: r.SpentMinor, IncomeMinor: r.IncomeMinor, Currency: r.Currency,
 			}

@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { fixture, importViaApi, signUp } from './helpers';
+import { fixture, importViaApi, sharedGroupViaApi, signUp } from './helpers';
 
 const DIR = 'screenshots';
 
@@ -48,6 +48,13 @@ test('screenshots of the main screens in both themes', async ({ page }) => {
 
   await page.goto('/settings/appearance');
   await shoot(page, 'settings');
+
+  await page.goto(await sharedGroupViaApi(page));
+  await expect(page.getByRole('region', { name: 'Paid vs share' })).toBeVisible();
+  await shoot(page, 'shared-group');
+  await page.goto('/s');
+  await expect(page.getByRole('region', { name: 'Timeline' }).getByRole('button', { name: 'Mazury' })).toBeVisible();
+  await shoot(page, 'shared');
 });
 
 // Phase 19: the table in each built-in colour theme, both modes (theme-<id>-dark/light.png).

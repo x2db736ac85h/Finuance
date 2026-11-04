@@ -46,14 +46,15 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 - **Recognise transfers between your own accounts.** Matching amounts going out of one account and into another within three days are marked as transfers: shown in the table with a badge (hide them with one click), and left out of the charts, the overview and the assistant's totals. You can unpair or mark them by hand.
 - **Group transactions.** Select rows by dragging, Shift-click or ⌘/Ctrl-click, then add them to a colour-coded group such as "Italy trip". A quick bar shows the count and the total of the selection. Groups filter the table and are kept when you delete and re-import a file. Each group has its own report (totals, span, spending per day, categories, top payees, an optional budget) and a CSV export.
 - **Keep cash too.** A cash account holds money that never reaches a bank file: add its expenses by hand (Add or `N`), change or delete them later. Rules categorise them like imported rows, and a cash withdrawal pairs with the cash it put in the wallet.
-- **Add friends.** Show a short code (valid for the hour) or enter someone's in Settings → Friends. Friends see each other's display name, never the e-mail address; a bell in the title bar says when someone added or removed you. Sharing a group of expenses with a friend comes next.
+- **Add friends.** Show a short code (valid for the hour) or enter someone's in Settings → Friends. Friends see each other's display name, never the e-mail address; a bell in the title bar says when someone added or removed you, invited you or settled up.
+- **Share a trip with friends.** Share a group from the Groups menu (or start an empty one in the Shared tab, `S`), invite friends, and each of you adds expenses: your own transactions put into the group, cash, or typed straight into the group. Friends see a copy of each shared expense (date, amount, payee, category, note, who paid), never your accounts or the bank's description. Split equally, by shares or as exact amounts; balances say who owes whom in as few payments as possible, and *Settle up* records a payment. The Shared tab lists your trips and groups over the years with per-day costs and "next time" hints. See [docs/sharing.md](docs/sharing.md).
 - **Move over from the prototype.** Settings → Data reads a backup of the single-file app (a locked one is decrypted in your browser) and brings its files, groups and labels, duplicate decisions, budgets, investments and chats, with a report of anything that didn't match. See [docs/migration.md](docs/migration.md).
 - **Share an instance.** Several people can use one server. Each person's data is isolated in the database itself (row-level security), not just in the application code.
 - **Run the instance for others.** Administrators create and manage accounts (one-time passwords, disable, reset), set limits, choose where a new user's view starts, switch parts of the app off and see usage, all without seeing anyone's transactions. See [docs/admin.md](docs/admin.md).
 - **Pick a colour theme.** Indigo, Fjord, Grove or Ember, each in a dark and a light variant, all readable to WCAG AA; administrators can make and approve more.
 - **See what happened in your account.** Settings → Activity lists sign-ins (failed ones too), password changes, revoked sessions, imports, deletions, exports and applied assistant proposals, with the address and browser of each, for a year.
 
-Coming next (🚧): shared groups with friends (splits, balances, settling up), an admin panel and colour themes; then an assistant that can add expenses, read receipts and track goals, and a CLI; then a public demo and v1.0.0. See [Status](#status).
+Coming next (🚧): an assistant that can add expenses, read receipts and track goals, and a CLI; then a public demo and v1.0.0. See [Status](#status).
 
 ## Screenshots
 
@@ -235,6 +236,7 @@ Start with [docs/README.md](docs/README.md), which lists every document and who 
 - [Runbook](docs/RUNBOOK.md): running it on Kubernetes, backups and restores; [SLOs](docs/SLO.md)
 - [Architecture decisions](docs/adr/): why the main choices were made
 - [API specification](api/openapi.yaml): OpenAPI 3
+- [Shared groups](docs/sharing.md), [administration](docs/admin.md)
 - [Moving over from the single-file app](docs/migration.md), [accessibility](docs/a11y.md), [parity report](docs/parity-report.md), [changelog](CHANGELOG.md)
 
 ## Security, contributing and license

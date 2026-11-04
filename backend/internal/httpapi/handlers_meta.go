@@ -21,6 +21,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/sharing"
 )
 
 // api implements gen.StrictServerInterface.
@@ -32,6 +33,7 @@ type api struct {
 	admin    *admin.Service
 	friends  *friends.Service
 	notify   *notify.Service
+	sharing  *sharing.Service
 	ledger   *ledger.Ledger
 	legacy   *legacyimport.Migrator
 	rules    *rules.Service

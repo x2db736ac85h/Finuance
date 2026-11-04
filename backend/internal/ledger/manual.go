@@ -189,7 +189,10 @@ func (l *Ledger) EditManual(ctx context.Context, userID, id uuid.UUID, e ManualE
 			BookedOn: f.bookedOn, AmountMinor: f.amountMinor, Payee: f.payee, PayeeN: nameKey(f.payee),
 			PayeeGroup: ingest.PayeeName(f.payee), Description: f.description, DescriptionN: nameKey(f.description),
 			SearchText: f.searchText(exp), Now: l.clock.Now()})
-		return err
+		if err != nil {
+			return err
+		}
+		return syncShared(ctx, q, userID, []uuid.UUID{id}, l.clock.Now(), true)
 	})
 	return dbErr("edit manual transaction", err)
 }
@@ -208,6 +211,19 @@ func (l *Ledger) DeleteManual(ctx context.Context, userID, id uuid.UUID) (uuid.U
 		}
 		if err := lockAccount(ctx, q, userID, t.AccountID); err != nil {
 			return err
+		}
+		// a typed row deleted on purpose takes its shared copy along (ADR 0028)
+		shared, err := q.TransactionsForSharing(ctx, db.TransactionsForSharingParams{UserID: userID, Ids: []uuid.UUID{id}})
+		if err != nil {
+			return err
+		}
+		for i := range shared {
+			s := &shared[i]
+			if s.LinkedExpense != nil {
+				if _, err := q.DeleteSharedExpense(ctx, *s.LinkedExpense); err != nil {
+					return err
+				}
+			}
 		}
 		r, err := q.DeleteManualTransaction(ctx, db.DeleteManualTransactionParams{UserID: userID, ID: id})
 		if err != nil {

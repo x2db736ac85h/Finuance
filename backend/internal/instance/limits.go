@@ -17,6 +17,7 @@ type Limits struct {
 	ImportsPerDay    *int64 `json:"importsPerDay,omitempty"`
 	MaxAccounts      *int64 `json:"maxAccounts,omitempty"`
 	MaxGroups        *int64 `json:"maxGroups,omitempty"`
+	MaxSharedGroups  *int64 `json:"maxSharedGroups,omitempty"`
 	AssistantPerHour *int64 `json:"assistantPerHour,omitempty"`
 }
 
@@ -33,6 +34,7 @@ type Effective struct {
 	ImportsPerDay    int64 `json:"importsPerDay"`
 	MaxAccounts      int64 `json:"maxAccounts"`
 	MaxGroups        int64 `json:"maxGroups"`
+	MaxSharedGroups  int64 `json:"maxSharedGroups"`
 	AssistantPerHour int64 `json:"assistantPerHour"`
 }
 
@@ -58,6 +60,7 @@ func Resolve(user, inst Limits, b Bounds) Effective {
 		ImportsPerDay:    pick(user.ImportsPerDay, inst.ImportsPerDay, 0),
 		MaxAccounts:      pick(user.MaxAccounts, inst.MaxAccounts, 0),
 		MaxGroups:        pick(user.MaxGroups, inst.MaxGroups, 0),
+		MaxSharedGroups:  pick(user.MaxSharedGroups, inst.MaxSharedGroups, 0),
 		AssistantPerHour: capped(pick(user.AssistantPerHour, inst.AssistantPerHour, b.AssistantPerHour), b.AssistantPerHour),
 	}
 }
@@ -90,6 +93,7 @@ func (l Limits) validate(prefix string, ve *platform.ValidationError) {
 	check("importsPerDay", l.ImportsPerDay, 1, 100_000)
 	check("maxAccounts", l.MaxAccounts, 1, 10_000)
 	check("maxGroups", l.MaxGroups, 1, 100_000)
+	check("maxSharedGroups", l.MaxSharedGroups, 1, 10_000)
 	check("assistantPerHour", l.AssistantPerHour, 1, 10_000)
 }
 

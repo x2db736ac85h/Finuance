@@ -14,7 +14,7 @@ func groupDTO(g ledger.GroupStat) gen.Group {
 	return gen.Group{Id: g.ID, Name: g.Name, Color: g.Color, Count: g.Count,
 		Spent:   gen.Money{AmountMinor: g.SpentMinor, Currency: g.Currency},
 		Income:  gen.Money{AmountMinor: g.IncomeMinor, Currency: g.Currency},
-		FirstOn: dateDTO(g.FirstOn), LastOn: dateDTO(g.LastOn), BudgetMinor: g.BudgetMinor}
+		FirstOn: dateDTO(g.FirstOn), LastOn: dateDTO(g.LastOn), BudgetMinor: g.BudgetMinor, SharedGroupId: g.SharedGroupID}
 }
 
 // budgetIn reads GroupInput.budgetMinor: omitted keeps the budget, 0 removes it.

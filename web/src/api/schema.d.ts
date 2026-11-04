@@ -869,6 +869,317 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Personal and shared groups on one timeline
+         * @description Every personal group with transactions and every shared group the user is an active member of, newest first by their last day, with totals, the largest category and "next time" hints that compare a group with the others of the same kind (PLAN 19.9). A personal group linked to a shared group appears once, as the shared group. Totals of a shared group are the group's (every member's expenses).
+         */
+        get: operations["groupsTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your shared groups and invitations
+         * @description Shared groups the user owns, is a member of or is invited to (ADR 0028). `404` when the instance switched shared groups off and in demo mode.
+         */
+        get: operations["listSharedGroups"];
+        put?: never;
+        /**
+         * Create a shared group
+         * @description The caller becomes its owner. With `fromGroupId` the personal group is linked: its transactions are copied into the shared group (date, amount, payee, category, note; never the account or the bank's description) and follow it. `422 limit_reached` at the `maxSharedGroups` limit; `422` when a transaction of the group is in another currency.
+         */
+        post: operations["createSharedGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * A shared group with members, expenses, settlements and balances
+         * @description An invited user sees the group and its members only. Balances are paid − share − paid out + received per member and sum to zero; `transfers` settle them in at most n − 1 payments.
+         */
+        get: operations["getSharedGroup"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a shared group (owner, only while nobody else joined)
+         * @description Once someone joined, archive the group instead (`409 conflict`).
+         */
+        delete: operations["deleteSharedGroup"];
+        options?: never;
+        head?: never;
+        /** Change or archive a shared group (owner) */
+        patch: operations["updateSharedGroup"];
+        trace?: never;
+    };
+    "/shared-groups/{id}/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite a friend (owner)
+         * @description Only friends can be invited (`422`), and someone who is or was in the group only once (`409`).
+         */
+        post: operations["inviteToSharedGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an invitation
+         * @description Joins the group and creates a personal group of the same name linked to it (or "<name> (shared)" when the name is taken), so the user can put their own transactions in.
+         */
+        post: operations["acceptSharedGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline an invitation */
+        post: operations["declineSharedGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave a shared group
+         * @description Needs a zero balance (`409 conflict`: settle up first); the owner archives instead. What the user shared stays in the group; their personal group is unlinked.
+         */
+        post: operations["leaveSharedGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/members/{memberId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Withdraw an invitation or remove a member with a zero balance (owner) */
+        delete: operations["removeSharedMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add an expense without a transaction
+         * @description Typed in the group, in its currency; split equally between the active members unless `split` says otherwise. The other members are notified.
+         */
+        post: operations["addSharedExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/expenses/{expenseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                expenseId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete your own typed expense
+         * @description A copy goes when its transaction leaves the group (`409 conflict` here).
+         */
+        delete: operations["deleteSharedExpense"];
+        options?: never;
+        head?: never;
+        /**
+         * Change your own expense
+         * @description A typed expense takes every field (send them all); a copy of a transaction only its split (the rest follows the transaction). `403` for someone else's expense.
+         */
+        patch: operations["updateSharedExpense"];
+        trace?: never;
+    };
+    "/shared-groups/{id}/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a payment between two members (settle up)
+         * @description The caller must be the payer or the payee; the other one is notified.
+         */
+        post: operations["addSharedSettlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/settlements/{settlementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                settlementId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a payment you recorded */
+        delete: operations["deleteSharedSettlement"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * A shared group's report (the group page's cards)
+         * @description Computed from the group's expenses: totals and span, spending per day, per category, top payees, the largest expenses and paid vs share per member.
+         */
+        get: operations["sharedGroupReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The group's expenses as CSV
+         * @description UTF-8 with BOM, `;`-separated: date, payee, category, amount, paid by, note and one column per member with their share; formula characters are neutralised like every export.
+         */
+        get: operations["exportSharedGroup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{id}/report": {
         parameters: {
             query?: never;
@@ -1686,7 +1997,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "friend.added" | "friend.removed" | "friend.code_failed";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -2212,7 +2523,272 @@ export interface components {
             code: string;
         };
         /** @enum {string} */
-        NotificationKind: "friend.added" | "friend.removed";
+        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled";
+        /** @enum {string} */
+        SharedGroupKind: "trip" | "household" | "event" | "other";
+        /** @description Someone in a group as the others see them; never an e-mail address. */
+        SharedMember: {
+            /**
+             * Format: uuid
+             * @description The member id (not a user id).
+             */
+            id: string;
+            displayName: string;
+            /** @enum {string} */
+            role: "owner" | "member";
+            /** @enum {string} */
+            state: "invited" | "active" | "left";
+            isMe: boolean;
+            /** @description The user deleted their account ("Former member"). */
+            former: boolean;
+        };
+        SharedGroup: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            color: number;
+            currency: string;
+            kind: components["schemas"]["SharedGroupKind"];
+            /** Format: date */
+            startsOn?: string;
+            /** Format: date */
+            endsOn?: string;
+            /** Format: int64 */
+            budgetMinor?: number;
+            archived: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            me: components["schemas"]["SharedMember"];
+            /**
+             * Format: uuid
+             * @description The caller's own personal group linked to this one, if any.
+             */
+            linkedGroupId?: string;
+        };
+        SharedGroupInput: {
+            name: string;
+            color?: number;
+            /** @description Create only (default PLN, or the linked group's currency). */
+            currency?: string;
+            kind?: components["schemas"]["SharedGroupKind"];
+            /** Format: date */
+            startsOn?: string;
+            /** Format: date */
+            endsOn?: string;
+            /** Format: int64 */
+            budgetMinor?: number;
+            /** @description Update only. */
+            archived?: boolean;
+            /**
+             * Format: uuid
+             * @description Create only; the personal group to share.
+             */
+            fromGroupId?: string;
+        };
+        SharedShare: {
+            /** Format: uuid */
+            memberId: string;
+            /** Format: int64 */
+            shareMinor: number;
+            weight?: number;
+        };
+        SharedExpense: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            addedBy: string;
+            /** Format: uuid */
+            paidBy: string;
+            /** Format: date */
+            bookedOn: string;
+            /**
+             * Format: int64
+             * @description Positive = money spent for the group.
+             */
+            amountMinor: number;
+            payee: string;
+            category: string;
+            note: string;
+            /** @enum {string} */
+            origin: "transaction" | "typed";
+            /** @enum {string} */
+            splitMode: "equal" | "shares" | "exact";
+            shares: components["schemas"]["SharedShare"][];
+            mine: boolean;
+            /** @description Your own copy whose transaction is gone (shown to you only). */
+            sourceMissing: boolean;
+        };
+        SharedSplit: {
+            /** @enum {string} */
+            mode?: "equal" | "shares" | "exact";
+            /** @description Equal and shares; equal without members is every active member. */
+            members?: string[];
+            weights?: number[];
+            exact?: {
+                /** Format: uuid */
+                memberId: string;
+                /** Format: int64 */
+                shareMinor: number;
+            }[];
+        };
+        SharedExpenseInput: {
+            /** Format: date */
+            bookedOn?: string;
+            /** Format: int64 */
+            amountMinor?: number;
+            payee?: string;
+            category?: string;
+            note?: string;
+            /**
+             * Format: uuid
+             * @description A member id; default the caller.
+             */
+            paidBy?: string;
+            split?: components["schemas"]["SharedSplit"];
+        };
+        SharedSettlement: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            from: string;
+            /** Format: uuid */
+            to: string;
+            /** Format: int64 */
+            amountMinor: number;
+            /** Format: date */
+            settledOn: string;
+            note: string;
+            mine: boolean;
+        };
+        SharedSettlementInput: {
+            /** Format: uuid */
+            from: string;
+            /** Format: uuid */
+            to: string;
+            /** Format: int64 */
+            amountMinor: number;
+            /** Format: date */
+            settledOn: string;
+            note?: string;
+        };
+        SharedBalance: {
+            /** Format: uuid */
+            memberId: string;
+            /**
+             * Format: int64
+             * @description Positive = the others owe this member.
+             */
+            balanceMinor: number;
+        };
+        SharedTransfer: {
+            /** Format: uuid */
+            from: string;
+            /** Format: uuid */
+            to: string;
+            /** Format: int64 */
+            amountMinor: number;
+        };
+        SharedGroupDetail: {
+            group: components["schemas"]["SharedGroup"];
+            members: components["schemas"]["SharedMember"][];
+            expenses: components["schemas"]["SharedExpense"][];
+            settlements: components["schemas"]["SharedSettlement"][];
+            balances: components["schemas"]["SharedBalance"][];
+            transfers: components["schemas"]["SharedTransfer"][];
+        };
+        NamedSpend: {
+            /** @description A category or payee; empty for uncategorised. */
+            name: string;
+            /** Format: int64 */
+            spentMinor: number;
+            /** Format: int64 */
+            count: number;
+        };
+        MemberPaidShare: {
+            /** Format: uuid */
+            memberId: string;
+            /** Format: int64 */
+            paidMinor: number;
+            /** Format: int64 */
+            shareMinor: number;
+        };
+        SharedGroupReport: {
+            currency: string;
+            /** Format: int64 */
+            totalMinor: number;
+            /** Format: int64 */
+            count: number;
+            /** Format: date */
+            firstOn?: string;
+            /** Format: date */
+            lastOn?: string;
+            /** @description The group's dates when set, else from the first to the last expense, inclusive (1 when empty). */
+            days: number;
+            /** Format: int64 */
+            avgPerDayMinor: number;
+            daily: components["schemas"]["DaySpend"][];
+            /** @description Largest first. */
+            categories: components["schemas"]["NamedSpend"][];
+            payees: components["schemas"]["NamedSpend"][];
+            largest: components["schemas"]["SharedExpense"][];
+            members: components["schemas"]["MemberPaidShare"][];
+        };
+        TimelineGroup: {
+            /**
+             * Format: uuid
+             * @description A personal group id or a shared group id (see `source`).
+             */
+            id: string;
+            /** @enum {string} */
+            source: "personal" | "shared";
+            name: string;
+            color: number;
+            /** @enum {string} */
+            kind: "personal" | "trip" | "household" | "event" | "other";
+            currency: string;
+            /** Format: date */
+            firstOn?: string;
+            /** Format: date */
+            lastOn?: string;
+            days: number;
+            /** Format: int64 */
+            spentMinor: number;
+            /** Format: int64 */
+            count: number;
+            /** Format: int64 */
+            perDayMinor: number;
+            /** Format: int64 */
+            budgetMinor?: number;
+            topCategory?: components["schemas"]["NamedSpend"];
+            /** Format: double */
+            topCategoryShare?: number;
+        };
+        TimelineYear: {
+            year: number;
+            currency: string;
+            groups: number;
+            /**
+             * Format: int64
+             * @description In the most common currency of the year's groups (others are left out).
+             */
+            spentMinor: number;
+            days: number;
+        };
+        /** @description A "next time" fact; the browser writes the sentence. `category_high`: this group's spending per day on `category` was `ratio` × the average of the other groups of its kind. `per_day_high`: its spending per day was `ratio` × their median. `over_budget`: spent `ratio` × its budget. */
+        TimelineHint: {
+            /** Format: uuid */
+            groupId: string;
+            /** @enum {string} */
+            kind: "category_high" | "per_day_high" | "over_budget";
+            category?: string;
+            /** Format: double */
+            ratio: number;
+        };
+        GroupTimeline: {
+            groups: components["schemas"]["TimelineGroup"][];
+            years: components["schemas"]["TimelineYear"][];
+            hints: components["schemas"]["TimelineHint"][];
+        };
         Notification: {
             /** Format: uuid */
             id: string;
@@ -2346,6 +2922,11 @@ export interface components {
              * @description The money out the group should stay under (e.g. a trip budget), in `spent`'s currency; absent without a budget.
              */
             budgetMinor?: number;
+            /**
+             * Format: uuid
+             * @description The shared group this personal group is linked to (its transactions are copied there).
+             */
+            sharedGroupId?: string;
         };
         GroupInput: {
             name: string;
@@ -3333,6 +3914,11 @@ export interface components {
             maxAccounts?: number;
             /** Format: int64 */
             maxGroups?: number;
+            /**
+             * Format: int64
+             * @description Shared groups the user owns (archived ones don't count).
+             */
+            maxSharedGroups?: number;
             /** Format: int64 */
             assistantPerHour?: number;
         };
@@ -3346,6 +3932,8 @@ export interface components {
             maxAccounts: number;
             /** Format: int64 */
             maxGroups: number;
+            /** Format: int64 */
+            maxSharedGroups: number;
             /** Format: int64 */
             assistantPerHour: number;
         };
@@ -4985,6 +5573,435 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Group"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    groupsTimeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The timeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupTimeline"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listSharedGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The groups. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedGroup"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedGroupInput"];
+            };
+        };
+        responses: {
+            /** @description The new group. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedGroup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The group. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedGroupDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedGroupInput"];
+            };
+        };
+        responses: {
+            /** @description The group. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedGroup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    inviteToSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    friendId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The invited member. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedMember"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    acceptSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The group. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedGroup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    declineSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Declined. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    leaveSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Left. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeSharedMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addSharedExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedExpenseInput"];
+            };
+        };
+        responses: {
+            /** @description The new expense's id. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteSharedExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                expenseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateSharedExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                expenseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedExpenseInput"];
+            };
+        };
+        responses: {
+            /** @description Changed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addSharedSettlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedSettlementInput"];
+            };
+        };
+        responses: {
+            /** @description The payment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedSettlement"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteSharedSettlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                settlementId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    sharedGroupReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedGroupReport"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    exportSharedGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV. */
+            200: {
+                headers: {
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             default: components["responses"]["Problem"];

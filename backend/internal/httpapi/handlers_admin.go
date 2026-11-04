@@ -35,12 +35,12 @@ func (a *api) adminAudit(ctx context.Context, action string, target *admin.User,
 
 func limitsDTO(l instance.Limits) gen.LimitOverrides {
 	return gen.LimitOverrides{MaxUploadBytes: l.MaxUploadBytes, ImportsPerDay: l.ImportsPerDay, MaxAccounts: l.MaxAccounts,
-		MaxGroups: l.MaxGroups, AssistantPerHour: l.AssistantPerHour}
+		MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour}
 }
 
 func limitsIn(l gen.LimitOverrides) instance.Limits {
 	return instance.Limits{MaxUploadBytes: l.MaxUploadBytes, ImportsPerDay: l.ImportsPerDay, MaxAccounts: l.MaxAccounts,
-		MaxGroups: l.MaxGroups, AssistantPerHour: l.AssistantPerHour}
+		MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour}
 }
 
 func adminUserDTO(u admin.User) gen.AdminUser {

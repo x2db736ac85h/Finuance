@@ -23,7 +23,15 @@ notes of their version.
 - **Friends**: show a short code (valid for the hour) or enter someone's in Settings → Friends;
   friends see each other's display name, never the e-mail address. Administrators can switch it
   off; it is off in demo mode.
-- **Notifications** in the title bar (a bell with the unread count): a friend added or removed you.
+- **Notifications** in the title bar (a bell with the unread count): a friend added or removed you,
+  invited you to a shared group, joined, left, added an expense or recorded a payment.
+- **Shared groups** and the **Shared tab** (`S`): share a personal group with friends (Groups menu
+  → Share…) or start an empty one; members see copies of what is shared (date, amount, payee,
+  category, note, who paid), never accounts or bank descriptions. Expenses from your transactions
+  follow them (category, note, delete + re-import), typed expenses and cash count too; equal,
+  shares or exact splits; balances with the fewest payments to settle up; CSV export; a timeline of
+  your trips and groups with per-year sums and "next time" hints. Switchable by administrators,
+  limited per user (`maxSharedGroups`), off in demo mode; shared groups are in the data export.
 
 ### Changed
 

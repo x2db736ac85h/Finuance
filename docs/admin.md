@@ -60,8 +60,8 @@ reload (`409`).
   them are shown, the sidebar. These lie under each person's own preferences, so they apply to
   everything a person hasn't changed yet; their own choices always win.
 - **Features**: switching Overview or the Assistant off hides it for everyone and its API answers
-  `404`. Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); Shared
-  groups follow with the rest of Phase 19.
+  `404`. Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
+  **Shared groups** off hides the Shared tab, *Share…* and their routes ([sharing.md](sharing.md)).
 - **Default limits** for every account without its own.
 
 ### Limits
@@ -70,6 +70,7 @@ reload (`409`).
 |---|---|---|
 | Accounts | at most this many accounts | — |
 | Groups | at most this many groups | — |
+| Shared groups | at most this many shared groups owned (archived ones don't count) | — |
 | Imports | uploads in the last 24 hours | — |
 | Largest file | the biggest CSV upload | `FINUANCE_MAX_UPLOAD_BYTES` |
 | Assistant questions | per hour | `FINUANCE_AI_RATE_PER_HOUR` |

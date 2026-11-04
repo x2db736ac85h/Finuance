@@ -92,5 +92,13 @@ func (l *Ledger) annotateTx(ctx context.Context, q *db.Queries, userID uuid.UUID
 	if _, err := q.DeleteEmptyAnnotations(ctx, userID); err != nil {
 		return 0, err
 	}
+	// copies in shared groups follow the group, category and note (ADR 0028)
+	changed := make([]uuid.UUID, len(rows))
+	for i := range rows {
+		changed[i] = rows[i].ID
+	}
+	if err := syncShared(ctx, q, userID, changed, now, true); err != nil {
+		return 0, err
+	}
 	return len(rows), nil
 }

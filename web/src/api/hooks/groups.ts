@@ -25,7 +25,17 @@ export function useGroupReport(id: string) {
 
 /** After any group change: the list, the rows (group column and filter) and dependent views. */
 export function invalidateGroups(qc: ReturnType<typeof useQueryClient>) {
-  for (const k of [keys.groups, ['groupReport'], keys.tx, ['distinct'], ['transaction'], keys.insight, keys.overview]) {
+  // a linked group's transactions are copied into its shared group (ADR 0028)
+  for (const k of [
+    keys.groups,
+    ['groupReport'],
+    keys.tx,
+    ['distinct'],
+    ['transaction'],
+    keys.insight,
+    keys.overview,
+    keys.shared,
+  ]) {
     void qc.invalidateQueries({ queryKey: k });
   }
 }

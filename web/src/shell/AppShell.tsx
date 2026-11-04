@@ -86,9 +86,19 @@ export function AppShell({ user }: { user: User }) {
   const rows = viewId === 'all' ? total : (list.find((a) => a.id === viewId)?.txCount ?? 0);
   // settings and the admin panel share the settings layout
   const inSettings = location.pathname.startsWith('/settings') || location.pathname.startsWith('/admin');
+  // the Shared tab (Phase 19): a page of its own, like the overview, without the table's parts
+  const inShared = location.pathname === '/s' || location.pathname.startsWith('/s/');
+  const sharedOn = useMeta().data?.features.sharedGroups !== false && !user.isDemo;
+  const lastView = useRef('/t/all');
+  useEffect(() => {
+    if (!inShared && !inSettings && /^\/[to]\//.test(location.pathname)) lastView.current = location.pathname;
+  }, [inShared, inSettings, location.pathname]);
+  const toggleShared = () => {
+    void navigate(inShared ? lastView.current : '/s');
+  };
   // The table's inspector and status bar, for a view that exists (Views redirects the others).
   const tableShown =
-    mode === 'table' && hasData && !inSettings && (viewId === 'all' || list.some((a) => a.id === viewId));
+    mode === 'table' && hasData && !inSettings && !inShared && (viewId === 'all' || list.some((a) => a.id === viewId));
   const selected = useViews((s) => viewOf(s.views, viewId).selectedId);
 
   const setMode = (m: 'table' | 'ov') => {
@@ -113,8 +123,13 @@ export function AppShell({ user }: { user: User }) {
     openShortcuts: () => {
       useUi.getState().setKeysOpen(true);
     },
+    toggleShared: () => {
+      if (!sharedOn) return false;
+      toggleShared();
+      return true;
+    },
     addTransaction: () => {
-      if (!viewCash || inSettings || mode !== 'table') return false;
+      if (!viewCash || inSettings || inShared || mode !== 'table') return false;
       useCashDialogs.getState().openTransaction({ accountId: viewCash.id, currency: viewCash.currency });
       return true;
     },
@@ -127,8 +142,9 @@ export function AppShell({ user }: { user: User }) {
     'app',
     !sbShown && 'no-sb',
     !vizOpen && 'no-viz',
-    mode === 'ov' && !inSettings && 'mode-ov',
-    accounts.isSuccess && !hasData && !inSettings && 'is-empty',
+    mode === 'ov' && !inSettings && !inShared && 'mode-ov',
+    inShared && 'mode-sh',
+    accounts.isSuccess && !hasData && !inSettings && !inShared && 'is-empty',
     tableShown && selected && 'has-insp',
     aiOpen && 'has-chat',
     aiOpen && aiMax && 'chat-max',
@@ -144,7 +160,15 @@ export function AppShell({ user }: { user: User }) {
           Demo — your data is deleted after 24 hours.
         </div>
       )}
-      <TitleBar user={user} viewId={viewId} hasData={hasData} searchRef={searchRef} onToggleMode={setMode} />
+      <TitleBar
+        user={user}
+        viewId={viewId}
+        hasData={hasData}
+        searchRef={searchRef}
+        onToggleMode={setMode}
+        inShared={inShared}
+        onToggleShared={toggleShared}
+      />
       <div className="main">
         <Sidebar accounts={list} total={total} email={user.email} />
         <section className="content">

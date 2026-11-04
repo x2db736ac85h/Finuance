@@ -31,5 +31,9 @@ export const keys = {
   legacyImports: ['legacyImports'] as const,
   friends: ['friends'] as const,
   notifications: ['notifications'] as const,
+  shared: ['shared'] as const,
+  sharedGroup: (id: string) => ['shared', 'group', id] as const,
+  sharedReport: (id: string) => ['shared', 'report', id] as const,
+  timeline: ['shared', 'timeline'] as const,
   legacyImport: (id: string) => ['legacyImport', id] as const,
 };

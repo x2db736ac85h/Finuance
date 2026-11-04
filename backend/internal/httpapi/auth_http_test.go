@@ -40,6 +40,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
+	"github.com/x2db736ac85h/finuance/backend/internal/sharing"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 	tu "github.com/x2db736ac85h/finuance/backend/testutil"
@@ -129,7 +130,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
 		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
 			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})})
 	if err != nil {
@@ -587,6 +588,17 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		t.Fatal(err)
 	}
 	if err := notify.New(st, platform.SystemClock{}).Send(ctx, u, notify.FriendAdded, map[string]string{"name": "Bo"}); err != nil {
+		t.Fatal(err)
+	}
+	// a shared group made from the personal group: the member row and the private link (ADR 0028)
+	if err := st.WithoutUser(ctx, func(_ *db.Queries, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE users SET display_name = 'Sharer' WHERE id = $1 AND display_name = ''`, u)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	sh := sharing.New(st, l, notify.New(st, platform.SystemClock{}), platform.SystemClock{})
+	if _, err := sh.Create(ctx, u, sharing.GroupInput{Name: "Shared trip", FromGroupID: &g.ID}); err != nil {
 		t.Fatal(err)
 	}
 	code := sha256.Sum256(u[:]) // any 32 bytes: the table only keeps hashes

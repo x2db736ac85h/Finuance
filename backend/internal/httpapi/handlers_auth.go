@@ -74,7 +74,7 @@ func (a *api) userDTO(ctx context.Context, u auth.User) gen.User {
 	return gen.User{Id: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, CreatedAt: u.CreatedAt,
 		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword,
 		Limits: gen.EffectiveLimits{MaxUploadBytes: l.MaxUploadBytes, ImportsPerDay: l.ImportsPerDay, MaxAccounts: l.MaxAccounts,
-			MaxGroups: l.MaxGroups, AssistantPerHour: l.AssistantPerHour}}
+			MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour}}
 }
 
 // Signup creates an account and signs it in.

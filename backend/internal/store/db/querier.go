@@ -14,6 +14,8 @@ import (
 type Querier interface {
 	// Transaction count and date range per account (GET /accounts).
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
+	// The members an equal split goes to, in id order (the remainder cents go to the first ones).
+	ActiveSharedMemberIDs(ctx context.Context, groupID uuid.UUID) ([]uuid.UUID, error)
 	AddFriendship(ctx context.Context, arg AddFriendshipParams) (int64, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
 	AdminCountUsers(ctx context.Context, arg AdminCountUsersParams) (AdminCountUsersRow, error)
@@ -47,6 +49,7 @@ type Querier interface {
 	CountImportRows(ctx context.Context, arg CountImportRowsParams) (CountImportRowsRow, error)
 	// For the imports-per-day limit (run under the user's context).
 	CountImportsSince(ctx context.Context, arg CountImportsSinceParams) (int64, error)
+	CountOwnedSharedGroups(ctx context.Context, ownerID *uuid.UUID) (int64, error)
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUnreadNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
 	// kind (bank | cash) is chosen here and never changes (ADR 0029).
@@ -65,6 +68,10 @@ type Querier interface {
 	// expiry (created + FINUANCE_SESSION_TTL); the idle expiry is last_seen_at + FINUANCE_SESSION_IDLE_TTL,
 	// passed in as idle_cutoff. Time comes from the caller (platform.Clock), so both are testable.
 	CreateSession(ctx context.Context, arg CreateSessionParams) error
+	// Shared groups (Phase 19, ADR 0028). Every statement runs under WithUser: the membership policies
+	// of migration 00014 decide what the caller sees and may change; the WHERE clauses below repeat
+	// the rule where it matters, so a mistake shows up as "not found" rather than another member's row.
+	CreateSharedGroup(ctx context.Context, arg CreateSharedGroupParams) (SharedGroup, error)
 	CreateTheme(ctx context.Context, arg CreateThemeParams) (Theme, error)
 	// users and sessions are outside RLS (PLAN §5.3); only the auth package uses these queries,
 	// through store.WithoutUser.
@@ -116,6 +123,11 @@ type Querier interface {
 	DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphanTransactionsParams) (int64, error)
 	DeleteRule(ctx context.Context, arg DeleteRuleParams) (int64, error)
 	DeleteSession(ctx context.Context, tokenHash []byte) error
+	DeleteSharedExpense(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteSharedGroup(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteSharedMember(ctx context.Context, arg DeleteSharedMemberParams) (int64, error)
+	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (int64, error)
+	DeleteSharedSplits(ctx context.Context, expenseID uuid.UUID) error
 	DeleteTransactionsByID(ctx context.Context, arg DeleteTransactionsByIDParams) (int64, error)
 	// Cascades to every user-owned table.
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
@@ -185,11 +197,15 @@ type Querier interface {
 	// Without the manifest (the job reads it with GetLegacyImportManifest).
 	GetLegacyImport(ctx context.Context, arg GetLegacyImportParams) (GetLegacyImportRow, error)
 	GetLegacyImportManifest(ctx context.Context, arg GetLegacyImportManifestParams) ([]byte, error)
+	GetMyMembership(ctx context.Context, arg GetMyMembershipParams) (SharedGroupMember, error)
 	GetPreferences(ctx context.Context, userID uuid.UUID) (UserPreference, error)
 	GetRule(ctx context.Context, arg GetRuleParams) (GetRuleRow, error)
 	// A live session and its user: not past the absolute expiry, seen after idle_cutoff, and the
 	// account not disabled (disabling also deletes the sessions; this covers a race with a request).
 	GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error)
+	GetSharedExpense(ctx context.Context, id uuid.UUID) (SharedExpense, error)
+	GetSharedGroup(ctx context.Context, id uuid.UUID) (SharedGroup, error)
+	GetSharedMember(ctx context.Context, arg GetSharedMemberParams) (SharedGroupMember, error)
 	GetTheme(ctx context.Context, id uuid.UUID) (Theme, error)
 	// Detail view: the transaction with its category and group names, the rule that set the category
 	// and the other half of a transfer pair.
@@ -197,6 +213,9 @@ type Querier interface {
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	// email is citext, so the lookup ignores case.
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// Money out per personal group and category (the timeline's largest categories and hints).
+	GroupCategorySpend(ctx context.Context, userID uuid.UUID) ([]GroupCategorySpendRow, error)
+	GroupLinkedTo(ctx context.Context, arg GroupLinkedToParams) (uuid.UUID, error)
 	// Every group with its transactions over all the user's accounts, ignoring filters (PLAN §4.7):
 	// count, money out and in (minor units, transfers included as in the legacy), first and last day.
 	// The currency is the most common one among the group's transactions.
@@ -218,6 +237,10 @@ type Querier interface {
 	// In-app notifications (Phase 19, 19.8). User-owned with forced RLS; another user's action writes
 	// a notification under the recipient's own context (internal/notify).
 	InsertNotification(ctx context.Context, arg InsertNotificationParams) error
+	InsertSharedExpense(ctx context.Context, arg InsertSharedExpenseParams) error
+	InsertSharedMember(ctx context.Context, arg InsertSharedMemberParams) (SharedGroupMember, error)
+	InsertSharedSettlement(ctx context.Context, arg InsertSharedSettlementParams) (SharedSettlement, error)
+	InsertSharedSplit(ctx context.Context, arg InsertSharedSplitParams) error
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
 	InsertTransactionFromRow(ctx context.Context, arg InsertTransactionFromRowParams) error
@@ -229,6 +252,7 @@ type Querier interface {
 	// caller upserts the categories first. Returns the inserted ids (the "new" rows).
 	InsertTransactionsFromImport(ctx context.Context, arg InsertTransactionsFromImportParams) ([]uuid.UUID, error)
 	LegacyImportFile(ctx context.Context, arg LegacyImportFileParams) ([]byte, error)
+	LinkGroupToShared(ctx context.Context, arg LinkGroupToSharedParams) (int64, error)
 	LinkImportRow(ctx context.Context, arg LinkImportRowParams) error
 	// Commit step 2: link every staged row to its transaction, new or pre-existing (provenance).
 	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
@@ -258,10 +282,16 @@ type Querier interface {
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
 	ListLegacyImports(ctx context.Context, userID uuid.UUID) ([]ListLegacyImportsRow, error)
+	// The groups the user is in or invited to, with their own membership.
+	ListMySharedGroups(ctx context.Context, userID *uuid.UUID) ([]ListMySharedGroupsRow, error)
 	ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]ListNotificationsRow, error)
 	// Rules and transfers (PLAN tasks 15.2, 15.3). The dynamic part, a rule's match, is compiled by
 	// internal/query; these are the fixed statements around it.
 	ListRules(ctx context.Context, userID uuid.UUID) ([]ListRulesRow, error)
+	ListSharedExpenses(ctx context.Context, groupID uuid.UUID) ([]SharedExpense, error)
+	ListSharedMembers(ctx context.Context, groupID uuid.UUID) ([]SharedGroupMember, error)
+	ListSharedSettlements(ctx context.Context, groupID uuid.UUID) ([]SharedSettlement, error)
+	ListSharedSplits(ctx context.Context, groupID uuid.UUID) ([]SharedExpenseSplit, error)
 	ListThemes(ctx context.Context) ([]Theme, error)
 	// Users in id order, a page at a time (the retention job visits every user under its own RLS
 	// context; users is not under RLS).
@@ -293,6 +323,8 @@ type Querier interface {
 	Ping(ctx context.Context) (int32, error)
 	// Versioned: only the document the administrator read can be replaced.
 	PutInstanceSettings(ctx context.Context, arg PutInstanceSettingsParams) (int64, error)
+	// After the rules ran: the category names of the user's copies follow their transactions.
+	RefreshSharedCategories(ctx context.Context, arg RefreshSharedCategoriesParams) (int64, error)
 	RenameCategory(ctx context.Context, arg RenameCategoryParams) (Category, error)
 	// Reclassify step 2: transfers marked by rules, and pairs that lost their other half (deleted or
 	// re-imported), become unmarked again. Pairs whose both halves remain stay as they are.
@@ -341,6 +373,7 @@ type Querier interface {
 	SetManualTransfer(ctx context.Context, arg SetManualTransferParams) ([]SetManualTransferRow, error)
 	// Reorder: ids in their new order (positions 0, 1, …).
 	SetRulePositions(ctx context.Context, arg SetRulePositionsParams) (int64, error)
+	SetSharedMemberState(ctx context.Context, arg SetSharedMemberStateParams) (int64, error)
 	SetThemeStatus(ctx context.Context, arg SetThemeStatusParams) (Theme, error)
 	SetUserAdmin(ctx context.Context, arg SetUserAdminParams) (int64, error)
 	SetUserDisabled(ctx context.Context, arg SetUserDisabledParams) (int64, error)
@@ -351,10 +384,23 @@ type Querier interface {
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
 	// An administrator's reset: a new one-time password the user has to replace at the next sign-in.
 	SetUserPasswordMustChange(ctx context.Context, arg SetUserPasswordMustChangeParams) error
+	// Spending per shared group and category name, over the groups the user can see.
+	SharedCategorySpend(ctx context.Context) ([]SharedCategorySpendRow, error)
+	// The user's copies in a group and whether their source transaction still exists (a missing source
+	// is shown to its owner only).
+	SharedCopiesFrom(ctx context.Context, arg SharedCopiesFromParams) ([]SharedCopiesFromRow, error)
+	SharedSplitsOf(ctx context.Context, expenseID uuid.UUID) ([]SharedExpenseSplit, error)
+	// Totals and spans of the groups the user can see (for the timeline).
+	SharedTimelineStats(ctx context.Context) ([]SharedTimelineStatsRow, error)
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
 	// The staged rows (one per import that contains this transaction), oldest import first.
 	TransactionProvenance(ctx context.Context, arg TransactionProvenanceParams) ([]TransactionProvenanceRow, error)
+	// The given transactions with what a shared copy needs, the shared group their personal group is
+	// linked to, and their current copy (through the user's private link). Only rows that are linked or
+	// already shared come back, so a bulk edit without sharing costs one cheap query.
+	TransactionsForSharing(ctx context.Context, arg TransactionsForSharingParams) ([]TransactionsForSharingRow, error)
+	TransactionsInGroup(ctx context.Context, arg TransactionsInGroupParams) ([]uuid.UUID, error)
 	// Every unmarked outgoing transaction with an unmarked incoming one of the opposite amount in the
 	// same currency, in another account of the user, booked at most 3 days apart; smallest gap first,
 	// then the older rows (seq), so the greedy pairing in Go is deterministic.
@@ -365,6 +411,7 @@ type Querier interface {
 	TrimAssistantChats(ctx context.Context, arg TrimAssistantChatsParams) (int64, error)
 	// Deleting a category: its transactions become uncategorised, however their category was set.
 	UncategoriseCategoryTransactions(ctx context.Context, arg UncategoriseCategoryTransactionsParams) (int64, error)
+	UnlinkGroupsFromShared(ctx context.Context, arg UnlinkGroupsFromSharedParams) (int64, error)
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
 	// After a turn: the last activity, the connection and model used, and the title (the first
 	// question) when the chat had none.
@@ -378,6 +425,8 @@ type Querier interface {
 	// values stay as the file had them.
 	UpdateManualTransaction(ctx context.Context, arg UpdateManualTransactionParams) (int64, error)
 	UpdateRule(ctx context.Context, arg UpdateRuleParams) (int64, error)
+	UpdateSharedExpense(ctx context.Context, arg UpdateSharedExpenseParams) (int64, error)
+	UpdateSharedGroup(ctx context.Context, arg UpdateSharedGroupParams) (SharedGroup, error)
 	// Versioned like the settings; status changes go through SetThemeStatus.
 	UpdateTheme(ctx context.Context, arg UpdateThemeParams) (Theme, error)
 	// The user-editable fields of a set of transactions (ledger.Annotate). Each set_* flag says whether
@@ -401,6 +450,7 @@ type Querier interface {
 	// check category_aliases first (ResolveBankCategory).
 	UpsertCategory(ctx context.Context, arg UpsertCategoryParams) (uuid.UUID, error)
 	UpsertImportProfile(ctx context.Context, arg UpsertImportProfileParams) error
+	UpsertSharedLink(ctx context.Context, arg UpsertSharedLinkParams) error
 	// Imports and assistant questions per day since a date, for the instance usage page.
 	UserActivityByDay(ctx context.Context, arg UserActivityByDayParams) ([]UserActivityByDayRow, error)
 	// Run under the user's own RLS context: counts only.

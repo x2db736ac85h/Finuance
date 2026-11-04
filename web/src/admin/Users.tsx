@@ -292,6 +292,7 @@ function CreateUser({
 const LIMIT_FIELDS: { key: keyof LimitOverrides; label: string; hint: string; scale?: number }[] = [
   { key: 'maxAccounts', label: 'Accounts', hint: 'at most' },
   { key: 'maxGroups', label: 'Groups', hint: 'at most' },
+  { key: 'maxSharedGroups', label: 'Shared groups', hint: 'owned, at most' },
   { key: 'importsPerDay', label: 'Imports', hint: 'per 24 hours' },
   { key: 'maxUploadBytes', label: 'Largest file', hint: 'MiB', scale: 1 << 20 },
   { key: 'assistantPerHour', label: 'Assistant questions', hint: 'per hour' },

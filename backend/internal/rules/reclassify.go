@@ -70,7 +70,11 @@ func (s *Service) Reclassify(ctx context.Context, userID uuid.UUID) (Result, err
 				out.RuleTransfers += n
 			}
 		}
-		out.Pairs, err = detectTransfers(ctx, q, userID)
+		if out.Pairs, err = detectTransfers(ctx, q, userID); err != nil {
+			return err
+		}
+		// the category names of the user's shared copies follow their transactions (ADR 0028)
+		_, err = q.RefreshSharedCategories(ctx, db.RefreshSharedCategoriesParams{UserID: userID, Now: s.clock.Now()})
 		return err
 	})
 	return out, ledger.DBError("reclassify", err)
