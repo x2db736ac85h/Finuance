@@ -1,5 +1,5 @@
 // The split editor's arithmetic (Phase 19, ADR 0028), the same rules as the server's
-// internal/splits: an equal split gives the remainder cent by cent to the first members, shares
+// internal/splits: an equal split gives the remainder cent by cent to the first members by id, shares
 // split by weight with the largest remainders, exact amounts must add up. The server checks again;
 // this is the preview.
 
@@ -32,6 +32,8 @@ export function previewShares(s: SplitState, amount: number, order: string[]): R
   }
   if (!members.length) return null;
   if (s.mode === 'equal') {
+    // the server gives the remainder to the first members by id
+    members.sort();
     const base = Math.floor(abs / members.length);
     let rest = abs - base * members.length;
     for (const m of members) {

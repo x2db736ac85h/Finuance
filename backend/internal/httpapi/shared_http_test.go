@@ -117,8 +117,9 @@ func TestSharedGroupsHTTP(t *testing.T) {
 	d := alex.do("GET", "/shared-groups/"+gid, nil)
 	expect(t, d, 200, "")
 	a, b := memberID(t, d, "Alex"), memberID(t, d, "Bo")
-	// Alex paid 60 alone (shared before Bo joined, so split to Alex only); Bo paid 30 split equally
-	if len(d.body["expenses"].([]any)) != 2 || balanceOf(d, a) != -1500 || balanceOf(d, b) != 1500 {
+	// Alex's 60 was shared with everyone before Bo joined: joining split it between both; Bo's 30
+	// is split equally too. Alex paid 60 and owes 30 + 15; Bo paid 30 and owes 30 + 15.
+	if len(d.body["expenses"].([]any)) != 2 || balanceOf(d, a) != 1500 || balanceOf(d, b) != -1500 {
 		t.Fatalf("detail = %s", d.raw)
 	}
 	if strings.Contains(d.raw, "Portfel") || strings.Contains(d.raw, wallet.body["id"].(string)) {
@@ -133,7 +134,12 @@ func TestSharedGroupsHTTP(t *testing.T) {
 	}
 	expect(t, bo.do("PATCH", "/shared-groups/"+gid+"/expenses/"+alexExp, map[string]any{"split": map[string]any{"mode": "equal"}}), 403, "forbidden")
 	expect(t, alex.do("DELETE", "/shared-groups/"+gid+"/expenses/"+alexExp, nil), 409, "conflict")
-	// re-split Alex's copy equally: now Bo owes Alex 30 − 15 … balances: Alex +30 −15 = +15? (paid 60, share 30+15)
+	// Alex takes the copy on alone (exact split), then back to equal
+	expect(t, alex.do("PATCH", "/shared-groups/"+gid+"/expenses/"+alexExp, map[string]any{"split": map[string]any{"mode": "exact",
+		"exact": []any{map[string]any{"memberId": a, "shareMinor": 6000}}}}), 204, "")
+	if d = alex.do("GET", "/shared-groups/"+gid, nil); balanceOf(d, a) != -1500 || balanceOf(d, b) != 1500 {
+		t.Fatalf("after the exact split: %s", d.raw)
+	}
 	expect(t, alex.do("PATCH", "/shared-groups/"+gid+"/expenses/"+alexExp, map[string]any{"split": map[string]any{"mode": "equal"}}), 204, "")
 	d = alex.do("GET", "/shared-groups/"+gid, nil)
 	if balanceOf(d, a) != 1500 || balanceOf(d, b) != -1500 || len(d.body["transfers"].([]any)) != 1 {

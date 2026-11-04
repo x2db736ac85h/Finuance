@@ -79,7 +79,7 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inSha
       {features?.sharedGroups !== false && !user.isDemo && (
         <IconButton
           icon="swap"
-          title="Shared: trips and groups with friends (S)"
+          title="Shared with friends (S)"
           on={inShared}
           aria-pressed={inShared}
           onClick={onToggleShared}

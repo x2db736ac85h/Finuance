@@ -237,14 +237,14 @@ func TestSharedTrip(t *testing.T) {
 		t.Fatalf("expenses %d, balances %v", len(d.Expenses), d.Balances)
 	}
 	a, b := memberOf(d, "Alex").ID, memberOf(d, "Bo").ID
-	// Alex paid 720 (alone when shared: 0 owed), Bo paid 80 + 40 split equally: Bo owes Alex 40 − 20 … computed:
-	// Alex: +720 −720 (his copies were split to him alone) −40 (half of 80) −20 (half of 40) = −60
-	if d.Balances[a] != -6000 || d.Balances[b] != 6000 || len(d.Transfers) != 1 || d.Transfers[0].From != a || d.Transfers[0].Amount != 6000 {
+	// Alex's two copies were shared before Bo joined, with everyone (Alex): joining re-split them
+	// between Alex and Bo. Alex paid 720 and owes 360 + 40 + 20; Bo paid 120 and owes the same 420.
+	if d.Balances[a] != 30000 || d.Balances[b] != -30000 || len(d.Transfers) != 1 || d.Transfers[0].From != b || d.Transfers[0].Amount != 30000 {
 		t.Errorf("balances %v transfers %+v", d.Balances, d.Transfers)
 	}
-	// Bo can't leave owing money (here: being owed); settle first
+	// Bo can't leave owing money; settle first (recorded by Alex, who received it)
 	isErr(t, e.s.Leave(e.ctx, bo, g.ID), ledger.ErrState)
-	if _, err := e.s.Settle(e.ctx, alex, g.ID, sharing.SettlementInput{From: a, To: b, AmountMinor: 6000, SettledOn: platform.Date{Y: 2026, M: 5, D: 10}}); err != nil {
+	if _, err := e.s.Settle(e.ctx, alex, g.ID, sharing.SettlementInput{From: b, To: a, AmountMinor: 30000, SettledOn: platform.Date{Y: 2026, M: 5, D: 10}}); err != nil {
 		t.Fatal(err)
 	}
 	d = e.detail(bo, g.ID)
@@ -537,7 +537,13 @@ func TestSharedRLS(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := e.s.Leave(e.ctx, dee, g.ID); err != nil { // Dee's balance is zero: the hotel was Alex's alone
+	// joining split the hotel three ways: Dee pays their 100 back, then leaves
+	dd := e.detail(dee, g.ID)
+	if _, err := e.s.Settle(e.ctx, dee, g.ID, sharing.SettlementInput{From: memberOf(dd, "Dee").ID, To: memberOf(dd, "Alex").ID,
+		AmountMinor: 10000, SettledOn: platform.Date{Y: 2026, M: 5, D: 3}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.s.Leave(e.ctx, dee, g.ID); err != nil {
 		t.Fatal(err)
 	}
 	counts := func(u uuid.UUID) map[string]int {
@@ -558,8 +564,8 @@ func TestSharedRLS(t *testing.T) {
 		return got
 	}
 	want := map[uuid.UUID]map[string]int{
-		alex: {"shared_groups": 1, "shared_group_members": 4, "shared_expenses": 1, "shared_expense_splits": 1, "shared_expense_links": 1},
-		bo:   {"shared_groups": 1, "shared_group_members": 4, "shared_expenses": 1, "shared_expense_splits": 1},
+		alex: {"shared_groups": 1, "shared_group_members": 4, "shared_expenses": 1, "shared_expense_splits": 3, "shared_settlements": 1, "shared_expense_links": 1},
+		bo:   {"shared_groups": 1, "shared_group_members": 4, "shared_expenses": 1, "shared_expense_splits": 3, "shared_settlements": 1},
 		cy:   {"shared_groups": 1, "shared_group_members": 4}, // invited
 		dee:  {"shared_group_members": 1},                     // left: their own row only
 		out:  {},
@@ -619,5 +625,48 @@ func TestFormerMember(t *testing.T) {
 	m := memberOf(after, "Bo")
 	if !m.Former || len(after.Expenses) != 1 || after.Balances[m.ID] != before.Balances[m.ID] || sum(after.Balances) != 0 {
 		t.Errorf("after deleting Bo: member %+v, expenses %d, balances %v (before %v)", m, len(after.Expenses), after.Balances, before.Balances)
+	}
+}
+
+// TestJoiningResplits: an equal split with everyone takes in a member who joins later; a split
+// between some members, by shares or as exact amounts doesn't change.
+func TestJoiningResplits(t *testing.T) {
+	e := newEnv(t)
+	alex, bo, cy := e.user("Alex"), e.user("Bo"), e.user("Cy")
+	e.befriend(alex, bo)
+	e.befriend(alex, cy)
+	g, _ := e.s.Create(e.ctx, alex, sharing.GroupInput{Name: "Dom", Currency: "PLN"})
+	if _, err := e.s.Invite(e.ctx, alex, g.ID, bo); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.Accept(e.ctx, bo, g.ID); err != nil {
+		t.Fatal(err)
+	}
+	d := e.detail(alex, g.ID)
+	a, b := memberOf(d, "Alex").ID, memberOf(d, "Bo").ID
+	day := platform.Date{Y: 2026, M: 9, D: 1}
+	everyone, _ := e.s.AddExpense(e.ctx, alex, g.ID, sharing.ExpenseInput{BookedOn: day, AmountMinor: 900, Payee: "all"})
+	some, _ := e.s.AddExpense(e.ctx, alex, g.ID, sharing.ExpenseInput{BookedOn: day, AmountMinor: 900, Payee: "alex only",
+		Split: sharing.Split{Members: []uuid.UUID{a}}})
+	weighted, _ := e.s.AddExpense(e.ctx, bo, g.ID, sharing.ExpenseInput{BookedOn: day, AmountMinor: 900, Payee: "shares",
+		Split: sharing.Split{Mode: "shares", Members: []uuid.UUID{a, b}, Weights: []int{2, 1}}})
+	bosAll, _ := e.s.AddExpense(e.ctx, bo, g.ID, sharing.ExpenseInput{BookedOn: day, AmountMinor: 600, Payee: "bo all"})
+	if _, err := e.s.Invite(e.ctx, alex, g.ID, cy); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.Accept(e.ctx, cy, g.ID); err != nil {
+		t.Fatal(err)
+	}
+	d = e.detail(cy, g.ID)
+	parts := func(id uuid.UUID) int {
+		for _, x := range d.Expenses {
+			if x.ID == id {
+				return len(x.Shares)
+			}
+		}
+		return -1
+	}
+	if parts(everyone) != 3 || parts(bosAll) != 3 || parts(some) != 1 || parts(weighted) != 2 || sum(d.Balances) != 0 {
+		t.Errorf("after Cy joined: %d %d %d %d, balances %v", parts(everyone), parts(bosAll), parts(some), parts(weighted), d.Balances)
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,6 +72,8 @@ func (s *Service) Accept(ctx context.Context, userID, groupID uuid.UUID) (Group,
 	var out Group
 	var owner *uuid.UUID
 	var myName string
+	var before []uuid.UUID // the members who were active before the join
+	var others []uuid.UUID // their user ids
 	err := s.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 		g, me, err := myGroup(ctx, q, userID, groupID)
 		if err != nil {
@@ -88,10 +92,28 @@ func (s *Service) Accept(ctx context.Context, userID, groupID uuid.UUID) (Group,
 		}
 		me.State, me.DisplayName = "active", name
 		out, owner, myName = groupOf(g, me, userID), g.OwnerID, name
+		members, err := q.ListSharedMembers(ctx, groupID)
+		if err != nil {
+			return err
+		}
+		for i := range members {
+			m := &members[i]
+			if m.State == "active" && m.ID != me.ID {
+				before = append(before, m.ID)
+				if m.UserID != nil {
+					others = append(others, *m.UserID)
+				}
+			}
+		}
 		return nil
 	})
 	if err != nil {
 		return Group{}, ledger.DBError("accept", err)
+	}
+	for _, u := range others {
+		if err := s.includeNewMember(ctx, u, groupID, before); err != nil {
+			return out, err
+		}
 	}
 	if err := s.linkPersonalGroup(ctx, userID, out); err != nil {
 		return out, err
@@ -100,6 +122,54 @@ func (s *Service) Accept(ctx context.Context, userID, groupID uuid.UUID) (Group,
 		return out, s.notify.Send(ctx, *owner, notify.SharedJoined, map[string]string{"groupId": groupID.String(), "group": out.Name, "name": myName})
 	}
 	return out, nil
+}
+
+// includeNewMember re-splits a member's equal-split expenses that were shared with everyone (every
+// member active before the join) so the new member takes part, as if they had been there when the
+// expense was added: sharing a trip and inviting friends afterwards splits it between everyone.
+// Expenses split between some members, by shares or as exact amounts stay as they are. It runs
+// under that member's own context: only the member who added an expense may change its split.
+func (s *Service) includeNewMember(ctx context.Context, userID, groupID uuid.UUID, before []uuid.UUID) error {
+	err := s.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		members, err := q.ListSharedMembers(ctx, groupID)
+		if err != nil {
+			return err
+		}
+		exps, err := q.ListSharedExpenses(ctx, groupID)
+		if err != nil {
+			return err
+		}
+		rows, err := q.ListSharedSplits(ctx, groupID)
+		if err != nil {
+			return err
+		}
+		sharedWith := map[uuid.UUID][]uuid.UUID{}
+		for i := range rows {
+			sharedWith[rows[i].ExpenseID] = append(sharedWith[rows[i].ExpenseID], rows[i].MemberID)
+		}
+		everyone := sortedIDs(before)
+		for i := range exps {
+			e := &exps[i]
+			if e.AddedBy == nil || *e.AddedBy != userID || e.SplitMode != "equal" || !slices.Equal(sortedIDs(sharedWith[e.ID]), everyone) {
+				continue
+			}
+			parts, _, err := shares(Split{Mode: "equal"}, e.AmountMinor, members)
+			if err != nil {
+				return err
+			}
+			if err := writeShares(ctx, q, groupID, e.ID, parts); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return ledger.DBError("include the new member", err)
+}
+
+func sortedIDs(ids []uuid.UUID) []uuid.UUID {
+	out := slices.Clone(ids)
+	slices.SortFunc(out, func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) })
+	return out
 }
 
 // linkPersonalGroup creates the user's personal group for a shared group they joined ("Trip", or

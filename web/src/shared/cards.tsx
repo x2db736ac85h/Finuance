@@ -107,7 +107,10 @@ export function SummaryCard({ r, d }: { r: SharedGroupReport; d: SharedGroupDeta
   const cur = r.currency;
   const me = d.members.find((m) => m.isMe);
   const mine = r.members.find((m) => m.memberId === me?.id);
-  const span = r.firstOn && r.lastOn ? `${fmtDay(r.firstOn)} – ${fmtDay(r.lastOn)}` : 'no expenses yet';
+  // the group's own dates when set (they decide the days too), else the first and last expense
+  const from = d.group.startsOn && d.group.endsOn ? d.group.startsOn : r.firstOn;
+  const to = d.group.startsOn && d.group.endsOn ? d.group.endsOn : r.lastOn;
+  const span = from && to ? `${fmtDay(from)} – ${fmtDay(to)}` : 'no expenses yet';
   const rows: Row[] = [
     ['Spent', money(r.totalMinor, cur)],
     ['Expenses', fmtInt(r.count)],

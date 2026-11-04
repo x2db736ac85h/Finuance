@@ -3,7 +3,7 @@
 import { expect, test } from '@playwright/test';
 
 import { check } from './axe';
-import { fixture, importViaApi, signUp } from './helpers';
+import { fixture, importViaApi, sharedGroupViaApi, signUp } from './helpers';
 
 test('login and signup', async ({ page }) => {
   await page.goto('/login');
@@ -57,10 +57,11 @@ test('table, import preview, overview, settings, assistant', async ({ page }) =>
 });
 
 // Phase 19: the other built-in colour themes (Indigo is the run above) on the busiest screens.
-test('every colour theme: table, overview and appearance settings', async ({ page }) => {
+test('every colour theme: table, overview, the Shared tab and appearance settings', async ({ page }) => {
   test.setTimeout(240_000);
   await signUp(page);
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
+  const sharedUrl = await sharedGroupViaApi(page);
   for (const theme of ['Fjord', 'Grove', 'Ember']) {
     await page.goto('/settings/appearance');
     await page
@@ -76,5 +77,8 @@ test('every colour theme: table, overview and appearance settings', async ({ pag
     await page.goto('/o/all');
     await expect(page.getByText('Recurring payments').first()).toBeVisible();
     await check(page, `${theme} overview`);
+    await page.goto(sharedUrl);
+    await expect(page.getByRole('region', { name: 'Paid vs share' })).toBeVisible();
+    await check(page, `${theme} shared group`);
   }
 });

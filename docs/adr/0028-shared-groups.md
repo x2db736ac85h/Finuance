@@ -26,7 +26,11 @@ import pipeline rebuilding transactions (delete + re-import, duplicate decisions
 - **Splits** (`shared_expense_splits`, minor units) always add up to the expense's amount (a deferred
   constraint trigger checks it at commit). Equal is the default (the remainder cents go to the first
   members by id); shares (weights) and exact amounts are the other modes; "for someone else" is one
-  member taking all of it. Group currency only (FX is in the backlog).
+  member taking all of it. Group currency only (FX is in the backlog). **Joining re-splits**: when
+  someone accepts, every equal-split expense that was shared with everyone active before them is
+  split again to include them, so sharing a trip first and inviting friends afterwards splits it
+  between everyone. Splits between some members, by shares or exact stay as they are. The re-split
+  of each expense runs under the context of the member who added it (only they may write its split).
 - **Balances** per member: paid − share + settlements paid − settlements received; they sum to zero.
   "Who owes whom" pairs the largest debtor with the largest creditor until everyone is even (at most
   n − 1 transfers). Settlements are recorded by the payer or the payee.
@@ -42,7 +46,9 @@ import pipeline rebuilding transactions (delete + re-import, duplicate decisions
   **`shared_group_members` has RLS enabled but not forced**: the app role is still bound by its
   policies; only the schema owner, which owns the function and runs migrations, is not. Every other
   shared table keeps FORCE RLS: members read the group, its members, expenses, splits and
-  settlements; they write only their own expenses (and the splits of those); the owner manages
+  settlements (an invited user only the group and its members; a user always sees their own member
+  row, which `INSERT … RETURNING` of the owner's first row needs, since the function reads the
+  statement's snapshot); they write only their own expenses (and the splits of those); the owner manages
   members and the group; links stay private to their user.
 - **Switches.** `sharedGroups` (instance feature) and demo mode take the routes away (`404`); the
   number of shared groups a user owns is a limit (`maxSharedGroups`).

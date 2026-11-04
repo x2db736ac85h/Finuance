@@ -45,6 +45,7 @@ cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {
 | `ledger` | Accounts, categories, groups, imports, transactions, annotations, budgets and profiles, and the transactions typed into cash accounts (`origin = 'manual'`, ADR 0029). Every method runs through `WithUser` and returns domain types, never sqlc rows. |
 | `legacyimport` | Migration of single-file app backups (Phase 14, ADR 0016): rebuilds the legacy tables and keys, runs each file through the import pipeline, moves labels, duplicate decisions, budgets, investments and chats, writes the report. |
 | `instance`, `admin` | Instance administration (Phase 19, ADR 0025). `instance` is pure: the settings document (view defaults, feature switches, limits resolved user → instance → environment) and the colour-theme contract with its WCAG check (ADR 0026). `admin` manages accounts, settings and themes through `WithoutUser` (those tables are outside RLS, like `users`); it can't import the financial packages and reads user-owned tables only for counts, under each user's own context. |
+| `sharing`, `splits` | Shared groups (Phase 19, ADR 0028). `sharing` runs groups, invitations, expenses, settlements, the report and the timeline under each caller's own context; `splits` is the pure arithmetic (equal, shares, exact, balances, minimal transfers). The copy of a member's transaction is written by `ledger` in the same database transaction as the change that shares it. Row-level security by membership: `shared_member_role()` (SECURITY DEFINER) answers the caller's role in a group. |
 | `friends`, `notify` | Between users (Phase 19, ADR 0027). `friends` makes and redeems friend codes (hashed, outside RLS like sessions) and keeps friendships (forced RLS for the two sides); `notify` writes in-app notifications under the recipient's own context and lists them. Friends see display names only. |
 | `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. `httpapi`'s session layer also gates `/admin` (administrators only, else `404`), the one-time-password change and switched-off features. |
 
@@ -279,7 +280,18 @@ Two independent layers keep users apart.
    One table has its own policies: the activity log (`audit_log`, ADR 0021) has one per command,
    so the app can read and add its own events but never update them, can't backdate one, and can
    delete only those older than 365 days; `UPDATE` and `TRUNCATE` are also revoked from the app
-   role (`TestAuditLogIsAppendOnly`).
+   role (`TestAuditLogIsAppendOnly`). `friendships` has a policy for either side (ADR 0027).
+
+   **Shared tables** (Phase 19, ADR 0028, migration `00014_shared_groups.sql`) are read and written
+   by membership: `shared_groups`, `shared_expenses`, `shared_expense_splits` and
+   `shared_settlements` have forced RLS with policies that ask `shared_member_role(group_id)`, a
+   `SECURITY DEFINER STABLE` function owned by `finuance_owner`, for the caller's role (owner,
+   member, invited). The function reads `shared_group_members`, which therefore has RLS **enabled
+   but not forced** (the app role is still bound by its policies; FORCE would bind the function's
+   owner too, and a policy reading its own table would recurse). It is the one listed exception in
+   `TestEveryUserTableHasForcedRLS`. Members only write expenses they added and those expenses'
+   splits; `shared_expense_links` (a member's private link from their transaction to its copy) is
+   an ordinary tenant table.
 
 ### How a request reaches the database
 

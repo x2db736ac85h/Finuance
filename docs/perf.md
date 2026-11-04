@@ -565,3 +565,23 @@ from 3 to 4). Grafana walkthrough of both runs: `docs/screenshots/grafana/homela
 ![SLOs during load and ramp](screenshots/grafana/homelab/finuance-slo.png)
 ![API](screenshots/grafana/homelab/finuance-api.png)
 ![PostgreSQL](screenshots/grafana/homelab/finuance-postgres.png)
+
+## Phase 19: shared groups (task 19.11)
+
+`TestSharedPerf` (`FINUANCE_PERF=1 go test -run TestSharedPerf -v ./internal/sharing/`, the 4-vCPU
+cloud sandbox, PostgreSQL 18.6 in a container): one group of four members with 5,000 typed
+expenses (20,000 split rows), each call 15 times right after seeding.
+
+| Call | Run 1 p50 | Run 1 p95 | Run 2 p50 | Run 2 p95 |
+|---|---|---|---|---|
+| Group page (`GET /shared-groups/{id}`: members, expenses, splits, settlements, balances, transfers) | 187 ms | 5.46 s ¹ | 142 ms | 166 ms |
+| Report (`GET /shared-groups/{id}/report`) | 170 ms | 306 ms | 148 ms | 164 ms |
+| Timeline (`GET /groups/timeline`) | 70 ms | 92 ms | 86 ms | 107 ms |
+
+¹ One cold call (the first after seeding, while autovacuum analysed the new tables); the other 14
+were within 200 ms, and a second run had no outlier. `EXPLAIN (ANALYZE)` of the reads at this size:
+expenses 35 ms, splits 46–70 ms, members and links under 5 ms. The policies call
+`shared_member_role()` once per row (about 5 µs each); a group needs well past 5,000 expenses
+before that matters. The lever if it does: a set-returning "my groups" function evaluated once per
+statement (`group_id IN (SELECT …)`). Within the table SLO (95 % of table and chart requests under
+300 ms, [SLO.md](SLO.md)) at 5,000 expenses.
