@@ -26,23 +26,26 @@ import (
 
 // api implements gen.StrictServerInterface.
 type api struct {
-	cfg      config.Config
-	version  string
-	prod     bool
-	auth     *auth.Service
-	admin    *admin.Service
-	friends  *friends.Service
-	notify   *notify.Service
-	sharing  *sharing.Service
-	ledger   *ledger.Ledger
-	legacy   *legacyimport.Migrator
-	rules    *rules.Service
-	query    *query.Engine
-	insights *insights.Service
-	ai       *assistant.Assistant
-	jobs     *river.Client[pgx.Tx]
-	cookies  cookies
-	limits   limits
+	cfg     config.Config
+	version string
+	// the build and the schema, for the administrators' Developer section
+	commit, buildDate string
+	schemaVersion     func(context.Context) (int64, error)
+	prod              bool
+	auth              *auth.Service
+	admin             *admin.Service
+	friends           *friends.Service
+	notify            *notify.Service
+	sharing           *sharing.Service
+	ledger            *ledger.Ledger
+	legacy            *legacyimport.Migrator
+	rules             *rules.Service
+	query             *query.Engine
+	insights          *insights.Service
+	ai                *assistant.Assistant
+	jobs              *river.Client[pgx.Tx]
+	cookies           cookies
+	limits            limits
 }
 
 var _ gen.StrictServerInterface = (*api)(nil)

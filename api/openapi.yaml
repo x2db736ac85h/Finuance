@@ -2541,6 +2541,23 @@ paths:
                 $ref: "#/components/schemas/InstanceUsage"
         default:
           $ref: "#/components/responses/Problem"
+  /admin/developer:
+    get:
+      operationId: adminDeveloperInfo
+      summary: The Developer section (build, source, tool links)
+      description: >-
+        Only with `FINUANCE_DEVELOPER_MODE=true`; otherwise `404`, as for anyone but an administrator.
+        Holds no secrets: notes say how to get a credential, never the credential.
+      tags: [admin]
+      responses:
+        "200":
+          description: The build and the links from the instance's configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeveloperInfo"
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/themes:
     get:
       operationId: adminListThemes
@@ -6591,6 +6608,78 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DayUsage"
+    DeveloperInfo:
+      type: object
+      additionalProperties: false
+      required: [build, links]
+      properties:
+        build:
+          $ref: "#/components/schemas/DeveloperBuild"
+        source:
+          $ref: "#/components/schemas/DeveloperSource"
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeveloperLink"
+    DeveloperBuild:
+      type: object
+      additionalProperties: false
+      required: [version, commit, date, goVersion, environment, instance, schemaVersion, expectedSchemaVersion]
+      properties:
+        version:
+          type: string
+          description: The release (`0.3.0`), or `dev` for a local build.
+        commit:
+          type: string
+        date:
+          type: string
+          description: Build time as the release workflow wrote it, or `unknown`.
+        goVersion:
+          type: string
+        environment:
+          type: string
+          description: "`FINUANCE_ENV`: dev, test or prod."
+        instance:
+          type: string
+          description: The host name of the api replica that answered (the pod name on Kubernetes).
+        schemaVersion:
+          type: integer
+          format: int64
+        expectedSchemaVersion:
+          type: integer
+          format: int64
+    DeveloperSource:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+        commitUrl:
+          type: string
+          description: The build's commit on GitHub (only for a github.com source and a known commit).
+        releaseUrl:
+          type: string
+          description: The build's release on GitHub (only for a github.com source and a release build).
+    DeveloperLink:
+      type: object
+      additionalProperties: false
+      required: [group, name, url]
+      properties:
+        group:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+        note:
+          type: string
+          description: Plain text, may have line breaks.
+        commands:
+          type: array
+          description: Plain text for the clipboard, one command each.
+          items:
+            type: string
     ThemeColours:
       type: object
       description: Token → colour (`#rrggbb` or `#rrggbbaa`); every key of the theme contract (ADR 0026).

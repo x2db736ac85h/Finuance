@@ -52,6 +52,43 @@
         "egress": { "$ref": "#/definitions/egress" }
       }
     },
+    "developer": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Administration → Developer (docs/admin.md); administrators only",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "source": {
+          "type": "string",
+          "description": "The source repository, http(s) without user info",
+          "pattern": "^$|^https?://[^/@\\s]+(/[^\\s]*)?$"
+        },
+        "links": {
+          "type": "array",
+          "maxItems": 40,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "url"],
+            "properties": {
+              "group": { "type": "string", "maxLength": 40 },
+              "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+              "url": {
+                "type": "string",
+                "description": "http(s) without user:password (say in the note where the credentials are)",
+                "pattern": "^https?://[^/@\\s]+([/?#][^\\s]*)?$"
+              },
+              "note": { "type": "string", "maxLength": 600 },
+              "commands": {
+                "type": "array",
+                "maxItems": 4,
+                "items": { "type": "string", "minLength": 1, "maxLength": 600 }
+              }
+            }
+          }
+        }
+      }
+    },
     "otel": {
       "type": "object",
       "properties": {

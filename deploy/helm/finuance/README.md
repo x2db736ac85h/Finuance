@@ -42,6 +42,7 @@ Everything is documented in [`values.yaml`](values.yaml) and checked by [`values
 | `trustedProxies` | the pod CIDR of the ingress controller, so rate limits see the client address |
 | `database.*` | host (default `finuance-db-rw`), roles and their secrets |
 | `assistant.*` | off by default; the connections file, a secret with API keys, and the egress to the model servers |
+| `developer.*` | off by default; administrators' Developer section: the source repository and links with notes and commands (no secrets; `http`/`https` without `user:password`), mounted for the api only ([docs/admin.md](../../../docs/admin.md#developer)) |
 | `otel.endpoint` | the full OTLP/HTTP traces URL, path included (`http://tempo.monitoring.svc:4318/v1/traces`); a bare `host:4318` is refused |
 | `podMonitor.enabled` | PodMonitors for api and worker (`job` = `finuance-api` / `finuance-worker`) |
 | `extraEnv` | further `FINUANCE_*` settings, e.g. `FINUANCE_AI_TIMEOUT` / `FINUANCE_AI_IDLE_TIMEOUT` for a slow model server |

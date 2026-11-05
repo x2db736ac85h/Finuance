@@ -362,7 +362,7 @@ It replicates to the standby, and restores carry it. `pg_monitor` members read s
 
 After the push the three apps sync by themselves (about 8 minutes on the reference machine). **`finuance-db` then shows `OutOfSync`** for its PodMonitor and NetworkPolicy only: sync those two (UI *Sync* with just them ticked); the PostgreSQL pods don't restart.
 
-**Access** (then `http://localhost:3000`, user `admin`):
+**Access** (then `http://localhost:3000`, user `admin`; administrators also find these links and commands in the app under Administration → Developer, [admin.md](admin.md#developer)):
 
 ```sh
 kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d; echo

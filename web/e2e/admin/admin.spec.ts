@@ -8,7 +8,7 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 import { check } from '../axe';
-import { API_HEADERS } from '../helpers';
+import { API_HEADERS, signUp } from '../helpers';
 
 const ADMIN_EMAIL = process.env['E2E_ADMIN_EMAIL'] ?? 'admin@example.test';
 const ADMIN_PASSWORD = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e admin password long enough';
@@ -120,6 +120,39 @@ test('an administrator runs the instance; a new user follows it', async ({ page,
   await ctx.close();
 });
 
+test('the Developer section is for administrators only', async ({ page, browser }) => {
+  // compose.ci.yaml turns developer mode on with deploy/developer/links.example.json
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+  await page.goto('/settings/profile');
+  await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Administration' }).click();
+  await page.getByRole('navigation', { name: 'Administration' }).getByRole('link', { name: 'Developer' }).click();
+  await expect(page.getByRole('heading', { name: 'Developer' })).toBeVisible();
+  await expect(page.getByText('Database schema')).toBeVisible();
+  const grafana = page.getByRole('link', { name: 'Grafana' });
+  await expect(grafana).toHaveAttribute('href', 'http://localhost:3000');
+  await expect(grafana).toHaveAttribute('rel', 'noopener noreferrer');
+  // hover shows how to get in; the pointer can move into the note and copy a command
+  await page.getByRole('button', { name: 'How to get into Grafana' }).hover();
+  const pop = page.getByRole('group', { name: 'How to get into Grafana' });
+  await expect(pop).toContainText('User admin');
+  await pop.getByRole('button', { name: 'Copy command 1 for Grafana' }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    'kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80',
+  );
+  await check(page, 'admin Developer with a note open');
+
+  // anyone else: the API says 404 and the page sends them away
+  const ctx = await browser.newContext();
+  const other = await ctx.newPage();
+  await signUp(other);
+  expect((await other.request.get('/api/v1/admin/developer')).status()).toBe(404);
+  await other.goto('/admin/developer');
+  await expect(other).not.toHaveURL(/\/admin/);
+  await expect(other.getByRole('link', { name: 'Administration' })).toHaveCount(0);
+  await ctx.close();
+});
+
 test('the administration pages are accessible in both modes', async ({ page }) => {
   test.setTimeout(120_000);
   await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
@@ -128,6 +161,7 @@ test('the administration pages are accessible in both modes', async ({ page }) =
     ['/admin/instance', 'Defaults and features'],
     ['/admin/themes', 'Colour themes'],
     ['/admin/usage', 'Usage'],
+    ['/admin/developer', 'Developer'],
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: heading })).toBeVisible();

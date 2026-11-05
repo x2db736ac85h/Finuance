@@ -1,4 +1,6 @@
 {{- $name := include "finuance.fullname" . -}}
+{{- $assistantFile := and .Values.assistant.enabled .Values.assistant.connectionsFile -}}
+{{- $developerLinks := and .Values.developer.enabled (or .Values.developer.source .Values.developer.links) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -67,6 +69,11 @@ spec:
             - name: FINUANCE_AI_CONNECTIONS_FILE
               value: /etc/finuance/connections.json
             {{- end }}
+            {{- if $developerLinks }}
+            # Only the api serves the Developer section (administrators only).
+            - name: FINUANCE_DEVELOPER_LINKS_FILE
+              value: /etc/finuance-developer/links.json
+            {{- end }}
           startupProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 2
@@ -91,17 +98,31 @@ spec:
             {{- toYaml .Values.api.resources | nindent 12 }}
           securityContext:
             {{- include "finuance.containerSecurity" . | nindent 12 }}
-          {{- if and .Values.assistant.enabled .Values.assistant.connectionsFile }}
+          {{- if or $assistantFile $developerLinks }}
           volumeMounts:
+            {{- if $assistantFile }}
             - name: assistant
               mountPath: /etc/finuance
               readOnly: true
+            {{- end }}
+            {{- if $developerLinks }}
+            - name: developer
+              mountPath: /etc/finuance-developer
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- if and .Values.assistant.enabled .Values.assistant.connectionsFile }}
+      {{- if or $assistantFile $developerLinks }}
       volumes:
+        {{- if $assistantFile }}
         - name: assistant
           configMap:
             name: {{ $name }}-assistant
+        {{- end }}
+        {{- if $developerLinks }}
+        - name: developer
+          configMap:
+            name: {{ $name }}-developer
+        {{- end }}
       {{- end }}
 ---
 apiVersion: v1

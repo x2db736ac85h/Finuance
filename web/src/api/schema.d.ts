@@ -1865,6 +1865,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/developer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Developer section (build, source, tool links)
+         * @description Only with `FINUANCE_DEVELOPER_MODE=true`; otherwise `404`, as for anyone but an administrator. Holds no secrets: notes say how to get a credential, never the credential.
+         */
+        get: operations["adminDeveloperInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/themes": {
         parameters: {
             query?: never;
@@ -4057,6 +4077,43 @@ export interface components {
             /** Format: int64 */
             storedBytes: number;
             days: components["schemas"]["DayUsage"][];
+        };
+        DeveloperInfo: {
+            build: components["schemas"]["DeveloperBuild"];
+            source?: components["schemas"]["DeveloperSource"];
+            links: components["schemas"]["DeveloperLink"][];
+        };
+        DeveloperBuild: {
+            /** @description The release (`0.3.0`), or `dev` for a local build. */
+            version: string;
+            commit: string;
+            /** @description Build time as the release workflow wrote it, or `unknown`. */
+            date: string;
+            goVersion: string;
+            /** @description `FINUANCE_ENV`: dev, test or prod. */
+            environment: string;
+            /** @description The host name of the api replica that answered (the pod name on Kubernetes). */
+            instance: string;
+            /** Format: int64 */
+            schemaVersion: number;
+            /** Format: int64 */
+            expectedSchemaVersion: number;
+        };
+        DeveloperSource: {
+            url: string;
+            /** @description The build's commit on GitHub (only for a github.com source and a known commit). */
+            commitUrl?: string;
+            /** @description The build's release on GitHub (only for a github.com source and a release build). */
+            releaseUrl?: string;
+        };
+        DeveloperLink: {
+            group: string;
+            name: string;
+            url: string;
+            /** @description Plain text, may have line breaks. */
+            note?: string;
+            /** @description Plain text for the clipboard, one command each. */
+            commands?: string[];
         };
         /** @description Token → colour (`#rrggbb` or `#rrggbbaa`); every key of the theme contract (ADR 0026). */
         ThemeColours: {
@@ -7030,6 +7087,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InstanceUsage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminDeveloperInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The build and the links from the instance's configuration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeveloperInfo"];
                 };
             };
             default: components["responses"]["Problem"];

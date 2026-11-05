@@ -1,0 +1,65 @@
+{
+  "source": "https://github.com/x2db736ac85h/finuance",
+  "links": [
+    {
+      "group": "Observability",
+      "name": "Grafana",
+      "url": "http://localhost:3000",
+      "note": "Not exposed: start the port-forward on a machine with cluster access, then open the link. User admin; the second command prints the password (it comes from the sealed secret grafana-admin).",
+      "commands": [
+        "kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80",
+        "kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d; echo"
+      ]
+    },
+    {
+      "group": "Observability",
+      "name": "Prometheus",
+      "url": "http://localhost:9090",
+      "note": "Targets, rules and queries. No sign-in; reachable only through the port-forward.",
+      "commands": [
+        "kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090"
+      ]
+    },
+    {
+      "group": "Observability",
+      "name": "Alertmanager",
+      "url": "http://localhost:9093",
+      "note": "Alerts and silences. No sign-in; reachable only through the port-forward.",
+      "commands": [
+        "kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093"
+      ]
+    },
+    {
+      "group": "Deployment",
+      "name": "Argo CD",
+      "url": "https://localhost:8443",
+      "note": "User admin with the password chosen at the bootstrap (the initial secret is deleted; keep it in your password manager). The certificate is self-signed.",
+      "commands": [
+        "kubectl -n argocd port-forward svc/argocd-server 8443:443"
+      ]
+    },
+    {
+      "group": "CI/CD",
+      "name": "Actions",
+      "url": "https://github.com/x2db736ac85h/finuance/actions",
+      "note": "CI, releases, the weekly scans and the kind rehearsal. Sign in to GitHub with an account that can read the repository."
+    },
+    {
+      "group": "CI/CD",
+      "name": "Releases",
+      "url": "https://github.com/x2db736ac85h/finuance/releases"
+    },
+    {
+      "group": "CI/CD",
+      "name": "Pull requests",
+      "url": "https://github.com/x2db736ac85h/finuance/pulls",
+      "note": "A merged gitops-bump pull request deploys a release; reverting it rolls back (docs/RUNBOOK.md)."
+    },
+    {
+      "group": "CI/CD",
+      "name": "Container images",
+      "url": "https://github.com/x2db736ac85h?tab=packages",
+      "note": "finuance-api and finuance-web on ghcr.io, signed with cosign (docs/RUNBOOK.md)."
+    }
+  ]
+}

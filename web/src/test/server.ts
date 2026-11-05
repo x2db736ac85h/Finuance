@@ -183,6 +183,8 @@ export const server = setupServer(
       return new HttpResponse(null, { status: 204 });
     }),
   ),
+  // developer mode off, as on most instances (tests that need the section override this)
+  http.get(`${API}/admin/developer`, () => authed(() => problem(404, 'not_found', 'Not found.'))),
   http.get(`${API}/imports`, () => authed(() => HttpResponse.json(db.imports))),
   http.post(`${API}/transactions/query`, async ({ request }) => {
     const q = (await request.json()) as Schemas['TransactionQuery'];

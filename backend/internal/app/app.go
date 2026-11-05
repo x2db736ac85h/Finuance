@@ -101,7 +101,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	}
 	notes := notify.New(c.store, platform.SystemClock{})
 	h, err := httpapi.NewHandler(httpapi.Deps{
-		Config: cfg, Version: b.Version, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
+		Config: cfg, Version: b.Version, Commit: b.Commit, BuildDate: b.Date, SchemaVersion: c.store.SchemaVersion, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
 		Auth: authSvc, Admin: NewAdmin(c.store, authSvc, cfg), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
 		Legacy: legacyimport.New(c.store, led, nil, platform.SystemClock{}),
 		Rules:  rules.New(c.store, platform.SystemClock{}),

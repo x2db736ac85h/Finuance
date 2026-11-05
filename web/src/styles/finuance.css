@@ -148,6 +148,8 @@ button.mini-drop {
   flex: 1;
   min-width: 0;
   max-width: 40rem;
+  /* centred in the room beside the section list (settings and administration) */
+  margin-inline: auto;
   padding: 1rem 1.5rem 2rem;
 }
 .set-body h1 {
@@ -1030,6 +1032,90 @@ textarea.inp.ins-note {
 /* Administration (/admin, Phase 19): the settings layout, wider for the tables. */
 .set-body.adm-body {
   max-width: 64rem;
+}
+/* Administration → Developer */
+.dev-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.375rem 1rem;
+  margin: 0;
+}
+.dev-facts dt {
+  color: var(--muted);
+}
+.dev-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.dev-warn {
+  color: var(--neg);
+}
+.dev-facts a,
+.dev-links a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.dev-facts a:hover,
+.dev-links a:hover {
+  text-decoration: underline;
+}
+.dev-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.dev-links li {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+.dev-links li > .hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dev-info {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.dev-pop {
+  position: absolute;
+  top: 100%;
+  /* opens to the right, over the empty end of the row rather than the links */
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(28rem, 80vw);
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.dev-note {
+  white-space: pre-line;
+}
+.dev-cmd {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.dev-cmd code {
+  flex: 1;
+  min-width: 0;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.25rem;
+  background: var(--bg);
+  overflow-wrap: anywhere;
+  user-select: all;
 }
 .adm-toolbar {
   justify-content: space-between;

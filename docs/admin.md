@@ -29,8 +29,8 @@ demoted, disabled or deleted.
 
 ## The panel
 
-Administrators find **Administration** in the account menu (the initial in the top-right corner).
-Everyone else gets `404` from its routes.
+Administrators find **Administration** in the account menu (the initial in the top-right corner)
+and at the end of the Settings list. Everyone else gets `404` from its routes.
 
 ### Users
 
@@ -97,6 +97,43 @@ the same in every theme.
 
 Instance totals (accounts, active people, transactions, imports, stored files) and the last 30
 days of imports and assistant questions.
+
+### Developer
+
+Off unless the instance turns on **developer mode**. Then administrators get a *Developer* section
+with:
+
+- **Build**: version (linked to its release), commit (linked to it), build time, Go version,
+  environment, the api replica that answered, and the database schema version (marked when it is
+  behind what the build expects).
+- **Source**: the repository.
+- **Links** to the tools around the instance (dashboards, Argo CD, CI/CD), grouped, each opening in
+  a new tab. The **ⓘ** next to a link shows how to get in on hover or keyboard focus (a tap keeps it
+  open), with a **Copy** button for each command, such as the port-forward or the one that prints a
+  password.
+
+Turn it on:
+
+| Where | How |
+|---|---|
+| Kubernetes (Helm chart) | `developer.enabled: true`, `developer.source`, `developer.links` (see the chart's `values.yaml`; the homelab's are in `deploy/environments/homelab/values.yaml`) |
+| Compose, local process | `FINUANCE_DEVELOPER_MODE=true`, optionally `FINUANCE_DEVELOPER_LINKS_FILE` (example: `deploy/developer/links.example.json`; `make up` mounts the folder at `/etc/finuance/developer`) |
+| `compose.prod.yaml` | `FINUANCE_DEVELOPER_MODE=true` in `.env` (the build only) |
+
+The links file is JSON: `source` and up to 40 `links` with `group`, `name`, `url`, `note` and up
+to 4 `commands`. The api refuses to start on a bad file and names every problem.
+
+Who can see it, and what it may hold:
+
+- Only administrators. `GET /api/v1/admin/developer` answers `404` to everyone else, and to
+  administrators too while the mode is off, so nobody else can tell whether it is on. `/meta` and
+  `/me` don't mention it, the web app holds none of the links (they come from that request only),
+  and the response is never cached.
+- **No secrets.** Notes say *how* to get a credential (a command that needs cluster access, a
+  password manager), never the credential. Links must be `http`/`https` and may not carry a
+  `user:password`; text is shown as plain text.
+- Never on a public demo: `FINUANCE_DEVELOPER_MODE` together with `FINUANCE_DEMO_MODE` is a
+  configuration error.
 
 ## API
 

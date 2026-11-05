@@ -50,10 +50,14 @@ const ShutdownGrace = 20 * time.Second
 type Deps struct {
 	Config  config.Config
 	Version string
-	Logger  *slog.Logger
-	Metrics *observability.Metrics
-	Tracing *observability.Tracing
-	Ready   []Check
+	// Commit and BuildDate come from the build (ldflags), shown in the Developer section.
+	Commit, BuildDate string
+	// SchemaVersion reads the database's migration version for the Developer section; nil = 0.
+	SchemaVersion func(context.Context) (int64, error)
+	Logger        *slog.Logger
+	Metrics       *observability.Metrics
+	Tracing       *observability.Tracing
+	Ready         []Check
 	// Auth serves sessions and the /auth, /me and /preferences routes. Nil means every protected
 	// route answers 401 (tests of the bare server).
 	Auth *auth.Service
@@ -115,7 +119,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	impl := &api{admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, commit: d.Commit, buildDate: d.BuildDate, schemaVersion: d.SchemaVersion, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

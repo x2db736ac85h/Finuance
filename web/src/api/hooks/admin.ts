@@ -10,6 +10,7 @@ export type AdminUser = Schemas['AdminUser'];
 export type InstanceSettings = Schemas['InstanceSettingsDoc'];
 export type AdminTheme = Schemas['Theme'];
 export type LimitOverrides = Schemas['LimitOverrides'];
+export type DeveloperInfo = Schemas['DeveloperInfo'];
 
 export function useAdminUsers(search: string, cursor: string) {
   return useQuery({
@@ -20,6 +21,19 @@ export function useAdminUsers(search: string, cursor: string) {
           params: { query: { ...(search ? { search } : {}), ...(cursor ? { cursor } : {}) } },
         }),
       ),
+  });
+}
+
+/**
+ * The Developer section (FINUANCE_DEVELOPER_MODE): 404 while the mode is off, which hides the
+ * section. Everything it shows comes from here, never from the bundle.
+ */
+export function useDeveloperInfo(enabled = true) {
+  return useQuery({
+    queryKey: [...keys.admin, 'developer'],
+    queryFn: async () => data(await api.GET('/admin/developer')),
+    retry: false,
+    enabled,
   });
 }
 
