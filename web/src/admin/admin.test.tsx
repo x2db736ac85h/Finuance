@@ -49,6 +49,29 @@ describe('administration', () => {
     });
   });
 
+  it('is linked from the settings for administrators only, and links back', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/settings/profile');
+    const nav = await screen.findByRole('navigation', { name: 'Settings' });
+    await user.click(within(nav).getByRole('link', { name: 'Administration' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/users');
+    });
+    const adminNav = await screen.findByRole('navigation', { name: 'Administration' });
+    await user.click(within(adminNav).getByRole('link', { name: 'Settings' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/settings/appearance');
+    });
+  });
+
+  it('has no settings link for other users', async () => {
+    db.user.isAdmin = false;
+    renderApp('/settings/profile');
+    const nav = await screen.findByRole('navigation', { name: 'Settings' });
+    expect(within(nav).getByRole('link', { name: 'Profile' })).toBeTruthy();
+    expect(within(nav).queryByRole('link', { name: 'Administration' })).toBeNull();
+  });
+
   it('lists accounts with counts, creates one with a one-time password', async () => {
     let created: Schemas['AdminCreateUserRequest'] | undefined;
     const sam = adminUser();

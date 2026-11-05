@@ -36,6 +36,10 @@ export function AdminPage() {
             {s.label}
           </NavLink>
         ))}
+        <NavLink to="/settings/appearance" className="mi">
+          <Icon name="cog" />
+          Settings
+        </NavLink>
         <NavLink to="/" className="mi">
           <Icon name="left" />
           Back to transactions
