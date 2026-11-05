@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -47,6 +47,117 @@ describe('administration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).not.toMatch(/^\/admin/);
     });
+  });
+
+  it('is linked from the settings for administrators only, and links back', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/settings/profile');
+    const nav = await screen.findByRole('navigation', { name: 'Settings' });
+    await user.click(within(nav).getByRole('link', { name: 'Administration' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/users');
+    });
+    const adminNav = await screen.findByRole('navigation', { name: 'Administration' });
+    await user.click(within(adminNav).getByRole('link', { name: 'Settings' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/settings/appearance');
+    });
+  });
+
+  it('has no settings link for other users', async () => {
+    db.user.isAdmin = false;
+    renderApp('/settings/profile');
+    const nav = await screen.findByRole('navigation', { name: 'Settings' });
+    expect(within(nav).getByRole('link', { name: 'Profile' })).toBeTruthy();
+    expect(within(nav).queryByRole('link', { name: 'Administration' })).toBeNull();
+  });
+
+  it('shows the Developer section only when the instance has developer mode on', async () => {
+    const { router } = renderApp('/admin/developer');
+    // off (404): no section, and a direct visit lands on Users
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/users');
+    });
+    const nav = await screen.findByRole('navigation', { name: 'Administration' });
+    expect(within(nav).queryByRole('link', { name: 'Developer' })).toBeNull();
+  });
+
+  it('shows the build and the links with how to get in, and copies the command', async () => {
+    const info: Schemas['DeveloperInfo'] = {
+      build: {
+        version: '0.3.0-rc.2',
+        commit: '9ae8f60',
+        date: '2026-11-05T10:00:00Z',
+        goVersion: 'go1.27.3',
+        environment: 'prod',
+        instance: 'finuance-api-abc',
+        schemaVersion: 14,
+        expectedSchemaVersion: 14,
+      },
+      source: {
+        url: 'https://github.com/example/finuance',
+        commitUrl: 'https://github.com/example/finuance/commit/9ae8f60',
+        releaseUrl: 'https://github.com/example/finuance/releases/tag/v0.3.0-rc.2',
+      },
+      links: [
+        {
+          group: 'Observability',
+          name: 'Grafana',
+          url: 'http://localhost:3000',
+          note: 'User admin.\nThe second command prints the password.',
+          commands: ['kubectl -n monitoring port-forward svc/grafana 3000:80', 'kubectl get secret grafana-admin'],
+        },
+        { group: 'CI/CD', name: 'Actions', url: 'https://github.com/example/finuance/actions' },
+        { group: 'CI/CD', name: 'Odd', url: 'javascript:alert(1)' },
+      ],
+    };
+    server.use(http.get(`${API}/admin/developer`, () => HttpResponse.json(info)));
+    const user = userEvent.setup(); // with its own clipboard
+    renderApp('/admin/developer');
+    await screen.findByRole('heading', { name: 'Developer' });
+    expect(screen.getByRole('link', { name: '0.3.0-rc.2' }).getAttribute('href')).toBe(info.source?.releaseUrl);
+    expect(screen.getByRole('link', { name: '9ae8f60' }).getAttribute('href')).toBe(info.source?.commitUrl);
+    expect(screen.getByText('finuance-api-abc')).toBeTruthy();
+    const grafana = screen.getByRole('link', { name: 'Grafana' });
+    expect(grafana.getAttribute('target')).toBe('_blank');
+    expect(grafana.getAttribute('rel')).toBe('noopener noreferrer');
+    // a link the server would never send still doesn't become one
+    expect(screen.queryByRole('link', { name: 'Odd' })).toBeNull();
+    expect(screen.getByText('Odd')).toBeTruthy();
+    // Actions has nothing to explain: no ⓘ
+    expect(screen.queryByRole('button', { name: 'How to get into Actions' })).toBeNull();
+
+    const info1 = screen.getByRole('button', { name: 'How to get into Grafana' });
+    await user.hover(info1);
+    const pop = screen.getByRole('group', { name: 'How to get into Grafana' });
+    expect(within(pop).getByText(/prints the password/)).toBeTruthy();
+    await user.click(within(pop).getByRole('button', { name: 'Copy command 2 for Grafana' }));
+    expect(await navigator.clipboard.readText()).toBe('kubectl get secret grafana-admin');
+    await screen.findByText('Copied the command');
+    // Escape closes it, keyboard focus opens it again
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('group', { name: 'How to get into Grafana' })).toBeNull();
+    act(() => {
+      info1.focus();
+    });
+    expect(screen.getByRole('group', { name: 'How to get into Grafana' })).toBeTruthy();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('group', { name: 'How to get into Grafana' })).toBeNull();
+  });
+
+  it('never asks for the Developer section for anyone but an administrator', async () => {
+    db.user.isAdmin = false;
+    const asked: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.includes('/admin/')) asked.push(request.url);
+    });
+    const { router } = renderApp('/admin/developer');
+    await waitFor(() => {
+      expect(router.state.location.pathname).not.toMatch(/^\/admin/);
+    });
+    await screen.findByRole('navigation', { name: 'Accounts' }).catch(() => undefined);
+    expect(asked).toEqual([]);
+    server.events.removeAllListeners('request:start');
   });
 
   it('lists accounts with counts, creates one with a one-time password', async () => {

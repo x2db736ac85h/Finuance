@@ -24,3 +24,16 @@ podMonitor:
   enabled: true
 extraEnv:
   FINUANCE_AI_RATE_PER_HOUR: "60"
+developer:
+  enabled: true
+  source: https://github.com/example/finuance
+  links:
+    - group: Observability
+      name: Grafana
+      url: http://localhost:3000
+      note: User admin; the second command prints the password.
+      commands:
+        - kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
+        - kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d
+    - name: Actions
+      url: https://github.com/example/finuance/actions

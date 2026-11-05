@@ -24,19 +24,21 @@ const (
 
 // Config is the validated application configuration.
 type Config struct {
-	Env                  Env
-	HTTPAddr             string
-	AdminAddr            string
-	PublicOrigin         *url.URL
-	DatabaseURL          string
-	MigrateDatabaseURL   string
-	DBMaxConns           int32
-	SessionTTL           time.Duration
-	SessionIdleTTL       time.Duration
-	CookieSecure         bool
-	AllowSignup          bool
-	DemoMode             bool
-	DemoAssistant        bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
+	Env                Env
+	HTTPAddr           string
+	AdminAddr          string
+	PublicOrigin       *url.URL
+	DatabaseURL        string
+	MigrateDatabaseURL string
+	DBMaxConns         int32
+	SessionTTL         time.Duration
+	SessionIdleTTL     time.Duration
+	CookieSecure       bool
+	AllowSignup        bool
+	DemoMode           bool
+	DemoAssistant      bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
+	// Developer is the administrators' Developer section; nil unless FINUANCE_DEVELOPER_MODE=true.
+	Developer            *Developer
 	MaxUploadBytes       int64
 	MaxLegacyImportBytes int64
 	OTLPEndpoint         string
@@ -125,6 +127,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		Argon2Time:           uint32(p.int("FINUANCE_ARGON2_TIME", 2, 1, 10)),                     //nolint:gosec // bounded by p.int
 		Argon2Threads:        uint8(p.int("FINUANCE_ARGON2_THREADS", 1, 1, 16)),                   //nolint:gosec // bounded by p.int
 	}
+	c.Developer = p.developer(p.bool("FINUANCE_DEVELOPER_MODE", false))
 	c.AIConnections = p.aiConnections(p.int("FINUANCE_AI_CONTEXT_TOKENS", 8192, 1024, 10_000_000))
 	switch c.Env {
 	case EnvDev, EnvTest, EnvProd:
@@ -137,6 +140,10 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 	}
 	if c.DemoMode {
 		c.demoLimits(&p)
+		if c.Developer != nil {
+			// a public demo shouldn't list the tools around it, not even to its administrators
+			p.fail("FINUANCE_DEVELOPER_MODE", "must not be true when FINUANCE_DEMO_MODE is")
+		}
 	}
 	if c.SessionIdleTTL > c.SessionTTL {
 		p.fail("FINUANCE_SESSION_IDLE_TTL", "must not exceed FINUANCE_SESSION_TTL")

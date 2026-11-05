@@ -7,3 +7,5 @@ services:
     environment:
       FINUANCE_DEMO_MODE: "true"
       FINUANCE_ALLOW_SIGNUP: "false"
+      # compose.ci.yaml turns developer mode on; a demo refuses it
+      FINUANCE_DEVELOPER_MODE: "false"

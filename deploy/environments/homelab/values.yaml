@@ -44,6 +44,54 @@ assistant:
   # Ollama on the host (ADR 0020/0022); its connections file and egress rule come from the overlay.
   enabled: true
 
+# Administration → Developer (docs/admin.md): administrators see the build and these links. Every
+# tool is reached through a port-forward from the machine (none is exposed), so the links point at
+# localhost and the notes say how to get in; credentials are read from the cluster, never written here.
+developer:
+  enabled: true
+  source: https://github.com/x2db736ac85h/finuance
+  links:
+    - group: Observability
+      name: Grafana
+      url: http://localhost:3000
+      note: Dashboards, traces (Tempo) and the SLOs. Start the port-forward on the machine, then open the link. User admin; the second command prints the password (sealed secret grafana-admin).
+      commands:
+        - kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
+        - kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d; echo
+    - group: Observability
+      name: Prometheus
+      url: http://localhost:9090
+      note: Targets, rules and queries. No sign-in; only through the port-forward.
+      commands:
+        - kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090
+    - group: Observability
+      name: Alertmanager
+      url: http://localhost:9093
+      note: Firing alerts and silences; alerts are e-mailed (docs/RUNBOOK.md step 13). No sign-in; only through the port-forward.
+      commands:
+        - kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093
+    - group: Deployment
+      name: Argo CD
+      url: https://localhost:8443
+      note: Sync state of every app. User admin with the password chosen at the bootstrap (the initial secret is deleted; it lives in your password manager). The certificate is self-signed.
+      commands:
+        - kubectl -n argocd port-forward svc/argocd-server 8443:443
+    - group: CI/CD
+      name: Actions
+      url: https://github.com/x2db736ac85h/finuance/actions
+      note: CI, releases, the weekly scans and the kind rehearsal. Needs a GitHub account that can read the repository.
+    - group: CI/CD
+      name: Releases
+      url: https://github.com/x2db736ac85h/finuance/releases
+    - group: CI/CD
+      name: Pull requests
+      url: https://github.com/x2db736ac85h/finuance/pulls
+      note: Merging a release's gitops-bump pull request deploys it; reverting it rolls back (docs/RUNBOOK.md).
+    - group: CI/CD
+      name: Container images
+      url: https://github.com/x2db736ac85h?tab=packages
+      note: finuance-api and finuance-web on ghcr.io, signed with cosign.
+
 otel:
   # Tempo in the monitoring namespace (OTLP over HTTP; deploy/k8s/argocd/apps/tempo.yaml).
   endpoint: http://tempo.monitoring.svc:4318/v1/traces

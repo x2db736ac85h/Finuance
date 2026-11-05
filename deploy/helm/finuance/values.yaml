@@ -57,6 +57,25 @@ assistant:
   #  - to: [{ namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ollama } } }]
   #    ports: [11434]
 
+developer:
+  # Administration → Developer (docs/admin.md): the build, the source repository and links to the
+  # tools around the instance, each with a note on how to get in; administrators only (everyone
+  # else gets 404). Never on a public demo: the app refuses it together with FINUANCE_DEMO_MODE.
+  enabled: false
+  # The source repository (http/https); on GitHub the build's commit and release are linked too.
+  source: ""
+  # Up to 40 links: group (heading), name, url (http/https, no user:password), note (how to get in
+  # or where the credentials are; never the credential itself), commands (up to 4, each with Copy).
+  # Mounted for the api only at /etc/finuance-developer/links.json.
+  links: []
+  #  - group: Observability
+  #    name: Grafana
+  #    url: http://localhost:3000
+  #    note: User admin; the second command prints the password.
+  #    commands:
+  #      - kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
+  #      - kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d
+
 otel:
   # The full OTLP/HTTP traces URL, path included, e.g. http://tempo.monitoring.svc:4318/v1/traces:
   # the app sends to exactly this URL (a bare host:4318 gets 404 from the collector; the schema

@@ -62,6 +62,12 @@ services:
       FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
       FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
       FINUANCE_AI_CONNECTIONS_FILE: ${FINUANCE_AI_CONNECTIONS_FILE:-}
+      # Administration → Developer (docs/admin.md): build, source and tool links, administrators only.
+      # The example links are mounted at /etc/finuance/developer/links.example.json.
+      FINUANCE_DEVELOPER_MODE: ${FINUANCE_DEVELOPER_MODE:-false}
+      FINUANCE_DEVELOPER_LINKS_FILE: ${FINUANCE_DEVELOPER_LINKS_FILE:-}
+    volumes:
+      - ../developer:/etc/finuance/developer:ro
     ports:
       - "127.0.0.1:8080:8080" # API
       - "127.0.0.1:9090:9090" # admin (/metrics, pprof) — published in dev only, never via an ingress

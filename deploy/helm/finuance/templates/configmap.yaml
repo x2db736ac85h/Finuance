@@ -12,6 +12,7 @@ data:
   FINUANCE_ALLOW_SIGNUP: {{ .Values.allowSignup | quote }}
   FINUANCE_TRUSTED_PROXIES: {{ .Values.trustedProxies | quote }}
   FINUANCE_MAX_UPLOAD_BYTES: {{ .Values.maxUploadBytes | int64 | quote }}
+  FINUANCE_DEVELOPER_MODE: {{ .Values.developer.enabled | quote }}
   FINUANCE_DB_MAX_CONNS: {{ .Values.database.maxConns | quote }}
   FINUANCE_DATABASE_URL: {{ include "finuance.dbURL" (dict "root" . "user" .Values.database.app.user) | quote }}
   {{- with .Values.otel.endpoint }}
@@ -20,6 +21,17 @@ data:
   {{- range $k, $v := .Values.extraEnv }}
   {{ $k }}: {{ $v | quote }}
   {{- end }}
+{{- if and .Values.developer.enabled (or .Values.developer.source .Values.developer.links) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "finuance.fullname" . }}-developer
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+data:
+  links.json: {{ dict "source" .Values.developer.source "links" .Values.developer.links | toJson | quote }}
+{{- end }}
 {{- if and .Values.assistant.enabled .Values.assistant.connectionsFile }}
 ---
 apiVersion: v1

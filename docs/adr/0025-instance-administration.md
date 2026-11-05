@@ -58,6 +58,28 @@ Two facts shaped the design:
   account's e-mail) and in the affected account's Activity with `{"by": "administrator"}`, which
   says that an administrator acted but not which one.
 
+## Addendum (2026-11-05): the Developer section
+
+Administrators of an instance in **developer mode** (`FINUANCE_DEVELOPER_MODE`, chart
+`developer.enabled`) get a *Developer* section: the build (version, commit, time, Go, environment,
+the answering replica, schema version), the source repository and links to the tools around the
+instance with notes on how to get in (docs/admin.md). Decisions:
+
+- **Configuration, not data.** The links come from a file the operator writes (the chart renders
+  it from values), read and validated at start like the assistant's connections file; nothing is
+  stored in the database or editable in the panel, so the panel can't be used to plant a link.
+- **Hidden like every admin route, and then some.** `GET /admin/developer` answers `404` to
+  non-administrators (the gate) and to administrators while the mode is off, so only an
+  administrator of an instance with the mode on learns it exists. `/meta` and `/me` don't carry the
+  flag; the web app asks only for administrators and shows the section only when that answer comes.
+  The bundle holds no URL or note.
+- **No secrets.** Links are `http`/`https` without user info (no `javascript:` or `data:`, no
+  `user:password@`), text fields are plain single-line or multi-line text with length limits, and
+  notes say how to fetch a credential (typically a `kubectl` command, which needs cluster access)
+  rather than holding one. The schema of the chart and the api both check it.
+- **Not on a public demo**: developer mode with demo mode is a configuration error.
+- Viewing it is not audited: it changes nothing, like the other admin reads.
+
 ## Consequences (positive, negative, follow-ups)
 
 - Running an instance for several people needs no shell access after the first administrator.

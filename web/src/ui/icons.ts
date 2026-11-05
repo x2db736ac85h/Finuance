@@ -158,6 +158,13 @@ export const APP_ICONS = {
     ['path', { d: 'M4 8h13M13.5 4.5 17 8l-3.5 3.5' }],
     ['path', { d: 'M20 16H7M10.5 12.5 7 16l3.5 3.5' }],
   ],
+  // the admin panel's Developer section
+  code: [['path', { d: 'm8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15' }]],
+  // a note on hover ("how to get in")
+  info: [
+    ['circle', { cx: '12', cy: '12', r: '9' }],
+    ['path', { d: 'M12 11v5.5M12 7.6v.1' }],
+  ],
   // notifications
   bell: [
     ['path', { d: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9' }],

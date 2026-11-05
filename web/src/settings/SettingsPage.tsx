@@ -1,8 +1,9 @@
 // /settings/:section (PLAN §7.3, task 8.9): a section list on the left, the section on the right.
 
-import { Navigate, NavLink, useParams } from 'react-router';
+import { Navigate, NavLink, useOutletContext, useParams } from 'react-router';
 
 import { useMeta } from '../api/hooks/me';
+import type { ShellContext } from '../shell/AppShell';
 import { Icon } from '../ui/Icon';
 import { RulesSettings } from '../rules/RulesSettings';
 import { ActivitySettings } from './Activity';
@@ -31,6 +32,7 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
 };
 
 export function SettingsPage() {
+  const { user } = useOutletContext<ShellContext>();
   const { section } = useParams();
   const meta = useMeta().data;
   // Friends only where the instance has them: switched on, and not a demo (ADR 0027)
@@ -48,6 +50,13 @@ export function SettingsPage() {
             {s.label}
           </NavLink>
         ))}
+        {/* Administrators also reach the panel from here, not only from the account menu */}
+        {user.isAdmin && (
+          <NavLink to="/admin/users" className="mi">
+            <Icon name="cog" />
+            Administration
+          </NavLink>
+        )}
         <NavLink to="/" className="mi">
           <Icon name="left" />
           Back to transactions

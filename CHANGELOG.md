@@ -38,9 +38,16 @@ settle-up.
   your trips and groups with per-year sums and "next time" hints. Switchable by administrators,
   limited per user (`maxSharedGroups`), off in demo mode; shared groups are in the data export.
 
+- **Developer section** for administrators (`FINUANCE_DEVELOPER_MODE`, chart `developer.*`; off by
+  default, refused in demo mode): the build, the source repository and links to the tools around
+  the instance (dashboards, Argo CD, CI/CD), each with how to get in and commands to copy. Anyone but
+  an administrator gets `404`, and nothing else reveals it.
+
 ### Changed
 
 - The assistant's send button uses the solid accent colour, like the other filled buttons.
+- Settings and Administration are centred beside their section list; Settings links to
+  Administration for administrators, and back.
 
 ## [0.2.0]
 

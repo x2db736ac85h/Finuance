@@ -191,17 +191,22 @@ func checkAddress(u *url.URL, cloud bool) string {
 }
 
 func readLimited(name string) ([]byte, error) {
+	return readLimitedFile(name, maxConnectionsFile, "connections file")
+}
+
+// readLimitedFile reads a small config file, refusing one larger than limit bytes.
+func readLimitedFile(name string, limit int, what string) ([]byte, error) {
 	f, err := os.Open(name) //nolint:gosec // the admin's own config path
 	if err != nil {
-		return nil, fmt.Errorf("can't read the connections file: %w", err)
+		return nil, fmt.Errorf("can't read the %s: %w", what, err)
 	}
 	defer func() { _ = f.Close() }()
-	b, err := io.ReadAll(io.LimitReader(f, maxConnectionsFile+1))
+	b, err := io.ReadAll(io.LimitReader(f, int64(limit)+1))
 	if err != nil {
-		return nil, fmt.Errorf("can't read the connections file: %w", err)
+		return nil, fmt.Errorf("can't read the %s: %w", what, err)
 	}
-	if len(b) > maxConnectionsFile {
-		return nil, fmt.Errorf("the connections file is larger than %d KiB", maxConnectionsFile>>10)
+	if len(b) > limit {
+		return nil, fmt.Errorf("the %s is larger than %d KiB", what, limit>>10)
 	}
 	return b, nil
 }

@@ -74,6 +74,15 @@ func (s *Store) Ping(ctx context.Context) error {
 	return err
 }
 
+// SchemaVersion is the database's migration version (the administrators' Developer section).
+func (s *Store) SchemaVersion(ctx context.Context) (int64, error) {
+	v, err := db.New(s.pool).SchemaVersion(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("read schema version: %w", err)
+	}
+	return v, nil
+}
+
 // MigrationsCurrent is the readiness probe "migrations": the database must be at least at
 // ExpectedVersion, so an api whose migrate job failed never receives traffic.
 func (s *Store) MigrationsCurrent(ctx context.Context) error {
