@@ -1,7 +1,12 @@
 package httpapi
 
 import (
+	"context"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
 
 // TestAIChangesHTTP: a proposal applied through the normal endpoints with the assistant's headers
@@ -106,4 +111,120 @@ func TestAIChangesHTTP(t *testing.T) {
 		t.Errorf("another user sees %d changes", n)
 	}
 	expect(t, other.do("POST", "/ai-changes/"+again["id"].(string)+"/revert", nil), 404, "not_found")
+}
+
+// TestProposalsV2HTTP: set_budget, add_expense and add_to_shared_group proposed by the (mock)
+// model, applied as the panel does with the assistant's headers, recorded and undone (ADR 0030).
+func TestProposalsV2HTTP(t *testing.T) {
+	e, _ := mockEnv(t, nil)
+	b, _ := demoBrowser(t, e)
+	me := b.do("GET", "/me", nil)
+	if err := e.st.WithoutUser(context.Background(), func(_ *db.Queries, tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE users SET display_name = 'Alex' WHERE id = $1`, me.body["id"])
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	chat := b.do("POST", "/assistant/chats", nil).body["id"].(string)
+	propose := func(text string) map[string]any {
+		t.Helper()
+		ask := b.do("POST", "/assistant/chats/"+chat+"/messages", map[string]any{"text": text, "settings": map[string]any{"mode": "auto", "think": "auto"}})
+		expect(t, ask, 200, "")
+		evs := parseSSE(t, ask.raw)
+		i := slicesIndexEv(evs, "step")
+		if i < 0 {
+			t.Fatalf("no step for %q: %s", text, ask.raw)
+		}
+		return obj(t, evs[i].data, "proposal")
+	}
+	with := func(p map[string]any, fn func()) {
+		t.Helper()
+		b.header["X-Assistant-Chat"], b.header["X-Assistant-Proposal"] = chat, p["key"].(string)
+		defer func() { delete(b.header, "X-Assistant-Chat"); delete(b.header, "X-Assistant-Proposal") }()
+		fn()
+	}
+	latest := func() map[string]any {
+		t.Helper()
+		return b.do("GET", "/ai-changes", nil).body["changes"].([]any)[0].(map[string]any)
+	}
+	budgetOf := func(name string) any {
+		t.Helper()
+		for _, x := range b.do("GET", "/budgets", nil).body["budgets"].([]any) {
+			if x := x.(map[string]any); x["category"].(map[string]any)["name"] == name {
+				return x["amountMinor"]
+			}
+		}
+		return nil
+	}
+
+	// set_budget: Rachunki gets 800.00 a month; undo removes it again
+	p := propose(`budget "rachunki" 800`)
+	if p["action"] != "set_budget" || p["categoryName"] != "Rachunki" || num(obj(t, p, "budget")["amountMinor"]) != 80000 {
+		t.Fatalf("set_budget proposal = %v", p)
+	}
+	with(p, func() {
+		expect(t, b.do("PUT", "/budgets/"+p["categoryId"].(string), map[string]any{"amountMinor": 80000}), 204, "")
+	})
+	if budgetOf("Rachunki") != float64(80000) {
+		t.Fatalf("budget = %v", budgetOf("Rachunki"))
+	}
+	c := latest()
+	if c["action"] != "set_budget" || num(c["items"]) != 1 {
+		t.Errorf("change = %v", c)
+	}
+	expect(t, b.do("POST", "/ai-changes/"+c["id"].(string)+"/revert", nil), 200, "")
+	if v := budgetOf("Rachunki"); v != nil {
+		t.Errorf("budget after undo = %v", v)
+	}
+
+	// add_expense into the cash account: the row's source is Assistant until it is undone
+	wallet := b.do("POST", "/accounts", map[string]any{"name": "Portfel", "kind": "cash"})
+	expect(t, wallet, 201, "")
+	p = propose(`spent 25.50 at "Kawiarnia Ziarno" on 2025-03-10`)
+	if p["action"] != "add_expense" || p["accountId"] != wallet.body["id"] || num(obj(t, p, "amount")["amountMinor"]) != -2550 || p["date"] != "2025-03-10" {
+		t.Fatalf("add_expense proposal = %v", p)
+	}
+	with(p, func() {
+		expect(t, b.do("POST", "/transactions", map[string]any{"accountId": p["accountId"], "bookedOn": p["date"],
+			"amountMinor": -2550, "payee": p["payee"]}), 201, "")
+	})
+	assistant := map[string]any{"column": "source", "cond": "=Assistant"}
+	if n := totalWhere(t, b, assistant); n != 1 {
+		t.Errorf("rows the assistant added = %d", n)
+	}
+	c = latest()
+	if c["action"] != "add_expense" || num(c["items"]) != 1 {
+		t.Errorf("change = %v", c)
+	}
+	rv := b.do("POST", "/ai-changes/"+c["id"].(string)+"/revert", nil)
+	expect(t, rv, 200, "")
+	if n := totalWhere(t, b, assistant); n != 0 || num(rv.body["rows"]) != 1 {
+		t.Errorf("after undo: %d rows, %s", n, rv.raw)
+	}
+
+	// add_to_shared_group: copies in the shared group follow the rows in and out again
+	grp := b.do("POST", "/groups", map[string]any{"name": "Praga"})
+	expect(t, grp, 201, "")
+	sg := b.do("POST", "/shared-groups", map[string]any{"name": "Wyjazd do Pragi", "fromGroupId": grp.body["id"]})
+	expect(t, sg, 201, "")
+	p = propose(`share "OPERATOR INTERNETU" with "wyjazd do pragi"`)
+	if p["action"] != "add_to_shared_group" || p["groupId"] != grp.body["id"] || p["sharedGroupId"] != sg.body["id"] || num(p["matched"]) != 14 {
+		t.Fatalf("add_to_shared_group proposal = %v", p)
+	}
+	with(p, func() {
+		expect(t, b.do("POST", "/transactions/bulk", map[string]any{"ids": p["ids"], "set": map[string]any{"groupId": p["groupId"]}}), 200, "")
+	})
+	expenses := func() int {
+		t.Helper()
+		d := b.do("GET", "/shared-groups/"+sg.body["id"].(string), nil)
+		expect(t, d, 200, "")
+		return len(d.body["expenses"].([]any))
+	}
+	if n := expenses(); n != 14 {
+		t.Errorf("shared expenses = %d", n)
+	}
+	expect(t, b.do("POST", "/ai-changes/"+latest()["id"].(string)+"/revert", nil), 200, "")
+	if n := expenses(); n != 0 {
+		t.Errorf("shared expenses after undo = %d", n)
+	}
 }

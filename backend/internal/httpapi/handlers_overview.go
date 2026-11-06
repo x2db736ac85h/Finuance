@@ -155,7 +155,10 @@ func (a *api) ListBudgets(ctx context.Context, _ gen.ListBudgetsRequestObject) (
 // PutBudget sets a category's budget, or removes it with null.
 func (a *api) PutBudget(ctx context.Context, req gen.PutBudgetRequestObject) (gen.PutBudgetResponseObject, error) {
 	user := identity(ctx).User.ID
-	var err error
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	if v := req.Body.AmountMinor; v != nil {
 		err = a.ledger.SetBudget(ctx, user, req.CategoryId, *v)
 	} else {

@@ -262,7 +262,8 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	for _, f := range []struct {
 		v   string
 		dst **string
-	}{{p.Reason, &out.Reason}, {p.CategoryName, &out.CategoryName}, {p.GroupName, &out.GroupName}, {p.RuleName, &out.RuleName}} {
+	}{{p.Reason, &out.Reason}, {p.CategoryName, &out.CategoryName}, {p.GroupName, &out.GroupName}, {p.RuleName, &out.RuleName},
+		{p.AccountName, &out.AccountName}, {p.Payee, &out.Payee}, {p.Note, &out.Note}, {p.SharedGroupName, &out.SharedGroupName}} {
 		if f.v != "" {
 			v := f.v
 			*f.dst = &v
@@ -270,6 +271,42 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	}
 	if len(p.IDs) > 0 {
 		out.Ids = &p.IDs
+	}
+	// Phase 20 proposals (ADR 0030)
+	out.AccountId, out.SharedGroupId = p.AccountID, p.SharedGroupID
+	if p.RemoveBudget {
+		out.RemoveBudget = &p.RemoveBudget
+	}
+	if p.BudgetMinor != nil {
+		out.Budget = &gen.Money{AmountMinor: *p.BudgetMinor, Currency: p.Currency}
+	}
+	if p.BudgetBeforeMinor != nil {
+		out.BudgetBefore = &gen.Money{AmountMinor: *p.BudgetBeforeMinor, Currency: p.Currency}
+	}
+	out.ExpenseId, out.PaidBy = p.ExpenseID, p.PaidBy
+	if p.ExpenseCategory != "" {
+		out.ExpenseCategory = &p.ExpenseCategory
+	}
+	if sp := p.Split; sp != nil {
+		ms := make([]gen.ProposalSplitMember, len(sp.Members))
+		for i, m := range sp.Members {
+			ms[i] = gen.ProposalSplitMember{MemberId: m.MemberID, Name: m.Name}
+			if m.Weight > 0 {
+				w := m.Weight
+				ms[i].Weight = &w
+			}
+			if m.AmountMinor != 0 {
+				v := m.AmountMinor
+				ms[i].AmountMinor = &v
+			}
+		}
+		out.Split = &gen.ProposalSplit{Mode: gen.ProposalSplitMode(sp.Mode), Members: ms}
+	}
+	if p.Action == assistant.ActionAddExpense || p.Action == assistant.ActionSplitExpense {
+		out.Amount = &gen.Money{AmountMinor: p.AmountMinor, Currency: p.Currency}
+		if d, err := platform.ParseDate(p.Date); err == nil {
+			out.Date = dateDTO(&d)
+		}
 	}
 	if m := p.Match; m != nil {
 		rm := gen.RuleMatch{}

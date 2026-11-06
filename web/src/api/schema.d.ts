@@ -3698,7 +3698,7 @@ export interface components {
             /** @description Identifies the proposal within its chat (a hash of its content); sent back as X-Assistant-Proposal when it is applied. */
             key: string;
             /** @enum {string} */
-            action: "set_category" | "set_group" | "create_rule";
+            action: "set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense";
             reason?: string;
             /** @description The transactions it changes (set_*) or the rule matches now (create_rule). */
             matched: number;
@@ -3713,6 +3713,42 @@ export interface components {
             ruleName?: string;
             match?: components["schemas"]["RuleMatch"];
             sample: components["schemas"]["ProposalRow"][];
+            /** @description set_budget: the monthly budget to set (absent with removeBudget). */
+            budget?: components["schemas"]["Money"];
+            /** @description set_budget: remove the category's own budget (back to the default from earlier months). */
+            removeBudget?: boolean;
+            /** @description set_budget: the budget it replaces, if any. */
+            budgetBefore?: components["schemas"]["Money"];
+            /**
+             * Format: uuid
+             * @description add_expense: the cash account.
+             */
+            accountId?: string;
+            accountName?: string;
+            /**
+             * Format: date
+             * @description add_expense: the day of the payment.
+             */
+            date?: string;
+            /** @description add_expense: the amount (negative: money out). */
+            amount?: components["schemas"]["Money"];
+            payee?: string;
+            note?: string;
+            /**
+             * Format: uuid
+             * @description add_to_shared_group: the shared group (groupId is the user's personal group linked to it).
+             */
+            sharedGroupId?: string;
+            sharedGroupName?: string;
+            /**
+             * Format: uuid
+             * @description split_expense: the shared expense (date, amount, payee, note are its values).
+             */
+            expenseId?: string;
+            expenseCategory?: string;
+            /** Format: uuid */
+            paidBy?: string;
+            split?: components["schemas"]["ProposalSplit"];
             toolFilter?: components["schemas"]["ToolFilter"];
         };
         ProposalRow: {
@@ -4153,6 +4189,20 @@ export interface components {
             deleted: number;
             /** @description Groups and categories it created that were kept because they are used now. */
             kept: number;
+        };
+        /** @description split_expense: the new split. */
+        ProposalSplit: {
+            /** @enum {string} */
+            mode: "equal" | "shares" | "exact";
+            members: components["schemas"]["ProposalSplitMember"][];
+        };
+        ProposalSplitMember: {
+            /** Format: uuid */
+            memberId: string;
+            name: string;
+            weight?: number;
+            /** Format: int64 */
+            amountMinor?: number;
         };
         DeveloperInfo: {
             build: components["schemas"]["DeveloperBuild"];
@@ -5100,7 +5150,14 @@ export interface operations {
     addTransaction: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6041,7 +6098,14 @@ export interface operations {
     updateSharedExpense: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
             path: {
                 id: components["parameters"]["Id"];
                 expenseId: string;
@@ -6510,7 +6574,14 @@ export interface operations {
     putBudget: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
             path: {
                 categoryId: string;
             };

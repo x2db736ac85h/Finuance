@@ -18,6 +18,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
+	"github.com/x2db736ac85h/finuance/backend/internal/sharing"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
@@ -174,12 +175,51 @@ func (s *Service) unchanged(ctx context.Context, q *db.Queries, userID uuid.UUID
 	for _, it := range items {
 		switch it.entity {
 		case ledger.AIEntityTransaction:
+			if created(it) {
+				same, err := s.sameManual(ctx, q, userID, it)
+				if err != nil {
+					return err
+				}
+				if !same {
+					changed++
+				}
+				continue
+			}
 			var after ledger.AnnotationState
 			if err := json.Unmarshal(it.after, &after); err != nil {
 				return fmt.Errorf("ai change item: %w", err)
 			}
 			cur, ok := now[it.id]
 			if !ok || !sameAnnotation(after, cur) {
+				changed++
+			}
+		case ledger.AIEntitySharedExpense:
+			var after sharing.SplitState
+			if err := json.Unmarshal(it.after, &after); err != nil {
+				return fmt.Errorf("ai change item: %w", err)
+			}
+			cur, err := sharing.CurrentSplit(ctx, q, it.id)
+			if err != nil {
+				return err
+			}
+			if cur != nil && !cur.Same(after) {
+				changed++
+			}
+		case ledger.AIEntityBudget:
+			var after ledger.BudgetState
+			if err := json.Unmarshal(it.after, &after); err != nil {
+				return fmt.Errorf("ai change item: %w", err)
+			}
+			cur, err := q.BudgetAmountForUpdate(ctx, db.BudgetAmountForUpdateParams{UserID: userID, CategoryID: it.id})
+			if errors.Is(err, pgx.ErrNoRows) {
+				if after.AmountMinor != nil {
+					changed++
+				}
+				continue
+			} else if err != nil {
+				return err
+			}
+			if after.AmountMinor == nil || *after.AmountMinor != cur {
 				changed++
 			}
 		case ledger.AIEntityRule:
@@ -202,6 +242,29 @@ func (s *Service) unchanged(ctx context.Context, q *db.Queries, userID uuid.UUID
 		return fmt.Errorf("%d of the changed items are different now: %w", changed, platform.ErrChangedSince)
 	}
 	return nil
+}
+
+// created is true for a row the change added (add_expense): its "after" is a ManualState.
+func created(it item) bool {
+	var c struct {
+		Created bool `json:"created"`
+	}
+	return it.before == nil && json.Unmarshal(it.after, &c) == nil && c.Created
+}
+
+// sameManual is true while a row the change added still exists with the typed values it got.
+func (s *Service) sameManual(ctx context.Context, q *db.Queries, userID uuid.UUID, it item) (bool, error) {
+	var after ledger.ManualState
+	if err := json.Unmarshal(it.after, &after); err != nil {
+		return false, fmt.Errorf("ai change item: %w", err)
+	}
+	t, err := q.GetTransaction(ctx, db.GetTransactionParams{UserID: userID, ID: it.id})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true, nil // deleted since: nothing to undo
+	} else if err != nil {
+		return false, err
+	}
+	return t.Origin == "manual" && t.BookedOn.String() == after.BookedOn && t.AmountMinor == after.AmountMinor && t.Payee == after.Payee, nil
 }
 
 func sameAnnotation(after ledger.AnnotationState, cur db.TransactionAnnotationStateRow) bool {
@@ -230,7 +293,7 @@ func (s *Service) undo(ctx context.Context, q *db.Queries, userID uuid.UUID, ite
 	groupTo := map[string][]uuid.UUID{}
 	groupOf := map[string]*uuid.UUID{}
 	for _, it := range items {
-		if it.entity != ledger.AIEntityTransaction {
+		if it.entity != ledger.AIEntityTransaction || created(it) {
 			continue
 		}
 		var before ledger.AnnotationState
@@ -269,6 +332,38 @@ func (s *Service) undo(ctx context.Context, q *db.Queries, userID uuid.UUID, ite
 		}
 		if _, err := s.led.AnnotateTx(ctx, q, userID, ids, ledger.AnnotationPatch{SetGroup: true, GroupID: to}); err != nil {
 			return res, err
+		}
+	}
+	for _, it := range items {
+		switch {
+		case it.entity == ledger.AIEntityTransaction && created(it):
+			if _, err := s.led.DeleteManualTx(ctx, q, userID, it.id); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return res, err
+			}
+			res.Rows++
+			res.Reclassify = true // transfers pair again without it
+		case it.entity == ledger.AIEntitySharedExpense:
+			var before sharing.SplitState
+			if err := json.Unmarshal(it.before, &before); err != nil {
+				return res, fmt.Errorf("ai change item: %w", err)
+			}
+			cur, err := sharing.CurrentSplit(ctx, q, it.id)
+			if err != nil {
+				return res, err
+			}
+			if cur != nil { // the expense is still there
+				if err := sharing.RestoreSplitTx(ctx, q, s.clock.Now(), userID, it.id, before); err != nil {
+					return res, err
+				}
+			}
+		case it.entity == ledger.AIEntityBudget:
+			var before ledger.BudgetState
+			if err := json.Unmarshal(it.before, &before); err != nil {
+				return res, fmt.Errorf("ai change item: %w", err)
+			}
+			if err := s.led.BudgetTx(ctx, q, userID, it.id, before.AmountMinor); err != nil {
+				return res, err
+			}
 		}
 	}
 	for _, it := range items {

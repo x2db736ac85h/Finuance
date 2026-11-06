@@ -24,6 +24,11 @@ const (
 	ActionSetCategory = "set_category"
 	ActionSetGroup    = "set_group"
 	ActionCreateRule  = "create_rule"
+	// Phase 20 (ADR 0030)
+	ActionSetBudget        = "set_budget"
+	ActionAddExpense       = "add_expense"
+	ActionAddToSharedGroup = "add_to_shared_group"
+	ActionSplitExpense     = "split_expense"
 )
 
 // Limits of a proposal: the rows a set_* proposal may touch (the bulk endpoint takes 5,000; a
@@ -56,6 +61,39 @@ type Proposal struct {
 	Match        *ProposalMatch `json:"match,omitempty"`
 	Sample       []ProposalRow  `json:"sample"`
 	Filter       *StepFilter    `json:"filter,omitempty"` // set_*: the rows' lookup filter, for "Show in table"
+	// Phase 20 (every field omitted when empty, so the keys of earlier proposals stay the same)
+	BudgetMinor       *int64     `json:"budgetMinor,omitempty"`       // set_budget: the monthly budget; nil with RemoveBudget
+	RemoveBudget      bool       `json:"removeBudget,omitempty"`      // set_budget: back to the default from earlier months
+	BudgetBeforeMinor *int64     `json:"budgetBeforeMinor,omitempty"` // set_budget: the budget it replaces
+	AccountID         *uuid.UUID `json:"accountId,omitempty"`         // add_expense: the cash account
+	AccountName       string     `json:"accountName,omitempty"`
+	Date              string     `json:"date,omitempty"`
+	AmountMinor       int64      `json:"amountMinor,omitempty"` // add_expense: negative (money out)
+	Currency          string     `json:"currency,omitempty"`    // add_expense, set_budget
+	Payee             string     `json:"payee,omitempty"`
+	Note              string     `json:"note,omitempty"`
+	SharedGroupID     *uuid.UUID `json:"sharedGroupId,omitempty"` // add_to_shared_group (GroupID is its linked personal group), split_expense
+	SharedGroupName   string     `json:"sharedGroupName,omitempty"`
+	// split_expense: the expense (Date, AmountMinor, Currency, Payee and Note are its values, sent
+	// back unchanged for a typed one) and its new split
+	ExpenseID       *uuid.UUID     `json:"expenseId,omitempty"`
+	ExpenseCategory string         `json:"expenseCategory,omitempty"`
+	PaidBy          *uuid.UUID     `json:"paidBy,omitempty"`
+	Split           *ProposalSplit `json:"split,omitempty"`
+}
+
+// ProposalSplit is a split_expense's new split, in the API's SharedSplit form plus names.
+type ProposalSplit struct {
+	Mode    string          `json:"mode"` // equal | shares | exact
+	Members []ProposalShare `json:"members"`
+}
+
+// ProposalShare is one member's part: a weight (shares) or an amount (exact).
+type ProposalShare struct {
+	MemberID    uuid.UUID `json:"memberId"`
+	Name        string    `json:"name"`
+	Weight      int       `json:"weight,omitempty"`
+	AmountMinor int64     `json:"amountMinor,omitempty"`
 }
 
 // Key identifies the proposal within its chat: a hash of its stored form, so the streamed step
@@ -98,7 +136,27 @@ type proposalResult struct {
 	ToGroup         string      `json:"to_group,omitempty"`
 	CreatesGroup    bool        `json:"creates_group,omitempty"`
 	RuleName        string      `json:"rule_name,omitempty"`
+	SharedGroup     string      `json:"shared_group,omitempty"`
+	Budget          json.Number `json:"budget,omitempty"`
+	BudgetBefore    json.Number `json:"budget_before,omitempty"`
+	RemovesBudget   bool        `json:"removes_budget,omitempty"`
+	Account         string      `json:"account,omitempty"`
+	Date            string      `json:"date,omitempty"`
+	Amount          json.Number `json:"amount,omitempty"`
+	Payee           string      `json:"payee,omitempty"`
+	Split           *splitOut   `json:"split,omitempty"`
 	Sample          []sampleOut `json:"sample"`
+}
+
+type splitOut struct {
+	Mode    string           `json:"mode"`
+	Members []splitMemberOut `json:"members"`
+}
+
+type splitMemberOut struct {
+	Name   string      `json:"name"`
+	Weight int         `json:"weight,omitempty"`
+	Amount json.Number `json:"amount,omitempty"`
 }
 
 type sampleOut struct {
@@ -168,8 +226,16 @@ func (t *Tools) propose(ctx context.Context, userID uuid.UUID, sc Scope, a args)
 			}
 		}
 		return t.proposeRows(ctx, userID, sc, a, p)
+	case ActionSetBudget:
+		return t.proposeBudget(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
+	case ActionAddExpense:
+		return t.proposeExpense(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
+	case ActionAddToSharedGroup:
+		return t.proposeShared(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
+	case ActionSplitExpense:
+		return t.proposeSplit(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
 	}
-	return proposalError("action must be set_category, set_group or create_rule"), nil
+	return proposalError("action must be set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group or split_expense"), nil
 }
 
 // proposeRows reads the rows a set_* action would change: the filter within the chat's scope,
@@ -267,6 +333,33 @@ func proposalOutcome(sc Scope, p *Proposal, label string) Outcome {
 	switch p.Action {
 	case ActionSetGroup:
 		r.ToGroup, r.CreatesGroup = p.GroupName, p.GroupID == nil
+	case ActionAddToSharedGroup:
+		r.SharedGroup = p.SharedGroupName
+	case ActionSplitExpense:
+		r.SharedGroup, r.Date, r.Amount, r.Payee = p.SharedGroupName, p.Date, amount(p.AmountMinor, p.Currency), sc.mask(p.Payee)
+		if p.Split != nil {
+			r.Split = &splitOut{Mode: p.Split.Mode}
+			for _, m := range p.Split.Members {
+				o := splitMemberOut{Name: m.Name, Weight: m.Weight}
+				if p.Split.Mode == "exact" {
+					o.Amount = amount(m.AmountMinor, p.Currency)
+				}
+				r.Split.Members = append(r.Split.Members, o)
+			}
+		}
+	case ActionSetBudget:
+		r.ToCategory, r.RemovesBudget = p.CategoryName, p.RemoveBudget
+		if p.BudgetMinor != nil {
+			r.Budget = amount(*p.BudgetMinor, p.Currency)
+		}
+		if p.BudgetBeforeMinor != nil {
+			r.BudgetBefore = amount(*p.BudgetBeforeMinor, p.Currency)
+		}
+	case ActionAddExpense:
+		r.Account, r.Date, r.Amount, r.Payee = p.AccountName, p.Date, amount(p.AmountMinor, p.Currency), sc.mask(p.Payee)
+		if p.CategoryName != "" {
+			r.ToCategory, r.CreatesCategory = p.CategoryName, p.CategoryID == nil
+		}
 	default:
 		r.ToCategory, r.CreatesCategory = p.CategoryName, p.CategoryID == nil
 	}

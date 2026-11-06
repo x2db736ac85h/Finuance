@@ -192,6 +192,25 @@
      "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"},
     {"id": "prop-group-en", "category": "action proposals", "lang": "en", "question": "Label my TEATR MAŁY visits with the group Culture.",
      "tools": ["propose_action"], "args": [{"action": "set_group", "payee|query": "~teatr", "to_group": "~culture"}],
-     "mention": "Apply|confirm|review|card"}
+     "mention": "Apply|confirm|review|card"},
+
+    {"id": "prop-budget-en", "category": "action proposals", "lang": "en", "question": "Set my monthly budget for Rachunki to 900 PLN.",
+     "tools": ["propose_action"], "args": [{"action": "set_budget", "to_category": "~rachunki"}],
+     "mention": "Apply|confirm|review|card"},
+    {"id": "prop-budget-pl", "category": "action proposals", "lang": "pl", "question": "Ustaw miesięczny budżet na Artykuły spożywcze na 1500 zł.",
+     "tools": ["propose_action"], "args": [{"action": "set_budget", "to_category": "~spożywcze"}],
+     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"},
+    {"id": "prop-expense-en", "category": "action proposals", "lang": "en", "question": "I paid 18 PLN in cash for coffee at KAWIARNIA ZIARNO today. Add it.",
+     "tools": ["propose_action"], "args": [{"action": "add_expense", "payee": "~ziarno", "date": "2025-03-20"}],
+     "mention": "Apply|confirm|review|card"},
+    {"id": "prop-expense-pl", "category": "action proposals", "lang": "pl", "question": "Dodaj wydatek gotówką: wczoraj 42 zł w PIEKARNIA ZIARNO.",
+     "tools": ["propose_action"], "args": [{"action": "add_expense", "payee": "~piekarnia", "date": "2025-03-19"}],
+     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"},
+    {"id": "prop-share-en", "category": "action proposals", "lang": "en", "question": "Share my TEATR MAŁY tickets with the Wyjazd do Pragi group.",
+     "tools": ["propose_action"], "args": [{"action": "add_to_shared_group", "shared_group": "~pragi", "payee|query": "~teatr"}],
+     "mention": "Apply|confirm|review|card"},
+    {"id": "prop-share-pl", "category": "action proposals", "lang": "pl", "question": "Udostępnij wydatki z KINO POD GWIAZDAMI w grupie Wyjazd do Pragi.",
+     "tools": ["propose_action"], "args": [{"action": "add_to_shared_group", "shared_group": "~pragi", "payee|query": "~kino"}],
+     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"}
   ]
 }

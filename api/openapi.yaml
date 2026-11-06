@@ -736,6 +736,10 @@ paths:
         transaction can be edited and deleted later; rules and transfer detection treat it like an
         imported one, but a category set here is a manual one and wins (ADR 0029).
       tags: [transactions]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -1542,6 +1546,10 @@ paths:
         A typed expense takes every field (send them all); a copy of a transaction only its split
         (the rest follows the transaction). `403` for someone else's expense.
       tags: [shared]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -1986,6 +1994,9 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -5915,7 +5926,7 @@ components:
             X-Assistant-Proposal when it is applied.
         action:
           type: string
-          enum: [set_category, set_group, create_rule]
+          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense]
         reason:
           type: string
         matched:
@@ -5947,6 +5958,49 @@ components:
           maxItems: 5
           items:
             $ref: "#/components/schemas/ProposalRow"
+        budget:
+          $ref: "#/components/schemas/Money"
+          description: "set_budget: the monthly budget to set (absent with removeBudget)."
+        removeBudget:
+          type: boolean
+          description: "set_budget: remove the category's own budget (back to the default from earlier months)."
+        budgetBefore:
+          $ref: "#/components/schemas/Money"
+          description: "set_budget: the budget it replaces, if any."
+        accountId:
+          type: string
+          format: uuid
+          description: "add_expense: the cash account."
+        accountName:
+          type: string
+        date:
+          type: string
+          format: date
+          description: "add_expense: the day of the payment."
+        amount:
+          $ref: "#/components/schemas/Money"
+          description: "add_expense: the amount (negative: money out)."
+        payee:
+          type: string
+        note:
+          type: string
+        sharedGroupId:
+          type: string
+          format: uuid
+          description: "add_to_shared_group: the shared group (groupId is the user's personal group linked to it)."
+        sharedGroupName:
+          type: string
+        expenseId:
+          type: string
+          format: uuid
+          description: "split_expense: the shared expense (date, amount, payee, note are its values)."
+        expenseCategory:
+          type: string
+        paidBy:
+          type: string
+          format: uuid
+        split:
+          $ref: "#/components/schemas/ProposalSplit"
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
     ProposalRow:
@@ -6712,6 +6766,28 @@ components:
         rows: { type: integer, description: Transactions put back. }
         deleted: { type: integer, description: Rules, groups and categories the change created that were deleted. }
         kept: { type: integer, description: Groups and categories it created that were kept because they are used now. }
+    ProposalSplit:
+      type: object
+      additionalProperties: false
+      required: [mode, members]
+      description: "split_expense: the new split."
+      properties:
+        mode:
+          type: string
+          enum: [equal, shares, exact]
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalSplitMember"
+    ProposalSplitMember:
+      type: object
+      additionalProperties: false
+      required: [memberId, name]
+      properties:
+        memberId: { type: string, format: uuid }
+        name: { type: string }
+        weight: { type: integer }
+        amountMinor: { type: integer, format: int64 }
     DeveloperInfo:
       type: object
       additionalProperties: false

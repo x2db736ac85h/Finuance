@@ -32,6 +32,8 @@ type Querier interface {
 	// Commit step 1b: re-apply user annotations (group, manual category, note, manual transfer mark)
 	// to freshly inserted transactions, so labels survive delete + re-import.
 	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
+	// A category's budget before an assistant change sets it (ADR 0030).
+	BudgetAmountForUpdate(ctx context.Context, arg BudgetAmountForUpdateParams) (int64, error)
 	CategoryNameTaken(ctx context.Context, arg CategoryNameTakenParams) (bool, error)
 	// Settings → Categories: every category with its transaction count, how many were set by hand and
 	// by rules, and the bank names that map to it (its own name excluded).
@@ -298,6 +300,9 @@ type Querier interface {
 	// internal/query; these are the fixed statements around it.
 	ListRules(ctx context.Context, userID uuid.UUID) ([]ListRulesRow, error)
 	ListSharedExpenses(ctx context.Context, groupID uuid.UUID) ([]SharedExpense, error)
+	// The user's personal groups linked to a shared group they are in, not archived (the assistant's
+	// add_to_shared_group target). shared_groups is read under its membership RLS.
+	ListSharedGroupLinks(ctx context.Context, userID uuid.UUID) ([]ListSharedGroupLinksRow, error)
 	ListSharedMembers(ctx context.Context, groupID uuid.UUID) ([]SharedGroupMember, error)
 	ListSharedSettlements(ctx context.Context, groupID uuid.UUID) ([]SharedSettlement, error)
 	ListSharedSplits(ctx context.Context, groupID uuid.UUID) ([]SharedExpenseSplit, error)

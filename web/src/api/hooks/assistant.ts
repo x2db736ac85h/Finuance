@@ -228,6 +228,66 @@ export async function applyProposal(p: Proposal, chatId: string, auto = false): 
       );
       return p.matched;
     }
+    case 'set_budget': {
+      const r = await api.PUT('/budgets/{categoryId}', {
+        params: { path: { categoryId: p.categoryId ?? '' }, header },
+        body: { amountMinor: p.removeBudget ? null : (p.budget?.amountMinor ?? null) },
+      });
+      if (r.error) data(r);
+      return 1;
+    }
+    case 'add_expense': {
+      const categoryId = p.categoryId ?? (p.categoryName ? await categoryFor(p, header) : undefined);
+      data(
+        await api.POST('/transactions', {
+          params: { header },
+          body: {
+            accountId: p.accountId ?? '',
+            bookedOn: p.date ?? '',
+            amountMinor: p.amount?.amountMinor ?? 0,
+            payee: p.payee ?? '',
+            ...(categoryId ? { categoryId } : {}),
+            ...(p.note ? { note: p.note } : {}),
+          },
+        }),
+      );
+      return 1;
+    }
+    case 'add_to_shared_group': {
+      const r = await api.POST('/transactions/bulk', {
+        params: { header },
+        body: { ids: p.ids ?? [], set: { groupId: p.groupId ?? null } },
+      });
+      return data(r).updated;
+    }
+    case 'split_expense': {
+      const sp = p.split;
+      const members = sp?.members ?? [];
+      // a typed expense takes every field back unchanged; a copy only its split
+      const r = await api.PATCH('/shared-groups/{id}/expenses/{expenseId}', {
+        params: { path: { id: p.sharedGroupId ?? '', expenseId: p.expenseId ?? '' }, header },
+        body: {
+          bookedOn: p.date ?? '',
+          amountMinor: p.amount?.amountMinor ?? 0,
+          payee: p.payee ?? '',
+          category: p.expenseCategory ?? '',
+          note: p.note ?? '',
+          ...(p.paidBy ? { paidBy: p.paidBy } : {}),
+          split:
+            sp?.mode === 'exact'
+              ? { mode: 'exact', exact: members.map((m) => ({ memberId: m.memberId, shareMinor: m.amountMinor ?? 0 })) }
+              : sp?.mode === 'shares'
+                ? {
+                    mode: 'shares',
+                    members: members.map((m) => m.memberId),
+                    weights: members.map((m) => m.weight ?? 1),
+                  }
+                : { mode: 'equal', members: members.map((m) => m.memberId) },
+        },
+      });
+      if (r.error) data(r);
+      return 1;
+    }
   }
 }
 
@@ -241,6 +301,8 @@ export function useApplyProposal() {
       invalidateGroups(qc);
       void qc.invalidateQueries({ queryKey: keys.rules });
       void qc.invalidateQueries({ queryKey: keys.aiChanges });
+      void qc.invalidateQueries({ queryKey: keys.accounts }); // a typed expense changes an account's count
+      void qc.invalidateQueries({ queryKey: keys.shared });
     },
   });
 }
@@ -270,6 +332,8 @@ export function useRevertAIChange() {
       void qc.invalidateQueries({ queryKey: keys.rules });
       void qc.invalidateQueries({ queryKey: keys.aiChanges });
       void qc.invalidateQueries({ queryKey: keys.activity });
+      void qc.invalidateQueries({ queryKey: keys.accounts });
+      void qc.invalidateQueries({ queryKey: keys.shared });
     },
   });
 }

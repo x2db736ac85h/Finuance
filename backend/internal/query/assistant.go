@@ -163,10 +163,14 @@ type ColumnSample struct {
 	Sample string
 }
 
-// ColumnSamples returns every column of GridOrder with a sample value, for the system prompt.
+// ColumnSamples returns every column of GridOrder with a sample value, for the system prompt. The
+// source column is left out: the tools can't filter by it, and every imported row says "Bank".
 func (in *Insight) ColumnSamples() ([]ColumnSample, error) {
 	out := make([]ColumnSample, 0, len(GridOrder))
 	for _, name := range GridOrder {
+		if name == "source" {
+			continue
+		}
 		col := columns[name]
 		c, w, err := in.r.fresh(true)
 		if err != nil {

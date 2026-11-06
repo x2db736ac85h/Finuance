@@ -26,6 +26,48 @@ export function proposalTitle(p: Proposal): string {
       ].filter(Boolean);
       return `Create the rule “${p.ruleName ?? ''}”: ${parts.join(' and ')} → ${p.categoryName ?? ''}`;
     }
+    case 'set_budget':
+      return p.removeBudget || !p.budget
+        ? `Remove the budget of “${p.categoryName ?? ''}” (back to the default from earlier months)`
+        : `Set the monthly budget of “${p.categoryName ?? ''}” to ${fmtMoney(p.budget)}` +
+            (p.budgetBefore ? ` (now ${fmtMoney(p.budgetBefore)})` : '');
+    case 'add_expense':
+      return (
+        `Add ${p.amount ? fmtMoney(p.amount) : ''} paid to “${p.payee ?? ''}” on ${fmtDay(p.date)} to ${p.accountName ?? ''}` +
+        (p.categoryName ? ` · ${p.categoryName}` : '')
+      );
+    case 'add_to_shared_group':
+      return `Share ${plural(p.matched, 'transaction')} with “${p.sharedGroupName ?? ''}”`;
+    case 'split_expense': {
+      const members = p.split?.members ?? [];
+      const who =
+        p.split?.mode === 'exact'
+          ? `exactly: ${members.map((m) => `${m.name} ${fmtMoney({ amountMinor: m.amountMinor ?? 0, currency: p.amount?.currency ?? 'PLN' })}`).join(', ')}`
+          : p.split?.mode === 'shares'
+            ? `by shares: ${members.map((m) => `${m.name} ${String(m.weight ?? 1)}`).join(', ')}`
+            : members.length === 1
+              ? `all for ${members[0]?.name ?? ''}`
+              : `equally between ${members.map((m) => m.name).join(', ')}`;
+      return `Split “${p.payee ?? ''}” (${fmtDay(p.date)}${p.amount ? `, ${fmtMoney(p.amount)}` : ''}) in “${p.sharedGroupName ?? ''}” ${who}`;
+    }
+  }
+}
+
+/** What Apply did, for the toast. */
+function appliedText(p: Proposal, n: number): string {
+  switch (p.action) {
+    case 'create_rule':
+      return `Rule “${p.ruleName ?? ''}” created · applying…`;
+    case 'set_budget':
+      return `Budget of “${p.categoryName ?? ''}” ${p.removeBudget ? 'removed' : 'set'}`;
+    case 'add_expense':
+      return `Added to ${p.accountName ?? 'the account'}`;
+    case 'add_to_shared_group':
+      return `Shared ${plural(n, 'transaction')} with “${p.sharedGroupName ?? ''}”`;
+    case 'split_expense':
+      return `Split of “${p.payee ?? ''}” changed`;
+    default:
+      return `Applied to ${plural(n, 'transaction')}`;
   }
 }
 
@@ -43,11 +85,14 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
   const mine = changes.data?.pages[0]?.changes.find((c) => c.chatId === chatId && c.proposalKey === p.key);
   const undone = done && mine?.revertedAt !== undefined;
   const creates =
-    (p.action !== 'set_group' && !p.categoryId) || (p.action === 'set_group' && !p.groupId)
-      ? p.action === 'set_group'
-        ? 'The group is new and is created first.'
-        : 'The category is new and is created first.'
-      : '';
+    p.action === 'set_group'
+      ? p.groupId
+        ? ''
+        : 'The group is new and is created first.'
+      : (p.action === 'set_category' || p.action === 'create_rule' || (p.action === 'add_expense' && p.categoryName)) &&
+          !p.categoryId
+        ? 'The category is new and is created first.'
+        : '';
   const run = () => {
     if (!chatId) return;
     apply.mutate(
@@ -55,11 +100,7 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
       {
         onSuccess: (n) => {
           markApplied(p.key);
-          toast(
-            p.action === 'create_rule'
-              ? `Rule “${p.ruleName ?? ''}” created · applying…`
-              : `Applied to ${plural(n, 'transaction')}`,
-          );
+          toast(appliedText(p, n));
         },
         onError: (e) => {
           toast(errorMessage(e), { kind: 'error' });

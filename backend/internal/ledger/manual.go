@@ -144,9 +144,13 @@ func (l *Ledger) AddManual(ctx context.Context, userID uuid.UUID, in ManualInput
 		patch := AnnotationPatch{SetGroup: in.GroupID != nil, GroupID: in.GroupID,
 			SetCategory: category != nil, CategoryID: category, SetNote: note != "", Note: note}
 		if patch.SetGroup || patch.SetCategory || patch.SetNote {
-			_, err = l.annotateTx(ctx, q, userID, []uuid.UUID{id}, patch)
+			// part of the new row: an AI change records the row as created, not its annotation
+			if _, err = l.annotateTx(withoutAIOrigin(ctx), q, userID, []uuid.UUID{id}, patch); err != nil {
+				return err
+			}
 		}
-		return err
+		return RecordAIChange(ctx, q, l.clock, userID, []AIItem{{Entity: AIEntityTransaction, ID: id,
+			After: ManualState{Created: true, BookedOn: f.bookedOn.String(), AmountMinor: f.amountMinor, Payee: f.payee}}})
 	})
 	return id, dbErr("add manual transaction", err)
 }
@@ -197,11 +201,30 @@ func (l *Ledger) EditManual(ctx context.Context, userID, id uuid.UUID, e ManualE
 	return dbErr("edit manual transaction", err)
 }
 
+// ManualState is the "after" of a transaction an AI change added (add_expense): a revert deletes
+// it while its typed fields are still these.
+type ManualState struct {
+	Created     bool   `json:"created"`
+	BookedOn    string `json:"bookedOn"`
+	AmountMinor int64  `json:"amountMinor"`
+	Payee       string `json:"payee"`
+}
+
 // DeleteManual deletes a manual transaction (and its annotation) and returns its account. An
 // imported one is ErrState: it goes with its import.
 func (l *Ledger) DeleteManual(ctx context.Context, userID, id uuid.UUID) (uuid.UUID, error) {
 	var account uuid.UUID
-	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) (err error) {
+		account, err = l.DeleteManualTx(ctx, q, userID, id)
+		return err
+	})
+	return account, dbErr("delete manual transaction", err)
+}
+
+// DeleteManualTx is DeleteManual inside the caller's transaction (an AI change's revert).
+func (l *Ledger) DeleteManualTx(ctx context.Context, q *db.Queries, userID, id uuid.UUID) (uuid.UUID, error) {
+	var account uuid.UUID
+	err := func() error {
 		t, err := q.GetTransaction(ctx, db.GetTransactionParams{UserID: userID, ID: id})
 		if err != nil {
 			return err
@@ -232,6 +255,6 @@ func (l *Ledger) DeleteManual(ctx context.Context, userID, id uuid.UUID) (uuid.U
 		account = r.AccountID
 		return q.DeleteAnnotation(ctx, db.DeleteAnnotationParams{UserID: userID, AccountID: r.AccountID,
 			Fingerprint: r.Fingerprint, Occurrence: r.Occurrence, SplitScope: r.SplitScope})
-	})
-	return account, dbErr("delete manual transaction", err)
+	}()
+	return account, err
 }
