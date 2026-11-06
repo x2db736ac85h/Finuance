@@ -5,3 +5,10 @@
 # proposal's content) in a Vitest fixture; the fixture uses plainly fake keys since.
 c38e3e585e9a30139c42cfe17105b83fe8fe4222:web/src/assistant/assistant.test.tsx:generic-api-key:216
 c38e3e585e9a30139c42cfe17105b83fe8fe4222:web/src/assistant/assistant.test.tsx:generic-api-key:304
+#
+# aab9a66 (Phase 20, 20.1): fake proposal keys ("0123456789abcdef", "fedcba9876543210") in Go and
+# Vitest fixtures; the fixtures use plainly fake keys since.
+aab9a660daf983aa93e3b274fd55a39d8e6edd01:backend/internal/httpapi/auth_http_test.go:generic-api-key:592
+aab9a660daf983aa93e3b274fd55a39d8e6edd01:backend/internal/store/rls_test.go:generic-api-key:148
+aab9a660daf983aa93e3b274fd55a39d8e6edd01:web/src/settings/activity.test.tsx:generic-api-key:42
+aab9a660daf983aa93e3b274fd55a39d8e6edd01:web/src/settings/activity.test.tsx:generic-api-key:51
