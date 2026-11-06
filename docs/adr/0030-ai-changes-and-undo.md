@@ -36,6 +36,12 @@ that a proposal was applied, not what it replaced.
   show only rows with an un-undone change; the `source` column filters and exports like any other.
   Settings → Activity lists the changes with Undo, the proposal card offers Undo and Apply again.
 
+- **Applied by itself** only for the kinds a user ticks (`assistant_settings.auto_apply`, empty by
+  default): the panel applies such a proposal when the answer to the user's own question is
+  complete, with `X-Assistant-Auto` (recorded as `auto`), never one touching more than 50
+  transactions and never a background digest's (those run on the server and only wait for Apply).
+  The card says *Applied automatically* and offers Undo like any other.
+
 ## Consequences (positive, negative, follow-ups)
 
 - Each new write path (Phase 20's new proposal kinds) adds one `RecordAIChange` call and the

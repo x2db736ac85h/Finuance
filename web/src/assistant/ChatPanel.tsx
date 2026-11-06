@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router';
 
 import { useAccounts } from '../api/hooks/accounts';
 import {
+  useApplyProposal,
   useAssistantSettings,
   useAssistantStatus,
   useChats,
@@ -18,6 +19,7 @@ import {
 } from '../api/hooks/assistant';
 import { keys } from '../api/keys';
 import { fmtDateTime, fmtDay } from '../lib/dates';
+import { errorMessage } from '../lib/errors';
 import { fmtInt, plural } from '../lib/format';
 import { useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
@@ -30,6 +32,7 @@ import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
 import { useChat, type AiTurn } from './chatStore';
 import { ChatSettings, pick } from './ChatSettings';
+import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';
 import { TurnView } from './Turn';
 
 const SUGGEST = [
@@ -50,7 +53,8 @@ export function ChatPanel({ viewId }: { viewId: string }) {
   const saveSettings = useSaveAssistantSettings();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { turns, busy, send, stop, newChat, chatId } = useChat();
+  const { turns, busy, send, stop, newChat, chatId, markApplied } = useChat();
+  const apply = useApplyProposal();
   const [showCfg, setShowCfg] = useState(false);
   const [consentFor, setConsentFor] = useState<AssistantConnection | null>(null);
   const [text, setText] = useState('');
@@ -115,8 +119,29 @@ export function ChatPanel({ viewId }: { viewId: string }) {
           setConsentFor(conn);
         },
         onChanged: () => void qc.invalidateQueries({ queryKey: keys.chats }),
+        onDone: (t, chatId) => {
+          void autoApply(t, chatId);
+        },
       },
     );
+  };
+
+  // the proposals of the kinds the user lets the panel apply by itself (ADR 0030): never one
+  // touching more than AUTO_APPLY_MAX_ROWS transactions, never one applied already
+  const autoApply = async (t: AiTurn, chatId: string) => {
+    const kinds = settings.data?.autoApply ?? [];
+    for (const s of t.steps) {
+      const p = s.proposal;
+      if (!p || !kinds.includes(p.action) || p.matched > AUTO_APPLY_MAX_ROWS) continue;
+      if (useChat.getState().applied.includes(p.key)) continue;
+      try {
+        await apply.mutateAsync({ proposal: p, chatId, auto: true });
+        markApplied(p.key);
+        toast(`Applied automatically: ${proposalTitle(p)}`);
+      } catch (e) {
+        toast(`Not applied automatically: ${errorMessage(e)}`, { kind: 'error' });
+      }
+    }
   };
 
   // legacy showAiSelection: the lookup's filter in the table, as a removable "✦" chip

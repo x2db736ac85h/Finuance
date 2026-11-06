@@ -3130,6 +3130,22 @@ body.has-qbar .toast {
 .conn label.chk {
   flex-direction: row;
 }
+/* "Apply by itself" (ADR 0030): one checkbox per kind of proposal */
+.conn .auto-apply {
+  margin: 0.75rem 0;
+  padding: 0;
+  border: 0;
+}
+.conn .auto-apply legend {
+  padding: 0;
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+.conn .auto-apply label.chk {
+  align-items: center;
+  margin: 0.25rem 0;
+  color: var(--text);
+}
 .conn .hint {
   line-height: 1.5;
 }

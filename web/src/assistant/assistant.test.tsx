@@ -514,6 +514,113 @@ describe('ChatPanel', () => {
     });
   });
 
+  it('applies the kinds of proposals the user opted into by itself, up to 50 transactions (ADR 0030)', async () => {
+    st.settings = { retentionDays: 2, cloudConsent: [], autoApply: ['set_category'] };
+    const proposal = (key: string, matched: number): Schemas['ActionProposal'] => ({
+      key,
+      action: 'set_category',
+      matched,
+      ids: Array.from({ length: matched }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`),
+      categoryName: 'Rachunki',
+      categoryId: '00000000-0000-4000-8000-0000000000c2',
+      sample: [],
+    });
+    st.answer = streamed([
+      [
+        'step',
+        {
+          index: 0,
+          tool: 'propose_action',
+          args: {},
+          summary: 's',
+          result: '{}',
+          proposal: proposal('00000000000000d1', 14),
+        },
+      ],
+      [
+        'step',
+        {
+          index: 1,
+          tool: 'propose_action',
+          args: {},
+          summary: 's',
+          result: '{}',
+          proposal: proposal('00000000000000d2', 120),
+        },
+      ],
+      ['content', { delta: 'Two proposals.' }],
+      ['done', { messageSeq: 4, meta }],
+    ]);
+    const bulk: { key: string | null; auto: string | null }[] = [];
+    server.use(
+      http.post(`${API}/transactions/bulk`, ({ request }) => {
+        const key = request.headers.get('X-Assistant-Proposal');
+        bulk.push({ key, auto: request.headers.get('X-Assistant-Auto') });
+        db.aiChanges = [
+          {
+            id: '00000000-0000-4000-8000-0000000000e3',
+            chatId: CHAT,
+            proposalKey: key ?? '',
+            action: 'set_category',
+            auto: true,
+            appliedAt: '2026-11-06T11:00:00Z',
+            items: 14,
+          },
+        ];
+        return HttpResponse.json({ updated: 14 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    const p = await panel();
+    await user.type(await within(p).findByRole('textbox', { name: 'Question' }), 'Categorise my bills{Enter}');
+    const cards = await within(p).findAllByRole('group', { name: 'Proposed change' });
+    expect(await within(cards[0] as HTMLElement).findByText('✓ Applied automatically')).toBeTruthy();
+    // the one above the limit waits for Apply
+    expect(within(cards[1] as HTMLElement).getByRole('button', { name: 'Apply' })).toBeTruthy();
+    expect(bulk).toEqual([{ key: '00000000000000d1', auto: 'true' }]);
+    expect(within(cards[0] as HTMLElement).getByRole('button', { name: 'Undo' })).toBeTruthy();
+  });
+
+  it('applies nothing by itself without the setting', async () => {
+    st.answer = streamed([
+      [
+        'step',
+        {
+          index: 0,
+          tool: 'propose_action',
+          args: {},
+          summary: 's',
+          result: '{}',
+          proposal: {
+            key: '00000000000000d3',
+            action: 'set_category',
+            matched: 1,
+            ids: ['x'],
+            categoryName: 'X',
+            categoryId: 'c',
+            sample: [],
+          },
+        },
+      ],
+      ['done', { messageSeq: 4, meta }],
+    ]);
+    let applied = 0;
+    server.use(
+      http.post(`${API}/transactions/bulk`, () => {
+        applied++;
+        return HttpResponse.json({ updated: 1 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    const p = await panel();
+    await user.type(await within(p).findByRole('textbox', { name: 'Question' }), 'Categorise{Enter}');
+    const card = await within(p).findByRole('group', { name: 'Proposed change' });
+    expect(within(card).getByRole('button', { name: 'Apply' })).toBeTruthy();
+    expect(applied).toBe(0);
+  });
+
   it('says when the assistant is not set up', async () => {
     st.status = status([]);
     renderApp('/t/all');
@@ -538,6 +645,11 @@ describe('ChatSettings', () => {
       expect(st.settingsPuts).toEqual([{ retentionDays: null, cloudConsent: [] }]);
     });
     expect(await within(p).findByText(/Chats are kept until you delete them/)).toBeTruthy();
+    // the kinds of proposals applied by themselves (ADR 0030)
+    fireEvent.click(within(p).getByRole('checkbox', { name: 'Set or remove a budget' }));
+    await waitFor(() => {
+      expect(st.settingsPuts.at(-1)?.autoApply).toEqual(['set_budget']);
+    });
   });
 
   it('asks for consent before a cloud connection gets data', async () => {

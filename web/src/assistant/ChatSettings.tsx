@@ -9,12 +9,14 @@ import {
   type AssistantConnection,
   type AssistantStatus,
 } from '../api/hooks/assistant';
+import type { Schemas } from '../api/client';
 import { THINKING, type AiPrefs, type Thinking } from '../stores/prefs';
 import { useUi } from '../stores/uiStore';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { Select, type Option } from '../ui/inputs';
 import { fixFor } from './errors';
+import { AUTO_APPLY_MAX_ROWS } from './Proposal';
 
 /** The connection and model the panel uses: the saved choice when offered, else the defaults. */
 export function pick(status: AssistantStatus | undefined, ai: Pick<AiPrefs, 'connection' | 'model'>) {
@@ -54,6 +56,17 @@ type Props = {
   onCloud: (c: AssistantConnection) => void;
   onDone: () => void;
 };
+
+/** The kinds of proposals a user can let the panel apply by itself (ADR 0030). */
+const AUTO_KINDS: [NonNullable<Schemas['AssistantSettings']['autoApply']>[number], string][] = [
+  ['set_category', 'Set a category'],
+  ['set_group', 'Put transactions in a group'],
+  ['create_rule', 'Create a rule'],
+  ['set_budget', 'Set or remove a budget'],
+  ['add_expense', 'Add a cash expense'],
+  ['add_to_shared_group', 'Share with a shared group'],
+  ['split_expense', 'Change how a shared expense is split'],
+];
 
 export function ChatSettings({ status, onCloud, onDone }: Props) {
   const ai = useUi((s) => s.ai);
@@ -180,6 +193,30 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
           }}
         />
       </label>
+      <fieldset className="auto-apply" disabled={!settings.data || save.isPending}>
+        <legend>Apply by itself</legend>
+        <p className="hint">
+          Proposals of these kinds are applied as soon as the answer is complete, at most {AUTO_APPLY_MAX_ROWS}{' '}
+          transactions at a time. Each can be undone on its card or in Settings → Activity.
+        </p>
+        {AUTO_KINDS.map(([kind, label]) => (
+          <label key={kind} className="chk">
+            <input
+              type="checkbox"
+              checked={settings.data?.autoApply?.includes(kind) ?? false}
+              onChange={(e) => {
+                if (!settings.data) return;
+                const cur = settings.data.autoApply ?? [];
+                save.mutate({
+                  ...settings.data,
+                  autoApply: e.target.checked ? [...cur, kind] : cur.filter((k) => k !== kind),
+                });
+              }}
+            />
+            {label}
+          </label>
+        ))}
+      </fieldset>
       {retention === 'forever' ? (
         <div className="conn-err" role="note">
           Chats are kept until you delete them. They hold your questions and the transactions the assistant looked up.

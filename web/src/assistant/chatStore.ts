@@ -58,6 +58,8 @@ export type SendHooks = {
   onConsent?: () => void;
   /** The chat list changed (a new chat, a new title or order). */
   onChanged?: () => void;
+  /** The answer is complete (not stopped, not failed): the panel applies opted-in proposals. */
+  onDone?: (turn: AiTurn, chatId: string) => void;
 };
 
 /** How long a stop request may take before the connection is simply closed. */
@@ -168,6 +170,8 @@ export const useChat = create<ChatStore>()((set, get) => ({
           t.pending ? { ...t, pending: false, error: { code: 'interrupted', message: 'The answer was cut off.' } } : t,
         ),
       }));
+      const last = get().turns.at(-1);
+      if (last?.role === 'assistant' && !last.error && !ctrl.signal.aborted) hooks.onDone?.(last, id);
     } catch (err) {
       const aborted = ctrl.signal.aborted;
       let error: TurnError | undefined;

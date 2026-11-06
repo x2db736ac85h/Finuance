@@ -29,6 +29,8 @@ const (
 	ActionAddExpense       = "add_expense"
 	ActionAddToSharedGroup = "add_to_shared_group"
 	ActionSplitExpense     = "split_expense"
+	ActionCreateGoal       = "create_goal" // 20.4
+	ActionUpdateGoal       = "update_goal"
 )
 
 // Limits of a proposal: the rows a set_* proposal may touch (the bulk endpoint takes 5,000; a

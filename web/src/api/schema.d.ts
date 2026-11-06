@@ -3632,6 +3632,8 @@ export interface components {
             retentionDays: number | null;
             /** @description Names of the cloud connections the user agreed to send their data to. */
             cloudConsent: string[];
+            /** @description Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Left out of a PUT, the stored list stays. */
+            autoApply?: ("set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal")[];
         };
         AssistantChat: {
             /** Format: uuid */

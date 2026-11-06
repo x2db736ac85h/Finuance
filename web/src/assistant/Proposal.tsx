@@ -12,6 +12,9 @@ import { Icon } from '../ui/Icon';
 import { toast } from '../ui/toastStore';
 import { useChat } from './chatStore';
 
+/** The panel applies an opted-in proposal by itself only up to this many transactions (ADR 0030). */
+export const AUTO_APPLY_MAX_ROWS = 50;
+
 /** The card's headline, e.g. "Set the category Internet for 14 transactions". */
 export function proposalTitle(p: Proposal): string {
   switch (p.action) {
@@ -150,7 +153,7 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
       <div className="pr-a">
         {done && !undone ? (
           <>
-            <span className="pr-done">✓ Applied</span>
+            <span className="pr-done">{mine?.auto ? '✓ Applied automatically' : '✓ Applied'}</span>
             {mine && !mine.revertedAt && (
               <Button size="sm" disabled={revert.isPending} onClick={undo}>
                 Undo

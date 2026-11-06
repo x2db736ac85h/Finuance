@@ -5795,6 +5795,15 @@ components:
             type: string
             maxLength: 40
           description: Names of the cloud connections the user agreed to send their data to.
+        autoApply:
+          type: array
+          maxItems: 16
+          description: >-
+            Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one
+            touching more than 50 transactions. Left out of a PUT, the stored list stays.
+          items:
+            type: string
+            enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
     AssistantChat:
       type: object
       additionalProperties: false

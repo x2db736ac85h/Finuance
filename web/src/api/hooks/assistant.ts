@@ -295,7 +295,8 @@ export async function applyProposal(p: Proposal, chatId: string, auto = false): 
 export function useApplyProposal() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ proposal, chatId }: { proposal: Proposal; chatId: string }) => applyProposal(proposal, chatId),
+    mutationFn: async ({ proposal, chatId, auto }: { proposal: Proposal; chatId: string; auto?: boolean }) =>
+      applyProposal(proposal, chatId, auto ?? false),
     onSuccess: () => {
       invalidateClassified(qc);
       invalidateGroups(qc);

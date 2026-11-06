@@ -228,3 +228,39 @@ func TestProposalsV2HTTP(t *testing.T) {
 		t.Errorf("shared expenses after undo = %d", n)
 	}
 }
+
+// TestAutoApplyHTTP: the kinds of proposals the panel may apply by itself are a setting (kept when
+// a client leaves it out), and an Apply marked X-Assistant-Auto is recorded as automatic.
+func TestAutoApplyHTTP(t *testing.T) {
+	e, _ := mockEnv(t, nil)
+	b, _ := demoBrowser(t, e)
+	s := b.do("GET", "/assistant/settings", nil)
+	if auto := s.body["autoApply"].([]any); len(auto) != 0 {
+		t.Fatalf("default autoApply = %v", auto)
+	}
+	put := b.do("PUT", "/assistant/settings", map[string]any{"retentionDays": 2, "cloudConsent": []any{}, "autoApply": []any{"set_group", "set_category", "set_group"}})
+	expect(t, put, 200, "")
+	if auto := put.body["autoApply"].([]any); len(auto) != 2 || auto[0] != "set_category" || auto[1] != "set_group" {
+		t.Errorf("autoApply = %v", auto)
+	}
+	// an older client's save leaves the list alone
+	again := b.do("PUT", "/assistant/settings", map[string]any{"retentionDays": 3, "cloudConsent": []any{}})
+	expect(t, again, 200, "")
+	if auto := again.body["autoApply"].([]any); len(auto) != 2 || num(again.body["retentionDays"]) != 3 {
+		t.Errorf("after a save without autoApply: %v", again.body)
+	}
+	expect(t, b.do("PUT", "/assistant/settings", map[string]any{"retentionDays": 2, "cloudConsent": []any{}, "autoApply": []any{"delete_everything"}}), 422, "validation_failed")
+
+	chat := b.do("POST", "/assistant/chats", nil).body["id"].(string)
+	ask := b.do("POST", "/assistant/chats/"+chat+"/messages", map[string]any{"text": `put "OPERATOR INTERNETU" in Rachunki`, "settings": map[string]any{"mode": "auto", "think": "auto"}})
+	evs := parseSSE(t, ask.raw)
+	p := obj(t, evs[slicesIndexEv(evs, "step")].data, "proposal")
+	b.header["X-Assistant-Chat"], b.header["X-Assistant-Proposal"], b.header["X-Assistant-Auto"] = chat, p["key"].(string), "true"
+	expect(t, b.do("POST", "/transactions/bulk", map[string]any{"ids": p["ids"], "category": map[string]any{"id": p["categoryId"]}}), 200, "")
+	delete(b.header, "X-Assistant-Chat")
+	delete(b.header, "X-Assistant-Proposal")
+	delete(b.header, "X-Assistant-Auto")
+	if c := b.do("GET", "/ai-changes", nil).body["changes"].([]any)[0].(map[string]any); c["auto"] != true {
+		t.Errorf("change = %v (applied automatically)", c)
+	}
+}

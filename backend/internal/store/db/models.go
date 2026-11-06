@@ -80,6 +80,7 @@ type AssistantSetting struct {
 	RetentionDays *int16
 	CloudConsent  []string
 	UpdatedAt     time.Time
+	AutoApply     []string
 }
 
 type AuditLog struct {

@@ -92,7 +92,14 @@ func (a *api) PutAssistantSettings(ctx context.Context, req gen.PutAssistantSett
 	if err != nil {
 		return nil, err
 	}
-	s, err := c.SaveSettings(ctx, identity(ctx).User.ID, assistant.Settings{RetentionDays: req.Body.RetentionDays, CloudConsent: req.Body.CloudConsent})
+	in := assistant.Settings{RetentionDays: req.Body.RetentionDays, CloudConsent: req.Body.CloudConsent}
+	if req.Body.AutoApply != nil {
+		in.AutoApply = make([]string, len(*req.Body.AutoApply))
+		for i, x := range *req.Body.AutoApply {
+			in.AutoApply[i] = string(x)
+		}
+	}
+	s, err := c.SaveSettings(ctx, identity(ctx).User.ID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +107,11 @@ func (a *api) PutAssistantSettings(ctx context.Context, req gen.PutAssistantSett
 }
 
 func settingsDTO(s assistant.Settings) gen.AssistantSettings {
-	return gen.AssistantSettings{RetentionDays: s.RetentionDays, CloudConsent: s.CloudConsent}
+	auto := make([]gen.AssistantSettingsAutoApply, len(s.AutoApply))
+	for i, x := range s.AutoApply {
+		auto[i] = gen.AssistantSettingsAutoApply(x)
+	}
+	return gen.AssistantSettings{RetentionDays: s.RetentionDays, CloudConsent: s.CloudConsent, AutoApply: &auto}
 }
 
 func chatDTO(c assistant.Chat) gen.AssistantChat {
