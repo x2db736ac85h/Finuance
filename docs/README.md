@@ -9,6 +9,7 @@
 | [RUNBOOK.md](RUNBOOK.md) | Running it on Kubernetes: bootstrap (also on single-node k3s, step by step: TLS, GitOps, monitoring, scans, image admission), deploy, rollback, failed migrations, secrets, scaling, backups and restores, drills, playbooks |
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Assets, attackers, threats and the controls (with the tests that prove them), and the security scans |
 | [security-scan.md](security-scan.md) | The latest results of every security scan (Trivy, npm audit, ZAP, OpenVAS, …) and the decision on each finding |
+| [security-review.md](security-review.md) | The 2026-11-06 code-level security review: 54 findings with severity per deployment context, the requirements for the planned features (receipts, digests, advice, Admin → Assistant, tokens and the CLI, the public demo) and the roadmap for Phases 20–21 |
 | [SLO.md](SLO.md) | The service level objectives, how they are measured and alerted on, and the error budget policy |
 | [adr/](adr/) | Architecture decision records: why Go + PostgreSQL, money in minor units, row-level security, sessions and CSRF, the CSV export format, … |
 | [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3) |

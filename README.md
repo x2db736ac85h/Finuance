@@ -232,7 +232,7 @@ The instructions the agent works from are part of the repository: [`CLAUDE.md`](
 Start with [docs/README.md](docs/README.md), which lists every document and who it is for. The most useful ones:
 
 - [Architecture](docs/ARCHITECTURE.md): components, data model, row-level security, request flow
-- [Threat model](docs/THREAT-MODEL.md): what is protected, against whom, and how; [security scan results](docs/security-scan.md)
+- [Threat model](docs/THREAT-MODEL.md): what is protected, against whom, and how; [security scan results](docs/security-scan.md); [security review](docs/security-review.md): the open findings, weighted per deployment, and the plan to close them
 - [Runbook](docs/RUNBOOK.md): running it on Kubernetes, backups and restores; [SLOs](docs/SLO.md)
 - [Architecture decisions](docs/adr/): why the main choices were made
 - [API specification](api/openapi.yaml): OpenAPI 3
