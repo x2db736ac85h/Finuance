@@ -95,6 +95,20 @@ variant, plus any theme an administrator approved. To make one:
 Themes are colours only (`#rrggbb` or `#rrggbbaa`), never CSS (ADR 0026). The chart colours stay
 the same in every theme.
 
+### Assistant
+
+- **Instructions for the assistant**: up to 2,000 characters added to the instructions of every
+  question and digest on the instance, after the app's own rules (which they can't change). Every
+  user's model reads them, so keep them to tone, language and pointers to articles.
+- **Advice library**: short markdown articles the assistant searches for general money questions
+  (ADR 0034). Each has a title, an address (slug, unique per language), a two-letter language,
+  tags (searched like the title) and a status: only **published** articles are found and readable.
+  *Add the starter articles* adds eight original English articles (emergency fund, splitting income,
+  subscriptions, debt, saving for a goal, irregular expenses, spending by category, sharing costs)
+  as drafts: read them, adjust them to your instance and publish the ones you want. Each ends with a
+  "general information, not financial advice" note. Saving, publishing and deleting are in your
+  Activity.
+
 ### Usage
 
 Instance totals (accounts, active people, transactions, imports, stored files) and the last 30

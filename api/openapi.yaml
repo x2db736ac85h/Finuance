@@ -2810,6 +2810,136 @@ paths:
                 $ref: "#/components/schemas/InstanceUsage"
         default:
           $ref: "#/components/responses/Problem"
+  /admin/advice:
+    get:
+      operationId: adminListAdvice
+      summary: Every article of the advice library (ADR 0034), without bodies
+      tags: [admin]
+      responses:
+        "200":
+          description: Articles by language and title.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: adminCreateAdvice
+      summary: Write an article
+      description: The slug is unique per language (`422` on `slug` otherwise).
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdviceInput"
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/advice/starter:
+    post:
+      operationId: adminAddStarterAdvice
+      summary: Add the starter articles
+      description: Adds the eight English starter articles whose slug isn't taken in English, as drafts to read and publish.
+      tags: [admin]
+      responses:
+        "200":
+          description: How many were added.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [added]
+                properties:
+                  added:
+                    type: integer
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/advice/{id}:
+    parameters:
+      - $ref: "#/components/parameters/AdviceId"
+    get:
+      operationId: adminGetAdvice
+      summary: One article with its body
+      tags: [admin]
+      responses:
+        "200":
+          description: The article.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: adminUpdateAdvice
+      summary: Change an article
+      description: Versioned (`409 stale_version` when it changed since it was read).
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdviceUpdate"
+      responses:
+        "200":
+          description: The article as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: adminDeleteAdvice
+      summary: Delete an article
+      tags: [admin]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /advice/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+      - name: language
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "^[a-z]{2}$"
+        description: The reader's language first, then English, then any.
+    get:
+      operationId: getAdvice
+      summary: A published article of the advice library
+      description: What the assistant's search_advice found, for reading in full (ADR 0034).
+      tags: [assistant]
+      responses:
+        "200":
+          description: The article.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/developer:
     get:
       operationId: adminDeveloperInfo
@@ -2927,6 +3057,13 @@ components:
         type: string
         format: uuid
     ThemeId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AdviceId:
       name: id
       in: path
       required: true
@@ -3157,6 +3294,8 @@ components:
             - admin.settings_changed
             - admin.theme_approved
             - admin.theme_retired
+            - admin.advice_changed
+            - admin.advice_deleted
             - transaction.added
             - transaction.edited
             - transaction.deleted
@@ -7026,6 +7165,111 @@ components:
               type: boolean
         limits:
           $ref: "#/components/schemas/LimitOverrides"
+        assistant:
+          $ref: "#/components/schemas/InstanceAssistant"
+        updatedAt:
+          type: string
+          format: date-time
+    InstanceAssistant:
+      type: object
+      additionalProperties: false
+      description: The instance's settings for the assistant; left out of a PUT, the stored ones stay.
+      properties:
+        instructions:
+          type: string
+          maxLength: 2000
+          description: Added to every system prompt after the app's rules (ADR 0034).
+    AdviceInput:
+      type: object
+      additionalProperties: false
+      required: [slug, language, title, body, tags, status]
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+        language:
+          type: string
+          pattern: "^[a-z]{2}$"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+          maxLength: 20000
+          description: Markdown.
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 40
+        status:
+          type: string
+          enum: [draft, published]
+    AdviceUpdate:
+      type: object
+      additionalProperties: false
+      required: [version, slug, language, title, body, tags, status]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+        language:
+          type: string
+          pattern: "^[a-z]{2}$"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+          maxLength: 20000
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 40
+        status:
+          type: string
+          enum: [draft, published]
+    AdviceArticle:
+      type: object
+      additionalProperties: false
+      required: [id, slug, language, title, body, bodyLength, tags, status, version, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        language:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+          description: Markdown ("" in a listing).
+        bodyLength:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, published]
+        version:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
         updatedAt:
           type: string
           format: date-time

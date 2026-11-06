@@ -27,6 +27,22 @@ type Account struct {
 	Kind                string
 }
 
+type AdviceArticle struct {
+	ID        uuid.UUID
+	Slug      string
+	Language  string
+	Title     string
+	Body      string
+	Tags      []string
+	Status    string
+	TitleN    string
+	BodyN     string
+	Search    interface{}
+	Version   int32
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type AiChange struct {
 	ID          uuid.UUID
 	UserID      uuid.UUID

@@ -27,6 +27,7 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/advice"
 	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
@@ -135,7 +136,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Commit: "0123abcd", BuildDate: "2026-11-05T10:00:00Z", SchemaVersion: st.SchemaVersion, Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), AIChanges: aichanges.New(st, led, clk), Goals: goals.New(st, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), AIChanges: aichanges.New(st, led, clk), Goals: goals.New(st, clk), Advice: advice.New(st, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
 		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
 			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})})
 	if err != nil {

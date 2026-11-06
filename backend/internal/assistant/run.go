@@ -124,6 +124,8 @@ type RunnerConfig struct {
 	Metrics       *Metrics
 	Tracer        trace.TracerProvider
 	Logger        *slog.Logger
+	// Instructions returns the administrator's addition to the system prompt (ADR 0034); nil: none.
+	Instructions func(ctx context.Context) string
 }
 
 // Runner runs questions: one at a time per user, at most MaxConcurrent per process.
@@ -164,6 +166,7 @@ type Run struct {
 	conn     *Connection
 	model    ModelInfo
 	images   []llm.Image // the question's photos
+	extra    string      // the administrator's instructions, read when the run starts
 	released sync.Once
 }
 
@@ -360,6 +363,9 @@ func (run *Run) Execute(ctx context.Context, emit func(Event)) {
 		return
 	}
 	sc.MultiAccount = facts != nil && facts.Accounts > 1
+	if r.cfg.Instructions != nil {
+		run.extra = r.cfg.Instructions(ctx)
+	}
 
 	mode := req.Mode
 	if mode == ModeAuto {
@@ -615,7 +621,7 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 	if toolset == "" {
 		toolset = ToolsetFull
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset) + instructionsBlock(run.extra)
 	defs := ToolDefs(toolset)
 	var conv []llm.Message // this turn's assistant and tool messages
 	for range maxRounds {
@@ -729,7 +735,7 @@ func (run *Run) runPlan(ctx context.Context, emit func(Event), sc Scope, facts *
 	if toolset == "" {
 		toolset = ToolsetCompact
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset) + instructionsBlock(run.extra)
 	hist := trimHistory(history, true, run.noThink(), system, run.budget())
 	zero := 0.0
 	plan, err := run.complete(ctx, emit, t, llm.Request{System: system + planInstructions(ToolDefs(toolset)), Messages: hist, Temperature: &zero}, false)

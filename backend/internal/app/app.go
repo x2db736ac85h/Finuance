@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/advice"
 	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
@@ -103,14 +104,15 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 		log.Warn(w)
 	}
 	notes := notify.New(c.store, platform.SystemClock{})
+	adm := NewAdmin(c.store, authSvc, cfg)
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Commit: b.Commit, BuildDate: b.Date, SchemaVersion: c.store.SchemaVersion, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: authSvc, Admin: NewAdmin(c.store, authSvc, cfg), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), AIChanges: aichanges.New(c.store, led, platform.SystemClock{}), Goals: goals.New(c.store, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
+		Auth: authSvc, Admin: adm, Advice: advice.New(c.store, platform.SystemClock{}), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), AIChanges: aichanges.New(c.store, led, platform.SystemClock{}), Goals: goals.New(c.store, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
 		Legacy: legacyimport.New(c.store, led, nil, platform.SystemClock{}),
 		Rules:  rules.New(c.store, platform.SystemClock{}),
 		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
 			MaxChats: cfg.AIMaxChats, MaxConcurrent: cfg.AIMaxConcurrent, Metrics: assistant.NewMetrics(c.metrics.Registry),
-			Tracer: c.tracing.Provider, Logger: log}),
+			Tracer: c.tracing.Provider, Logger: log, Instructions: instructions(adm)}),
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
@@ -198,9 +200,10 @@ func newDigests(ctx context.Context, c *common, cfg config.Config, authSvc *auth
 	for _, w := range warnings {
 		log.Warn(w)
 	}
-	ai := assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
-		MaxChats: cfg.AIMaxChats, MaxConcurrent: 1, Metrics: assistant.NewMetrics(c.metrics.Registry), Tracer: c.tracing.Provider, Logger: log})
 	adm := NewAdmin(c.store, authSvc, cfg)
+	ai := assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
+		MaxChats: cfg.AIMaxChats, MaxConcurrent: 1, Metrics: assistant.NewMetrics(c.metrics.Registry), Tracer: c.tracing.Provider, Logger: log,
+		Instructions: instructions(adm)})
 	policy := func(ctx context.Context, id uuid.UUID) (assistant.DigestPolicy, error) {
 		if cfg.DemoMode {
 			return assistant.DigestPolicy{}, nil
@@ -221,6 +224,18 @@ func newDigests(ctx context.Context, c *common, cfg config.Config, authSvc *auth
 	}
 	return assistant.NewDigests(assistant.DigestsConfig{Assistant: ai, Policy: policy, Notify: notes, Clock: platform.SystemClock{},
 		Logger: log}), nil
+}
+
+// instructions reads the administrator's addition to the assistant's system prompt (ADR 0034);
+// unreadable settings mean none.
+func instructions(adm *admin.Service) func(context.Context) string {
+	return func(ctx context.Context) string {
+		s, _, err := adm.Settings(ctx)
+		if err != nil || s.Assistant == nil {
+			return ""
+		}
+		return s.Assistant.Instructions
+	}
 }
 
 // serveAll runs every server until ctx ends, then shuts them all down within the grace period.

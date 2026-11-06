@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -17,6 +19,17 @@ type Settings struct {
 	Defaults Defaults `json:"defaults"`
 	Features Features `json:"features"`
 	Limits   Limits   `json:"limits"`
+	// Assistant is nil in a document saved without it (the stored one stays).
+	Assistant *Assistant `json:"assistant,omitempty"`
+}
+
+// MaxInstructions is the longest addition to the assistant's system prompt (ADR 0034).
+const MaxInstructions = 2000
+
+// Assistant holds the instance's settings for the assistant.
+type Assistant struct {
+	// Instructions are the administrator's addition to every system prompt, after the app's rules.
+	Instructions string `json:"instructions,omitempty"`
 }
 
 // Defaults are the preferences a user's view starts from. The browser merges them under the
@@ -107,6 +120,9 @@ func (s Settings) Validate() error {
 		}
 	}
 	s.Limits.validate("limits", ve)
+	if a := s.Assistant; a != nil && (utf8.RuneCountInString(a.Instructions) > MaxInstructions || strings.ContainsRune(a.Instructions, 0)) {
+		ve.Add("assistant.instructions", fmt.Sprintf("must be at most %d characters", MaxInstructions))
+	}
 	return ve.Err()
 }
 

@@ -49,6 +49,8 @@ const (
 	AuditAdminSettingsChanged = "admin.settings_changed"
 	AuditAdminThemeApproved   = "admin.theme_approved"
 	AuditAdminThemeRetired    = "admin.theme_retired"
+	AuditAdminAdviceChanged   = "admin.advice_changed" // an article written, changed, published or the starter ones added
+	AuditAdminAdviceDeleted   = "admin.advice_deleted"
 	// Transactions added by hand to a cash account (ADR 0029): the entity is the transaction, the
 	// meta names the account; never amounts or payees.
 	AuditTransactionAdded   = "transaction.added"
@@ -78,7 +80,7 @@ var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPass
 	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied, AuditAssistantReverted,
 	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,
 	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
-	AuditAdminThemeApproved, AuditAdminThemeRetired,
+	AuditAdminThemeApproved, AuditAdminThemeRetired, AuditAdminAdviceChanged, AuditAdminAdviceDeleted,
 	AuditTransactionAdded, AuditTransactionEdited, AuditTransactionDeleted, AuditTransactionMerged,
 	AuditFriendAdded, AuditFriendRemoved, AuditFriendCodeFailed,
 	AuditSharedCreated, AuditSharedDeleted, AuditSharedArchived, AuditSharedInvited, AuditSharedJoined, AuditSharedDeclined, AuditSharedLeft, AuditSharedMemberRemoved, AuditSharedSettled}

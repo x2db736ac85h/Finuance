@@ -8,6 +8,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/advice"
 	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
@@ -36,6 +37,7 @@ type api struct {
 	prod              bool
 	auth              *auth.Service
 	admin             *admin.Service
+	advice            *advice.Service
 	aiChanges         *aichanges.Service // lists and undoes the assistant's changes (ADR 0030)
 	goals             *goals.Service     // savings and reduction goals (ADR 0031)
 	friends           *friends.Service

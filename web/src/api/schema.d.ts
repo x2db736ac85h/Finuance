@@ -2053,6 +2053,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/advice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every article of the advice library (ADR 0034), without bodies */
+        get: operations["adminListAdvice"];
+        put?: never;
+        /**
+         * Write an article
+         * @description The slug is unique per language (`422` on `slug` otherwise).
+         */
+        post: operations["adminCreateAdvice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/advice/starter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add the starter articles
+         * @description Adds the eight English starter articles whose slug isn't taken in English, as drafts to read and publish.
+         */
+        post: operations["adminAddStarterAdvice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/advice/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        /** One article with its body */
+        get: operations["adminGetAdvice"];
+        /**
+         * Change an article
+         * @description Versioned (`409 stale_version` when it changed since it was read).
+         */
+        put: operations["adminUpdateAdvice"];
+        post?: never;
+        /** Delete an article */
+        delete: operations["adminDeleteAdvice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/advice/{slug}": {
+        parameters: {
+            query?: {
+                /** @description The reader's language first, then English, then any. */
+                language?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A published article of the advice library
+         * @description What the assistant's search_advice found, for reading in full (ADR 0034).
+         */
+        get: operations["getAdvice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/developer": {
         parameters: {
             query?: never;
@@ -2205,7 +2295,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -4361,8 +4451,54 @@ export interface components {
                 sharedGroups?: boolean;
             };
             limits: components["schemas"]["LimitOverrides"];
+            assistant?: components["schemas"]["InstanceAssistant"];
             /** Format: date-time */
             updatedAt?: string;
+        };
+        /** @description The instance's settings for the assistant; left out of a PUT, the stored ones stay. */
+        InstanceAssistant: {
+            /** @description Added to every system prompt after the app's rules (ADR 0034). */
+            instructions?: string;
+        };
+        AdviceInput: {
+            slug: string;
+            language: string;
+            title: string;
+            /** @description Markdown. */
+            body: string;
+            tags: string[];
+            /** @enum {string} */
+            status: "draft" | "published";
+        };
+        AdviceUpdate: {
+            /** Format: int32 */
+            version: number;
+            slug: string;
+            language: string;
+            title: string;
+            body: string;
+            tags: string[];
+            /** @enum {string} */
+            status: "draft" | "published";
+        };
+        AdviceArticle: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            language: string;
+            title: string;
+            /** @description Markdown ("" in a listing). */
+            body: string;
+            bodyLength: number;
+            tags: string[];
+            /** @enum {string} */
+            status: "draft" | "published";
+            /** Format: int32 */
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         /** @description Counts of an account's data (never the data). */
         UserUsage: {
@@ -4688,6 +4824,7 @@ export interface components {
     parameters: {
         AdminUserId: string;
         ThemeId: string;
+        AdviceId: string;
         /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
         AssistantChatHeader: string;
         /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
@@ -7893,6 +8030,172 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InstanceUsage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Articles by language and title. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminCreateAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdviceInput"];
+            };
+        };
+        responses: {
+            /** @description Created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminAddStarterAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many were added. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        added: number;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminGetAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The article. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdviceUpdate"];
+            };
+        };
+        responses: {
+            /** @description The article as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminDeleteAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAdvice: {
+        parameters: {
+            query?: {
+                /** @description The reader's language first, then English, then any. */
+                language?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The article. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
                 };
             };
             default: components["responses"]["Problem"];

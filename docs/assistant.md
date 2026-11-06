@@ -2,7 +2,7 @@
 
 The assistant answers questions about your transactions with a language model that looks the data up through read-only tools (PLAN §4.8, ADR 0015). It works with any server that speaks the OpenAI Chat Completions or Anthropic Messages API: LM Studio, Ollama, vLLM, llama.cpp, OpenAI, Anthropic, OpenRouter and others, local or in the cloud.
 
-The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and ten tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
+The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and eleven tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
 
 | Tool | What it does |
 |---|---|
@@ -15,6 +15,7 @@ The model never gets a dump of your data. It gets a short description (date rang
 | `group_summary` | One transaction group (e.g. a trip): totals, days, spending per day, the group budget, categories and top payees |
 | `goal_status` | The user's goals: saved so far against a steady pace, or this month's spending against a reduction goal's limit (ADR 0031) |
 | `find_receipt_match` | The payments a receipt may belong to: the exact amount, within 3 days, ranked by the day and the shop's name (ADR 0032) |
+| `search_advice` | Finds published articles of the instance's advice library for a general money question (ADR 0034) |
 | `propose_action` | Proposes a change (a category or group, a rule, a budget, an expense, sharing or a split, a goal, a receipt in a note); it changes nothing by itself |
 
 Every lookup is shown under the answer, with exactly what went back to the model and a *Show in table* link.
@@ -30,6 +31,10 @@ Since Phase 20 the assistant can also propose a category's budget, a cash expens
 With a model that reads images (the model list in the panel's settings and `llm-probe` show `vision`), the panel has a camera button: pick or take a photo of a receipt, and ask (or just send it: "Here is a receipt."). The browser shrinks the photo to at most 1,600 px and saves it as a new JPEG, so the camera's EXIF data (location, device, time) never leaves the device; the server checks it and encodes it again. The photo goes to the model with that question only and is kept with the chat (its retention deletes it).
 
 The model reads the shop, the date, the amount paid and the currency, and looks for the payment with `find_receipt_match` (money out of exactly that amount, booked within 3 days of the receipt). If it finds it, the card proposes to add "Receipt: shop · what was bought" to that transaction's note (Undo puts the old note back); if not, it proposes the expense: in a cash account, or in the bank account of a card payment whose file isn't imported yet. When that file arrives, a card above the table offers to **Merge** the typed payment into the bank's row (the bank's row stays, with the category, note, group and shared-group copy of the typed one) or to **Keep both** (ADR 0032).
+
+### Advice library
+
+For general questions about managing money ("how big should an emergency fund be?", "which debt first?"), the assistant searches the instance's advice library with `search_advice`: short articles an administrator wrote and published in Administration → Assistant. It bases the answer on them and names the article; the lookup lists the articles found, and each opens in a window. Articles are general information, not financial advice. The search folds case and accents and matches word beginnings, so it works in any language; a question finds articles in its own language first, then in any. An administrator can also add a few lines of **instructions** to every question's instructions (a tone, a language), after the app's own rules (ADR 0034).
 
 ### Digests
 

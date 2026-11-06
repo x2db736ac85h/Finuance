@@ -28,6 +28,10 @@ notes of their version.
 - **Digests**: the assistant can write a short daily or weekly summary in the background (off by
   default; the hour and day in the panel's settings, or *Write one now*). The bell says when it is
   ready; its proposals wait for *Apply*. Administrators can switch digests off for everyone.
+- **Advice library**: administrators write short articles (and can start from eight English
+  starter articles) that the assistant searches for general money questions and names in its
+  answer; each opens in a window from the lookup. Administrators can also add a few lines of
+  instructions to every question.
 - **A daily token budget** for the assistant per user, questions and digests together
   (`FINUANCE_AI_TOKENS_PER_DAY`, 200,000 by default; a limit administrators can lower per account).
 

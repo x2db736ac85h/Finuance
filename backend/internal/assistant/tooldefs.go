@@ -50,6 +50,10 @@ var toolDefs = []llm.Tool{
 		Parameters: json.RawMessage(`{"type":"object","properties":{"amount":{"type":"number","description":"The total paid (positive)"},` +
 			`"date":{"type":"string","description":"The receipt's date, YYYY-MM-DD"},"shop":{"type":"string","description":"The shop's name as printed"},` +
 			`"currency":{"type":"string","description":"ISO 4217 code, e.g. EUR"}},"required":["amount","date"]}`)},
+	{Name: ToolAdvice, Description: "Search the advice library: short articles on managing money (budgeting, saving, debt, " +
+		"subscriptions, sharing costs) written for this app. Use it for general money questions, not for the user's own numbers.",
+		Parameters: json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"The topic, e.g. emergency fund"},` +
+			`"language":{"type":"string","description":"Two-letter code of the question's language, e.g. en"}},"required":["query"]}`)},
 	{Name: ToolPropose, Description: "Propose a change for the user to confirm: put transactions in a category (set_category) or a group (set_group), " +
 		"create a rule that categorises a payee from now on (create_rule), set or remove a category's monthly budget (set_budget), " +
 		"type a cash payment into a cash account (add_expense), share transactions with a shared group (add_to_shared_group), " +

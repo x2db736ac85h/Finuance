@@ -148,3 +148,39 @@ export function useDeleteTheme() {
     await api.DELETE('/admin/themes/{id}', { params: { path: { id } } });
   });
 }
+
+// The advice library (ADR 0034): articles the assistant searches.
+export type AdviceArticle = Schemas['AdviceArticle'];
+export type AdviceInput = Schemas['AdviceInput'];
+
+export function useAdviceList() {
+  return useQuery({ queryKey: [...keys.admin, 'advice'], queryFn: async () => data(await api.GET('/admin/advice')) });
+}
+
+export function useAdviceArticle(id: string | null) {
+  return useQuery({
+    queryKey: [...keys.admin, 'advice', id],
+    queryFn: async () => data(await api.GET('/admin/advice/{id}', { params: { path: { id: id ?? '' } } })),
+    enabled: !!id,
+  });
+}
+
+export function useCreateAdvice() {
+  return useAdminMutation(async (body: AdviceInput) => data(await api.POST('/admin/advice', { body })));
+}
+
+export function useUpdateAdvice() {
+  return useAdminMutation(async ({ id, ...body }: Schemas['AdviceUpdate'] & { id: string }) =>
+    data(await api.PUT('/admin/advice/{id}', { params: { path: { id } }, body })),
+  );
+}
+
+export function useDeleteAdvice() {
+  return useAdminMutation(async (id: string) => {
+    data(await api.DELETE('/admin/advice/{id}', { params: { path: { id } } }));
+  });
+}
+
+export function useAddStarterAdvice() {
+  return useAdminMutation(async () => data(await api.POST('/admin/advice/starter')));
+}

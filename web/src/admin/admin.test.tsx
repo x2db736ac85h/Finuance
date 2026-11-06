@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -322,6 +322,119 @@ describe('administration', () => {
     });
     // queued behind "Saved Sea" (one toast at a time)
     expect(await screen.findByText(/everyone can pick it now/, {}, { timeout: 4000 })).toBeTruthy();
+  });
+
+  it('saves the instructions and writes, publishes and deletes advice articles (ADR 0034)', async () => {
+    let stored: Schemas['InstanceSettingsDoc'] = {
+      version: 3,
+      defaults: {},
+      features: {},
+      limits: {},
+      assistant: { instructions: 'Be brief.' },
+    };
+    let articles: Schemas['AdviceArticle'][] = [];
+    const puts: Schemas['InstanceSettingsDoc'][] = [];
+    const sent: unknown[] = [];
+    let starter = 0;
+    const article = (over: Partial<Schemas['AdviceArticle']>): Schemas['AdviceArticle'] => ({
+      id: '0a000000-0000-4000-8000-000000000001',
+      slug: 'emergency-fund',
+      language: 'en',
+      title: 'Building an emergency fund',
+      body: 'Keep **three months** aside.',
+      bodyLength: 28,
+      tags: ['saving'],
+      status: 'draft',
+      version: 1,
+      createdAt: '2026-11-06T10:00:00Z',
+      updatedAt: '2026-11-06T10:00:00Z',
+      ...over,
+    });
+    server.use(
+      http.get(`${API}/admin/settings`, () => HttpResponse.json(stored)),
+      http.put(`${API}/admin/settings`, async ({ request }) => {
+        const put = (await request.json()) as Schemas['InstanceSettingsDoc'];
+        puts.push(put);
+        stored = { ...put, version: stored.version + 1 };
+        return HttpResponse.json(stored);
+      }),
+      http.get(`${API}/admin/advice`, () => HttpResponse.json(articles.map((a) => ({ ...a, body: '' })))),
+      http.get(`${API}/admin/advice/:id`, ({ params }) =>
+        HttpResponse.json(articles.find((a) => a.id === params['id'])),
+      ),
+      http.post(`${API}/admin/advice`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AdviceInput'];
+        sent.push(body);
+        articles = [article({ ...body })];
+        return HttpResponse.json(articles[0], { status: 201 });
+      }),
+      http.put(`${API}/admin/advice/:id`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AdviceUpdate'];
+        sent.push(body);
+        articles = [article({ ...body, version: body.version + 1 })];
+        return HttpResponse.json(articles[0]);
+      }),
+      http.delete(`${API}/admin/advice/:id`, () => {
+        articles = [];
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.post(`${API}/admin/advice/starter`, () => {
+        starter++;
+        return HttpResponse.json({ added: 8 });
+      }),
+    );
+    renderApp('/admin/assistant');
+    const box = await screen.findByRole('textbox', { name: 'Instructions for the assistant' });
+    expect((box as HTMLTextAreaElement).value).toBe('Be brief.');
+    fireEvent.change(box, { target: { value: 'Be brief. Answer in English.' } });
+    await userEvent.click(screen.getAllByRole('button', { name: 'Save' })[0] ?? document.body);
+    await waitFor(() => {
+      expect(puts.at(-1)?.assistant).toEqual({ instructions: 'Be brief. Answer in English.' });
+    });
+    expect(puts.at(-1)?.version).toBe(3);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add the starter articles' }));
+    await waitFor(() => {
+      expect(starter).toBe(1);
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'New article' }));
+    const form = await screen.findByRole('form', { name: 'Article' });
+    fireEvent.change(within(form).getByLabelText('Title'), { target: { value: 'Building an emergency fund' } });
+    fireEvent.change(within(form).getByLabelText(/^Tags/), { target: { value: 'saving, goals' } });
+    fireEvent.change(within(form).getByRole('textbox', { name: 'Text (markdown)' }), {
+      target: { value: 'Keep **three months** aside.' },
+    });
+    await userEvent.click(within(form).getByRole('button', { name: 'Preview' }));
+    expect(within(form).getByText('three months').tagName).toBe('B');
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(sent[0]).toEqual({
+        slug: 'building-an-emergency-fund',
+        language: 'en',
+        title: 'Building an emergency fund',
+        body: 'Keep **three months** aside.',
+        status: 'draft',
+        tags: ['saving', 'goals'],
+      });
+    });
+    expect(await screen.findByText('Draft')).toBeTruthy();
+
+    // publish it
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const edit = await screen.findByRole('form', { name: 'Article' });
+    await userEvent.selectOptions(within(edit).getByLabelText('Status'), 'published');
+    await userEvent.click(within(edit).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(sent[1]).toMatchObject({ version: 1, status: 'published', slug: 'building-an-emergency-fund' });
+    });
+    expect(await screen.findByText('Published')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    await userEvent.click(
+      within(await screen.findByRole('form', { name: 'Article' })).getByRole('button', { name: 'Delete' }),
+    );
+    expect(await screen.findByText('No articles yet.')).toBeTruthy();
   });
 
   it('shows a limit as a sentence', async () => {

@@ -29,6 +29,7 @@ type Querier interface {
 	// user at a time; they return numbers, never rows.
 	// One page of accounts, newest first, optionally filtered by part of the e-mail address.
 	AdminListUsers(ctx context.Context, arg AdminListUsersParams) ([]User, error)
+	AdviceSlugs(ctx context.Context) ([]AdviceSlugsRow, error)
 	// The data export: every row of the user, oldest first.
 	AllAuditEvents(ctx context.Context, userID uuid.UUID) ([]AllAuditEventsRow, error)
 	// The proposal keys of one chat that the user applied (the panel's "Applied" state).
@@ -94,6 +95,7 @@ type Querier interface {
 	CurrentEnableNestLoop(ctx context.Context) (string, error)
 	// Cascades to the account's imports, transactions, annotations and overrides.
 	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
+	DeleteAdviceArticle(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteAnnotation(ctx context.Context, arg DeleteAnnotationParams) error
 	DeleteAssistantChat(ctx context.Context, arg DeleteAssistantChatParams) (int64, error)
 	// Retention: chats whose last message is older than the cutoff.
@@ -198,6 +200,7 @@ type Querier interface {
 	FriendDisplayName(ctx context.Context, id uuid.UUID) (string, error)
 	GetAIChangeForUpdate(ctx context.Context, arg GetAIChangeForUpdateParams) (GetAIChangeForUpdateRow, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
+	GetAdviceArticle(ctx context.Context, id uuid.UUID) (GetAdviceArticleRow, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetAssistantAttachment(ctx context.Context, arg GetAssistantAttachmentParams) (AssistantAttachment, error)
 	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
@@ -258,6 +261,7 @@ type Querier interface {
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
 	// sidebar source labels b1, b2, … (task 6.12).
 	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
+	InsertAdviceArticle(ctx context.Context, arg InsertAdviceArticleParams) (InsertAdviceArticleRow, error)
 	InsertAssistantAttachment(ctx context.Context, arg InsertAssistantAttachmentParams) error
 	InsertAssistantMessage(ctx context.Context, arg InsertAssistantMessageParams) (InsertAssistantMessageRow, error)
 	// The audit log (PLAN task 17.6, migration 00010). Rows are only ever inserted, listed and, after
@@ -295,6 +299,9 @@ type Querier interface {
 	ListAIChangeItems(ctx context.Context, arg ListAIChangeItemsParams) ([]ListAIChangeItemsRow, error)
 	ListAIChanges(ctx context.Context, arg ListAIChangesParams) ([]ListAIChangesRow, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
+	// The advice library (ADR 0034; migration 00021). An instance table: administrators write it,
+	// every signed-in user reads the published articles.
+	ListAdviceArticles(ctx context.Context) ([]ListAdviceArticlesRow, error)
 	ListApprovedThemes(ctx context.Context) ([]Theme, error)
 	// What the chat shows: each sent photo's question and size, never the bytes.
 	ListAssistantAttachmentRefs(ctx context.Context, arg ListAssistantAttachmentRefsParams) ([]ListAssistantAttachmentRefsRow, error)
@@ -377,6 +384,8 @@ type Querier interface {
 	// Mark detected pairs: out_ids[i] and in_ids[i] point at each other.
 	PairTransfers(ctx context.Context, arg PairTransfersParams) (int64, error)
 	Ping(ctx context.Context) (int32, error)
+	// The asked language first, then English, then any.
+	PublishedAdviceArticle(ctx context.Context, arg PublishedAdviceArticleParams) (PublishedAdviceArticleRow, error)
 	// Versioned: only the document the administrator read can be replaced.
 	PutInstanceSettings(ctx context.Context, arg PutInstanceSettingsParams) (int64, error)
 	// Receipts by photo (Phase 20, ADR 0032).
@@ -402,6 +411,8 @@ type Querier interface {
 	SavePreferences(ctx context.Context, arg SavePreferencesParams) (int32, error)
 	// Highest applied goose migration (the readiness check compares it with the binary's expectation).
 	SchemaVersion(ctx context.Context) (int64, error)
+	// Published articles matching a tsquery the app built from normalised words (an empty language: any).
+	SearchAdvice(ctx context.Context, arg SearchAdviceParams) ([]SearchAdviceRow, error)
 	// Mirror a manual transfer decision into tx_annotations (it survives delete + re-import).
 	SetAnnotationTransfer(ctx context.Context, arg SetAnnotationTransferParams) error
 	// Budgets are global per category (legacy behaviour).
@@ -480,6 +491,8 @@ type Querier interface {
 	// The attachments of a question about to be sent, in the order asked for.
 	UnsentAssistantAttachments(ctx context.Context, arg UnsentAssistantAttachmentsParams) ([]AssistantAttachment, error)
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
+	// Versioned: no row when the version read is no longer the stored one.
+	UpdateAdviceArticle(ctx context.Context, arg UpdateAdviceArticleParams) (UpdateAdviceArticleRow, error)
 	// After a turn: the last activity, the connection and model used, and the title (the first
 	// question) when the chat had none.
 	UpdateAssistantChat(ctx context.Context, arg UpdateAssistantChatParams) error

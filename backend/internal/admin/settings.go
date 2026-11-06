@@ -94,11 +94,20 @@ func (s *Service) PutSettings(ctx context.Context, actor uuid.UUID, raw json.Raw
 			return instance.Settings{}, 0, invalid("defaults.themeId", "must be a built-in or approved theme")
 		}
 	}
-	doc, _ := json.Marshal(set) // plain data; it can't fail
 	err = s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		if err := q.EnsureInstanceSettings(ctx); err != nil {
 			return err
 		}
+		if set.Assistant == nil { // saved without the assistant part (Defaults and features): keep it
+			row, err := q.GetInstanceSettings(ctx)
+			if err != nil {
+				return err
+			}
+			if cur, err := instance.ParseSettings(row.Doc); err == nil {
+				set.Assistant = cur.Assistant
+			}
+		}
+		doc, _ := json.Marshal(set) // plain data; it can't fail
 		n, err := q.PutInstanceSettings(ctx, db.PutInstanceSettingsParams{Doc: doc, Now: s.clock.Now(), UpdatedBy: &actor, Version: version})
 		if err == nil && n == 0 {
 			err = fmt.Errorf("the settings changed since they were read: %w", platform.ErrStaleVersion)

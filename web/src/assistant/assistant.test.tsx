@@ -530,6 +530,59 @@ describe('ChatPanel', () => {
     expect(within(cards[1] as HTMLElement).getByRole('button', { name: 'Apply' })).toBeTruthy();
   });
 
+  it('opens an article a search_advice lookup found (ADR 0034)', async () => {
+    let asked = '';
+    server.use(
+      http.get(`${API}/advice/:slug`, ({ params, request }) => {
+        asked = `${String(params['slug'])}?${new URL(request.url).searchParams.toString()}`;
+        return HttpResponse.json({
+          id: '0a000000-0000-4000-8000-000000000001',
+          slug: 'emergency-fund',
+          language: 'en',
+          title: 'Building an emergency fund',
+          body: 'Keep **three months** of spending aside.',
+          bodyLength: 40,
+          tags: ['saving'],
+          status: 'published',
+          version: 2,
+          createdAt: '2026-11-06T10:00:00Z',
+          updatedAt: '2026-11-06T10:00:00Z',
+        });
+      }),
+    );
+    st.storedSteps = [
+      {
+        tool: 'search_advice',
+        args: { query: 'emergency fund' },
+        summary: 'advice · 1 article',
+        result: JSON.stringify({
+          articles: [{ slug: 'emergency-fund', language: 'en', title: 'Building an emergency fund', excerpt: 'Keep…' }],
+          note: 'General information, not financial advice.',
+        }),
+      },
+    ];
+    st.chats = [
+      {
+        id: CHAT,
+        title: 'Earlier question',
+        kind: 'chat',
+        connection: 'lmstudio',
+        model: 'qwen3-14b',
+        createdAt: '2025-03-19T10:00:00Z',
+        updatedAt: '2025-03-19T10:00:05Z',
+      },
+    ];
+    renderApp('/t/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Earlier question'));
+    expect(await within(p).findByText(/Searched the advice library/)).toBeTruthy();
+    fireEvent.click(within(p).getByRole('button', { name: 'Building an emergency fund' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Building an emergency fund' });
+    expect((await within(dialog).findByText('three months')).tagName).toBe('B');
+    expect(within(dialog).getByText(/not financial advice/)).toBeTruthy();
+    expect(asked).toBe('emergency-fund?language=en');
+  });
+
   it('opens and deletes a recent chat', async () => {
     st.chats = [
       {

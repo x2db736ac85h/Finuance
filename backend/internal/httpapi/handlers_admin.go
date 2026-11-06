@@ -202,10 +202,11 @@ func (a *api) AdminPutSettings(ctx context.Context, req gen.AdminPutSettingsRequ
 	version := body.Version
 	body.Version, body.UpdatedAt = 0, nil
 	raw, _ := json.Marshal(struct {
-		Defaults gen.ViewDefaults   `json:"defaults"`
-		Features any                `json:"features"`
-		Limits   gen.LimitOverrides `json:"limits"`
-	}{body.Defaults, body.Features, body.Limits})
+		Defaults  gen.ViewDefaults       `json:"defaults"`
+		Features  any                    `json:"features"`
+		Limits    gen.LimitOverrides     `json:"limits"`
+		Assistant *gen.InstanceAssistant `json:"assistant,omitempty"` // left out: the stored one stays
+	}{body.Defaults, body.Features, body.Limits, body.Assistant})
 	s, v, err := a.admin.PutSettings(ctx, identity(ctx).User.ID, raw, version)
 	if err != nil {
 		return nil, err
