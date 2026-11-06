@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Schemas } from '../api/client';
 import type { MessageRequest } from '../api/hooks/assistant';
@@ -13,6 +13,13 @@ import { contextOf } from '../table/context';
 import { renderApp, warmUpApp } from '../test/render';
 import { account, API, db, problem, resetDb, server } from '../test/server';
 import { applyEvent, useChat, type AiTurn } from './chatStore';
+
+// jsdom has no canvas: the browser-side re-encoding is replaced by a fixed JPEG (photos.test.ts
+// tests its scaling)
+vi.mock('./photos', async (orig) => ({
+  ...(await orig<typeof import('./photos')>()),
+  reencodePhoto: () => Promise.resolve(new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' })),
+}));
 
 beforeAll(async () => {
   server.listen({ onUnhandledFrame: 'error' });
@@ -41,8 +48,8 @@ const status = (over: Partial<Schemas['AssistantConnection']>[] = [{}]): Schemas
     reachable: true,
     defaultModel: 'qwen3-14b',
     models: [
-      { id: 'qwen3-14b', tools: true, reasoning: 'switch', contextTokens: 8192 },
-      { id: 'gemma-3-12b', tools: false, reasoning: 'none', contextTokens: 8192 },
+      { id: 'qwen3-14b', tools: true, reasoning: 'switch', contextTokens: 8192, vision: false },
+      { id: 'gemma-3-12b', tools: false, reasoning: 'none', contextTokens: 8192, vision: true },
     ],
     ...o,
   })),
@@ -182,6 +189,8 @@ describe('ChatPanel', () => {
     expect(await within(p).findByText('Ask about your money')).toBeTruthy();
     expect(within(p).getByText(/917 transactions/)).toBeTruthy();
     expect(await within(p).findByText('qwen3-14b')).toBeTruthy();
+    // this model doesn't read images: no photos
+    expect(within(p).queryByRole('button', { name: 'Attach a photo of a receipt' })).toBeNull();
 
     fireEvent.click(within(p).getByText('Which subscriptions or regular bills do I pay?'));
     expect(
@@ -209,6 +218,37 @@ describe('ChatPanel', () => {
     expect(viewOf(useViews.getState().views, 'all').toolFilter).toEqual(step.toolFilter);
     expect(router.state.location.pathname).toBe('/t/all');
     expect(await screen.findByText('Showing 10 matching rows')).toBeTruthy();
+  });
+
+  it('attaches a photo for a model that reads images and sends it with the question (receipts)', async () => {
+    st.status = status([
+      { models: [{ id: 'qwen3-14b', tools: true, reasoning: 'switch', contextTokens: 8192, vision: true }] },
+    ]);
+    const uploads: string[] = [];
+    server.use(
+      http.post(`${API}/assistant/chats/:id/attachments`, ({ request, params }) => {
+        uploads.push(`${String(params['id'])} ${request.headers.get('Content-Type') ?? ''}`);
+        return HttpResponse.json({ id: 'p1', width: 800, height: 1200 }, { status: 201 });
+      }),
+      http.get(`${API}/assistant/chats/:id/attachments/:aid`, () => new HttpResponse(new Uint8Array([0xff, 0xd8]))),
+    );
+    renderApp('/t/all');
+    const p = await panel();
+    const camera = await within(p).findByRole('button', { name: 'Attach a photo of a receipt' });
+    expect(camera).toBeTruthy();
+    fireEvent.change(within(p).getByLabelText('Photo of a receipt'), {
+      target: { files: [new File(['raw'], 'receipt.jpg', { type: 'image/jpeg' })] },
+    });
+    expect(await within(p).findByAltText('Photo to send')).toBeTruthy();
+    expect(uploads).toEqual([`${CHAT} image/jpeg`]); // the chat was created first
+    // a photo alone asks about the receipt
+    fireEvent.click(within(p).getByRole('button', { name: 'Send (Enter)' }));
+    await waitFor(() => {
+      expect(st.sent).toHaveLength(1);
+    });
+    expect(st.sent[0]).toMatchObject({ text: 'Here is a receipt.', attachmentIds: ['p1'] });
+    expect(await within(p).findByAltText('Attached photo')).toBeTruthy();
+    expect(within(p).queryByAltText('Photo to send')).toBeNull();
   });
 
   it('shows a proposal as a card; Apply creates the category and sends the change marked with the chat and proposal', async () => {

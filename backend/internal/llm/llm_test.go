@@ -272,6 +272,81 @@ func TestAnthropicRequestBody(t *testing.T) {
 	}
 }
 
+// TestImagesInRequests: a user message's images go as image_url data URLs (OpenAI) or base64
+// image blocks before the text (Anthropic); a message without images stays a plain string.
+func TestImagesInRequests(t *testing.T) {
+	jpeg := Image{MIME: "image/jpeg", Data: []byte{0xff, 0xd8, 0xff, 0xd9}}
+	req := Request{Model: "m", Messages: []Message{{Role: RoleUser, Content: "Read this receipt", Images: []Image{jpeg}},
+		{Role: RoleAssistant, Content: "ok"}, {Role: RoleUser, Content: "Thanks"}}}
+
+	srv, bodies := serve(t, 200, "text/event-stream", "openai-crlf-no-blank.sse")
+	if _, _, err := run(t, client(OpenAI, srv.URL), req); err != nil {
+		t.Fatal(err)
+	}
+	msgs := (*bodies)[0]["messages"].([]any)
+	parts := msgs[0].(map[string]any)["content"].([]any)
+	if len(parts) != 2 || parts[0].(map[string]any)["text"] != "Read this receipt" ||
+		parts[1].(map[string]any)["image_url"].(map[string]any)["url"] != "data:image/jpeg;base64,/9j/2Q==" ||
+		msgs[2].(map[string]any)["content"] != "Thanks" {
+		t.Errorf("openai messages = %v", msgs)
+	}
+
+	srv2, bodies2 := serve(t, 200, "application/json", "anthropic-nonstream.json")
+	if _, _, err := run(t, client(Anthropic, srv2.URL+"/v1"), req); err != nil {
+		t.Fatal(err)
+	}
+	blocks := (*bodies2)[0]["messages"].([]any)[0].(map[string]any)["content"].([]any)
+	img := blocks[0].(map[string]any)
+	src := img["source"].(map[string]any)
+	if len(blocks) != 2 || img["type"] != "image" || src["type"] != "base64" || src["media_type"] != "image/jpeg" ||
+		src["data"] != "/9j/2Q==" || blocks[1].(map[string]any)["text"] != "Read this receipt" {
+		t.Errorf("anthropic blocks = %v", blocks)
+	}
+}
+
+// TestOllamaShowDetails: without LM Studio's list, Ollama's /api/show says which models take tools
+// and images (and which make embeddings); a model it can't describe stays as it is.
+func TestOllamaShowDetails(t *testing.T) {
+	var shown []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/models":
+			_, _ = w.Write([]byte(`{"data":[{"id":"qwen3-vl:4b-instruct"},{"id":"gemma3:4b"},{"id":"nomic-embed-text"},{"id":"gone"}]}`))
+		case "/api/show":
+			var b struct {
+				Model string `json:"model"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&b)
+			shown = append(shown, b.Model)
+			switch b.Model {
+			case "qwen3-vl:4b-instruct":
+				_, _ = w.Write([]byte(`{"capabilities":["completion","vision","tools"]}`))
+			case "gemma3:4b":
+				_, _ = w.Write([]byte(`{"capabilities":["completion","vision"]}`))
+			case "nomic-embed-text":
+				_, _ = w.Write([]byte(`{"capabilities":["embedding"]}`))
+			default:
+				http.NotFound(w, r)
+			}
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	ms, err := client(OpenAI, srv.URL+"/v1").Models(context.Background())
+	if err != nil || len(ms) != 4 || len(shown) != 4 {
+		t.Fatalf("models %+v %v, shown %v", ms, err, shown)
+	}
+	is := func(p *bool, want bool) bool { return p != nil && *p == want }
+	if !is(ms[0].ToolUse, true) || !is(ms[0].Vision, true) || !is(ms[1].ToolUse, false) || !is(ms[1].Vision, true) ||
+		!ms[2].Embedding || ms[3].ToolUse != nil || ms[3].Vision != nil {
+		t.Errorf("details = %+v", ms)
+	}
+	if c := DetectCaps(OpenAI, ms[1], 8192, nil); c.Tools || !c.Vision {
+		t.Errorf("gemma3 caps = %+v (no tools: plan mode; vision)", c)
+	}
+}
+
 func TestErrorsAreClassified(t *testing.T) {
 	cases := []struct {
 		status int
@@ -402,7 +477,9 @@ func TestDetectCaps(t *testing.T) {
 	f := false
 	r := ReasonEffort
 	ctx := 65536
-	over := []CapsOverride{{Pattern: "gemma-*", Tools: &f}, {Pattern: "my-reasoner", Reasoning: &r, ContextTokens: &ctx}}
+	tr := true
+	over := []CapsOverride{{Pattern: "gemma-*", Tools: &f}, {Pattern: "my-reasoner", Reasoning: &r, ContextTokens: &ctx},
+		{Pattern: "my-ocr-*", Vision: &tr}}
 	cases := []struct {
 		api  API
 		m    Model
@@ -411,12 +488,22 @@ func TestDetectCaps(t *testing.T) {
 		{OpenAI, Model{ID: "qwen3-8b", ContextTokens: 8192}, Caps{Tools: true, Reasoning: ReasonSwitch, ContextTokens: 8192}},
 		{OpenAI, Model{ID: "openai/gpt-oss-20b"}, Caps{Tools: true, Reasoning: ReasonEffort, ContextTokens: 16000}},
 		{OpenAI, Model{ID: "o4-mini"}, Caps{Tools: true, Reasoning: ReasonEffort, ContextTokens: 16000}},
-		{OpenAI, Model{ID: "gpt-4.1-mini"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000}},
-		{OpenAI, Model{ID: "Gemma-3-12B"}, Caps{Tools: false, Reasoning: ReasonNone, ContextTokens: 16000}},
+		{OpenAI, Model{ID: "gpt-4.1-mini"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000, Vision: true}},
+		{OpenAI, Model{ID: "Gemma-3-12B"}, Caps{Tools: false, Reasoning: ReasonNone, ContextTokens: 16000, Vision: true}},
 		{OpenAI, Model{ID: "my-reasoner"}, Caps{Tools: true, Reasoning: ReasonEffort, ContextTokens: 65536}},
-		{Anthropic, Model{ID: "claude-sonnet-4-5"}, Caps{Tools: true, Reasoning: ReasonBudget, ContextTokens: 16000}},
-		{Anthropic, Model{ID: "claude-3-5-haiku-latest"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000}},
+		{Anthropic, Model{ID: "claude-sonnet-4-5"}, Caps{Tools: true, Reasoning: ReasonBudget, ContextTokens: 16000, Vision: true}},
+		{Anthropic, Model{ID: "claude-3-5-haiku-latest"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000, Vision: true}},
 		{Anthropic, Model{ID: "qwen3-8b"}, Caps{Tools: true, Reasoning: ReasonSwitch, ContextTokens: 16000}},
+		// vision (Phase 20): the server's report wins; otherwise the model id
+		{OpenAI, Model{ID: "qwen3-vl:4b-instruct"}, Caps{Tools: true, Reasoning: ReasonSwitch, ContextTokens: 16000, Vision: true}},
+		{OpenAI, Model{ID: "qwen2.5vl:3b"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000, Vision: true}},
+		{OpenAI, Model{ID: "gemma3:4b"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000, Vision: true}},
+		{OpenAI, Model{ID: "gemma3:1b"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000}},
+		{OpenAI, Model{ID: "gemma3n:e4b"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000}},
+		{OpenAI, Model{ID: "qwen3:4b-thinking-2507-q4_K_M"}, Caps{Tools: true, Reasoning: ReasonSwitch, ContextTokens: 16000}},
+		{OpenAI, Model{ID: "gemma3:4b", ToolUse: &f, Vision: &f}, Caps{Tools: false, Reasoning: ReasonNone, ContextTokens: 16000}},
+		{OpenAI, Model{ID: "some-model", Vision: &tr}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000, Vision: true}},
+		{OpenAI, Model{ID: "my-ocr-model"}, Caps{Tools: true, Reasoning: ReasonNone, ContextTokens: 16000, Vision: true}},
 	}
 	for _, c := range cases {
 		if got := DetectCaps(c.api, c.m, 16000, over); got != c.want {

@@ -311,7 +311,7 @@ func (q *Queries) OpenAIChange(ctx context.Context, arg OpenAIChangeParams) (uui
 }
 
 const transactionAnnotationState = `-- name: TransactionAnnotationState :many
-SELECT id, category_id, category_source, group_id FROM transactions
+SELECT id, category_id, category_source, group_id, note FROM transactions
 WHERE user_id = $1 AND id = ANY($2::uuid[])
 FOR UPDATE
 `
@@ -326,9 +326,10 @@ type TransactionAnnotationStateRow struct {
 	CategoryID     *uuid.UUID
 	CategorySource string
 	GroupID        *uuid.UUID
+	Note           string
 }
 
-// What an annotation change replaces: the category (and where it came from) and the group.
+// What an annotation change replaces: the category (and where it came from), the group and the note.
 func (q *Queries) TransactionAnnotationState(ctx context.Context, arg TransactionAnnotationStateParams) ([]TransactionAnnotationStateRow, error) {
 	rows, err := q.db.Query(ctx, transactionAnnotationState, arg.UserID, arg.Ids)
 	if err != nil {
@@ -343,6 +344,7 @@ func (q *Queries) TransactionAnnotationState(ctx context.Context, arg Transactio
 			&i.CategoryID,
 			&i.CategorySource,
 			&i.GroupID,
+			&i.Note,
 		); err != nil {
 			return nil, err
 		}

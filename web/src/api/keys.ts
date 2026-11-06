@@ -9,6 +9,7 @@ export const keys = {
   activity: ['activity'] as const,
   aiChanges: ['ai-changes'] as const,
   goals: ['goals'] as const,
+  mergeSuggestions: ['mergeSuggestions'] as const,
   imports: (accountId?: string) => (accountId ? (['imports', accountId] as const) : (['imports'] as const)),
   import: (id: string) => ['import', id] as const,
   importLines: (id: string, optionsKey: string) => ['importLines', id, optionsKey] as const,

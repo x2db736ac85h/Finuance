@@ -165,6 +165,16 @@ export const APP_ICONS = {
     ['circle', { cx: '12', cy: '12', r: '9' }],
     ['path', { d: 'M12 11v5.5M12 7.6v.1' }],
   ],
+  // a photo for the assistant (receipts)
+  camera: [
+    [
+      'path',
+      {
+        d: 'M3.5 8.5A1.5 1.5 0 0 1 5 7h2.5L9 5h6l1.5 2H19a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z',
+      },
+    ],
+    ['circle', { cx: '12', cy: '12.5', r: '3.5' }],
+  ],
   // notifications
   bell: [
     ['path', { d: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9' }],

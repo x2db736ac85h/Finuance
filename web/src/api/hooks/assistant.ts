@@ -152,6 +152,27 @@ export async function sendMessage(
   });
 }
 
+export type Attachment = Schemas['AssistantAttachment'];
+
+/** POST /assistant/chats/{id}/attachments: a JPEG for the chat's next question. */
+export async function uploadAttachment(chatId: string, jpeg: Blob): Promise<Attachment> {
+  const res = await globalThis.fetch(
+    `${window.location.origin}/api/v1/assistant/chats/${encodeURIComponent(chatId)}/attachments`,
+    {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'image/jpeg', 'X-Finuance-Client': 'web' },
+      body: jpeg,
+    },
+  );
+  if (!res.ok) throw new ApiError(await toProblem(res));
+  return (await res.json()) as Attachment;
+}
+
+/** Where a chat's photo is shown from (same origin; the session cookie authorises it). */
+export const attachmentUrl = (chatId: string, id: string) =>
+  `/api/v1/assistant/chats/${encodeURIComponent(chatId)}/attachments/${encodeURIComponent(id)}`;
+
 export type Proposal = Schemas['ActionProposal'];
 
 /** The assistant headers of an Apply: the server records the change as the assistant's (ADR 0030). */
@@ -312,6 +333,17 @@ export async function applyProposal(p: Proposal, chatId: string, auto = false): 
           }),
         );
       }
+      return 1;
+    }
+    case 'attach_receipt': {
+      // the receipt goes into the matched transaction's note (ADR 0032), with a category if proposed
+      const categoryId = p.categoryId ?? (p.categoryName ? await categoryFor(p, header) : undefined);
+      data(
+        await api.PATCH('/transactions/{id}', {
+          params: { path: { id: p.ids?.[0] ?? '' }, header },
+          body: { note: p.note ?? '', ...(categoryId ? { categoryId } : {}) },
+        }),
+      );
       return 1;
     }
   }

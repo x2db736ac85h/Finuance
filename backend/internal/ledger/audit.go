@@ -54,6 +54,7 @@ const (
 	AuditTransactionAdded   = "transaction.added"
 	AuditTransactionEdited  = "transaction.edited"
 	AuditTransactionDeleted = "transaction.deleted"
+	AuditTransactionMerged  = "transaction.merged" // a typed bank row merged into the imported one (ADR 0032)
 	// Friends (ADR 0027): the entity is the friend's user id; a failed code is recorded without it.
 	AuditFriendAdded      = "friend.added"
 	AuditFriendRemoved    = "friend.removed"
@@ -78,7 +79,7 @@ var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPass
 	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,
 	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
 	AuditAdminThemeApproved, AuditAdminThemeRetired,
-	AuditTransactionAdded, AuditTransactionEdited, AuditTransactionDeleted,
+	AuditTransactionAdded, AuditTransactionEdited, AuditTransactionDeleted, AuditTransactionMerged,
 	AuditFriendAdded, AuditFriendRemoved, AuditFriendCodeFailed,
 	AuditSharedCreated, AuditSharedDeleted, AuditSharedArchived, AuditSharedInvited, AuditSharedJoined, AuditSharedDeclined, AuditSharedLeft, AuditSharedMemberRemoved, AuditSharedSettled}
 

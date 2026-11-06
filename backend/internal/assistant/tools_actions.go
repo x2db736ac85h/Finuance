@@ -85,6 +85,9 @@ type Proposal struct {
 	// create_goal: the new goal; update_goal: the goal after the change, and before it
 	Goal       *ProposalGoal `json:"goal,omitempty"`
 	GoalBefore *ProposalGoal `json:"goalBefore,omitempty"`
+	// attach_receipt (ADR 0032): the line added to the matched transaction's note (Note is the
+	// whole note after it; IDs the transaction; Date, AmountMinor, Payee and AccountName its values)
+	ReceiptLine string `json:"receiptLine,omitempty"`
 }
 
 // ProposalSplit is a split_expense's new split, in the API's SharedSplit form plus names.
@@ -243,8 +246,10 @@ func (t *Tools) propose(ctx context.Context, userID uuid.UUID, sc Scope, a args)
 		return t.proposeSplit(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
 	case ActionCreateGoal, ActionUpdateGoal:
 		return t.proposeGoal(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
+	case ActionAttachReceipt:
+		return t.proposeReceipt(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
 	}
-	return proposalError("action must be set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal or update_goal"), nil
+	return proposalError("action must be set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal or attach_receipt"), nil
 }
 
 // proposeRows reads the rows a set_* action would change: the filter within the chat's scope,
@@ -366,6 +371,11 @@ func proposalOutcome(sc Scope, p *Proposal, label string) Outcome {
 		}
 	case ActionCreateGoal, ActionUpdateGoal:
 		r.Goal, r.GoalBefore = goalProposedOf(sc, p.Goal), goalProposedOf(sc, p.GoalBefore)
+	case ActionAttachReceipt:
+		r.Account, r.Date, r.Amount, r.Payee = sc.mask(p.AccountName), p.Date, amount(p.AmountMinor, p.Currency), sc.mask(p.Payee)
+		if p.CategoryName != "" {
+			r.ToCategory, r.CreatesCategory = p.CategoryName, p.CategoryID == nil
+		}
 	case ActionAddExpense:
 		r.Account, r.Date, r.Amount, r.Payee = p.AccountName, p.Date, amount(p.AmountMinor, p.Currency), sc.mask(p.Payee)
 		if p.CategoryName != "" {

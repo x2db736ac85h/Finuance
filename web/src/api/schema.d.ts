@@ -495,8 +495,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Add a transaction by hand to a cash account
-         * @description For cash accounts only (`422` for a bank account, whose transactions come from files). The transaction can be edited and deleted later; rules and transfer detection treat it like an imported one, but a category set here is a manual one and wins (ADR 0029).
+         * Add a transaction by hand
+         * @description Into a cash account (ADR 0029), or into a bank account for a card payment its file doesn't have yet (ADR 0032: when the import brings the bank's row, a merge suggestion offers to keep that one with this row's category, note and group). The transaction can be edited and deleted later; rules and transfer detection treat it like an imported one, but a category set here is a manual one and wins.
          */
         post: operations["addTransaction"];
         delete?: never;
@@ -539,6 +539,48 @@ export interface paths {
          * @description Computed over the context with this column's own filter removed, so unticked values stay listed. Ordered by count, then value.
          */
         post: operations["distinctValues"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transactions/merge-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Typed card payments the bank's file has now (ADR 0032)
+         * @description For each transaction typed by hand into a bank account, the imported row of the same account and amount booked within 3 days of it (the nearest), unless the user kept the two apart.
+         */
+        get: operations["listMergeSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transactions/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a typed transaction into the imported one, or keep them apart
+         * @description `{into}` keeps the imported row and gives it the typed row's category set by hand, note and group and its shared-group copy, then deletes the typed row (`id`). With `keepApart: true` nothing changes and the pair isn't suggested again. `422` unless both are in the same account, of the same amount and booked within 3 days, `id` typed and `into` imported.
+         */
+        post: operations["mergeTransaction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1634,6 +1676,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/chats/{id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach a photo to the chat's next question
+         * @description A JPEG of at most 2 MiB and 2,048 px a side (the panel sends at most 1,600 px). The server reads the dimensions before decoding and encodes the pixels again, so no metadata (EXIF, location) is kept. The photo waits until a question names it in `attachmentIds`; it then goes to the model with that question only and is deleted with the chat. Photos never sent are deleted after a day; at most 6 wait in one chat. `422` for anything else.
+         */
+        post: operations["addAssistantAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/chats/{id}/attachments/{attachmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        /** A photo of the chat */
+        get: operations["getAssistantAttachment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/assistant/chats/{id}/stop": {
         parameters: {
             query?: never;
@@ -2101,7 +2185,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -3771,6 +3855,8 @@ export interface components {
              */
             reasoning: "none" | "effort" | "budget" | "switch";
             contextTokens: number;
+            /** @description Whether the model reads images (photos of receipts can be attached). */
+            vision: boolean;
         };
         AssistantError: {
             /** @enum {string} */
@@ -3829,6 +3915,8 @@ export interface components {
             steps?: components["schemas"]["AssistantStep"][];
             meta?: components["schemas"]["AssistantMeta"];
             error?: components["schemas"]["AssistantTurnError"];
+            /** @description The photos a question went with. */
+            attachments?: components["schemas"]["AssistantAttachment"][];
             /** Format: date-time */
             createdAt: string;
         };
@@ -3851,7 +3939,7 @@ export interface components {
             /** @description Identifies the proposal within its chat (a hash of its content); sent back as X-Assistant-Proposal when it is applied. */
             key: string;
             /** @enum {string} */
-            action: "set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal";
+            action: "set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal" | "attach_receipt";
             reason?: string;
             /** @description The transactions it changes (set_*) or the rule matches now (create_rule). */
             matched: number;
@@ -3874,7 +3962,7 @@ export interface components {
             budgetBefore?: components["schemas"]["Money"];
             /**
              * Format: uuid
-             * @description add_expense: the cash account.
+             * @description add_expense: the cash account, or the bank account of a card payment not imported yet.
              */
             accountId?: string;
             accountName?: string;
@@ -3904,6 +3992,8 @@ export interface components {
             split?: components["schemas"]["ProposalSplit"];
             goal?: components["schemas"]["ProposalGoal"];
             goalBefore?: components["schemas"]["ProposalGoal"];
+            /** @description attach_receipt: the line added to the matched transaction's note (`note` is the whole note after it). */
+            receiptLine?: string;
             toolFilter?: components["schemas"]["ToolFilter"];
         };
         ProposalRow: {
@@ -3953,6 +4043,14 @@ export interface components {
              */
             timeZone?: string;
             settings?: components["schemas"]["AssistantRunSettings"];
+            /** @description Photos attached to this chat (POST …/attachments) that go with this question; the model must read images. */
+            attachmentIds?: string[];
+        };
+        AssistantAttachment: {
+            /** Format: uuid */
+            id: string;
+            width: number;
+            height: number;
         };
         AssistantRunSettings: {
             /** @description Default the chat's connection, else the first one. */
@@ -4350,6 +4448,33 @@ export interface components {
             /** @enum {string} */
             mode: "equal" | "shares" | "exact";
             members: components["schemas"]["ProposalSplitMember"][];
+        };
+        MergeSuggestionList: {
+            suggestions: components["schemas"]["MergeSuggestion"][];
+        };
+        MergeSuggestion: {
+            /** Format: uuid */
+            typedId: string;
+            /** Format: uuid */
+            importedId: string;
+            /** Format: date */
+            typedOn: string;
+            /** Format: date */
+            importedOn: string;
+            typedPayee: string;
+            importedPayee: string;
+            typedNote?: string;
+            amount: components["schemas"]["Money"];
+            account: components["schemas"]["NamedRef"];
+        };
+        MergeRequest: {
+            /**
+             * Format: uuid
+             * @description The imported transaction.
+             */
+            into: string;
+            /** @default false */
+            keepApart: boolean;
         };
         /** @description create_goal: the new goal (POST /goals); update_goal: the goal after the change, sent as PATCH /goals/{id} with its version, and in goalBefore as it was when proposed. */
         ProposalGoal: {
@@ -5408,6 +5533,52 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listMergeSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestions, newest typed row first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeSuggestionList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    mergeTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Merged (or kept apart). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     transactionRange: {
         parameters: {
             query?: never;
@@ -5538,7 +5709,14 @@ export interface operations {
     updateTransaction: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -7125,6 +7303,57 @@ export interface operations {
                 };
             };
             429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    addAssistantAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+            };
+        };
+        responses: {
+            /** @description The stored photo. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantAttachment"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAssistantAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The JPEG as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
             default: components["responses"]["Problem"];
         };
     };

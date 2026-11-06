@@ -24,6 +24,7 @@ type Caps struct {
 	Tools         bool      `json:"tools"`
 	Reasoning     Reasoning `json:"reasoning"`
 	ContextTokens int       `json:"contextTokens"`
+	Vision        bool      `json:"vision"` // reads images (receipts, Phase 20)
 }
 
 // CapsOverride is the admin's correction for the models matching Pattern (a path.Match glob on
@@ -33,6 +34,7 @@ type CapsOverride struct {
 	Tools         *bool      `json:"tools,omitempty"`
 	Reasoning     *Reasoning `json:"reasoning,omitempty"`
 	ContextTokens *int       `json:"contextTokens,omitempty"`
+	Vision        *bool      `json:"vision,omitempty"`
 }
 
 var (
@@ -40,6 +42,10 @@ var (
 	effortRe  = regexp.MustCompile(`(?i)gpt-oss|(^|/)o[1-9](-|$)|gpt-5|reasoner|magistral`)
 	oldClaude = regexp.MustCompile(`(?i)claude-(instant|2|3-(opus|sonnet|haiku|5))`)
 	embedRe   = regexp.MustCompile(`(?i)embed`)
+	// models that read images when the server doesn't say (Ollama and LM Studio do); Gemma 3 1B
+	// and Gemma 3n read text only on today's servers
+	visionRe   = regexp.MustCompile(`(?i)(^|[-_/:.])vl([-_/:.]|$)|qwen2\.5-?vl|vision|llava|pixtral|minicpm-v|moondream|gemma-?3|gpt-4o|gpt-4\.1|gpt-5|claude-(3|sonnet|opus|haiku)`)
+	textOnlyRe = regexp.MustCompile(`(?i)gemma-?3n|gemma-?3[^/]*[:-]1b`)
 )
 
 // DetectCaps guesses a model's capabilities from the wire format, its id and what the server
@@ -53,6 +59,11 @@ func DetectCaps(api API, m Model, defaultContext int, overrides []CapsOverride) 
 		c.ContextTokens = m.ContextTokens
 	}
 	id := m.ID
+	if m.Vision != nil {
+		c.Vision = *m.Vision
+	} else {
+		c.Vision = visionRe.MatchString(id) && !textOnlyRe.MatchString(id)
+	}
 	switch {
 	case api == Anthropic && strings.Contains(strings.ToLower(id), "claude"):
 		if !oldClaude.MatchString(id) {
@@ -75,6 +86,9 @@ func DetectCaps(api API, m Model, defaultContext int, overrides []CapsOverride) 
 		}
 		if o.ContextTokens != nil && *o.ContextTokens > 0 {
 			c.ContextTokens = *o.ContextTokens
+		}
+		if o.Vision != nil {
+			c.Vision = *o.Vision
 		}
 	}
 	return c

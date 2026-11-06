@@ -75,11 +75,11 @@ func TestAssistantStatusHTTP(t *testing.T) {
 	}
 	// cached for the next request; refresh asks again
 	b.do("GET", "/assistant/status", nil)
-	if calls.Load() != 2 { // /v1/models + LM Studio's /api/v0/models
+	if calls.Load() != 3 { // /v1/models + LM Studio's /api/v0/models + Ollama's /api/show (both 404 here)
 		t.Errorf("upstream calls = %d", calls.Load())
 	}
 	b.do("GET", "/assistant/status?refresh=true", nil)
-	if calls.Load() != 4 {
+	if calls.Load() != 6 {
 		t.Errorf("upstream calls after refresh = %d", calls.Load())
 	}
 }

@@ -9,6 +9,7 @@ import {
   fetchChat,
   sendMessage,
   stopRun,
+  type Attachment,
   type ChatDetail,
   type MessageRequest,
   type Meta,
@@ -21,7 +22,7 @@ export type TurnError = { code: string; message: string };
 /** Where a turn's lookups ran: every account, or one table view ("Show in table" goes there). */
 export type TurnScope = { view: boolean; viewId: string };
 
-export type UserTurn = { role: 'user'; content: string };
+export type UserTurn = { role: 'user'; content: string; attachments?: Attachment[] };
 export type AiTurn = {
   role: 'assistant';
   content: string;
@@ -47,7 +48,15 @@ type ChatStore = {
   open: (id: string) => Promise<void>;
   /** Forget the chat on screen when it was deleted. */
   dropped: (id: string) => void;
-  send: (text: string, req: Omit<MessageRequest, 'text'>, scope: TurnScope, hooks?: SendHooks) => Promise<void>;
+  send: (
+    text: string,
+    req: Omit<MessageRequest, 'text'>,
+    scope: TurnScope,
+    hooks?: SendHooks,
+    attachments?: Attachment[],
+  ) => Promise<void>;
+  /** The open chat's id, creating the chat first (photos are uploaded into it before the question). */
+  ensureChat: (hooks?: SendHooks) => Promise<string>;
   /** A proposal of this chat was applied. */
   markApplied: (key: string) => void;
   stop: () => Promise<void>;
@@ -68,7 +77,8 @@ const STOP_GRACE_MS = 3000;
 /** The turns of a stored chat. */
 export function turnsOf(c: ChatDetail, viewId = 'all'): UiTurn[] {
   return c.turns.map((t): UiTurn => {
-    if (t.role === 'user') return { role: 'user', content: t.content };
+    if (t.role === 'user')
+      return { role: 'user', content: t.content, ...(t.attachments ? { attachments: t.attachments } : {}) };
     const scope: TurnScope =
       t.meta?.scope === 'view'
         ? { view: true, viewId: t.meta.accountIds?.[0] ?? viewId }
@@ -144,11 +154,20 @@ export const useChat = create<ChatStore>()((set, get) => ({
     set((s) => (s.applied.includes(key) ? s : { applied: [...s.applied, key] }));
   },
 
-  send: async (text, req, scope, hooks = {}) => {
+  ensureChat: async (hooks = {}) => {
+    const cur = get().chatId;
+    if (cur) return cur;
+    const id = (await createChat()).id;
+    set({ chatId: id });
+    hooks.onChanged?.();
+    return id;
+  },
+  send: async (text, req, scope, hooks = {}, attachments = []) => {
     if (get().busy || !text.trim()) return;
     const ctrl = new AbortController();
     const answer: AiTurn = { role: 'assistant', content: '', reasoning: '', steps: [], pending: true, scope };
-    set((s) => ({ busy: true, ctrl, turns: [...s.turns, { role: 'user', content: text.trim() }, answer] }));
+    const question: UserTurn = { role: 'user', content: text.trim(), ...(attachments.length ? { attachments } : {}) };
+    set((s) => ({ busy: true, ctrl, turns: [...s.turns, question, answer] }));
     try {
       let id = get().chatId;
       if (!id) {
@@ -157,7 +176,7 @@ export const useChat = create<ChatStore>()((set, get) => ({
       }
       await sendMessage(
         id,
-        { ...req, text: text.trim() },
+        { ...req, text: text.trim(), ...(attachments.length ? { attachmentIds: attachments.map((a) => a.id) } : {}) },
         (e) => {
           if (e.type === 'mode') set({ noTools: true });
           set((s) => ({ turns: lastAi(s.turns, (t) => applyEvent(t, e)) }));

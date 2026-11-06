@@ -94,6 +94,8 @@ func (t *Tools) Run(ctx context.Context, userID uuid.UUID, sc Scope, name, rawAr
 		out, err = t.group(ctx, userID, sc, a)
 	case ToolGoals:
 		out, err = t.goalStatus(ctx, userID, a)
+	case ToolReceipt:
+		out, err = t.receipt(ctx, userID, sc, a)
 	case ToolPropose:
 		out, err = t.propose(ctx, userID, sc, a)
 	default:

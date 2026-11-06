@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -27,7 +28,10 @@ var testDB *testutil.DB
 
 func TestMain(m *testing.M) { testutil.Main(m, &testDB) }
 
-const questionsPath = "../../../../evals/assistant/questions.json"
+const (
+	questionsPath = "../../../../evals/assistant/questions.json"
+	receiptsDir   = "../../../../evals/assistant/receipts"
+)
 
 func TestNumbers(t *testing.T) {
 	for _, c := range []struct {
@@ -214,5 +218,76 @@ func TestRunsOfOneModelStayApart(t *testing.T) {
 func TestReportWithoutRuns(t *testing.T) {
 	if !strings.Contains(Report(nil), "No runs yet") {
 		t.Error(Report(nil))
+	}
+}
+
+// TestReceiptSet checks the receipt set itself: enough receipts in enough languages, an image for
+// each, and truths the grader reads.
+func TestReceiptSet(t *testing.T) {
+	set, err := LoadReceipts(filepath.Join(receiptsDir, "receipts.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	langs := map[string]int{}
+	for _, r := range set.Receipts {
+		langs[r.Lang]++
+		if _, err := os.Stat(filepath.Join(receiptsDir, r.ID+".jpg")); err != nil {
+			t.Errorf("%s: %v", r.ID, err)
+		}
+		tr := r.Truth
+		if _, ok := minorOf(tr.Total, tr.Currency); !ok || len(tr.Date) != 10 || tr.MerchantKey == "" ||
+			!GradeReceipt(tr, ReceiptRead{Merchant: tr.Merchant, Date: tr.Date, Total: tr.Total, Currency: tr.Currency}).OK() {
+			t.Errorf("%s: truth %+v doesn't grade as correct", r.ID, tr)
+		}
+	}
+	if len(set.Receipts) < 16 || len(langs) < 5 || langs["en"] < 2 || langs["de"] < 2 || langs["fr"] < 2 || langs["pl"] < 2 {
+		t.Errorf("%d receipts, languages %v", len(set.Receipts), langs)
+	}
+}
+
+func TestGradeReceipt(t *testing.T) {
+	truth := ReceiptTruth{Merchant: "Gasthaus Zum Grünen Tal", MerchantKey: "grunen tal", Date: "2025-02-28", Total: "54.30", Currency: "EUR"}
+	cases := []struct {
+		answer string
+		want   ReceiptScore
+	}{
+		{`{"merchant":"Gasthaus Zum Grünen Tal","date":"2025-02-28","total":54.30,"currency":"EUR"}`, ReceiptScore{true, true, true, true}},
+		{"```json\n{\"merchant\": \"GASTHAUS ZUM GRUNEN TAL\", \"date\": \"2025-02-28\", \"total\": \"54,30\", \"currency\": \"€\"}\n```", ReceiptScore{true, true, true, true}},
+		{`Here it is: {"merchant":"Gasthaus","date":"28.02.2025","total":54.3,"currency":"eur"}`, ReceiptScore{false, false, true, true}},
+		{`{"merchant":"Zum Grünen Tal","date":"2025-02-28","total":8.67,"currency":"USD"}`, ReceiptScore{true, true, false, false}},
+		{`{"merchant":"x","date":"2025-02-28","total":"1.054,30","currency":"EUR"}`, ReceiptScore{false, true, false, true}},
+	}
+	for _, c := range cases {
+		read, ok := ParseReceiptAnswer(c.answer)
+		if got := GradeReceipt(truth, read); !ok || got != c.want {
+			t.Errorf("%s: %+v (parsed %v), want %+v", c.answer, got, ok, c.want)
+		}
+	}
+	if _, ok := ParseReceiptAnswer("I can't read this image."); ok {
+		t.Error("an answer without JSON parsed")
+	}
+	// thousands separators, other currencies
+	for s, want := range map[string]int64{"1 234,50": 123450, "1,234.50": 123450, "£9.30": 930, "186": 18600, "279,79 zł": 27979} {
+		if got, ok := minorOf(s, "PLN"); !ok || got != want {
+			t.Errorf("minorOf(%q) = %d %v, want %d", s, got, ok, want)
+		}
+	}
+}
+
+func TestReceiptReport(t *testing.T) {
+	r := ReceiptResult{Connection: "ollama", Model: "m", Think: "off", RanAt: time.Date(2026, 11, 6, 0, 0, 0, 0, time.UTC), Cases: []ReceiptCase{
+		{ID: "de-a", Lang: "de", OK: true, Ms: 4000},
+		{ID: "pl-b", Lang: "pl", Fields: []string{"total"}, Read: ReceiptRead{Merchant: "Sklep", Date: "2025-03-12", Total: "8.94", Currency: "PLN"}, Ms: 6000},
+		{ID: "fr-c", Lang: "fr", Error: "timeout", Ms: 9000},
+	}}
+	rep := ReceiptReport([]ReceiptResult{r})
+	for _, want := range []string{"| ollama | m | off | 1 / 3 (33 %) | 67 % | 67 % | 33 % | 67 % | 6.0 s | 9.0 s | 2026-11-06 |",
+		"| m | 1 / 1 | 0 / 1 | 0 / 1 |", "- `pl-b`: total (read \"Sklep\", 2025-03-12, 8.94 PLN)", "- `fr-c`: timeout"} {
+		if !strings.Contains(rep, want) {
+			t.Errorf("report lacks %q:\n%s", want, rep)
+		}
+	}
+	if !strings.Contains(ReceiptReport(nil), "No runs yet") {
+		t.Error(ReceiptReport(nil))
 	}
 }

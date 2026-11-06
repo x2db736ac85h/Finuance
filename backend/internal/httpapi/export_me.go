@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"maps"
 	"mime"
@@ -35,6 +36,7 @@ const ExportFormatVersion = 1
 //	                        assistant's changes (ai-changes: what each one set, before and after)
 //	transactions.csv        every transaction of every account (the CSV export format, all columns)
 //	imports/<id>/<filename> the original files
+//	assistant/<chat>/<n>-<id>.jpg the photos sent with question n of a chat
 //
 // The JSON documents are read before the response starts, so a failure there is still a problem
 // response; the CSV and the files then stream.
@@ -198,6 +200,18 @@ func (a *api) writeExportZip(ctx context.Context, w io.Writer, userID uuid.UUID,
 		return err
 	}); err != nil {
 		return err
+	}
+	if a.ai != nil {
+		if err := a.ai.Chats.ExportAttachments(ctx, userID, func(chatID, id uuid.UUID, seq int, content []byte) error {
+			f, err := create(fmt.Sprintf("assistant/%s/%d-%s.jpg", chatID, seq, id))
+			if err != nil {
+				return err
+			}
+			_, err = f.Write(content)
+			return err
+		}); err != nil {
+			return err
+		}
 	}
 	return z.Close()
 }

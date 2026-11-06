@@ -168,3 +168,37 @@ func (e *Engine) SharedGroup(ctx context.Context, userID, sharedGroupID uuid.UUI
 	})
 	return members, expenses, err
 }
+
+// ReceiptRow is a transaction a receipt may belong to (ADR 0032).
+type ReceiptRow struct {
+	ID          uuid.UUID
+	AccountID   uuid.UUID
+	AccountName string
+	AccountKind string
+	BookedOn    platform.Date
+	Payee       string
+	Description string
+	AmountMinor int64
+	Currency    string
+	Category    string
+	Note        string
+	Typed       bool // added by hand, not imported
+}
+
+// ReceiptCandidates lists money out of exactly amountMinor (positive) booked within days of on,
+// nearest first.
+func (e *Engine) ReceiptCandidates(ctx context.Context, userID uuid.UUID, amountMinor int64, on platform.Date, days int) ([]ReceiptRow, error) {
+	var out []ReceiptRow
+	err := e.st.WithUserReadOnly(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		rows, err := q.ReceiptCandidates(ctx, db.ReceiptCandidatesParams{UserID: userID, AmountMinor: -amountMinor,
+			FromOn: on.AddDays(-days), ToOn: on.AddDays(days), ReceiptOn: on})
+		for i := range rows {
+			r := &rows[i]
+			out = append(out, ReceiptRow{ID: r.ID, AccountID: r.AccountID, AccountName: r.AccountName, AccountKind: r.AccountKind,
+				BookedOn: r.BookedOn, Payee: r.Payee, Description: r.Description, AmountMinor: r.AmountMinor, Currency: r.Currency,
+				Category: r.Category, Note: r.Note, Typed: r.Origin == "manual"})
+		}
+		return err
+	})
+	return out, err
+}

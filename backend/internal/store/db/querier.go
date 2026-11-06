@@ -62,6 +62,7 @@ type Querier interface {
 	CountOwnedSharedGroups(ctx context.Context, ownerID *uuid.UUID) (int64, error)
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUnreadNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountUnsentAssistantAttachments(ctx context.Context, arg CountUnsentAssistantAttachmentsParams) (int64, error)
 	// kind (bank | cash) is chosen here and never changes (ADR 0029).
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateAssistantChat(ctx context.Context, arg CreateAssistantChatParams) (AssistantChat, error)
@@ -140,12 +141,14 @@ type Querier interface {
 	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (int64, error)
 	DeleteSharedSplits(ctx context.Context, expenseID uuid.UUID) error
 	DeleteTransactionsByID(ctx context.Context, arg DeleteTransactionsByIDParams) (int64, error)
+	DeleteUnsentAssistantAttachmentsBefore(ctx context.Context, arg DeleteUnsentAssistantAttachmentsBeforeParams) (int64, error)
 	// Cascades to every user-owned table.
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
 	// Revoke one session by its public id: the first 8 bytes of the token hash (PLAN §6.2).
 	DeleteUserSessionByPrefix(ctx context.Context, arg DeleteUserSessionByPrefixParams) (int64, error)
 	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
+	DismissMerge(ctx context.Context, arg DismissMergeParams) error
 	// The duplicate groups of the given accounts (PLAN §7.14, legacy §32.3): fingerprints with staged
 	// rows in two or more committed imports where something was merged (more linked rows than
 	// transactions) or the user decided (an override). Every token must appear in one of the rows'
@@ -162,6 +165,7 @@ type Querier interface {
 	ExportAIChanges(ctx context.Context, userID uuid.UUID) ([]ExportAIChangesRow, error)
 	// Queries for the personal data export (GET /me/export, PLAN task 7.10).
 	ExportAnnotations(ctx context.Context, userID uuid.UUID) ([]TxAnnotation, error)
+	ExportAssistantAttachments(ctx context.Context, userID uuid.UUID) ([]ExportAssistantAttachmentsRow, error)
 	ExportDedupeOverrides(ctx context.Context, userID uuid.UUID) ([]DedupeOverride, error)
 	// Every import of the user, oldest first (the export streams their files one at a time).
 	ExportImportIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
@@ -191,6 +195,7 @@ type Querier interface {
 	GetAIChangeForUpdate(ctx context.Context, arg GetAIChangeForUpdateParams) (GetAIChangeForUpdateRow, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
+	GetAssistantAttachment(ctx context.Context, arg GetAssistantAttachmentParams) (AssistantAttachment, error)
 	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
 	// The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
 	GetAssistantSettings(ctx context.Context, userID uuid.UUID) (AssistantSetting, error)
@@ -247,6 +252,7 @@ type Querier interface {
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
 	// sidebar source labels b1, b2, … (task 6.12).
 	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
+	InsertAssistantAttachment(ctx context.Context, arg InsertAssistantAttachmentParams) error
 	InsertAssistantMessage(ctx context.Context, arg InsertAssistantMessageParams) (InsertAssistantMessageRow, error)
 	// The audit log (PLAN task 17.6, migration 00010). Rows are only ever inserted, listed and, after
 	// the retention, deleted (the table's policies allow nothing else).
@@ -284,6 +290,8 @@ type Querier interface {
 	ListAIChanges(ctx context.Context, arg ListAIChangesParams) ([]ListAIChangesRow, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
 	ListApprovedThemes(ctx context.Context) ([]Theme, error)
+	// What the chat shows: each sent photo's question and size, never the bytes.
+	ListAssistantAttachmentRefs(ctx context.Context, arg ListAssistantAttachmentRefsParams) ([]ListAssistantAttachmentRefsRow, error)
 	ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]AssistantChat, error)
 	ListAssistantMessages(ctx context.Context, arg ListAssistantMessagesParams) ([]AssistantMessage, error)
 	// Newest first, a page at a time: rows with an id below before_id (0 = from the newest).
@@ -335,6 +343,7 @@ type Querier interface {
 	// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
 	LockUserAccounts(ctx context.Context, userID uuid.UUID) error
 	MarkAIChangeReverted(ctx context.Context, arg MarkAIChangeRevertedParams) error
+	MarkAssistantAttachmentsSent(ctx context.Context, arg MarkAssistantAttachmentsSentParams) error
 	// Marks the given notifications read, or every unread one when ids is NULL.
 	MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) (int64, error)
 	MergeCategoryAnnotations(ctx context.Context, arg MergeCategoryAnnotationsParams) error
@@ -344,7 +353,11 @@ type Querier interface {
 	MergeCategoryRules(ctx context.Context, arg MergeCategoryRulesParams) error
 	// Merging: the transactions keep how their category was set (bank, rule, manual).
 	MergeCategoryTransactions(ctx context.Context, arg MergeCategoryTransactionsParams) (int64, error)
+	// Typed rows of bank accounts with an imported row of the same account and amount booked within 3
+	// days, not dismissed: the nearest imported row first for each typed one.
+	MergeSuggestions(ctx context.Context, userID uuid.UUID) ([]MergeSuggestionsRow, error)
 	MoveCategoryAliases(ctx context.Context, arg MoveCategoryAliasesParams) error
+	MoveSharedLink(ctx context.Context, arg MoveSharedLinkParams) error
 	// Changes the assistant made (Phase 20, ADR 0030). User-owned with forced RLS; written in the same
 	// transaction as the change by internal/ledger, undone by internal/aichanges.
 	// The open change of a proposal, created by the first request of its Apply; later requests of the
@@ -360,6 +373,9 @@ type Querier interface {
 	Ping(ctx context.Context) (int32, error)
 	// Versioned: only the document the administrator read can be replaced.
 	PutInstanceSettings(ctx context.Context, arg PutInstanceSettingsParams) (int64, error)
+	// Receipts by photo (Phase 20, ADR 0032).
+	// Money out of exactly this amount, booked within the days around the receipt's date, nearest first.
+	ReceiptCandidates(ctx context.Context, arg ReceiptCandidatesParams) ([]ReceiptCandidatesRow, error)
 	// After the rules ran: the category names of the user's copies follow their transactions.
 	RefreshSharedCategories(ctx context.Context, arg RefreshSharedCategoriesParams) (int64, error)
 	RenameCategory(ctx context.Context, arg RenameCategoryParams) (Category, error)
@@ -426,13 +442,15 @@ type Querier interface {
 	// The user's copies in a group and whether their source transaction still exists (a missing source
 	// is shown to its owner only).
 	SharedCopiesFrom(ctx context.Context, arg SharedCopiesFromParams) ([]SharedCopiesFromRow, error)
+	SharedLinkOf(ctx context.Context, arg SharedLinkOfParams) (uuid.UUID, error)
 	SharedSplitsOf(ctx context.Context, expenseID uuid.UUID) ([]SharedExpenseSplit, error)
 	// Totals and spans of the groups the user can see (for the timeline).
 	SharedTimelineStats(ctx context.Context) ([]SharedTimelineStatsRow, error)
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
-	// What an annotation change replaces: the category (and where it came from) and the group.
+	// What an annotation change replaces: the category (and where it came from), the group and the note.
 	TransactionAnnotationState(ctx context.Context, arg TransactionAnnotationStateParams) ([]TransactionAnnotationStateRow, error)
+	TransactionForMerge(ctx context.Context, arg TransactionForMergeParams) (TransactionForMergeRow, error)
 	// The staged rows (one per import that contains this transaction), oldest import first.
 	TransactionProvenance(ctx context.Context, arg TransactionProvenanceParams) ([]TransactionProvenanceRow, error)
 	// The given transactions with what a shared copy needs, the shared group their personal group is
@@ -451,6 +469,8 @@ type Querier interface {
 	// Deleting a category: its transactions become uncategorised, however their category was set.
 	UncategoriseCategoryTransactions(ctx context.Context, arg UncategoriseCategoryTransactionsParams) (int64, error)
 	UnlinkGroupsFromShared(ctx context.Context, arg UnlinkGroupsFromSharedParams) (int64, error)
+	// The attachments of a question about to be sent, in the order asked for.
+	UnsentAssistantAttachments(ctx context.Context, arg UnsentAssistantAttachmentsParams) ([]AssistantAttachment, error)
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
 	// After a turn: the last activity, the connection and model used, and the title (the first
 	// question) when the chat had none.

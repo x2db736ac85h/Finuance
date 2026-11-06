@@ -228,3 +228,42 @@ test('a goal proposal applies, shows on the Overview, and undoes (ADR 0031)', as
   expect(seen.foreign).toEqual([]);
   expect(seen.errors).toEqual([]);
 });
+
+test('a receipt photo goes with its question; attach_receipt writes the note and undoes (ADR 0032)', async ({
+  page,
+  baseURL,
+}) => {
+  const seen = watch(page, baseURL ?? '');
+  const panel = await setup(page);
+  // the mock's model that reads images
+  await panel.getByRole('button', { name: 'Assistant settings' }).click();
+  await panel
+    .locator('label', { hasText: /^Model/ })
+    .locator('select')
+    .selectOption('mock-vl');
+  await panel.getByRole('button', { name: 'Done' }).click();
+  const withReceipt = async () => {
+    const r = await page.request.post('/api/v1/transactions/query', {
+      headers: API_HEADERS,
+      data: { context: { search: 'Receipt: Piekarnia' }, limit: 1 },
+    });
+    return ((await r.json()) as { total: number }).total;
+  };
+
+  await panel.getByLabel('Photo of a receipt').setInputFiles('../evals/assistant/receipts/pl-sklep.jpg');
+  await expect(panel.getByAltText('Photo to send')).toBeVisible();
+  await ask(page, 'receipt 98.07 "Piekarnia Ziarno" on 2025-03-17');
+  await expect(panel.getByAltText('Attached photo')).toBeVisible();
+  const card = panel.getByRole('group', { name: 'Proposed change' }).last();
+  await expect(card).toContainText('Add the receipt to “PIEKARNIA ZIARNO WARSZAWA” (17.03.2025');
+  await expect(card).toContainText('Piekarnia Ziarno · bread, butter');
+  expect(await withReceipt()).toBe(0);
+  await card.getByRole('button', { name: 'Apply' }).click();
+  await expect(card).toContainText('✓ Applied');
+  await expect.poll(withReceipt).toBe(1);
+  await card.getByRole('button', { name: 'Undo' }).click();
+  await expect(card).toContainText('↺ Undone');
+  await expect.poll(withReceipt).toBe(0);
+  expect(seen.foreign).toEqual([]);
+  expect(seen.errors).toEqual([]);
+});

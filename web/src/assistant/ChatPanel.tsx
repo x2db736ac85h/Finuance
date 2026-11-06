@@ -14,7 +14,10 @@ import {
   useChats,
   useDeleteChat,
   useSaveAssistantSettings,
+  attachmentUrl,
+  uploadAttachment,
   type AssistantConnection,
+  type Attachment,
   type Step,
 } from '../api/hooks/assistant';
 import { keys } from '../api/keys';
@@ -33,6 +36,7 @@ import { toast } from '../ui/toastStore';
 import { useChat, type AiTurn } from './chatStore';
 import { ChatSettings, pick } from './ChatSettings';
 import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';
+import { reencodePhoto } from './photos';
 import { TurnView } from './Turn';
 
 const SUGGEST = [
@@ -44,6 +48,8 @@ const SUGGEST = [
 ];
 
 const MIN_W = 300;
+/** Photos per question (the API's limit). */
+const MAX_PHOTOS = 3;
 
 export function ChatPanel({ viewId }: { viewId: string }) {
   const ai = useUi((s) => s.ai);
@@ -53,17 +59,22 @@ export function ChatPanel({ viewId }: { viewId: string }) {
   const saveSettings = useSaveAssistantSettings();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { turns, busy, send, stop, newChat, chatId, markApplied } = useChat();
+  const { turns, busy, send, stop, newChat, chatId, markApplied, ensureChat } = useChat();
   const apply = useApplyProposal();
   const [showCfg, setShowCfg] = useState(false);
   const [consentFor, setConsentFor] = useState<AssistantConnection | null>(null);
   const [text, setText] = useState('');
+  // photos waiting for the next question (uploaded into the chat already)
+  const [photos, setPhotos] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(0);
+  const picker = useRef<HTMLInputElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const near = useRef(true);
   const accounts = useAccounts().data ?? [];
 
   const { conn, model } = pick(status.data, ai);
+  const vision = conn?.models.find((m) => m.id === model)?.vision ?? false;
   const enabled = status.data?.enabled ?? false;
   const dot = status.isLoading ? 'busy' : conn?.reachable ? 'on' : conn ? 'err' : '';
 
@@ -88,15 +99,19 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     .sort()
     .at(-1);
 
-  const ask = (q: string) => {
-    if (!q.trim() || busy) return;
+  const ask = (typed: string) => {
+    // a photo alone asks about the receipt
+    const q = typed.trim() || (vision && photos.length > 0 ? 'Here is a receipt.' : '');
+    if (!q || busy) return;
     if (!conn) {
       setShowCfg(true);
       return;
     }
     const view = ai.scope === 'view';
     const v = viewOf(useViews.getState().views, viewId);
+    const sent = vision ? photos : [];
     setText('');
+    setPhotos([]);
     near.current = true;
     void send(
       q,
@@ -123,13 +138,37 @@ export function ChatPanel({ viewId }: { viewId: string }) {
           void autoApply(t, chatId);
         },
       },
+      sent,
     );
+  };
+
+  // photos are re-encoded in the browser (no EXIF or location leaves the device), then uploaded
+  const attach = async (files: FileList | null) => {
+    const list = [...(files ?? [])].slice(0, Math.max(0, MAX_PHOTOS - photos.length));
+    if (!list.length) return;
+    setUploading((n) => n + list.length);
+    try {
+      const id = await ensureChat({ onChanged: () => void qc.invalidateQueries({ queryKey: keys.chats }) });
+      for (const f of list) {
+        try {
+          const a = await uploadAttachment(id, await reencodePhoto(f));
+          setPhotos((p) => [...p, a]);
+        } catch (e) {
+          toast(`${f.name}: ${errorMessage(e)}`, { kind: 'error' });
+        } finally {
+          setUploading((n) => n - 1);
+        }
+      }
+    } catch (e) {
+      setUploading(0);
+      toast(errorMessage(e), { kind: 'error' });
+    }
   };
 
   // the proposals of the kinds the user lets the panel apply by itself (ADR 0030): never one
   // touching more than AUTO_APPLY_MAX_ROWS transactions, never one applied already
   const autoApply = async (t: AiTurn, chatId: string) => {
-    const kinds = settings.data?.autoApply ?? [];
+    const kinds: readonly string[] = settings.data?.autoApply ?? [];
     for (const s of t.steps) {
       const p = s.proposal;
       if (!p || !kinds.includes(p.action) || p.matched > AUTO_APPLY_MAX_ROWS) continue;
@@ -321,7 +360,48 @@ export function ChatPanel({ viewId }: { viewId: string }) {
           else ask(text);
         }}
       >
+        {photos.length + uploading > 0 && (
+          <div className="photos waiting" aria-label="Photos for the next question">
+            {chatId &&
+              photos.map((a) => (
+                <span key={a.id} className="photo">
+                  <img src={attachmentUrl(chatId, a.id)} width={a.width} height={a.height} alt="Photo to send" />
+                  <IconButton
+                    icon="x"
+                    size="sm"
+                    title="Don't send this photo"
+                    onClick={() => {
+                      setPhotos((p) => p.filter((x) => x.id !== a.id));
+                    }}
+                  />
+                </span>
+              ))}
+            {uploading > 0 && <span className="photo busy">Preparing…</span>}
+          </div>
+        )}
         <div className="chat-in">
+          {vision && (
+            <>
+              <IconButton
+                icon="camera"
+                title="Attach a photo of a receipt"
+                disabled={busy || photos.length + uploading >= MAX_PHOTOS}
+                onClick={() => picker.current?.click()}
+              />
+              <input
+                ref={picker}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                aria-label="Photo of a receipt"
+                onChange={(e) => {
+                  void attach(e.currentTarget.files);
+                  e.currentTarget.value = '';
+                }}
+              />
+            </>
+          )}
           <textarea
             ref={input}
             rows={1}
@@ -353,9 +433,9 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         {consentFor && (
           <div className="conn">
             <p>
-              <b>{consentFor.label}</b> runs outside this server. Your questions and the transactions the model looks up
-              (payees, amounts, dates, titles) will be sent there. Long numbers such as account numbers are shortened
-              first.
+              <b>{consentFor.label}</b> runs outside this server. Your questions, the photos you attach (receipts) and
+              the transactions the model looks up (payees, amounts, dates, titles) will be sent there. Long numbers such
+              as account numbers are shortened first; photos are sent as they are.
             </p>
             <p className="hint">You can withdraw this in the assistant settings at any time.</p>
             <div className="row2">

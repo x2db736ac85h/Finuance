@@ -48,6 +48,8 @@ export type Db = {
   investments: Schemas['Investments'];
   investmentPuts: Schemas['Investments'][];
   goals: Schemas['Goal'][];
+  mergeSuggestions: Schemas['MergeSuggestion'][];
+  merges: { id: string; body: Schemas['MergeRequest'] }[];
   goalWrites: { method: 'POST' | 'PATCH'; id?: string; body: unknown; header: string | null }[];
   accountPatches: { id: string; body: Schemas['AccountInput'] }[];
 };
@@ -125,6 +127,8 @@ export const freshDb = (): Db => ({
   investmentPuts: [],
   goals: [],
   goalWrites: [],
+  mergeSuggestions: [],
+  merges: [],
   accountPatches: [],
 });
 
@@ -306,6 +310,15 @@ export const server = setupServer(
     return new HttpResponse(null, { status: 204 });
   }),
   http.get(`${API}/goals`, () => authed(() => HttpResponse.json({ goals: db.goals }))),
+  http.get(`${API}/transactions/merge-suggestions`, () =>
+    authed(() => HttpResponse.json({ suggestions: db.mergeSuggestions })),
+  ),
+  http.post(`${API}/transactions/:id/merge`, async ({ params, request }) => {
+    const body = (await request.json()) as Schemas['MergeRequest'];
+    db.merges.push({ id: String(params['id']), body });
+    db.mergeSuggestions = db.mergeSuggestions.filter((m) => m.typedId !== params['id']);
+    return new HttpResponse(null, { status: 204 });
+  }),
   http.post(`${API}/goals`, async ({ request }) => {
     const body = (await request.json()) as Schemas['GoalInput'];
     db.goalWrites.push({ method: 'POST', body, header: request.headers.get('X-Assistant-Proposal') });

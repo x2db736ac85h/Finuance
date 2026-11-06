@@ -64,7 +64,7 @@ func Probe(ctx context.Context, cfg config.Config, in ProbeInput, out func(forma
 			if m.ID == st.DefaultModel {
 				def = "  [default]"
 			}
-			out("  %-40s tools=%-5v reasoning=%-6s context=%d%s", m.ID, m.Caps.Tools, m.Caps.Reasoning, m.Caps.ContextTokens, def)
+			out("  %-40s tools=%-5v reasoning=%-6s vision=%-5v context=%d%s", m.ID, m.Caps.Tools, m.Caps.Reasoning, m.Caps.Vision, m.Caps.ContextTokens, def)
 		}
 	}
 	c, m, err := conns.Resolve(ctx, in.Connection, in.Model)

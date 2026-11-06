@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"mime"
@@ -36,6 +37,14 @@ type anBlock struct {
 	Input     json.RawMessage `json:"input,omitempty"`
 	ToolUseID string          `json:"tool_use_id,omitempty"`
 	Content   string          `json:"content,omitempty"`
+	Source    *anSource       `json:"source,omitempty"` // image
+}
+
+// anSource is a base64 image of a user message.
+type anSource struct {
+	Type      string `json:"type"`
+	MediaType string `json:"media_type"`
+	Data      string `json:"data"`
 }
 
 type anMessage struct {
@@ -120,7 +129,12 @@ func (a *anthropicClient) body(req Request) ([]byte, error) {
 			}
 			add("assistant", blocks...)
 		default:
-			add("user", mustJSON(anBlock{Type: "text", Text: m.Content}))
+			blocks := make([]json.RawMessage, 0, len(m.Images)+1)
+			for _, im := range m.Images { // images before the text (Anthropic's advice)
+				blocks = append(blocks, mustJSON(anBlock{Type: "image", Source: &anSource{Type: "base64", MediaType: im.MIME,
+					Data: base64.StdEncoding.EncodeToString(im.Data)}}))
+			}
+			add("user", append(blocks, mustJSON(anBlock{Type: "text", Text: m.Content}))...)
 		}
 	}
 	for _, t := range req.Tools {

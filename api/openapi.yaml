@@ -730,11 +730,13 @@ paths:
   /transactions:
     post:
       operationId: addTransaction
-      summary: Add a transaction by hand to a cash account
+      summary: Add a transaction by hand
       description: >-
-        For cash accounts only (`422` for a bank account, whose transactions come from files). The
-        transaction can be edited and deleted later; rules and transfer detection treat it like an
-        imported one, but a category set here is a manual one and wins (ADR 0029).
+        Into a cash account (ADR 0029), or into a bank account for a card payment its file doesn't
+        have yet (ADR 0032: when the import brings the bank's row, a merge suggestion offers to keep
+        that one with this row's category, note and group). The transaction can be edited and
+        deleted later; rules and transfer detection treat it like an imported one, but a category
+        set here is a manual one and wins.
       tags: [transactions]
       parameters:
         - $ref: "#/components/parameters/AssistantChatHeader"
@@ -800,6 +802,47 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DistinctValue"
+        default:
+          $ref: "#/components/responses/Problem"
+  /transactions/merge-suggestions:
+    get:
+      operationId: listMergeSuggestions
+      summary: Typed card payments the bank's file has now (ADR 0032)
+      description: >-
+        For each transaction typed by hand into a bank account, the imported row of the same
+        account and amount booked within 3 days of it (the nearest), unless the user kept the two
+        apart.
+      tags: [transactions]
+      responses:
+        "200":
+          description: The suggestions, newest typed row first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MergeSuggestionList"
+        default:
+          $ref: "#/components/responses/Problem"
+  /transactions/{id}/merge:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: mergeTransaction
+      summary: Merge a typed transaction into the imported one, or keep them apart
+      description: >-
+        `{into}` keeps the imported row and gives it the typed row's category set by hand, note and
+        group and its shared-group copy, then deletes the typed row (`id`). With `keepApart: true`
+        nothing changes and the pair isn't suggested again. `422` unless both are in the same
+        account, of the same amount and booked within 3 days, `id` typed and `into` imported.
+      tags: [transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MergeRequest"
+      responses:
+        "204":
+          description: Merged (or kept apart).
         default:
           $ref: "#/components/responses/Problem"
   /transactions/ids:
@@ -908,6 +951,10 @@ paths:
         survive deleting and re-importing the file. `bookedOn`, `amountMinor`, `payee` and
         `description` change transactions added by hand only.
       tags: [transactions]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -2292,6 +2339,68 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Problem"
+  /assistant/chats/{id}/attachments:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: addAssistantAttachment
+      summary: Attach a photo to the chat's next question
+      description: >-
+        A JPEG of at most 2 MiB and 2,048 px a side (the panel sends at most 1,600 px). The server
+        reads the dimensions before decoding and encodes the pixels again, so no metadata (EXIF,
+        location) is kept. The photo waits until a question names it in `attachmentIds`; it then
+        goes to the model with that question only and is deleted with the chat. Photos never sent
+        are deleted after a day; at most 6 wait in one chat. `422` for anything else.
+      tags: [assistant]
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: The stored photo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantAttachment"
+        default:
+          $ref: "#/components/responses/Problem"
+  /assistant/chats/{id}/attachments/{attachmentId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getAssistantAttachment
+      summary: A photo of the chat
+      tags: [assistant]
+      responses:
+        "200":
+          description: The JPEG as stored.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Problem"
   /assistant/chats/{id}/stop:
     parameters:
       - name: id
@@ -3035,6 +3144,7 @@ components:
             - transaction.added
             - transaction.edited
             - transaction.deleted
+            - transaction.merged
             - friend.added
             - friend.removed
             - friend.code_failed
@@ -6011,7 +6121,7 @@ components:
     AssistantModel:
       type: object
       additionalProperties: false
-      required: [id, tools, reasoning, contextTokens]
+      required: [id, tools, reasoning, contextTokens, vision]
       properties:
         id:
           type: string
@@ -6025,6 +6135,9 @@ components:
           description: How thinking is controlled (none = no control; the model may still reason).
         contextTokens:
           type: integer
+        vision:
+          type: boolean
+          description: Whether the model reads images (photos of receipts can be attached).
     AssistantError:
       type: object
       additionalProperties: false
@@ -6152,6 +6265,11 @@ components:
           $ref: "#/components/schemas/AssistantMeta"
         error:
           $ref: "#/components/schemas/AssistantTurnError"
+        attachments:
+          type: array
+          description: The photos a question went with.
+          items:
+            $ref: "#/components/schemas/AssistantAttachment"
         createdAt:
           type: string
           format: date-time
@@ -6195,7 +6313,7 @@ components:
             X-Assistant-Proposal when it is applied.
         action:
           type: string
-          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
+          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal, attach_receipt]
         reason:
           type: string
         matched:
@@ -6239,7 +6357,7 @@ components:
         accountId:
           type: string
           format: uuid
-          description: "add_expense: the cash account."
+          description: "add_expense: the cash account, or the bank account of a card payment not imported yet."
         accountName:
           type: string
         date:
@@ -6274,6 +6392,9 @@ components:
           $ref: "#/components/schemas/ProposalGoal"
         goalBefore:
           $ref: "#/components/schemas/ProposalGoal"
+        receiptLine:
+          type: string
+          description: "attach_receipt: the line added to the matched transaction's note (`note` is the whole note after it)."
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
     ProposalRow:
@@ -6363,6 +6484,25 @@ components:
           example: Europe/Warsaw
         settings:
           $ref: "#/components/schemas/AssistantRunSettings"
+        attachmentIds:
+          type: array
+          maxItems: 3
+          description: Photos attached to this chat (POST …/attachments) that go with this question; the model must read images.
+          items:
+            type: string
+            format: uuid
+    AssistantAttachment:
+      type: object
+      additionalProperties: false
+      required: [id, width, height]
+      properties:
+        id:
+          type: string
+          format: uuid
+        width:
+          type: integer
+        height:
+          type: integer
     AssistantRunSettings:
       type: object
       additionalProperties: false
@@ -7052,6 +7192,43 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ProposalSplitMember"
+    MergeSuggestionList:
+      type: object
+      additionalProperties: false
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MergeSuggestion"
+    MergeSuggestion:
+      type: object
+      additionalProperties: false
+      required: [typedId, importedId, typedOn, importedOn, typedPayee, importedPayee, amount, account]
+      properties:
+        typedId: { type: string, format: uuid }
+        importedId: { type: string, format: uuid }
+        typedOn: { type: string, format: date }
+        importedOn: { type: string, format: date }
+        typedPayee: { type: string }
+        importedPayee: { type: string }
+        typedNote: { type: string }
+        amount:
+          $ref: "#/components/schemas/Money"
+        account:
+          $ref: "#/components/schemas/NamedRef"
+    MergeRequest:
+      type: object
+      additionalProperties: false
+      required: [into]
+      properties:
+        into:
+          type: string
+          format: uuid
+          description: The imported transaction.
+        keepApart:
+          type: boolean
+          default: false
     ProposalGoal:
       type: object
       additionalProperties: false

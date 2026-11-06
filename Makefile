@@ -263,7 +263,12 @@ llmmock: ## Mock model server on :11434 for local UI work (OpenAI and Anthropic 
 eval-assistant: ## Assistant evals against a real model: CONNECTION= MODEL= THINK= (Docker for the DB; docs/evals.md)
 	cd backend && FINUANCE_EVAL_CONNECTION=$(CONNECTION) FINUANCE_EVAL_MODEL=$(MODEL) FINUANCE_EVAL_THINK=$(THINK) \
 	  FINUANCE_EVAL_MODE=$(MODE) FINUANCE_EVAL_TOOLSET=$(TOOLSET) \
-	  go test -tags eval -run TestEvalAssistant -count=1 -timeout 3h -v ./internal/assistant/eval
+	  go test -tags eval -run TestEvalAssistant -count=1 -timeout $(or $(TIMEOUT),3h) -v ./internal/assistant/eval
+
+.PHONY: eval-receipts
+eval-receipts: ## Receipt evals (images) against a real model that reads them: CONNECTION= MODEL= THINK= (docs/evals.md)
+	cd backend && FINUANCE_EVAL_CONNECTION=$(CONNECTION) FINUANCE_EVAL_MODEL=$(MODEL) FINUANCE_EVAL_THINK=$(THINK) \
+	  go test -tags eval -run TestEvalReceipts -count=1 -timeout 2h -v ./internal/assistant/eval
 
 ##@ Build and deploy
 
