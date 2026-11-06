@@ -64,8 +64,8 @@ spec:
           env:
             {{- include "finuance.dbPassword" .Values.database.app | nindent 12 }}
             {{- if and .Values.assistant.enabled .Values.assistant.connectionsFile }}
-            # Only the api mounts the connections file (the worker would fail its config check
-            # on a path it doesn't have).
+            # The api and the worker (digests) mount the connections file; a container that reads
+            # it without the mount would fail its config check (check-helm checks).
             - name: FINUANCE_AI_CONNECTIONS_FILE
               value: /etc/finuance/connections.json
             {{- end }}

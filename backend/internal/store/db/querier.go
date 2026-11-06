@@ -18,6 +18,8 @@ type Querier interface {
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
 	// The members an equal split goes to, in id order (the remainder cents go to the first ones).
 	ActiveSharedMemberIDs(ctx context.Context, groupID uuid.UUID) ([]uuid.UUID, error)
+	// One finished run's tokens on its UTC day (ADR 0033).
+	AddAssistantUsage(ctx context.Context, arg AddAssistantUsageParams) error
 	AddFriendship(ctx context.Context, arg AddFriendshipParams) (int64, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
 	AdminCountUsers(ctx context.Context, arg AdminCountUsersParams) (AdminCountUsersRow, error)
@@ -149,6 +151,8 @@ type Querier interface {
 	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
 	DismissMerge(ctx context.Context, arg DismissMergeParams) error
+	// Users whose digest is due: never disabled or demo users.
+	DueDigestUsers(ctx context.Context, arg DueDigestUsersParams) ([]DueDigestUsersRow, error)
 	// The duplicate groups of the given accounts (PLAN §7.14, legacy §32.3): fingerprints with staged
 	// rows in two or more committed imports where something was merged (more linked rows than
 	// transactions) or the user decided (an override). Every token must appear in one of the rows'
@@ -199,11 +203,13 @@ type Querier interface {
 	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
 	// The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
 	GetAssistantSettings(ctx context.Context, userID uuid.UUID) (AssistantSetting, error)
+	GetAssistantUsage(ctx context.Context, arg GetAssistantUsageParams) (GetAssistantUsageRow, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
 	GetCategoryAlias(ctx context.Context, arg GetCategoryAliasParams) (*uuid.UUID, error)
 	// Duplicate review (PLAN §4.4, "Duplicate review and overrides"). ledger.Rematerialize uses these to
 	// rebuild the transactions of one (account, fingerprint) from its staged rows and override.
 	GetDedupeOverride(ctx context.Context, arg GetDedupeOverrideParams) (DedupeOverride, error)
+	GetDigestDueAt(ctx context.Context, id uuid.UUID) (*time.Time, error)
 	GetGoal(ctx context.Context, arg GetGoalParams) (Goal, error)
 	GetGoalForUpdate(ctx context.Context, arg GetGoalForUpdateParams) (Goal, error)
 	GetGroup(ctx context.Context, arg GetGroupParams) (Group, error)
@@ -404,6 +410,8 @@ type Querier interface {
 	SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error
 	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
 	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
+	// When the user's next digest is due (NULL: none; ADR 0033). users is not under RLS.
+	SetDigestDueAt(ctx context.Context, arg SetDigestDueAtParams) error
 	// Lets the planner use nested loops or not, for the rest of the transaction (set_config with
 	// is_local). The commit turns them off after a bulk insert (ledger/commit.go, afterBulkInsert).
 	SetEnableNestLoop(ctx context.Context, value string) error

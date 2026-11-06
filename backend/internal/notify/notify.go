@@ -1,5 +1,6 @@
 // Package notify keeps in-app notifications (Phase 19, 19.8): short messages about what other
-// people did that concern a user (a friend added or removed you; shared groups in PR 3). They are
+// people did that concern a user (a friend added or removed you, shared groups), and that the
+// assistant's digest is ready (Phase 20). They are
 // user-owned rows under forced RLS; another user's action writes one under the recipient's own
 // context. The web app words them from the kind and the data, which hold ids and display names,
 // never e-mail addresses. There is no e-mail delivery. Notifications older than 90 days are
@@ -30,10 +31,14 @@ const (
 	SharedLeft         = "shared.left"
 	SharedExpenseAdded = "shared.expense_added"
 	SharedSettled      = "shared.settled"
+	// AssistantDigest: a digest is ready (ADR 0033); data holds the chat's id, the schedule, the
+	// number of proposals waiting, and failed when it couldn't be written.
+	AssistantDigest = "assistant.digest"
 )
 
 // Kinds lists every kind above.
-var Kinds = []string{FriendAdded, FriendRemoved, SharedInvited, SharedJoined, SharedLeft, SharedExpenseAdded, SharedSettled}
+var Kinds = []string{FriendAdded, FriendRemoved, SharedInvited, SharedJoined, SharedLeft, SharedExpenseAdded, SharedSettled,
+	AssistantDigest}
 
 // Retention is how long a notification is kept.
 const Retention = 90 * 24 * time.Hour

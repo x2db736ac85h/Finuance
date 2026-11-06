@@ -60,7 +60,8 @@ func (a *api) GetMeta(ctx context.Context, _ gen.GetMetaRequestObject) (gen.GetM
 	f := a.features(ctx)
 	out := gen.GetMeta200JSONResponse{Version: a.version, SignupEnabled: a.cfg.AllowSignup, DemoMode: a.cfg.DemoMode,
 		AssistantEnabled: a.conns().Enabled() && f.Assistant, Themes: []gen.PublicTheme{},
-		Features: gen.Features{Overview: f.Overview, Assistant: f.Assistant, Friends: f.Friends, SharedGroups: f.SharedGroups}}
+		Features: gen.Features{Overview: f.Overview, Assistant: f.Assistant, AssistantDigests: f.AssistantDigests && !a.cfg.DemoMode,
+			Friends: f.Friends, SharedGroups: f.SharedGroups}}
 	if a.admin != nil {
 		pub, err := a.admin.Public(ctx)
 		if err != nil {

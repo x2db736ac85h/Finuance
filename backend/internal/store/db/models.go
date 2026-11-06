@@ -68,6 +68,7 @@ type AssistantChat struct {
 	NoTools    bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	Kind       string
 }
 
 type AssistantMessage struct {
@@ -88,11 +89,25 @@ type AssistantMessage struct {
 }
 
 type AssistantSetting struct {
-	UserID        uuid.UUID
-	RetentionDays *int16
-	CloudConsent  []string
-	UpdatedAt     time.Time
-	AutoApply     []string
+	UserID           uuid.UUID
+	RetentionDays    *int16
+	CloudConsent     []string
+	UpdatedAt        time.Time
+	AutoApply        []string
+	Digest           string
+	DigestHour       int16
+	DigestWeekday    int16
+	DigestTimeZone   string
+	DigestConnection string
+	DigestModel      string
+}
+
+type AssistantUsage struct {
+	UserID  uuid.UUID
+	Day     platform.Date
+	Runs    int32
+	Digests int32
+	Tokens  int64
 }
 
 type AuditLog struct {
@@ -506,6 +521,7 @@ type User struct {
 	DisabledAt         *time.Time
 	MustChangePassword bool
 	Limits             []byte
+	DigestDueAt        *time.Time
 }
 
 type UserPreference struct {

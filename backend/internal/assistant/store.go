@@ -31,6 +31,11 @@ type Settings struct {
 	// AutoApply lists the proposal actions the panel applies by itself (ADR 0030); nil when saving
 	// keeps the stored list.
 	AutoApply []string
+	// Digest is the digest schedule (ADR 0033); nil when saving keeps the stored one.
+	Digest *DigestSettings
+	// Read only: when the next digest is due (nil: none) and the tokens used today (UTC).
+	DigestNextAt *time.Time
+	TokensToday  int64
 }
 
 // AutoApplyActions are the proposal actions a user can let the panel apply by itself.
@@ -44,6 +49,7 @@ func (s Settings) Consented(conn string) bool { return slices.Contains(s.CloudCo
 type Chat struct {
 	ID         uuid.UUID
 	Title      string
+	Kind       string // chat or digest
 	Connection string
 	Model      string
 	NoTools    bool // auto mode switched this chat to plan mode
@@ -147,22 +153,54 @@ func (c *Chats) Settings(ctx context.Context, userID uuid.UUID) (Settings, error
 	var s Settings
 	err := c.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
 		var err error
-		s, err = settings(ctx, q, userID)
-		return err
+		if s, err = settings(ctx, q, userID); err != nil {
+			return err
+		}
+		return c.readOnlyParts(ctx, q, userID, &s)
 	})
 	return s, err
+}
+
+// readOnlyParts fills in the next digest's time and today's tokens.
+func (c *Chats) readOnlyParts(ctx context.Context, q *db.Queries, userID uuid.UUID, s *Settings) error {
+	due, err := q.GetDigestDueAt(ctx, userID)
+	if err != nil {
+		return err
+	}
+	s.DigestNextAt = due
+	use, err := q.GetAssistantUsage(ctx, db.GetAssistantUsageParams{UserID: userID, Day: utcDay(c.clock.Now())})
+	s.TokensToday = use.Tokens
+	return err
+}
+
+func utcDay(t time.Time) platform.Date {
+	t = t.UTC()
+	return platform.Date{Y: t.Year(), M: t.Month(), D: t.Day()}
+}
+
+// TokensToday is what the user's runs used today (UTC).
+func (c *Chats) TokensToday(ctx context.Context, userID uuid.UUID) (int64, error) {
+	var n int64
+	err := c.st.WithUserReadOnly(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		use, err := q.GetAssistantUsage(ctx, db.GetAssistantUsageParams{UserID: userID, Day: utcDay(c.clock.Now())})
+		n = use.Tokens
+		return err
+	})
+	return n, err
 }
 
 func settings(ctx context.Context, q *db.Queries, userID uuid.UUID) (Settings, error) {
 	row, err := q.GetAssistantSettings(ctx, userID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		d := DefaultRetentionDays
-		return Settings{RetentionDays: &d, CloudConsent: []string{}, AutoApply: []string{}}, nil
+		d, dg := DefaultRetentionDays, DefaultDigest()
+		return Settings{RetentionDays: &d, CloudConsent: []string{}, AutoApply: []string{}, Digest: &dg}, nil
 	}
 	if err != nil {
 		return Settings{}, err
 	}
-	s := Settings{CloudConsent: row.CloudConsent, AutoApply: row.AutoApply}
+	s := Settings{CloudConsent: row.CloudConsent, AutoApply: row.AutoApply, Digest: &DigestSettings{Schedule: row.Digest,
+		Hour: int(row.DigestHour), Weekday: int(row.DigestWeekday), TimeZone: row.DigestTimeZone, Connection: row.DigestConnection,
+		Model: row.DigestModel}}
 	if s.AutoApply == nil {
 		s.AutoApply = []string{}
 	}
@@ -197,6 +235,9 @@ func (c *Chats) SaveSettings(ctx context.Context, userID uuid.UUID, s Settings) 
 			break
 		}
 	}
+	if s.Digest != nil {
+		s.Digest.validate(ve)
+	}
 	if err := ve.Err(); err != nil {
 		return Settings{}, err
 	}
@@ -218,12 +259,29 @@ func (c *Chats) SaveSettings(ctx context.Context, userID uuid.UUID, s Settings) 
 		if auto == nil {
 			auto = []string{}
 		}
-		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: userID, RetentionDays: days,
-			CloudConsent: consent, AutoApply: auto, Now: c.clock.Now()}); err != nil {
+		cur, err := settings(ctx, q, userID)
+		if err != nil {
 			return err
 		}
-		var err error
+		dg := *cur.Digest
+		if s.Digest != nil {
+			dg = *s.Digest
+		}
+		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: userID, RetentionDays: days,
+			CloudConsent: consent, AutoApply: auto, Digest: dg.Schedule, DigestHour: int16(dg.Hour), DigestWeekday: int16(dg.Weekday), //nolint:gosec // validated
+			DigestTimeZone: dg.TimeZone, DigestConnection: dg.Connection, DigestModel: dg.Model, Now: c.clock.Now()}); err != nil {
+			return err
+		}
+		if s.Digest != nil && *s.Digest != *cur.Digest { // a new schedule starts from now
+			next, on := NextDigest(dg, c.clock.Now())
+			if err := q.SetDigestDueAt(ctx, db.SetDigestDueAtParams{ID: userID, DueAt: timePtr(next, on)}); err != nil {
+				return err
+			}
+		}
 		if out, err = settings(ctx, q, userID); err != nil {
+			return err
+		}
+		if err := c.readOnlyParts(ctx, q, userID, &out); err != nil {
 			return err
 		}
 		return c.expire(ctx, q, userID, out)
@@ -263,14 +321,19 @@ func (c *Chats) List(ctx context.Context, userID uuid.UUID) ([]Chat, error) {
 }
 
 func chatOf(r db.AssistantChat) Chat {
-	return Chat{ID: r.ID, Title: r.Title, Connection: r.Connection, Model: r.Model, NoTools: r.NoTools, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
+	return Chat{ID: r.ID, Title: r.Title, Kind: r.Kind, Connection: r.Connection, Model: r.Model, NoTools: r.NoTools, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
 }
 
 // Create starts a chat and drops the oldest chats beyond the limit.
 func (c *Chats) Create(ctx context.Context, userID uuid.UUID) (Chat, error) {
+	return c.create(ctx, userID, KindChat, "")
+}
+
+func (c *Chats) create(ctx context.Context, userID uuid.UUID, kind, title string) (Chat, error) {
 	var out Chat
 	err := c.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		r, err := q.CreateAssistantChat(ctx, db.CreateAssistantChatParams{ID: platform.NewID(), UserID: userID, Now: c.clock.Now()})
+		r, err := q.CreateAssistantChat(ctx, db.CreateAssistantChatParams{ID: platform.NewID(), UserID: userID, Kind: kind,
+			Title: clip(title, maxTitle), Now: c.clock.Now()})
 		if err != nil {
 			return err
 		}
@@ -372,6 +435,14 @@ func (c *Chats) Delete(ctx context.Context, userID, chatID uuid.UUID) error {
 type ChatUpdate struct {
 	Title, Connection, Model string
 	NoTools                  bool
+	// Usage is the finished run's, added to the day's (ADR 0033); nil for the question.
+	Usage *RunUsage
+}
+
+// RunUsage is one run's share of the daily token budget.
+type RunUsage struct {
+	Tokens int64
+	Digest bool
 }
 
 // Append stores messages at the end of a chat and updates the chat, in one transaction. It
@@ -390,6 +461,12 @@ func (c *Chats) Append(ctx context.Context, userID, chatID uuid.UUID, msgs []Mes
 				return err
 			}
 			last = int(r.Seq)
+		}
+		if u := up.Usage; u != nil {
+			if err := q.AddAssistantUsage(ctx, db.AddAssistantUsageParams{UserID: userID, Day: utcDay(now), Digest: u.Digest,
+				Tokens: max(u.Tokens, 0)}); err != nil {
+				return err
+			}
 		}
 		return q.UpdateAssistantChat(ctx, db.UpdateAssistantChatParams{UserID: userID, ID: chatID, Now: now, Connection: up.Connection,
 			Model: up.Model, NoTools: up.NoTools, Title: clip(up.Title, maxTitle)})

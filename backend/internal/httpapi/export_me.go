@@ -142,12 +142,12 @@ func (a *api) assistantExport(ctx context.Context, u uuid.UUID) (map[string]any,
 		return nil, err
 	}
 	chats := make([]gen.AssistantChatDetail, 0, len(list))
-	for _, c := range list {
-		ch, msgs, err := a.ai.Chats.Get(ctx, u, c.ID)
+	for i := range list {
+		ch, msgs, err := a.ai.Chats.Get(ctx, u, list[i].ID)
 		if err != nil {
 			return nil, err
 		}
-		chats = append(chats, gen.AssistantChatDetail{Id: ch.ID, Title: ch.Title, Connection: ch.Connection, Model: ch.Model,
+		chats = append(chats, gen.AssistantChatDetail{Id: ch.ID, Title: ch.Title, Kind: gen.AssistantChatKind(ch.Kind), Connection: ch.Connection, Model: ch.Model,
 			CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs)})
 	}
 	return map[string]any{"settings": settingsDTO(s), "chats": chats}, nil

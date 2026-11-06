@@ -53,7 +53,7 @@ func (q *Queries) AdminCountUsers(ctx context.Context, arg AdminCountUsersParams
 
 const adminListUsers = `-- name: AdminListUsers :many
 
-SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits FROM users
+SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at FROM users
 WHERE ($1::text = '' OR email ILIKE '%' || $1::text || '%')
   AND ($2::timestamptz IS NULL OR (created_at, id) < ($2::timestamptz, $3::uuid))
 ORDER BY created_at DESC, id DESC
@@ -98,6 +98,7 @@ func (q *Queries) AdminListUsers(ctx context.Context, arg AdminListUsersParams) 
 			&i.DisabledAt,
 			&i.MustChangePassword,
 			&i.Limits,
+			&i.DigestDueAt,
 		); err != nil {
 			return nil, err
 		}
@@ -205,7 +206,7 @@ func (q *Queries) CreateTheme(ctx context.Context, arg CreateThemeParams) (Theme
 const createUserWithRole = `-- name: CreateUserWithRole :one
 INSERT INTO users (id, email, password_hash, display_name, is_admin, must_change_password)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits
+RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at
 `
 
 type CreateUserWithRoleParams struct {
@@ -239,6 +240,7 @@ func (q *Queries) CreateUserWithRole(ctx context.Context, arg CreateUserWithRole
 		&i.DisabledAt,
 		&i.MustChangePassword,
 		&i.Limits,
+		&i.DigestDueAt,
 	)
 	return i, err
 }

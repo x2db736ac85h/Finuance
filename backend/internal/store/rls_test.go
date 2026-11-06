@@ -125,12 +125,16 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if _, err := q.CreateInvestmentPosition(ctx, db.CreateInvestmentPositionParams{ID: platform.NewID(), UserID: u, Name: "ETF", Now: now}); err != nil {
 			return fmt.Errorf("investment position: %w", err)
 		}
-		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: u, CloudConsent: []string{}, AutoApply: []string{}, Now: now}); err != nil {
+		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: u, CloudConsent: []string{}, AutoApply: []string{},
+			Digest: "weekly", DigestHour: 7, DigestWeekday: 1, DigestTimeZone: "Europe/Warsaw", Now: now}); err != nil {
 			return fmt.Errorf("assistant settings: %w", err)
 		}
-		chat, err := q.CreateAssistantChat(ctx, db.CreateAssistantChatParams{ID: platform.NewID(), UserID: u, Title: "Q", Now: now})
+		chat, err := q.CreateAssistantChat(ctx, db.CreateAssistantChatParams{ID: platform.NewID(), UserID: u, Title: "Q", Kind: "digest", Now: now})
 		if err != nil {
 			return fmt.Errorf("assistant chat: %w", err)
+		}
+		if err := q.AddAssistantUsage(ctx, db.AddAssistantUsageParams{UserID: u, Day: platform.DateOf(now, time.UTC), Digest: true, Tokens: 1200}); err != nil {
+			return fmt.Errorf("assistant usage: %w", err)
 		}
 		if _, err := q.InsertAssistantMessage(ctx, db.InsertAssistantMessageParams{ChatID: chat.ID, UserID: u, Role: "user", Content: "Q", Now: now}); err != nil {
 			return fmt.Errorf("assistant message: %w", err)

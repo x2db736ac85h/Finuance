@@ -270,3 +270,27 @@ test('a receipt photo goes with its question; attach_receipt writes the note and
   expect(seen.foreign).toEqual([]);
   expect(seen.errors).toEqual([]);
 });
+
+test('a digest asked for now is written by the worker and opens from the bell (ADR 0033)', async ({ page }) => {
+  const panel = await setup(page);
+  await panel.getByTitle('Assistant settings').click();
+  await panel.getByLabel('How often').selectOption('daily');
+  await expect(panel.getByText(/Next one .*, with mock-tools\./)).toBeVisible();
+  await panel.getByRole('button', { name: 'Write one now' }).click();
+  await expect(page.getByText(/A digest is being written/)).toBeVisible();
+  await panel.getByRole('button', { name: 'Done' }).click();
+
+  // the worker answers the digest's question with the mock (spending by category); the bell asks
+  // every minute and when the page loads
+  const bell = page.getByRole('button', { name: 'Notifications, 1 unread' });
+  await expect(async () => {
+    await page.reload();
+    await expect(bell).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
+  await bell.click();
+  await page.getByText('Your daily digest is ready').click();
+  const open = page.getByRole('complementary', { name: 'Assistant' });
+  await expect(open.getByText(/^Write my daily digest for today/)).toBeVisible();
+  await expect(open.locator('.mdt table')).toBeVisible();
+  await expect(open.locator('.chat-ttl')).toContainText('Daily digest ·');
+});

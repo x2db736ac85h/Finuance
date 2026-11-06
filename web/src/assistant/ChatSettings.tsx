@@ -5,11 +5,17 @@
 import {
   useAssistantSettings,
   useRefreshStatus,
+  useRequestDigest,
   useSaveAssistantSettings,
   type AssistantConnection,
+  type AssistantSettings,
   type AssistantStatus,
 } from '../api/hooks/assistant';
+import { useMe, useMeta } from '../api/hooks/me';
 import type { Schemas } from '../api/client';
+import { errorMessage } from '../lib/errors';
+import { fmtDateTime } from '../lib/dates';
+import { toast } from '../ui/toastStore';
 import { THINKING, type AiPrefs, type Thinking } from '../stores/prefs';
 import { useUi } from '../stores/uiStore';
 import { Button } from '../ui/Button';
@@ -70,12 +76,133 @@ const AUTO_KINDS: [NonNullable<Schemas['AssistantSettings']['autoApply']>[number
   ['update_goal', 'Change a goal'],
 ];
 
+type Digest = Schemas['AssistantDigest'];
+const SCHEDULES: Option<string>[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'daily', label: 'Every day' },
+  { value: 'weekly', label: 'Every week' },
+];
+const WEEKDAYS: Option<string>[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(
+  (d, i) => ({ value: String(i + 1), label: d }),
+);
+const HOURS: Option<string>[] = Array.from({ length: 24 }, (_, h) => ({
+  value: String(h),
+  label: `${String(h).padStart(2, '0')}:00`,
+}));
+
+/** The digest (ADR 0033): written in the background with the connection and model chosen here,
+ * at an hour of the browser's time zone; its proposals wait in its chat. */
+function DigestSettings({
+  settings,
+  connection,
+  model,
+  disabled,
+  onSave,
+}: {
+  settings: AssistantSettings;
+  connection: string;
+  model: string;
+  disabled: boolean;
+  onSave: (s: AssistantSettings) => void;
+}) {
+  const me = useMe();
+  const now = useRequestDigest();
+  const d: Digest = settings.digest ?? {
+    schedule: 'off',
+    hour: 7,
+    weekday: 1,
+    timeZone: 'Europe/Warsaw',
+    connection: '',
+    model: '',
+  };
+  const save = (change: Partial<Digest>) => {
+    onSave({
+      ...settings,
+      digest: { ...d, ...change, connection, model, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    });
+  };
+  const limit = me.data?.limits.assistantTokensPerDay ?? 0;
+  return (
+    <fieldset className="auto-apply digest" disabled={disabled}>
+      <legend>Digest</legend>
+      <p className="hint">
+        A short summary written in the background: budgets and goals that need attention, payments due and changes worth
+        making. Its proposals wait in its chat until you apply them.
+      </p>
+      <label>
+        How often
+        <Select
+          value={d.schedule}
+          options={SCHEDULES}
+          onChange={(schedule) => {
+            save({ schedule: schedule as Digest['schedule'] });
+          }}
+        />
+      </label>
+      {d.schedule === 'weekly' && (
+        <label>
+          On
+          <Select
+            value={String(d.weekday)}
+            options={WEEKDAYS}
+            onChange={(v) => {
+              save({ weekday: Number(v) });
+            }}
+          />
+        </label>
+      )}
+      {d.schedule !== 'off' && (
+        <label>
+          At
+          <Select
+            value={String(d.hour)}
+            options={HOURS}
+            onChange={(v) => {
+              save({ hour: Number(v) });
+            }}
+          />
+        </label>
+      )}
+      {settings.digestNextAt && (
+        <p className="hint">
+          Next one {fmtDateTime(settings.digestNextAt)}, with {d.model || 'the default model'}.
+        </p>
+      )}
+      <div className="row2">
+        <Button
+          size="sm"
+          icon="ai"
+          disabled={now.isPending}
+          onClick={() => {
+            now.mutate(undefined, {
+              onSuccess: () => {
+                toast('A digest is being written. The bell tells you when it is ready.');
+              },
+              onError: (e) => {
+                toast(errorMessage(e), { kind: 'error' });
+              },
+            });
+          }}
+        >
+          Write one now
+        </Button>
+      </div>
+      {limit > 0 && (
+        <p className="hint">
+          Used today: {(settings.tokensToday ?? 0).toLocaleString()} of {limit.toLocaleString()} tokens.
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
 export function ChatSettings({ status, onCloud, onDone }: Props) {
   const ai = useUi((s) => s.ai);
   const setAi = useUi((s) => s.setAi);
   const settings = useAssistantSettings();
   const save = useSaveAssistantSettings();
   const refresh = useRefreshStatus();
+  const meta = useMeta();
   const { conn, model } = pick(status, ai);
   const consented = !!conn && (settings.data?.cloudConsent ?? []).includes(conn.name);
   const info = conn?.models.find((m) => m.id === model);
@@ -219,6 +346,17 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
           </label>
         ))}
       </fieldset>
+      {meta.data?.features.assistantDigests && settings.data && (
+        <DigestSettings
+          settings={settings.data}
+          connection={conn?.name ?? ''}
+          model={model}
+          disabled={save.isPending}
+          onSave={(s) => {
+            save.mutate(s);
+          }}
+        />
+      )}
       {retention === 'forever' ? (
         <div className="conn-err" role="note">
           Chats are kept until you delete them. They hold your questions and the transactions the assistant looked up.

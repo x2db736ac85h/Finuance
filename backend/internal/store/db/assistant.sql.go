@@ -10,7 +10,34 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
+
+const addAssistantUsage = `-- name: AddAssistantUsage :exec
+INSERT INTO assistant_usage (user_id, day, runs, digests, tokens)
+VALUES ($1, $2, 1, CASE WHEN $3::boolean THEN 1 ELSE 0 END, $4)
+ON CONFLICT (user_id, day) DO UPDATE
+SET runs = assistant_usage.runs + 1, digests = assistant_usage.digests + excluded.digests,
+    tokens = assistant_usage.tokens + excluded.tokens
+`
+
+type AddAssistantUsageParams struct {
+	UserID uuid.UUID
+	Day    platform.Date
+	Digest bool
+	Tokens int64
+}
+
+// One finished run's tokens on its UTC day (ADR 0033).
+func (q *Queries) AddAssistantUsage(ctx context.Context, arg AddAssistantUsageParams) error {
+	_, err := q.db.Exec(ctx, addAssistantUsage,
+		arg.UserID,
+		arg.Day,
+		arg.Digest,
+		arg.Tokens,
+	)
+	return err
+}
 
 const countUnsentAssistantAttachments = `-- name: CountUnsentAssistantAttachments :one
 SELECT count(*) FROM assistant_attachments WHERE user_id = $1 AND chat_id = $2 AND message_seq IS NULL
@@ -29,9 +56,9 @@ func (q *Queries) CountUnsentAssistantAttachments(ctx context.Context, arg Count
 }
 
 const createAssistantChat = `-- name: CreateAssistantChat :one
-INSERT INTO assistant_chats (id, user_id, title, connection, model, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $6)
-RETURNING id, user_id, title, connection, model, no_tools, created_at, updated_at
+INSERT INTO assistant_chats (id, user_id, title, connection, model, kind, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+RETURNING id, user_id, title, connection, model, no_tools, created_at, updated_at, kind
 `
 
 type CreateAssistantChatParams struct {
@@ -40,6 +67,7 @@ type CreateAssistantChatParams struct {
 	Title      string
 	Connection string
 	Model      string
+	Kind       string
 	Now        time.Time
 }
 
@@ -50,6 +78,7 @@ func (q *Queries) CreateAssistantChat(ctx context.Context, arg CreateAssistantCh
 		arg.Title,
 		arg.Connection,
 		arg.Model,
+		arg.Kind,
 		arg.Now,
 	)
 	var i AssistantChat
@@ -62,6 +91,7 @@ func (q *Queries) CreateAssistantChat(ctx context.Context, arg CreateAssistantCh
 		&i.NoTools,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -116,6 +146,43 @@ func (q *Queries) DeleteUnsentAssistantAttachmentsBefore(ctx context.Context, ar
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const dueDigestUsers = `-- name: DueDigestUsers :many
+SELECT id, digest_due_at::timestamptz AS due_at FROM users
+WHERE digest_due_at <= $1 AND disabled_at IS NULL AND NOT is_demo
+ORDER BY digest_due_at, id LIMIT $2
+`
+
+type DueDigestUsersParams struct {
+	Now      *time.Time
+	PageSize int32
+}
+
+type DueDigestUsersRow struct {
+	ID    uuid.UUID
+	DueAt time.Time
+}
+
+// Users whose digest is due: never disabled or demo users.
+func (q *Queries) DueDigestUsers(ctx context.Context, arg DueDigestUsersParams) ([]DueDigestUsersRow, error) {
+	rows, err := q.db.Query(ctx, dueDigestUsers, arg.Now, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DueDigestUsersRow
+	for rows.Next() {
+		var i DueDigestUsersRow
+		if err := rows.Scan(&i.ID, &i.DueAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const exportAssistantAttachments = `-- name: ExportAssistantAttachments :many
@@ -183,7 +250,7 @@ func (q *Queries) GetAssistantAttachment(ctx context.Context, arg GetAssistantAt
 }
 
 const getAssistantChat = `-- name: GetAssistantChat :one
-SELECT id, user_id, title, connection, model, no_tools, created_at, updated_at FROM assistant_chats WHERE user_id = $1 AND id = $2
+SELECT id, user_id, title, connection, model, no_tools, created_at, updated_at, kind FROM assistant_chats WHERE user_id = $1 AND id = $2
 `
 
 type GetAssistantChatParams struct {
@@ -203,13 +270,14 @@ func (q *Queries) GetAssistantChat(ctx context.Context, arg GetAssistantChatPara
 		&i.NoTools,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const getAssistantSettings = `-- name: GetAssistantSettings :one
 
-SELECT user_id, retention_days, cloud_consent, updated_at, auto_apply FROM assistant_settings WHERE user_id = $1
+SELECT user_id, retention_days, cloud_consent, updated_at, auto_apply, digest, digest_hour, digest_weekday, digest_time_zone, digest_connection, digest_model FROM assistant_settings WHERE user_id = $1
 `
 
 // The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
@@ -222,8 +290,49 @@ func (q *Queries) GetAssistantSettings(ctx context.Context, userID uuid.UUID) (A
 		&i.CloudConsent,
 		&i.UpdatedAt,
 		&i.AutoApply,
+		&i.Digest,
+		&i.DigestHour,
+		&i.DigestWeekday,
+		&i.DigestTimeZone,
+		&i.DigestConnection,
+		&i.DigestModel,
 	)
 	return i, err
+}
+
+const getAssistantUsage = `-- name: GetAssistantUsage :one
+SELECT coalesce(sum(runs), 0)::bigint AS runs, coalesce(sum(digests), 0)::bigint AS digests,
+       coalesce(sum(tokens), 0)::bigint AS tokens
+FROM assistant_usage WHERE user_id = $1 AND day = $2
+`
+
+type GetAssistantUsageParams struct {
+	UserID uuid.UUID
+	Day    platform.Date
+}
+
+type GetAssistantUsageRow struct {
+	Runs    int64
+	Digests int64
+	Tokens  int64
+}
+
+func (q *Queries) GetAssistantUsage(ctx context.Context, arg GetAssistantUsageParams) (GetAssistantUsageRow, error) {
+	row := q.db.QueryRow(ctx, getAssistantUsage, arg.UserID, arg.Day)
+	var i GetAssistantUsageRow
+	err := row.Scan(&i.Runs, &i.Digests, &i.Tokens)
+	return i, err
+}
+
+const getDigestDueAt = `-- name: GetDigestDueAt :one
+SELECT digest_due_at FROM users WHERE id = $1
+`
+
+func (q *Queries) GetDigestDueAt(ctx context.Context, id uuid.UUID) (*time.Time, error) {
+	row := q.db.QueryRow(ctx, getDigestDueAt, id)
+	var digest_due_at *time.Time
+	err := row.Scan(&digest_due_at)
+	return digest_due_at, err
 }
 
 const insertAssistantAttachment = `-- name: InsertAssistantAttachment :exec
@@ -349,7 +458,7 @@ func (q *Queries) ListAssistantAttachmentRefs(ctx context.Context, arg ListAssis
 }
 
 const listAssistantChats = `-- name: ListAssistantChats :many
-SELECT id, user_id, title, connection, model, no_tools, created_at, updated_at FROM assistant_chats WHERE user_id = $1 ORDER BY updated_at DESC, id
+SELECT id, user_id, title, connection, model, no_tools, created_at, updated_at, kind FROM assistant_chats WHERE user_id = $1 ORDER BY updated_at DESC, id
 `
 
 func (q *Queries) ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]AssistantChat, error) {
@@ -370,6 +479,7 @@ func (q *Queries) ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]A
 			&i.NoTools,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -478,6 +588,21 @@ func (q *Queries) MarkAssistantAttachmentsSent(ctx context.Context, arg MarkAssi
 	return err
 }
 
+const setDigestDueAt = `-- name: SetDigestDueAt :exec
+UPDATE users SET digest_due_at = $1 WHERE id = $2
+`
+
+type SetDigestDueAtParams struct {
+	DueAt *time.Time
+	ID    uuid.UUID
+}
+
+// When the user's next digest is due (NULL: none; ADR 0033). users is not under RLS.
+func (q *Queries) SetDigestDueAt(ctx context.Context, arg SetDigestDueAtParams) error {
+	_, err := q.db.Exec(ctx, setDigestDueAt, arg.DueAt, arg.ID)
+	return err
+}
+
 const trimAssistantChats = `-- name: TrimAssistantChats :execrows
 DELETE FROM assistant_chats d
 WHERE d.user_id = $1 AND d.id NOT IN (
@@ -574,20 +699,30 @@ func (q *Queries) UpdateAssistantChat(ctx context.Context, arg UpdateAssistantCh
 }
 
 const upsertAssistantSettings = `-- name: UpsertAssistantSettings :one
-INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, auto_apply, updated_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, auto_apply, digest, digest_hour, digest_weekday,
+                                digest_time_zone, digest_connection, digest_model, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11)
 ON CONFLICT (user_id) DO UPDATE
 SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_consent, auto_apply = excluded.auto_apply,
-    updated_at = excluded.updated_at
-RETURNING user_id, retention_days, cloud_consent, updated_at, auto_apply
+    digest = excluded.digest, digest_hour = excluded.digest_hour, digest_weekday = excluded.digest_weekday,
+    digest_time_zone = excluded.digest_time_zone, digest_connection = excluded.digest_connection,
+    digest_model = excluded.digest_model, updated_at = excluded.updated_at
+RETURNING user_id, retention_days, cloud_consent, updated_at, auto_apply, digest, digest_hour, digest_weekday, digest_time_zone, digest_connection, digest_model
 `
 
 type UpsertAssistantSettingsParams struct {
-	UserID        uuid.UUID
-	RetentionDays *int16
-	CloudConsent  []string
-	AutoApply     []string
-	Now           time.Time
+	UserID           uuid.UUID
+	RetentionDays    *int16
+	CloudConsent     []string
+	AutoApply        []string
+	Digest           string
+	DigestHour       int16
+	DigestWeekday    int16
+	DigestTimeZone   string
+	DigestConnection string
+	DigestModel      string
+	Now              time.Time
 }
 
 // retention_days NULL keeps chats until the user deletes them.
@@ -597,6 +732,12 @@ func (q *Queries) UpsertAssistantSettings(ctx context.Context, arg UpsertAssista
 		arg.RetentionDays,
 		arg.CloudConsent,
 		arg.AutoApply,
+		arg.Digest,
+		arg.DigestHour,
+		arg.DigestWeekday,
+		arg.DigestTimeZone,
+		arg.DigestConnection,
+		arg.DigestModel,
 		arg.Now,
 	)
 	var i AssistantSetting
@@ -606,6 +747,12 @@ func (q *Queries) UpsertAssistantSettings(ctx context.Context, arg UpsertAssista
 		&i.CloudConsent,
 		&i.UpdatedAt,
 		&i.AutoApply,
+		&i.Digest,
+		&i.DigestHour,
+		&i.DigestWeekday,
+		&i.DigestTimeZone,
+		&i.DigestConnection,
+		&i.DigestModel,
 	)
 	return i, err
 }

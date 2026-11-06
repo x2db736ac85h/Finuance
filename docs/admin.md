@@ -60,7 +60,8 @@ reload (`409`).
   them are shown, the sidebar. These lie under each person's own preferences, so they apply to
   everything a person hasn't changed yet; their own choices always win.
 - **Features**: switching Overview or the Assistant off hides it for everyone and its API answers
-  `404`. Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
+  `404`. Switching **Assistant digests** off (or the Assistant) stops every digest and hides the
+  setting (ADR 0033). Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
   **Shared groups** off hides the Shared tab, *Share…* and their routes ([sharing.md](sharing.md)).
 - **Default limits** for every account without its own.
 
@@ -74,6 +75,7 @@ reload (`409`).
 | Imports | uploads in the last 24 hours | — |
 | Largest file | the biggest CSV upload | `FINUANCE_MAX_UPLOAD_BYTES` |
 | Assistant questions | per hour | `FINUANCE_AI_RATE_PER_HOUR` |
+| Assistant tokens | per UTC day, questions and digests together | `FINUANCE_AI_TOKENS_PER_DAY` (200,000) |
 
 An account's own limit wins over the instance default, and both are capped by the server's
 environment, so an administrator can only lower those two. A request over a limit gets

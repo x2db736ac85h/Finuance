@@ -108,7 +108,8 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	svc := auth.New(st, clk, auth.Config{Params: auth.Params{MemoryKiB: 8 * 1024, Time: 1, Threads: 1},
 		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: cfg.AllowSignup})
 	led := ledger.New(st, platform.SystemClock{})
-	adm := admin.New(st, svc, clk, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour)})
+	adm := admin.New(st, svc, clk, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour),
+		AssistantTokensPerDay: cfg.AITokensPerDay})
 	legacy := legacyimport.New(st, led, assistant.NewChats(st, platform.SystemClock{}, 25), platform.SystemClock{})
 	rs := rules.New(st, platform.SystemClock{})
 	notes := notify.New(st, clk)
@@ -582,7 +583,8 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chats.Append(ctx, u, chat.ID, []assistant.Message{{Role: llm.RoleUser, Content: "Q"}}, assistant.ChatUpdate{Title: "Q"}); err != nil {
+	if _, err := chats.Append(ctx, u, chat.ID, []assistant.Message{{Role: llm.RoleUser, Content: "Q"}},
+		assistant.ChatUpdate{Title: "Q", Usage: &assistant.RunUsage{Tokens: 900}}); err != nil { // and the day's tokens (assistant_usage)
 		t.Fatal(err)
 	}
 	var photo bytes.Buffer // a photo waiting for a question (assistant_attachments)

@@ -1,4 +1,5 @@
 {{- $name := include "finuance.fullname" . -}}
+{{- $assistantFile := and .Values.assistant.enabled .Values.assistant.connectionsFile -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,8 +41,17 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ $name }}-env
+            {{- if and .Values.assistant.enabled .Values.assistant.envSecret }}
+            - secretRef:
+                name: {{ .Values.assistant.envSecret }}
+            {{- end }}
           env:
             {{- include "finuance.dbPassword" .Values.database.app | nindent 12 }}
+            {{- if $assistantFile }}
+            # The worker writes the assistant's digests (ADR 0033) with the same connections.
+            - name: FINUANCE_AI_CONNECTIONS_FILE
+              value: /etc/finuance/connections.json
+            {{- end }}
           # The worker serves /healthz, /readyz and /metrics on its admin port.
           startupProbe:
             httpGet: { path: /healthz, port: metrics }
@@ -59,3 +69,15 @@ spec:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           securityContext:
             {{- include "finuance.containerSecurity" . | nindent 12 }}
+          {{- if $assistantFile }}
+          volumeMounts:
+            - name: assistant
+              mountPath: /etc/finuance
+              readOnly: true
+          {{- end }}
+      {{- if $assistantFile }}
+      volumes:
+        - name: assistant
+          configMap:
+            name: {{ $name }}-assistant
+      {{- end }}

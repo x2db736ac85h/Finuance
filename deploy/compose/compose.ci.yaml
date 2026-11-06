@@ -25,6 +25,9 @@ services:
     ports: !reset []
     environment:
       FINUANCE_ENV: test
+      # digests (ADR 0033) are written by the worker with the same mock model
+      FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
+      FINUANCE_AI_DEFAULT_MODEL: mock-tools
   web:
     ports: !override
       - "127.0.0.1:8000:8080"

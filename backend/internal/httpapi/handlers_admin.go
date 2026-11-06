@@ -35,12 +35,12 @@ func (a *api) adminAudit(ctx context.Context, action string, target *admin.User,
 
 func limitsDTO(l instance.Limits) gen.LimitOverrides {
 	return gen.LimitOverrides{MaxUploadBytes: l.MaxUploadBytes, ImportsPerDay: l.ImportsPerDay, MaxAccounts: l.MaxAccounts,
-		MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour}
+		MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour, AssistantTokensPerDay: l.AssistantTokensPerDay}
 }
 
 func limitsIn(l gen.LimitOverrides) instance.Limits {
 	return instance.Limits{MaxUploadBytes: l.MaxUploadBytes, ImportsPerDay: l.ImportsPerDay, MaxAccounts: l.MaxAccounts,
-		MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour}
+		MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour, AssistantTokensPerDay: l.AssistantTokensPerDay}
 }
 
 func adminUserDTO(u admin.User) gen.AdminUser {
@@ -302,18 +302,19 @@ func (a *api) AdminSetThemeStatus(ctx context.Context, req gen.AdminSetThemeStat
 // features are the switches in effect; without an admin service (bare-server tests) all are on.
 func (a *api) features(ctx context.Context) instance.EffectiveFeatures {
 	if a.admin == nil {
-		return instance.EffectiveFeatures{Overview: true, Assistant: true, Friends: true, SharedGroups: true}
+		return instance.AllOn
 	}
 	f, err := a.admin.Features(ctx)
 	if err != nil { // the settings are unreadable: keep the app usable, like a fresh instance
-		return instance.EffectiveFeatures{Overview: true, Assistant: true, Friends: true, SharedGroups: true}
+		return instance.AllOn
 	}
 	return f
 }
 
 // effectiveLimits are the signed-in user's limits.
 func (a *api) effectiveLimits(ctx context.Context, u auth.User) instance.Effective {
-	bounds := instance.Bounds{MaxUploadBytes: a.cfg.MaxUploadBytes, AssistantPerHour: int64(a.cfg.AIRatePerHour)}
+	bounds := instance.Bounds{MaxUploadBytes: a.cfg.MaxUploadBytes, AssistantPerHour: int64(a.cfg.AIRatePerHour),
+		AssistantTokensPerDay: a.cfg.AITokensPerDay}
 	if a.admin == nil {
 		return instance.Resolve(u.Limits, instance.Limits{}, bounds)
 	}

@@ -372,7 +372,7 @@ describe('one-time passwords and switched-off features', () => {
 
   it('hides the overview and the assistant when they are off', async () => {
     db.user.isAdmin = false;
-    db.features = { overview: false, assistant: false, friends: true, sharedGroups: true };
+    db.features = { overview: false, assistant: false, assistantDigests: false, friends: true, sharedGroups: true };
     const { router } = renderApp('/o/all');
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/t/all');

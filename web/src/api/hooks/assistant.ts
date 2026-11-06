@@ -60,6 +60,15 @@ export function useSaveAssistantSettings() {
   });
 }
 
+/** Asks for a digest now (ADR 0033): the worker writes it, and a notification says when it is ready. */
+export function useRequestDigest() {
+  return useMutation({
+    mutationFn: async () => {
+      data(await api.POST('/assistant/digest'));
+    },
+  });
+}
+
 export function useChats(enabled = true) {
   return useQuery({
     queryKey: keys.chats,

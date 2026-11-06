@@ -51,6 +51,7 @@ type Config struct {
 	AIMaxConcurrent int           // assistant runs at once per replica
 	AIMaxChats      int           // chats kept per user (the oldest go first)
 	AIRatePerHour   int           // messages per user per hour
+	AITokensPerDay  int64         // tokens per user per UTC day, the outer bound of assistantTokensPerDay (ADR 0033)
 	// Argon2id parameters for new password hashes (ADR 0010). Existing hashes keep theirs until
 	// the next successful login rehashes them.
 	Argon2MemoryKiB uint32
@@ -123,6 +124,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		AIMaxConcurrent:      p.int("FINUANCE_AI_MAX_CONCURRENT", 2, 1, 64),
 		AIMaxChats:           p.int("FINUANCE_AI_MAX_CHATS", 25, 1, 1000),
 		AIRatePerHour:        p.int("FINUANCE_AI_RATE_PER_HOUR", 30, 1, 10000),
+		AITokensPerDay:       int64(p.int("FINUANCE_AI_TOKENS_PER_DAY", 200_000, 1000, 1_000_000_000)),
 		Argon2MemoryKiB:      uint32(p.int("FINUANCE_ARGON2_MEMORY_KIB", 19*1024, 8*1024, 1<<20)), //nolint:gosec // bounded by p.int
 		Argon2Time:           uint32(p.int("FINUANCE_ARGON2_TIME", 2, 1, 10)),                     //nolint:gosec // bounded by p.int
 		Argon2Threads:        uint8(p.int("FINUANCE_ARGON2_THREADS", 1, 1, 16)),                   //nolint:gosec // bounded by p.int

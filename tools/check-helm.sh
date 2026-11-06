@@ -67,6 +67,9 @@ echo "== assistant connections file is mounted where it is read"
   | .name' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a container reads the connections file without mounting it"; exit 1; }
 "$YQ" -e '.data.FINUANCE_AI_CONNECTIONS_FILE' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 &&
   { echo "check-helm: FINUANCE_AI_CONNECTIONS_FILE is in the shared ConfigMap (every component would read it)"; exit 1; }
+# The worker writes the assistant's digests (ADR 0033), so it gets the connections too.
+"$YQ" -e 'select(.kind == "Deployment" and .metadata.name == "finuance-worker") | .spec.template.spec.containers[].env[] | select(.name == "FINUANCE_AI_CONNECTIONS_FILE")' \
+  "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 || { echo "check-helm: the worker doesn't get the assistant's connections (digests)"; exit 1; }
 # The Developer section's links: only the api reads them, and it mounts them.
 "$YQ" -e 'select(.kind == "Deployment" or .kind == "Job") | .spec.template.spec.containers[]
   | select(.env[]? | .name == "FINUANCE_DEVELOPER_LINKS_FILE") | select([.volumeMounts[]? | .mountPath] | contains(["/etc/finuance-developer"]) | not)

@@ -25,6 +25,11 @@ notes of their version.
   a receipt (shrunk and stripped of its location in the browser); the assistant finds the payment
   and proposes the receipt in its note, or proposes the expense. Card payments typed into a bank
   account wait for the bank's file, then a card offers to merge them.
+- **Digests**: the assistant can write a short daily or weekly summary in the background (off by
+  default; the hour and day in the panel's settings, or *Write one now*). The bell says when it is
+  ready; its proposals wait for *Apply*. Administrators can switch digests off for everyone.
+- **A daily token budget** for the assistant per user, questions and digests together
+  (`FINUANCE_AI_TOKENS_PER_DAY`, 200,000 by default; a limit administrators can lower per account).
 
 ## [0.3.0]
 

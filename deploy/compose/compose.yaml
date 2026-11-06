@@ -95,6 +95,13 @@ services:
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       # The worker serves only the admin port; point the healthcheck subcommand at it.
       FINUANCE_HTTP_ADDR: ":9090"
+      # The assistant's digests are written by the worker (ADR 0033): the same model server as the api.
+      FINUANCE_AI_BASE_URL: ${FINUANCE_AI_BASE_URL:-}
+      FINUANCE_AI_API: ${FINUANCE_AI_API:-}
+      FINUANCE_AI_API_KEY: ${FINUANCE_AI_API_KEY:-}
+      FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
+      FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
+      FINUANCE_AI_CONNECTIONS_FILE: ${FINUANCE_AI_CONNECTIONS_FILE:-}
     ports:
       - "127.0.0.1:9091:9090" # admin (/metrics, /readyz) — dev only
     depends_on:

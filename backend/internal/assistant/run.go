@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -70,6 +71,11 @@ type Request struct {
 	// AttachmentIDs are photos waiting in the chat that go with this question (a model that reads
 	// images only; at most MaxAttachments).
 	AttachmentIDs []uuid.UUID
+	// TokensPerDay is the user's daily token budget (0 = none): a run doesn't start once today's
+	// tokens reach it (ADR 0033).
+	TokensPerDay int64
+	// Digest marks a background digest (counted as one in the usage).
+	Digest bool
 }
 
 // Event is one server-sent event of a run (PLAN §6.3 AssistantEvent): step, reasoning, content,
@@ -214,6 +220,15 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 	}
 	if err := ve.Err(); err != nil {
 		return nil, err
+	}
+	if req.TokensPerDay > 0 {
+		used, err := r.cfg.Chats.TokensToday(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		if used >= req.TokensPerDay {
+			return nil, &instance.LimitError{Limit: "assistantTokensPerDay", Value: req.TokensPerDay}
+		}
 	}
 	chat, msgs, err := r.cfg.Chats.Get(ctx, userID, req.ChatID)
 	if err != nil {
@@ -424,7 +439,7 @@ func (run *Run) finish(ctx context.Context, emit func(Event), span trace.Span, f
 	if final.Steps == nil {
 		final.Steps = []Step{}
 	}
-	seq, err := run.store(ctx, append(t.msgs, final))
+	seq, err := run.store(ctx, append(t.msgs, final), run.usage(t, final))
 	if err != nil {
 		run.fail(ctx, emit, span, "internal", err, mode, t0, t)
 		return
@@ -452,7 +467,7 @@ func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, cod
 		}
 		msgs = t.msgs
 	}
-	seq, serr := run.store(ctx, append(msgs, final))
+	seq, serr := run.store(ctx, append(msgs, final), run.usage(t, final))
 	if serr != nil {
 		seq = 0
 	}
@@ -464,11 +479,32 @@ func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, cod
 	run.observe(span, mode, "error", code, t, t0)
 }
 
-func (run *Run) store(ctx context.Context, msgs []Message) (int, error) {
+func (run *Run) store(ctx context.Context, msgs []Message, use *RunUsage) (int, error) {
 	sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), persistGrace)
 	defer cancel()
 	return run.r.cfg.Chats.Append(sctx, run.userID, run.req.ChatID, msgs,
-		ChatUpdate{Connection: run.conn.Name, Model: run.model.ID, NoTools: run.chat.NoTools})
+		ChatUpdate{Connection: run.conn.Name, Model: run.model.ID, NoTools: run.chat.NoTools, Usage: use})
+}
+
+// usage is the run's tokens: what the server counted, else the runner's estimate of what was sent
+// plus the answer's length / 4.
+func (run *Run) usage(t *turn, final Message) *RunUsage {
+	u := &RunUsage{Digest: run.req.Digest}
+	if t == nil {
+		return u
+	}
+	if n := t.usage.Input + t.usage.Output; n > 0 {
+		u.Tokens = int64(n)
+		return u
+	}
+	out := len(final.Content) + len(final.Reasoning)
+	for i := range t.msgs {
+		if t.msgs[i].Role == llm.RoleAssistant {
+			out += len(t.msgs[i].Content) + len(t.msgs[i].Reasoning)
+		}
+	}
+	u.Tokens = int64(t.sent + out/4)
+	return u
 }
 
 // observe records the run's metrics and its one log line (no prompt, answer or tool data).

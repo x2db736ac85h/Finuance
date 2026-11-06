@@ -2419,6 +2419,22 @@ paths:
           description: Stopped (or nothing was running).
         default:
           $ref: "#/components/responses/Problem"
+  /assistant/digest:
+    post:
+      operationId: requestAssistantDigest
+      summary: Write a digest now
+      description: >-
+        Queues a digest for the signed-in user (ADR 0033), whatever the schedule; the worker writes it
+        into a new chat of kind `digest` and a notification `assistant.digest` says when it is ready.
+        At most one waits per user (a second request while one waits is accepted and changes nothing).
+        `404` when digests are switched off for the instance or in demo mode, `assistant_unavailable`
+        without a connection, `limit_reached` once the day's tokens are used.
+      tags: [assistant]
+      responses:
+        "202":
+          description: Queued.
+        default:
+          $ref: "#/components/responses/Problem"
   /demo-data:
     post:
       operationId: loadDemoData
@@ -4120,7 +4136,7 @@ components:
           description: Case, spaces and dashes don't matter.
     NotificationKind:
       type: string
-      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled]
+      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled, assistant.digest]
     SharedGroupKind:
       type: string
       enum: [trip, household, event, other]
@@ -6177,17 +6193,65 @@ components:
           items:
             type: string
             enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
+        digest:
+          $ref: "#/components/schemas/AssistantDigest"
+        digestNextAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the next digest is due (null when they are off). Ignored in a PUT.
+        tokensToday:
+          type: integer
+          format: int64
+          description: Tokens used today (UTC), questions and digests together. Ignored in a PUT.
+    AssistantDigest:
+      type: object
+      additionalProperties: false
+      required: [schedule, hour, weekday, timeZone, connection, model]
+      description: >-
+        The digest schedule (ADR 0033): off, daily, or weekly on a weekday, at an hour of the time zone,
+        written with the connection and model named (else the instance's default). Left out of a PUT,
+        the stored schedule stays.
+      properties:
+        schedule:
+          type: string
+          enum: ["off", daily, weekly]
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        weekday:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: ISO weekday (1 = Monday), for weekly digests.
+        timeZone:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: An IANA time zone such as Europe/Warsaw.
+        connection:
+          type: string
+          maxLength: 40
+        model:
+          type: string
+          maxLength: 200
+    AssistantChatKind:
+      type: string
+      enum: [chat, digest]
     AssistantChat:
       type: object
       additionalProperties: false
-      required: [id, title, connection, model, createdAt, updatedAt]
+      required: [id, title, kind, connection, model, createdAt, updatedAt]
       properties:
         id:
           type: string
           format: uuid
         title:
           type: string
-          description: The first question ("" before it).
+          description: The first question ("" before it), or the digest's name.
+        kind:
+          $ref: "#/components/schemas/AssistantChatKind"
         connection:
           type: string
         model:
@@ -6212,13 +6276,15 @@ components:
     AssistantChatDetail:
       type: object
       additionalProperties: false
-      required: [id, title, connection, model, createdAt, updatedAt, noTools, turns, appliedProposals]
+      required: [id, title, kind, connection, model, createdAt, updatedAt, noTools, turns, appliedProposals]
       properties:
         id:
           type: string
           format: uuid
         title:
           type: string
+        kind:
+          $ref: "#/components/schemas/AssistantChatKind"
         connection:
           type: string
         model:
@@ -6822,12 +6888,15 @@ components:
       type: object
       additionalProperties: false
       description: Parts of the app the instance offers (an administrator can switch them off).
-      required: [overview, assistant, friends, sharedGroups]
+      required: [overview, assistant, assistantDigests, friends, sharedGroups]
       properties:
         overview:
           type: boolean
         assistant:
           type: boolean
+        assistantDigests:
+          type: boolean
+          description: Daily or weekly digests written in the background (off with the assistant too).
         friends:
           type: boolean
         sharedGroups:
@@ -6897,11 +6966,16 @@ components:
           type: integer
           format: int64
           minimum: 1
+        assistantTokensPerDay:
+          type: integer
+          format: int64
+          minimum: 1000
+          description: Tokens the assistant may use per UTC day, questions and digests together (ADR 0033).
     EffectiveLimits:
       type: object
       additionalProperties: false
       description: The limits that apply to the signed-in user; 0 means no limit.
-      required: [maxUploadBytes, importsPerDay, maxAccounts, maxGroups, maxSharedGroups, assistantPerHour]
+      required: [maxUploadBytes, importsPerDay, maxAccounts, maxGroups, maxSharedGroups, assistantPerHour, assistantTokensPerDay]
       properties:
         maxUploadBytes:
           type: integer
@@ -6919,6 +6993,9 @@ components:
           type: integer
           format: int64
         assistantPerHour:
+          type: integer
+          format: int64
+        assistantTokensPerDay:
           type: integer
           format: int64
     InstanceSettingsDoc:
@@ -6940,6 +7017,8 @@ components:
             overview:
               type: boolean
             assistant:
+              type: boolean
+            assistantDigests:
               type: boolean
             friends:
               type: boolean

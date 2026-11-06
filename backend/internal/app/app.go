@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
@@ -131,14 +132,21 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	led := ledger.New(c.store, platform.SystemClock{})
 	chats := assistant.NewChats(c.store, platform.SystemClock{}, cfg.AIMaxChats)
 	authSvc := NewAuth(c.store, cfg)
+	notes := notify.New(c.store, platform.SystemClock{})
+	digests, err := newDigests(ctx, c, cfg, authSvc, notes, log)
+	if err != nil {
+		return err
+	}
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
 		Logger: log,
-		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
+		// digests one at a time (ADR 0033): they share a small model server with the questions
+		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}, jobs.DigestQueue: {MaxWorkers: 1}},
 		Workers: jobs.Workers(jobs.Deps{Sessions: authSvc, Demo: authSvc, Ledger: led, Audit: led, Chats: chats,
 			Migrator: legacyimport.New(c.store, led, chats, platform.SystemClock{}),
 			Rules:    rules.New(c.store, platform.SystemClock{}),
-			Friends:  friends.New(c.store, platform.SystemClock{}, notify.New(c.store, platform.SystemClock{})),
-			Notify:   notify.New(c.store, platform.SystemClock{}),
+			Friends:  friends.New(c.store, platform.SystemClock{}, notes),
+			Notify:   notes,
+			Digests:  digests,
 			Metrics:  jobs.NewImportMetrics(c.metrics.Registry)}),
 		PeriodicJobs: jobs.PeriodicJobs(),
 		Middleware: []rivertype.Middleware{jobs.NewTelemetry(c.tracing.Provider, c.tracing.Propagator,
@@ -174,6 +182,45 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 		err = errors.Join(err, fmt.Errorf("stop river: %w", serr))
 	}
 	return err
+}
+
+// newDigests is the worker's digest service (ADR 0033), or nil when no model connection is
+// configured. The worker runs the assistant for digests only, one run at a time.
+func newDigests(ctx context.Context, c *common, cfg config.Config, authSvc *auth.Service, notes *notify.Service, log *slog.Logger) (jobs.DigestWriter, error) {
+	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, cfg.AIIdleTimeout, platform.SystemClock{}, nil)
+	if !conns.Enabled() {
+		return nil, nil
+	}
+	warnings, err := conns.CheckHosts(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, w := range warnings {
+		log.Warn(w)
+	}
+	ai := assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
+		MaxChats: cfg.AIMaxChats, MaxConcurrent: 1, Metrics: assistant.NewMetrics(c.metrics.Registry), Tracer: c.tracing.Provider, Logger: log})
+	adm := NewAdmin(c.store, authSvc, cfg)
+	policy := func(ctx context.Context, id uuid.UUID) (assistant.DigestPolicy, error) {
+		if cfg.DemoMode {
+			return assistant.DigestPolicy{}, nil
+		}
+		u, err := authSvc.UserByID(ctx, id)
+		if errors.Is(err, platform.ErrNotFound) { // deleted since the digest was queued
+			return assistant.DigestPolicy{}, nil
+		}
+		if err != nil || u.IsDemo || u.Disabled {
+			return assistant.DigestPolicy{}, err
+		}
+		f, err := adm.Features(ctx)
+		if err != nil || !f.AssistantDigests {
+			return assistant.DigestPolicy{}, err
+		}
+		l, err := adm.Limits(ctx, u)
+		return assistant.DigestPolicy{Allowed: true, TokensPerDay: l.AssistantTokensPerDay}, err
+	}
+	return assistant.NewDigests(assistant.DigestsConfig{Assistant: ai, Policy: policy, Notify: notes, Clock: platform.SystemClock{},
+		Logger: log}), nil
 }
 
 // serveAll runs every server until ctx ends, then shuts them all down within the grace period.
@@ -271,7 +318,8 @@ func Healthcheck(ctx context.Context, cfg config.Config) error {
 
 // NewAdmin returns the administration service with the environment's outer limits (ADR 0025).
 func NewAdmin(st *store.Store, a *auth.Service, cfg config.Config) *admin.Service {
-	return admin.New(st, a, platform.SystemClock{}, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour)})
+	return admin.New(st, a, platform.SystemClock{}, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour),
+		AssistantTokensPerDay: cfg.AITokensPerDay})
 }
 
 // NewAuth builds the auth service from the configuration.

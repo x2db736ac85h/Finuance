@@ -49,7 +49,7 @@ assistant:
   # An existing secret whose keys become environment variables (the API keys the file names with
   # apiKeyEnv). Empty: none.
   envSecret: ""
-  # Where the api may connect when the assistant is on (NetworkPolicy egress): the model servers,
+  # Where the api and the worker (digests) may connect when the assistant is on (NetworkPolicy egress): the model servers,
   # as a `cidr` outside the cluster or `to` peers inside it.
   egress: []
   #  - cidr: 192.168.1.20/32
@@ -102,6 +102,7 @@ api:
   terminationGracePeriodSeconds: 45
 
 worker:
+  # One replica: each one writes the assistant's digests one at a time (ADR 0033).
   replicas: 1
   resources:
     requests: { cpu: 50m, memory: 128Mi }

@@ -31,6 +31,10 @@ With a model that reads images (the model list in the panel's settings and `llm-
 
 The model reads the shop, the date, the amount paid and the currency, and looks for the payment with `find_receipt_match` (money out of exactly that amount, booked within 3 days of the receipt). If it finds it, the card proposes to add "Receipt: shop · what was bought" to that transaction's note (Undo puts the old note back); if not, it proposes the expense: in a cash account, or in the bank account of a card payment whose file isn't imported yet. When that file arrives, a card above the table offers to **Merge** the typed payment into the bank's row (the bank's row stays, with the category, note, group and shared-group copy of the typed one) or to **Keep both** (ADR 0032).
 
+### Digests
+
+In the panel's settings, *Digest* asks the assistant for a short summary every day or every week (off by default), at an hour of your time zone: what you spent, budgets that are over or ahead of pace, how your goals are doing, payments due in the next week, and changes worth making. The worker writes it in the background with the connection and model the panel used when you switched it on, through the same read-only tools, into a chat of its own (marked *digest* in the recent chats). The bell says when it is ready and how many proposals wait in it; its proposals are never applied by themselves, whatever *Apply by itself* says. *Write one now* asks for one at once. A model server that is off at that hour means no digest that day (the bell says it couldn't be written). Demo visitors have no digests, and an administrator can switch them off for everyone (ADR 0033).
+
 ## Configure one server
 
 For a single server, set these variables on the api:
@@ -120,9 +124,10 @@ Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 to
 | `FINUANCE_AI_IDLE_TIMEOUT` | `60s` | A model stream silent this long ends, also before its first token (at most `FINUANCE_AI_TIMEOUT`). A small GPU reading a long prompt (system prompt + tool results, ~8,000 tokens) can be silent for over a minute: raise both (e.g. `300s` / `150s` on a 4 GB card) |
 | `FINUANCE_AI_MAX_CONCURRENT` | `2` | Answers written at once per api replica (`503 assistant_busy` beyond) |
 | `FINUANCE_AI_RATE_PER_HOUR` | `30` | Questions per user per hour (`429`) |
+| `FINUANCE_AI_TOKENS_PER_DAY` | `200000` | Tokens per user per UTC day, questions and digests together: the outer bound of the `assistantTokensPerDay` limit (`422 limit_reached` once used; a digest is skipped) |
 | `FINUANCE_AI_MAX_CHATS` | `25` | Chats kept per user; the oldest go first |
 
-Each user can only have one answer in progress at a time (`409 run_in_progress`). Chats are deleted 48 hours after their last message unless the user picks 1–7 days or *forever* in the assistant settings. An hourly worker job applies the setting, and expired chats are never shown even before it runs. Chats are part of *Download my data* and are deleted with the account.
+Each user can only have one answer in progress at a time (`409 run_in_progress`). A run's tokens are what the model server reported, or the length of what was sent and written / 4 where it reports none; a run that started under the budget finishes even if it goes over. The worker writes digests one at a time, so on a small GPU a question asked while a digest is written waits for the digest's current model request. Chats are deleted 48 hours after their last message unless the user picks 1–7 days or *forever* in the assistant settings. An hourly worker job applies the setting, and expired chats are never shown even before it runs. Chats are part of *Download my data* and are deleted with the account.
 
 ## Checking a model: `finuance admin llm-probe`
 

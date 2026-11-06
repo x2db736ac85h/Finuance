@@ -1740,6 +1740,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write a digest now
+         * @description Queues a digest for the signed-in user (ADR 0033), whatever the schedule; the worker writes it into a new chat of kind `digest` and a notification `assistant.digest` says when it is ready. At most one waits per user (a second request while one waits is accepted and changes nothing). `404` when digests are switched off for the instance or in demo mode, `assistant_unavailable` without a connection, `limit_reached` once the day's tokens are used.
+         */
+        post: operations["requestAssistantDigest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/demo-data": {
         parameters: {
             query?: never;
@@ -2720,7 +2740,7 @@ export interface components {
             code: string;
         };
         /** @enum {string} */
-        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled";
+        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled" | "assistant.digest";
         /** @enum {string} */
         SharedGroupKind: "trip" | "household" | "event" | "other";
         /** @description Someone in a group as the others see them; never an e-mail address. */
@@ -3871,12 +3891,38 @@ export interface components {
             cloudConsent: string[];
             /** @description Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Left out of a PUT, the stored list stays. */
             autoApply?: ("set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal")[];
+            digest?: components["schemas"]["AssistantDigest"];
+            /**
+             * Format: date-time
+             * @description When the next digest is due (null when they are off). Ignored in a PUT.
+             */
+            digestNextAt?: string | null;
+            /**
+             * Format: int64
+             * @description Tokens used today (UTC), questions and digests together. Ignored in a PUT.
+             */
+            tokensToday?: number;
         };
+        /** @description The digest schedule (ADR 0033): off, daily, or weekly on a weekday, at an hour of the time zone, written with the connection and model named (else the instance's default). Left out of a PUT, the stored schedule stays. */
+        AssistantDigest: {
+            /** @enum {string} */
+            schedule: "off" | "daily" | "weekly";
+            hour: number;
+            /** @description ISO weekday (1 = Monday), for weekly digests. */
+            weekday: number;
+            /** @description An IANA time zone such as Europe/Warsaw. */
+            timeZone: string;
+            connection: string;
+            model: string;
+        };
+        /** @enum {string} */
+        AssistantChatKind: "chat" | "digest";
         AssistantChat: {
             /** Format: uuid */
             id: string;
-            /** @description The first question ("" before it). */
+            /** @description The first question ("" before it), or the digest's name. */
             title: string;
+            kind: components["schemas"]["AssistantChatKind"];
             connection: string;
             model: string;
             /** Format: date-time */
@@ -3892,6 +3938,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             title: string;
+            kind: components["schemas"]["AssistantChatKind"];
             connection: string;
             model: string;
             /** Format: date-time */
@@ -4239,6 +4286,8 @@ export interface components {
         Features: {
             overview: boolean;
             assistant: boolean;
+            /** @description Daily or weekly digests written in the background (off with the assistant too). */
+            assistantDigests: boolean;
             friends: boolean;
             sharedGroups: boolean;
         };
@@ -4276,6 +4325,11 @@ export interface components {
             maxSharedGroups?: number;
             /** Format: int64 */
             assistantPerHour?: number;
+            /**
+             * Format: int64
+             * @description Tokens the assistant may use per UTC day, questions and digests together (ADR 0033).
+             */
+            assistantTokensPerDay?: number;
         };
         /** @description The limits that apply to the signed-in user; 0 means no limit. */
         EffectiveLimits: {
@@ -4291,6 +4345,8 @@ export interface components {
             maxSharedGroups: number;
             /** Format: int64 */
             assistantPerHour: number;
+            /** Format: int64 */
+            assistantTokensPerDay: number;
         };
         InstanceSettingsDoc: {
             /** Format: int32 */
@@ -4300,6 +4356,7 @@ export interface components {
             features: {
                 overview?: boolean;
                 assistant?: boolean;
+                assistantDigests?: boolean;
                 friends?: boolean;
                 sharedGroups?: boolean;
             };
@@ -7370,6 +7427,25 @@ export interface operations {
         responses: {
             /** @description Stopped (or nothing was running). */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    requestAssistantDigest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued. */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
