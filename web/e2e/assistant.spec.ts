@@ -245,12 +245,15 @@ test('a receipt photo goes with its question; attach_receipt writes the note and
   const withReceipt = async () => {
     const r = await page.request.post('/api/v1/transactions/query', {
       headers: API_HEADERS,
-      data: { context: { search: 'Receipt: Piekarnia' }, limit: 1 },
+      // the search box covers the bank's text, not notes: filter the note column
+      data: { context: { filters: [{ column: 'note', cond: 'Piekarnia Ziarno' }] }, limit: 1 },
     });
     return ((await r.json()) as { total: number }).total;
   };
 
-  await panel.getByLabel('Photo of a receipt').setInputFiles('../evals/assistant/receipts/pl-sklep.jpg');
+  await panel
+    .getByLabel('Photo of a receipt', { exact: true })
+    .setInputFiles('../evals/assistant/receipts/pl-sklep.jpg');
   await expect(panel.getByAltText('Photo to send')).toBeVisible();
   await ask(page, 'receipt 98.07 "Piekarnia Ziarno" on 2025-03-17');
   await expect(panel.getByAltText('Attached photo')).toBeVisible();
