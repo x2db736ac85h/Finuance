@@ -11,3 +11,7 @@ ingress:
 alerting:
   email:
     enabled: false
+# A daily e-mail at 12:00 Central European Time with the last 24 hours and anything far from the
+# previous 7 days (docs/SLO.md "Daily digest"), through the receiver above.
+digest:
+  enabled: true

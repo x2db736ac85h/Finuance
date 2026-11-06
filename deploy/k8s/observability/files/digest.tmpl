@@ -1,0 +1,57 @@
+{{- /* The daily digest's text (docs/SLO.md "Daily digest"), a Prometheus alert template: the
+       chart replaces the __UPPER__ placeholders. Figures come from the finuance:digest_24h
+       recording rules or straight from the metrics. The recordings are refreshed every 10 minutes,
+       longer than an instant query looks back (5 minutes), so they are read with last_over_time, as
+       of the previous evaluation (its rule group may not have run yet at this one). */ -}}
+{{- define "v" }}{{ if eq .Labels.unit "ratio" }}{{ .Value | humanizePercentage }}{{ else if eq .Labels.unit "seconds" }}{{ .Value | humanizeDuration }}{{ else if eq .Labels.unit "bytes" }}{{ if ge .Value 0.0 }}+{{ end }}{{ .Value | humanize1024 }}B{{ else if eq .Labels.unit "rate" }}{{ printf "%.2f requests/s" .Value }}{{ else }}{{ .Value | humanize }}{{ end }}{{ end }}
+{{- define "name" }}{{ if eq . "availability" }}Availability{{ else if eq . "latency_p95" }}p95 latency{{ else if eq . "latency_within_slo" }}Requests within 300 ms{{ else if eq . "requests" }}Requests{{ else if eq . "peak_rate" }}Peak traffic{{ else if eq . "errors_5xx" }}Server errors{{ else if eq . "imports" }}Imports{{ else if eq . "imports_failed" }}Failed imports{{ else if eq . "jobs_failed" }}Failed jobs{{ else if eq . "assistant_runs" }}Assistant runs{{ else if eq . "database_growth" }}Database growth{{ else if eq . "restarts" }}Restarts{{ else if eq . "cpu_peak" }}CPU peak{{ else if eq . "memory_peak" }}Memory peak{{ else if eq . "ingress_5xx" }}Errors at the ingress{{ else }}{{ . }}{{ end }}{{ end }}
+{{- define "ind" }}{{ with query (printf "last_over_time(finuance:digest_24h{indicator=%q}[15m] offset __EVAL__s)" .) }}{{ template "v" (first .) }}{{ else }}no data{{ end }}{{ end -}}
+The 24 hours to {{ with query "time()" }}{{ . | first | value | humanizeTimestamp }}{{ end }}.
+
+SERVICE
+  Availability          {{ template "ind" "availability" }} of requests without a server error (SLO 99.5%)
+  Within 300 ms         {{ template "ind" "latency_within_slo" }} of table and chart requests (SLO 95%), p95 {{ template "ind" "latency_p95" }}
+  Requests              {{ template "ind" "requests" }}, peak {{ template "ind" "peak_rate" }} (15-minute average)
+  Server errors         {{ template "ind" "errors_5xx" }} at the api{{ if eq "__INGRESS__" "true" }}, {{ template "ind" "ingress_5xx" }} at the ingress{{ end }}
+
+ACTIVITY
+  Imports               {{ template "ind" "imports" }} committed, {{ template "ind" "imports_failed" }} failed
+  Failed jobs           {{ template "ind" "jobs_failed" }}{{ range sortByLabel "kind" (query `last_over_time(finuance:digest_24h_failed_jobs:by_kind[15m] offset __EVAL__s) >= 0.5`) }} · {{ .Labels.kind }} {{ printf "%.0f" .Value }}{{ end }}
+  Assistant runs        {{ template "ind" "assistant_runs" }}
+{{- if eq "__DATABASE__" "true" }}
+
+DATABASE
+  Size                  {{ with query `max(cnpg_pg_database_size_bytes{job="finuance-db",namespace="__NS__",datname="finuance"})` }}{{ . | first | value | humanize1024 }}B{{ else }}no data{{ end }} ({{ template "ind" "database_growth" }} in 24 hours)
+  Replication lag       at most {{ with query `max(max_over_time(cnpg_pg_replication_lag{job="finuance-db",namespace="__NS__"}[24h]))` }}{{ . | first | value | humanizeDuration }}{{ else }}no data{{ end }}
+  WAL archiving         last archived {{ with query `min(cnpg_pg_stat_archiver_seconds_since_last_archival{job="finuance-db",namespace="__NS__"})` }}{{ . | first | value | humanizeDuration }} ago{{ else }}no data{{ end }}{{ with query `sum(increase(cnpg_pg_stat_archiver_failed_count{job="finuance-db",namespace="__NS__"}[24h])) >= 0.5` }}, {{ . | first | value | printf "%.0f" }} failed attempts{{ end }}
+{{- end }}
+{{- if eq "__BACKUPS__" "true" }}
+  Last backup           {{ with query `time() - max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{job="finuance-db",namespace="__NS__"})` }}{{ . | first | value | humanizeDuration }} ago{{ else }}none reported{{ end }}
+{{- end }}
+{{- if or (eq "__NODE__" "true") (eq "__KUBERNETES__" "true") }}
+
+MACHINE
+{{- if eq "__NODE__" "true" }}
+  CPU peak              {{ template "ind" "cpu_peak" }}
+  Memory peak           {{ template "ind" "memory_peak" }}
+  Disk /                {{ with query `max(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})` }}{{ . | first | value | humanizePercentage }} used{{ else }}no data{{ end }}
+{{- end }}
+{{- if eq "__KUBERNETES__" "true" }}
+  Restarts              {{ template "ind" "restarts" }}{{ range sortByLabel "namespace" (query `last_over_time(finuance:digest_24h_restarts:by_namespace[15m] offset __EVAL__s) >= 0.5`) }} · {{ .Labels.namespace }} {{ printf "%.0f" .Value }}{{ end }}
+{{- end }}
+{{- end }}
+
+ALERTS THAT FIRED
+{{- /* up to the previous evaluation: the other rule groups may not have written this one yet */ -}}
+{{- range sortByLabel "alertname" (query `max by (alertname, severity) (count_over_time(ALERTS{alertstate="firing",alertname!~"Watchdog|InfoInhibitor|FinuanceDailyDigest"}[24h] offset __EVAL__s)) * __EVAL__`) }}
+  {{ .Labels.alertname }} ({{ .Labels.severity }}), for up to {{ .Value | humanizeDuration }}
+{{- else }}
+  none
+{{- end }}
+
+OUTSIDE THE USUAL (against the 7 days before: more than __SIGMA__ standard deviations, or a change above __CHANGE__% where the history is flat or short)
+{{- range sortByLabel "indicator" (query `last_over_time(finuance:digest_anomaly[15m] offset __EVAL__s)`) }}
+  {{ template "name" .Labels.indicator }}: {{ with query (printf "last_over_time(finuance:digest_24h{indicator=%q}[15m] offset __EVAL__s)" .Labels.indicator) }}{{ template "v" (first .) }}{{ end }}, usually {{ with query (printf "last_over_time(finuance:digest_24h:avg7d{indicator=%q}[15m] offset __EVAL__s)" .Labels.indicator) }}{{ template "v" (first .) }}{{ end }}{{ with query (printf "100 * (last_over_time(finuance:digest_24h{indicator=%q}[15m] offset __EVAL__s) - on (indicator, unit) last_over_time(finuance:digest_24h:avg7d[15m] offset __EVAL__s)) / on (indicator, unit) abs(last_over_time(finuance:digest_24h:avg7d[15m] offset __EVAL__s) != 0)" .Labels.indicator) }} ({{ . | first | value | printf "%+.0f" }}%){{ end }}
+{{- else }}
+  nothing
+{{- end }}

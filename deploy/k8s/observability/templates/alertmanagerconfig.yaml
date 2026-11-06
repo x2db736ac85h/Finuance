@@ -36,6 +36,7 @@ spec:
     receiver: email
     matchers:
       - { name: alertname, matchType: "=~", value: "Finuance.*" }
+      - { name: alertname, matchType: "!=", value: FinuanceDailyDigest }
     groupBy: [alertname, severity]
     groupWait: 30s
     groupInterval: 5m
@@ -75,6 +76,50 @@ spec:
   receivers:
     {{- include "obs.emailReceiver" $.Values.alerting.email | nindent 4 }}
 {{- end }}
+{{- end }}
+{{- if $.Values.digest.enabled }}
+---
+# The daily digest (docs/SLO.md): the FinuanceDailyDigest alert fires once a day for 15 minutes;
+# its text is the e-mail, sent once (no repeat within 24 hours, no "resolved").
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ $.Release.Name }}-digest
+  labels:
+    {{- include "obs.labels" $ | nindent 4 }}
+    {{- with $.Values.alerting.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  route:
+    receiver: digest
+    matchers:
+      - { name: alertname, matchType: "=", value: FinuanceDailyDigest }
+    groupBy: [alertname]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 24h
+  receivers:
+    - name: digest
+      emailConfigs:
+        {{- with $.Values.alerting.email }}
+        - to: {{ .to | quote }}
+          from: {{ .from | quote }}
+          smarthost: {{ .smarthost | quote }}
+          {{- with .authUsername }}
+          authUsername: {{ . | quote }}
+          authPassword:
+            name: {{ $.Values.alerting.email.passwordSecret.name }}
+            key: {{ $.Values.alerting.email.passwordSecret.key }}
+          {{- end }}
+          requireTLS: {{ .requireTLS }}
+          sendResolved: false
+          headers:
+            - { key: Subject, value: {{ `{{ .CommonAnnotations.summary }}` | quote }} }
+          # the digest is laid out in columns: plain text, and monospace in HTML (html/template escapes it)
+          text: {{ `{{ range .Alerts }}{{ .Annotations.digest }}{{ end }}` | quote }}
+          html: {{ `{{ range .Alerts }}<pre style="font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap">{{ .Annotations.digest }}</pre>{{ end }}` | quote }}
+        {{- end }}
 {{- end }}
 {{- with $.Values.alerting.heartbeat }}
 {{- if .enabled }}

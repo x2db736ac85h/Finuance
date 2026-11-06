@@ -387,7 +387,9 @@ What goes by e-mail (`deploy/k8s/observability`, `alerting.*`): every `Finuance*
 once and hourly, tickets daily), the monitoring stack's own `critical` alerts (nodes, disks,
 Kubernetes, Prometheus; every 4 hours while they last), and once a week, on Monday 06:00–08:00 UTC,
 the always-firing `Watchdog` as a sign of life: **if that Monday mail doesn't come, the alert path is
-broken** (machine off, Alertmanager down, the app password revoked). Warnings stay on the dashboards.
+broken** (machine off, Alertmanager down, the app password revoked). Every day at 12:00 Central
+European Time the **daily digest** sums up the last 24 hours ([SLO.md](SLO.md#daily-digest)); a
+missing digest means the same. Warnings stay on the dashboards.
 Which route an alert takes, checked inside Alertmanager:
 
 ```sh

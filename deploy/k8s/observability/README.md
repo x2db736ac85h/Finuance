@@ -20,11 +20,13 @@ homelab's values: `deploy/environments/homelab/observability-values.yaml`.
 | Part | What |
 |---|---|
 | `files/dashboards/*.json` | Six Grafana dashboards (API, imports and jobs, assistant, PostgreSQL, Go runtime and pool, SLOs), written by `tools/observability/dashboards.mjs`; ConfigMaps labelled for the Grafana sidecar |
-| `templates/prometheusrule.yaml` | SLO recording rules (5 m … 3 d), burn-rate alerts, app, database, backup and pod alerts (crash loops, no api pod ready), and the ingress alert; groups switched by `rules.database`, `rules.backups`, `rules.kubernetes`, `ingress.traefik.enabled` |
+| `templates/prometheusrule.yaml` | SLO recording rules (5 m … 3 d), burn-rate alerts, app, database, backup and pod alerts (crash loops, no api pod ready), and the ingress alert; groups switched by `rules.database`, `rules.backups`, `rules.kubernetes`, `ingress.traefik.enabled`; with `digest.enabled` the daily digest (24-hour figures every 10 minutes, their 7-day baselines and anomalies, and `FinuanceDailyDigest` at the local hour; [docs/SLO.md](../../../docs/SLO.md#daily-digest)) |
+| `files/digest.tmpl`, `files/digest-summary.tmpl` | The digest's text and subject, Prometheus alert templates that run queries |
 | `templates/traefik-podmonitor.yaml` | Traefik's request metrics (`ingress.traefik`) |
-| `templates/alertmanagerconfig.yaml` | Every `Finuance*` alert by e-mail; the monitoring stack's own alerts of `alerting.platform.severities` (default `critical`); a weekly `Watchdog` mail as a sign of life (`alerting.heartbeat`, Mondays 06:00–08:00 UTC); the SMTP password from a Secret |
+| `templates/alertmanagerconfig.yaml` | Every `Finuance*` alert by e-mail; the monitoring stack's own alerts of `alerting.platform.severities` (default `critical`); a weekly `Watchdog` mail as a sign of life (`alerting.heartbeat`, Mondays 06:00–08:00 UTC); the daily digest's own route (once, no "resolved"); the SMTP password from a Secret |
 | `tests/rules.test.yaml` | promtool unit tests: each alert fires on the right series and stays quiet below its threshold |
-| `metrics.txt`, `external-metrics.txt` | The metrics the dashboards and rules may use (ours from `TestMetricNames`; CloudNativePG 1.30.1, Barman Cloud plugin v0.15.1, kube-state-metrics, Traefik) |
+| `tests/digest.test.yaml`, `tests/digest-time.test.yaml` | The digest's text on 9 days of data, and its hour across both switches of EU summer time (on the rendered expression alone) |
+| `metrics.txt`, `external-metrics.txt` | The metrics the dashboards, rules and the digest's text may use (ours from `TestMetricNames`; CloudNativePG 1.30.1, Barman Cloud plugin v0.15.1, kube-state-metrics, node-exporter, Traefik) |
 
 `make helm-lint` runs `tools/check-observability.sh`: dashboards equal the generator's output, the
 chart renders and validates, `promtool check rules` and `promtool test rules` pass, and every metric

@@ -38,6 +38,10 @@ settle-up.
   your trips and groups with per-year sums and "next time" hints. Switchable by administrators,
   limited per user (`maxSharedGroups`), off in demo mode; shared groups are in the data export.
 
+- **Daily digest** (observability chart `digest.*`, on for the homelab): one e-mail a day at 12:00
+  Central European Time with the last 24 hours (availability and latency against the SLOs, traffic
+  and its peak, imports, failed jobs, the database and backups, CPU, memory, disk, restarts, the
+  alerts that fired) and every figure far from its previous 7 days.
 - **Developer section** for administrators (`FINUANCE_DEVELOPER_MODE`, chart `developer.*`; off by
   default, refused in demo mode): the build, the source repository and links to the tools around
   the instance (dashboards, Argo CD, CI/CD), each with how to get in and commands to copy. Anyone but

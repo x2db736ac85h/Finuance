@@ -40,6 +40,24 @@ ingress:
     selector: { app.kubernetes.io/name: traefik }
     port: metrics
 
+# A daily e-mail with the last 24 hours (docs/SLO.md "Daily digest"): availability and latency
+# against the SLOs, traffic and its peak, imports, failed jobs, the assistant, the database and its
+# backups, the machine's CPU, memory and disk, restarts, the alerts that fired, and every figure far
+# outside its last 7 days. A rule fires once a day at the local hour below and its text is built
+# from queries; it goes out through alerting.email (no "resolved" mail).
+digest:
+  enabled: false
+  hour: 12                # local time
+  utcOffsetHours: 1       # the local standard time's offset from UTC (1: Central European Time)
+  euSummerTime: true      # one hour earlier in UTC from the last Sunday of March to the last Sunday of October
+  evaluationSeconds: 30   # Prometheus' rule evaluation interval (how long an alert fired = samples × this)
+  # Machine figures from node-exporter (kube-prometheus-stack); restarts need rules.kubernetes.
+  node: true
+  anomalies:
+    sigma: 3              # listed when this many standard deviations from its previous 7 days …
+    change: 0.5           # … or, with a flat or short history, when it changed by more than this
+    minHistoryHours: 72   # history needed before the standard deviation is trusted
+
 alerting:
   # An AlertmanagerConfig that sends every Finuance alert by e-mail (Phase 17 decision). The SMTP
   # password comes from a Secret (sealed in Phase 18: tools/seal-secrets.sh).
