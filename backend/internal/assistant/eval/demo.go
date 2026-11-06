@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/advice"
 	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/notify"
@@ -109,6 +110,10 @@ func SetupDemo(ctx context.Context, st *store.Store, csvPath string) (uuid.UUID,
 	if _, err := sh.Create(ctx, u, sharing.GroupInput{Name: "Wyjazd do Pragi", FromGroupID: &trip.ID}); err != nil {
 		return uuid.Nil, err
 	}
+	// the advice library's starter articles, published (search_advice, ADR 0034)
+	if err := publishStarter(ctx, st); err != nil {
+		return uuid.Nil, err
+	}
 	// a savings goal of the year (goal_status, update_goal)
 	target, start := int64(500_000), platform.MustDate(2025, 1, 1)
 	if _, err := goals.New(st, platform.SystemClock{}).Create(ctx, u, goals.Input{Name: "Wakacje", Kind: goals.KindSave,
@@ -116,4 +121,31 @@ func SetupDemo(ctx context.Context, st *store.Store, csvPath string) (uuid.UUID,
 		return uuid.Nil, err
 	}
 	return u, nil
+}
+
+// publishStarter adds the advice library's starter articles and publishes them (the advice table is
+// the instance's; an eval runs on its own database).
+func publishStarter(ctx context.Context, st *store.Store) error {
+	lib := advice.New(st, platform.SystemClock{})
+	if _, err := lib.AddStarter(ctx); err != nil {
+		return err
+	}
+	list, err := lib.List(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range list {
+		a, err := lib.Get(ctx, list[i].ID)
+		if err != nil {
+			return err
+		}
+		if a.Status == advice.Published {
+			continue
+		}
+		if _, err := lib.Update(ctx, a.ID, a.Version, advice.Input{Slug: a.Slug, Language: a.Language, Title: a.Title, Body: a.Body,
+			Tags: a.Tags, Status: advice.Published}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
