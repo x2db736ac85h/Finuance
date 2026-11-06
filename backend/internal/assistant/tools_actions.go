@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -32,6 +33,32 @@ const (
 	ActionCreateGoal       = "create_goal" // 20.4
 	ActionUpdateGoal       = "update_goal"
 )
+
+// proposalActions are the actions propose_action takes.
+var proposalActions = []string{ActionSetCategory, ActionSetGroup, ActionCreateRule, ActionSetBudget, ActionAddExpense,
+	ActionAddToSharedGroup, ActionSplitExpense, ActionCreateGoal, ActionUpdateGoal, ActionAttachReceipt}
+
+// asProposal reads a call named after a proposal's action ("set_budget" called as a tool, which
+// small models do) as propose_action with that action; any other call stays as it is.
+func asProposal(name, rawArgs string) (string, string) {
+	if !slices.Contains(proposalActions, name) {
+		return name, rawArgs
+	}
+	m := map[string]any{}
+	dec := json.NewDecoder(strings.NewReader(rawArgs))
+	dec.UseNumber() // amounts keep their digits
+	if dec.Decode(&m) != nil || m == nil {
+		m = map[string]any{}
+	}
+	if a, _ := m["action"].(string); a == "" {
+		m["action"] = name
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return ToolPropose, `{"action":"` + name + `"}`
+	}
+	return ToolPropose, string(b)
+}
 
 // Limits of a proposal: the rows a set_* proposal may touch (the bulk endpoint takes 5,000; a
 // proposal is meant to be reviewed), the sample rows the card shows, and the names.

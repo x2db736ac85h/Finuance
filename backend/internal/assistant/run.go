@@ -616,6 +616,7 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 
 // step executes one tool call and reports it.
 func (run *Run) step(ctx context.Context, emit func(Event), sc Scope, t *turn, name, rawArgs string) (Outcome, error) {
+	name, rawArgs = asProposal(name, rawArgs)
 	ctx, span := run.r.tracer.Start(ctx, "assistant.tool", trace.WithAttributes(attribute.String("assistant.tool", knownTool(name))))
 	defer span.End()
 	args := json.RawMessage(rawArgs)
