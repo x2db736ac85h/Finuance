@@ -19,8 +19,8 @@ var testDB *testutil.DB
 func TestMain(m *testing.M) { testutil.Main(m, &testDB) }
 
 func TestExpectedVersion(t *testing.T) {
-	if v := store.ExpectedVersion(); v != 16 {
-		t.Errorf("ExpectedVersion = %d, want 16 (00016_assistant_auto_apply.sql)", v)
+	if v := store.ExpectedVersion(); v != 17 {
+		t.Errorf("ExpectedVersion = %d, want 17 (00017_goals.sql)", v)
 	}
 }
 

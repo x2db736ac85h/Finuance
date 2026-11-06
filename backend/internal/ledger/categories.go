@@ -150,7 +150,7 @@ func (l *Ledger) RenameCategory(ctx context.Context, userID, id uuid.UUID, name 
 
 // MergeCategory moves everything of category from into category into and deletes from: its
 // transactions (keeping how each was categorised), manual categories, rules, its budget when into
-// has none, and its bank names (from's own name and its aliases now mean into).
+// has none, its goals, and its bank names (from's own name and its aliases now mean into).
 func (l *Ledger) MergeCategory(ctx context.Context, userID, from, into uuid.UUID) (int64, error) {
 	if from == into {
 		return 0, fmt.Errorf("a category can't be merged into itself: %w", ErrInvalid)
@@ -176,6 +176,9 @@ func (l *Ledger) MergeCategory(ctx context.Context, userID, from, into uuid.UUID
 			},
 			func() error {
 				return q.MergeCategoryBudget(ctx, db.MergeCategoryBudgetParams{UserID: userID, FromID: from, IntoID: into})
+			},
+			func() error {
+				return q.MergeCategoryGoals(ctx, db.MergeCategoryGoalsParams{UserID: userID, FromID: from, IntoID: into})
 			},
 			func() error {
 				return q.MoveCategoryAliases(ctx, db.MoveCategoryAliasesParams{UserID: userID, FromID: from, IntoID: into})

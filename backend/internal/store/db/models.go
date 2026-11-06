@@ -143,6 +143,25 @@ type Friendship struct {
 	CreatedAt time.Time
 }
 
+type Goal struct {
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	Name           string
+	Kind           string
+	TargetMinor    *int64
+	Currency       string
+	AccountID      *uuid.UUID
+	CategoryID     *uuid.UUID
+	ReducePct      *int16
+	BaselineMonths int16
+	StartsOn       platform.Date
+	Deadline       platform.Date
+	Status         string
+	Version        int32
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
 type GooseDbVersion struct {
 	ID        int32
 	VersionID int64

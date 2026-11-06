@@ -66,6 +66,8 @@ const AUTO_KINDS: [NonNullable<Schemas['AssistantSettings']['autoApply']>[number
   ['add_expense', 'Add a cash expense'],
   ['add_to_shared_group', 'Share with a shared group'],
   ['split_expense', 'Change how a shared expense is split'],
+  ['create_goal', 'Set a goal'],
+  ['update_goal', 'Change a goal'],
 ];
 
 export function ChatSettings({ status, onCloud, onDone }: Props) {

@@ -267,6 +267,34 @@ func toolFilterDTO(f *assistant.StepFilter) *gen.ToolFilter {
 	return &tf
 }
 
+func proposalGoalDTO(g *assistant.ProposalGoal) *gen.ProposalGoal {
+	if g == nil {
+		return nil
+	}
+	out := &gen.ProposalGoal{Id: g.ID, Name: g.Name, Kind: gen.ProposalGoalKind(g.Kind), TargetMinor: g.TargetMinor, Currency: g.Currency,
+		AccountId: g.AccountID, CategoryId: g.CategoryID, BaselineMonths: g.BaselineMonths}
+	if d, err := platform.ParseDate(g.Deadline); err == nil {
+		out.Deadline = *dateDTO(&d)
+	}
+	if g.AccountName != "" {
+		out.AccountName = &g.AccountName
+	}
+	if g.CategoryName != "" {
+		out.CategoryName = &g.CategoryName
+	}
+	if g.ReducePct > 0 {
+		out.ReducePct = &g.ReducePct
+	}
+	if g.Status != "" {
+		st := gen.ProposalGoalStatus(g.Status)
+		out.Status = &st
+	}
+	if g.Version > 0 {
+		out.Version = &g.Version
+	}
+	return out
+}
+
 func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	out := &gen.ActionProposal{Key: p.Key(), Action: gen.ActionProposalAction(p.Action), Matched: p.Matched, CategoryId: p.CategoryID, GroupId: p.GroupID,
 		Sample: make([]gen.ProposalRow, len(p.Sample))}
@@ -319,6 +347,7 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 			out.Date = dateDTO(&d)
 		}
 	}
+	out.Goal, out.GoalBefore = proposalGoalDTO(p.Goal), proposalGoalDTO(p.GoalBefore)
 	if m := p.Match; m != nil {
 		rm := gen.RuleMatch{}
 		if m.Search != "" {

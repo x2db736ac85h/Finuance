@@ -1447,6 +1447,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Goals with their progress
+         * @description Every goal (ADR 0031), open ones first by deadline, with its progress today. A save goal counts income minus spending of every account in its currency since its start (transfers between the user's accounts left out), or the growth of its one account; a reduce goal compares each month's spending in its category with the average of the baseline months before its start.
+         */
+        get: operations["listGoals"];
+        put?: never;
+        /**
+         * Create a goal
+         * @description `save` needs `targetMinor` (and takes an optional `accountId`); `reduce` needs `categoryId` and `reducePct`. Without `startsOn` the goal starts today; without `currency` a save goal takes its account's, or the first account's. At most 50 goals (`422 limit_reached`).
+         */
+        post: operations["createGoal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/goals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a goal */
+        delete: operations["deleteGoal"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a goal
+         * @description Replaces the goal's fields (its kind, currency and start stay). Send the version you read; a mismatch is `409 stale_version`.
+         */
+        patch: operations["updateGoal"];
+        trace?: never;
+    };
     "/investments": {
         parameters: {
             query?: never;
@@ -3561,6 +3608,110 @@ export interface components {
              */
             amountMinor: number | null;
         };
+        GoalList: {
+            goals: components["schemas"]["Goal"][];
+        };
+        Goal: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind: "save" | "reduce";
+            /**
+             * Format: int64
+             * @description save only, in the goal's currency.
+             */
+            targetMinor?: number;
+            currency: string;
+            account?: components["schemas"]["NamedRef"];
+            category?: components["schemas"]["NamedRef"];
+            reducePct?: number;
+            baselineMonths: number;
+            /** Format: date */
+            startsOn: string;
+            /** Format: date */
+            deadline: string;
+            /** @enum {string} */
+            status: "active" | "done" | "archived";
+            version: number;
+            /** @description An assistant change set the goal and nobody undid it (ADR 0030). */
+            ai: boolean;
+            progress: components["schemas"]["GoalProgress"];
+        };
+        /** @description How the goal is doing today. `percent` is of the target (save) or of this month's limit (reduce). A goal whose category is gone, or a reduce goal without spending in its baseline, `needs_attention`. */
+        GoalProgress: {
+            /** @enum {string} */
+            state: "not_started" | "on_track" | "behind" | "done" | "missed" | "needs_attention";
+            percent: number;
+            daysLeft: number;
+            /** Format: int64 */
+            savedMinor?: number;
+            /**
+             * Format: int64
+             * @description What a steady pace would have put aside by today.
+             */
+            expectedMinor?: number;
+            /**
+             * Format: int64
+             * @description At today's pace, by the deadline.
+             */
+            projectedMinor?: number;
+            /**
+             * Format: int64
+             * @description The average month of the baseline.
+             */
+            baselineMinor?: number;
+            /** Format: int64 */
+            monthlyLimitMinor?: number;
+            /** Format: int64 */
+            thisMonthMinor?: number;
+            /**
+             * Format: int64
+             * @description This month's limit up to today.
+             */
+            allowedSoFarMinor?: number;
+            monthsKept?: number;
+            monthsPast?: number;
+        };
+        GoalInput: {
+            name: string;
+            /** @enum {string} */
+            kind: "save" | "reduce";
+            /** Format: int64 */
+            targetMinor?: number;
+            currency?: string;
+            /** Format: uuid */
+            accountId?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            reducePct?: number;
+            /** @default 3 */
+            baselineMonths: number;
+            /** Format: date */
+            startsOn?: string;
+            /** Format: date */
+            deadline: string;
+        };
+        GoalUpdate: {
+            name: string;
+            /** Format: int64 */
+            targetMinor?: number;
+            /** Format: uuid */
+            accountId?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            reducePct?: number;
+            /** @default 3 */
+            baselineMonths: number;
+            /** Format: date */
+            deadline: string;
+            /**
+             * @default active
+             * @enum {string}
+             */
+            status: "active" | "done" | "archived";
+            version: number;
+        };
         /** @description Pracownicze Plany Kapitałowe (the Polish employee capital plan). */
         PPK: {
             /** Format: int64 */
@@ -3700,7 +3851,7 @@ export interface components {
             /** @description Identifies the proposal within its chat (a hash of its content); sent back as X-Assistant-Proposal when it is applied. */
             key: string;
             /** @enum {string} */
-            action: "set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense";
+            action: "set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal";
             reason?: string;
             /** @description The transactions it changes (set_*) or the rule matches now (create_rule). */
             matched: number;
@@ -3751,6 +3902,8 @@ export interface components {
             /** Format: uuid */
             paidBy?: string;
             split?: components["schemas"]["ProposalSplit"];
+            goal?: components["schemas"]["ProposalGoal"];
+            goalBefore?: components["schemas"]["ProposalGoal"];
             toolFilter?: components["schemas"]["ToolFilter"];
         };
         ProposalRow: {
@@ -4197,6 +4350,30 @@ export interface components {
             /** @enum {string} */
             mode: "equal" | "shares" | "exact";
             members: components["schemas"]["ProposalSplitMember"][];
+        };
+        /** @description create_goal: the new goal (POST /goals); update_goal: the goal after the change, sent as PATCH /goals/{id} with its version, and in goalBefore as it was when proposed. */
+        ProposalGoal: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            /** @enum {string} */
+            kind: "save" | "reduce";
+            /** Format: int64 */
+            targetMinor?: number;
+            currency: string;
+            /** Format: uuid */
+            accountId?: string;
+            accountName?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            categoryName?: string;
+            reducePct?: number;
+            baselineMonths: number;
+            /** Format: date */
+            deadline: string;
+            /** @enum {string} */
+            status?: "active" | "done" | "archived";
+            version?: number;
         };
         ProposalSplitMember: {
             /** Format: uuid */
@@ -6601,6 +6778,114 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listGoals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The goals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createGoal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoalInput"];
+            };
+        };
+        responses: {
+            /** @description The new goal. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Goal"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateGoal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoalUpdate"];
+            };
+        };
+        responses: {
+            /** @description The goal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Goal"];
+                };
             };
             default: components["responses"]["Problem"];
         };

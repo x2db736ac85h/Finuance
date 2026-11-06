@@ -207,10 +207,12 @@ var (
 	// `put "PAYEE" in Category` proposes a category; `rule "PAYEE" as Category` proposes a rule.
 	proposeRe = regexp.MustCompile(`(?i)^\s*(put|rule)\s+["“„]([^"”]+)["”]\s+(?:in|as)\s+(.+?)\s*$`)
 	// Phase 20 proposals: `budget "Category" 800`, `spent 25.50 at "Payee" on 2026-11-05`,
-	// `share "PAYEE" with "Shared group"`
+	// `share "PAYEE" with "Shared group"`, `save 10000 by 2027-06-30`, `spend 20% less on "Category" by 2027-04-30`
 	budgetRe  = regexp.MustCompile(`(?i)^\s*budget\s+["“„]([^"”]+)["”]\s+([0-9.,]+)\s*$`)
 	expenseRe = regexp.MustCompile(`(?i)^\s*spent\s+([0-9.,]+)\s+at\s+["“„]([^"”]+)["”]\s+on\s+(\d{4}-\d{2}-\d{2})\s*$`)
 	shareRe   = regexp.MustCompile(`(?i)^\s*share\s+["“„]([^"”]+)["”]\s+with\s+["“„]([^"”]+)["”]\s*$`)
+	saveRe    = regexp.MustCompile(`(?i)^\s*save\s+([0-9.,]+)\s+by\s+(\d{4}-\d{2}-\d{2})\s*$`)
+	reduceRe  = regexp.MustCompile(`(?i)^\s*spend\s+(\d+)\s*%\s+less\s+on\s+["“„]([^"”]+)["”]\s+by\s+(\d{4}-\d{2}-\d{2})\s*$`)
 )
 
 func brain(req request, anthropic bool) Reply {
@@ -266,6 +268,12 @@ func pick(question string) Call {
 	}
 	if m := shareRe.FindStringSubmatch(question); m != nil {
 		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":"add_to_shared_group","payee":%q,"shared_group":%q,"reason":"You asked for it"}`, m[1], m[2])}
+	}
+	if m := saveRe.FindStringSubmatch(question); m != nil {
+		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":"create_goal","goal_kind":"save","goal_name":"Savings","amount":%q,"deadline":%q,"reason":"You asked for it"}`, m[1], m[2])}
+	}
+	if m := reduceRe.FindStringSubmatch(question); m != nil {
+		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":"create_goal","goal_kind":"reduce","goal_name":"Less on %s","to_category":%q,"reduce_pct":%s,"deadline":%q,"reason":"You asked for it"}`, m[2], m[2], m[1], m[3])}
 	}
 	if m := proposeRe.FindStringSubmatch(question); m != nil {
 		action := "set_category"

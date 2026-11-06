@@ -288,6 +288,32 @@ export async function applyProposal(p: Proposal, chatId: string, auto = false): 
       if (r.error) data(r);
       return 1;
     }
+    case 'create_goal':
+    case 'update_goal': {
+      const g = p.goal;
+      if (!g) return 0;
+      const fields = {
+        name: g.name,
+        deadline: g.deadline,
+        baselineMonths: g.baselineMonths,
+        ...(g.targetMinor !== undefined ? { targetMinor: g.targetMinor } : {}),
+        ...(g.accountId ? { accountId: g.accountId } : {}),
+        ...(g.categoryId ? { categoryId: g.categoryId } : {}),
+        ...(g.reducePct !== undefined ? { reducePct: g.reducePct } : {}),
+      };
+      if (p.action === 'create_goal') {
+        data(await api.POST('/goals', { params: { header }, body: { ...fields, kind: g.kind, currency: g.currency } }));
+      } else {
+        // the whole goal as proposed, with the version read then: a goal changed since is a 409
+        data(
+          await api.PATCH('/goals/{id}', {
+            params: { path: { id: g.id ?? '' }, header },
+            body: { ...fields, status: g.status ?? 'active', version: g.version ?? 0 },
+          }),
+        );
+      }
+      return 1;
+    }
   }
 }
 
@@ -304,6 +330,7 @@ export function useApplyProposal() {
       void qc.invalidateQueries({ queryKey: keys.aiChanges });
       void qc.invalidateQueries({ queryKey: keys.accounts }); // a typed expense changes an account's count
       void qc.invalidateQueries({ queryKey: keys.shared });
+      void qc.invalidateQueries({ queryKey: keys.goals });
     },
   });
 }
@@ -335,6 +362,7 @@ export function useRevertAIChange() {
       void qc.invalidateQueries({ queryKey: keys.activity });
       void qc.invalidateQueries({ queryKey: keys.accounts });
       void qc.invalidateQueries({ queryKey: keys.shared });
+      void qc.invalidateQueries({ queryKey: keys.goals });
     },
   });
 }

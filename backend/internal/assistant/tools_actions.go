@@ -82,6 +82,9 @@ type Proposal struct {
 	ExpenseCategory string         `json:"expenseCategory,omitempty"`
 	PaidBy          *uuid.UUID     `json:"paidBy,omitempty"`
 	Split           *ProposalSplit `json:"split,omitempty"`
+	// create_goal: the new goal; update_goal: the goal after the change, and before it
+	Goal       *ProposalGoal `json:"goal,omitempty"`
+	GoalBefore *ProposalGoal `json:"goalBefore,omitempty"`
 }
 
 // ProposalSplit is a split_expense's new split, in the API's SharedSplit form plus names.
@@ -130,24 +133,26 @@ type ProposalRow struct {
 
 // proposalResult is what the model receives.
 type proposalResult struct {
-	Status          string      `json:"status"`
-	Action          string      `json:"action"`
-	Matched         int         `json:"matched"`
-	ToCategory      string      `json:"to_category,omitempty"`
-	CreatesCategory bool        `json:"creates_category,omitempty"`
-	ToGroup         string      `json:"to_group,omitempty"`
-	CreatesGroup    bool        `json:"creates_group,omitempty"`
-	RuleName        string      `json:"rule_name,omitempty"`
-	SharedGroup     string      `json:"shared_group,omitempty"`
-	Budget          json.Number `json:"budget,omitempty"`
-	BudgetBefore    json.Number `json:"budget_before,omitempty"`
-	RemovesBudget   bool        `json:"removes_budget,omitempty"`
-	Account         string      `json:"account,omitempty"`
-	Date            string      `json:"date,omitempty"`
-	Amount          json.Number `json:"amount,omitempty"`
-	Payee           string      `json:"payee,omitempty"`
-	Split           *splitOut   `json:"split,omitempty"`
-	Sample          []sampleOut `json:"sample"`
+	Status          string        `json:"status"`
+	Action          string        `json:"action"`
+	Matched         int           `json:"matched"`
+	ToCategory      string        `json:"to_category,omitempty"`
+	CreatesCategory bool          `json:"creates_category,omitempty"`
+	ToGroup         string        `json:"to_group,omitempty"`
+	CreatesGroup    bool          `json:"creates_group,omitempty"`
+	RuleName        string        `json:"rule_name,omitempty"`
+	SharedGroup     string        `json:"shared_group,omitempty"`
+	Budget          json.Number   `json:"budget,omitempty"`
+	BudgetBefore    json.Number   `json:"budget_before,omitempty"`
+	RemovesBudget   bool          `json:"removes_budget,omitempty"`
+	Account         string        `json:"account,omitempty"`
+	Date            string        `json:"date,omitempty"`
+	Amount          json.Number   `json:"amount,omitempty"`
+	Payee           string        `json:"payee,omitempty"`
+	Split           *splitOut     `json:"split,omitempty"`
+	Goal            *goalProposed `json:"goal,omitempty"`
+	GoalBefore      *goalProposed `json:"goal_before,omitempty"`
+	Sample          []sampleOut   `json:"sample"`
 }
 
 type splitOut struct {
@@ -236,8 +241,10 @@ func (t *Tools) propose(ctx context.Context, userID uuid.UUID, sc Scope, a args)
 		return t.proposeShared(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
 	case ActionSplitExpense:
 		return t.proposeSplit(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
+	case ActionCreateGoal, ActionUpdateGoal:
+		return t.proposeGoal(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
 	}
-	return proposalError("action must be set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group or split_expense"), nil
+	return proposalError("action must be set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal or update_goal"), nil
 }
 
 // proposeRows reads the rows a set_* action would change: the filter within the chat's scope,
@@ -357,6 +364,8 @@ func proposalOutcome(sc Scope, p *Proposal, label string) Outcome {
 		if p.BudgetBeforeMinor != nil {
 			r.BudgetBefore = amount(*p.BudgetBeforeMinor, p.Currency)
 		}
+	case ActionCreateGoal, ActionUpdateGoal:
+		r.Goal, r.GoalBefore = goalProposedOf(sc, p.Goal), goalProposedOf(sc, p.GoalBefore)
 	case ActionAddExpense:
 		r.Account, r.Date, r.Amount, r.Payee = p.AccountName, p.Date, amount(p.AmountMinor, p.Currency), sc.mask(p.Payee)
 		if p.CategoryName != "" {

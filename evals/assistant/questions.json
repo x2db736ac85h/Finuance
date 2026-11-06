@@ -211,6 +211,24 @@
      "mention": "Apply|confirm|review|card"},
     {"id": "prop-share-pl", "category": "action proposals", "lang": "pl", "question": "Udostępnij wydatki z KINO POD GWIAZDAMI w grupie Wyjazd do Pragi.",
      "tools": ["propose_action"], "args": [{"action": "add_to_shared_group", "shared_group": "~pragi", "payee|query": "~kino"}],
-     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"}
+     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"},
+
+    {"id": "goal-save-en", "category": "goals", "lang": "en", "question": "I want to save 10 000 PLN by the end of June. Set that up as a goal.",
+     "tools": ["propose_action"], "args": [{"action": "create_goal", "deadline": "2025-06-30", "amount": "~10000"}],
+     "mention": "Apply|confirm|review|card"},
+    {"id": "goal-save-pl", "category": "goals", "lang": "pl", "question": "Chcę odłożyć 5000 zł do końca roku — ustaw mi taki cel.",
+     "tools": ["propose_action"], "args": [{"action": "create_goal", "deadline": "2025-12-31", "amount": "~5000"}],
+     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"},
+    {"id": "goal-reduce-en", "category": "goals", "lang": "en", "question": "Help me cut my eating out (Restauracje i kawiarnie) by 20 % until the end of the year.",
+     "tools": ["propose_action"], "args": [{"action": "create_goal", "to_category": "~restaur", "reduce_pct": "~20"}],
+     "mention": "Apply|confirm|review|card"},
+    {"id": "goal-reduce-pl", "category": "goals", "lang": "pl", "question": "Ustaw cel: wydawać o 15% mniej na transport do końca czerwca.",
+     "tools": ["propose_action"], "args": [{"action": "create_goal", "to_category": "~transport", "reduce_pct": "~15"}],
+     "mention": "Zastosuj|Apply|potwierdź|zatwierdź|kart"},
+    {"id": "goal-update-en", "category": "goals", "lang": "en", "question": "Move the deadline of my Wakacje goal to the end of September.",
+     "tools": ["propose_action"], "args": [{"action": "update_goal", "goal": "~wakacje", "deadline": "2025-09-30"}],
+     "mention": "Apply|confirm|review|card"},
+    {"id": "goal-status-pl", "category": "goals", "lang": "pl", "question": "Jak idzie mi oszczędzanie na Wakacje?",
+     "tools": ["goal_status"], "mention": "Wakacje"}
   ]
 }

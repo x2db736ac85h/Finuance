@@ -44,6 +44,7 @@ func TestExportMeHTTP(t *testing.T) {
 	expect(t, b.do("POST", "/rules", map[string]any{"name": "Internet", "match": map[string]any{"search": "operator internetu"},
 		"setCategoryId": rachunki}), 201, "")
 	expect(t, b.do("POST", "/groups", map[string]any{"name": "Trip", "budgetMinor": 50000}), 201, "")
+	expect(t, b.do("POST", "/goals", map[string]any{"name": "Holiday", "kind": "save", "targetMinor": 500000, "deadline": "2030-06-30"}), 201, "")
 
 	r := b.do("GET", "/me/export", nil)
 	expect(t, r, 200, "")
@@ -53,7 +54,7 @@ func TestExportMeHTTP(t *testing.T) {
 	files := unzip(t, r.raw)
 	for _, name := range []string{"manifest.json", "accounts.json", "categories.json", "groups.json", "budgets.json", "annotations.json",
 		"dedupe-overrides.json", "imports.json", "investments.json", "preferences.json", "assistant.json", "transactions.csv",
-		"rules.json", "category-aliases.json", "activity.json", "friends.json", "notifications.json", "shared-groups.json", "ai-changes.json"} {
+		"rules.json", "category-aliases.json", "activity.json", "friends.json", "notifications.json", "shared-groups.json", "ai-changes.json", "goals.json"} {
 		if _, ok := files[name]; !ok {
 			t.Errorf("missing %s (have %d files)", name, len(files))
 		}
@@ -79,6 +80,11 @@ func TestExportMeHTTP(t *testing.T) {
 		len(aliases) != 1 || aliases[0]["bankCategory"] != "rachunki" || aliases[0]["categoryName"] != "Opłaty" ||
 		len(groups) != 1 || num(groups[0]["budgetMinor"]) != 50000 {
 		t.Errorf("rules %s\naliases %s\ngroups %s", files["rules.json"], files["category-aliases.json"], files["groups.json"])
+	}
+	var goalDocs []map[string]any
+	if err := json.Unmarshal(files["goals.json"], &goalDocs); err != nil || len(goalDocs) != 1 || goalDocs[0]["name"] != "Holiday" ||
+		num(goalDocs[0]["targetMinor"]) != 500000 || obj(t, goalDocs[0], "progress")["state"] == nil {
+		t.Errorf("goals %s", files["goals.json"])
 	}
 	// Phase 17: the activity log; this export is recorded after its documents were read
 	var act []map[string]any
@@ -107,7 +113,7 @@ func TestExportMeHTTP(t *testing.T) {
 	o := other.do("GET", "/me/export", nil)
 	expect(t, o, 200, "")
 	of := unzip(t, o.raw)
-	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 19 || string(of["ai-changes.json"]) != "[]\n" ||
+	if string(of["accounts.json"]) != "[]\n" || strings.Count(string(of["transactions.csv"]), "\r\n") != 0 || len(of) != 20 || string(of["ai-changes.json"]) != "[]\n" || string(of["goals.json"]) != "[]\n" ||
 		string(of["rules.json"]) != "[]\n" || string(of["category-aliases.json"]) != "[]\n" || string(of["activity.json"]) != "[]\n" {
 		t.Errorf("other user's export: accounts %s, %d files", of["accounts.json"], len(of))
 	}

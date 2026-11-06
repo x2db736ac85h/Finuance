@@ -47,6 +47,8 @@ export type Db = {
   budgetPuts: { categoryId: string; amountMinor: number | null }[];
   investments: Schemas['Investments'];
   investmentPuts: Schemas['Investments'][];
+  goals: Schemas['Goal'][];
+  goalWrites: { method: 'POST' | 'PATCH'; id?: string; body: unknown; header: string | null }[];
   accountPatches: { id: string; body: Schemas['AccountInput'] }[];
 };
 
@@ -121,6 +123,8 @@ export const freshDb = (): Db => ({
     positions: [],
   },
   investmentPuts: [],
+  goals: [],
+  goalWrites: [],
   accountPatches: [],
 });
 
@@ -299,6 +303,38 @@ export const server = setupServer(
   http.put(`${API}/budgets/:categoryId`, async ({ params, request }) => {
     const body = (await request.json()) as Schemas['BudgetInput'];
     db.budgetPuts.push({ categoryId: String(params['categoryId']), amountMinor: body.amountMinor ?? null });
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get(`${API}/goals`, () => authed(() => HttpResponse.json({ goals: db.goals }))),
+  http.post(`${API}/goals`, async ({ request }) => {
+    const body = (await request.json()) as Schemas['GoalInput'];
+    db.goalWrites.push({ method: 'POST', body, header: request.headers.get('X-Assistant-Proposal') });
+    const g: Schemas['Goal'] = {
+      ...body,
+      id: `goal-${String(db.goals.length + 1)}`,
+      currency: body.currency ?? 'PLN',
+      startsOn: body.startsOn ?? '2025-03-17',
+      status: 'active',
+      version: 1,
+      ai: request.headers.has('X-Assistant-Proposal'),
+      progress: { state: 'on_track', percent: 0, daysLeft: 100, savedMinor: 0, expectedMinor: 0, projectedMinor: 0 },
+    };
+    db.goals = [...db.goals, g];
+    return HttpResponse.json(g, { status: 201 });
+  }),
+  http.patch(`${API}/goals/:id`, async ({ params, request }) => {
+    const body = (await request.json()) as Schemas['GoalUpdate'];
+    const id = String(params['id']);
+    db.goalWrites.push({ method: 'PATCH', id, body, header: request.headers.get('X-Assistant-Proposal') });
+    const cur = db.goals.find((g) => g.id === id);
+    if (!cur) return problem(404, 'not_found', 'No such goal.');
+    if (cur.version !== body.version) return problem(409, 'stale_version', 'The goal was changed meanwhile.');
+    const g = { ...cur, ...body, version: cur.version + 1 };
+    db.goals = db.goals.map((x) => (x.id === id ? g : x));
+    return HttpResponse.json(g);
+  }),
+  http.delete(`${API}/goals/:id`, ({ params }) => {
+    db.goals = db.goals.filter((g) => g.id !== params['id']);
     return new HttpResponse(null, { status: 204 });
   }),
   http.get(`${API}/investments`, () => HttpResponse.json(db.investments)),

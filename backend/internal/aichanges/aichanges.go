@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
@@ -152,7 +153,8 @@ func (s *Service) Revert(ctx context.Context, userID, id uuid.UUID, enqueue rule
 	return res, ledger.DBError("revert ai change", err)
 }
 
-// unchanged checks that every transaction and rule the change touched still is as it left it.
+// unchanged checks that every transaction, budget, split, goal and rule the change touched still is
+// as it left it.
 // Groups and categories it created never block: the revert deletes them only when unused.
 func (s *Service) unchanged(ctx context.Context, q *db.Queries, userID uuid.UUID, items []item) error {
 	var ids []uuid.UUID
@@ -220,6 +222,18 @@ func (s *Service) unchanged(ctx context.Context, q *db.Queries, userID uuid.UUID
 				return err
 			}
 			if after.AmountMinor == nil || *after.AmountMinor != cur {
+				changed++
+			}
+		case ledger.AIEntityGoal:
+			var after goals.State
+			if err := json.Unmarshal(it.after, &after); err != nil {
+				return fmt.Errorf("ai change item: %w", err)
+			}
+			cur, err := goals.CurrentState(ctx, q, userID, it.id)
+			if err != nil {
+				return err
+			}
+			if cur != nil && !cur.Same(after) { // a goal deleted since has nothing to undo
 				changed++
 			}
 		case ledger.AIEntityRule:
@@ -354,6 +368,26 @@ func (s *Service) undo(ctx context.Context, q *db.Queries, userID uuid.UUID, ite
 			if cur != nil { // the expense is still there
 				if err := sharing.RestoreSplitTx(ctx, q, s.clock.Now(), userID, it.id, before); err != nil {
 					return res, err
+				}
+			}
+		case it.entity == ledger.AIEntityGoal:
+			var before *goals.State
+			if !created(it) {
+				before = &goals.State{}
+				if err := json.Unmarshal(it.before, before); err != nil {
+					return res, fmt.Errorf("ai change item: %w", err)
+				}
+			}
+			cur, err := goals.CurrentState(ctx, q, userID, it.id)
+			if err != nil {
+				return res, err
+			}
+			if cur != nil {
+				if err := goals.RestoreTx(ctx, q, s.clock.Now(), userID, it.id, before); err != nil {
+					return res, err
+				}
+				if before == nil {
+					res.Deleted++
 				}
 			}
 		case it.entity == ledger.AIEntityBudget:

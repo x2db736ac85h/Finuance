@@ -85,6 +85,17 @@ func (a *api) ExportMe(ctx context.Context, _ gen.ExportMeRequestObject) (gen.Ex
 		}
 		docs["ai-changes.json"] = list
 	}
+	if a.goals != nil {
+		list, err := a.goals.List(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]gen.Goal, len(list))
+		for i := range list {
+			out[i] = goalDTO(&list[i])
+		}
+		docs["goals.json"] = out
+	}
 	if a.sharing != nil {
 		list, err := a.sharing.List(ctx, u)
 		if err != nil {

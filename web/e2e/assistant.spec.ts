@@ -197,3 +197,34 @@ test('budget and cash-expense proposals apply and undo (ADR 0030)', async ({ pag
   expect(seen.foreign).toEqual([]);
   expect(seen.errors).toEqual([]);
 });
+
+test('a goal proposal applies, shows on the Overview, and undoes (ADR 0031)', async ({ page, baseURL }) => {
+  const seen = watch(page, baseURL ?? '');
+  const panel = await setup(page);
+  const goals = async () => {
+    const r = await page.request.get('/api/v1/goals');
+    return ((await r.json()) as { goals: { name: string; ai: boolean }[] }).goals;
+  };
+
+  await ask(page, 'spend 20% less on "Artykuły spożywcze" by 2030-04-30');
+  const card = panel.getByRole('group', { name: 'Proposed change' }).last();
+  await expect(card).toContainText('New goal “Less on Artykuły spożywcze”: spend 20 % less on Artykuły spożywcze');
+  expect(await goals()).toEqual([]); // nothing changes before Apply
+  await card.getByRole('button', { name: 'Apply' }).click();
+  await expect(card).toContainText('✓ Applied');
+  await expect
+    .poll(async () => (await goals()).map((g) => [g.name, g.ai]))
+    .toEqual([['Less on Artykuły spożywcze', true]]);
+
+  // the Overview's Goals card shows it, marked as the assistant's
+  await page.getByRole('button', { name: 'Personal finance overview' }).click(); // in the app: the panel stays open
+  const goalsCard = page.getByRole('region', { name: 'Goals' });
+  await expect(goalsCard).toContainText('Less on Artykuły spożywcze');
+  await expect(goalsCard.getByTitle(/Set by the assistant/)).toBeVisible();
+
+  await card.getByRole('button', { name: 'Undo' }).click();
+  await expect(card).toContainText('↺ Undone');
+  await expect(goalsCard).toContainText('No goals yet');
+  expect(seen.foreign).toEqual([]);
+  expect(seen.errors).toEqual([]);
+});

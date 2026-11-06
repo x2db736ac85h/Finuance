@@ -21,6 +21,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/friends"
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/sharing"
 )
@@ -36,6 +37,7 @@ type api struct {
 	auth              *auth.Service
 	admin             *admin.Service
 	aiChanges         *aichanges.Service // lists and undoes the assistant's changes (ADR 0030)
+	goals             *goals.Service     // savings and reduction goals (ADR 0031)
 	friends           *friends.Service
 	notify            *notify.Service
 	sharing           *sharing.Service

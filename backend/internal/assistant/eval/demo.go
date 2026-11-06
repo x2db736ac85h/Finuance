@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/notify"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -106,6 +107,12 @@ func SetupDemo(ctx context.Context, st *store.Store, csvPath string) (uuid.UUID,
 	}
 	sh := sharing.New(st, l, notify.New(st, platform.SystemClock{}), platform.SystemClock{})
 	if _, err := sh.Create(ctx, u, sharing.GroupInput{Name: "Wyjazd do Pragi", FromGroupID: &trip.ID}); err != nil {
+		return uuid.Nil, err
+	}
+	// a savings goal of the year (goal_status, update_goal)
+	target, start := int64(500_000), platform.MustDate(2025, 1, 1)
+	if _, err := goals.New(st, platform.SystemClock{}).Create(ctx, u, goals.Input{Name: "Wakacje", Kind: goals.KindSave,
+		TargetMinor: &target, StartsOn: &start, Deadline: platform.MustDate(2025, 8, 31)}); err != nil {
 		return uuid.Nil, err
 	}
 	return u, nil

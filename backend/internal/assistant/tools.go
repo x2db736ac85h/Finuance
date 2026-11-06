@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/investments"
@@ -60,8 +61,9 @@ type Outcome struct {
 // Tools runs the read-only lookups. Every call is one read-only transaction under the user's RLS
 // context (query.Engine.Insight → store.WithUserReadOnly).
 type Tools struct {
-	eng *query.Engine
-	ins *insights.Service
+	eng   *query.Engine
+	ins   *insights.Service
+	goals *goals.Service // goal_status and the goal proposals (WithGoals)
 }
 
 // NewTools returns the tools on eng.
@@ -90,6 +92,8 @@ func (t *Tools) Run(ctx context.Context, userID uuid.UUID, sc Scope, name, rawAr
 		out, err = t.budgets(ctx, userID, sc, a)
 	case ToolGroup:
 		out, err = t.group(ctx, userID, sc, a)
+	case ToolGoals:
+		out, err = t.goalStatus(ctx, userID, a)
 	case ToolPropose:
 		out, err = t.propose(ctx, userID, sc, a)
 	default:

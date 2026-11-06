@@ -2008,6 +2008,91 @@ paths:
           description: Saved.
         default:
           $ref: "#/components/responses/Problem"
+  /goals:
+    get:
+      operationId: listGoals
+      summary: Goals with their progress
+      description: >-
+        Every goal (ADR 0031), open ones first by deadline, with its progress today. A save goal
+        counts income minus spending of every account in its currency since its start (transfers
+        between the user's accounts left out), or the growth of its one account; a reduce goal
+        compares each month's spending in its category with the average of the baseline months
+        before its start.
+      tags: [goals]
+      responses:
+        "200":
+          description: The goals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createGoal
+      summary: Create a goal
+      description: >-
+        `save` needs `targetMinor` (and takes an optional `accountId`); `reduce` needs `categoryId`
+        and `reducePct`. Without `startsOn` the goal starts today; without `currency` a save goal
+        takes its account's, or the first account's. At most 50 goals (`422 limit_reached`).
+      tags: [goals]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalInput"
+      responses:
+        "201":
+          description: The new goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        default:
+          $ref: "#/components/responses/Problem"
+  /goals/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      operationId: updateGoal
+      summary: Change a goal
+      description: >-
+        Replaces the goal's fields (its kind, currency and start stay). Send the version you read; a
+        mismatch is `409 stale_version`.
+      tags: [goals]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalUpdate"
+      responses:
+        "200":
+          description: The goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteGoal
+      summary: Delete a goal
+      tags: [goals]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
   /investments:
     get:
       operationId: getInvestments
@@ -5655,6 +5740,181 @@ components:
           minimum: 0
           nullable: true
           description: The monthly limit; null resets to the default budget.
+    GoalList:
+      type: object
+      additionalProperties: false
+      required: [goals]
+      properties:
+        goals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Goal"
+    Goal:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, currency, baselineMonths, startsOn, deadline, status, version, ai, progress]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [save, reduce]
+        targetMinor:
+          type: integer
+          format: int64
+          description: save only, in the goal's currency.
+        currency:
+          type: string
+        account:
+          $ref: "#/components/schemas/NamedRef"
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        reducePct:
+          type: integer
+        baselineMonths:
+          type: integer
+        startsOn:
+          type: string
+          format: date
+        deadline:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, done, archived]
+        version:
+          type: integer
+        ai:
+          type: boolean
+          description: An assistant change set the goal and nobody undid it (ADR 0030).
+        progress:
+          $ref: "#/components/schemas/GoalProgress"
+    GoalProgress:
+      type: object
+      additionalProperties: false
+      required: [state, percent, daysLeft]
+      description: >-
+        How the goal is doing today. `percent` is of the target (save) or of this month's limit
+        (reduce). A goal whose category is gone, or a reduce goal without spending in its baseline,
+        `needs_attention`.
+      properties:
+        state:
+          type: string
+          enum: [not_started, on_track, behind, done, missed, needs_attention]
+        percent:
+          type: integer
+        daysLeft:
+          type: integer
+        savedMinor:
+          type: integer
+          format: int64
+        expectedMinor:
+          type: integer
+          format: int64
+          description: What a steady pace would have put aside by today.
+        projectedMinor:
+          type: integer
+          format: int64
+          description: At today's pace, by the deadline.
+        baselineMinor:
+          type: integer
+          format: int64
+          description: The average month of the baseline.
+        monthlyLimitMinor:
+          type: integer
+          format: int64
+        thisMonthMinor:
+          type: integer
+          format: int64
+        allowedSoFarMinor:
+          type: integer
+          format: int64
+          description: This month's limit up to today.
+        monthsKept:
+          type: integer
+        monthsPast:
+          type: integer
+    GoalInput:
+      type: object
+      additionalProperties: false
+      required: [name, kind, deadline]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        kind:
+          type: string
+          enum: [save, reduce]
+        targetMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        accountId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        reducePct:
+          type: integer
+          minimum: 1
+          maximum: 100
+        baselineMonths:
+          type: integer
+          minimum: 1
+          maximum: 12
+          default: 3
+        startsOn:
+          type: string
+          format: date
+        deadline:
+          type: string
+          format: date
+    GoalUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, deadline, version]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        targetMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        accountId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        reducePct:
+          type: integer
+          minimum: 1
+          maximum: 100
+        baselineMonths:
+          type: integer
+          minimum: 1
+          maximum: 12
+          default: 3
+        deadline:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, done, archived]
+          default: active
+        version:
+          type: integer
+          minimum: 1
     PPK:
       type: object
       additionalProperties: false
@@ -5935,7 +6195,7 @@ components:
             X-Assistant-Proposal when it is applied.
         action:
           type: string
-          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense]
+          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
         reason:
           type: string
         matched:
@@ -6010,6 +6270,10 @@ components:
           format: uuid
         split:
           $ref: "#/components/schemas/ProposalSplit"
+        goal:
+          $ref: "#/components/schemas/ProposalGoal"
+        goalBefore:
+          $ref: "#/components/schemas/ProposalGoal"
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
     ProposalRow:
@@ -6788,6 +7052,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ProposalSplitMember"
+    ProposalGoal:
+      type: object
+      additionalProperties: false
+      required: [name, kind, currency, baselineMonths, deadline]
+      description: >-
+        create_goal: the new goal (POST /goals); update_goal: the goal after the change, sent as
+        PATCH /goals/{id} with its version, and in goalBefore as it was when proposed.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        kind: { type: string, enum: [save, reduce] }
+        targetMinor: { type: integer, format: int64 }
+        currency: { type: string }
+        accountId: { type: string, format: uuid }
+        accountName: { type: string }
+        categoryId: { type: string, format: uuid }
+        categoryName: { type: string }
+        reducePct: { type: integer }
+        baselineMonths: { type: integer }
+        deadline: { type: string, format: date }
+        status: { type: string, enum: [active, done, archived] }
+        version: { type: integer }
     ProposalSplitMember:
       type: object
       additionalProperties: false

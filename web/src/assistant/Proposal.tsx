@@ -53,7 +53,38 @@ export function proposalTitle(p: Proposal): string {
               : `equally between ${members.map((m) => m.name).join(', ')}`;
       return `Split “${p.payee ?? ''}” (${fmtDay(p.date)}${p.amount ? `, ${fmtMoney(p.amount)}` : ''}) in “${p.sharedGroupName ?? ''}” ${who}`;
     }
+    case 'create_goal':
+      return `New goal “${p.goal?.name ?? ''}”: ${p.goal ? goalText(p.goal) : ''}`;
+    case 'update_goal': {
+      const g = p.goal;
+      const b = p.goalBefore;
+      if (!g || !b) return 'Change a goal';
+      const changes = [
+        g.name !== b.name ? `rename to “${g.name}”` : '',
+        g.targetMinor !== b.targetMinor && g.targetMinor !== undefined
+          ? `target ${fmtMoney({ amountMinor: g.targetMinor, currency: g.currency })}`
+          : '',
+        g.reducePct !== b.reducePct ? `${String(g.reducePct ?? 0)} % less` : '',
+        g.categoryName !== b.categoryName ? `on ${g.categoryName ?? ''}` : '',
+        g.deadline !== b.deadline ? `deadline ${fmtDay(g.deadline)}` : '',
+        g.status !== b.status
+          ? g.status === 'active'
+            ? 'reopen it'
+            : g.status === 'done'
+              ? 'close it'
+              : 'archive it'
+          : '',
+      ].filter(Boolean);
+      return `Change the goal “${b.name}”: ${changes.join(', ')}`;
+    }
   }
+}
+
+/** A goal in a few words: "save 10 000,00 PLN by 30.06.2027" or "spend 20 % less on Jedzenie until …". */
+function goalText(g: NonNullable<Proposal['goal']>): string {
+  return g.kind === 'save'
+    ? `save ${fmtMoney({ amountMinor: g.targetMinor ?? 0, currency: g.currency })}${g.accountName ? ` on ${g.accountName}` : ''} by ${fmtDay(g.deadline)}`
+    : `spend ${String(g.reducePct ?? 0)} % less on ${g.categoryName ?? ''} than the last ${plural(g.baselineMonths, 'month')}, until ${fmtDay(g.deadline)}`;
 }
 
 /** What Apply did, for the toast. */
@@ -69,6 +100,10 @@ function appliedText(p: Proposal, n: number): string {
       return `Shared ${plural(n, 'transaction')} with “${p.sharedGroupName ?? ''}”`;
     case 'split_expense':
       return `Split of “${p.payee ?? ''}” changed`;
+    case 'create_goal':
+      return `Goal “${p.goal?.name ?? ''}” added — see Overview → Goals`;
+    case 'update_goal':
+      return `Goal “${p.goal?.name ?? ''}” changed`;
     default:
       return `Applied to ${plural(n, 'transaction')}`;
   }

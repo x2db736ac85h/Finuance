@@ -66,8 +66,98 @@ function record(calls: Call[]) {
       await capture('PATCH', request);
       return new HttpResponse(null, { status: 204 });
     }),
+    http.post(`${API}/goals`, async ({ request }) => {
+      await capture('POST', request);
+      return HttpResponse.json({} as Schemas['Goal'], { status: 201 });
+    }),
+    http.patch(`${API}/goals/:id`, async ({ request }) => {
+      await capture('PATCH', request);
+      return HttpResponse.json({} as Schemas['Goal']);
+    }),
   );
 }
+
+describe('goal proposals (ADR 0031)', () => {
+  const holiday: NonNullable<Proposal['goal']> = {
+    id: 'g1',
+    name: 'Wakacje',
+    kind: 'save',
+    targetMinor: 1_000_000,
+    currency: 'PLN',
+    baselineMonths: 3,
+    deadline: '2027-06-30',
+    status: 'active',
+    version: 4,
+  };
+  it('names the goal or what changes, and applies it through POST and PATCH /goals', async () => {
+    const create = base({
+      key: '00000000000000b1',
+      action: 'create_goal',
+      goal: {
+        name: 'Less food',
+        kind: 'reduce',
+        currency: 'PLN',
+        categoryId: CAT,
+        categoryName: 'Jedzenie',
+        reducePct: 20,
+        baselineMonths: 3,
+        deadline: '2027-04-30',
+      },
+    });
+    expect(proposalTitle(create)).toBe(
+      'New goal “Less food”: spend 20 % less on Jedzenie than the last 3 months, until 30.04.2027',
+    );
+    const update = base({
+      key: '00000000000000b2',
+      action: 'update_goal',
+      goalBefore: holiday,
+      goal: { ...holiday, targetMinor: 1_200_000, deadline: '2027-08-31' },
+    });
+    expect(proposalTitle(update)).toMatch(/^Change the goal “Wakacje”: target .*12.*, deadline 31\.08\.2027$/);
+    expect(
+      proposalTitle(base({ action: 'update_goal', goalBefore: holiday, goal: { ...holiday, status: 'done' } })),
+    ).toBe('Change the goal “Wakacje”: close it');
+
+    const calls: Call[] = [];
+    record(calls);
+    await applyProposal(create, CHAT);
+    await applyProposal(update, CHAT, true);
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        path: '/goals',
+        chat: CHAT,
+        key: '00000000000000b1',
+        auto: null,
+        body: {
+          name: 'Less food',
+          kind: 'reduce',
+          currency: 'PLN',
+          categoryId: CAT,
+          reducePct: 20,
+          baselineMonths: 3,
+          deadline: '2027-04-30',
+        },
+      },
+      // the whole goal with the version it was proposed on
+      {
+        method: 'PATCH',
+        path: '/goals/g1',
+        chat: CHAT,
+        key: '00000000000000b2',
+        auto: 'true',
+        body: {
+          name: 'Wakacje',
+          targetMinor: 1_200_000,
+          baselineMonths: 3,
+          deadline: '2027-08-31',
+          status: 'active',
+          version: 4,
+        },
+      },
+    ]);
+  });
+});
 
 describe('proposals v2 (ADR 0030)', () => {
   it('names each change in its card', () => {
