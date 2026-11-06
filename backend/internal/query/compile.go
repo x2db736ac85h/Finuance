@@ -49,6 +49,9 @@ func Compile(userID uuid.UUID, c Context) (*Compiled, error) {
 	if c.GroupID != nil {
 		out.Where = append(out.Where, "t.group_id = "+a.add(*c.GroupID))
 	}
+	if c.AIAssisted {
+		out.Where = append(out.Where, aiTouched)
+	}
 	out.Where = append(out.Where, searchPreds("t.search_text", c.Search, a)...)
 	ve := &platform.ValidationError{}
 	checkText(ve, "context.search", c.Search)

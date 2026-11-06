@@ -77,6 +77,10 @@ func (a *api) GetTransaction(ctx context.Context, req gen.GetTransactionRequestO
 // AddTransaction adds a transaction by hand to a cash account (ADR 0029).
 func (a *api) AddTransaction(ctx context.Context, req gen.AddTransactionRequestObject) (gen.AddTransactionResponseObject, error) {
 	u, b := identity(ctx).User.ID, req.Body
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	in := ledger.ManualInput{AccountID: b.AccountId, BookedOn: *dateIn(&b.BookedOn), AmountMinor: b.AmountMinor, Payee: b.Payee,
 		Description: deref(b.Description), CategoryID: b.CategoryId, CategoryName: b.CategoryName, GroupID: b.GroupId, Note: deref(b.Note)}
 	id, err := a.ledger.AddManual(ctx, u, in)

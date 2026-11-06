@@ -191,6 +191,49 @@ func (q *Queries) ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, er
 	return items, nil
 }
 
+const listSharedGroupLinks = `-- name: ListSharedGroupLinks :many
+SELECT g.id, g.name, sg.id AS shared_group_id, sg.name AS shared_name, sg.currency
+FROM groups g JOIN shared_groups sg ON sg.id = g.shared_group_id
+WHERE g.user_id = $1 AND sg.archived_at IS NULL
+ORDER BY sg.name COLLATE pl_natural, sg.id
+`
+
+type ListSharedGroupLinksRow struct {
+	ID            uuid.UUID
+	Name          string
+	SharedGroupID uuid.UUID
+	SharedName    string
+	Currency      string
+}
+
+// The user's personal groups linked to a shared group they are in, not archived (the assistant's
+// add_to_shared_group target). shared_groups is read under its membership RLS.
+func (q *Queries) ListSharedGroupLinks(ctx context.Context, userID uuid.UUID) ([]ListSharedGroupLinksRow, error) {
+	rows, err := q.db.Query(ctx, listSharedGroupLinks, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSharedGroupLinksRow
+	for rows.Next() {
+		var i ListSharedGroupLinksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SharedGroupID,
+			&i.SharedName,
+			&i.Currency,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setGroupBudget = `-- name: SetGroupBudget :execrows
 UPDATE groups SET budget_minor = $1::bigint WHERE user_id = $2 AND id = $3
 `

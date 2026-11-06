@@ -101,7 +101,10 @@ test('says so when no model is configured', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Question' })).toBeHidden();
 });
 
-test('a proposal changes nothing until Apply; Apply categorises the rows (PLAN 15.7)', async ({ page, baseURL }) => {
+test('a proposal changes nothing until Apply; Apply categorises the rows, Undo puts them back (PLAN 15.7, ADR 0030)', async ({
+  page,
+  baseURL,
+}) => {
   const seen = watch(page, baseURL ?? '');
   const panel = await setup(page);
   const count = async (cond: string) => {
@@ -131,7 +134,97 @@ test('a proposal changes nothing until Apply; Apply categorises the rows (PLAN 1
   const again = page.getByRole('complementary', { name: 'Assistant' });
   await again.getByTitle('Recent chats').click();
   await again.getByTitle('put "OPERATOR INTERNETU" in Internet').click();
-  await expect(again.getByRole('group', { name: 'Proposed change' })).toContainText('✓ Applied');
+  const card2 = again.getByRole('group', { name: 'Proposed change' });
+  await expect(card2).toContainText('✓ Applied');
+  // only the rows the assistant changed, each marked; Undo puts the bank's categories back (ADR 0030)
+  await page.getByRole('button', { name: 'Columns' }).click();
+  await page.getByRole('checkbox', { name: 'Only what the assistant changed' }).check();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('tr[data-i]')).toHaveCount(14);
+  await expect(page.getByTitle(/Changed by the assistant/)).toHaveCount(14);
+  await card2.getByRole('button', { name: 'Undo' }).click();
+  await expect(card2).toContainText('↺ Undone');
+  await expect.poll(() => count('=Internet')).toBe(0);
+  await expect(page.locator('tr[data-i]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Remove ✦ AI assisted' }).click();
+  await page.goto('/settings/activity');
+  await expect(page.getByRole('list', { name: 'Assistant changes' })).toContainText('undone');
+  expect(seen.foreign).toEqual([]);
+  expect(seen.errors).toEqual([]);
+});
+
+test('budget and cash-expense proposals apply and undo (ADR 0030)', async ({ page, baseURL }) => {
+  const seen = watch(page, baseURL ?? '');
+  // the cash account exists before the question: the proposal names it
+  const panel = await setup(page);
+  expect(
+    (
+      await page.request.post('/api/v1/accounts', { headers: API_HEADERS, data: { name: 'Portfel', kind: 'cash' } })
+    ).ok(),
+  ).toBe(true);
+  const budget = async () => {
+    const r = await page.request.get('/api/v1/budgets');
+    const list = ((await r.json()) as { budgets: { category: { name: string }; amountMinor: number }[] }).budgets;
+    return list.find((b) => b.category.name === 'Rachunki')?.amountMinor ?? null;
+  };
+  const added = async () => {
+    const r = await page.request.post('/api/v1/transactions/query', {
+      headers: API_HEADERS,
+      data: { context: { filters: [{ column: 'source', cond: '=Assistant' }] }, limit: 1 },
+    });
+    return ((await r.json()) as { total: number }).total;
+  };
+
+  await ask(page, 'budget "Rachunki" 800');
+  const card = panel.getByRole('group', { name: 'Proposed change' }).last();
+  await expect(card).toContainText('Set the monthly budget of “Rachunki”');
+  await card.getByRole('button', { name: 'Apply' }).click();
+  await expect(card).toContainText('✓ Applied');
+  await expect.poll(budget).toBe(80000);
+  await card.getByRole('button', { name: 'Undo' }).click();
+  await expect(card).toContainText('↺ Undone');
+  await expect.poll(budget).toBeNull();
+
+  await ask(page, 'spent 25.50 at "Kawiarnia Ziarno" on 2025-03-10');
+  const card2 = panel.getByRole('group', { name: 'Proposed change' }).last();
+  await expect(card2).toContainText('paid to “Kawiarnia Ziarno” on 10.03.2025 to Portfel');
+  await card2.getByRole('button', { name: 'Apply' }).click();
+  await expect(card2).toContainText('✓ Applied');
+  await expect.poll(added).toBe(1);
+  await card2.getByRole('button', { name: 'Undo' }).click();
+  await expect(card2).toContainText('↺ Undone');
+  await expect.poll(added).toBe(0);
+  expect(seen.foreign).toEqual([]);
+  expect(seen.errors).toEqual([]);
+});
+
+test('a goal proposal applies, shows on the Overview, and undoes (ADR 0031)', async ({ page, baseURL }) => {
+  const seen = watch(page, baseURL ?? '');
+  const panel = await setup(page);
+  const goals = async () => {
+    const r = await page.request.get('/api/v1/goals');
+    return ((await r.json()) as { goals: { name: string; ai: boolean }[] }).goals;
+  };
+
+  await ask(page, 'spend 20% less on "Artykuły spożywcze" by 2030-04-30');
+  const card = panel.getByRole('group', { name: 'Proposed change' }).last();
+  await expect(card).toContainText('New goal “Less on Artykuły spożywcze”: spend 20 % less on Artykuły spożywcze');
+  expect(await goals()).toEqual([]); // nothing changes before Apply
+  await card.getByRole('button', { name: 'Apply' }).click();
+  await expect(card).toContainText('✓ Applied');
+  await expect
+    .poll(async () => (await goals()).map((g) => [g.name, g.ai]))
+    .toEqual([['Less on Artykuły spożywcze', true]]);
+
+  // the Overview's Goals card shows it, marked as the assistant's
+  await page.getByRole('button', { name: 'Personal finance overview' }).click(); // in the app: the panel stays open
+  const goalsCard = page.getByRole('region', { name: 'Goals' });
+  await expect(goalsCard).toContainText('Less on Artykuły spożywcze');
+  await expect(goalsCard.getByTitle(/Set by the assistant/)).toBeVisible();
+
+  await card.getByRole('button', { name: 'Undo' }).click();
+  await expect(card).toContainText('↺ Undone');
+  await expect(goalsCard).toContainText('No goals yet');
   expect(seen.foreign).toEqual([]);
   expect(seen.errors).toEqual([]);
 });

@@ -24,6 +24,8 @@ export type Db = {
   friends: Schemas['Friend'][];
   notifications: Schemas['Notification'][];
   notificationsRead: number;
+  /** The assistant's changes (ADR 0030); the fake revert marks one undone. */
+  aiChanges: Schemas['AIChange'][];
   /** Rows the fake query endpoint pages through (no filtering). */
   transactions: Schemas['TransactionRow'][];
   duplicatesSkipped: number;
@@ -45,6 +47,8 @@ export type Db = {
   budgetPuts: { categoryId: string; amountMinor: number | null }[];
   investments: Schemas['Investments'];
   investmentPuts: Schemas['Investments'][];
+  goals: Schemas['Goal'][];
+  goalWrites: { method: 'POST' | 'PATCH'; id?: string; body: unknown; header: string | null }[];
   accountPatches: { id: string; body: Schemas['AccountInput'] }[];
 };
 
@@ -74,6 +78,7 @@ export const freshDb = (): Db => ({
   friends: [],
   notifications: [],
   notificationsRead: 0,
+  aiChanges: [],
   defaults: {},
   themes: [],
   user: {
@@ -118,6 +123,8 @@ export const freshDb = (): Db => ({
     positions: [],
   },
   investmentPuts: [],
+  goals: [],
+  goalWrites: [],
   accountPatches: [],
 });
 
@@ -181,6 +188,17 @@ export const server = setupServer(
       db.notificationsRead++;
       db.notifications = db.notifications.map((n) => ({ ...n, readAt: n.readAt ?? '2026-11-03T12:00:00Z' }));
       return new HttpResponse(null, { status: 204 });
+    }),
+  ),
+  http.get(`${API}/me/activity`, () => authed(() => HttpResponse.json({ events: [] }))),
+  http.get(`${API}/ai-changes`, () => authed(() => HttpResponse.json({ changes: db.aiChanges }))),
+  http.post(`${API}/ai-changes/:id/revert`, ({ params }) =>
+    authed(() => {
+      const c = db.aiChanges.find((x) => x.id === params['id']);
+      if (!c) return problem(404, 'not_found', 'Not found.');
+      if (c.revertedAt) return problem(409, 'conflict', 'Undone already.');
+      c.revertedAt = '2026-11-06T12:00:00Z';
+      return HttpResponse.json({ change: c, rows: c.items, deleted: 0, kept: 0 });
     }),
   ),
   // developer mode off, as on most instances (tests that need the section override this)
@@ -287,6 +305,38 @@ export const server = setupServer(
     db.budgetPuts.push({ categoryId: String(params['categoryId']), amountMinor: body.amountMinor ?? null });
     return new HttpResponse(null, { status: 204 });
   }),
+  http.get(`${API}/goals`, () => authed(() => HttpResponse.json({ goals: db.goals }))),
+  http.post(`${API}/goals`, async ({ request }) => {
+    const body = (await request.json()) as Schemas['GoalInput'];
+    db.goalWrites.push({ method: 'POST', body, header: request.headers.get('X-Assistant-Proposal') });
+    const g: Schemas['Goal'] = {
+      ...body,
+      id: `goal-${String(db.goals.length + 1)}`,
+      currency: body.currency ?? 'PLN',
+      startsOn: body.startsOn ?? '2025-03-17',
+      status: 'active',
+      version: 1,
+      ai: request.headers.has('X-Assistant-Proposal'),
+      progress: { state: 'on_track', percent: 0, daysLeft: 100, savedMinor: 0, expectedMinor: 0, projectedMinor: 0 },
+    };
+    db.goals = [...db.goals, g];
+    return HttpResponse.json(g, { status: 201 });
+  }),
+  http.patch(`${API}/goals/:id`, async ({ params, request }) => {
+    const body = (await request.json()) as Schemas['GoalUpdate'];
+    const id = String(params['id']);
+    db.goalWrites.push({ method: 'PATCH', id, body, header: request.headers.get('X-Assistant-Proposal') });
+    const cur = db.goals.find((g) => g.id === id);
+    if (!cur) return problem(404, 'not_found', 'No such goal.');
+    if (cur.version !== body.version) return problem(409, 'stale_version', 'The goal was changed meanwhile.');
+    const g = { ...cur, ...body, version: cur.version + 1 };
+    db.goals = db.goals.map((x) => (x.id === id ? g : x));
+    return HttpResponse.json(g);
+  }),
+  http.delete(`${API}/goals/:id`, ({ params }) => {
+    db.goals = db.goals.filter((g) => g.id !== params['id']);
+    return new HttpResponse(null, { status: 204 });
+  }),
   http.get(`${API}/investments`, () => HttpResponse.json(db.investments)),
   http.put(`${API}/investments`, async ({ request }) => {
     const body = (await request.json()) as Schemas['Investments'];
@@ -386,5 +436,7 @@ export const txRow = (i: number, over: Partial<Schemas['TransactionRow']> = {}):
   counterpartyAccount: '',
   note: '',
   isTransfer: false,
+  source: 'Bank',
+  ai: false,
   ...over,
 });

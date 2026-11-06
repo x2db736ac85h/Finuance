@@ -114,7 +114,7 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if _, err := q.CreateInvestmentPosition(ctx, db.CreateInvestmentPositionParams{ID: platform.NewID(), UserID: u, Name: "ETF", Now: now}); err != nil {
 			return fmt.Errorf("investment position: %w", err)
 		}
-		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: u, CloudConsent: []string{}, Now: now}); err != nil {
+		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: u, CloudConsent: []string{}, AutoApply: []string{}, Now: now}); err != nil {
 			return fmt.Errorf("assistant settings: %w", err)
 		}
 		chat, err := q.CreateAssistantChat(ctx, db.CreateAssistantChatParams{ID: platform.NewID(), UserID: u, Title: "Q", Now: now})
@@ -143,6 +143,20 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		}
 		if err := q.InsertNotification(ctx, db.InsertNotificationParams{ID: platform.NewID(), UserID: u, Kind: "friend.added", Data: []byte(`{}`), Now: now}); err != nil {
 			return fmt.Errorf("notification: %w", err)
+		}
+		change, err := q.OpenAIChange(ctx, db.OpenAIChangeParams{ID: platform.NewID(), UserID: u, ChatID: platform.NewID(),
+			ProposalKey: "00000000000000f1", Action: "set_category", Now: now})
+		if err != nil {
+			return fmt.Errorf("ai change: %w", err)
+		}
+		if err := q.UpsertAIChangeItem(ctx, db.UpsertAIChangeItemParams{ChangeID: change, UserID: u, Entity: "category",
+			EntityID: cat.ID, After: []byte(`{"created":true}`)}); err != nil {
+			return fmt.Errorf("ai change item: %w", err)
+		}
+		target := int64(100_000)
+		if _, err := q.InsertGoal(ctx, db.InsertGoalParams{ID: platform.NewID(), UserID: u, Name: "Holiday", Kind: "save", TargetMinor: &target,
+			Currency: "PLN", BaselineMonths: 3, StartsOn: platform.MustDate(2026, 1, 1), Deadline: platform.MustDate(2026, 12, 31), Now: now}); err != nil {
+			return fmt.Errorf("goal: %w", err)
 		}
 		if err := seedSharedLink(ctx, tx, u, d.account); err != nil {
 			return fmt.Errorf("shared expense link: %w", err)

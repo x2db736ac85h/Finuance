@@ -169,18 +169,20 @@ type Row struct {
 	IsTransfer          bool
 	GroupID             *uuid.UUID
 	GroupName           *string
+	Source              string // Bank, Manual or Assistant
+	AI                  bool   // an assistant change set it and nobody undid it (ADR 0030)
 }
 
 const rowColumns = "t.id, t.account_id, a.name, t.booked_on, t.value_on, t.amount_minor, t.currency, t.balance_after_minor," +
 	" t.payee, t.description, c.id, c.name, t.category_source, t.bank_category, t.tx_type, t.reference," +
-	" t.counterparty_account, t.note, t.is_transfer, g.id, g.name"
+	" t.counterparty_account, t.note, t.is_transfer, g.id, g.name, " + sourceText + ", " + aiTouched
 
 func scanRow(rows pgx.CollectableRow) (Row, error) {
 	var r Row
 	var booked, value pgtype.Date
 	err := rows.Scan(&r.ID, &r.AccountID, &r.AccountName, &booked, &value, &r.AmountMinor, &r.Currency, &r.BalanceAfterMinor,
 		&r.Payee, &r.Description, &r.CategoryID, &r.CategoryName, &r.CategorySource, &r.BankCategory, &r.TxType, &r.Reference,
-		&r.CounterpartyAccount, &r.Note, &r.IsTransfer, &r.GroupID, &r.GroupName)
+		&r.CounterpartyAccount, &r.Note, &r.IsTransfer, &r.GroupID, &r.GroupName, &r.Source, &r.AI)
 	if err != nil {
 		return r, err
 	}

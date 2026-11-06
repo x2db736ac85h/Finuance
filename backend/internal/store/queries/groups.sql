@@ -36,3 +36,11 @@ LEFT JOIN transactions t ON t.group_id = g.id AND t.user_id = @user_id
 WHERE g.user_id = @user_id
 GROUP BY g.id
 ORDER BY g.name COLLATE pl_natural, g.id;
+
+-- name: ListSharedGroupLinks :many
+-- The user's personal groups linked to a shared group they are in, not archived (the assistant's
+-- add_to_shared_group target). shared_groups is read under its membership RLS.
+SELECT g.id, g.name, sg.id AS shared_group_id, sg.name AS shared_name, sg.currency
+FROM groups g JOIN shared_groups sg ON sg.id = g.shared_group_id
+WHERE g.user_id = @user_id AND sg.archived_at IS NULL
+ORDER BY sg.name COLLATE pl_natural, sg.id;

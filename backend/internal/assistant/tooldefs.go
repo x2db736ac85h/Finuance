@@ -42,13 +42,36 @@ var toolDefs = []llm.Tool{
 	{Name: ToolGroup, Description: "Summary of one user-defined transaction group (e.g. a trip): totals, first and last day, spending per day, " +
 		"the group budget and what is left, categories and top payees.",
 		Parameters: json.RawMessage(`{"type":"object","properties":{"group":{"type":"string","description":"The group name (find_values with field group lists them)"}},"required":["group"]}`)},
+	{Name: ToolGoals, Description: "The user's goals with their progress: saving an amount by a deadline (saved so far against the steady pace) " +
+		"or spending a percentage less on a category (this month against the goal's monthly limit). Default every open goal.",
+		Parameters: json.RawMessage(`{"type":"object","properties":{"goal":{"type":"string","description":"One goal's name; default every open goal"}}}`)},
 	{Name: ToolPropose, Description: "Propose a change for the user to confirm: put transactions in a category (set_category) or a group (set_group), " +
-		"or create a rule that categorises a payee from now on (create_rule). You never change data yourself: the user sees a card with the affected " +
-		"transactions and applies it. Select the transactions with the usual filters; a rule uses payee and/or query.",
-		Parameters: json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["set_category","set_group","create_rule"]},` +
-			`"to_category":{"type":"string","description":"set_category and create_rule: the category name (an existing one, or a new one to create)"},` +
+		"create a rule that categorises a payee from now on (create_rule), set or remove a category's monthly budget (set_budget), " +
+		"type a cash payment into a cash account (add_expense), share transactions with a shared group (add_to_shared_group), " +
+		"change how one of the user's expenses in a shared group is split (split_expense), " +
+		"set a goal (create_goal: save an amount by a deadline, or spend reduce_pct % less on a category) or change one (update_goal). " +
+		"You never change data yourself: the user sees a card and applies it. Select transactions with the usual filters; a rule uses payee and/or query; " +
+		"add_expense uses account, date, amount, payee and optionally to_category; split_expense uses shared_group, payee (and date), split_mode and members; " +
+		"create_goal uses goal_name, deadline and amount (save) or to_category and reduce_pct (reduce); update_goal names the goal and what changes.",
+		Parameters: json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["set_category","set_group","create_rule","set_budget","add_expense","add_to_shared_group","split_expense","create_goal","update_goal"]},` +
+			`"to_category":{"type":"string","description":"set_category, create_rule, set_budget, add_expense: the category name (an existing one, or a new one to create; set_budget needs an existing one); create_goal, update_goal: the existing category to spend less on"},` +
 			`"to_group":{"type":"string","description":"set_group: the group name (an existing one, or a new one to create)"},` +
 			`"rule_name":{"type":"string","description":"create_rule: a short name for the rule"},` +
+			`"amount":{"type":"number","description":"set_budget: the monthly budget; add_expense: the amount paid (positive); create_goal, update_goal: the amount to save"},` +
+			`"remove_budget":{"type":"boolean","description":"set_budget: remove the category's own budget (back to the default)"},` +
+			`"account":{"type":"string","description":"add_expense: the cash account's name (may be left out when there is one); create_goal: optionally the one account the savings go to"},` +
+			`"goal":{"type":"string","description":"update_goal: the goal's name"},` +
+			`"goal_name":{"type":"string","description":"create_goal: a short name; update_goal: a new name"},` +
+			`"goal_kind":{"type":"string","enum":["save","reduce"],"description":"create_goal: save an amount, or spend less on a category"},` +
+			`"reduce_pct":{"type":"integer","description":"create_goal, update_goal (reduce): spend this many percent less than the average of the last 3 months"},` +
+			`"deadline":{"type":"string","description":"create_goal, update_goal: the goal's last day, YYYY-MM-DD"},` +
+			`"goal_status":{"type":"string","enum":["active","done","archived"],"description":"update_goal: close or reopen a goal"},` +
+			`"date":{"type":"string","description":"add_expense: the day of the payment, YYYY-MM-DD"},` +
+			`"note":{"type":"string","description":"add_expense: an optional note"},` +
+			`"shared_group":{"type":"string","description":"add_to_shared_group, split_expense: the shared group's name"},` +
+			`"split_mode":{"type":"string","enum":["equal","shares","exact"],"description":"split_expense: equal (one member: for someone else), by shares, or exact amounts"},` +
+			`"members":{"type":"array","description":"split_expense: who shares it; \"me\" is the user. equal: [{\"name\":\"me\"},{\"name\":\"Bo\"}]; shares: add share; exact: add amount",` +
+			`"items":{"type":"object","properties":{"name":{"type":"string"},"share":{"type":"integer"},"amount":{"type":"number"}},"required":["name"]}},` +
 			`"reason":{"type":"string","description":"One short sentence for the user on why"},` + filters + `},"required":["action"]}`)},
 }
 

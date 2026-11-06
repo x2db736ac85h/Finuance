@@ -271,6 +271,10 @@ func (a *api) UpdateSharedExpense(ctx context.Context, req gen.UpdateSharedExpen
 	if err := a.sharingOn(); err != nil {
 		return nil, err
 	}
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	if err := a.sharing.UpdateExpense(ctx, identity(ctx).User.ID, req.Id, req.ExpenseId, sharedExpenseIn(*req.Body)); err != nil {
 		return nil, err
 	}

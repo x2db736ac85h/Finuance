@@ -12,6 +12,7 @@ type Props = { viewId: string; columns: readonly ColumnDef[]; anchor: HTMLElemen
 export function ColumnsMenu({ viewId, columns, anchor, onClose }: Props) {
   const hidden = useViews((s) => viewOf(s.views, viewId).hidden);
   const hideTransfers = useViews((s) => viewOf(s.views, viewId).hideTransfers);
+  const aiOnly = useViews((s) => viewOf(s.views, viewId).aiOnly);
   const patch = useViews((s) => s.patch);
   const visible = columns.filter((c) => !hidden.includes(c.id)).length;
   const allOn = visible === columns.length;
@@ -52,6 +53,16 @@ export function ColumnsMenu({ viewId, columns, anchor, onClose }: Props) {
             }}
           />
           <span className="vt">Show transfers between my accounts</span>
+        </label>
+        <label className="vi rows-opt">
+          <input
+            type="checkbox"
+            checked={aiOnly}
+            onChange={(e) => {
+              patch(viewId, { aiOnly: e.target.checked });
+            }}
+          />
+          <span className="vt">Only what the assistant changed</span>
         </label>
       </div>
       <div className="pop-f">

@@ -9,9 +9,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/notify"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
+	"github.com/x2db736ac85h/finuance/backend/internal/sharing"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
@@ -88,6 +91,29 @@ func SetupDemo(ctx context.Context, st *store.Store, csvPath string) (uuid.UUID,
 		if _, err := l.Annotate(ctx, u, g.ids, ledger.AnnotationPatch{SetGroup: true, GroupID: &grp.ID}); err != nil {
 			return uuid.Nil, err
 		}
+	}
+	// Phase 20 proposals: an empty cash account (add_expense) and a shared trip (add_to_shared_group)
+	if _, err := l.CreateAccount(ctx, u, ledger.AccountInput{Name: "Portfel", Kind: ledger.KindCash}); err != nil {
+		return uuid.Nil, err
+	}
+	if err := st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		return q.SetUserDisplayName(ctx, db.SetUserDisplayNameParams{ID: u, DisplayName: "Alex"})
+	}); err != nil {
+		return uuid.Nil, err
+	}
+	trip, err := l.CreateGroup(ctx, u, "Praga", 3)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	sh := sharing.New(st, l, notify.New(st, platform.SystemClock{}), platform.SystemClock{})
+	if _, err := sh.Create(ctx, u, sharing.GroupInput{Name: "Wyjazd do Pragi", FromGroupID: &trip.ID}); err != nil {
+		return uuid.Nil, err
+	}
+	// a savings goal of the year (goal_status, update_goal)
+	target, start := int64(500_000), platform.MustDate(2025, 1, 1)
+	if _, err := goals.New(st, platform.SystemClock{}).Create(ctx, u, goals.Input{Name: "Wakacje", Kind: goals.KindSave,
+		TargetMinor: &target, StartsOn: &start, Deadline: platform.MustDate(2025, 8, 31)}); err != nil {
+		return uuid.Nil, err
 	}
 	return u, nil
 }

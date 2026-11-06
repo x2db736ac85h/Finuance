@@ -20,6 +20,8 @@ export type ViewState = PersistedView & {
   toolFilter: Schemas['ToolFilter'] | null;
   /** Transfers between own accounts left out of the list (PLAN task 15.3); session-only. */
   hideTransfers: boolean;
+  /** Only the rows an assistant change set (the "AI assisted" chip, ADR 0030); session-only. */
+  aiOnly: boolean;
 };
 
 /**
@@ -35,6 +37,7 @@ export const DEFAULT_HIDDEN: readonly Column[] = [
   'reference',
   'counterpartyAccount',
   'note',
+  'source',
 ];
 
 export const newView = (id = 'all'): ViewState => ({
@@ -51,6 +54,7 @@ export const newView = (id = 'all'): ViewState => ({
   ovMonth: null,
   toolFilter: null,
   hideTransfers: false,
+  aiOnly: false,
 });
 
 type ViewStore = {

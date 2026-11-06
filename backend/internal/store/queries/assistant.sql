@@ -5,10 +5,11 @@ SELECT * FROM assistant_settings WHERE user_id = @user_id;
 
 -- name: UpsertAssistantSettings :one
 -- retention_days NULL keeps chats until the user deletes them.
-INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, updated_at)
-VALUES (@user_id, sqlc.narg(retention_days), @cloud_consent, @now)
+INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, auto_apply, updated_at)
+VALUES (@user_id, sqlc.narg(retention_days), @cloud_consent, @auto_apply, @now)
 ON CONFLICT (user_id) DO UPDATE
-SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_consent, updated_at = excluded.updated_at
+SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_consent, auto_apply = excluded.auto_apply,
+    updated_at = excluded.updated_at
 RETURNING *;
 
 -- name: CreateAssistantChat :one

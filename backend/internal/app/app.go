@@ -18,10 +18,12 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/friends"
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi"
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
@@ -102,7 +104,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	notes := notify.New(c.store, platform.SystemClock{})
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Commit: b.Commit, BuildDate: b.Date, SchemaVersion: c.store.SchemaVersion, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: authSvc, Admin: NewAdmin(c.store, authSvc, cfg), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
+		Auth: authSvc, Admin: NewAdmin(c.store, authSvc, cfg), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), AIChanges: aichanges.New(c.store, led, platform.SystemClock{}), Goals: goals.New(c.store, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
 		Legacy: legacyimport.New(c.store, led, nil, platform.SystemClock{}),
 		Rules:  rules.New(c.store, platform.SystemClock{}),
 		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},

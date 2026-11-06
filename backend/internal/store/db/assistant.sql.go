@@ -112,7 +112,7 @@ func (q *Queries) GetAssistantChat(ctx context.Context, arg GetAssistantChatPara
 
 const getAssistantSettings = `-- name: GetAssistantSettings :one
 
-SELECT user_id, retention_days, cloud_consent, updated_at FROM assistant_settings WHERE user_id = $1
+SELECT user_id, retention_days, cloud_consent, updated_at, auto_apply FROM assistant_settings WHERE user_id = $1
 `
 
 // The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
@@ -124,6 +124,7 @@ func (q *Queries) GetAssistantSettings(ctx context.Context, userID uuid.UUID) (A
 		&i.RetentionDays,
 		&i.CloudConsent,
 		&i.UpdatedAt,
+		&i.AutoApply,
 	)
 	return i, err
 }
@@ -337,17 +338,19 @@ func (q *Queries) UpdateAssistantChat(ctx context.Context, arg UpdateAssistantCh
 }
 
 const upsertAssistantSettings = `-- name: UpsertAssistantSettings :one
-INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, updated_at)
-VALUES ($1, $2, $3, $4)
+INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, auto_apply, updated_at)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (user_id) DO UPDATE
-SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_consent, updated_at = excluded.updated_at
-RETURNING user_id, retention_days, cloud_consent, updated_at
+SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_consent, auto_apply = excluded.auto_apply,
+    updated_at = excluded.updated_at
+RETURNING user_id, retention_days, cloud_consent, updated_at, auto_apply
 `
 
 type UpsertAssistantSettingsParams struct {
 	UserID        uuid.UUID
 	RetentionDays *int16
 	CloudConsent  []string
+	AutoApply     []string
 	Now           time.Time
 }
 
@@ -357,6 +360,7 @@ func (q *Queries) UpsertAssistantSettings(ctx context.Context, arg UpsertAssista
 		arg.UserID,
 		arg.RetentionDays,
 		arg.CloudConsent,
+		arg.AutoApply,
 		arg.Now,
 	)
 	var i AssistantSetting
@@ -365,6 +369,7 @@ func (q *Queries) UpsertAssistantSettings(ctx context.Context, arg UpsertAssista
 		&i.RetentionDays,
 		&i.CloudConsent,
 		&i.UpdatedAt,
+		&i.AutoApply,
 	)
 	return i, err
 }

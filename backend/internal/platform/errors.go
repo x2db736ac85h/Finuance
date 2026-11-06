@@ -29,6 +29,8 @@ var (
 	ErrLastAdmin              = errors.New("last administrator")
 	ErrContrast               = errors.New("contrast too low")
 	ErrDisplayNameRequired    = errors.New("display name required")
+	// Phase 20: an AI change can't be undone because something changed since (ADR 0030).
+	ErrChangedSince = errors.New("changed since")
 )
 
 // FieldError is one invalid input field.

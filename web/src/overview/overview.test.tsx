@@ -245,7 +245,7 @@ beforeEach(() => {
 const card = (title: string) => screen.getByRole('region', { name: title });
 
 describe('overview page', () => {
-  it('asks for the view without its period and shows the KPIs and the twelve cards', async () => {
+  it('asks for the view without its period and shows the KPIs and the thirteen cards', async () => {
     renderApp('/o/all');
     await screen.findByText('Projected spend · PLN');
     expect(db.overviewRequests.at(-1)).toEqual({ context: { includeTransfers: false }, months: 12 });
@@ -266,6 +266,7 @@ describe('overview page', () => {
       'Cash flow',
       'Budgets',
       'Recurring payments',
+      'Goals',
       'FI/RE number',
       'Yield on cost (PLN)',
       'Investment',

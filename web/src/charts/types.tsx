@@ -16,6 +16,7 @@ export type OvKey =
   | 'o_high'
   | 'o_flow'
   | 'o_budget'
+  | 'o_goals'
   | 'o_recur'
   | 'o_fire'
   | 'o_yoc'

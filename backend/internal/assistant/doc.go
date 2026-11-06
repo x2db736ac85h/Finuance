@@ -9,6 +9,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
@@ -38,7 +39,7 @@ type Config struct {
 // New builds the assistant.
 func New(c Config) *Assistant {
 	chats := NewChats(c.Store, c.Clock, c.MaxChats)
-	tools := NewTools(c.Query)
+	tools := NewTools(c.Query).WithGoals(goals.New(c.Store, c.Clock))
 	return &Assistant{Connections: c.Connections, Chats: chats, Tools: tools, Runner: NewRunner(RunnerConfig{Connections: c.Connections,
 		Tools: tools, Chats: chats, Clock: c.Clock, MaxConcurrent: c.MaxConcurrent, Metrics: c.Metrics, Tracer: c.Tracer, Logger: c.Logger})}
 }

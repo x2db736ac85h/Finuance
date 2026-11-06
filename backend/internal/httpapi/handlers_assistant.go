@@ -92,7 +92,14 @@ func (a *api) PutAssistantSettings(ctx context.Context, req gen.PutAssistantSett
 	if err != nil {
 		return nil, err
 	}
-	s, err := c.SaveSettings(ctx, identity(ctx).User.ID, assistant.Settings{RetentionDays: req.Body.RetentionDays, CloudConsent: req.Body.CloudConsent})
+	in := assistant.Settings{RetentionDays: req.Body.RetentionDays, CloudConsent: req.Body.CloudConsent}
+	if req.Body.AutoApply != nil {
+		in.AutoApply = make([]string, len(*req.Body.AutoApply))
+		for i, x := range *req.Body.AutoApply {
+			in.AutoApply[i] = string(x)
+		}
+	}
+	s, err := c.SaveSettings(ctx, identity(ctx).User.ID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +107,11 @@ func (a *api) PutAssistantSettings(ctx context.Context, req gen.PutAssistantSett
 }
 
 func settingsDTO(s assistant.Settings) gen.AssistantSettings {
-	return gen.AssistantSettings{RetentionDays: s.RetentionDays, CloudConsent: s.CloudConsent}
+	auto := make([]gen.AssistantSettingsAutoApply, len(s.AutoApply))
+	for i, x := range s.AutoApply {
+		auto[i] = gen.AssistantSettingsAutoApply(x)
+	}
+	return gen.AssistantSettings{RetentionDays: s.RetentionDays, CloudConsent: s.CloudConsent, AutoApply: &auto}
 }
 
 func chatDTO(c assistant.Chat) gen.AssistantChat {
@@ -256,13 +267,42 @@ func toolFilterDTO(f *assistant.StepFilter) *gen.ToolFilter {
 	return &tf
 }
 
+func proposalGoalDTO(g *assistant.ProposalGoal) *gen.ProposalGoal {
+	if g == nil {
+		return nil
+	}
+	out := &gen.ProposalGoal{Id: g.ID, Name: g.Name, Kind: gen.ProposalGoalKind(g.Kind), TargetMinor: g.TargetMinor, Currency: g.Currency,
+		AccountId: g.AccountID, CategoryId: g.CategoryID, BaselineMonths: g.BaselineMonths}
+	if d, err := platform.ParseDate(g.Deadline); err == nil {
+		out.Deadline = *dateDTO(&d)
+	}
+	if g.AccountName != "" {
+		out.AccountName = &g.AccountName
+	}
+	if g.CategoryName != "" {
+		out.CategoryName = &g.CategoryName
+	}
+	if g.ReducePct > 0 {
+		out.ReducePct = &g.ReducePct
+	}
+	if g.Status != "" {
+		st := gen.ProposalGoalStatus(g.Status)
+		out.Status = &st
+	}
+	if g.Version > 0 {
+		out.Version = &g.Version
+	}
+	return out
+}
+
 func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	out := &gen.ActionProposal{Key: p.Key(), Action: gen.ActionProposalAction(p.Action), Matched: p.Matched, CategoryId: p.CategoryID, GroupId: p.GroupID,
 		Sample: make([]gen.ProposalRow, len(p.Sample))}
 	for _, f := range []struct {
 		v   string
 		dst **string
-	}{{p.Reason, &out.Reason}, {p.CategoryName, &out.CategoryName}, {p.GroupName, &out.GroupName}, {p.RuleName, &out.RuleName}} {
+	}{{p.Reason, &out.Reason}, {p.CategoryName, &out.CategoryName}, {p.GroupName, &out.GroupName}, {p.RuleName, &out.RuleName},
+		{p.AccountName, &out.AccountName}, {p.Payee, &out.Payee}, {p.Note, &out.Note}, {p.SharedGroupName, &out.SharedGroupName}} {
 		if f.v != "" {
 			v := f.v
 			*f.dst = &v
@@ -271,6 +311,43 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	if len(p.IDs) > 0 {
 		out.Ids = &p.IDs
 	}
+	// Phase 20 proposals (ADR 0030)
+	out.AccountId, out.SharedGroupId = p.AccountID, p.SharedGroupID
+	if p.RemoveBudget {
+		out.RemoveBudget = &p.RemoveBudget
+	}
+	if p.BudgetMinor != nil {
+		out.Budget = &gen.Money{AmountMinor: *p.BudgetMinor, Currency: p.Currency}
+	}
+	if p.BudgetBeforeMinor != nil {
+		out.BudgetBefore = &gen.Money{AmountMinor: *p.BudgetBeforeMinor, Currency: p.Currency}
+	}
+	out.ExpenseId, out.PaidBy = p.ExpenseID, p.PaidBy
+	if p.ExpenseCategory != "" {
+		out.ExpenseCategory = &p.ExpenseCategory
+	}
+	if sp := p.Split; sp != nil {
+		ms := make([]gen.ProposalSplitMember, len(sp.Members))
+		for i, m := range sp.Members {
+			ms[i] = gen.ProposalSplitMember{MemberId: m.MemberID, Name: m.Name}
+			if m.Weight > 0 {
+				w := m.Weight
+				ms[i].Weight = &w
+			}
+			if m.AmountMinor != 0 {
+				v := m.AmountMinor
+				ms[i].AmountMinor = &v
+			}
+		}
+		out.Split = &gen.ProposalSplit{Mode: gen.ProposalSplitMode(sp.Mode), Members: ms}
+	}
+	if p.Action == assistant.ActionAddExpense || p.Action == assistant.ActionSplitExpense {
+		out.Amount = &gen.Money{AmountMinor: p.AmountMinor, Currency: p.Currency}
+		if d, err := platform.ParseDate(p.Date); err == nil {
+			out.Date = dateDTO(&d)
+		}
+	}
+	out.Goal, out.GoalBefore = proposalGoalDTO(p.Goal), proposalGoalDTO(p.GoalBefore)
 	if m := p.Match; m != nil {
 		rm := gen.RuleMatch{}
 		if m.Search != "" {

@@ -47,6 +47,7 @@ var problemTable = []problemKind{
 	{platform.ErrLastAdmin, gen.LastAdmin, http.StatusConflict, "The instance needs an administrator"},
 	{platform.ErrContrast, gen.ContrastFailed, http.StatusUnprocessableEntity, "Some colours are too hard to read"},
 	{platform.ErrDisplayNameRequired, gen.DisplayNameRequired, http.StatusUnprocessableEntity, "Set a display name first"},
+	{platform.ErrChangedSince, gen.ChangedSince, http.StatusConflict, "Changed since the assistant's change"},
 	{friends.ErrInvalid, gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"},
 	{friends.ErrAlready, gen.Conflict, http.StatusConflict, "Conflict"},
 	{assistant.ErrConsent, gen.ConsentRequired, http.StatusForbidden, "Agreement needed for a cloud connection"},

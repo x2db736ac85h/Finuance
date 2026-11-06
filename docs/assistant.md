@@ -2,7 +2,7 @@
 
 The assistant answers questions about your transactions with a language model that looks the data up through read-only tools (PLAN §4.8, ADR 0015). It works with any server that speaks the OpenAI Chat Completions or Anthropic Messages API: LM Studio, Ollama, vLLM, llama.cpp, OpenAI, Anthropic, OpenRouter and others, local or in the cloud.
 
-The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and eight tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
+The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and nine tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
 
 | Tool | What it does |
 |---|---|
@@ -13,13 +13,16 @@ The model never gets a dump of your data. It gets a short description (date rang
 | `recurring_payments` | Subscriptions and regular bills found in the data (weekly, monthly or yearly; `cadence` on each payment) |
 | `budget_status` | One month's budgets: spent, budget and what is left per category, over budget or ahead of pace first |
 | `group_summary` | One transaction group (e.g. a trip): totals, days, spending per day, the group budget, categories and top payees |
-| `propose_action` | Proposes a change (a category or group for some transactions, or a rule); it changes nothing by itself |
+| `goal_status` | The user's goals: saved so far against a steady pace, or this month's spending against a reduction goal's limit (ADR 0031) |
+| `propose_action` | Proposes a change (a category or group, a rule, a budget, a cash expense, sharing or a split, a goal); it changes nothing by itself |
 
 Every lookup is shown under the answer, with exactly what went back to the model and a *Show in table* link.
 
 ### Proposed changes
 
 The assistant never changes your data. When you ask it to ("put these in Groceries", "make a rule for ŻABKA", "label these as Italy trip"), it proposes the change and the panel shows a card: what would change, why, a few of the affected transactions and *Show in table*. Nothing happens until you click **Apply**; the change then goes through the same requests as when you make it yourself. A proposal changes exactly the transactions it listed when it was made (at most 1,000), and a new category or group is created first. Applied proposals are logged without any content (ADR 0019).
+
+Since Phase 20 the assistant can also propose a category's budget, a cash expense typed into a cash account, sharing transactions with a shared group, a new split of one of your shared expenses, and a new or changed goal. Every applied proposal is recorded with what it replaced (ADR 0030): the table marks the rows with ✦ (*Source* says Assistant for a row it added; "Only what the assistant changed" in the Columns menu filters them), and **Undo** on the card or in Settings → Activity → *Assistant changes* puts everything back, as long as nothing was changed since (otherwise it says so and changes nothing). In the panel's settings, *Apply by itself* lists the kinds of proposals the panel may apply without the click (none by default); it never does so for more than 50 transactions, and the card says *Applied automatically* with Undo.
 
 ## Configure one server
 

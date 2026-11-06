@@ -67,6 +67,18 @@ func (l *Ledger) annotateTx(ctx context.Context, q *db.Queries, userID uuid.UUID
 			return 0, err
 		}
 	}
+	// an applied assistant proposal records what it replaces (ADR 0030)
+	var before map[uuid.UUID]db.TransactionAnnotationStateRow
+	if _, ok := AIOriginFrom(ctx); ok {
+		prev, err := q.TransactionAnnotationState(ctx, db.TransactionAnnotationStateParams{UserID: userID, Ids: ids})
+		if err != nil {
+			return 0, err
+		}
+		before = make(map[uuid.UUID]db.TransactionAnnotationStateRow, len(prev))
+		for _, r := range prev {
+			before[r.ID] = r
+		}
+	}
 	now := l.clock.Now()
 	rows, err := q.UpdateTransactionAnnotations(ctx, db.UpdateTransactionAnnotationsParams{
 		UserID: userID, Ids: ids, Now: now,
@@ -99,6 +111,18 @@ func (l *Ledger) annotateTx(ctx context.Context, q *db.Queries, userID uuid.UUID
 	}
 	if err := syncShared(ctx, q, userID, changed, now, true); err != nil {
 		return 0, err
+	}
+	if before != nil {
+		items := make([]AIItem, 0, len(rows))
+		for i := range rows {
+			r, b := &rows[i], before[rows[i].ID]
+			items = append(items, AIItem{Entity: AIEntityTransaction, ID: r.ID,
+				Before: annotationState(b.CategoryID, b.CategorySource, b.GroupID, patch),
+				After:  annotationState(r.CategoryID, r.CategorySource, r.GroupID, patch)})
+		}
+		if err := RecordAIChange(ctx, q, l.clock, userID, items); err != nil {
+			return 0, err
+		}
 	}
 	return len(rows), nil
 }

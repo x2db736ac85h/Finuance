@@ -59,6 +59,8 @@ export const COLUMNS: readonly ColumnDef[] = [
   { id: 'account', label: 'Account', type: 'text', width: 150, text: (r) => r.accountName },
   { id: 'note', label: 'Note', type: 'text', width: 200, text: (r) => r.note },
   { id: 'group', label: 'Group', type: 'text', width: 140, text: (r) => r.group?.name ?? '' },
+  // Bank, Manual or Assistant (a row the assistant added; ADR 0030)
+  { id: 'source', label: 'Source', type: 'text', width: 100, text: (r) => r.source },
 ];
 
 export const columnById = (id: ColumnId): ColumnDef | undefined => COLUMNS.find((c) => c.id === id);

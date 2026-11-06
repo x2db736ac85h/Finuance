@@ -20,6 +20,7 @@ type Context struct {
 	IncludeTransfers bool        // Phase 15: transfers are hidden unless asked for
 	GroupID          *uuid.UUID  // Phase 15: only this group's transactions (group report, export)
 	ToolFilter       *ToolFilter // the assistant's lookup filter ("✦" chip), PLAN §4.8
+	AIAssisted       bool        // Phase 20: only rows an assistant change set ("AI assisted" chip, ADR 0030)
 }
 
 // Filter is one column's condition and its unticked values.

@@ -27,6 +27,26 @@ type Account struct {
 	Kind                string
 }
 
+type AiChange struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	ChatID      uuid.UUID
+	ProposalKey string
+	Action      string
+	Auto        bool
+	AppliedAt   time.Time
+	RevertedAt  *time.Time
+}
+
+type AiChangeItem struct {
+	ChangeID uuid.UUID
+	UserID   uuid.UUID
+	Entity   string
+	EntityID uuid.UUID
+	Before   []byte
+	After    []byte
+}
+
 type AssistantChat struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -60,6 +80,7 @@ type AssistantSetting struct {
 	RetentionDays *int16
 	CloudConsent  []string
 	UpdatedAt     time.Time
+	AutoApply     []string
 }
 
 type AuditLog struct {
@@ -120,6 +141,25 @@ type Friendship struct {
 	UserA     uuid.UUID
 	UserB     uuid.UUID
 	CreatedAt time.Time
+}
+
+type Goal struct {
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	Name           string
+	Kind           string
+	TargetMinor    *int64
+	Currency       string
+	AccountID      *uuid.UUID
+	CategoryID     *uuid.UUID
+	ReducePct      *int16
+	BaselineMonths int16
+	StartsOn       platform.Date
+	Deadline       platform.Date
+	Status         string
+	Version        int32
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type GooseDbVersion struct {

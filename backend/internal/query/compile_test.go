@@ -193,7 +193,9 @@ func FuzzCompile(f *testing.F) {
 var (
 	placeholderRe = regexp.MustCompile(`\$(\d+)`)
 	// The only string literals the compiler writes.
-	ourLiterals = strings.NewReplacer("''", "", "'-'", "", "','", "", "'0'", "", "'DD.MM.YYYY'", "")
+	ourLiterals = strings.NewReplacer("''", "", "'-'", "", "','", "", "'0'", "", "'DD.MM.YYYY'", "",
+		// the source column (columns.go sourceText): constants of ours, never user input
+		"'import'", "", "'Bank'", "", "'Assistant'", "", "'Manual'", "", "'transaction'", "")
 )
 
 func checkSQL(t *testing.T, c *Compiled) {

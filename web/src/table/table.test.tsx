@@ -41,6 +41,26 @@ const lastQuery = () => db.queries.at(-1);
 const grid = () => screen.getByRole('region', { name: 'Transactions' });
 
 describe('table', () => {
+  it('marks the rows the assistant changed and can show only those (ADR 0030)', async () => {
+    db.transactions = [txRow(1, { payee: 'KINO POD GWIAZDAMI', ai: true }), txRow(2), txRow(3)];
+    const user = userEvent.setup();
+    renderApp('/t/all');
+    const marks = await screen.findAllByTitle(/Changed by the assistant/);
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.closest('tr')?.textContent).toContain('KINO POD GWIAZDAMI');
+    expect(lastQuery()?.context.aiAssisted).toBeUndefined();
+    await user.click(screen.getByRole('button', { name: 'Columns' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Only what the assistant changed' }));
+    await waitFor(() => {
+      expect(lastQuery()?.context.aiAssisted).toBe(true);
+    });
+    await user.keyboard('{Escape}');
+    await user.click(await screen.findByRole('button', { name: 'Remove ✦ AI assisted' }));
+    await waitFor(() => {
+      expect(lastQuery()?.context.aiAssisted).toBeUndefined();
+    });
+  });
+
   it('renders the rows with formatted cells and the toolbar meta', async () => {
     renderApp('/t/all');
     expect(await screen.findByText('KINO POD GWIAZDAMI')).toBeTruthy();

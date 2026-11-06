@@ -736,6 +736,10 @@ paths:
         transaction can be edited and deleted later; rules and transfer detection treat it like an
         imported one, but a category set here is a manual one and wins (ADR 0029).
       tags: [transactions]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -826,6 +830,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AssistantChatHeader"
         - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       summary: Change the group, category or transfer state of many transactions
       description: >-
         Applies exactly one action to the given transactions (at most 5,000) and keeps the change as
@@ -966,6 +971,10 @@ paths:
         At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new
         category takes over its name: bank rows of that name come to it on the next import.
       tags: [categories]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -1095,6 +1104,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AssistantChatHeader"
         - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       summary: Create a rule (it goes last)
       description: >-
         A rule matches with the table's filter language and needs a search or a column filter, and
@@ -1266,6 +1276,10 @@ paths:
         The name is unique per user (ignoring case and accents), at most 40 characters. Without
         `color` the group takes the first unused colour slot. `409 conflict` when the name is taken.
       tags: [groups]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -1532,6 +1546,10 @@ paths:
         A typed expense takes every field (send them all); a copy of a transaction only its split
         (the rest follows the transaction). `403` for someone else's expense.
       tags: [shared]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -1976,6 +1994,9 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -1985,6 +2006,91 @@ paths:
       responses:
         "204":
           description: Saved.
+        default:
+          $ref: "#/components/responses/Problem"
+  /goals:
+    get:
+      operationId: listGoals
+      summary: Goals with their progress
+      description: >-
+        Every goal (ADR 0031), open ones first by deadline, with its progress today. A save goal
+        counts income minus spending of every account in its currency since its start (transfers
+        between the user's accounts left out), or the growth of its one account; a reduce goal
+        compares each month's spending in its category with the average of the baseline months
+        before its start.
+      tags: [goals]
+      responses:
+        "200":
+          description: The goals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createGoal
+      summary: Create a goal
+      description: >-
+        `save` needs `targetMinor` (and takes an optional `accountId`); `reduce` needs `categoryId`
+        and `reducePct`. Without `startsOn` the goal starts today; without `currency` a save goal
+        takes its account's, or the first account's. At most 50 goals (`422 limit_reached`).
+      tags: [goals]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalInput"
+      responses:
+        "201":
+          description: The new goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        default:
+          $ref: "#/components/responses/Problem"
+  /goals/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      operationId: updateGoal
+      summary: Change a goal
+      description: >-
+        Replaces the goal's fields (its kind, currency and start stay). Send the version you read; a
+        mismatch is `409 stale_version`.
+      tags: [goals]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalUpdate"
+      responses:
+        "200":
+          description: The goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteGoal
+      summary: Delete a goal
+      tags: [goals]
+      responses:
+        "204":
+          description: Deleted.
         default:
           $ref: "#/components/responses/Problem"
   /investments:
@@ -2335,6 +2441,44 @@ paths:
           description: Marked.
         default:
           $ref: "#/components/responses/Problem"
+  /ai-changes:
+    get:
+      operationId: listAIChanges
+      summary: The changes the assistant made, newest first
+      tags: [assistant]
+      parameters:
+        - { name: cursor, in: query, required: false, schema: { type: string, maxLength: 80 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, format: int32, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIChangesPage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /ai-changes/{id}/revert:
+    post:
+      operationId: revertAIChange
+      summary: Undo a change the assistant made
+      description: >-
+        Puts back what the change replaced, through the same functions as an edit by hand.
+        `409 changed_since` when anything it touched is different now (nothing is undone then),
+        `409 conflict` when it was undone already. Groups and categories it created are deleted only
+        when nothing uses them any more.
+      tags: [assistant]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Undone.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIChangeRevert"
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/users:
     get:
       operationId: adminListUsers
@@ -2681,10 +2825,19 @@ components:
       required: false
       description: >-
         With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the
-        chat shows the proposal as applied after a reload (`appliedProposals`).
+        chat shows the proposal as applied after a reload (`appliedProposals`). The pair also
+        records the change as the assistant's (ADR 0030): what it set before and after, so it can be
+        undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals.
       schema:
         type: string
         pattern: "^[0-9a-f]{16}$"
+    AssistantAutoHeader:
+      name: X-Assistant-Auto
+      in: header
+      required: false
+      description: With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind).
+      schema:
+        type: boolean
     Id:
       name: id
       in: path
@@ -2867,6 +3020,7 @@ components:
             - duplicates.decided
             - duplicates.reset
             - assistant.action_applied
+            - assistant.change_reverted
             - admin.user_created
             - admin.role_changed
             - admin.user_disabled
@@ -3342,7 +3496,7 @@ components:
     FilterColumn:
       type: string
       description: A filterable, sortable column (PLAN §4.5).
-      enum: [bookedOn, valueOn, amount, balanceAfter, currency, payee, description, category, bankCategory, txType, reference, counterpartyAccount, account, group, note]
+      enum: [bookedOn, valueOn, amount, balanceAfter, currency, payee, description, category, bankCategory, txType, reference, counterpartyAccount, account, group, note, source]
     ColumnFilter:
       type: object
       additionalProperties: false
@@ -3449,6 +3603,9 @@ components:
           description: Only this group's transactions (the group window's export).
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
+        aiAssisted:
+          type: boolean
+          description: Only transactions an assistant change set and nobody undid (the "AI assisted" chip, ADR 0030).
     Sort:
       type: object
       additionalProperties: false
@@ -3503,7 +3660,7 @@ components:
     TransactionRow:
       type: object
       additionalProperties: false
-      required: [id, accountId, accountName, bookedOn, amount, payee, description, categorySource, bankCategory, txType, reference, counterpartyAccount, note, isTransfer]
+      required: [id, accountId, accountName, bookedOn, amount, payee, description, categorySource, bankCategory, txType, reference, counterpartyAccount, note, isTransfer, source, ai]
       properties:
         id:
           type: string
@@ -3546,6 +3703,13 @@ components:
           type: boolean
         group:
           $ref: "#/components/schemas/NamedRef"
+        source:
+          type: string
+          enum: [Bank, Manual, Assistant]
+          description: Where the row came from (the `source` column).
+        ai:
+          type: boolean
+          description: An assistant change set it and nobody undid it (✦, ADR 0030).
     ResolvedPeriod:
       type: object
       additionalProperties: false
@@ -5576,6 +5740,181 @@ components:
           minimum: 0
           nullable: true
           description: The monthly limit; null resets to the default budget.
+    GoalList:
+      type: object
+      additionalProperties: false
+      required: [goals]
+      properties:
+        goals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Goal"
+    Goal:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, currency, baselineMonths, startsOn, deadline, status, version, ai, progress]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [save, reduce]
+        targetMinor:
+          type: integer
+          format: int64
+          description: save only, in the goal's currency.
+        currency:
+          type: string
+        account:
+          $ref: "#/components/schemas/NamedRef"
+        category:
+          $ref: "#/components/schemas/NamedRef"
+        reducePct:
+          type: integer
+        baselineMonths:
+          type: integer
+        startsOn:
+          type: string
+          format: date
+        deadline:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, done, archived]
+        version:
+          type: integer
+        ai:
+          type: boolean
+          description: An assistant change set the goal and nobody undid it (ADR 0030).
+        progress:
+          $ref: "#/components/schemas/GoalProgress"
+    GoalProgress:
+      type: object
+      additionalProperties: false
+      required: [state, percent, daysLeft]
+      description: >-
+        How the goal is doing today. `percent` is of the target (save) or of this month's limit
+        (reduce). A goal whose category is gone, or a reduce goal without spending in its baseline,
+        `needs_attention`.
+      properties:
+        state:
+          type: string
+          enum: [not_started, on_track, behind, done, missed, needs_attention]
+        percent:
+          type: integer
+        daysLeft:
+          type: integer
+        savedMinor:
+          type: integer
+          format: int64
+        expectedMinor:
+          type: integer
+          format: int64
+          description: What a steady pace would have put aside by today.
+        projectedMinor:
+          type: integer
+          format: int64
+          description: At today's pace, by the deadline.
+        baselineMinor:
+          type: integer
+          format: int64
+          description: The average month of the baseline.
+        monthlyLimitMinor:
+          type: integer
+          format: int64
+        thisMonthMinor:
+          type: integer
+          format: int64
+        allowedSoFarMinor:
+          type: integer
+          format: int64
+          description: This month's limit up to today.
+        monthsKept:
+          type: integer
+        monthsPast:
+          type: integer
+    GoalInput:
+      type: object
+      additionalProperties: false
+      required: [name, kind, deadline]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        kind:
+          type: string
+          enum: [save, reduce]
+        targetMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        accountId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        reducePct:
+          type: integer
+          minimum: 1
+          maximum: 100
+        baselineMonths:
+          type: integer
+          minimum: 1
+          maximum: 12
+          default: 3
+        startsOn:
+          type: string
+          format: date
+        deadline:
+          type: string
+          format: date
+    GoalUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, deadline, version]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        targetMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        accountId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        reducePct:
+          type: integer
+          minimum: 1
+          maximum: 100
+        baselineMonths:
+          type: integer
+          minimum: 1
+          maximum: 12
+          default: 3
+        deadline:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, done, archived]
+          default: active
+        version:
+          type: integer
+          minimum: 1
     PPK:
       type: object
       additionalProperties: false
@@ -5716,6 +6055,15 @@ components:
             type: string
             maxLength: 40
           description: Names of the cloud connections the user agreed to send their data to.
+        autoApply:
+          type: array
+          maxItems: 16
+          description: >-
+            Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one
+            touching more than 50 transactions. Left out of a PUT, the stored list stays.
+          items:
+            type: string
+            enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
     AssistantChat:
       type: object
       additionalProperties: false
@@ -5847,7 +6195,7 @@ components:
             X-Assistant-Proposal when it is applied.
         action:
           type: string
-          enum: [set_category, set_group, create_rule]
+          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
         reason:
           type: string
         matched:
@@ -5879,6 +6227,53 @@ components:
           maxItems: 5
           items:
             $ref: "#/components/schemas/ProposalRow"
+        budget:
+          $ref: "#/components/schemas/Money"
+          description: "set_budget: the monthly budget to set (absent with removeBudget)."
+        removeBudget:
+          type: boolean
+          description: "set_budget: remove the category's own budget (back to the default from earlier months)."
+        budgetBefore:
+          $ref: "#/components/schemas/Money"
+          description: "set_budget: the budget it replaces, if any."
+        accountId:
+          type: string
+          format: uuid
+          description: "add_expense: the cash account."
+        accountName:
+          type: string
+        date:
+          type: string
+          format: date
+          description: "add_expense: the day of the payment."
+        amount:
+          $ref: "#/components/schemas/Money"
+          description: "add_expense: the amount (negative: money out)."
+        payee:
+          type: string
+        note:
+          type: string
+        sharedGroupId:
+          type: string
+          format: uuid
+          description: "add_to_shared_group: the shared group (groupId is the user's personal group linked to it)."
+        sharedGroupName:
+          type: string
+        expenseId:
+          type: string
+          format: uuid
+          description: "split_expense: the shared expense (date, amount, payee, note are its values)."
+        expenseCategory:
+          type: string
+        paidBy:
+          type: string
+          format: uuid
+        split:
+          $ref: "#/components/schemas/ProposalSplit"
+        goal:
+          $ref: "#/components/schemas/ProposalGoal"
+        goalBefore:
+          $ref: "#/components/schemas/ProposalGoal"
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
     ProposalRow:
@@ -6236,6 +6631,7 @@ components:
         - last_admin
         - contrast_failed
         - display_name_required
+        - changed_since
         - internal
     FieldError:
       type: object
@@ -6608,6 +7004,85 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DayUsage"
+    AIChange:
+      type: object
+      additionalProperties: false
+      required: [id, chatId, proposalKey, action, auto, appliedAt, items]
+      properties:
+        id: { type: string, format: uuid }
+        chatId: { type: string, format: uuid }
+        proposalKey: { type: string }
+        action:
+          type: string
+          description: The proposal's action (`set_category`, `set_group`, `create_rule`, …).
+        auto: { type: boolean, description: Applied by the panel by itself. }
+        appliedAt: { type: string, format: date-time }
+        revertedAt: { type: string, format: date-time }
+        items: { type: integer, description: How many transactions, groups, categories and rules it touched. }
+    AIChangesPage:
+      type: object
+      additionalProperties: false
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIChange"
+        next: { type: string }
+    AIChangeRevert:
+      type: object
+      additionalProperties: false
+      required: [change, rows, deleted, kept]
+      properties:
+        change:
+          $ref: "#/components/schemas/AIChange"
+        rows: { type: integer, description: Transactions put back. }
+        deleted: { type: integer, description: Rules, groups and categories the change created that were deleted. }
+        kept: { type: integer, description: Groups and categories it created that were kept because they are used now. }
+    ProposalSplit:
+      type: object
+      additionalProperties: false
+      required: [mode, members]
+      description: "split_expense: the new split."
+      properties:
+        mode:
+          type: string
+          enum: [equal, shares, exact]
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalSplitMember"
+    ProposalGoal:
+      type: object
+      additionalProperties: false
+      required: [name, kind, currency, baselineMonths, deadline]
+      description: >-
+        create_goal: the new goal (POST /goals); update_goal: the goal after the change, sent as
+        PATCH /goals/{id} with its version, and in goalBefore as it was when proposed.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        kind: { type: string, enum: [save, reduce] }
+        targetMinor: { type: integer, format: int64 }
+        currency: { type: string }
+        accountId: { type: string, format: uuid }
+        accountName: { type: string }
+        categoryId: { type: string, format: uuid }
+        categoryName: { type: string }
+        reducePct: { type: integer }
+        baselineMonths: { type: integer }
+        deadline: { type: string, format: date }
+        status: { type: string, enum: [active, done, archived] }
+        version: { type: integer }
+    ProposalSplitMember:
+      type: object
+      additionalProperties: false
+      required: [memberId, name]
+      properties:
+        memberId: { type: string, format: uuid }
+        name: { type: string }
+        weight: { type: integer }
+        amountMinor: { type: integer, format: int64 }
     DeveloperInfo:
       type: object
       additionalProperties: false

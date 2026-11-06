@@ -12,6 +12,23 @@ import (
 	"github.com/google/uuid"
 )
 
+const budgetAmountForUpdate = `-- name: BudgetAmountForUpdate :one
+SELECT amount_minor FROM budgets WHERE user_id = $1 AND category_id = $2 FOR UPDATE
+`
+
+type BudgetAmountForUpdateParams struct {
+	UserID     uuid.UUID
+	CategoryID uuid.UUID
+}
+
+// A category's budget before an assistant change sets it (ADR 0030).
+func (q *Queries) BudgetAmountForUpdate(ctx context.Context, arg BudgetAmountForUpdateParams) (int64, error) {
+	row := q.db.QueryRow(ctx, budgetAmountForUpdate, arg.UserID, arg.CategoryID)
+	var amount_minor int64
+	err := row.Scan(&amount_minor)
+	return amount_minor, err
+}
+
 const deleteBudget = `-- name: DeleteBudget :execrows
 DELETE FROM budgets WHERE user_id = $1 AND category_id = $2
 `

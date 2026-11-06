@@ -28,7 +28,14 @@ const MaxRetentionDays = 7
 type Settings struct {
 	RetentionDays *int     // nil: keep chats until deleted
 	CloudConsent  []string // cloud connections the user agreed to send data to
+	// AutoApply lists the proposal actions the panel applies by itself (ADR 0030); nil when saving
+	// keeps the stored list.
+	AutoApply []string
 }
+
+// AutoApplyActions are the proposal actions a user can let the panel apply by itself.
+var AutoApplyActions = []string{ActionSetCategory, ActionSetGroup, ActionCreateRule, ActionSetBudget, ActionAddExpense,
+	ActionAddToSharedGroup, ActionSplitExpense, ActionCreateGoal, ActionUpdateGoal}
 
 // Consented reports whether the user agreed to send data to a cloud connection.
 func (s Settings) Consented(conn string) bool { return slices.Contains(s.CloudConsent, conn) }
@@ -148,12 +155,15 @@ func settings(ctx context.Context, q *db.Queries, userID uuid.UUID) (Settings, e
 	row, err := q.GetAssistantSettings(ctx, userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		d := DefaultRetentionDays
-		return Settings{RetentionDays: &d, CloudConsent: []string{}}, nil
+		return Settings{RetentionDays: &d, CloudConsent: []string{}, AutoApply: []string{}}, nil
 	}
 	if err != nil {
 		return Settings{}, err
 	}
-	s := Settings{CloudConsent: row.CloudConsent}
+	s := Settings{CloudConsent: row.CloudConsent, AutoApply: row.AutoApply}
+	if s.AutoApply == nil {
+		s.AutoApply = []string{}
+	}
 	if row.RetentionDays != nil {
 		d := int(*row.RetentionDays)
 		s.RetentionDays = &d
@@ -179,6 +189,12 @@ func (c *Chats) SaveSettings(ctx context.Context, userID uuid.UUID, s Settings) 
 	if len(s.CloudConsent) > 32 {
 		ve.Add("cloudConsent", "too many connections")
 	}
+	for _, a := range s.AutoApply {
+		if !slices.Contains(AutoApplyActions, a) {
+			ve.Add("autoApply", fmt.Sprintf("%q is not a proposal action", a))
+			break
+		}
+	}
 	if err := ve.Err(); err != nil {
 		return Settings{}, err
 	}
@@ -188,8 +204,20 @@ func (c *Chats) SaveSettings(ctx context.Context, userID uuid.UUID, s Settings) 
 	}
 	var out Settings
 	err := c.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		auto := s.AutoApply
+		if auto == nil { // not sent: keep what is stored
+			cur, err := settings(ctx, q, userID)
+			if err != nil {
+				return err
+			}
+			auto = cur.AutoApply
+		}
+		auto = slices.Compact(slices.Sorted(slices.Values(auto)))
+		if auto == nil {
+			auto = []string{}
+		}
 		if _, err := q.UpsertAssistantSettings(ctx, db.UpsertAssistantSettingsParams{UserID: userID, RetentionDays: days,
-			CloudConsent: consent, Now: c.clock.Now()}); err != nil {
+			CloudConsent: consent, AutoApply: auto, Now: c.clock.Now()}); err != nil {
 			return err
 		}
 		var err error
@@ -303,6 +331,23 @@ func messageOf(m *db.AssistantMessage) (Message, error) {
 		}
 	}
 	return out, nil
+}
+
+// FindProposal returns the proposal with this key in one of the chat's steps (an Apply names it, ADR
+// 0030), or platform.ErrNotFound.
+func (c *Chats) FindProposal(ctx context.Context, userID, chatID uuid.UUID, key string) (*Proposal, error) {
+	_, msgs, err := c.Get(ctx, userID, chatID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range msgs {
+		for _, st := range msgs[i].Steps {
+			if st.Proposal != nil && st.Proposal.Key() == key {
+				return st.Proposal, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("proposal %s in chat %s: %w", key, chatID, platform.ErrNotFound)
 }
 
 // Delete removes a chat.

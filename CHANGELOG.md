@@ -6,6 +6,22 @@ notes of their version.
 
 ## [Unreleased]
 
+### Added
+
+- **The assistant's changes, marked and undoable** (Phase 20): everything applied from an assistant
+  proposal is recorded with the change, shows ✦ in the table (and a *Source* column: Bank, Manual
+  or Assistant), filters with "Only what the assistant changed", and can be undone from the card
+  or Settings → Activity → Assistant changes while nothing changed since.
+- **More assistant proposals**: set or remove a category's budget, add a cash expense, share
+  transactions with a shared group, change how a shared expense is split, set or change a goal.
+  Each is still a card you apply.
+- **Apply by itself**: in the assistant's settings, tick the kinds of proposals the panel may apply
+  without asking (none by default; never more than 50 transactions at once); the card says
+  *Applied automatically* and offers Undo.
+- **Goals**: save an amount by a deadline, or spend a percentage less on a category than the months
+  before. The Overview's *Goals* card shows each goal against a steady pace; the assistant answers
+  "how are my goals doing" and proposes new ones. Goals are in the data export.
+
 ## [0.3.0]
 
 Administrators, colour themes, cash accounts, friends, notifications and shared groups with

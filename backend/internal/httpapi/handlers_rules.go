@@ -53,6 +53,10 @@ func (a *api) CategoryStats(ctx context.Context, _ gen.CategoryStatsRequestObjec
 
 // CreateCategory adds a category.
 func (a *api) CreateCategory(ctx context.Context, req gen.CreateCategoryRequestObject) (gen.CreateCategoryResponseObject, error) {
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	c, err := a.ledger.CreateCategory(ctx, identity(ctx).User.ID, req.Body.Name)
 	if err != nil {
 		return nil, err
@@ -152,6 +156,10 @@ func (a *api) ListRules(ctx context.Context, _ gen.ListRulesRequestObject) (gen.
 // CreateRule adds a rule at the end.
 func (a *api) CreateRule(ctx context.Context, req gen.CreateRuleRequestObject) (gen.CreateRuleResponseObject, error) {
 	u := identity(ctx).User.ID
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	r, err := a.rules.Create(ctx, u, ruleInputIn(*req.Body), a.reclassifyIn(u))
 	if err != nil {
 		return nil, err

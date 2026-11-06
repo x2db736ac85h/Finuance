@@ -12,6 +12,8 @@ import (
 )
 
 type Querier interface {
+	// Goals an assistant change set and nobody undid (the ✦ badge, ADR 0030).
+	AIGoalIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	// Transaction count and date range per account (GET /accounts).
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
 	// The members an equal split goes to, in id order (the remainder cents go to the first ones).
@@ -32,19 +34,27 @@ type Querier interface {
 	// Commit step 1b: re-apply user annotations (group, manual category, note, manual transfer mark)
 	// to freshly inserted transactions, so labels survive delete + re-import.
 	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
+	// A category's budget before an assistant change sets it (ADR 0030).
+	BudgetAmountForUpdate(ctx context.Context, arg BudgetAmountForUpdateParams) (int64, error)
 	CategoryNameTaken(ctx context.Context, arg CategoryNameTakenParams) (bool, error)
 	// Settings → Categories: every category with its transaction count, how many were set by hand and
 	// by rules, and the bank names that map to it (its own name excluded).
 	CategoryStats(ctx context.Context, userID uuid.UUID) ([]CategoryStatsRow, error)
 	ClearDedupeOverride(ctx context.Context, arg ClearDedupeOverrideParams) (int64, error)
+	CountAIChanges(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountAccounts(ctx context.Context, userID uuid.UUID) (int64, error)
 	// Locks the administrators' rows, so two requests can't demote the last two at the same time.
 	CountActiveAdmins(ctx context.Context) (int64, error)
+	// Whether a category the assistant created is used (a revert deletes it only when unused).
+	CountCategoryUse(ctx context.Context, arg CountCategoryUseParams) (int64, error)
 	// Valid staged rows whose (fingerprint, occurrence) the account already has: the preview's
 	// "duplicates" estimate before the commit.
 	CountDuplicateEstimate(ctx context.Context, arg CountDuplicateEstimateParams) (int64, error)
 	// How many staged rows step 1 of the commit may insert; the caller generates that many ids.
 	CountEligibleImportRows(ctx context.Context, arg CountEligibleImportRowsParams) (int64, error)
+	CountGoals(ctx context.Context, userID uuid.UUID) (int64, error)
+	// Whether a group the assistant created holds anything (a revert deletes it only when empty).
+	CountGroupUse(ctx context.Context, arg CountGroupUseParams) (int64, error)
 	CountGroups(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountImportRows(ctx context.Context, arg CountImportRowsParams) (CountImportRowsRow, error)
 	// For the imports-per-day limit (run under the user's context).
@@ -104,6 +114,7 @@ type Querier interface {
 	DeleteExpiredSessions(ctx context.Context, arg DeleteExpiredSessionsParams) (int64, error)
 	DeleteFriendCode(ctx context.Context, userID uuid.UUID) error
 	DeleteFriendship(ctx context.Context, arg DeleteFriendshipParams) (int64, error)
+	DeleteGoal(ctx context.Context, arg DeleteGoalParams) (int64, error)
 	// Removes the group and its labels only (ON DELETE SET NULL on transactions and annotations).
 	DeleteGroup(ctx context.Context, arg DeleteGroupParams) (int64, error)
 	// Cascades to import_files and import_rows. Transactions are cleaned up by DeleteOrphanTransactions.
@@ -148,6 +159,7 @@ type Querier interface {
 	DuplicatesSkipped(ctx context.Context, arg DuplicatesSkippedParams) (int64, error)
 	// The migration seeds the row; this restores it if it was ever removed (tests truncate tables).
 	EnsureInstanceSettings(ctx context.Context) error
+	ExportAIChanges(ctx context.Context, userID uuid.UUID) ([]ExportAIChangesRow, error)
 	// Queries for the personal data export (GET /me/export, PLAN task 7.10).
 	ExportAnnotations(ctx context.Context, userID uuid.UUID) ([]TxAnnotation, error)
 	ExportDedupeOverrides(ctx context.Context, userID uuid.UUID) ([]DedupeOverride, error)
@@ -176,6 +188,7 @@ type Querier interface {
 	FinishLegacyImport(ctx context.Context, arg FinishLegacyImportParams) error
 	// The display name of a user (friends never see each other's e-mail).
 	FriendDisplayName(ctx context.Context, id uuid.UUID) (string, error)
+	GetAIChangeForUpdate(ctx context.Context, arg GetAIChangeForUpdateParams) (GetAIChangeForUpdateRow, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
@@ -186,6 +199,8 @@ type Querier interface {
 	// Duplicate review (PLAN §4.4, "Duplicate review and overrides"). ledger.Rematerialize uses these to
 	// rebuild the transactions of one (account, fingerprint) from its staged rows and override.
 	GetDedupeOverride(ctx context.Context, arg GetDedupeOverrideParams) (DedupeOverride, error)
+	GetGoal(ctx context.Context, arg GetGoalParams) (Goal, error)
+	GetGoalForUpdate(ctx context.Context, arg GetGoalForUpdateParams) (Goal, error)
 	GetGroup(ctx context.Context, arg GetGroupParams) (Group, error)
 	GetImport(ctx context.Context, arg GetImportParams) (Import, error)
 	GetImportFile(ctx context.Context, arg GetImportFileParams) ([]byte, error)
@@ -213,6 +228,13 @@ type Querier interface {
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	// email is citext, so the lookup ignores case.
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// A save goal on one account: everything that came in and went out (transfers included).
+	GoalAccountGrowth(ctx context.Context, arg GoalAccountGrowthParams) (int64, error)
+	// A reduce goal: money out per month for the category between two days (inclusive).
+	GoalCategoryMonths(ctx context.Context, arg GoalCategoryMonthsParams) ([]GoalCategoryMonthsRow, error)
+	// A save goal without an account: income minus spending of every account in the currency between
+	// two days (inclusive), transfers between the user's own accounts left out.
+	GoalNet(ctx context.Context, arg GoalNetParams) (int64, error)
 	// Money out per personal group and category (the timeline's largest categories and hints).
 	GroupCategorySpend(ctx context.Context, userID uuid.UUID) ([]GroupCategorySpendRow, error)
 	GroupLinkedTo(ctx context.Context, arg GroupLinkedToParams) (uuid.UUID, error)
@@ -229,6 +251,8 @@ type Querier interface {
 	// The audit log (PLAN task 17.6, migration 00010). Rows are only ever inserted, listed and, after
 	// the retention, deleted (the table's policies allow nothing else).
 	InsertAuditEvent(ctx context.Context, arg InsertAuditEventParams) error
+	// Goals (Phase 20, ADR 0031). User-owned with forced RLS.
+	InsertGoal(ctx context.Context, arg InsertGoalParams) (Goal, error)
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
 	// Manual transactions (Phase 19, ADR 0029): expenses typed into a cash account. They have
 	// origin = 'manual' and a random fingerprint, so no import ever matches them; re-materialisation,
@@ -256,6 +280,8 @@ type Querier interface {
 	LinkImportRow(ctx context.Context, arg LinkImportRowParams) error
 	// Commit step 2: link every staged row to its transaction, new or pre-existing (provenance).
 	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
+	ListAIChangeItems(ctx context.Context, arg ListAIChangeItemsParams) ([]ListAIChangeItemsRow, error)
+	ListAIChanges(ctx context.Context, arg ListAIChangesParams) ([]ListAIChangesRow, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
 	ListApprovedThemes(ctx context.Context) ([]Theme, error)
 	ListAssistantChats(ctx context.Context, userID uuid.UUID) ([]AssistantChat, error)
@@ -271,6 +297,7 @@ type Querier interface {
 	ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error)
 	// The user's friends with their display names, newest first.
 	ListFriends(ctx context.Context, userID uuid.UUID) ([]ListFriendsRow, error)
+	ListGoals(ctx context.Context, userID uuid.UUID) ([]Goal, error)
 	ListGroups(ctx context.Context, userID uuid.UUID) ([]Group, error)
 	ListImportProfiles(ctx context.Context, userID uuid.UUID) ([]ImportProfile, error)
 	// Staged rows are inserted by store.InsertImportRows (hand-written unnest, see importrows.go).
@@ -289,6 +316,9 @@ type Querier interface {
 	// internal/query; these are the fixed statements around it.
 	ListRules(ctx context.Context, userID uuid.UUID) ([]ListRulesRow, error)
 	ListSharedExpenses(ctx context.Context, groupID uuid.UUID) ([]SharedExpense, error)
+	// The user's personal groups linked to a shared group they are in, not archived (the assistant's
+	// add_to_shared_group target). shared_groups is read under its membership RLS.
+	ListSharedGroupLinks(ctx context.Context, userID uuid.UUID) ([]ListSharedGroupLinksRow, error)
 	ListSharedMembers(ctx context.Context, groupID uuid.UUID) ([]SharedGroupMember, error)
 	ListSharedSettlements(ctx context.Context, groupID uuid.UUID) ([]SharedSettlement, error)
 	ListSharedSplits(ctx context.Context, groupID uuid.UUID) ([]SharedExpenseSplit, error)
@@ -304,15 +334,22 @@ type Querier interface {
 	// Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
 	// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
 	LockUserAccounts(ctx context.Context, userID uuid.UUID) error
+	MarkAIChangeReverted(ctx context.Context, arg MarkAIChangeRevertedParams) error
 	// Marks the given notifications read, or every unread one when ids is NULL.
 	MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) (int64, error)
 	MergeCategoryAnnotations(ctx context.Context, arg MergeCategoryAnnotationsParams) error
 	// The merged category's budget moves over when the target has none (else the target's stays).
 	MergeCategoryBudget(ctx context.Context, arg MergeCategoryBudgetParams) error
+	MergeCategoryGoals(ctx context.Context, arg MergeCategoryGoalsParams) error
 	MergeCategoryRules(ctx context.Context, arg MergeCategoryRulesParams) error
 	// Merging: the transactions keep how their category was set (bank, rule, manual).
 	MergeCategoryTransactions(ctx context.Context, arg MergeCategoryTransactionsParams) (int64, error)
 	MoveCategoryAliases(ctx context.Context, arg MoveCategoryAliasesParams) error
+	// Changes the assistant made (Phase 20, ADR 0030). User-owned with forced RLS; written in the same
+	// transaction as the change by internal/ledger, undone by internal/aichanges.
+	// The open change of a proposal, created by the first request of its Apply; later requests of the
+	// same Apply add their items to it.
+	OpenAIChange(ctx context.Context, arg OpenAIChangeParams) (uuid.UUID, error)
 	// Fingerprints of this import that have an override: the commit re-materialises them (step 2b).
 	OverriddenFingerprintsInImport(ctx context.Context, arg OverriddenFingerprintsInImportParams) ([][]byte, error)
 	// Overrides that prefer this import: deleting the import removes them (FK cascade), so their
@@ -394,6 +431,8 @@ type Querier interface {
 	SharedTimelineStats(ctx context.Context) ([]SharedTimelineStatsRow, error)
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
+	// What an annotation change replaces: the category (and where it came from) and the group.
+	TransactionAnnotationState(ctx context.Context, arg TransactionAnnotationStateParams) ([]TransactionAnnotationStateRow, error)
 	// The staged rows (one per import that contains this transaction), oldest import first.
 	TransactionProvenance(ctx context.Context, arg TransactionProvenanceParams) ([]TransactionProvenanceRow, error)
 	// The given transactions with what a shared copy needs, the shared group their personal group is
@@ -416,6 +455,8 @@ type Querier interface {
 	// After a turn: the last activity, the connection and model used, and the title (the first
 	// question) when the chat had none.
 	UpdateAssistantChat(ctx context.Context, arg UpdateAssistantChatParams) error
+	// The kind, currency and start stay; version must be the one the caller read.
+	UpdateGoal(ctx context.Context, arg UpdateGoalParams) (Goal, error)
 	UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group, error)
 	// A new mapping/options and the re-parse results: PATCH while previewed, reprocess when committed
 	// (expected_status guards which).
@@ -437,6 +478,9 @@ type Querier interface {
 	// Re-point a kept transaction at a (possibly new) value source: every imported field comes from the
 	// row. User edits stay: a manual or rule category is kept, the bank category is re-resolved.
 	UpdateTransactionFromRow(ctx context.Context, arg UpdateTransactionFromRowParams) error
+	// The first "before" of an entity stays (it is what the change replaced); "after" follows the
+	// latest request.
+	UpsertAIChangeItem(ctx context.Context, arg UpsertAIChangeItemParams) error
 	// User annotations keyed by dedupe identity (PLAN §4.4): they outlive the transaction row, so a
 	// label comes back when the same transaction is imported again.
 	UpsertAnnotation(ctx context.Context, arg UpsertAnnotationParams) error

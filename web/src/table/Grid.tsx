@@ -277,7 +277,7 @@ const DataRow = memo(function DataRow({
               void copyText(text);
             }}
           >
-            {cell(c, text, tokens, row.group && groupColor(row.group.id), row.isTransfer)}
+            {cell(c, text, tokens, row.group && groupColor(row.group.id), row.isTransfer, row.ai)}
           </td>
         );
       })}
@@ -291,13 +291,23 @@ function cell(
   tokens: readonly string[],
   color: string | undefined,
   transfer: boolean,
+  ai: boolean,
 ): ReactNode {
-  if (c.id === 'payee' && transfer) {
+  if (c.id === 'payee' && (transfer || ai)) {
     return (
       <>
-        <span className="tag xfer" title="A transfer between your own accounts: left out of charts and the overview">
-          Transfer
-        </span>{' '}
+        {ai && (
+          <span className="tag ai" title="Changed by the assistant (Settings → Activity lists it, with Revert)">
+            ✦
+          </span>
+        )}
+        {ai && ' '}
+        {transfer && (
+          <span className="tag xfer" title="A transfer between your own accounts: left out of charts and the overview">
+            Transfer
+          </span>
+        )}
+        {transfer && ' '}
         {hl(text, tokens)}
       </>
     );

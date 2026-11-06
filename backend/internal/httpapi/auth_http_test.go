@@ -25,10 +25,12 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/friends"
+	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/ingest"
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
@@ -130,7 +132,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Commit: "0123abcd", BuildDate: "2026-11-05T10:00:00Z", SchemaVersion: st.SchemaVersion, Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), AIChanges: aichanges.New(st, led, clk), Goals: goals.New(st, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
 		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
 			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})})
 	if err != nil {
@@ -585,6 +587,20 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		t.Fatal("no transactions committed")
 	}
 	if _, err := l.Annotate(ctx, u, txIDs[:1], ledger.AnnotationPatch{SetGroup: true, GroupID: &g.ID}); err != nil {
+		t.Fatal(err)
+	}
+	// a change the assistant made (ai_changes, ai_change_items; ADR 0030)
+	aiCtx := ledger.WithAIOrigin(ctx, ledger.AIOrigin{ChatID: platform.NewID(), ProposalKey: "00000000000000f1", Action: "set_group"})
+	if _, err := l.Annotate(aiCtx, u, txIDs[:1], ledger.AnnotationPatch{SetGroup: true, GroupID: nil}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.Annotate(ctx, u, txIDs[:1], ledger.AnnotationPatch{SetGroup: true, GroupID: &g.ID}); err != nil {
+		t.Fatal(err)
+	}
+	// a goal (ADR 0031)
+	target := int64(100_000)
+	if _, err := goals.New(st, platform.SystemClock{}).Create(ctx, u, goals.Input{Name: "Holiday", Kind: goals.KindSave,
+		TargetMinor: &target, Deadline: platform.DateOf(time.Now().AddDate(1, 0, 0), time.UTC)}); err != nil {
 		t.Fatal(err)
 	}
 	if err := notify.New(st, platform.SystemClock{}).Send(ctx, u, notify.FriendAdded, map[string]string{"name": "Bo"}); err != nil {

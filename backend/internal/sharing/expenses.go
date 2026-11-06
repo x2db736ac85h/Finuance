@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -240,14 +241,109 @@ func (s *Service) UpdateExpense(ctx context.Context, userID, groupID, expenseID 
 		if err != nil {
 			return err
 		}
+		// an assistant proposal (split_expense) records the split it replaces (ADR 0030)
+		var before *SplitState
+		if _, ok := ledger.AIOriginFrom(ctx); ok {
+			if before, err = splitState(ctx, q, e.SplitMode, expenseID); err != nil {
+				return err
+			}
+		}
 		if _, err := q.UpdateSharedExpense(ctx, db.UpdateSharedExpenseParams{ID: expenseID, GroupID: groupID, BookedOn: in.BookedOn,
 			AmountMinor: in.AmountMinor, Payee: in.Payee, CategoryName: in.Category, Note: in.Note, PaidBy: paidBy, SplitMode: mode,
 			Now: s.clock.Now()}); err != nil {
 			return err
 		}
-		return writeShares(ctx, q, groupID, expenseID, parts)
+		if err := writeShares(ctx, q, groupID, expenseID, parts); err != nil {
+			return err
+		}
+		if before == nil {
+			return nil
+		}
+		after, err := splitState(ctx, q, mode, expenseID)
+		if err != nil {
+			return err
+		}
+		return ledger.RecordAIChange(ctx, q, s.clock, userID, []ledger.AIItem{{Entity: ledger.AIEntitySharedExpense, ID: expenseID,
+			Before: before, After: after}})
 	})
 	return ledger.DBError("update shared expense", err)
+}
+
+// SplitState is an expense's split in an AI change: the mode and each member's share.
+type SplitState struct {
+	Mode   string       `json:"mode"`
+	Shares []SplitShare `json:"shares"`
+}
+
+// SplitShare is one member's part of a SplitState.
+type SplitShare struct {
+	Member uuid.UUID `json:"member"`
+	Minor  int64     `json:"minor"`
+	Weight *int32    `json:"weight,omitempty"`
+}
+
+// Same reports whether two states are the same split.
+func (s SplitState) Same(o SplitState) bool {
+	if s.Mode != o.Mode || len(s.Shares) != len(o.Shares) {
+		return false
+	}
+	for i := range s.Shares {
+		a, b := s.Shares[i], o.Shares[i]
+		if a.Member != b.Member || a.Minor != b.Minor || (a.Weight == nil) != (b.Weight == nil) || (a.Weight != nil && *a.Weight != *b.Weight) {
+			return false
+		}
+	}
+	return true
+}
+
+func splitState(ctx context.Context, q *db.Queries, mode string, expenseID uuid.UUID) (*SplitState, error) {
+	rows, err := q.SharedSplitsOf(ctx, expenseID)
+	if err != nil {
+		return nil, err
+	}
+	st := &SplitState{Mode: mode, Shares: make([]SplitShare, len(rows))}
+	for i, r := range rows {
+		st.Shares[i] = SplitShare{Member: r.MemberID, Minor: r.ShareMinor, Weight: r.Weight}
+	}
+	return st, nil
+}
+
+// CurrentSplit reads an expense's split inside the caller's transaction (an AI change's revert);
+// nil when the expense is gone.
+func CurrentSplit(ctx context.Context, q *db.Queries, expenseID uuid.UUID) (*SplitState, error) {
+	e, err := q.GetSharedExpense(ctx, expenseID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return splitState(ctx, q, e.SplitMode, expenseID)
+}
+
+// RestoreSplitTx puts a recorded split back inside the caller's transaction (an AI change's
+// revert). Only the member who added the expense may (as for any split change).
+func RestoreSplitTx(ctx context.Context, q *db.Queries, now time.Time, userID, expenseID uuid.UUID, st SplitState) error {
+	e, err := q.GetSharedExpense(ctx, expenseID)
+	if err != nil {
+		return err
+	}
+	if e.AddedBy == nil || *e.AddedBy != userID {
+		return fmt.Errorf("only the member who added an expense can change it: %w", platform.ErrForbidden)
+	}
+	if _, err := q.UpdateSharedExpense(ctx, db.UpdateSharedExpenseParams{ID: expenseID, GroupID: e.GroupID, BookedOn: e.BookedOn,
+		AmountMinor: e.AmountMinor, Payee: e.Payee, CategoryName: e.CategoryName, Note: e.Note, PaidBy: e.PaidBy, SplitMode: st.Mode,
+		Now: now}); err != nil {
+		return err
+	}
+	parts := make([]splits.Share, len(st.Shares))
+	for i, sh := range st.Shares {
+		w := 0
+		if sh.Weight != nil {
+			w = int(*sh.Weight)
+		}
+		parts[i] = splits.Share{Member: sh.Member, Minor: sh.Minor, Weight: w}
+	}
+	return writeShares(ctx, q, e.GroupID, expenseID, parts)
 }
 
 // DeleteExpense deletes an expense the caller typed in the group. A copy goes when its
