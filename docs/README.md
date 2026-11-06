@@ -15,6 +15,7 @@
 | [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities (images included), limits and the daily token budget, retention, receipts, digests, the advice library, the probe and the evals |
 | [migration.md](migration.md) | Moving a backup of the single-file app into Finuance |
 | [admin.md](admin.md) | Administrators: the first one, the panel (accounts, limits, defaults and features, colour themes, the assistant's connections, tuning and advice library, usage) |
+| [cli.md](cli.md) | The `fin` command line: installing it, signing in with an access token, the commands and their output |
 | [sharing.md](sharing.md) | Shared groups: sharing a trip with friends, splits, balances and settling up, the Shared tab, what the others see |
 | [evals.md](evals.md) | Assistant quality per model, thinking mode and toolset on the golden questions, and per model on the receipt set |
 | [perf.md](perf.md) | Performance measurements: parsing, staging, queries, the table, charts and overview with 100k rows, the bundle, the load tests (Compose and the reference cluster) |

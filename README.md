@@ -57,9 +57,10 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 - **Set goals** (🚧 Phase 20): save an amount by a date, or spend a percentage less on a category than before; the Overview's *Goals* card shows each against a steady pace.
 - **Get a digest** (🚧 Phase 20): a short daily or weekly summary written in the background (budgets and goals that need attention, payments due, changes worth making), behind the bell, with its proposals waiting for you.
 - **Read the advice library** (🚧 Phase 20): short articles your admin publishes; the assistant uses them for general money questions and names them in its answer.
+- **Script it** (🚧 Phase 20): personal access tokens (read only, or read and write) and `fin`, a command line for accounts, transactions, imports, the overview and the assistant, with table, CSV or JSON output ([docs/cli.md](docs/cli.md)).
 - **See what happened in your account.** Settings → Activity lists sign-ins (failed ones too), password changes, revoked sessions, imports, deletions, exports and applied assistant proposals, with the address and browser of each, for a year.
 
-Coming next (🚧): personal access tokens and a command line, then v0.4.0 with Phase 20; then a public demo and v1.0.0. See [Status](#status).
+Coming next (🚧): v0.4.0 with Phase 20 above; then a public demo and v1.0.0. See [Status](#status).
 
 ## Screenshots
 
@@ -108,6 +109,7 @@ flowchart LR
     worker["worker<br/>Go background jobs"] -->|"commits imports, rebuilds duplicates"| db
     api -.->|"optional assistant"| llm["LLM server<br/>(LM Studio, Ollama, …)"]
     worker -.->|"assistant digests"| llm
+    cli["fin CLI / scripts"] -->|"access token"| web
 ```
 
 - **One Go binary** runs as the API server (`finuance serve`), the background worker (`finuance worker`), the migration step and the admin CLI. The API is specified first in [`api/openapi.yaml`](api/openapi.yaml); server code and the web app's typed client are generated from it.
@@ -242,7 +244,7 @@ Start with [docs/README.md](docs/README.md), which lists every document and who 
 - [Runbook](docs/RUNBOOK.md): running it on Kubernetes, backups and restores; [SLOs](docs/SLO.md)
 - [Architecture decisions](docs/adr/): why the main choices were made
 - [API specification](api/openapi.yaml): OpenAPI 3
-- [Shared groups](docs/sharing.md), [administration](docs/admin.md), [the assistant](docs/assistant.md)
+- [Shared groups](docs/sharing.md), [administration](docs/admin.md), [the assistant](docs/assistant.md), [the `fin` command line](docs/cli.md)
 - [Moving over from the single-file app](docs/migration.md), [accessibility](docs/a11y.md), [parity report](docs/parity-report.md), [changelog](CHANGELOG.md)
 
 ## Security, contributing and license
