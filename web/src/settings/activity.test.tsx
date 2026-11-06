@@ -39,7 +39,7 @@ describe('activity', () => {
       {
         id: '00000000-0000-4000-8000-0000000000e2',
         chatId: '00000000-0000-4000-8000-0000000000f1',
-        proposalKey: '0123456789abcdef',
+        proposalKey: '00000000000000e1',
         action: 'set_category',
         auto: true,
         appliedAt: '2026-11-06T11:00:00Z',
@@ -48,7 +48,7 @@ describe('activity', () => {
       {
         id: '00000000-0000-4000-8000-0000000000e1',
         chatId: '00000000-0000-4000-8000-0000000000f1',
-        proposalKey: 'fedcba9876543210',
+        proposalKey: '00000000000000e2',
         action: 'create_rule',
         auto: false,
         appliedAt: '2026-11-05T11:00:00Z',

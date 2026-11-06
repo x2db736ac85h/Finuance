@@ -145,7 +145,7 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 			return fmt.Errorf("notification: %w", err)
 		}
 		change, err := q.OpenAIChange(ctx, db.OpenAIChangeParams{ID: platform.NewID(), UserID: u, ChatID: platform.NewID(),
-			ProposalKey: "0123456789abcdef", Action: "set_category", Now: now})
+			ProposalKey: "00000000000000f1", Action: "set_category", Now: now})
 		if err != nil {
 			return fmt.Errorf("ai change: %w", err)
 		}

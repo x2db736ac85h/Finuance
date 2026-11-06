@@ -589,7 +589,7 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		t.Fatal(err)
 	}
 	// a change the assistant made (ai_changes, ai_change_items; ADR 0030)
-	aiCtx := ledger.WithAIOrigin(ctx, ledger.AIOrigin{ChatID: platform.NewID(), ProposalKey: "0123456789abcdef", Action: "set_group"})
+	aiCtx := ledger.WithAIOrigin(ctx, ledger.AIOrigin{ChatID: platform.NewID(), ProposalKey: "00000000000000f1", Action: "set_group"})
 	if _, err := l.Annotate(aiCtx, u, txIDs[:1], ledger.AnnotationPatch{SetGroup: true, GroupID: nil}); err != nil {
 		t.Fatal(err)
 	}
