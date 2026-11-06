@@ -635,6 +635,15 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 	if err := notify.New(st, platform.SystemClock{}).Send(ctx, u, notify.FriendAdded, map[string]string{"name": "Bo"}); err != nil {
 		t.Fatal(err)
 	}
+	// a personal access token (access_tokens, ADR 0036)
+	if err := st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		_, err := q.InsertAccessToken(ctx, db.InsertAccessTokenParams{ID: platform.NewID(), UserID: u, Name: "cli",
+			TokenHash: func() []byte { h := sha256.Sum256(u[:]); return h[:] }(), Prefix: "fin_AAAAAAAA", Scope: "read", Now: time.Now(),
+			ExpiresAt: time.Now().Add(time.Hour)})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
 	// a shared group made from the personal group: the member row and the private link (ADR 0028)
 	if err := st.WithoutUser(ctx, func(_ *db.Queries, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE users SET display_name = 'Sharer' WHERE id = $1 AND display_name = ''`, u)

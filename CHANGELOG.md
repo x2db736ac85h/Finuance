@@ -36,6 +36,9 @@ notes of their version.
   file's (API keys sealed under `FINUANCE_INSTANCE_KEY`, never shown again), tune a model's
   defaults (temperature, thinking, tools, context, a note), and see each person's assistant runs
   and tokens (never what they asked).
+- **Personal access tokens** (Settings → Access tokens): read-only or read-and-write tokens for
+  scripts and the `fin` command line, sent as `Authorization: Bearer fin_…`, valid up to a year,
+  revocable; no token reaches sign-in, the password, sessions, tokens or Administration.
 - **A daily token budget** for the assistant per user, questions and digests together
   (`FINUANCE_AI_TOKENS_PER_DAY`, 200,000 by default; a limit administrators can lower per account).
 

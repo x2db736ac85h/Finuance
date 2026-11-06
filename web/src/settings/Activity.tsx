@@ -80,6 +80,8 @@ const DESCRIBE: Record<ActivityAction, (m: Meta) => string> = {
     typeof m['starter'] === 'number'
       ? `Added ${String(m['starter'])} starter articles to the advice library`
       : `Saved the advice article ${str(m, 'slug')} (${str(m, 'status')})`,
+  'auth.token_created': (m) => `Made the access token ${str(m, 'name')} (${str(m, 'scope')})`,
+  'auth.token_revoked': (m) => `Revoked the access token ${str(m, 'name')}`,
   'admin.advice_deleted': (m) => `Deleted the advice article ${str(m, 'slug')}`,
   'admin.assistant_changed': (m) =>
     m['model'] !== undefined

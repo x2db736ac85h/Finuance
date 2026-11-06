@@ -2053,6 +2053,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The user's personal access tokens (ADR 0036)
+         * @description Newest first; revoked and expired ones stay listed for 30 days. Never a token itself.
+         */
+        get: operations["listAccessTokens"];
+        put?: never;
+        /**
+         * Make a personal access token
+         * @description For the fin CLI and scripts: send it as `Authorization: Bearer fin_…`. `read` uses what reads (GET and the query routes), `write` also changes data; no token reaches the admin, sign-in, password, session or token routes. The secret is in this answer only. At most 25 live tokens (`422 limit_reached`).
+         */
+        post: operations["createAccessToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a personal access token */
+        delete: operations["revokeAccessToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/advice": {
         parameters: {
             query?: never;
@@ -2363,7 +2406,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "admin.assistant_changed" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "auth.token_created" | "auth.token_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "admin.assistant_changed" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -4592,6 +4635,34 @@ export interface components {
             extraPrompt: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        AccessToken: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The first 12 characters (fin_ and 8 more), to recognise it. */
+            prefix: string;
+            /** @enum {string} */
+            scope: "read" | "write";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            lastUsedAt?: string;
+            /** Format: date-time */
+            revokedAt?: string;
+        };
+        AccessTokenRequest: {
+            name: string;
+            /** @enum {string} */
+            scope: "read" | "write";
+            expiresInDays: number;
+        };
+        AccessTokenCreated: {
+            token: components["schemas"]["AccessToken"];
+            /** @description The token itself, shown once. */
+            secret: string;
         };
         /** @description The instance's settings for the assistant; left out of a PUT, the stored ones stay. */
         InstanceAssistant: {
@@ -8184,6 +8255,73 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["InstanceUsage"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAccessTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessToken"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createAccessToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Made; the secret is shown once. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenCreated"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeAccessToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

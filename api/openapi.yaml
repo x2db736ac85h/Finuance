@@ -15,6 +15,7 @@ servers:
   - url: /api/v1
 security:
   - sessionCookie: []
+  - accessToken: []
 paths:
   /meta:
     get:
@@ -2810,6 +2811,63 @@ paths:
                 $ref: "#/components/schemas/InstanceUsage"
         default:
           $ref: "#/components/responses/Problem"
+  /me/tokens:
+    get:
+      operationId: listAccessTokens
+      summary: The user's personal access tokens (ADR 0036)
+      description: Newest first; revoked and expired ones stay listed for 30 days. Never a token itself.
+      tags: [auth]
+      responses:
+        "200":
+          description: The tokens.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccessToken"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createAccessToken
+      summary: Make a personal access token
+      description: >-
+        For the fin CLI and scripts: send it as `Authorization: Bearer fin_…`. `read` uses what reads (GET and
+        the query routes), `write` also changes data; no token reaches the admin, sign-in, password, session
+        or token routes. The secret is in this answer only. At most 25 live tokens (`422 limit_reached`).
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessTokenRequest"
+      responses:
+        "201":
+          description: Made; the secret is shown once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/tokens/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: revokeAccessToken
+      summary: Revoke a personal access token
+      tags: [auth]
+      responses:
+        "204":
+          description: Revoked.
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/advice:
     get:
       operationId: adminListAdvice
@@ -3229,6 +3287,13 @@ components:
       description: |
         HttpOnly session cookie set by signup and login. Unsafe methods also need the header
         `X-Finuance-Client: web` and, when sent, an `Origin` equal to the instance origin (CSRF, §6.1).
+    accessToken:
+      type: http
+      scheme: bearer
+      description: |
+        A personal access token (`fin_…`, ADR 0036) for the fin CLI and scripts. No CSRF header; cookies
+        are ignored when it is sent. A read token reaches GET and the query routes only; no token reaches
+        the admin, sign-in, password, session or token routes (403).
   headers:
     SetSessionCookie:
       description: "`finuance_session=…; Path=/; HttpOnly; SameSite=Lax` (+ `Secure` outside dev). Max-Age=0 clears it."
@@ -3386,6 +3451,8 @@ components:
             - auth.logout
             - auth.password_changed
             - auth.session_revoked
+            - auth.token_created
+            - auth.token_revoked
             - import.committed
             - import.deleted
             - account.deleted
@@ -7440,6 +7507,60 @@ components:
         updatedAt:
           type: string
           format: date-time
+    AccessToken:
+      type: object
+      additionalProperties: false
+      required: [id, name, prefix, scope, createdAt, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        prefix:
+          type: string
+          description: The first 12 characters (fin_ and 8 more), to recognise it.
+        scope:
+          type: string
+          enum: [read, write]
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+    AccessTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [name, scope, expiresInDays]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        scope:
+          type: string
+          enum: [read, write]
+        expiresInDays:
+          type: integer
+          minimum: 1
+          maximum: 366
+    AccessTokenCreated:
+      type: object
+      additionalProperties: false
+      required: [token, secret]
+      properties:
+        token:
+          $ref: "#/components/schemas/AccessToken"
+        secret:
+          type: string
+          description: The token itself, shown once.
     InstanceAssistant:
       type: object
       additionalProperties: false

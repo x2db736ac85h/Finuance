@@ -62,6 +62,7 @@ type Querier interface {
 	CountImportRows(ctx context.Context, arg CountImportRowsParams) (CountImportRowsRow, error)
 	// For the imports-per-day limit (run under the user's context).
 	CountImportsSince(ctx context.Context, arg CountImportsSinceParams) (int64, error)
+	CountLiveAccessTokens(ctx context.Context, arg CountLiveAccessTokensParams) (int64, error)
 	CountOwnedSharedGroups(ctx context.Context, ownerID *uuid.UUID) (int64, error)
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUnreadNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -134,6 +135,8 @@ type Querier interface {
 	// Deletes a manual row and returns its identity, so its annotation goes too.
 	DeleteManualTransaction(ctx context.Context, arg DeleteManualTransactionParams) (DeleteManualTransactionRow, error)
 	DeleteModelSettings(ctx context.Context, arg DeleteModelSettingsParams) (int64, error)
+	// Expired or revoked more than 30 days ago (the hourly session cleanup).
+	DeleteOldAccessTokens(ctx context.Context, cutoff time.Time) (int64, error)
 	DeleteOldNotifications(ctx context.Context, arg DeleteOldNotificationsParams) (int64, error)
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
@@ -264,6 +267,9 @@ type Querier interface {
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
 	// sidebar source labels b1, b2, … (task 6.12).
 	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
+	// Personal access tokens (ADR 0036; migration 00023). Outside RLS like sessions; every query but
+	// the lookup by hash filters by user_id.
+	InsertAccessToken(ctx context.Context, arg InsertAccessTokenParams) (AccessToken, error)
 	InsertAdviceArticle(ctx context.Context, arg InsertAdviceArticleParams) (InsertAdviceArticleRow, error)
 	InsertAssistantAttachment(ctx context.Context, arg InsertAssistantAttachmentParams) error
 	InsertAssistantMessage(ctx context.Context, arg InsertAssistantMessageParams) (InsertAssistantMessageRow, error)
@@ -302,6 +308,7 @@ type Querier interface {
 	LinkImportRows(ctx context.Context, arg LinkImportRowsParams) (int64, error)
 	ListAIChangeItems(ctx context.Context, arg ListAIChangeItemsParams) ([]ListAIChangeItemsRow, error)
 	ListAIChanges(ctx context.Context, arg ListAIChangesParams) ([]ListAIChangesRow, error)
+	ListAccessTokens(ctx context.Context, userID uuid.UUID) ([]AccessToken, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
 	// The advice library (ADR 0034; migration 00021). An instance table: administrators write it,
 	// every signed-in user reads the published articles.
@@ -407,6 +414,11 @@ type Querier interface {
 	ResetAutomaticTransfers(ctx context.Context, userID uuid.UUID) (int64, error)
 	// Reclassify step 1: categories set by rules go back to the bank's category.
 	ResetRuleCategories(ctx context.Context, userID uuid.UUID) (int64, error)
+	// A live token and its user: not revoked, not expired, and the account not disabled.
+	ResolveAccessToken(ctx context.Context, arg ResolveAccessTokenParams) (ResolveAccessTokenRow, error)
+	RevokeAccessToken(ctx context.Context, arg RevokeAccessTokenParams) (AccessToken, error)
+	// A new password, or an administrator signing the account out everywhere, ends its tokens too.
+	RevokeUserAccessTokens(ctx context.Context, arg RevokeUserAccessTokensParams) (int64, error)
 	// Payee groups whose transactions the user put in one category by hand at least 3 times (PLAN
 	// 15.10), with that category (the most frequent one when there are several), the number of
 	// manual categorisations and the group's transaction count, most manual first.
@@ -473,6 +485,8 @@ type Querier interface {
 	SharedSplitsOf(ctx context.Context, expenseID uuid.UUID) ([]SharedExpenseSplit, error)
 	// Totals and spans of the groups the user can see (for the timeline).
 	SharedTimelineStats(ctx context.Context) ([]SharedTimelineStatsRow, error)
+	// Records use; the caller throttles it to once a minute.
+	TouchAccessToken(ctx context.Context, arg TouchAccessTokenParams) error
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
 	// What an annotation change replaces: the category (and where it came from), the group and the note.

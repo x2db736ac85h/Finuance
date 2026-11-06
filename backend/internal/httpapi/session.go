@@ -51,20 +51,30 @@ func authFrom(ctx context.Context) *requestAuth {
 // identity returns the signed-in user of a protected route.
 func identity(ctx context.Context) auth.Identity { return authFrom(ctx).identity }
 
-// requireSession resolves the session cookie. It runs per matched API route (r.Pattern is set), so
-// unknown paths still answer 404. Public routes pass without a session; protected ones answer 401.
-func requireSession(svc *auth.Service, adm *admin.Service, prod bool) func(http.Handler) http.Handler {
+// requireSession resolves the session cookie, or a personal access token sent as "Authorization:
+// Bearer fin_…" (ADR 0036; cookies are then ignored). It runs per matched API route (r.Pattern is
+// set), so unknown paths still answer 404. Public routes pass without a session; protected ones
+// answer 401.
+func requireSession(svc *auth.Service, adm *admin.Service, prod bool, tokens *mw.Limiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ra := &requestAuth{client: auth.Client{UserAgent: r.UserAgent()}}
 			if ip, err := netip.ParseAddr(mw.FromContext(r.Context()).ClientIP); err == nil {
 				ra.client.IP = ip
 			}
+			ctx := context.WithValue(r.Context(), authKey{}, ra)
+			r = r.WithContext(ctx)
+			if h := r.Header.Get("Authorization"); h != "" {
+				if err := resolveBearer(ctx, svc, adm, r.Pattern, h, ra, tokens); err != nil {
+					WriteProblem(w, r, err, prod)
+					return
+				}
+				next.ServeHTTP(w, r)
+				return
+			}
 			if c, err := r.Cookie(SessionCookie); err == nil {
 				ra.token = c.Value
 			}
-			ctx := context.WithValue(r.Context(), authKey{}, ra)
-			r = r.WithContext(ctx)
 			if publicRoutes[r.Pattern] {
 				next.ServeHTTP(w, r)
 				return
@@ -88,6 +98,38 @@ func requireSession(svc *auth.Service, adm *admin.Service, prod bool) func(http.
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// resolveBearer authenticates a personal access token for one route: a route no token reaches is
+// 403, a changing route with a read token is 403, an unknown or expired token is 401.
+func resolveBearer(ctx context.Context, svc *auth.Service, adm *admin.Service, pattern, header string, ra *requestAuth, tokens *mw.Limiter) error {
+	secret, ok := strings.CutPrefix(header, "Bearer ")
+	if !ok || svc == nil || !auth.IsAccessToken(secret) {
+		return platform.ErrUnauthenticated
+	}
+	class := tokenPolicy(pattern)
+	if class == tokenNever {
+		return fmt.Errorf("access tokens can't use %s: %w", pattern, platform.ErrForbidden)
+	}
+	if publicRoutes[pattern] {
+		return nil // GET /meta: nothing to authenticate
+	}
+	id, err := svc.ResolveToken(ctx, secret)
+	if err != nil {
+		return err
+	}
+	if class == tokenWrite && id.Token.Scope != auth.ScopeWrite {
+		return fmt.Errorf("a read token can't change data (%s): %w", pattern, platform.ErrForbidden)
+	}
+	if tokens != nil {
+		if err := tokens.Allow(id.Token.ID.String()); err != nil {
+			return err
+		}
+	}
+	ra.identity = id
+	sum := sha256.Sum256(id.User.ID[:])
+	mw.FromContext(ctx).UserHash = hex.EncodeToString(sum[:8])
+	return gate(ctx, pattern, id.User, adm)
 }
 
 // cookies builds Set-Cookie values. Secure is on unless FINUANCE_COOKIE_SECURE=false, which the

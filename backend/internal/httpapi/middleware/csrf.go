@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // ClientHeader must be present, with this value, on every unsafe request (docs/PLAN.md §6.1).
@@ -25,6 +26,12 @@ func CSRF(publicOrigin *url.URL, reject func(http.ResponseWriter, *http.Request,
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet, http.MethodHead, http.MethodOptions:
+				next.ServeHTTP(w, r)
+				return
+			}
+			// A bearer credential is never sent by a browser on its own (a cross-site page can't set
+			// the header without CORS), and the session layer then ignores cookies (ADR 0036).
+			if strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
 				next.ServeHTTP(w, r)
 				return
 			}

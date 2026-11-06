@@ -24,6 +24,8 @@ const (
 	AuditLogout           = "auth.logout"
 	AuditPasswordChanged  = "auth.password_changed"
 	AuditSessionRevoked   = "auth.session_revoked"
+	AuditTokenCreated     = "auth.token_created" //nolint:gosec // an action name: a personal access token was made (ADR 0036)
+	AuditTokenRevoked     = "auth.token_revoked" //nolint:gosec // an action name
 	AuditImportCommitted  = "import.committed"
 	AuditImportDeleted    = "import.deleted"
 	AuditAccountDeleted   = "account.deleted"
@@ -76,7 +78,7 @@ const (
 )
 
 // AuditActions lists every action above.
-var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPasswordChanged, AuditSessionRevoked,
+var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPasswordChanged, AuditSessionRevoked, AuditTokenCreated, AuditTokenRevoked,
 	AuditImportCommitted, AuditImportDeleted, AuditAccountDeleted, AuditExportCSV, AuditExportData,
 	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied, AuditAssistantReverted,
 	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,

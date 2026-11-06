@@ -13,6 +13,19 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
+type AccessToken struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	Name       string
+	TokenHash  []byte
+	Prefix     string
+	Scope      string
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
+	LastUsedAt *time.Time
+	RevokedAt  *time.Time
+}
+
 type Account struct {
 	ID                  uuid.UUID
 	UserID              uuid.UUID
