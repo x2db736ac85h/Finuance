@@ -101,7 +101,10 @@ test('says so when no model is configured', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Question' })).toBeHidden();
 });
 
-test('a proposal changes nothing until Apply; Apply categorises the rows (PLAN 15.7)', async ({ page, baseURL }) => {
+test('a proposal changes nothing until Apply; Apply categorises the rows, Undo puts them back (PLAN 15.7, ADR 0030)', async ({
+  page,
+  baseURL,
+}) => {
   const seen = watch(page, baseURL ?? '');
   const panel = await setup(page);
   const count = async (cond: string) => {
@@ -131,7 +134,21 @@ test('a proposal changes nothing until Apply; Apply categorises the rows (PLAN 1
   const again = page.getByRole('complementary', { name: 'Assistant' });
   await again.getByTitle('Recent chats').click();
   await again.getByTitle('put "OPERATOR INTERNETU" in Internet').click();
-  await expect(again.getByRole('group', { name: 'Proposed change' })).toContainText('✓ Applied');
+  const card2 = again.getByRole('group', { name: 'Proposed change' });
+  await expect(card2).toContainText('✓ Applied');
+  // the rows carry the assistant's marker; Undo puts the bank's categories back (ADR 0030)
+  await expect(
+    page
+      .locator('tr[data-i]')
+      .first()
+      .getByTitle(/Changed by the assistant/),
+  ).toBeVisible();
+  await card2.getByRole('button', { name: 'Undo' }).click();
+  await expect(card2).toContainText('↺ Undone');
+  await expect.poll(() => count('=Internet')).toBe(0);
+  await expect(page.getByTitle(/Changed by the assistant/)).toHaveCount(0);
+  await page.goto('/settings/activity');
+  await expect(page.getByRole('list', { name: 'Assistant changes' })).toContainText('undone');
   expect(seen.foreign).toEqual([]);
   expect(seen.errors).toEqual([]);
 });

@@ -305,6 +305,23 @@ func messageOf(m *db.AssistantMessage) (Message, error) {
 	return out, nil
 }
 
+// FindProposal returns the proposal with this key in one of the chat's steps (an Apply names it, ADR
+// 0030), or platform.ErrNotFound.
+func (c *Chats) FindProposal(ctx context.Context, userID, chatID uuid.UUID, key string) (*Proposal, error) {
+	_, msgs, err := c.Get(ctx, userID, chatID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range msgs {
+		for _, st := range msgs[i].Steps {
+			if st.Proposal != nil && st.Proposal.Key() == key {
+				return st.Proposal, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("proposal %s in chat %s: %w", key, chatID, platform.ErrNotFound)
+}
+
 // Delete removes a chat.
 func (c *Chats) Delete(ctx context.Context, userID, chatID uuid.UUID) error {
 	return c.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {

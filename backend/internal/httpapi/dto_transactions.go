@@ -30,7 +30,8 @@ func deref[T any](p *T) T {
 }
 
 func contextIn(c gen.QueryContext) query.Context {
-	out := query.Context{AccountIDs: deref(c.AccountIds), Search: deref(c.Search), IncludeTransfers: deref(c.IncludeTransfers), GroupID: c.GroupId}
+	out := query.Context{AccountIDs: deref(c.AccountIds), Search: deref(c.Search), IncludeTransfers: deref(c.IncludeTransfers), GroupID: c.GroupId,
+		AIAssisted: deref(c.AiAssisted)}
 	for _, f := range deref(c.Filters) {
 		out.Filters = append(out.Filters, query.Filter{Column: string(f.Column), Cond: deref(f.Cond), Excluded: deref(f.Excluded)})
 	}
@@ -65,7 +66,8 @@ func txRowDTO(r *query.Row) gen.TransactionRow {
 		BalanceAfter: moneyDTO(r.BalanceAfterMinor, r.Currency), Payee: r.Payee, Description: r.Description,
 		Category: namedRef(r.CategoryID, r.CategoryName), CategorySource: gen.TransactionRowCategorySource(r.CategorySource),
 		BankCategory: r.BankCategory, TxType: r.TxType, Reference: r.Reference, CounterpartyAccount: r.CounterpartyAccount,
-		Note: r.Note, IsTransfer: r.IsTransfer, Group: namedRef(r.GroupID, r.GroupName)}
+		Note: r.Note, IsTransfer: r.IsTransfer, Group: namedRef(r.GroupID, r.GroupName),
+		Source: gen.TransactionRowSource(r.Source), Ai: r.AI}
 }
 
 func pageDTO(p *query.Page) gen.TransactionPage {

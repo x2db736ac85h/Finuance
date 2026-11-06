@@ -1735,6 +1735,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The changes the assistant made, newest first */
+        get: operations["listAIChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-changes/{id}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a change the assistant made
+         * @description Puts back what the change replaced, through the same functions as an edit by hand. `409 changed_since` when anything it touched is different now (nothing is undone then), `409 conflict` when it was undone already. Groups and categories it created are deleted only when nothing uses them any more.
+         */
+        post: operations["revertAIChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -2017,7 +2054,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -2270,7 +2307,7 @@ export interface components {
          * @description A filterable, sortable column (PLAN §4.5).
          * @enum {string}
          */
-        FilterColumn: "bookedOn" | "valueOn" | "amount" | "balanceAfter" | "currency" | "payee" | "description" | "category" | "bankCategory" | "txType" | "reference" | "counterpartyAccount" | "account" | "group" | "note";
+        FilterColumn: "bookedOn" | "valueOn" | "amount" | "balanceAfter" | "currency" | "payee" | "description" | "category" | "bankCategory" | "txType" | "reference" | "counterpartyAccount" | "account" | "group" | "note" | "source";
         ColumnFilter: {
             column: components["schemas"]["FilterColumn"];
             /** @description Filter language (`>100`, `-50..50`, `2025-03`, `=x`, `!kino` …). */
@@ -2323,6 +2360,8 @@ export interface components {
              */
             groupId?: string;
             toolFilter?: components["schemas"]["ToolFilter"];
+            /** @description Only transactions an assistant change set and nobody undid (the "AI assisted" chip, ADR 0030). */
+            aiAssisted?: boolean;
         };
         Sort: {
             column: components["schemas"]["FilterColumn"];
@@ -2377,6 +2416,13 @@ export interface components {
             note: string;
             isTransfer: boolean;
             group?: components["schemas"]["NamedRef"];
+            /**
+             * @description Where the row came from (the `source` column).
+             * @enum {string}
+             */
+            source: "Bank" | "Manual" | "Assistant";
+            /** @description An assistant change set it and nobody undid it (✦, ADR 0030). */
+            ai: boolean;
         };
         ResolvedPeriod: {
             /** @enum {string} */
@@ -3873,7 +3919,7 @@ export interface components {
          * @description Stable machine-readable error code.
          * @enum {string}
          */
-        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "display_name_required" | "internal";
+        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "display_name_required" | "changed_since" | "internal";
         FieldError: {
             /** @description Dotted path of the offending field, e.g. `mapping.amount`. */
             field: string;
@@ -4078,6 +4124,36 @@ export interface components {
             storedBytes: number;
             days: components["schemas"]["DayUsage"][];
         };
+        AIChange: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            chatId: string;
+            proposalKey: string;
+            /** @description The proposal's action (`set_category`, `set_group`, `create_rule`, …). */
+            action: string;
+            /** @description Applied by the panel by itself. */
+            auto: boolean;
+            /** Format: date-time */
+            appliedAt: string;
+            /** Format: date-time */
+            revertedAt?: string;
+            /** @description How many transactions */
+            items: number;
+        };
+        AIChangesPage: {
+            changes: components["schemas"]["AIChange"][];
+            next?: string;
+        };
+        AIChangeRevert: {
+            change: components["schemas"]["AIChange"];
+            /** @description Transactions put back. */
+            rows: number;
+            /** @description Rules */
+            deleted: number;
+            /** @description Groups and categories it created that were kept because they are used now. */
+            kept: number;
+        };
         DeveloperInfo: {
             build: components["schemas"]["DeveloperBuild"];
             source?: components["schemas"]["DeveloperSource"];
@@ -4203,8 +4279,10 @@ export interface components {
         ThemeId: string;
         /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
         AssistantChatHeader: string;
-        /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). */
+        /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
         AssistantProposalHeader: string;
+        /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+        AssistantAutoHeader: boolean;
         Id: string;
     };
     requestBodies: never;
@@ -5125,8 +5203,10 @@ export interface operations {
             header?: {
                 /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
                 "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
-                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). */
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
                 "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
             };
             path?: never;
             cookie?: never;
@@ -5272,7 +5352,14 @@ export interface operations {
     createCategory: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5423,8 +5510,10 @@ export interface operations {
             header?: {
                 /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
                 "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
-                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). */
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
                 "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
             };
             path?: never;
             cookie?: never;
@@ -5613,7 +5702,14 @@ export interface operations {
     createGroup: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
+                "X-Assistant-Chat"?: components["parameters"]["AssistantChatHeader"];
+                /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
+                "X-Assistant-Proposal"?: components["parameters"]["AssistantProposalHeader"];
+                /** @description With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind). */
+                "X-Assistant-Auto"?: components["parameters"]["AssistantAutoHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6846,6 +6942,53 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAIChanges: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIChangesPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revertAIChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Undone. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIChangeRevert"];
+                };
             };
             default: components["responses"]["Problem"];
         };

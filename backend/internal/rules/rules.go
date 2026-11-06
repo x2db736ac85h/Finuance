@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -76,6 +77,28 @@ type Rule struct {
 	CategoryName  *string
 	MarkTransfer  bool
 	UpdatedAt     time.Time
+}
+
+// RuleState is the "after" of a rule an AI change created: a revert deletes it only while it is
+// still this rule (nobody edited its name, match, category or switches since).
+type RuleState struct {
+	Created       bool            `json:"created"`
+	Name          string          `json:"name"`
+	Enabled       bool            `json:"enabled"`
+	Match         json.RawMessage `json:"match"`
+	SetCategoryID *uuid.UUID      `json:"setCategoryId,omitempty"`
+	MarkTransfer  bool            `json:"markTransfer,omitempty"`
+}
+
+// StateOf is a stored rule's RuleState.
+func StateOf(r db.GetRuleRow) RuleState {
+	return RuleState{Created: true, Name: r.Name, Enabled: r.Enabled, Match: r.Match, SetCategoryID: r.SetCategoryID, MarkTransfer: r.MarkTransfer}
+}
+
+// Same reports whether two states describe the same rule.
+func (s RuleState) Same(o RuleState) bool {
+	same := func(a, b *uuid.UUID) bool { return (a == nil && b == nil) || (a != nil && b != nil && *a == *b) }
+	return s.Name == o.Name && s.Enabled == o.Enabled && bytes.Equal(s.Match, o.Match) && same(s.SetCategoryID, o.SetCategoryID) && s.MarkTransfer == o.MarkTransfer
 }
 
 // Input is a rule as the user edits it.
@@ -215,6 +238,15 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, in Input, enqueu
 			return err
 		}
 		if out, err = get(ctx, q, userID, id); err != nil {
+			return err
+		}
+		// a rule from an assistant proposal can be undone while nobody edited it (ADR 0030)
+		stored, err := q.GetRule(ctx, db.GetRuleParams{UserID: userID, ID: id})
+		if err != nil {
+			return err
+		}
+		if err := ledger.RecordAIChange(ctx, q, s.clock, userID, []ledger.AIItem{{Entity: ledger.AIEntityRule, ID: id,
+			After: StateOf(stored)}}); err != nil {
 			return err
 		}
 		return enqueue(ctx, tx)

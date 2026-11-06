@@ -115,7 +115,10 @@ func (l *Ledger) CreateGroupWith(ctx context.Context, userID uuid.UUID, name str
 			return err
 		}
 		out = groupOf(g)
-		return setBudget(ctx, q, userID, g.ID, budget, &out)
+		if err := setBudget(ctx, q, userID, g.ID, budget, &out); err != nil {
+			return err
+		}
+		return RecordAIChange(ctx, q, l.clock, userID, []AIItem{{Entity: AIEntityGroup, ID: g.ID, After: CreatedState{Created: true, Name: g.Name}}})
 	})
 	return out, dbErr("create group", err)
 }

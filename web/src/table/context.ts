@@ -25,7 +25,7 @@ export function periodOf(p: PeriodPref, custom: ViewState['custom']): Schemas['P
 export function contextOf(
   viewId: string,
   v: Pick<ViewState, 'search' | 'filters' | 'period' | 'custom'> &
-    Partial<Pick<ViewState, 'toolFilter' | 'hideTransfers'>>,
+    Partial<Pick<ViewState, 'toolFilter' | 'hideTransfers' | 'aiOnly'>>,
 ): QueryContext {
   const filters: NonNullable<QueryContext['filters']> = [];
   for (const [column, f] of Object.entries(v.filters)) {
@@ -44,6 +44,7 @@ export function contextOf(
     ...(filters.length ? { filters } : {}),
     ...(period ? { period } : {}),
     ...(v.toolFilter ? { toolFilter: v.toolFilter } : {}),
+    ...(v.aiOnly ? { aiAssisted: true } : {}),
     // the list shows transfers unless hidden; charts, the overview and the assistant leave them
     // out (their requests set includeTransfers: false, ADR 0018)
     includeTransfers: !v.hideTransfers,
@@ -63,9 +64,10 @@ export function useQueryContext(viewId: string): ViewQuery {
   const sortPref = useViews((s) => viewOf(s.views, viewId).sort);
   const toolFilter = useViews((s) => viewOf(s.views, viewId).toolFilter);
   const hideTransfers = useViews((s) => viewOf(s.views, viewId).hideTransfers);
+  const aiOnly = useViews((s) => viewOf(s.views, viewId).aiOnly);
   return useMemo(() => {
-    const context = contextOf(viewId, { search, filters, period, custom, toolFilter, hideTransfers });
+    const context = contextOf(viewId, { search, filters, period, custom, toolFilter, hideTransfers, aiOnly });
     const sort = sortPref ? { column: sortPref.column as Schemas['FilterColumn'], dir: sortPref.dir } : undefined;
     return { context, ctxKey: JSON.stringify(context), sort, sortKey: JSON.stringify(sort ?? null) };
-  }, [viewId, search, filters, period, custom, sortPref, toolFilter, hideTransfers]);
+  }, [viewId, search, filters, period, custom, sortPref, toolFilter, hideTransfers, aiOnly]);
 }

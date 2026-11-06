@@ -44,6 +44,10 @@ func (a *api) CreateGroup(ctx context.Context, req gen.CreateGroupRequestObject)
 	if err := a.checkCount(ctx, admin.LimitGroups); err != nil {
 		return nil, err
 	}
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	color := -1
 	if req.Body.Color != nil {
 		color = *req.Body.Color
@@ -112,8 +116,11 @@ func (a *api) BulkUpdateTransactions(ctx context.Context, req gen.BulkUpdateTran
 	if actions != 1 {
 		return nil, validation("set", "send exactly one of set, category and transfer")
 	}
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	var n int
-	var err error
 	switch {
 	case b.Set != nil:
 		n, err = a.ledger.Annotate(ctx, u, b.Ids, ledger.AnnotationPatch{SetGroup: true, GroupID: b.Set.GroupId})

@@ -34,6 +34,8 @@ const (
 	AuditDuplicateDecided = "duplicates.decided"
 	AuditDuplicateReset   = "duplicates.reset"
 	AuditAssistantApplied = "assistant.action_applied"
+	// AuditAssistantReverted: an AI change was undone (ADR 0030); the change is the entity.
+	AuditAssistantReverted = "assistant.change_reverted"
 	// Administrators' actions (ADR 0025): in the administrator's log with the account's e-mail,
 	// and in the affected account's log with {"by": "administrator"}.
 	AuditAdminUserCreated     = "admin.user_created"
@@ -72,7 +74,7 @@ const (
 // AuditActions lists every action above.
 var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPasswordChanged, AuditSessionRevoked,
 	AuditImportCommitted, AuditImportDeleted, AuditAccountDeleted, AuditExportCSV, AuditExportData,
-	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied,
+	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied, AuditAssistantReverted,
 	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,
 	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
 	AuditAdminThemeApproved, AuditAdminThemeRetired,

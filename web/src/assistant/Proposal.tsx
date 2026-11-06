@@ -1,8 +1,9 @@
 // The confirmation card of an assistant proposal (PLAN 15.7, ADR 0019): what would change, the
 // affected rows, and Apply. The server never applies a proposal; Apply sends the change through
-// the normal endpoints with the user's session.
+// the normal endpoints with the user's session. An applied card offers Undo (ADR 0030), and an
+// undone one Apply again.
 
-import { useApplyProposal, type Proposal } from '../api/hooks/assistant';
+import { useAIChanges, useApplyProposal, useRevertAIChange, type Proposal } from '../api/hooks/assistant';
 import { fmtDay } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
 import { fmtInt, fmtMoney, plural } from '../lib/format';
@@ -35,6 +36,12 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
   // the server records applied proposals in the activity log; the chat reads them back
   const done = useChat((s) => s.chatId === chatId && s.applied.includes(p.key));
   const markApplied = useChat((s) => s.markApplied);
+  // the newest change of this proposal: open (Undo) or undone (Apply again); none for proposals
+  // applied before changes were recorded
+  const changes = useAIChanges(done);
+  const revert = useRevertAIChange();
+  const mine = changes.data?.pages[0]?.changes.find((c) => c.chatId === chatId && c.proposalKey === p.key);
+  const undone = done && mine?.revertedAt !== undefined;
   const creates =
     (p.action !== 'set_group' && !p.categoryId) || (p.action === 'set_group' && !p.groupId)
       ? p.action === 'set_group'
@@ -59,6 +66,17 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
         },
       },
     );
+  };
+  const undo = () => {
+    if (!mine) return;
+    revert.mutate(mine.id, {
+      onSuccess: (r) => {
+        toast(r.rows > 0 ? `Undone for ${plural(r.rows, 'transaction')}` : 'Undone');
+      },
+      onError: (e) => {
+        toast(errorMessage(e), { kind: 'error' });
+      },
+    });
   };
   return (
     <div className="proposal" role="group" aria-label="Proposed change">
@@ -89,12 +107,22 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
       )}
       {p.matched > p.sample.length && <p className="hint">and {fmtInt(p.matched - p.sample.length)} more</p>}
       <div className="pr-a">
-        {done ? (
-          <span className="pr-done">✓ Applied</span>
+        {done && !undone ? (
+          <>
+            <span className="pr-done">✓ Applied</span>
+            {mine && !mine.revertedAt && (
+              <Button size="sm" disabled={revert.isPending} onClick={undo}>
+                Undo
+              </Button>
+            )}
+          </>
         ) : (
-          <Button size="sm" variant="primary" disabled={!chatId || apply.isPending} onClick={run}>
-            Apply
-          </Button>
+          <>
+            {undone && <span className="pr-done">↺ Undone</span>}
+            <Button size="sm" variant="primary" disabled={!chatId || apply.isPending} onClick={run}>
+              {undone ? 'Apply again' : 'Apply'}
+            </Button>
+          </>
         )}
         {p.toolFilter && onShow && (
           <Button size="sm" variant="ghost" onClick={onShow}>

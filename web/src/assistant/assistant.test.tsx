@@ -261,6 +261,18 @@ describe('ChatPanel', () => {
           proposal: request.headers.get('X-Assistant-Proposal'),
           body: await request.json(),
         });
+        // the server records the Apply as one change of the assistant's (ADR 0030)
+        db.aiChanges = [
+          {
+            id: '00000000-0000-4000-8000-0000000000e1',
+            chatId: CHAT,
+            proposalKey: 'proposal-internet',
+            action: 'set_category',
+            auto: false,
+            appliedAt: '2026-11-06T11:00:00Z',
+            items: 15,
+          },
+        ];
         return HttpResponse.json({ updated: 14 });
       }),
     );
@@ -283,7 +295,7 @@ describe('ChatPanel', () => {
     await user.click(within(card).getByRole('button', { name: 'Apply' }));
     expect(await screen.findByText('Applied to 14 transactions')).toBeTruthy();
     expect(calls).toEqual([
-      { path: '/categories', chat: null, body: { name: 'Internet' } },
+      { path: '/categories', chat: CHAT, body: { name: 'Internet' } },
       {
         path: '/transactions/bulk',
         chat: CHAT,
@@ -294,6 +306,12 @@ describe('ChatPanel', () => {
     expect(within(card).getByText('✓ Applied')).toBeTruthy();
     expect(within(card).queryByRole('button', { name: 'Apply' })).toBeNull();
     expect(useChat.getState().applied).toEqual(['proposal-internet']);
+
+    // Undo puts it back; the card then offers Apply again
+    await user.click(await within(card).findByRole('button', { name: 'Undo' }));
+    expect(await within(card).findByText('↺ Undone')).toBeTruthy();
+    expect(db.aiChanges[0]?.revertedAt).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Apply again' })).toBeTruthy();
 
     // Show in table puts the proposal's rows in the view
     await user.click(within(card).getByRole('button', { name: 'Show in table' }));

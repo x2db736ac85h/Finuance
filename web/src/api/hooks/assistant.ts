@@ -1,7 +1,7 @@
 // The assistant's API (PLAN §6.2, ADR 0015): connections and models, the user's settings, chats,
 // and the streamed answer of a question (server-sent events, read by ../../assistant/sse).
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { readEvents } from '../../assistant/sse';
 import { api, ApiError, data, toProblem, type Schemas } from '../client';
@@ -154,11 +154,14 @@ export async function sendMessage(
 
 export type Proposal = Schemas['ActionProposal'];
 
+/** The assistant headers of an Apply: the server records the change as the assistant's (ADR 0030). */
+type ApplyHeader = { 'X-Assistant-Chat': string; 'X-Assistant-Proposal': string; 'X-Assistant-Auto'?: boolean };
+
 /** The category's id: the proposal's, else created now (or found, if it was created meanwhile). */
-async function categoryFor(p: Proposal): Promise<string> {
+async function categoryFor(p: Proposal, header: ApplyHeader): Promise<string> {
   if (p.categoryId) return p.categoryId;
   const name = p.categoryName ?? '';
-  const r = await api.POST('/categories', { body: { name } });
+  const r = await api.POST('/categories', { params: { header }, body: { name } });
   if (r.response.status === 409) {
     const all = data(await api.GET('/categories'));
     const hit = all.find((c) => c.name.toLocaleLowerCase() === name.toLocaleLowerCase());
@@ -167,10 +170,10 @@ async function categoryFor(p: Proposal): Promise<string> {
   return data(r).id;
 }
 
-async function groupFor(p: Proposal): Promise<string> {
+async function groupFor(p: Proposal, header: ApplyHeader): Promise<string> {
   if (p.groupId) return p.groupId;
   const name = p.groupName ?? '';
-  const r = await api.POST('/groups', { body: { name } });
+  const r = await api.POST('/groups', { params: { header }, body: { name } });
   if (r.response.status === 409) {
     const hit = data(await api.GET('/groups')).find((g) => g.name.toLocaleLowerCase() === name.toLocaleLowerCase());
     if (hit) return hit.id;
@@ -180,16 +183,21 @@ async function groupFor(p: Proposal): Promise<string> {
 
 /**
  * Applies an assistant proposal (PLAN 15.7) through the normal endpoints with the user's session:
- * the category or group first when it is new, then the bulk change or the rule. The main request
- * carries X-Assistant-Chat and X-Assistant-Proposal, so the server records it in the activity log
- * and the chat shows it as applied after a reload. Returns how many
- * transactions changed (set_*) or the rule's current matches (create_rule).
+ * the category or group first when it is new, then the bulk change or the rule. Every request
+ * carries X-Assistant-Chat and X-Assistant-Proposal: the server records the change as the
+ * assistant's (one change for the whole Apply, undoable, ADR 0030) and in the activity log, and the
+ * chat shows it as applied after a reload. `auto` marks an Apply the panel made by itself. Returns
+ * how many transactions changed (set_*) or the rule's current matches (create_rule).
  */
-export async function applyProposal(p: Proposal, chatId: string): Promise<number> {
-  const header = { 'X-Assistant-Chat': chatId, 'X-Assistant-Proposal': p.key };
+export async function applyProposal(p: Proposal, chatId: string, auto = false): Promise<number> {
+  const header: ApplyHeader = {
+    'X-Assistant-Chat': chatId,
+    'X-Assistant-Proposal': p.key,
+    ...(auto ? { 'X-Assistant-Auto': true } : {}),
+  };
   switch (p.action) {
     case 'set_category': {
-      const id = await categoryFor(p);
+      const id = await categoryFor(p, header);
       const r = await api.POST('/transactions/bulk', {
         params: { header },
         body: { ids: p.ids ?? [], category: { id } },
@@ -197,7 +205,7 @@ export async function applyProposal(p: Proposal, chatId: string): Promise<number
       return data(r).updated;
     }
     case 'set_group': {
-      const groupId = await groupFor(p);
+      const groupId = await groupFor(p, header);
       const r = await api.POST('/transactions/bulk', {
         params: { header },
         body: { ids: p.ids ?? [], set: { groupId } },
@@ -205,7 +213,7 @@ export async function applyProposal(p: Proposal, chatId: string): Promise<number
       return data(r).updated;
     }
     case 'create_rule': {
-      const setCategoryId = await categoryFor(p);
+      const setCategoryId = await categoryFor(p, header);
       data(
         await api.POST('/rules', {
           params: { header },
@@ -232,6 +240,36 @@ export function useApplyProposal() {
       invalidateClassified(qc);
       invalidateGroups(qc);
       void qc.invalidateQueries({ queryKey: keys.rules });
+      void qc.invalidateQueries({ queryKey: keys.aiChanges });
+    },
+  });
+}
+
+export type AIChange = Schemas['AIChange'];
+
+/** The changes the assistant made, newest first (ADR 0030). */
+export function useAIChanges(enabled = true) {
+  return useInfiniteQuery({
+    queryKey: keys.aiChanges,
+    enabled,
+    queryFn: async ({ pageParam }) =>
+      data(await api.GET('/ai-changes', { params: { query: pageParam ? { cursor: pageParam } : {} } })),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.next ?? undefined,
+  });
+}
+
+/** Undoes one change; everything that shows categories, groups, rules or the activity refetches. */
+export function useRevertAIChange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => data(await api.POST('/ai-changes/{id}/revert', { params: { path: { id } } })),
+    onSuccess: () => {
+      invalidateClassified(qc);
+      invalidateGroups(qc);
+      void qc.invalidateQueries({ queryKey: keys.rules });
+      void qc.invalidateQueries({ queryKey: keys.aiChanges });
+      void qc.invalidateQueries({ queryKey: keys.activity });
     },
   });
 }

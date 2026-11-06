@@ -1,11 +1,12 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { ActivityAction, ActivityEvent } from '../api/hooks/activity';
 import { renderApp, warmUpApp } from '../test/render';
-import { API, resetDb, server } from '../test/server';
+import { account, API, db, resetDb, server, txRow } from '../test/server';
+import { useViews, viewOf } from '../stores/viewStore';
 import { describeActivity } from './Activity';
 
 beforeAll(async () => {
@@ -30,6 +31,58 @@ const ev = (id: number, action: ActivityAction, extra: Partial<ActivityEvent> = 
 });
 
 describe('activity', () => {
+  it("lists the assistant's changes with Undo and shows the rows it changed", async () => {
+    db.accounts = [account({ txCount: 2 })];
+    db.transactions = [txRow(1, { ai: true }), txRow(2)];
+    server.use(http.get(`${API}/categories`, () => HttpResponse.json([])));
+    db.aiChanges = [
+      {
+        id: '00000000-0000-4000-8000-0000000000e2',
+        chatId: '00000000-0000-4000-8000-0000000000f1',
+        proposalKey: '0123456789abcdef',
+        action: 'set_category',
+        auto: true,
+        appliedAt: '2026-11-06T11:00:00Z',
+        items: 15,
+      },
+      {
+        id: '00000000-0000-4000-8000-0000000000e1',
+        chatId: '00000000-0000-4000-8000-0000000000f1',
+        proposalKey: 'fedcba9876543210',
+        action: 'create_rule',
+        auto: false,
+        appliedAt: '2026-11-05T11:00:00Z',
+        revertedAt: '2026-11-05T12:00:00Z',
+        items: 1,
+      },
+    ];
+    const user = userEvent.setup();
+    const { router } = renderApp('/settings/activity');
+    const list = await screen.findByRole('list', { name: 'Assistant changes' });
+    const [open, undone] = within(list).getAllByRole('listitem');
+    expect(open?.textContent).toContain('Set a category · 15 items');
+    expect(open?.textContent).toContain('applied automatically');
+    expect(undone?.textContent).toContain('undone');
+    expect(within(undone as HTMLElement).queryByRole('button', { name: 'Undo' })).toBeNull();
+    await user.click(within(open as HTMLElement).getByRole('button', { name: 'Undo' }));
+    await waitFor(() => {
+      expect(within(list).getAllByText('undone')).toHaveLength(2);
+    });
+    expect(db.aiChanges[0]?.revertedAt).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Show what the assistant changed' }));
+    expect(router.state.location.pathname).toBe('/t/all');
+    expect(viewOf(useViews.getState().views, 'all').aiOnly).toBe(true);
+    expect(await screen.findByRole('button', { name: 'Remove ✦ AI assisted' })).toBeTruthy();
+    expect(db.queries.at(-1)?.context.aiAssisted).toBe(true);
+  });
+
+  it('shows no assistant section before the assistant changed anything', async () => {
+    renderApp('/settings/activity');
+    await screen.findByRole('list', { name: 'Activity' });
+    expect(screen.queryByRole('list', { name: 'Assistant changes' })).toBeNull();
+  });
+
   it('lists events newest first, flags failed sign-ins and loads more', async () => {
     const first = Array.from({ length: 50 }, (_, i) =>
       ev(100 - i, 'auth.login', { ip: '192.0.2.4', browser: 'Firefox on Linux' }),

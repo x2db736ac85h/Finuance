@@ -31,7 +31,8 @@ const ExportFormatVersion = 1
 //	                        imports (metadata), investments, preferences, assistant (settings and
 //	                        chats with their turns), rules, category aliases, activity (the
 //	                        audit log), friends (display names only), notifications, shared
-//	                        groups (as the user sees them: members, expenses, settlements)
+//	                        groups (as the user sees them: members, expenses, settlements), the
+//	                        assistant's changes (ai-changes: what each one set, before and after)
 //	transactions.csv        every transaction of every account (the CSV export format, all columns)
 //	imports/<id>/<filename> the original files
 //
@@ -76,6 +77,13 @@ func (a *api) ExportMe(ctx context.Context, _ gen.ExportMeRequestObject) (gen.Ex
 			out[i] = gen.Notification{Id: n.ID, Kind: gen.NotificationKind(n.Kind), Data: n.Data, CreatedAt: n.CreatedAt, ReadAt: n.ReadAt}
 		}
 		docs["notifications.json"] = out
+	}
+	if a.aiChanges != nil {
+		list, err := a.aiChanges.Export(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		docs["ai-changes.json"] = list
 	}
 	if a.sharing != nil {
 		list, err := a.sharing.List(ctx, u)

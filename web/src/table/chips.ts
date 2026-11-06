@@ -31,6 +31,7 @@ export function chipsOf(viewId: string, v: ViewState, periodLabel: string | unde
   const hidden = extraHidden(viewId, v.hidden).length;
   if (hidden) out.push({ key: 'hidden', icon: 'eyeoff', value: `${String(hidden)} hidden` });
   if (v.hideTransfers) out.push({ key: 'transfers', icon: 'eyeoff', value: 'transfers hidden' });
+  if (v.aiOnly) out.push({ key: 'ai', label: '✦', value: 'AI assisted' });
   return out;
 }
 
@@ -42,6 +43,7 @@ export function withoutChip(viewId: string, v: ViewState, key: string): Partial<
   if (key === 'sort') return { sort: null };
   if (key === 'hidden') return { hidden: [...newView(viewId).hidden] };
   if (key === 'transfers') return { hideTransfers: false };
+  if (key === 'ai') return { aiOnly: false };
   const col = key.slice(2);
   const f = v.filters[col];
   if (!f) return {};
@@ -61,5 +63,6 @@ export function cleared(viewId: string): Partial<ViewState> {
     custom: null,
     toolFilter: null,
     hideTransfers: false,
+    aiOnly: false,
   };
 }

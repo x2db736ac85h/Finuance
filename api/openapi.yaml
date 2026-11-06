@@ -826,6 +826,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AssistantChatHeader"
         - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       summary: Change the group, category or transfer state of many transactions
       description: >-
         Applies exactly one action to the given transactions (at most 5,000) and keeps the change as
@@ -966,6 +967,10 @@ paths:
         At most 80 characters, unique per user ignoring case and accents (`409 conflict`). A new
         category takes over its name: bank rows of that name come to it on the next import.
       tags: [categories]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -1095,6 +1100,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AssistantChatHeader"
         - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       summary: Create a rule (it goes last)
       description: >-
         A rule matches with the table's filter language and needs a search or a column filter, and
@@ -1266,6 +1272,10 @@ paths:
         The name is unique per user (ignoring case and accents), at most 40 characters. Without
         `color` the group takes the first unused colour slot. `409 conflict` when the name is taken.
       tags: [groups]
+      parameters:
+        - $ref: "#/components/parameters/AssistantChatHeader"
+        - $ref: "#/components/parameters/AssistantProposalHeader"
+        - $ref: "#/components/parameters/AssistantAutoHeader"
       requestBody:
         required: true
         content:
@@ -2335,6 +2345,44 @@ paths:
           description: Marked.
         default:
           $ref: "#/components/responses/Problem"
+  /ai-changes:
+    get:
+      operationId: listAIChanges
+      summary: The changes the assistant made, newest first
+      tags: [assistant]
+      parameters:
+        - { name: cursor, in: query, required: false, schema: { type: string, maxLength: 80 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, format: int32, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIChangesPage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /ai-changes/{id}/revert:
+    post:
+      operationId: revertAIChange
+      summary: Undo a change the assistant made
+      description: >-
+        Puts back what the change replaced, through the same functions as an edit by hand.
+        `409 changed_since` when anything it touched is different now (nothing is undone then),
+        `409 conflict` when it was undone already. Groups and categories it created are deleted only
+        when nothing uses them any more.
+      tags: [assistant]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Undone.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIChangeRevert"
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/users:
     get:
       operationId: adminListUsers
@@ -2681,10 +2729,19 @@ components:
       required: false
       description: >-
         With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the
-        chat shows the proposal as applied after a reload (`appliedProposals`).
+        chat shows the proposal as applied after a reload (`appliedProposals`). The pair also
+        records the change as the assistant's (ADR 0030): what it set before and after, so it can be
+        undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals.
       schema:
         type: string
         pattern: "^[0-9a-f]{16}$"
+    AssistantAutoHeader:
+      name: X-Assistant-Auto
+      in: header
+      required: false
+      description: With X-Assistant-Chat and X-Assistant-Proposal, the panel applied the proposal by itself (the user opted in for its kind).
+      schema:
+        type: boolean
     Id:
       name: id
       in: path
@@ -2867,6 +2924,7 @@ components:
             - duplicates.decided
             - duplicates.reset
             - assistant.action_applied
+            - assistant.change_reverted
             - admin.user_created
             - admin.role_changed
             - admin.user_disabled
@@ -3342,7 +3400,7 @@ components:
     FilterColumn:
       type: string
       description: A filterable, sortable column (PLAN §4.5).
-      enum: [bookedOn, valueOn, amount, balanceAfter, currency, payee, description, category, bankCategory, txType, reference, counterpartyAccount, account, group, note]
+      enum: [bookedOn, valueOn, amount, balanceAfter, currency, payee, description, category, bankCategory, txType, reference, counterpartyAccount, account, group, note, source]
     ColumnFilter:
       type: object
       additionalProperties: false
@@ -3449,6 +3507,9 @@ components:
           description: Only this group's transactions (the group window's export).
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
+        aiAssisted:
+          type: boolean
+          description: Only transactions an assistant change set and nobody undid (the "AI assisted" chip, ADR 0030).
     Sort:
       type: object
       additionalProperties: false
@@ -3503,7 +3564,7 @@ components:
     TransactionRow:
       type: object
       additionalProperties: false
-      required: [id, accountId, accountName, bookedOn, amount, payee, description, categorySource, bankCategory, txType, reference, counterpartyAccount, note, isTransfer]
+      required: [id, accountId, accountName, bookedOn, amount, payee, description, categorySource, bankCategory, txType, reference, counterpartyAccount, note, isTransfer, source, ai]
       properties:
         id:
           type: string
@@ -3546,6 +3607,13 @@ components:
           type: boolean
         group:
           $ref: "#/components/schemas/NamedRef"
+        source:
+          type: string
+          enum: [Bank, Manual, Assistant]
+          description: Where the row came from (the `source` column).
+        ai:
+          type: boolean
+          description: An assistant change set it and nobody undid it (✦, ADR 0030).
     ResolvedPeriod:
       type: object
       additionalProperties: false
@@ -6236,6 +6304,7 @@ components:
         - last_admin
         - contrast_failed
         - display_name_required
+        - changed_since
         - internal
     FieldError:
       type: object
@@ -6608,6 +6677,41 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DayUsage"
+    AIChange:
+      type: object
+      additionalProperties: false
+      required: [id, chatId, proposalKey, action, auto, appliedAt, items]
+      properties:
+        id: { type: string, format: uuid }
+        chatId: { type: string, format: uuid }
+        proposalKey: { type: string }
+        action:
+          type: string
+          description: The proposal's action (`set_category`, `set_group`, `create_rule`, …).
+        auto: { type: boolean, description: Applied by the panel by itself. }
+        appliedAt: { type: string, format: date-time }
+        revertedAt: { type: string, format: date-time }
+        items: { type: integer, description: How many transactions, groups, categories and rules it touched. }
+    AIChangesPage:
+      type: object
+      additionalProperties: false
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIChange"
+        next: { type: string }
+    AIChangeRevert:
+      type: object
+      additionalProperties: false
+      required: [change, rows, deleted, kept]
+      properties:
+        change:
+          $ref: "#/components/schemas/AIChange"
+        rows: { type: integer, description: Transactions put back. }
+        deleted: { type: integer, description: Rules, groups and categories the change created that were deleted. }
+        kept: { type: integer, description: Groups and categories it created that were kept because they are used now. }
     DeveloperInfo:
       type: object
       additionalProperties: false

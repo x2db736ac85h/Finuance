@@ -793,6 +793,11 @@ textarea.inp.ins-note {
   color: var(--accent);
   border-color: var(--accent);
 }
+.tag.ai {
+  color: var(--accent);
+  border-color: transparent;
+  padding-inline: 0;
+}
 .otab .tag.cad {
   margin-left: 0.375rem;
 }

@@ -144,6 +144,15 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if err := q.InsertNotification(ctx, db.InsertNotificationParams{ID: platform.NewID(), UserID: u, Kind: "friend.added", Data: []byte(`{}`), Now: now}); err != nil {
 			return fmt.Errorf("notification: %w", err)
 		}
+		change, err := q.OpenAIChange(ctx, db.OpenAIChangeParams{ID: platform.NewID(), UserID: u, ChatID: platform.NewID(),
+			ProposalKey: "0123456789abcdef", Action: "set_category", Now: now})
+		if err != nil {
+			return fmt.Errorf("ai change: %w", err)
+		}
+		if err := q.UpsertAIChangeItem(ctx, db.UpsertAIChangeItemParams{ChangeID: change, UserID: u, Entity: "category",
+			EntityID: cat.ID, After: []byte(`{"created":true}`)}); err != nil {
+			return fmt.Errorf("ai change item: %w", err)
+		}
 		if err := seedSharedLink(ctx, tx, u, d.account); err != nil {
 			return fmt.Errorf("shared expense link: %w", err)
 		}

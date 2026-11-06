@@ -18,6 +18,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 
@@ -82,6 +83,8 @@ type Deps struct {
 	// tests of the bare server: the routes answer 404.
 	Friends *friends.Service
 	Notify  *notify.Service
+	// AIChanges lists and undoes the assistant's changes (ADR 0030). Nil in tests of the bare server.
+	AIChanges *aichanges.Service
 	// Sharing runs shared groups (ADR 0028). Nil in tests of the bare server: the routes answer 404.
 	Sharing *sharing.Service
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
@@ -119,7 +122,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, commit: d.Commit, buildDate: d.BuildDate, schemaVersion: d.SchemaVersion, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	impl := &api{aiChanges: d.AIChanges, admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, commit: d.Commit, buildDate: d.BuildDate, schemaVersion: d.SchemaVersion, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

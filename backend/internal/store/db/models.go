@@ -27,6 +27,26 @@ type Account struct {
 	Kind                string
 }
 
+type AiChange struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	ChatID      uuid.UUID
+	ProposalKey string
+	Action      string
+	Auto        bool
+	AppliedAt   time.Time
+	RevertedAt  *time.Time
+}
+
+type AiChangeItem struct {
+	ChangeID uuid.UUID
+	UserID   uuid.UUID
+	Entity   string
+	EntityID uuid.UUID
+	Before   []byte
+	After    []byte
+}
+
 type AssistantChat struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID

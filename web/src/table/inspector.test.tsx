@@ -222,7 +222,7 @@ describe('status bar', () => {
     await waitFor(() => {
       expect(st.getByText(/of 5 rows/).className).toBe('st accent');
     });
-    expect(st.getByText('6 / 13 columns')).toBeTruthy();
+    expect(st.getByText('6 / 14 columns')).toBeTruthy();
     const sum = 250000 - 1001 - 1003;
     expect(st.getByText(fmtMoney({ amountMinor: sum, currency: 'PLN' }))).toBeTruthy();
     expect(st.getByText(fmtMoney({ amountMinor: -1003, currency: 'PLN' })).closest('.st')?.textContent).toMatch(/^min/);

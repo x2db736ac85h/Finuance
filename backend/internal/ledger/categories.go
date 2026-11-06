@@ -34,8 +34,11 @@ func (l *Ledger) CreateCategory(ctx context.Context, userID uuid.UUID, name stri
 			return err
 		}
 		c, err := q.CreateCategory(ctx, db.CreateCategoryParams{ID: platform.NewID(), UserID: userID, Name: name, NameN: nameKey(name)})
+		if err != nil {
+			return err
+		}
 		out = Category{ID: c.ID, Name: c.Name}
-		return err
+		return RecordAIChange(ctx, q, l.clock, userID, []AIItem{{Entity: AIEntityCategory, ID: c.ID, After: CreatedState{Created: true, Name: c.Name}}})
 	})
 	return out, dbErr("create category", err)
 }

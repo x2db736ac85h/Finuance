@@ -24,6 +24,8 @@ export type Db = {
   friends: Schemas['Friend'][];
   notifications: Schemas['Notification'][];
   notificationsRead: number;
+  /** The assistant's changes (ADR 0030); the fake revert marks one undone. */
+  aiChanges: Schemas['AIChange'][];
   /** Rows the fake query endpoint pages through (no filtering). */
   transactions: Schemas['TransactionRow'][];
   duplicatesSkipped: number;
@@ -74,6 +76,7 @@ export const freshDb = (): Db => ({
   friends: [],
   notifications: [],
   notificationsRead: 0,
+  aiChanges: [],
   defaults: {},
   themes: [],
   user: {
@@ -181,6 +184,17 @@ export const server = setupServer(
       db.notificationsRead++;
       db.notifications = db.notifications.map((n) => ({ ...n, readAt: n.readAt ?? '2026-11-03T12:00:00Z' }));
       return new HttpResponse(null, { status: 204 });
+    }),
+  ),
+  http.get(`${API}/me/activity`, () => authed(() => HttpResponse.json({ events: [] }))),
+  http.get(`${API}/ai-changes`, () => authed(() => HttpResponse.json({ changes: db.aiChanges }))),
+  http.post(`${API}/ai-changes/:id/revert`, ({ params }) =>
+    authed(() => {
+      const c = db.aiChanges.find((x) => x.id === params['id']);
+      if (!c) return problem(404, 'not_found', 'Not found.');
+      if (c.revertedAt) return problem(409, 'conflict', 'Undone already.');
+      c.revertedAt = '2026-11-06T12:00:00Z';
+      return HttpResponse.json({ change: c, rows: c.items, deleted: 0, kept: 0 });
     }),
   ),
   // developer mode off, as on most instances (tests that need the section override this)
@@ -386,5 +400,7 @@ export const txRow = (i: number, over: Partial<Schemas['TransactionRow']> = {}):
   counterpartyAccount: '',
   note: '',
   isTransfer: false,
+  source: 'Bank',
+  ai: false,
   ...over,
 });
