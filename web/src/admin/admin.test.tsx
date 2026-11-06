@@ -254,14 +254,16 @@ describe('administration', () => {
     renderApp('/admin/instance');
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Daily spending' }));
     await userEvent.click(screen.getByRole('checkbox', { name: /Overview/ }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Assistant digests/ }));
     await userEvent.type(screen.getAllByLabelText(/Accounts/)[0] ?? document.body, '3');
+    await userEvent.type(screen.getByLabelText(/Assistant tokens/), '50000');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(put).toEqual({
         version: 3,
         defaults: { cards: ['sum', 'cat', 'flow', 'pace', 'payee'] },
-        features: { overview: false },
-        limits: { maxAccounts: 3 },
+        features: { overview: false, assistantDigests: false },
+        limits: { maxAccounts: 3, assistantTokensPerDay: 50000 },
       });
     });
     // the saved version remounts the form; the confirmation still comes

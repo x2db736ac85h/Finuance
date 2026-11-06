@@ -296,6 +296,7 @@ const LIMIT_FIELDS: { key: keyof LimitOverrides; label: string; hint: string; sc
   { key: 'importsPerDay', label: 'Imports', hint: 'per 24 hours' },
   { key: 'maxUploadBytes', label: 'Largest file', hint: 'MiB', scale: 1 << 20 },
   { key: 'assistantPerHour', label: 'Assistant questions', hint: 'per hour' },
+  { key: 'assistantTokensPerDay', label: 'Assistant tokens', hint: 'per day, questions and digests' },
 ];
 
 /** The limit overrides as text fields ('' = the instance default). */
