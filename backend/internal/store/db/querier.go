@@ -133,6 +133,7 @@ type Querier interface {
 	DeleteLegacyImportFiles(ctx context.Context, arg DeleteLegacyImportFilesParams) error
 	// Deletes a manual row and returns its identity, so its annotation goes too.
 	DeleteManualTransaction(ctx context.Context, arg DeleteManualTransactionParams) (DeleteManualTransactionRow, error)
+	DeleteModelSettings(ctx context.Context, arg DeleteModelSettingsParams) (int64, error)
 	DeleteOldNotifications(ctx context.Context, arg DeleteOldNotificationsParams) (int64, error)
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
@@ -144,6 +145,7 @@ type Querier interface {
 	DeleteSharedMember(ctx context.Context, arg DeleteSharedMemberParams) (int64, error)
 	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (int64, error)
 	DeleteSharedSplits(ctx context.Context, expenseID uuid.UUID) error
+	DeleteStoredConnection(ctx context.Context, name string) (int64, error)
 	DeleteTransactionsByID(ctx context.Context, arg DeleteTransactionsByIDParams) (int64, error)
 	DeleteUnsentAssistantAttachmentsBefore(ctx context.Context, arg DeleteUnsentAssistantAttachmentsBeforeParams) (int64, error)
 	// Cascades to every user-owned table.
@@ -235,6 +237,7 @@ type Querier interface {
 	GetSharedExpense(ctx context.Context, id uuid.UUID) (SharedExpense, error)
 	GetSharedGroup(ctx context.Context, id uuid.UUID) (SharedGroup, error)
 	GetSharedMember(ctx context.Context, arg GetSharedMemberParams) (SharedGroupMember, error)
+	GetStoredConnection(ctx context.Context, name string) (AssistantConnection, error)
 	GetTheme(ctx context.Context, id uuid.UUID) (Theme, error)
 	// Detail view: the transaction with its category and group names, the rule that set the category
 	// and the other half of a transfer pair.
@@ -281,6 +284,7 @@ type Querier interface {
 	InsertSharedMember(ctx context.Context, arg InsertSharedMemberParams) (SharedGroupMember, error)
 	InsertSharedSettlement(ctx context.Context, arg InsertSharedSettlementParams) (SharedSettlement, error)
 	InsertSharedSplit(ctx context.Context, arg InsertSharedSplitParams) error
+	InsertStoredConnection(ctx context.Context, arg InsertStoredConnectionParams) (AssistantConnection, error)
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
 	InsertTransactionFromRow(ctx context.Context, arg InsertTransactionFromRowParams) error
@@ -330,6 +334,7 @@ type Querier interface {
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
 	ListLegacyImports(ctx context.Context, userID uuid.UUID) ([]ListLegacyImportsRow, error)
+	ListModelSettings(ctx context.Context) ([]AssistantModelSetting, error)
 	// The groups the user is in or invited to, with their own membership.
 	ListMySharedGroups(ctx context.Context, userID *uuid.UUID) ([]ListMySharedGroupsRow, error)
 	ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]ListNotificationsRow, error)
@@ -343,6 +348,9 @@ type Querier interface {
 	ListSharedMembers(ctx context.Context, groupID uuid.UUID) ([]SharedGroupMember, error)
 	ListSharedSettlements(ctx context.Context, groupID uuid.UUID) ([]SharedSettlement, error)
 	ListSharedSplits(ctx context.Context, groupID uuid.UUID) ([]SharedExpenseSplit, error)
+	// Administration → Assistant (ADR 0035; migration 00022): stored connections and per-model tuning.
+	// Instance tables, read and written outside any user's context.
+	ListStoredConnections(ctx context.Context) ([]AssistantConnection, error)
 	ListThemes(ctx context.Context) ([]Theme, error)
 	// Users in id order, a page at a time (the retention job visits every user under its own RLS
 	// context; users is not under RLS).
@@ -509,6 +517,8 @@ type Querier interface {
 	UpdateRule(ctx context.Context, arg UpdateRuleParams) (int64, error)
 	UpdateSharedExpense(ctx context.Context, arg UpdateSharedExpenseParams) (int64, error)
 	UpdateSharedGroup(ctx context.Context, arg UpdateSharedGroupParams) (SharedGroup, error)
+	// Versioned: no row when the version read is no longer the stored one.
+	UpdateStoredConnection(ctx context.Context, arg UpdateStoredConnectionParams) (AssistantConnection, error)
 	// Versioned like the settings; status changes go through SetThemeStatus.
 	UpdateTheme(ctx context.Context, arg UpdateThemeParams) (Theme, error)
 	// The user-editable fields of a set of transactions (ledger.Annotate). Each set_* flag says whether
@@ -535,11 +545,12 @@ type Querier interface {
 	// check category_aliases first (ResolveBankCategory).
 	UpsertCategory(ctx context.Context, arg UpsertCategoryParams) (uuid.UUID, error)
 	UpsertImportProfile(ctx context.Context, arg UpsertImportProfileParams) error
+	UpsertModelSettings(ctx context.Context, arg UpsertModelSettingsParams) (AssistantModelSetting, error)
 	UpsertSharedLink(ctx context.Context, arg UpsertSharedLinkParams) error
-	// Imports and assistant questions per day since a date, for the instance usage page.
+	// Imports, assistant questions and assistant tokens per day since a date, for the instance usage page.
 	UserActivityByDay(ctx context.Context, arg UserActivityByDayParams) ([]UserActivityByDayRow, error)
 	// Run under the user's own RLS context: counts only.
-	UserUsage(ctx context.Context, userID uuid.UUID) (UserUsageRow, error)
+	UserUsage(ctx context.Context, arg UserUsageParams) (UserUsageRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

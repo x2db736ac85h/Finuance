@@ -251,6 +251,17 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 	if err != nil {
 		return nil, err
 	}
+	if t := info.Tuning; t != nil { // the administrator's defaults for this model (ADR 0035)
+		if req.Temperature == nil && t.Temperature != nil {
+			req.Temperature = t.Temperature
+		}
+		if req.Think == llm.ThinkAuto && t.Think != "" {
+			req.Think = t.Think
+		}
+		if req.Toolset == "" {
+			req.Toolset = t.Toolset
+		}
+	}
 	if conn.Cloud {
 		s, err := r.cfg.Chats.Settings(ctx, userID)
 		if err != nil {
@@ -365,6 +376,9 @@ func (run *Run) Execute(ctx context.Context, emit func(Event)) {
 	sc.MultiAccount = facts != nil && facts.Accounts > 1
 	if r.cfg.Instructions != nil {
 		run.extra = r.cfg.Instructions(ctx)
+	}
+	if t := run.model.Tuning; t != nil && strings.TrimSpace(t.ExtraPrompt) != "" {
+		run.extra = strings.TrimSpace(run.extra + "\n" + t.ExtraPrompt)
 	}
 
 	mode := req.Mode

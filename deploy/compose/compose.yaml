@@ -61,6 +61,7 @@ services:
       FINUANCE_AI_API_KEY: ${FINUANCE_AI_API_KEY:-}
       FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
       FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
+      FINUANCE_INSTANCE_KEY: ${FINUANCE_INSTANCE_KEY:-} # seals API keys entered in the admin panel (ADR 0035)
       FINUANCE_AI_CONNECTIONS_FILE: ${FINUANCE_AI_CONNECTIONS_FILE:-}
       # Administration → Developer (docs/admin.md): build, source and tool links, administrators only.
       # The example links are mounted at /etc/finuance/developer/links.example.json.
@@ -101,6 +102,7 @@ services:
       FINUANCE_AI_API_KEY: ${FINUANCE_AI_API_KEY:-}
       FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
       FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
+      FINUANCE_INSTANCE_KEY: ${FINUANCE_INSTANCE_KEY:-} # seals API keys entered in the admin panel (ADR 0035)
       FINUANCE_AI_CONNECTIONS_FILE: ${FINUANCE_AI_CONNECTIONS_FILE:-}
     ports:
       - "127.0.0.1:9091:9090" # admin (/metrics, /readyz) — dev only

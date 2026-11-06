@@ -1,6 +1,7 @@
-// Administration → Assistant (Phase 20): the instructions added to every system prompt, and the
-// advice library the assistant searches (ADR 0034). Articles are markdown, shown with the chat's
-// renderer; the starter articles arrive as drafts for an administrator to read and publish.
+// Administration → Assistant (Phase 20): the connections and per-model tuning (ADR 0035), the
+// instructions added to every system prompt, and the advice library the assistant searches
+// (ADR 0034). Articles are markdown, shown with the chat's renderer; the starter articles arrive
+// as drafts for an administrator to read and publish.
 
 import { useState } from 'react';
 
@@ -18,6 +19,7 @@ import {
   type InstanceSettings,
 } from '../api/hooks/admin';
 import { Markdown } from '../assistant/md';
+import { Connections, Tuning } from './AssistantConnections';
 import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
 import { Button } from '../ui/Button';
@@ -30,6 +32,8 @@ export function AssistantAdmin() {
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <>
+      <Connections />
+      <Tuning />
       <Instructions />
       <Library editing={editing} onEdit={setEditing} />
       {editing && <ArticleEditor key={editing} id={editing === 'new' ? null : editing} onDone={setEditing} />}

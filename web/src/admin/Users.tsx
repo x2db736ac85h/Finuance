@@ -383,7 +383,8 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
       <p className="hint">
         Created {fmtDateTime(u.createdAt)} · {fmtInt(u.usage.accounts)} accounts · {fmtInt(u.usage.transactions)}{' '}
         transactions · {fmtInt(u.usage.imports)} imports · {fmtBytes(u.usage.storedBytes)} of files ·{' '}
-        {fmtInt(u.usage.chats)} chats
+        {fmtInt(u.usage.chats)} chats · the assistant in 30 days: {fmtInt(u.usage.assistantRuns)} runs,{' '}
+        {fmtInt(u.usage.assistantTokens)} tokens
         {u.usage.lastActivity ? ` · last activity ${fmtDateTime(u.usage.lastActivity)}` : ''}
       </p>
       <div className="set-actions adm-actions">

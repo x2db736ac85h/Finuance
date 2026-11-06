@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/secret"
 )
 
 // Env is the deployment environment; it controls log format and cookie defaults.
@@ -46,12 +48,16 @@ type Config struct {
 	TrustedProxies       []netip.Prefix
 	// AIConnections are the model servers the assistant may use; none = assistant disabled.
 	AIConnections   []AIConnection
+	AIContextTokens int           // the context size assumed when a server reports none
 	AITimeout       time.Duration // one model request, first byte to last
 	AIIdleTimeout   time.Duration // a model stream silent this long ends (also before its first token)
 	AIMaxConcurrent int           // assistant runs at once per replica
 	AIMaxChats      int           // chats kept per user (the oldest go first)
 	AIRatePerHour   int           // messages per user per hour
 	AITokensPerDay  int64         // tokens per user per UTC day, the outer bound of assistantTokensPerDay (ADR 0033)
+	// InstanceKey seals secrets stored in the database (assistant connections' API keys, ADR 0035);
+	// nil when FINUANCE_INSTANCE_KEY is unset.
+	InstanceKey []byte
 	// Argon2id parameters for new password hashes (ADR 0010). Existing hashes keep theirs until
 	// the next successful login rehashes them.
 	Argon2MemoryKiB uint32
@@ -130,7 +136,15 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		Argon2Threads:        uint8(p.int("FINUANCE_ARGON2_THREADS", 1, 1, 16)),                   //nolint:gosec // bounded by p.int
 	}
 	c.Developer = p.developer(p.bool("FINUANCE_DEVELOPER_MODE", false))
-	c.AIConnections = p.aiConnections(p.int("FINUANCE_AI_CONTEXT_TOKENS", 8192, 1024, 10_000_000))
+	c.AIContextTokens = p.int("FINUANCE_AI_CONTEXT_TOKENS", 8192, 1024, 10_000_000)
+	c.AIConnections = p.aiConnections(c.AIContextTokens)
+	if v, ok := p.raw("FINUANCE_INSTANCE_KEY"); ok && strings.TrimSpace(v) != "" {
+		if k, err := secret.ParseKey(v); err != nil {
+			p.fail("FINUANCE_INSTANCE_KEY", err.Error())
+		} else {
+			c.InstanceKey = k
+		}
+	}
 	switch c.Env {
 	case EnvDev, EnvTest, EnvProd:
 	default:

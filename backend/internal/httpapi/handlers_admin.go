@@ -47,7 +47,8 @@ func adminUserDTO(u admin.User) gen.AdminUser {
 	return gen.AdminUser{Id: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, IsAdmin: u.IsAdmin,
 		Disabled: u.Disabled, MustChangePassword: u.MustChangePassword, CreatedAt: u.CreatedAt, LastLoginAt: u.LastLoginAt,
 		Limits: limitsDTO(u.Limits), Usage: gen.UserUsage{Accounts: u.Usage.Accounts, Transactions: u.Usage.Transactions,
-			Imports: u.Usage.Imports, StoredBytes: u.Usage.StoredBytes, Chats: u.Usage.Chats, LastActivity: u.Usage.LastActivity}}
+			Imports: u.Usage.Imports, StoredBytes: u.Usage.StoredBytes, Chats: u.Usage.Chats, LastActivity: u.Usage.LastActivity,
+			AssistantRuns: u.Usage.AssistantRuns, AssistantTokens: u.Usage.AssistantTokens}}
 }
 
 func totalsDTO(t admin.Totals) gen.UserTotals {
@@ -229,7 +230,7 @@ func (a *api) AdminUsage(ctx context.Context, req gen.AdminUsageRequestObject) (
 	out := gen.AdminUsage200JSONResponse{Totals: totalsDTO(u.Totals), Accounts: u.Accounts, Transactions: u.Transactions,
 		Imports: u.Imports, StoredBytes: u.StoredBytes, Days: make([]gen.DayUsage, 0, len(u.Days))}
 	for _, d := range u.Days {
-		out.Days = append(out.Days, gen.DayUsage{Day: *dateDTO(&d.Day), Imports: d.Imports, Questions: d.Questions})
+		out.Days = append(out.Days, gen.DayUsage{Day: *dateDTO(&d.Day), Imports: d.Imports, Questions: d.Questions, Tokens: d.Tokens})
 	}
 	return out, nil
 }

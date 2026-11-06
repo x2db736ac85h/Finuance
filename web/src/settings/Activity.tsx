@@ -81,6 +81,10 @@ const DESCRIBE: Record<ActivityAction, (m: Meta) => string> = {
       ? `Added ${String(m['starter'])} starter articles to the advice library`
       : `Saved the advice article ${str(m, 'slug')} (${str(m, 'status')})`,
   'admin.advice_deleted': (m) => `Deleted the advice article ${str(m, 'slug')}`,
+  'admin.assistant_changed': (m) =>
+    m['model'] !== undefined
+      ? `Tuned the model ${str(m, 'model')} of the connection ${str(m, 'connection')}`
+      : `Changed the assistant connection ${str(m, 'connection')} (${str(m, 'change')})`,
   // Transactions added by hand to a cash account: no amounts or payees in the log.
   'transaction.added': () => 'Added a transaction by hand',
   'transaction.edited': () => 'Changed a transaction added by hand',

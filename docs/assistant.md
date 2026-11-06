@@ -83,6 +83,12 @@ To offer several servers, point `FINUANCE_AI_CONNECTIONS_FILE` at a JSON file in
 
 An invalid file stops the api at startup and names every problem at once.
 
+## Connections and tuning in the admin panel
+
+Administrators can add further connections in **Administration → Assistant** (ADR 0035), next to the file's, which are shown there read only. The same rules apply (a local server on a private address, a cloud service over https with each user's consent). An API key entered there is sealed with AES-256-GCM under `FINUANCE_INSTANCE_KEY` (32 random bytes in base64: `openssl rand -base64 32`, or `tools/seal-secrets.sh <env> instance-key` and the chart's `assistant.instanceKeySecret` on Kubernetes); it is never shown again, and changing the connection's address drops it. Without the variable, connections without a key still work. Every api and worker process reads the stored connections every minute, so other replicas follow a change within a minute.
+
+**Tuning per model** sets, for one model of any connection, the temperature, the thinking level and the tool set used when a question doesn't set them, the context size to plan with, and a short note added after the instance's instructions. These are settings; no model is trained.
+
 ## Capabilities and thinking
 
 For each model the assistant works out whether it calls tools, how its thinking is controlled, and its context size. It reads the server's own report (LM Studio's model list) and the model id, then applies your `caps` overrides:
@@ -129,6 +135,7 @@ Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 to
 | `FINUANCE_AI_IDLE_TIMEOUT` | `60s` | A model stream silent this long ends, also before its first token (at most `FINUANCE_AI_TIMEOUT`). A small GPU reading a long prompt (system prompt + tool results, ~8,000 tokens) can be silent for over a minute: raise both (e.g. `300s` / `150s` on a 4 GB card) |
 | `FINUANCE_AI_MAX_CONCURRENT` | `2` | Answers written at once per api replica (`503 assistant_busy` beyond) |
 | `FINUANCE_AI_RATE_PER_HOUR` | `30` | Questions per user per hour (`429`) |
+| `FINUANCE_INSTANCE_KEY` | (none) | Seals the API keys of connections added in the admin panel (32 bytes, base64; ADR 0035) |
 | `FINUANCE_AI_TOKENS_PER_DAY` | `200000` | Tokens per user per UTC day, questions and digests together: the outer bound of the `assistantTokensPerDay` limit (`422 limit_reached` once used; a digest is skipped) |
 | `FINUANCE_AI_MAX_CHATS` | `25` | Chats kept per user; the oldest go first |
 

@@ -103,11 +103,15 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	for _, w := range warnings {
 		log.Warn(w)
 	}
+	stored, err := loadStored(ctx, c, cfg, conns, log)
+	if err != nil {
+		return err
+	}
 	notes := notify.New(c.store, platform.SystemClock{})
 	adm := NewAdmin(c.store, authSvc, cfg)
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Commit: b.Commit, BuildDate: b.Date, SchemaVersion: c.store.SchemaVersion, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: authSvc, Admin: adm, Advice: advice.New(c.store, platform.SystemClock{}), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), AIChanges: aichanges.New(c.store, led, platform.SystemClock{}), Goals: goals.New(c.store, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
+		Auth: authSvc, Admin: adm, Advice: advice.New(c.store, platform.SystemClock{}), AssistantAdmin: stored, Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), AIChanges: aichanges.New(c.store, led, platform.SystemClock{}), Goals: goals.New(c.store, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
 		Legacy: legacyimport.New(c.store, led, nil, platform.SystemClock{}),
 		Rules:  rules.New(c.store, platform.SystemClock{}),
 		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
@@ -186,19 +190,33 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	return err
 }
 
-// newDigests is the worker's digest service (ADR 0033), or nil when no model connection is
-// configured. The worker runs the assistant for digests only, one run at a time.
+// loadStored reads the connections added in the panel into conns and keeps reloading them every
+// minute (ADR 0035). A database that can't be read yet leaves the file's connections only.
+func loadStored(ctx context.Context, c *common, cfg config.Config, conns *assistant.Connections, log *slog.Logger) (*assistant.ConnectionStore, error) {
+	stored, err := assistant.NewConnectionStore(c.store, cfg.InstanceKey, platform.SystemClock{}, conns, cfg.AIConnections, cfg.AIContextTokens, log)
+	if err != nil {
+		return nil, err
+	}
+	if err := stored.Load(ctx); err != nil {
+		log.Warn("assistant connections from the panel not loaded yet", "error", err)
+	}
+	go stored.Run(ctx)
+	return stored, nil
+}
+
+// newDigests is the worker's digest service (ADR 0033). The worker runs the assistant for digests
+// only, one run at a time, with the file's connections and those added in the panel.
 func newDigests(ctx context.Context, c *common, cfg config.Config, authSvc *auth.Service, notes *notify.Service, log *slog.Logger) (jobs.DigestWriter, error) {
 	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, cfg.AIIdleTimeout, platform.SystemClock{}, nil)
-	if !conns.Enabled() {
-		return nil, nil
-	}
 	warnings, err := conns.CheckHosts(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	for _, w := range warnings {
 		log.Warn(w)
+	}
+	if _, err := loadStored(ctx, c, cfg, conns, log); err != nil {
+		return nil, err
 	}
 	adm := NewAdmin(c.store, authSvc, cfg)
 	ai := assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},

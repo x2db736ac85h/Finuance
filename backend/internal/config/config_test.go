@@ -202,3 +202,17 @@ func TestDemoMode(t *testing.T) {
 		t.Errorf("not a demo: %+v, %v", c, err)
 	}
 }
+
+func TestInstanceKeyAndTokens(t *testing.T) {
+	c, err := Load(env(map[string]string{"FINUANCE_INSTANCE_KEY": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=", "FINUANCE_AI_TOKENS_PER_DAY": "50000"}), ForHealthcheck)
+	if err != nil || len(c.InstanceKey) != 32 || c.InstanceKey[0] != 1 || c.AITokensPerDay != 50_000 {
+		t.Fatalf("key %x, tokens %d, %v", c.InstanceKey, c.AITokensPerDay, err)
+	}
+	if c, err := Load(env(nil), ForHealthcheck); err != nil || c.InstanceKey != nil || c.AITokensPerDay != 200_000 {
+		t.Errorf("defaults: key %x, tokens %d, %v", c.InstanceKey, c.AITokensPerDay, err)
+	}
+	_, err = Load(env(map[string]string{"FINUANCE_INSTANCE_KEY": "c2hvcnQ=", "FINUANCE_AI_TOKENS_PER_DAY": "10"}), ForHealthcheck)
+	if v := vars(err); len(v) != 2 || v[0] != "FINUANCE_AI_TOKENS_PER_DAY" && v[1] != "FINUANCE_AI_TOKENS_PER_DAY" {
+		t.Errorf("bad key and tokens: %v", err)
+	}
+}

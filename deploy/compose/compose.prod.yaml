@@ -67,6 +67,7 @@ services:
       FINUANCE_AI_API_KEY: ${FINUANCE_AI_API_KEY:-}
       FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
       FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
+      FINUANCE_INSTANCE_KEY: ${FINUANCE_INSTANCE_KEY:-} # seals API keys entered in the admin panel (ADR 0035)
       # Administration → Developer with the build only (docs/admin.md; links need a mounted file)
       FINUANCE_DEVELOPER_MODE: ${FINUANCE_DEVELOPER_MODE:-false}
     depends_on:
@@ -95,6 +96,7 @@ services:
       FINUANCE_AI_API_KEY: ${FINUANCE_AI_API_KEY:-}
       FINUANCE_AI_DEFAULT_MODEL: ${FINUANCE_AI_DEFAULT_MODEL:-}
       FINUANCE_AI_ALLOW_REMOTE: ${FINUANCE_AI_ALLOW_REMOTE:-}
+      FINUANCE_INSTANCE_KEY: ${FINUANCE_INSTANCE_KEY:-} # seals API keys entered in the admin panel (ADR 0035)
     depends_on:
       migrate:
         condition: service_completed_successfully

@@ -38,6 +38,7 @@ type api struct {
 	auth              *auth.Service
 	admin             *admin.Service
 	advice            *advice.Service
+	aiAdmin           *assistant.ConnectionStore
 	aiChanges         *aichanges.Service // lists and undoes the assistant's changes (ADR 0030)
 	goals             *goals.Service     // savings and reduction goals (ADR 0031)
 	friends           *friends.Service

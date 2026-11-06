@@ -10,6 +10,7 @@ export function UsageAdmin() {
   const u = usage.data;
   if (!u) return <div className="set-card">{usage.isError ? errorMessage(usage.error) : 'Loading…'}</div>;
   const peak = Math.max(1, ...u.days.map((d) => Math.max(d.imports, d.questions)));
+  const tokens = u.days.reduce((n, d) => n + d.tokens, 0);
   const tiles: [string, string][] = [
     ['Accounts', fmtInt(u.totals.users)],
     ['Active in 7 days', fmtInt(u.totals.active7)],
@@ -17,6 +18,7 @@ export function UsageAdmin() {
     ['Transactions', fmtInt(u.transactions)],
     ['Imports', fmtInt(u.imports)],
     ['Stored files', fmtBytes(u.storedBytes)],
+    ['Assistant tokens in 30 days', fmtInt(tokens)],
   ];
   return (
     <>
@@ -43,6 +45,9 @@ export function UsageAdmin() {
               <th scope="col" className="num">
                 Assistant questions
               </th>
+              <th scope="col" className="num">
+                Assistant tokens
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -61,6 +66,7 @@ export function UsageAdmin() {
                   />
                   {fmtInt(d.questions)}
                 </td>
+                <td className="num">{fmtInt(d.tokens)}</td>
               </tr>
             ))}
           </tbody>

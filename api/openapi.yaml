@@ -2911,6 +2911,120 @@ paths:
           description: Deleted.
         default:
           $ref: "#/components/responses/Problem"
+  /admin/assistant/connections:
+    get:
+      operationId: adminListConnections
+      summary: The assistant's connections (ADR 0035)
+      description: The connections file's (read only) and those added here; never an API key.
+      tags: [admin]
+      responses:
+        "200":
+          description: The file's first, then the ones added here by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminConnection"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: adminCreateConnection
+      summary: Add a connection
+      description: >-
+        The connections file's rules apply (a local connection on a public address is refused, a cloud one
+        must use https). An API key needs FINUANCE_INSTANCE_KEY; it is sealed and never shown again.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminConnectionInput"
+      responses:
+        "201":
+          description: Added.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConnection"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/connections/{name}:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{0,39}$"
+    put:
+      operationId: adminUpdateConnection
+      summary: Change a connection added here
+      description: >-
+        Versioned. `apiKey` keeps (`keep`), removes (`remove`) or replaces (`replace`) the key; a new address
+        or cloud setting drops a kept key, so a key only ever goes where it was entered for.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminConnectionUpdate"
+      responses:
+        "200":
+          description: The connection as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConnection"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: adminDeleteConnection
+      summary: Delete a connection added here
+      tags: [admin]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/tuning:
+    get:
+      operationId: adminListTuning
+      summary: Per-model tuning
+      tags: [admin]
+      responses:
+        "200":
+          description: By connection and model.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModelTuning"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: adminPutTuning
+      summary: Save a model's tuning
+      description: A tuning that sets nothing removes the model's.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModelTuning"
+      responses:
+        "200":
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelTuning"
+        default:
+          $ref: "#/components/responses/Problem"
   /advice/{slug}:
     parameters:
       - name: slug
@@ -3296,6 +3410,7 @@ components:
             - admin.theme_retired
             - admin.advice_changed
             - admin.advice_deleted
+            - admin.assistant_changed
             - transaction.added
             - transaction.edited
             - transaction.deleted
@@ -7170,6 +7285,161 @@ components:
         updatedAt:
           type: string
           format: date-time
+    AdminConnection:
+      type: object
+      additionalProperties: false
+      required: [name, label, api, baseUrl, cloud, defaultModel, models, contextTokens, source, hasKey, keyUnreadable, version]
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        api:
+          type: string
+          enum: [openai, anthropic]
+        baseUrl:
+          type: string
+        cloud:
+          type: boolean
+        defaultModel:
+          type: string
+        models:
+          type: array
+          items:
+            type: string
+          description: Model id patterns offered (globs); empty offers every chat model.
+        contextTokens:
+          type: integer
+        source:
+          type: string
+          enum: [file, panel]
+          description: The connections file's (read only) or added here.
+        hasKey:
+          type: boolean
+        keyUnreadable:
+          type: boolean
+          description: The stored key was sealed under another instance key; enter it again.
+        version:
+          type: integer
+          format: int32
+          description: 0 for the file's.
+        updatedAt:
+          type: string
+          format: date-time
+    AdminConnectionInput:
+      type: object
+      additionalProperties: false
+      required: [name, label, api, baseUrl, cloud, defaultModel, models, contextTokens]
+      properties:
+        name:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{0,39}$"
+        label:
+          type: string
+          maxLength: 80
+        api:
+          type: string
+          enum: [openai, anthropic]
+        baseUrl:
+          type: string
+          maxLength: 500
+        cloud:
+          type: boolean
+        defaultModel:
+          type: string
+          maxLength: 200
+        models:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 200
+        contextTokens:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        apiKey:
+          type: string
+          maxLength: 1000
+          writeOnly: true
+    AdminConnectionUpdate:
+      type: object
+      additionalProperties: false
+      required: [version, label, api, baseUrl, cloud, defaultModel, models, contextTokens, keyAction]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+        label:
+          type: string
+          maxLength: 80
+        api:
+          type: string
+          enum: [openai, anthropic]
+        baseUrl:
+          type: string
+          maxLength: 500
+        cloud:
+          type: boolean
+        defaultModel:
+          type: string
+          maxLength: 200
+        models:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 200
+        contextTokens:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        keyAction:
+          type: string
+          enum: [keep, remove, replace]
+        apiKey:
+          type: string
+          maxLength: 1000
+          writeOnly: true
+          description: The new key with `replace`.
+    ModelTuning:
+      type: object
+      additionalProperties: false
+      required: [connection, model, extraPrompt]
+      description: >-
+        An administrator's defaults for one model (ADR 0035), used when a question doesn't set them;
+        the context size replaces the detected one and the note follows the instructions in the prompt.
+      properties:
+        connection:
+          type: string
+          minLength: 1
+          maxLength: 40
+        model:
+          type: string
+          minLength: 1
+          maxLength: 200
+        temperature:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 2
+        contextTokens:
+          type: integer
+          minimum: 1024
+          maximum: 10000000
+        think:
+          type: string
+          enum: ["off", auto, low, medium, high]
+        toolset:
+          type: string
+          enum: [full, compact]
+        extraPrompt:
+          type: string
+          maxLength: 1000
+        updatedAt:
+          type: string
+          format: date-time
     InstanceAssistant:
       type: object
       additionalProperties: false
@@ -7277,8 +7547,16 @@ components:
       type: object
       additionalProperties: false
       description: Counts of an account's data (never the data).
-      required: [accounts, transactions, imports, storedBytes, chats]
+      required: [accounts, transactions, imports, storedBytes, chats, assistantRuns, assistantTokens]
       properties:
+        assistantRuns:
+          type: integer
+          format: int64
+          description: Assistant questions and digests in the last 30 days (UTC).
+        assistantTokens:
+          type: integer
+          format: int64
+          description: Their tokens in the last 30 days (UTC).
         accounts:
           type: integer
           format: int64
@@ -7432,7 +7710,7 @@ components:
     DayUsage:
       type: object
       additionalProperties: false
-      required: [day, imports, questions]
+      required: [day, imports, questions, tokens]
       properties:
         day:
           type: string
@@ -7444,6 +7722,10 @@ components:
           type: integer
           format: int64
           description: Questions asked to the assistant.
+        tokens:
+          type: integer
+          format: int64
+          description: The assistant's tokens, questions and digests together.
     InstanceUsage:
       type: object
       additionalProperties: false

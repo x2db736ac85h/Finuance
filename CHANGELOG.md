@@ -32,6 +32,10 @@ notes of their version.
   starter articles) that the assistant searches for general money questions and names in its
   answer; each opens in a window from the lookup. Administrators can also add a few lines of
   instructions to every question.
+- **Administration → Assistant**: add model connections in the panel next to the configuration
+  file's (API keys sealed under `FINUANCE_INSTANCE_KEY`, never shown again), tune a model's
+  defaults (temperature, thinking, tools, context, a note), and see each person's assistant runs
+  and tokens (never what they asked).
 - **A daily token budget** for the assistant per user, questions and digests together
   (`FINUANCE_AI_TOKENS_PER_DAY`, 200,000 by default; a limit administrators can lower per account).
 

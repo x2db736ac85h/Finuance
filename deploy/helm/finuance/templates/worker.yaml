@@ -45,6 +45,10 @@ spec:
             - secretRef:
                 name: {{ .Values.assistant.envSecret }}
             {{- end }}
+            {{- if and .Values.assistant.enabled .Values.assistant.instanceKeySecret }}
+            - secretRef:
+                name: {{ .Values.assistant.instanceKeySecret }}
+            {{- end }}
           env:
             {{- include "finuance.dbPassword" .Values.database.app | nindent 12 }}
             {{- if $assistantFile }}

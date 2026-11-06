@@ -184,3 +184,55 @@ export function useDeleteAdvice() {
 export function useAddStarterAdvice() {
   return useAdminMutation(async () => data(await api.POST('/admin/advice/starter')));
 }
+
+// The assistant's connections and per-model tuning (ADR 0035). Keys go in, never come out.
+export type AdminConnection = Schemas['AdminConnection'];
+export type ModelTuning = Schemas['ModelTuning'];
+
+export function useConnections() {
+  return useQuery({
+    queryKey: [...keys.admin, 'connections'],
+    queryFn: async () => data(await api.GET('/admin/assistant/connections')),
+  });
+}
+
+/** A connection changes what users can pick: their status is read again too. */
+function useConnectionMutation<A, R>(fn: (a: A) => Promise<R>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: keys.admin });
+      await qc.invalidateQueries({ queryKey: keys.assistantStatus });
+    },
+  });
+}
+
+export function useCreateConnection() {
+  return useConnectionMutation(async (body: Schemas['AdminConnectionInput']) =>
+    data(await api.POST('/admin/assistant/connections', { body })),
+  );
+}
+
+export function useUpdateConnection() {
+  return useConnectionMutation(async ({ name, ...body }: Schemas['AdminConnectionUpdate'] & { name: string }) =>
+    data(await api.PUT('/admin/assistant/connections/{name}', { params: { path: { name } }, body })),
+  );
+}
+
+export function useDeleteConnection() {
+  return useConnectionMutation(async (name: string) => {
+    data(await api.DELETE('/admin/assistant/connections/{name}', { params: { path: { name } } }));
+  });
+}
+
+export function useTuning() {
+  return useQuery({
+    queryKey: [...keys.admin, 'tuning'],
+    queryFn: async () => data(await api.GET('/admin/assistant/tuning')),
+  });
+}
+
+export function usePutTuning() {
+  return useAdminMutation(async (body: ModelTuning) => data(await api.PUT('/admin/assistant/tuning', { body })));
+}

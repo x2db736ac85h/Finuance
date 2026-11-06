@@ -531,6 +531,7 @@ All secrets are SealedSecrets in `deploy/environments/homelab/secrets/`. They ar
 | `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, merge |
 | `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, merge, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
 | `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, merge, then `kubectl -n finuance rollout restart deploy/finuance-api` |
+| `finuance-instance-key` (optional) | `tools/seal-secrets.sh homelab instance-key` (random), `assistant.instanceKeySecret: finuance-instance-key` | a new key makes the API keys entered in Administration → Assistant unreadable: enter them again after the rollout (ADR 0035) |
 
 ### Back up the controller key
 

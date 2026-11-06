@@ -15,15 +15,22 @@ import (
 type Usage struct {
 	Accounts, Transactions, Imports, StoredBytes, Chats int64
 	LastActivity                                        *time.Time
+	// the assistant over the last 30 days (UTC): runs (questions and digests) and tokens, never
+	// what was asked (ADR 0035)
+	AssistantRuns, AssistantTokens int64
 }
+
+// usageDays is the window of the per-user assistant usage.
+const usageDays = 30
 
 // usage counts one user's data under that user's own row-level-security context, in a read-only
 // transaction, the way the cleanup jobs reach every user (ledger.CleanupAudit).
 func (s *Service) usage(ctx context.Context, userID uuid.UUID) (Usage, error) {
 	var u Usage
 	err := s.st.WithUserReadOnly(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		r, err := q.UserUsage(ctx, userID)
-		u = Usage{Accounts: r.Accounts, Transactions: r.Transactions, Imports: r.Imports, StoredBytes: r.StoredBytes, Chats: r.Chats}
+		r, err := q.UserUsage(ctx, db.UserUsageParams{UserID: userID, Since: s.usageSince()})
+		u = Usage{Accounts: r.Accounts, Transactions: r.Transactions, Imports: r.Imports, StoredBytes: r.StoredBytes, Chats: r.Chats,
+			AssistantRuns: r.AssistantRuns, AssistantTokens: r.AssistantTokens}
 		if r.LastActivity.Unix() > 0 {
 			at := r.LastActivity
 			u.LastActivity = &at
@@ -33,10 +40,14 @@ func (s *Service) usage(ctx context.Context, userID uuid.UUID) (Usage, error) {
 	return u, err
 }
 
+func (s *Service) usageSince() platform.Date {
+	return platform.DateOf(s.clock.Now().UTC().AddDate(0, 0, 1-usageDays), time.UTC)
+}
+
 // DayUsage is the instance's activity on one day.
 type DayUsage struct {
-	Day                platform.Date
-	Imports, Questions int64
+	Day                        platform.Date
+	Imports, Questions, Tokens int64
 }
 
 // InstanceUsage is the instance as a whole.
@@ -81,7 +92,7 @@ func (s *Service) InstanceUsage(ctx context.Context, days int) (InstanceUsage, e
 				return InstanceUsage{}, err
 			}
 			err := s.st.WithUserReadOnly(ctx, id, func(q *db.Queries, _ pgx.Tx) error {
-				r, err := q.UserUsage(ctx, id)
+				r, err := q.UserUsage(ctx, db.UserUsageParams{UserID: id, Since: s.usageSince()})
 				if err != nil {
 					return err
 				}
@@ -94,6 +105,7 @@ func (s *Service) InstanceUsage(ctx context.Context, days int) (InstanceUsage, e
 					if i < len(out.Days) {
 						out.Days[i].Imports += d.Imports
 						out.Days[i].Questions += d.Questions
+						out.Days[i].Tokens += d.Tokens
 					}
 				}
 				return err

@@ -87,6 +87,21 @@ type AssistantChat struct {
 	Kind       string
 }
 
+type AssistantConnection struct {
+	Name          string
+	Label         string
+	Api           string
+	BaseUrl       string
+	Cloud         bool
+	DefaultModel  string
+	Models        []string
+	ContextTokens int32
+	ApiKey        []byte
+	Version       int32
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
 type AssistantMessage struct {
 	ID         int64
 	ChatID     uuid.UUID
@@ -102,6 +117,17 @@ type AssistantMessage struct {
 	Meta       []byte
 	Error      []byte
 	CreatedAt  time.Time
+}
+
+type AssistantModelSetting struct {
+	Connection    string
+	Model         string
+	Temperature   *float32
+	ContextTokens *int32
+	Think         *string
+	Toolset       *string
+	ExtraPrompt   string
+	UpdatedAt     time.Time
 }
 
 type AssistantSetting struct {

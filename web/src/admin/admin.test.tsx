@@ -24,7 +24,15 @@ afterAll(() => {
   server.close();
 });
 
-const usage = { accounts: 1, transactions: 917, imports: 1, storedBytes: 150_000, chats: 0 };
+const usage = {
+  accounts: 1,
+  transactions: 917,
+  imports: 1,
+  storedBytes: 150_000,
+  chats: 0,
+  assistantRuns: 12,
+  assistantTokens: 34_500,
+};
 const adminUser = (over: Partial<Schemas['AdminUser']> = {}): Schemas['AdminUser'] => ({
   id: '00000000-0000-4000-8000-0000000000a1',
   email: 'sam@example.com',
@@ -435,6 +443,114 @@ describe('administration', () => {
       within(await screen.findByRole('form', { name: 'Article' })).getByRole('button', { name: 'Delete' }),
     );
     expect(await screen.findByText('No articles yet.')).toBeTruthy();
+  });
+
+  it('adds and changes connections with a key that never comes back, and tunes a model (ADR 0035)', async () => {
+    const conn = (over: Partial<Schemas['AdminConnection']>): Schemas['AdminConnection'] => ({
+      name: 'lmstudio',
+      label: 'LM Studio',
+      api: 'openai',
+      baseUrl: 'http://10.0.0.5:1234/v1',
+      cloud: false,
+      defaultModel: '',
+      models: [],
+      contextTokens: 8192,
+      source: 'file',
+      hasKey: false,
+      keyUnreadable: false,
+      version: 0,
+      ...over,
+    });
+    let conns = [conn({})];
+    const posted: Schemas['AdminConnectionInput'][] = [];
+    const updated: Schemas['AdminConnectionUpdate'][] = [];
+    const tuned: Schemas['ModelTuning'][] = [];
+    server.use(
+      http.get(`${API}/admin/settings`, () =>
+        HttpResponse.json({
+          version: 1,
+          defaults: {},
+          features: {},
+          limits: {},
+        } satisfies Schemas['InstanceSettingsDoc']),
+      ),
+      http.get(`${API}/admin/advice`, () => HttpResponse.json([])),
+      http.get(`${API}/admin/assistant/connections`, () => HttpResponse.json(conns)),
+      http.post(`${API}/admin/assistant/connections`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AdminConnectionInput'];
+        posted.push(body);
+        const c = conn({ ...body, source: 'panel', hasKey: !!body.apiKey, version: 1 });
+        conns = [...conns, c];
+        return HttpResponse.json(c, { status: 201 });
+      }),
+      http.put(`${API}/admin/assistant/connections/:name`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AdminConnectionUpdate'];
+        updated.push(body);
+        conns = conns.map((c) => (c.name === 'gpu' ? { ...c, label: body.label, version: 2 } : c));
+        return HttpResponse.json(conns[1]);
+      }),
+      http.get(`${API}/admin/assistant/tuning`, () => HttpResponse.json(tuned.at(-1) ? [tuned.at(-1)] : [])),
+      http.put(`${API}/admin/assistant/tuning`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['ModelTuning'];
+        tuned.push(body);
+        return HttpResponse.json(body);
+      }),
+    );
+    renderApp('/admin/assistant');
+    expect(await screen.findByText('configuration file')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull(); // the file's are read only
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a connection' }));
+    const form = await screen.findByRole('form', { name: 'Connection' });
+    fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'gpu' } });
+    fireEvent.change(within(form).getByLabelText('Label'), { target: { value: 'GPU box' } });
+    fireEvent.change(within(form).getByLabelText('Address'), { target: { value: 'http://10.0.0.9:11434/v1' } });
+    fireEvent.change(within(form).getByLabelText(/^Models offered/), { target: { value: 'qwen3*, gemma3*' } });
+    fireEvent.change(within(form).getByLabelText(/^API key/), { target: { value: 'sk-1' } });
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(posted[0]).toEqual({
+        name: 'gpu',
+        label: 'GPU box',
+        api: 'openai',
+        baseUrl: 'http://10.0.0.9:11434/v1',
+        cloud: false,
+        defaultModel: '',
+        models: ['qwen3*', 'gemma3*'],
+        contextTokens: 0,
+        apiKey: 'sk-1',
+      });
+    });
+    expect(await screen.findByText(/API key stored/)).toBeTruthy();
+
+    // a label change keeps the key, and sends none
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const edit = await screen.findByRole('form', { name: 'Connection' });
+    expect(within(edit).queryByLabelText(/New API key/)).toBeNull();
+    fireEvent.change(within(edit).getByLabelText('Label'), { target: { value: 'GPU box (Ollama)' } });
+    await userEvent.click(within(edit).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(updated[0]).toMatchObject({ version: 1, label: 'GPU box (Ollama)', keyAction: 'keep' });
+    });
+    expect(updated[0] && 'apiKey' in updated[0]).toBe(false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tune a model' }));
+    const tune = await screen.findByRole('form', { name: 'Tuning' });
+    fireEvent.change(within(tune).getByLabelText('Model'), { target: { value: 'qwen3:4b' } });
+    fireEvent.change(within(tune).getByLabelText(/^Temperature/), { target: { value: '0,5' } });
+    fireEvent.change(within(tune).getByLabelText('Thinking'), { target: { value: 'off' } });
+    fireEvent.change(within(tune).getByLabelText(/^Note for this model/), { target: { value: 'Be brief.' } });
+    await userEvent.click(within(tune).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(tuned[0]).toEqual({
+        connection: 'lmstudio',
+        model: 'qwen3:4b',
+        temperature: 0.5,
+        think: 'off',
+        extraPrompt: 'Be brief.',
+      });
+    });
+    expect(await screen.findByText(/temperature 0.5 · thinking off · a note/)).toBeTruthy();
   });
 
   it('shows a limit as a sentence', async () => {

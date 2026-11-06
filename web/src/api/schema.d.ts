@@ -2118,6 +2118,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/assistant/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The assistant's connections (ADR 0035)
+         * @description The connections file's (read only) and those added here; never an API key.
+         */
+        get: operations["adminListConnections"];
+        put?: never;
+        /**
+         * Add a connection
+         * @description The connections file's rules apply (a local connection on a public address is refused, a cloud one must use https). An API key needs FINUANCE_INSTANCE_KEY; it is sealed and never shown again.
+         */
+        post: operations["adminCreateConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/connections/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a connection added here
+         * @description Versioned. `apiKey` keeps (`keep`), removes (`remove`) or replaces (`replace`) the key; a new address or cloud setting drops a kept key, so a key only ever goes where it was entered for.
+         */
+        put: operations["adminUpdateConnection"];
+        post?: never;
+        /** Delete a connection added here */
+        delete: operations["adminDeleteConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/tuning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-model tuning */
+        get: operations["adminListTuning"];
+        /**
+         * Save a model's tuning
+         * @description A tuning that sets nothing removes the model's.
+         */
+        put: operations["adminPutTuning"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/advice/{slug}": {
         parameters: {
             query?: {
@@ -2295,7 +2363,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "admin.assistant_changed" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -4455,6 +4523,76 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        AdminConnection: {
+            name: string;
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            baseUrl: string;
+            cloud: boolean;
+            defaultModel: string;
+            /** @description Model id patterns offered (globs); empty offers every chat model. */
+            models: string[];
+            contextTokens: number;
+            /**
+             * @description The connections file's (read only) or added here.
+             * @enum {string}
+             */
+            source: "file" | "panel";
+            hasKey: boolean;
+            /** @description The stored key was sealed under another instance key; enter it again. */
+            keyUnreadable: boolean;
+            /**
+             * Format: int32
+             * @description 0 for the file's.
+             */
+            version: number;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        AdminConnectionInput: {
+            name: string;
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            baseUrl: string;
+            cloud: boolean;
+            defaultModel: string;
+            models: string[];
+            contextTokens: number;
+            apiKey?: string;
+        };
+        AdminConnectionUpdate: {
+            /** Format: int32 */
+            version: number;
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            baseUrl: string;
+            cloud: boolean;
+            defaultModel: string;
+            models: string[];
+            contextTokens: number;
+            /** @enum {string} */
+            keyAction: "keep" | "remove" | "replace";
+            /** @description The new key with `replace`. */
+            apiKey?: string;
+        };
+        /** @description An administrator's defaults for one model (ADR 0035), used when a question doesn't set them; the context size replaces the detected one and the note follows the instructions in the prompt. */
+        ModelTuning: {
+            connection: string;
+            model: string;
+            /** Format: double */
+            temperature?: number;
+            contextTokens?: number;
+            /** @enum {string} */
+            think?: "off" | "auto" | "low" | "medium" | "high";
+            /** @enum {string} */
+            toolset?: "full" | "compact";
+            extraPrompt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         /** @description The instance's settings for the assistant; left out of a PUT, the stored ones stay. */
         InstanceAssistant: {
             /** @description Added to every system prompt after the app's rules (ADR 0034). */
@@ -4502,6 +4640,16 @@ export interface components {
         };
         /** @description Counts of an account's data (never the data). */
         UserUsage: {
+            /**
+             * Format: int64
+             * @description Assistant questions and digests in the last 30 days (UTC).
+             */
+            assistantRuns: number;
+            /**
+             * Format: int64
+             * @description Their tokens in the last 30 days (UTC).
+             */
+            assistantTokens: number;
             /** Format: int64 */
             accounts: number;
             /** Format: int64 */
@@ -4593,6 +4741,11 @@ export interface components {
              * @description Questions asked to the assistant.
              */
             questions: number;
+            /**
+             * Format: int64
+             * @description The assistant's tokens, questions and digests together.
+             */
+            tokens: number;
         };
         InstanceUsage: {
             totals: components["schemas"]["UserTotals"];
@@ -8171,6 +8324,146 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file's first, then the ones added here by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminConnection"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminCreateConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminConnectionInput"];
+            };
+        };
+        responses: {
+            /** @description Added. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminConnection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminConnectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description The connection as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminConnection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminDeleteConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListTuning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description By connection and model. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelTuning"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminPutTuning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelTuning"];
+            };
+        };
+        responses: {
+            /** @description Saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelTuning"];
+                };
             };
             default: components["responses"]["Problem"];
         };

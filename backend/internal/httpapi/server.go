@@ -92,6 +92,8 @@ type Deps struct {
 	Goals *goals.Service
 	// Advice is the advice library (ADR 0034). Nil in tests of the bare server.
 	Advice *advice.Service
+	// AssistantAdmin keeps the connections added in the panel and per-model tuning (ADR 0035).
+	AssistantAdmin *assistant.ConnectionStore
 	// Sharing runs shared groups (ADR 0028). Nil in tests of the bare server: the routes answer 404.
 	Sharing *sharing.Service
 	// Extra registers additional routes on the mux (tests use it for a slow handler).
@@ -129,7 +131,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{aiChanges: d.AIChanges, goals: d.Goals, advice: d.Advice, admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, commit: d.Commit, buildDate: d.BuildDate, schemaVersion: d.SchemaVersion, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	impl := &api{aiChanges: d.AIChanges, goals: d.Goals, advice: d.Advice, aiAdmin: d.AssistantAdmin, admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, commit: d.Commit, buildDate: d.BuildDate, schemaVersion: d.SchemaVersion, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}

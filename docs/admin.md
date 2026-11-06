@@ -97,6 +97,14 @@ the same in every theme.
 
 ### Assistant
 
+- **Connections**: the model servers people pick from (ADR 0035). The configuration file's are
+  listed read only; *Add a connection* stores another one (name, label, API, address, cloud or
+  not, default model, the models offered, a context size, an API key). The key is stored sealed
+  under `FINUANCE_INSTANCE_KEY` and never shown again ("stored", "none", or "unreadable" when it
+  was sealed under another instance key); changing the address drops it, so enter it again. Other
+  api replicas and the worker pick a change up within a minute.
+- **Tuning per model**: for one model, the temperature, thinking level and tool set used when a
+  question doesn't set them, the context size, and a short note for that model.
 - **Instructions for the assistant**: up to 2,000 characters added to the instructions of every
   question and digest on the instance, after the app's own rules (which they can't change). Every
   user's model reads them, so keep them to tone, language and pointers to articles.
@@ -111,8 +119,9 @@ the same in every theme.
 
 ### Usage
 
-Instance totals (accounts, active people, transactions, imports, stored files) and the last 30
-days of imports and assistant questions.
+Instance totals (accounts, active people, transactions, imports, stored files, the assistant's
+tokens) and the last 30 days of imports, assistant questions and tokens. A user's detail shows
+their assistant runs and tokens over the last 30 days, never what they asked.
 
 ### Developer
 
