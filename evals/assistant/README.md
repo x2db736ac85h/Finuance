@@ -1,6 +1,6 @@
 # Assistant evaluations
 
-70 golden questions (`questions.json`, Polish and English) on the demo year with today frozen at Thursday 2025-03-20: relative dates, merchant spelling, categories, groups, rankings and trends, comparisons, periods outside the data, items vs transactions, income and savings, the month overview and recurring payments, budgets and group summaries (Phase 15), proposals, goals and splits (Phase 20), and the advice library and digests (Phase 20 PR 3; the setup publishes the starter articles).
+72 golden questions (`questions.json`, Polish and English) on the demo year with today frozen at Thursday 2025-03-20: relative dates, merchant spelling, categories, groups, rankings and trends, comparisons, periods outside the data, items vs transactions, income and savings, the month overview and recurring payments, budgets and group summaries (Phase 15), proposals, goals and splits (Phase 20), and the advice library and digests (Phase 20 PR 3; the setup publishes the starter articles).
 
 Each question names the tools a lookup may use, the arguments it must have (date ranges especially), and reference lookups whose results the answer must contain. The harness runs the references itself through the oracle-checked tools, so no expected number is written by hand.
 

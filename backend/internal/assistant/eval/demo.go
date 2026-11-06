@@ -2,6 +2,7 @@ package eval
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/advice"
+	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/notify"
@@ -69,6 +71,12 @@ func SetupDemo(ctx context.Context, st *store.Store, csvPath string) (uuid.UUID,
 		}
 	}
 	var holiday, renovation []uuid.UUID
+	var cinema uuid.UUID // the cinema on 2025-01-28, an expense of the shared trip (split_expense)
+	for ref := range byRef {
+		if r := byRef[ref]; strings.HasPrefix(r.Payee, "KINO") && r.BookedOn == platform.MustDate(2025, 1, 28) {
+			cinema = r.ID
+		}
+	}
 	for i, ref := range refs {
 		r, ok := byRef[ref]
 		if !ok {
@@ -106,8 +114,20 @@ func SetupDemo(ctx context.Context, st *store.Store, csvPath string) (uuid.UUID,
 	if err != nil {
 		return uuid.Nil, err
 	}
-	sh := sharing.New(st, l, notify.New(st, platform.SystemClock{}), platform.SystemClock{})
-	if _, err := sh.Create(ctx, u, sharing.GroupInput{Name: "Wyjazd do Pragi", FromGroupID: &trip.ID}); err != nil {
+	notes := notify.New(st, platform.SystemClock{})
+	sh := sharing.New(st, l, notes, platform.SystemClock{})
+	sg, err := sh.Create(ctx, u, sharing.GroupInput{Name: "Wyjazd do Pragi", FromGroupID: &trip.ID})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	// Bo, a friend, on the trip; the cinema of 28 January is a shared expense (split_expense)
+	if err := addTripMember(ctx, st, u, sg.ID, notes, sh); err != nil {
+		return uuid.Nil, err
+	}
+	if cinema == uuid.Nil {
+		return uuid.Nil, errors.New("the demo year has no cinema on 2025-01-28")
+	}
+	if _, err := l.Annotate(ctx, u, []uuid.UUID{cinema}, ledger.AnnotationPatch{SetGroup: true, GroupID: &trip.ID}); err != nil {
 		return uuid.Nil, err
 	}
 	// the advice library's starter articles, published (search_advice, ADR 0034)
@@ -148,4 +168,30 @@ func publishStarter(ctx context.Context, st *store.Store) error {
 		}
 	}
 	return nil
+}
+
+// addTripMember makes Bo the user's friend and a member of the shared group.
+func addTripMember(ctx context.Context, st *store.Store, u, groupID uuid.UUID, notes *notify.Service, sh *sharing.Service) error {
+	bo := platform.NewID()
+	if err := st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		if _, err := q.CreateUser(ctx, db.CreateUserParams{ID: bo, Email: "bo-" + bo.String() + "@example.test", PasswordHash: "x"}); err != nil {
+			return err
+		}
+		return q.SetUserDisplayName(ctx, db.SetUserDisplayNameParams{ID: bo, DisplayName: "Bo"})
+	}); err != nil {
+		return err
+	}
+	fr := friends.New(st, platform.SystemClock{}, notes)
+	code, err := fr.NewCode(ctx, u)
+	if err != nil {
+		return err
+	}
+	if _, err := fr.Redeem(ctx, bo, code.Code); err != nil {
+		return err
+	}
+	if _, err := sh.Invite(ctx, u, groupID, bo); err != nil {
+		return err
+	}
+	_, err = sh.Accept(ctx, bo, groupID)
+	return err
 }
