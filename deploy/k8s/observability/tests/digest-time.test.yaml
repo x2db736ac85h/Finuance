@@ -1,0 +1,32 @@
+# When the daily digest fires (templates/prometheusrule.yaml, digest.enabled, 12:00 Central European
+# Time): tools/check-observability.sh puts the rendered FinuanceDailyDigest expression in place of
+# DIGEST_EXPR and runs this against no rules (evaluating every rule through most of a year would take
+# minutes). Time 0 is Thursday 1970-01-01 00:00 UTC.
+rule_files: [no-rules.yaml]
+evaluation_interval: 1h
+
+tests:
+  # Once a day at 12:00 local: 11:00 UTC in winter, 10:00 UTC in EU summer time, switching on the
+  # last Sunday of March (1970-03-29, day 87) and of October (1970-10-25, day 297).
+  - interval: 1h
+    input_series: []
+    promql_expr_test:
+      - { expr: DIGEST_EXPR, eval_time: 11h05m, exp_samples: [{ labels: '{}', value: 1 }] }
+      - { expr: DIGEST_EXPR, eval_time: 10h05m, exp_samples: [] }
+      - { expr: DIGEST_EXPR, eval_time: 11h20m, exp_samples: [] }
+      - { expr: DIGEST_EXPR, eval_time: 12h05m, exp_samples: [] }
+      # Saturday 28 March: still winter
+      - { expr: DIGEST_EXPR, eval_time: 2075h05m, exp_samples: [{ labels: '{}', value: 1 }] }
+      - { expr: DIGEST_EXPR, eval_time: 2074h05m, exp_samples: [] }
+      # Sunday 29 March: summer time from 01:00 UTC
+      - { expr: DIGEST_EXPR, eval_time: 2098h05m, exp_samples: [{ labels: '{}', value: 1 }] }
+      - { expr: DIGEST_EXPR, eval_time: 2099h05m, exp_samples: [] }
+      # 1 July: summer
+      - { expr: DIGEST_EXPR, eval_time: 4354h05m, exp_samples: [{ labels: '{}', value: 1 }] }
+      - { expr: DIGEST_EXPR, eval_time: 4355h05m, exp_samples: [] }
+      # Saturday 24 October: still summer
+      - { expr: DIGEST_EXPR, eval_time: 7114h05m, exp_samples: [{ labels: '{}', value: 1 }] }
+      - { expr: DIGEST_EXPR, eval_time: 7115h05m, exp_samples: [] }
+      # Sunday 25 October: winter again from 01:00 UTC
+      - { expr: DIGEST_EXPR, eval_time: 7139h05m, exp_samples: [{ labels: '{}', value: 1 }] }
+      - { expr: DIGEST_EXPR, eval_time: 7138h05m, exp_samples: [] }

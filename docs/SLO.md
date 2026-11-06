@@ -51,6 +51,34 @@ CrashLoopBackOff, no api pod ready for a minute, and over 5 % of Finuance's requ
 ingress for 5 minutes (with `ingress.traefik`). Every alert goes by e-mail (Phase 17 decision): pages at once and every hour,
 tickets grouped and once a day (`alerting.email`, an `AlertmanagerConfig`).
 
+## Daily digest
+
+With `digest.enabled` (the homelab has it), one e-mail a day at 12:00 Central European Time
+(`digest.hour`, `utcOffsetHours`, `euSummerTime`) sums up the last 24 hours:
+
+- **Service:** availability and the share of table and chart requests within 300 ms against the
+  SLOs above, p95 latency, requests and the peak rate (15-minute average), server errors at the api
+  and at the ingress.
+- **Activity:** imports committed and failed, failed background jobs by kind, assistant runs.
+- **Database:** size and growth, the replication lag's maximum, WAL archiving, the last backup's age.
+- **Machine:** CPU and memory peaks, the root disk, container restarts by namespace.
+- **Alerts that fired**, with how long.
+- **Outside the usual:** every figure more than 3 standard deviations from its previous 7 days, or,
+  where that history is flat or shorter than 3 days, more than 50 % from its average
+  (`digest.anomalies`). A figure with no history yet isn't judged, so the first week stays quiet.
+
+It is the `FinuanceDailyDigest` alert (severity `digest`): the `finuance-digest.rules` group keeps
+each figure over the trailing 24 hours every 10 minutes (`finuance:digest_24h{indicator, unit}`),
+with its 7-day average and spread, and the alert fires for the first 15 minutes of 12:00 local time
+(the expression works out EU summer time itself, as Alertmanager's time intervals can't take a time
+zone here). Its text is built from queries when it fires and goes out through the e-mail receiver
+on its own route: once, no "resolved". `tests/digest.test.yaml` checks the text on 9 days of data,
+`tests/digest-time.test.yaml` the hour across both switches of summer time.
+
+The digest runs on the same machine as everything it reports on: a day without it means the machine,
+Prometheus, Alertmanager or the mail path was down (as on 2026-11-05, when the machine lost its
+network for 9½ hours). There is deliberately no outside heartbeat (our Product Engineer, 2026-11-06).
+
 ## Error budget policy
 
 - Budget left: ship as usual.

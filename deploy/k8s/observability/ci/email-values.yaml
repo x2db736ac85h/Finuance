@@ -2,6 +2,8 @@
 appNamespace: finuance
 rules:
   labels: { release: kube-prometheus-stack }
+digest:
+  enabled: true
 alerting:
   email:
     enabled: true

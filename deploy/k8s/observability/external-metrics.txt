@@ -32,6 +32,13 @@ barman_cloud_cloudnative_pg_io_last_available_backup_timestamp
 barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp
 # kube-state-metrics
 kube_deployment_status_replicas_available
+kube_pod_container_status_restarts_total
 kube_pod_container_status_waiting_reason
+# node-exporter (kube-prometheus-stack; the daily digest's machine figures)
+node_cpu_seconds_total
+node_filesystem_avail_bytes
+node_filesystem_size_bytes
+node_memory_MemAvailable_bytes
+node_memory_MemTotal_bytes
 # Traefik v3 (k3s's bundled chart 40.x; with metrics.prometheus.addRoutersLabels)
 traefik_router_requests_total

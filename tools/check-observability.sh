@@ -51,11 +51,17 @@ echo "== alert rules (promtool)"
 helm template obs "$chart" -n monitoring --kube-version "$K8S" -f "$chart/ci/email-values.yaml" >"$work/render-all.yaml"
 # RENDER_DIR: the CI helm job's Trivy config scan reads the renders there.
 if [ -n "${RENDER_DIR:-}" ]; then mkdir -p "$RENDER_DIR" && cp "$work/render-all.yaml" "$RENDER_DIR/observability.yaml"; fi
-helm template obs "$chart" -n monitoring --kube-version "$K8S" --set ingress.traefik.enabled=true >"$work/render.yaml"   # every rule group, for the tests
+# every rule group, for the tests (the digest's test data comes every 10 minutes, like its rule evaluations)
+helm template obs "$chart" -n monitoring --kube-version "$K8S" --set ingress.traefik.enabled=true \
+  --set digest.enabled=true --set digest.evaluationSeconds=600 >"$work/render.yaml"
 "$YQ" 'select(.kind == "PrometheusRule") | .spec' "$work/render.yaml" >"$work/rules.yaml"
-cp "$chart/tests/rules.test.yaml" "$work/"
+cp "$chart"/tests/*.test.yaml "$work/"
+# the digest's timing is checked on its rendered expression alone (tests/digest-time.test.yaml)
+echo 'groups: []' >"$work/no-rules.yaml"
+DIGEST_EXPR=$("$YQ" '.groups[].rules[] | select(.alert == "FinuanceDailyDigest") | .expr' "$work/rules.yaml") \
+  "$YQ" -i '(.tests[].promql_expr_test[] | select(.expr == "DIGEST_EXPR") | .expr) = strenv(DIGEST_EXPR)' "$work/digest-time.test.yaml"
 promtool check rules --lint=all --lint-fatal rules.yaml
-promtool test rules rules.test.yaml
+promtool test rules rules.test.yaml digest.test.yaml digest-time.test.yaml
 
 echo "== the local profile's rules are the chart's (deploy/compose/observability/rules.yaml)"
 local_rules=deploy/compose/observability/rules.yaml
@@ -69,13 +75,15 @@ diff "$work/local-rules.yaml" "$local_rules" || { echo "check-observability: run
 echo ok
 
 echo "== every metric used exists"
-# Queries of the rules and of every dashboard panel. Metric names are the identifiers right before
-# a selector's "{"; histogram series fall back to their family name.
+# Queries of the rules, of the digest's text (its annotations run queries) and of every dashboard
+# panel. Metric names are the identifiers right before a selector's "{" (not a template's "{{");
+# histogram series fall back to their family name.
 {
   "$YQ" '.groups[].rules[].expr' "$work/rules.yaml"
+  "$YQ" '.groups[].rules[] | select(has("annotations")) | .annotations[]' "$work/rules.yaml"
   for f in "$chart"/files/dashboards/*.json; do "$YQ" -p json -o yaml '.. | select(has("expr")) | .expr' "$f"; done
 } >"$work/exprs.txt"
-grep -oE '[A-Za-z_:][A-Za-z0-9_:]*\{' "$work/exprs.txt" | sed 's/{$//' | sort -u >"$work/used.txt"
+grep -oE '[A-Za-z_:][A-Za-z0-9_:]*\{[^{]' "$work/exprs.txt" | sed -E 's/\{.$//' | sort -u >"$work/used.txt"
 "$YQ" '.groups[].rules[] | select(has("record")) | .record' "$work/rules.yaml" | sort -u >"$work/recorded.txt"
 known=$(cat <(grep -v '^#' "$chart/metrics.txt") <(grep -v '^#' "$chart/external-metrics.txt") "$work/recorded.txt" | grep -v '^$' | sort -u)
 missing=0

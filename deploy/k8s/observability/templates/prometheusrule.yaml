@@ -255,4 +255,99 @@ spec:
             description: >-
               {{`Compare with the api's 5xx (SLO dashboard): failures only here mean requests that never reached the api (no ready pod, timeouts).`}}
     {{- end }}
+    {{- with .Values.digest }}
+    {{- if .enabled }}
+    {{- /* The digest's figures over the trailing 24 hours, one series per indicator (unit: how to
+           show it; requests are the ones that count for availability, so no health checks; peaks
+           are of 15-minute averages). Kept every 10 minutes, so the 7-day baselines below are cheap
+           to read. */}}
+    {{- $ind := list
+      (dict "name" "availability" "unit" "ratio" "expr" (printf `1 - ((sum(increase(http_server_requests_total{%s,status_class="5xx"}[24h])) or vector(0)) / sum(increase(http_server_requests_total{%s}[24h])))` $avail $avail))
+      (dict "name" "latency_p95" "unit" "seconds" "expr" (printf `histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{%s}[24h])))` $lat))
+      (dict "name" "latency_within_slo" "unit" "ratio" "expr" (printf `sum(increase(http_server_request_duration_seconds_bucket{%s,le="0.3"}[24h])) / sum(increase(http_server_request_duration_seconds_count{%s}[24h]))` $lat $lat))
+      (dict "name" "requests" "unit" "count" "expr" (printf `sum(increase(http_server_requests_total{%s}[24h]))` $avail))
+      (dict "name" "peak_rate" "unit" "rate" "expr" (printf `max_over_time(sum(rate(http_server_requests_total{%s}[15m]))[24h:5m])` $avail))
+      (dict "name" "errors_5xx" "unit" "count" "expr" (printf `sum(increase(http_server_requests_total{%s,status_class="5xx"}[24h])) or vector(0)` $avail))
+      (dict "name" "imports" "unit" "count" "expr" (printf `sum(increase(finuance_imports_total{namespace="%s",result="committed"}[24h])) or vector(0)` $ns))
+      (dict "name" "imports_failed" "unit" "count" "expr" (printf `sum(increase(finuance_imports_total{namespace="%s",result="failed"}[24h])) or vector(0)` $ns))
+      (dict "name" "jobs_failed" "unit" "count" "expr" (printf `sum(increase(finuance_jobs_total{namespace="%s",result="error"}[24h])) or vector(0)` $ns))
+      (dict "name" "assistant_runs" "unit" "count" "expr" (printf `sum(increase(finuance_assistant_runs_total{namespace="%s"}[24h])) or vector(0)` $ns))
+    }}
+    {{- if $.Values.rules.database }}
+    {{- $ind = append $ind (dict "name" "database_growth" "unit" "bytes" "expr" (printf `max(cnpg_pg_database_size_bytes{job="finuance-db",namespace="%s",datname="finuance"}) - max(cnpg_pg_database_size_bytes{job="finuance-db",namespace="%s",datname="finuance"} offset 24h)` $ns $ns)) }}
+    {{- end }}
+    {{- if $.Values.rules.kubernetes }}
+    {{- $ind = append $ind (dict "name" "restarts" "unit" "count" "expr" `sum(increase(kube_pod_container_status_restarts_total[24h])) or vector(0)`) }}
+    {{- end }}
+    {{- if .node }}
+    {{- $ind = append $ind (dict "name" "cpu_peak" "unit" "ratio" "expr" `max_over_time((1 - avg(rate(node_cpu_seconds_total{mode="idle"}[15m])))[24h:5m])`) }}
+    {{- $ind = append $ind (dict "name" "memory_peak" "unit" "ratio" "expr" `max_over_time((1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes))[24h:5m])`) }}
+    {{- end }}
+    {{- if $.Values.ingress.traefik.enabled }}
+    {{- $ind = append $ind (dict "name" "ingress_5xx" "unit" "count" "expr" (printf `sum(increase(traefik_router_requests_total{job="traefik",router=~"([a-z0-9]+-)?%s-.+",code=~"5.."}[24h])) or vector(0)` $ns)) }}
+    {{- end }}
+    {{- $base := `finuance:digest_24h[7d] offset 1d` }}
+    {{- $enough := printf `finuance:digest_24h:stddev7d > 0 and finuance:digest_24h:samples7d >= %d` (div (mul .anomalies.minHistoryHours 3600) 600) }}
+    - name: finuance-digest.rules
+      interval: 10m
+      rules:
+        {{- range $ind }}
+        - record: finuance:digest_24h
+          labels: { indicator: {{ .name }}, unit: {{ .unit }} }
+          expr: {{ .expr | toJson }}
+        {{- end }}
+        # the breakdowns the digest lists, recorded with their totals so both are of the same moment
+        - record: finuance:digest_24h_failed_jobs:by_kind
+          expr: sum by (kind) (increase(finuance_jobs_total{namespace="{{ $ns }}",result="error"}[24h]))
+        {{- if $.Values.rules.kubernetes }}
+        - record: finuance:digest_24h_restarts:by_namespace
+          expr: sum by (namespace) (increase(kube_pod_container_status_restarts_total[24h]))
+        {{- end }}
+        # the previous 7 days of each figure (the last day left out, so a spike doesn't hide itself)
+        - record: finuance:digest_24h:avg7d
+          expr: avg_over_time({{ $base }})
+        - record: finuance:digest_24h:stddev7d
+          expr: stddev_over_time({{ $base }})
+        - record: finuance:digest_24h:samples7d
+          expr: count_over_time({{ $base }})
+        # far from its usual: more than {{ .anomalies.sigma }} standard deviations, or, with a flat or
+        # short history, a change of more than {{ mulf .anomalies.change 100 }} % (a figure with no history at all isn't judged)
+        - record: finuance:digest_anomaly
+          expr: |
+            (
+              abs(finuance:digest_24h - finuance:digest_24h:avg7d) > {{ .anomalies.sigma }} * finuance:digest_24h:stddev7d
+              and on (indicator, unit) ({{ $enough }})
+            )
+            or
+            (
+              abs(finuance:digest_24h - finuance:digest_24h:avg7d) > {{ .anomalies.change }} * abs(finuance:digest_24h:avg7d)
+              unless on (indicator, unit) ({{ $enough }})
+            )
+    - name: finuance-digest.alerts
+      rules:
+        {{- /* The local hour in UTC, standard time and (with EU summer time) summer time. */}}
+        {{- $std := mod (add 24 (sub .hour .utcOffsetHours)) 24 }}
+        {{- $sum := mod (add 23 (sub .hour .utcOffsetHours)) 24 }}
+        # Fires for the first 15 minutes of {{ .hour }}:00 local time ({{ $std }}:00 UTC{{ if .euSummerTime }}, {{ $sum }}:00 UTC in
+        # EU summer time: from the last Sunday of March to the last Sunday of October, both switching at
+        # 01:00 UTC, so at this hour the day's offset is already in force{{ end }}). One e-mail a day: the
+        # route doesn't repeat within 24 hours and sends no "resolved".
+        - alert: FinuanceDailyDigest
+          expr: |
+            vector(1) and on () minute() < 15 and on () (
+            {{- if .euSummerTime }}
+                (hour() == {{ $std }} and on () (month() < 3 or month() > 10 or (month() == 3 and (day_of_month() - day_of_week()) < 25) or (month() == 10 and (day_of_month() - day_of_week()) >= 25)))
+              or
+                (hour() == {{ $sum }} and on () ((month() > 3 and month() < 10) or (month() == 3 and (day_of_month() - day_of_week()) >= 25) or (month() == 10 and (day_of_month() - day_of_week()) < 25)))
+            {{- else }}
+                hour() == {{ $std }}
+            {{- end }}
+            )
+          labels: { severity: digest }
+          annotations:
+            summary: {{ $.Files.Get "files/digest-summary.tmpl" | trim | replace "__NS__" $ns | replace "__EVAL__" (toString .evaluationSeconds) | toJson }}
+            digest: |
+              {{- $.Files.Get "files/digest.tmpl" | replace "__NS__" $ns | replace "__EVAL__" (toString .evaluationSeconds) | replace "__DATABASE__" (toString $.Values.rules.database) | replace "__BACKUPS__" (toString $.Values.rules.backups) | replace "__KUBERNETES__" (toString $.Values.rules.kubernetes) | replace "__NODE__" (toString .node) | replace "__INGRESS__" (toString $.Values.ingress.traefik.enabled) | replace "__SIGMA__" (toString .anomalies.sigma) | replace "__CHANGE__" (toString (mulf .anomalies.change 100)) | nindent 14 }}
+    {{- end }}
+    {{- end }}
 {{- end }}

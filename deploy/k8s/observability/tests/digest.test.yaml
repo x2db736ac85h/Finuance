@@ -1,0 +1,100 @@
+# promtool unit test for the daily digest's text (templates/prometheusrule.yaml with digest.enabled,
+# rendered with digest.evaluationSeconds=600 to match the 10-minute data and evaluations here;
+# tools/check-observability.sh). Eight quiet days, then from day 8 11:00 UTC ten times the traffic,
+# slower requests, server errors, failed jobs, restarts, a busier CPU and a 2-hour alert. The digest
+# fires at 11:00 UTC on day 9 (12:00 Central European Time, Saturday 1970-01-10).
+rule_files: [rules.yaml]
+evaluation_interval: 10m
+
+tests:
+  - interval: 10m
+    input_series:
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="2xx"}'
+        values: '0+60x1218 73140+599x150'
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="5xx"}'
+        values: '0+0x1218 0+1x150'
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",le="0.1"}'
+        values: '0+60x1218 73140+300x150'
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",le="0.3"}'
+        values: '0+60x1218 73140+540x150'
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",le="+Inf"}'
+        values: '0+60x1218 73140+600x150'
+      - series: 'http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query"}'
+        values: '0+60x1218 73140+600x150'
+      - series: 'finuance_imports_total{job="finuance-worker",namespace="finuance",result="committed"}'
+        values: '0+1x1370'
+      - series: 'finuance_jobs_total{job="finuance-worker",namespace="finuance",kind="reclassify",result="error"}'
+        values: '0+0x1300 0+1x3 3+0x66'
+      - series: 'cnpg_pg_database_size_bytes{job="finuance-db",namespace="finuance",datname="finuance",pod="finuance-db-1"}'
+        values: '4294967296+1048576x1370'
+      - series: 'cnpg_pg_replication_lag{job="finuance-db",namespace="finuance",pod="finuance-db-2"}'
+        values: '0+0x1300 2 0+0x69'
+      - series: 'cnpg_pg_stat_archiver_seconds_since_last_archival{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '30+0x1370'
+      - series: 'cnpg_pg_stat_archiver_failed_count{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '0+0x1370'
+      - series: 'barman_cloud_cloudnative_pg_io_last_available_backup_timestamp{job="finuance-db",namespace="finuance",pod="finuance-db-1"}'
+        values: '785700+0x1370'
+      - series: 'node_cpu_seconds_total{job="node-exporter",cpu="0",mode="idle"}'
+        values: '0+480x1218 584880+240x150'
+      - series: 'node_memory_MemTotal_bytes{job="node-exporter"}'
+        values: '8589934592+0x1370'
+      - series: 'node_memory_MemAvailable_bytes{job="node-exporter"}'
+        values: '4294967296+0x1370'
+      - series: 'node_filesystem_size_bytes{job="node-exporter",mountpoint="/"}'
+        values: '214748364800+0x1370'
+      - series: 'node_filesystem_avail_bytes{job="node-exporter",mountpoint="/"}'
+        values: '107374182400+0x1370'
+      - series: 'kube_pod_container_status_restarts_total{job="kube-state-metrics",namespace="cnpg-system",pod="operator",container="manager"}'
+        values: '0+0x1218 0+1x150'
+      - series: 'traefik_router_requests_total{job="traefik",router="websecure-finuance-web@kubernetes",code="200"}'
+        values: '0+60x1370'
+      - series: 'ALERTS{alertname="TargetDown",alertstate="firing",severity="warning",job="kube-state-metrics"}'
+        values: '_x1300 1x11 _x58'
+    alert_rule_test:
+      - eval_time: 227h
+        alertname: FinuanceDailyDigest
+        exp_alerts:
+          - exp_labels: { severity: digest }
+            exp_annotations:
+              summary: "Finuance daily digest: 7 figures outside their usual range, 4 alerts fired"
+              digest: |
+                The 24 hours to 1970-01-10 11:00:00 +0000 UTC.
+
+                SERVICE
+                  Availability          99.83% of requests without a server error (SLO 99.5%)
+                  Within 300 ms         90.01% of table and chart requests (SLO 95%), p95 300ms
+                  Requests              85.86k, peak 1.00 requests/s (15-minute average)
+                  Server errors         142 at the api, 0 at the ingress
+
+                ACTIVITY
+                  Imports               144 committed, 0 failed
+                  Failed jobs           3 · reclassify 3
+                  Assistant runs        0
+
+                DATABASE
+                  Size                  5.33GiB (+144MiB in 24 hours)
+                  Replication lag       at most 2s
+                  WAL archiving         last archived 30s ago
+                  Last backup           8h 45m 0s ago
+
+                MACHINE
+                  CPU peak              60%
+                  Memory peak           50%
+                  Disk /                50% used
+                  Restarts              142 · cnpg-system 142
+
+                ALERTS THAT FIRED
+                  FinuanceApiAbsent (page), for up to 1d 0h 0m 0s
+                  FinuanceJobsFailing (ticket), for up to 10m 0s
+                  FinuancePostgresAbsent (page), for up to 1d 0h 0m 0s
+                  TargetDown (warning), for up to 2h 0m 0s
+
+                OUTSIDE THE USUAL (against the 7 days before: more than 3 standard deviations, or a change above 50% where the history is flat or short)
+                  CPU peak: 60%, usually 20% (+200%)
+                  Server errors: 142, usually 0
+                  Failed jobs: 3, usually 0
+                  p95 latency: 300ms, usually 95ms (+216%)
+                  Peak traffic: 1.00 requests/s, usually 0.10 requests/s (+900%)
+                  Requests: 85.86k, usually 8.64k (+894%)
+                  Restarts: 142, usually 0
