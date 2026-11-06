@@ -10,6 +10,12 @@ demo goes public.
 from the checkout, and the stack was `compose.ci.yaml` (sign-ups on, mock model). Trivy 0.76.0 ran
 with a vulnerability database of 2026-10-26.
 
+**CI finding: 2026-11-06**, the backend job's govulncheck on PR #15 (no Go change in it): GO-2026-6865 in
+`github.com/klauspost/compress` 1.20.1 (indirect, through `client_golang`'s `promhttp`), reachable from
+the assistant eval harness (`eval.Run` → `multierr` → zstd decoding): **fixed** by 1.20.2. Afterwards
+govulncheck 0 reachable, 1 in a required module (GO-2026-5932, no fix, not reachable). The released
+`v0.3.0-rc.2` images carry 1.20.1; `v0.3.0` will carry the fix.
+
 **Release scan before `v0.3.0-rc.1`: 2026-11-04**, on the reference machine, on `main` at `9ae8f60`;
 images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`.
 Unchanged since v0.2.0 (no dependency changes in Phase 19): web image 0 findings; api image and
