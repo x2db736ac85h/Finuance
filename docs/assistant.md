@@ -95,6 +95,23 @@ If a server rejects tool definitions before any lookup, the chat switches to **p
 - **Evals on the reference machine** (2026-10-31, `docs/evals.md`; a 4 GB GPU through Vulkan): `qwen3:4b-thinking-2507` with the full toolset answered 46 of 53 correctly (87 %, arguments right 98 %), `qwen3:4b-instruct-2507` 35 (full) and 26 (compact). Thinking costs about twice the wait there (p50 112 s vs 60 s). The reference machine's connection offers both, thinking-2507 as the default; the full toolset is the default in tools mode already.
 - **Choose by answer quality**, not by the speed of a small test machine: the evals (`make eval-assistant`) on the server and model you'll actually use decide the default model and toolset.
 
+### Model notes (Phase 20): text and receipts on a 4 GB GPU
+
+Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 tokens of context, `docs/evals.md`): the 65 text questions (the 53 of Phase 18 and 12 new proposal and goal questions) and 17 receipts.
+
+| Model | On the GPU | Text: the 53 | Text: 12 new | Text: all | p50 | Receipts |
+|---|---|---:|---:|---:|---:|---:|
+| `qwen3:4b-thinking-2507` | 3.2 GB, all of it | 47 (46 on 2026-10-31) | 7 | 54 / 65 | 143 s | doesn't read images |
+| `qwen3-vl:4b-instruct` | 3.8 GB, ¾ (¼ on the CPU) | 36 | 10 | 46 / 65 | 29 s | 14 / 17 |
+| `qwen3-vl:4b-thinking` | 3.8 GB, ¾ | 27 | 6 | 33 / 65 | 300 s | 16 / 17 |
+| `gemma3:4b` | 2.9 GB, 90 % | 1 | 0 | 1 / 65 | 19 s | 10 / 17 |
+
+- **No single model holds up on both here**, so the reference machine keeps two: `qwen3:4b-thinking-2507` as the default for questions, and `qwen3-vl:4b-instruct` for receipt photos (the camera button appears only for a model that reads images). Ollama swaps them on the GPU, which costs a few seconds when switching.
+- **`qwen3-vl:4b-thinking`** reads receipts best but doesn't fit the GPU: with a quarter of it on the CPU it writes about 5 tokens a second, and 29 of the 65 questions ran into the 300 s limit. On a larger GPU it may be the one model for both; measure it there.
+- **`qwen3-vl:4b-instruct`** calls an action's name as a tool (`set_budget` instead of `propose_action` with that action); the run now reads such a call as the proposal (9 of the 12 new questions went from wrong to right with that). It is also the fastest usable model (p50 29 s), a choice for people who prefer speed.
+- **`gemma3:4b`** has no tool calling on Ollama (its capabilities say so), so it runs in plan mode and wrote ```` ```tool_code ```` instead of the plan's JSON; not usable for questions. On receipts it took the cash given or a subtotal for the total.
+- Receipts misread by the Qwen models: a UK date read as a US one (both), and by the instruct model a French total and a cash receipt's amount given.
+
 ## Limits and retention
 
 | Variable | Default | |
