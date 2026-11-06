@@ -39,6 +39,9 @@ notes of their version.
 - **Personal access tokens** (Settings → Access tokens): read-only or read-and-write tokens for
   scripts and the `fin` command line, sent as `Authorization: Bearer fin_…`, valid up to a year,
   revocable; no token reaches sign-in, the password, sessions, tokens or Administration.
+- **`fin`, the command line** (docs/cli.md): accounts, transactions (with the CSV export), import,
+  the month's overview, groups, shared groups, budgets, goals and `fin ask` for the assistant, as a
+  table, CSV or JSON; release binaries for Linux, macOS and Windows with checksums.
 - **A daily token budget** for the assistant per user, questions and digests together
   (`FINUANCE_AI_TOKENS_PER_DAY`, 200,000 by default; a limit administrators can lower per account).
 

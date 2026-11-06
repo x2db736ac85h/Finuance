@@ -19,7 +19,7 @@ It is a rebuild of the single-file legacy app in `legacy/`.
 - Only work on the current phase. Out-of-scope ideas go to the Backlog in PROGRESS.md.
 - Every change ships with tests. Never skip, delete or weaken a failing test; ask instead.
 - Run `make check` before every commit; `make test-integration` before closing a phase.
-- Never edit generated code: `backend/internal/httpapi/gen/`, `backend/internal/store/db/`, `web/src/api/schema.d.ts`.
+- Never edit generated code: `backend/internal/httpapi/gen/`, `backend/internal/client/gen/`, `backend/internal/store/db/`, `web/src/api/schema.d.ts`.
   Change `api/openapi.yaml` or `backend/internal/store/queries/*.sql`, then run `make gen`.
 - No new dependencies without asking. No float64 for money. No `innerHTML`/`dangerouslySetInnerHTML`.
 - Assistant tools are read-only and run under `store.WithUserReadOnly`. Never log prompts, model output or tool results.

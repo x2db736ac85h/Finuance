@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+# The fin CLI's client (Phase 20, 20.13): the same spec, a client instead of a server.
+package: gen
+output: internal/client/gen/client.go
+generate:
+  client: true
+  models: true
+output-options:
+  skip-prune: true

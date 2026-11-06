@@ -1,0 +1,32 @@
+[
+  {
+    "archived": false,
+    "createdAt": "2026-10-01T10:00:00Z",
+    "currency": "PLN",
+    "firstOn": "2024-01-01",
+    "id": "0c000000-0000-4000-8000-000000000001",
+    "isDemo": false,
+    "kind": "bank",
+    "lastOn": "2025-03-17",
+    "name": "Konto",
+    "openingBalance": {
+      "amountMinor": 0,
+      "currency": "PLN"
+    },
+    "txCount": 917
+  },
+  {
+    "archived": false,
+    "createdAt": "2026-10-02T10:00:00Z",
+    "currency": "EUR",
+    "id": "0c000000-0000-4000-8000-000000000002",
+    "isDemo": false,
+    "kind": "cash",
+    "name": "Wallet",
+    "openingBalance": {
+      "amountMinor": 0,
+      "currency": "EUR"
+    },
+    "txCount": 0
+  }
+]
