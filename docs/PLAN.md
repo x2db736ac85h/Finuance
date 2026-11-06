@@ -3581,6 +3581,12 @@ auto-apply in the panel, tools stay read-only, background digests only propose)
 **Gate (our Product Engineer):** receipts, goals and a digest with the real model; revert an AI change;
 the CLI against the homelab.
 
+**Planned 2026-11-06** (the task list is in `docs/PROGRESS.md`): four pull requests (AI changes,
+proposals v2, auto-apply and goals; receipts; digests, advice and Admin → Assistant; tokens and the
+CLI). Goals are savings targets and reductions (category limits stay budgets); one multilingual
+model for text and receipts chosen by measurement on the reference machine; `fin mcp` moved to
+the Backlog.
+
 ---
 
 ### Phase 21 — Public release: privacy clean-up, security, demo, documentation, v1.0.0 · Size L (was Phase 19, before that Phase 18)
