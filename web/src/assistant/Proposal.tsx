@@ -77,6 +77,12 @@ export function proposalTitle(p: Proposal): string {
       ].filter(Boolean);
       return `Change the goal “${b.name}”: ${changes.join(', ')}`;
     }
+    case 'attach_receipt':
+      return (
+        `Add the receipt to “${p.payee ?? ''}” (${fmtDay(p.date)}${p.amount ? `, ${fmtMoney(p.amount)}` : ''}) in ${p.accountName ?? ''}: ` +
+        (p.receiptLine ?? '').replace(/^Receipt: /, '') +
+        (p.categoryName ? ` · ${p.categoryName}` : '')
+      );
   }
 }
 
@@ -104,6 +110,8 @@ function appliedText(p: Proposal, n: number): string {
       return `Goal “${p.goal?.name ?? ''}” added — see Overview → Goals`;
     case 'update_goal':
       return `Goal “${p.goal?.name ?? ''}” changed`;
+    case 'attach_receipt':
+      return `Receipt added to “${p.payee ?? 'the transaction'}”`;
     default:
       return `Applied to ${plural(n, 'transaction')}`;
   }
@@ -127,7 +135,9 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
       ? p.groupId
         ? ''
         : 'The group is new and is created first.'
-      : (p.action === 'set_category' || p.action === 'create_rule' || (p.action === 'add_expense' && p.categoryName)) &&
+      : (p.action === 'set_category' ||
+            p.action === 'create_rule' ||
+            ((p.action === 'add_expense' || p.action === 'attach_receipt') && p.categoryName)) &&
           !p.categoryId
         ? 'The category is new and is created first.'
         : '';

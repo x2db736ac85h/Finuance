@@ -112,6 +112,11 @@ func (a *api) DeleteTransaction(ctx context.Context, req gen.DeleteTransactionRe
 // added by hand.
 func (a *api) UpdateTransaction(ctx context.Context, req gen.UpdateTransactionRequestObject) (gen.UpdateTransactionResponseObject, error) {
 	u, b := identity(ctx).User.ID, req.Body
+	// an attached receipt (ADR 0032) is applied here: its note change is recorded as the assistant's
+	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
+	if err != nil {
+		return nil, err
+	}
 	edit := ledger.ManualEdit{BookedOn: dateIn(b.BookedOn), AmountMinor: b.AmountMinor, Payee: b.Payee, Description: b.Description}
 	if !edit.Empty() {
 		if err := a.ledger.EditManual(ctx, u, req.Id, edit); err != nil {
@@ -228,4 +233,41 @@ func (a *api) ExportTransactions(ctx context.Context, req gen.ExportTransactions
 	}()
 	cd := mime.FormatMediaType("attachment", map[string]string{"filename": name})
 	return gen.ExportTransactions200TextcsvResponse{Body: pr, Headers: gen.ExportTransactions200ResponseHeaders{ContentDisposition: &cd}}, nil
+}
+
+// ListMergeSuggestions lists typed card payments the bank's file has now (ADR 0032).
+func (a *api) ListMergeSuggestions(ctx context.Context, _ gen.ListMergeSuggestionsRequestObject) (gen.ListMergeSuggestionsResponseObject, error) {
+	list, err := a.ledger.MergeSuggestions(ctx, identity(ctx).User.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := gen.ListMergeSuggestions200JSONResponse{Suggestions: make([]gen.MergeSuggestion, len(list))}
+	for i := range list {
+		s := &list[i]
+		out.Suggestions[i] = gen.MergeSuggestion{TypedId: s.TypedID, ImportedId: s.ImportedID, TypedOn: *dateDTO(&s.TypedOn),
+			ImportedOn: *dateDTO(&s.ImportedOn), TypedPayee: s.TypedPayee, ImportedPayee: s.ImportedPayee,
+			Amount: gen.Money{AmountMinor: s.AmountMinor, Currency: s.Currency}, Account: gen.NamedRef{Id: s.AccountID, Name: s.AccountName}}
+		if s.TypedNote != "" {
+			out.Suggestions[i].TypedNote = &s.TypedNote
+		}
+	}
+	return out, nil
+}
+
+// MergeTransaction merges a typed transaction into the imported one, or keeps the two apart.
+func (a *api) MergeTransaction(ctx context.Context, req gen.MergeTransactionRequestObject) (gen.MergeTransactionResponseObject, error) {
+	u := identity(ctx).User.ID
+	if deref(req.Body.KeepApart) {
+		if err := a.ledger.KeepApart(ctx, u, req.Id, req.Body.Into); err != nil {
+			return nil, err
+		}
+		return gen.MergeTransaction204Response{}, nil
+	}
+	account, err := a.ledger.Merge(ctx, u, req.Id, req.Body.Into)
+	if err != nil {
+		return nil, err
+	}
+	a.audit(ctx, u, ledger.AuditTransactionMerged, req.Id.String(), map[string]any{"account": account.String(), "into": req.Body.Into.String()})
+	a.reclassifyAfter(ctx, u)
+	return gen.MergeTransaction204Response{}, nil
 }

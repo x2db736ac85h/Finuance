@@ -10,6 +10,7 @@
 //	mock-tools       native tool calls, reasoning in reasoning_content
 //	mock-text-tools  <think> tags and Qwen <tool_call> text instead of native calls
 //	mock-no-tools    rejects requests with tools (HTTP 400), answers plan mode
+//	mock-vl          like mock-tools, and reads images by its name (receipts, Phase 20)
 //
 // Words in the question steer the brain: "slow" streams slowly (for stop), "fail" answers 500,
 // "by category" aggregates, "spelled" uses find_values, and a "quoted" word becomes the search query.
@@ -56,7 +57,7 @@ type Server struct {
 
 // New returns a mock with the default models.
 func New() *Server {
-	return &Server{Models: []string{"mock-tools", "mock-text-tools", "mock-no-tools"}}
+	return &Server{Models: []string{"mock-tools", "mock-text-tools", "mock-no-tools", "mock-vl"}}
 }
 
 // Push queues scripted replies; they are used before the brain.
@@ -207,11 +208,13 @@ var (
 	// `put "PAYEE" in Category` proposes a category; `rule "PAYEE" as Category` proposes a rule.
 	proposeRe = regexp.MustCompile(`(?i)^\s*(put|rule)\s+["“„]([^"”]+)["”]\s+(?:in|as)\s+(.+?)\s*$`)
 	// Phase 20 proposals: `budget "Category" 800`, `spent 25.50 at "Payee" on 2026-11-05`,
-	// `share "PAYEE" with "Shared group"`, `save 10000 by 2027-06-30`, `spend 20% less on "Category" by 2027-04-30`
+	// `share "PAYEE" with "Shared group"`, `save 10000 by 2027-06-30`, `spend 20% less on "Category" by 2027-04-30`,
+	// `receipt 54.30 "Shop" on 2026-11-03`
 	budgetRe  = regexp.MustCompile(`(?i)^\s*budget\s+["“„]([^"”]+)["”]\s+([0-9.,]+)\s*$`)
 	expenseRe = regexp.MustCompile(`(?i)^\s*spent\s+([0-9.,]+)\s+at\s+["“„]([^"”]+)["”]\s+on\s+(\d{4}-\d{2}-\d{2})\s*$`)
 	shareRe   = regexp.MustCompile(`(?i)^\s*share\s+["“„]([^"”]+)["”]\s+with\s+["“„]([^"”]+)["”]\s*$`)
 	saveRe    = regexp.MustCompile(`(?i)^\s*save\s+([0-9.,]+)\s+by\s+(\d{4}-\d{2}-\d{2})\s*$`)
+	receiptRe = regexp.MustCompile(`(?i)^\s*receipt\s+([0-9.,]+)\s+["“„]([^"”]+)["”]\s+on\s+(\d{4}-\d{2}-\d{2})\s*$`)
 	reduceRe  = regexp.MustCompile(`(?i)^\s*spend\s+(\d+)\s*%\s+less\s+on\s+["“„]([^"”]+)["”]\s+by\s+(\d{4}-\d{2}-\d{2})\s*$`)
 )
 
@@ -268,6 +271,9 @@ func pick(question string) Call {
 	}
 	if m := shareRe.FindStringSubmatch(question); m != nil {
 		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":"add_to_shared_group","payee":%q,"shared_group":%q,"reason":"You asked for it"}`, m[1], m[2])}
+	}
+	if m := receiptRe.FindStringSubmatch(question); m != nil {
+		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":"attach_receipt","amount":%q,"shop":%q,"date":%q,"items":"bread, butter","reason":"You asked for it"}`, m[1], m[2], m[3])}
 	}
 	if m := saveRe.FindStringSubmatch(question); m != nil {
 		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":"create_goal","goal_kind":"save","goal_name":"Savings","amount":%q,"deadline":%q,"reason":"You asked for it"}`, m[1], m[2])}

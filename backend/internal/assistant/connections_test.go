@@ -84,7 +84,7 @@ func TestStatusFiltersAndCaches(t *testing.T) {
 		t.Fatalf("status = %+v", st)
 	}
 	want := []ModelInfo{
-		{ID: "gemma-3-12b", Caps: llm.Caps{Tools: false, Reasoning: llm.ReasonNone, ContextTokens: 32768}},
+		{ID: "gemma-3-12b", Caps: llm.Caps{Tools: false, Reasoning: llm.ReasonNone, ContextTokens: 32768, Vision: true}},
 		{ID: "qwen3-14b", Caps: llm.Caps{Tools: true, Reasoning: llm.ReasonSwitch, ContextTokens: 8192}},
 	}
 	if !st[0].Reachable || st[0].DefaultModel != "qwen3-14b" || len(st[0].Models) != 2 || st[0].Models[0] != want[0] || st[0].Models[1] != want[1] {

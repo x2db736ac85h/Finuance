@@ -2,8 +2,7 @@
   "connection": "ollama",
   "model": "qwen3:4b-thinking-2507-q4_K_M",
   "think": "auto",
-  "toolset": "full",
-  "ranAt": "2026-10-31T14:02:51.798508486Z",
+  "ranAt": "2026-11-06T17:17:18.96971186Z",
   "cases": [
     {
       "id": "rel-last-month-en",
@@ -17,9 +16,9 @@
         "month_overview"
       ],
       "mode": "tools",
-      "ms": 137406,
-      "approxTokens": 2521,
-      "answer": "Last month (February 2025), you spent **PLN 5,569.62**.  \n*Date range: 2025-02-01 to 2025-02-28*"
+      "ms": 171090,
+      "approxTokens": 2696,
+      "answer": "Last month (February 2025) you spent **5,569.62 PLN**.  \n\n**Date range used**: 2025-02-01 to 2025-02-28 (full calendar month)."
     },
     {
       "id": "rel-last-month-pl",
@@ -33,9 +32,9 @@
         "month_overview"
       ],
       "mode": "tools",
-      "ms": 187406,
-      "approxTokens": 2522,
-      "answer": "W zeszłym miesiącu (luty 2025) wydałeś **5569,62 PLN**."
+      "ms": 83356,
+      "approxTokens": 2697,
+      "answer": "W zeszłym miesiącu (luty 2025) wydałeś **5569,62 PLN**.  \n*Data: 2025-02-01 do 2025-02-28*"
     },
     {
       "id": "rel-last-week-en",
@@ -49,9 +48,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 108279,
-      "approxTokens": 1922,
-      "answer": "Last week (2025-03-10 to 2025-03-16), you spent **PLN 932.95**."
+      "ms": 142839,
+      "approxTokens": 2097,
+      "answer": "Last week (2025-03-10 to 2025-03-16), you spent PLN 932.95."
     },
     {
       "id": "rel-last-week-pl",
@@ -65,9 +64,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 138447,
-      "approxTokens": 1923,
-      "answer": "W zeszłym tygodniu (2025-03-10 – 2025-03-16) wydałeś **932,95 PLN**."
+      "ms": 119606,
+      "approxTokens": 2097,
+      "answer": "W zeszłym tygodniu (10–16 mar. 2025) wydałeś **932,95 PLN**."
     },
     {
       "id": "rel-this-month-en",
@@ -81,25 +80,28 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 101524,
-      "approxTokens": 1928,
-      "answer": "This month so far (March 1–20, 2025), you've spent **5151.82 PLN**.  \n\n*Total: 33 transactions*"
+      "ms": 154816,
+      "approxTokens": 2102,
+      "answer": "This month so far (March 1–20, 2025), you've spent **PLN 5,151.82**.  \n\n*Total from 33 transactions.*"
     },
     {
       "id": "rel-this-week-pl",
       "category": "relative dates",
       "lang": "pl",
-      "ok": true,
+      "ok": false,
       "toolOk": true,
-      "argsOk": true,
-      "answerOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "0:total_spent"
+      ],
       "tools": [
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 132083,
-      "approxTokens": 1919,
-      "answer": "W tym tygodniu wydałeś **98,07 PLN** (data: 2025-03-17 do 2025-03-20)."
+      "ms": 160480,
+      "approxTokens": 2121,
+      "answer": "W tym tygodniu (2025-03-10 – 2025-03-20) wydałeś **1031,02 PLN**.  \n\n| Kategoria       | Wartość (PLN) |\n|-----------------|---------------|\n| Całkowity koszt | 1031,02       |"
     },
     {
       "id": "rel-january-income-pl",
@@ -113,9 +115,9 @@
         "month_overview"
       ],
       "mode": "tools",
-      "ms": 120416,
-      "approxTokens": 2527,
-      "answer": "W styczniu 2025 r. zarobiłeś **9213 PLN** (2025-01-01 do 2025-01-31)."
+      "ms": 106506,
+      "approxTokens": 2702,
+      "answer": "W styczniu 2025 r. zarobiłeś **9213 PLN** (źródło: PRACODAWCA PRZYKŁADOWY SP. Z O.O.).  \n*Data: 2025-01-01 do 2025-01-31*"
     },
     {
       "id": "rel-mar-2-en",
@@ -129,9 +131,9 @@
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 134039,
-      "approxTokens": 2036,
-      "answer": "On 2025-03-02, you spent:  \n- 48.82 PLN at MARKETPLACE OMEGA (Zakupy przez internet)  \n- 75.29 PLN at DELIKATESY POD LIPĄ WARSZAWA (Artykuły spożywcze)  \n- 2850.00 PLN at WSPÓLNOTA MIESZKANIOWA (Mieszkanie)  \n\n**Total: 2974.11 PLN**"
+      "ms": 117298,
+      "approxTokens": 2210,
+      "answer": "On 2025-03-02 (Wednesday), you spent:\n\n- 48.82 PLN at Marketplace Omega (online purchases)\n- 75.29 PLN at Delikatesy pod Lipą Warszawa (groceries)\n- 2850.00 PLN to Wspólnota mieszkaniowa (housing)\n\nTotal: 2974.11 PLN"
     },
     {
       "id": "out-yesterday-en",
@@ -141,11 +143,13 @@
       "toolOk": true,
       "argsOk": true,
       "answerOk": true,
-      "tools": [],
+      "tools": [
+        "search_transactions"
+      ],
       "mode": "tools",
-      "ms": 38045,
-      "approxTokens": 899,
-      "answer": "No transactions found for yesterday (2025-03-19). The latest available transaction is from 2025-03-17."
+      "ms": 184099,
+      "approxTokens": 2064,
+      "answer": "No transactions found for yesterday (2025-03-19). The latest available transaction date is 2025-03-17. Your data doesn't include any transactions for this date."
     },
     {
       "id": "out-dec-2023-en",
@@ -157,9 +161,9 @@
       "answerOk": true,
       "tools": [],
       "mode": "tools",
-      "ms": 43178,
-      "approxTokens": 901,
-      "answer": "The data starts from 2024-01-01, so December 2023 has no transactions in the available records. Latest available date: 2025-03-17."
+      "ms": 43570,
+      "approxTokens": 989,
+      "answer": "The data starts from 2024-01-01, so there are no transactions for December 2023. Latest available date: 2025-03-17.\n\n0 PLN (no transactions in December 2023)"
     },
     {
       "id": "out-april-pl",
@@ -169,11 +173,13 @@
       "toolOk": true,
       "argsOk": true,
       "answerOk": true,
-      "tools": [],
+      "tools": [
+        "month_overview"
+      ],
       "mode": "tools",
-      "ms": 45878,
-      "approxTokens": 899,
-      "answer": "The latest available transaction date is 2025-03-17. April 2025 has not occurred yet in your data (no transactions exist for this period). \n\n\u003canswer\u003e\nThere are no transactions for April 2025. The latest available transaction date is 2025-03-17.\n\u003c/answer\u003e"
+      "ms": 219675,
+      "approxTokens": 2690,
+      "answer": "Dane dla kwietnia 2025 nie są dostępne. Najnowsza data w bazie to 2025-03-17 (w tym tygodniu). Kwietień 2025 nie został jeszcze przetworzony w systemie. \n\n**Data użyta:** 2025-03-17 (najnowsza dostępna data)"
     },
     {
       "id": "out-2026-en",
@@ -185,9 +191,9 @@
       "answerOk": true,
       "tools": [],
       "mode": "tools",
-      "ms": 22049,
-      "approxTokens": 899,
-      "answer": "The latest available transaction date is 2025-03-17. There are no transactions in the data for 2026 (the year hasn't occurred yet). \n\n\u003canswer\u003e\nNo data available for 2026. Latest transaction: 2025-03-17.\n\u003c/answer\u003e"
+      "ms": 26275,
+      "approxTokens": 986,
+      "answer": "The latest available transaction date is 2025-03-17. There are no transactions in your data for 2026 (the year has not yet occurred). \n\n\u003canswer\u003e\nNo data available for 2026. Latest transaction: 2025-03-17.\n\u003c/answer\u003e"
     },
     {
       "id": "merch-kawiarnia-en",
@@ -201,9 +207,9 @@
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 214376,
-      "approxTokens": 3216,
-      "answer": "Total spent at **Kawiarnia Podwórko** (including city name in payee): **2021.48 PLN** (39 transactions from 2024-01-01 to 2025-03-17).  \n\n*Note: Payee names in the data include \"WARSZAWA\" (e.g., \"KAWIARNIA PODWÓRKO WARSZAWA\"), which matches the query \"Kawiarnia Podwórko\" due to case-insensitive and partial-text matching.*  \n\n**Date range**: 2024-01-01 to 2025-03-17 (latest available date: 2025-03-17)."
+      "ms": 197150,
+      "approxTokens": 3390,
+      "answer": "You spent a total of **2021.48 PLN** at *Kawiarnia Podwórko* from **2024-01-01 to 2025-03-17** (39 transactions).  \n\n*Date range used: 2024-01-01 to 2025-03-17*"
     },
     {
       "id": "merch-kino-pl",
@@ -214,12 +220,12 @@
       "argsOk": true,
       "answerOk": true,
       "tools": [
-        "search_transactions"
+        "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 212857,
-      "approxTokens": 2382,
-      "answer": "Wydałeś w kinie **813,72 PLN** (10 transakcji: *KINO POD GWIAZDAMI WARSZAWA*) w okresie od **2024-01-01** do **2025-03-17**."
+      "ms": 237499,
+      "approxTokens": 2090,
+      "answer": "Wydałeś w kinie **813,72 PLN** (10 transakcji) w okresie od 2024-01-01 do 2025-03-17."
     },
     {
       "id": "merch-taxi-en",
@@ -233,28 +239,25 @@
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 140070,
-      "approxTokens": 2950,
-      "answer": "You paid for **40 taxi rides** from 2024-01-01 to 2025-03-17.  \n\n*(All transactions with payee \"TAXI MIEJSKIE\" and expense type)*"
+      "ms": 180370,
+      "approxTokens": 3123,
+      "answer": "The date range used: **2024-01-01 to 2025-03-17** (all transactions in your data).  \n**Total taxi rides paid for**: 40 (all transactions match \"TAXI MIEJSKIE\" as payee and are expenses).  \n\n*Note: The tool returned 25 of 40 matches (truncated), but the total count is explicitly 40.*"
     },
     {
       "id": "merch-bakery-pl",
       "category": "merchants",
       "lang": "pl",
-      "ok": false,
+      "ok": true,
       "toolOk": true,
       "argsOk": true,
-      "answerOk": false,
-      "missing": [
-        "0:matched"
-      ],
+      "answerOk": true,
       "tools": [
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 259745,
-      "approxTokens": 1958,
-      "answer": "Płaciłeś 1 razy w piekarni (2025-03-17).  \n**Data użyta:** 2025-03-17 – 2025-03-20"
+      "ms": 180942,
+      "approxTokens": 3358,
+      "answer": "Płaciłeś w piekarni **128 razy** (od 2024-01-01 do 2025-03-17)."
     },
     {
       "id": "merch-energy-en",
@@ -268,9 +271,9 @@
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 164019,
-      "approxTokens": 2412,
-      "answer": "For 2024 (2024-01-01 to 2024-12-31), you paid **3,026.33 PLN** to \"DOSTAWCA ENERGII\" (energy supplier) across 12 transactions.  \n\n| Date       | Amount (PLN) |\n|------------|---------------|\n| 2024-01-15 | -212.47       |\n| 2024-02-15 | -278.48       |\n| 2024-03-15 | -280.63       |\n| 2024-04-15 | -291.51       |\n| 2024-05-15 | -263.37       |\n| 2024-06-15 | -295.99       |\n| 2024-07-15 | -256.04       |\n| 2024-08-15 | -190.57       |\n| 2024-09-15 | -270.89       |\n| 2024-10-15 | -242.12       |\n| 2024-11-15 | -204.63       |\n| 2024-12-15 | -239.63       |\n\n*Total: 3,026.33 PLN* (all transactions are recurring payments on the 15th of each month)."
+      "ms": 127192,
+      "approxTokens": 2587,
+      "answer": "In 2024, you paid a total of **3026.33 PLN** to DOSTAWCA ENERGII (12 transactions).  \n*Date range: 2024-01-01 to 2024-12-31*"
     },
     {
       "id": "merch-spelling-en",
@@ -284,9 +287,9 @@
         "find_values"
       ],
       "mode": "tools",
-      "ms": 37752,
-      "approxTokens": 1883,
-      "answer": "The pizzeria you go to is spelled as **PIZZERIA SŁONECZNA** in your data (62 transactions). This is the most frequent match for \"pizzeria\" in your transactions."
+      "ms": 73309,
+      "approxTokens": 2057,
+      "answer": "The pizzeria you go to is spelled as **PIZZERIA SŁONECZNA** in your data (appears 62 times)."
     },
     {
       "id": "merch-pharmacy-pl",
@@ -300,9 +303,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 217173,
-      "approxTokens": 1923,
-      "answer": "W aptece wydałeś **1098,33 PLN** w okresie od 2024-01-01 do 2025-03-17. \n\n*Data range: 2024-01-01 – 2025-03-17*"
+      "ms": 232757,
+      "approxTokens": 2095,
+      "answer": "Wydałeś w aptece **1098,33 PLN** (18 transakcji z kategorii *APTEKA ZDROWIE* od 2024-01-01 do 2025-03-17)."
     },
     {
       "id": "cat-groceries-feb-en",
@@ -316,9 +319,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 73924,
-      "approxTokens": 1937,
-      "answer": "You spent **1284.94 PLN** on groceries in February 2025 (2025-02-01 to 2025-02-28).  \n*Total: 26 transactions*"
+      "ms": 86488,
+      "approxTokens": 2117,
+      "answer": "For groceries in February 2025 (2025-02-01 to 2025-02-28):  \n**Total spent**: 1284.94 PLN  \n\n\u003cdetails\u003e\n\u003csummary\u003eBreakdown\u003c/summary\u003e\n- **Count**: 26 transactions  \n- **Category**: Artykuły spożywcze (403 total in data)  \n- **All transactions**: 100% of February groceries\n\u003c/details\u003e"
     },
     {
       "id": "cat-transport-2024-pl",
@@ -332,9 +335,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 102366,
-      "approxTokens": 1933,
-      "answer": "W 2024 roku wydałeś na transport **5 448,99 PLN** (data: 2024-01-01 do 2024-12-31).  \n\n*Wynik pochodzący z analizy 100 transakcji w kategorii \"Transport\" dla całego roku 2024.*"
+      "ms": 69831,
+      "approxTokens": 2109,
+      "answer": "W 2024 roku wydałeś na transport **5 448,99 PLN** (od 2024-01-01 do 2024-12-31).  \n\n*Data: 2024-01-01 – 2024-12-31*"
     },
     {
       "id": "cat-top-feb-en",
@@ -348,9 +351,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 98799,
-      "approxTokens": 1936,
-      "answer": "Your biggest spending category last month (February 2025) was **Mieszkanie** with **2,850 PLN** spent.  \n\n**Date range used**: 2025-02-01 to 2025-02-28 (last calendar month)."
+      "ms": 87997,
+      "approxTokens": 2280,
+      "answer": "Your biggest spending category last month (February 2025) was **Mieszkanie** with **2,850.00 PLN**.\n\n| Category         | Spent (PLN) |\n|------------------|-------------|\n| Mieszkanie       | 2,850.00    |\n| Artykuły spożywcze | 1,284.94    |\n\n*Data range: 2025-02-01 to 2025-02-28*"
     },
     {
       "id": "cat-restaurants-mar-pl",
@@ -364,28 +367,25 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 105510,
-      "approxTokens": 1934,
-      "answer": "W marcu (do 17.03.2025) wydałeś 72,63 PLN na restauracje i kawiarnie."
+      "ms": 107490,
+      "approxTokens": 2114,
+      "answer": "W marcu wydałeś **72,63 PLN** na restauracje i kawiarnie (transakcje z 2025-03-01 do 2025-03-17)."
     },
     {
       "id": "cat-top3-en",
       "category": "categories",
       "lang": "en",
-      "ok": false,
+      "ok": true,
       "toolOk": true,
       "argsOk": true,
-      "answerOk": false,
-      "missing": [
-        "0:groups.2.key"
-      ],
+      "answerOk": true,
       "tools": [
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 110925,
-      "approxTokens": 2160,
-      "answer": "The three categories you spend the most on overall (2024-01-01 to 2025-03-17):\n\n| Category                 | Total Spent (PLN) |\n|--------------------------|-------------------|\n| Mieszkanie               | 42,750.00         |\n| Artykuły spożywcze       | 19,771.41         |\n| Zakupy przez internet    | 7,438.63          |\n\n*Note: All amounts in PLN. Data covers 917 transactions from 2024-01-01 to 2025-03-17.*"
+      "ms": 196475,
+      "approxTokens": 2165,
+      "answer": "You spend the most on:\n1. **Mieszkanie** (Housing) - PLN 42,750.00  \n2. **Artykuły spożywcze** (Food) - PLN 19,771.41  \n3. **Restauracje i kawiarnie** (Restaurants and Cafes) - PLN 7,564.86  \n\n*Date range: 2024-01-01 to 2025-03-17*"
     },
     {
       "id": "grp-holiday-en",
@@ -399,9 +399,9 @@
         "group_summary"
       ],
       "mode": "tools",
-      "ms": 66902,
-      "approxTokens": 2239,
-      "answer": "The seaside holiday (group **Wakacje nad morzem**) cost you **3,126.90 PLN** from **2024-01-08** to **2025-03-17**.  \n\n*Total spent: 3,126.90 PLN (54 transactions)*"
+      "ms": 81390,
+      "approxTokens": 2413,
+      "answer": "Your seaside holiday (Wakacje nad morzem) cost **3126.9 PLN** from 2024-01-08 to 2025-03-17."
     },
     {
       "id": "grp-remont-pl",
@@ -415,9 +415,9 @@
         "group_summary"
       ],
       "mode": "tools",
-      "ms": 71634,
-      "approxTokens": 1948,
-      "answer": "Remont kosztował **758,29 PLN** (15 transakcji z 2024-01-10 do 2025-01-28). Wszystkie wydatki zaliczone w kategorię *Ogród*."
+      "ms": 84155,
+      "approxTokens": 2123,
+      "answer": "Remont kosztował 758,29 PLN (2024-01-10 do 2025-01-28)."
     },
     {
       "id": "grp-holiday-count-pl",
@@ -431,8 +431,8 @@
         "group_summary"
       ],
       "mode": "tools",
-      "ms": 82312,
-      "approxTokens": 2243,
+      "ms": 80263,
+      "approxTokens": 2417,
       "answer": "W grupie \"Wakacje nad morzem\" znajduje się **54 transakcji** (od 2024-01-08 do 2025-03-17)."
     },
     {
@@ -447,9 +447,9 @@
         "group_summary"
       ],
       "mode": "tools",
-      "ms": 108316,
-      "approxTokens": 2249,
-      "answer": "For your \"Wakacje nad morzem\" (Seaside holiday) group, groceries (**Artykuły spożywcze**) totaled **1,390.79 PLN**.  \n\n**Date range**: 2024-01-08 to 2025-03-17 (435 days)  \n**Top grocery payees**:  \n- PIEKARNIA ZIARNO (470.81 PLN)  \n- DELIKATESY POD LIPĄ (468.48 PLN)  \n- MARKET NA ROGU (451.50 PLN)  \n\n*Note: All transactions in this group are included (transfers, payments, etc).*"
+      "ms": 130015,
+      "approxTokens": 2423,
+      "answer": "For your seaside holiday group **Wakacje nad morzem**, you spent **1390.79 PLN** on groceries (category *Artykuły spożywcze*).  \n\n**Date range**: 2024-01-08 to 2025-03-17 (all transactions in this group)  \n\n*Note: This includes all grocery-related transactions during your holiday period.*"
     },
     {
       "id": "rank-payees-2024-en",
@@ -463,9 +463,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 98953,
-      "approxTokens": 1985,
-      "answer": "In 2024 (2024-01-01 to 2024-12-31), your top 3 payees by spending were:\n\n1. **WSPÓLNOTA MIESZKANIOWA**: 34,200 PLN  \n2. **DELIKATESY POD LIPĄ**: 5,631.07 PLN  \n3. **MARKET NA ROGU**: 5,412.54 PLN"
+      "ms": 147318,
+      "approxTokens": 2159,
+      "answer": "Top 3 payees by spending in 2024 (PLN):\n\n1. WSPÓLNOTA MIESZKANIOWA: 34,200.00  \n2. DELIKATESY POD LIPĄ: 5,631.07  \n3. MARKET NA ROGU: 5,412.54  \n\n*Date range: 2024-01-01 to 2024-12-31*"
     },
     {
       "id": "rank-month-2024-pl",
@@ -479,28 +479,25 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 88006,
-      "approxTokens": 2163,
-      "answer": "W miesiącu 2024 roku, w którym wydałeś najwięcej, to **marzec (2024-03)** z całkowitą kwotą wydatków **7 761,02 PLN**.  \n\n**Użyty zakres dat:** 2024-01-01 do 2024-12-31."
+      "ms": 88238,
+      "approxTokens": 2338,
+      "answer": "W miesiącu 2024 roku, w którym wydałem najwięcej, to **marzec (2024-03)** z całkowitą kwotą wydatków **7 761,02 PLN**.  \n\n**Dane z analizy:**  \n| Miesiąc | Wydatki (PLN) |\n|--------|----------------|\n| Marzec  | 7 761,02       |\n| Czerwiec| 7 168,11       |\n| Lipiec | 6 527,45       |\n| Sierpień| 7 151,89       |\n\n*Źródło: analiza transakcji z 2024-01-01 do 2024-12-31.*"
     },
     {
       "id": "rank-weekday-en",
       "category": "rankings and trends",
       "lang": "en",
-      "ok": false,
+      "ok": true,
       "toolOk": true,
       "argsOk": true,
-      "answerOk": false,
-      "missing": [
-        "0:argmax(groups,spent).key"
-      ],
+      "answerOk": true,
       "tools": [
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 101020,
-      "approxTokens": 2063,
-      "answer": "You spend the most on **Sunday** (15,813.01 PLN).  \n**Date range**: 2024-01-01 to 2025-03-17 (all transactions)  \n\n| Day       | Total Spent (PLN) |\n|-----------|-------------------|\n| Sunday    | 15,813.01         |"
+      "ms": 136191,
+      "approxTokens": 2237,
+      "answer": "You spend the most on **Tuesday** (16,385.46 PLN).  \n\n**Date range used**: 2024-01-01 to 2025-03-17 (all transactions)  \n\n| Day       | Total Spent (PLN) |\n|-----------|-------------------|\n| Tuesday   | 16,385.46         |"
     },
     {
       "id": "rank-largest-feb-en",
@@ -514,30 +511,25 @@
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 98159,
-      "approxTokens": 1957,
-      "answer": "Your largest single expense in February 2025 was **2,850 PLN** to *WSPÓLNOTA MIESZKANIOWA* (Apartment community) on 2025-02-02.  \n**Date range used**: 2025-02-01 to 2025-02-28."
+      "ms": 91451,
+      "approxTokens": 2132,
+      "answer": "The largest single expense in February 2025 was **2,850 PLN** to *WSPÓLNOTA MIESZKANIOWA* on 2025-02-02.  \n**Date range used**: 2025-02-01 to 2025-02-28."
     },
     {
       "id": "rank-largest-2025-pl",
       "category": "rankings and trends",
       "lang": "pl",
-      "ok": false,
-      "toolOk": false,
-      "argsOk": false,
-      "answerOk": false,
-      "missing": [
-        "0:rows.0.amount",
-        "0:rows.1.amount",
-        "0:rows.2.amount"
-      ],
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
       "tools": [
-        "aggregate_transactions"
+        "search_transactions"
       ],
       "mode": "tools",
-      "ms": 298112,
-      "approxTokens": 1934,
-      "answer": "W 2025 roku (od 01.01.2025 do 17.03.2025) mam 152 transakcji z całkowitym wydatkami 17 396,59 PLN. Dla 3 największych wydatków użyj funkcji `search_transactions` z sortowaniem po kwocie (najwyższa cena) i limitem 3."
+      "ms": 181814,
+      "approxTokens": 2217,
+      "answer": "Twoje 3 największe wydatki w 2025 roku (do 2025-03-17):\n\n| Data       | Wydatki (PLN) | Payee                     |\n|------------|----------------|----------------------------|\n| 2025-03-02 | 2 850,00       | WSPÓLNOTA MIESZKANIOWA    |\n| 2025-02-02 | 2 850,00       | WSPÓLNOTA MIESZKANIOWA    |\n| 2025-01-02 | 2 850,00       | WSPÓLNOTA MIESZKANIOWA    |\n\n*Uwaga: Wszystkie transakcje to opłaty za mieszkanie (kategorie: Mieszkanie).*"
     },
     {
       "id": "trend-months-2025-en",
@@ -551,9 +543,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 110356,
-      "approxTokens": 1969,
-      "answer": "Here's your spending per month in 2025 (data up to 2025-03-17):\n\n| Month       | Total Spent (PLN) |\n|-------------|-------------------|\n| January 2025 | 6,675.15          |\n| February 2025| 5,569.62          |\n| March 2025  | 5,151.82          |\n\n*Note: March data is partial (only transactions up to 2025-03-17 included).*"
+      "ms": 118743,
+      "approxTokens": 2143,
+      "answer": "Here's your spending per month in 2025 (data available up to 2025-03-17):\n\n| Month       | Total Spent (PLN) | Transactions |\n|-------------|-------------------|---------------|\n| January     | 6,675.15          | 70            |\n| February    | 5,569.62          | 49            |\n| March       | 5,151.82          | 33            |\n\n*Note: No transactions recorded for April–December 2025 (latest data: 2025-03-17).*"
     },
     {
       "id": "cmp-jan-feb-en",
@@ -564,13 +556,13 @@
       "argsOk": true,
       "answerOk": true,
       "tools": [
-        "month_overview",
-        "month_overview"
+        "aggregate_transactions",
+        "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 168540,
-      "approxTokens": 3251,
-      "answer": "For January 2025 (2025-01-01 to 2025-01-31): PLN 6,675.15 spent  \nFor February 2025 (2025-02-01 to 2025-02-28): PLN 5,569.62 spent  \n\nYou spent more in **January 2025**."
+      "ms": 231381,
+      "approxTokens": 2224,
+      "answer": "In January 2025, you spent **PLN 6,675.15** (70 transactions), which is more than February 2025's **PLN 5,569.62** (49 transactions).  \n*Date ranges: January 2025 (2025-01-01 to 2025-01-31), February 2025 (2025-02-01 to 2025-02-28)*"
     },
     {
       "id": "cmp-transport-pl",
@@ -581,12 +573,13 @@
       "argsOk": true,
       "answerOk": true,
       "tools": [
+        "aggregate_transactions",
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 133246,
-      "approxTokens": 1965,
-      "answer": "W styczniu 2025 wydałeś **433,71 PLN** (8 transakcji), a w lutym 2025 **649,77 PLN** (9 transakcji). Wydatki na transport wzrosły o **216,06 PLN** w porównaniu do stycznia.\n\n**Data użyta:** 2025-01-01 do 2025-02-28"
+      "ms": 170091,
+      "approxTokens": 2226,
+      "answer": "W styczniu 2025: 433,71 PLN  \nW lutym 2025: 649,77 PLN  \n\n*Data: styczeń 2025 (01.01–31.01) i luty 2025 (01.02–28.02)*"
     },
     {
       "id": "cmp-income-q1-en",
@@ -601,28 +594,25 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 208091,
-      "approxTokens": 2040,
-      "answer": "For Q1 2024 (2024-01-01 to 2024-03-31): **28,330 PLN**  \nFor Q1 2025 (2025-01-01 to 2025-03-17): **28,116 PLN** (data only available up to 2025-03-17)  \n\n*Note: Q1 2025 is incomplete (March 18–31 has no transactions).*"
+      "ms": 237621,
+      "approxTokens": 2214,
+      "answer": "Here's the comparison of your total income for Q1 2024 vs Q1 2025 (data ends March 17, 2025):\n\n| Period          | Income (PLN) | Notes                                  |\n|-----------------|---------------|-----------------------------------------|\n| Q1 2024 (Jan 1–Mar 31) | 28,330        | Full quarter data available            |\n| Q1 2025 (Jan 1–Mar 17) | 28,116        | Data incomplete (last transaction: 2025-03-17) |\n\n**Difference**: Q1 2025 income was **214 PLN less** than Q1 2024 (partial data)."
     },
     {
       "id": "items-coffee-en",
       "category": "items vs transactions",
       "lang": "en",
-      "ok": false,
+      "ok": true,
       "toolOk": true,
       "argsOk": true,
-      "answerOk": false,
-      "missing": [
-        "0:matched"
-      ],
+      "answerOk": true,
       "tools": [
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 256867,
-      "approxTokens": 1914,
-      "answer": "You bought **0 coffees** at Kawiarnia Podwórko in the data range (2024-01-01 to 2025-03-17). No transactions matched the criteria."
+      "ms": 187898,
+      "approxTokens": 3390,
+      "answer": "The data shows **39 transactions** at \"KAWIARNIA PODWÓRKO WARSZAWA\" (matches your query for \"Kawiarnia Podwórko\"). \n\n⚠️ **Important**: Each transaction is a single payment (e.g., one coffee order), *not* individual items. The system does **not track coffee quantities**—only transaction counts. \n\n**Date range used**: 2024-01-01 to 2025-03-17 (all available data).  \n**Total spent**: PLN 2,021.48 (across 39 transactions).\n\nNo further details about coffee quantities are available in the data."
     },
     {
       "id": "items-bread-pl",
@@ -636,9 +626,9 @@
         "search_transactions"
       ],
       "mode": "tools",
-      "ms": 254192,
-      "approxTokens": 3193,
-      "answer": "W Twoich transakcjach w kategorii **Artykuły spożywcze** z 2024-01-01 do 2025-03-17 zapisano **128 transakcji** w piekarni (np. Piekarnia Ziarno Warszawa). **Dane nie zawierają informacji o ilości bułek** – każda transakcja to cała kwota wydatków (np. 98,07 PLN), a nie rozliczenie poszczególnych produktów. \n\n*Załącznik: 25 z 128 transakcji (najnowsze)*  \n| Data       | Kwota (PLN) | Piekarnia               |\n|------------|--------------|-------------------------|\n| 2025-03-17 | -98,07       | PIEKARNIA ZIARNO WARSZAWA |\n\n**Uwaga**: W systemie Finuance nie są przechowywane ilości produktów – tylko całe transakcje. Aby określić ilość bułek, potrzebowałbyś dodatkowych danych (np. faktury lub listy zakupów)."
+      "ms": 297460,
+      "approxTokens": 3367,
+      "answer": "W Twoich transakcjach w piekarni (PIEKARNIA ZIARNO WARSZAWA) z **2024-01-01** do **2025-03-17** było **128 płatności**, łączna kwota **5873,29 PLN**. W danych nie są zapisane ilości bułek, więc nie można określić, ile bułek kupiłeś. Każda transakcja to jedna płatność (np. całe zamówienie), a nie poszczególne produkty."
     },
     {
       "id": "inc-2024-en",
@@ -652,8 +642,8 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 71893,
-      "approxTokens": 1917,
+      "ms": 75945,
+      "approxTokens": 2091,
       "answer": "Your total income in 2024 was **113,081 PLN** (from 2024-01-01 to 2024-12-31)."
     },
     {
@@ -668,9 +658,9 @@
         "month_overview"
       ],
       "mode": "tools",
-      "ms": 213946,
-      "approxTokens": 2522,
-      "answer": "Zaoszczędziłeś **4010,38 PLN** w lutym 2025 (2025-02-01 – 2025-02-28)."
+      "ms": 99757,
+      "approxTokens": 2697,
+      "answer": "Zaoszczędziłeś **4010,38 PLN** w lutym 2025 (2025-02-01 do 2025-02-28).  \n\n**Dane z raportu:**  \n- Wystawione: 5569,62 PLN  \n- Przychody: 9580 PLN  \n- Netto (zaoszczędzenie): 4010,38 PLN  \n\n*Uwaga: W lutym 2025 nie było niepełnych dni (28 dni).*"
     },
     {
       "id": "inc-salary-mar-en",
@@ -684,9 +674,9 @@
         "aggregate_transactions"
       ],
       "mode": "tools",
-      "ms": 105156,
-      "approxTokens": 1926,
-      "answer": "In the available data (March 1–17, 2025), you received a salary of **9,323 PLN**.  \n*(Latest transaction date: 2025-03-17)*"
+      "ms": 140559,
+      "approxTokens": 2100,
+      "answer": "You received a salary of **9,323 PLN** in March 2025 (data available up to 2025-03-17).  \n\n**Date range used**: 2025-03-01 to 2025-03-17  \n*(Note: Full March data not yet available)*"
     },
     {
       "id": "rec-list-en",
@@ -700,9 +690,9 @@
         "recurring_payments"
       ],
       "mode": "tools",
-      "ms": 112057,
-      "approxTokens": 2031,
-      "answer": "You have 3 active recurring payments:\n\n1. **WSPÓLNOTA MIESZKANIOWA** (Mieszkanie):  \n   - Typical amount: PLN 2,850  \n   - Yearly cost: PLN 34,200  \n   - Last charged: 2025-03-02 | Next due: 2025-04-02  \n\n2. **DOSTAWCA ENERGII** (Rachunki):  \n   - Typical amount: PLN 260.29  \n   - Yearly cost: PLN 3,123.48  \n   - Last charged: 2025-03-15 | Next due: 2025-04-15  \n\n3. **OPERATOR INTERNETU** (Rachunki):  \n   - Typical amount: PLN 79.99  \n   - Yearly cost: PLN 959.88  \n   - Last charged: 2025-02-20 | Next due: 2025-03-20  \n\nAll payments are active and recurring monthly."
+      "ms": 157430,
+      "approxTokens": 2205,
+      "answer": "Here are your active recurring payments (PLN):\n\n- **WSPÓLNOTA MIESZKANIOWA** (Mieszkanie):  \n  Typical: PLN 2,850 | Last: 2025-03-02 | Next: 2025-04-02  \n\n- **DOSTAWCA ENERGII** (Rachunki):  \n  Typical: PLN 260.29 | Last: 2025-03-15 | Next: 2025-04-15  \n\n- **OPERATOR INTERNETU** (Rachunki):  \n  Typical: PLN 79.99 | Last: 2025-02-20 | Next: 2025-03-20  \n\n*All payments are active and within your data range (2024-01-01 to 2025-03-17).*"
     },
     {
       "id": "rec-internet-pl",
@@ -716,9 +706,9 @@
         "recurring_payments"
       ],
       "mode": "tools",
-      "ms": 116969,
-      "approxTokens": 2021,
-      "answer": "Roczne opłaty za internet: **959,88 PLN** (OPERATOR INTERNETU, miesięcznie: 79,99 PLN).  \n*Data: ostatnia płatność 2025-02-20, następna 2025-03-20.*"
+      "ms": 142957,
+      "approxTokens": 2195,
+      "answer": "Rocznie płacę za internet **959,88 PLN** (12 razy miesięcznie).  \n*Data: 2024-01-01 do 2025-03-17 (najnowsze transakcje: 2025-02-20)*"
     },
     {
       "id": "month-progress-pl",
@@ -733,9 +723,9 @@
         "month_overview"
       ],
       "mode": "tools",
-      "ms": 260912,
-      "approxTokens": 3241,
-      "answer": "Ten miesiąc (marzec 2025) w porównaniu z poprzednim (luty 2025) charakteryzuje się:\n\n- **Mniejszymi wydatkami**: 5151,82 PLN (w lutowym: 5569,62 PLN) → zmniejszenie o 417,79 PLN  \n- **Wysoki zysk netto**: 4171,18 PLN (w lutowym: 4010,38 PLN) → wzrost o 160,80 PLN  \n- **Lepszym współczynnikiem oszczędności**: 44,7% (w lutowym: 41,9%)  \n\n**Kategorie**:  \n- Artykuły spożywcze: 1095,05 PLN (mniej niż w lutowym)  \n- Transport: 429,32 PLN (mniej niż w lutowym)  \n- Zakupy przez internet: 343,49 PLN (więcej niż w lutowym)  \n- Zdrowie i uroda: 57,53 PLN (nad budżetem)  \n\nW tym miesiącu oszczędzasz więcej niż w poprzednim, co wynika z mniejszych wydatków na podstawowe kategorie i większych wydatków na zakupy internetowe."
+      "ms": 269075,
+      "approxTokens": 3415,
+      "answer": "Ten miesiąc (marzec 2025) jest lepszy niż poprzedni (luty 2025) w kwestii zysków netto i stopy oszczędności.  \n- **Zysk netto**: 4171,18 PLN (w lutowym: 4010,38 PLN)  \n- **Stopa oszczędności**: 44,7% (w lutowym: 41,9%)  \n- **Zmiana kosztów**: Spadek o 417,80 PLN (marzec: 5151,82 PLN vs luty: 5569,62 PLN)  \n\nNajwiększe koszty: mieszkanie (2850 PLN), rachunki (216,32 PLN), zakupy online (185,41 PLN).  \nJedyna kategoria nad budżetem: *Zdrowie i uroda* (57,53 PLN).  \n\n**Data**: Marzec 2025 (do 17.03.2025) vs Luty 2025 (pełny miesiąc)."
     },
     {
       "id": "month-summary-en",
@@ -746,15 +736,16 @@
       "argsOk": true,
       "answerOk": false,
       "missing": [
-        "0:total_spent"
+        "0:total_spent",
+        "0:total_income"
       ],
       "tools": [
         "month_overview"
       ],
       "mode": "tools",
-      "ms": 194687,
-      "approxTokens": 2526,
-      "answer": "February 2025 (2025-02-01 to 2025-02-28):  \n- **Net savings**: PLN 4,010.38 (41.9% savings rate)  \n- **Largest expense**: Housing (PLN 2,850) on 2025-02-02  \n- **Key categories**:  \n  - Housing: PLN 2,850  \n  - Groceries: PLN 1,284.94 (over budget by PLN 24.94)  \n  - Transport: PLN 649.77  \n- **Income**: PLN 9,580 from employer (`PRACODAWCA PRZYKŁADOWY SP. Z O.O.`)"
+      "ms": 149031,
+      "approxTokens": 2700,
+      "answer": "**February 2025 (2025-02-01 to 2025-02-28)**  \n- Net savings: 4,010.38 PLN (41.9% savings rate)  \n- Over-budget categories: Groceries (1,284.94), Transport (649.77), Bills (340.28)  \n- Top expenses: Apartment fees (2,850), utilities (260.29), fuel (132.6)"
     },
     {
       "id": "budget-now-pl",
@@ -768,9 +759,9 @@
         "budget_status"
       ],
       "mode": "tools",
-      "ms": 74909,
-      "approxTokens": 2301,
-      "answer": "Tak, przekraczasz budżet w kategorii **Zdrowie i uroda** (57,53 PLN vs. 45 PLN).  \n**Data:** 2025-03 (17 dni z 31)  \n**Status:** Przekroczenie budżetu w tej kategorii. Inne kategorie są w zakresie lub przyspieszone (ale nie przekraczają całkowitego budżetu miesięcznego)."
+      "ms": 120954,
+      "approxTokens": 2476,
+      "answer": "Tak, przekraczasz budżet w kategorii **\"Zdrowie i uroda\"** (57,53 PLN vs 45 PLN).  \n**Data:** 2025-03-01 do 2025-03-17 (17 dni).  \nW pozostałych kategoriach budżet jest spełniony lub przekraczany szybciej niż planowane (np. *Mieszkanie* – 2850 PLN vs 2850 PLN).  \n\n*Uwaga: Budżet dla \"Zdrowie i uroda\" został ustawiony automatycznie (domyślny), więc przekroczenie wynika z rzeczywistych wydatków.*"
     },
     {
       "id": "budget-feb-en",
@@ -784,9 +775,9 @@
         "budget_status"
       ],
       "mode": "tools",
-      "ms": 92900,
-      "approxTokens": 2304,
-      "answer": "For February 2025 (2025-02-01 to 2025-02-28), the following categories went over budget:\n\n- **Artykuły spożywcze**: 24.94 PLN over  \n- **Transport**: 199.77 PLN over  \n- **Rachunki**: 20.28 PLN over"
+      "ms": 114995,
+      "approxTokens": 2478,
+      "answer": "In February 2025 (2025-02-01 to 2025-02-28), the following categories went over budget:\n\n| Category              | Over Budget (PLN) |\n|-----------------------|-------------------|\n| Artykuły spożywcze    | 24.94             |\n| Transport             | 199.77            |\n| Rachunki              | 20.28             |\n\n*(Total over budget: 245.99 PLN)*"
     },
     {
       "id": "grp-holiday-days-en",
@@ -800,9 +791,9 @@
         "group_summary"
       ],
       "mode": "tools",
-      "ms": 141480,
-      "approxTokens": 2255,
-      "answer": "The seaside holiday (\"Wakacje nad morzem\") lasted **435 days** (from 2024-01-08 to 2025-03-17), with an average daily spend of **7.19 PLN**.\n\n| Metric               | Value     |\n|----------------------|-----------|\n| Total days           | 435       |\n| Daily spend          | 7.19 PLN  |\n\n*Note: This reflects the duration of transactions in the \"Wakacje nad morzem\" group (as recorded in your data).*"
+      "ms": 162913,
+      "approxTokens": 2429,
+      "answer": "The seaside holiday (\"Wakacje nad morzem\") lasted **435 days** (from 2024-01-08 to 2025-03-17), with an average daily spend of **7.19 PLN**.\n\n| Metric               | Value     |\n|----------------------|-----------|\n| Total days           | 435       |\n| Daily spend          | 7.19 PLN  |"
     },
     {
       "id": "grp-remont-payee-pl",
@@ -816,28 +807,89 @@
         "group_summary"
       ],
       "mode": "tools",
-      "ms": 76647,
-      "approxTokens": 1958,
-      "answer": "Podczas remontu wydałeś najwięcej na **CENTRUM OGRODNICZE** w kategorii **Ogród** (758,29 PLN).  \n*Data: 2024-01-10 do 2025-01-28*"
+      "ms": 73594,
+      "approxTokens": 2133,
+      "answer": "Podczas remontu wydałeś najwięcej w **CENTRUM OGRODNICZE** (758,29 PLN).  \n*Data: 2024-01-10 do 2025-01-28 (385 dni)*.  \nWszystkie transakcje z grupy \"Remont\" należą do kategorii **Ogród**."
     },
     {
       "id": "prop-category-en",
       "category": "action proposals",
       "lang": "en",
-      "ok": true,
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [
+        "propose_action",
+        "propose_action",
+        "propose_action"
+      ],
+      "ms": 846772,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "prop-rule-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": false,
       "toolOk": true,
-      "argsOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Zastosuj|Apply|potwierdź|zatwierdź|kart"
+      ],
+      "tools": [
+        "propose_action",
+        "find_values",
+        "propose_action",
+        "propose_action",
+        "propose_action",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 910141,
+      "approxTokens": 7294,
+      "answer": "_Stopped after 6 lookups._"
+    },
+    {
+      "id": "prop-group-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Apply|confirm|review|card"
+      ],
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 343430,
+      "approxTokens": 2058,
+      "answer": "The group name \"Culture\" is valid in terms of length (7 characters), which meets the system's requirement of 1–40 characters. The error message you received likely stems from a temporary system validation issue, as the name itself is correctly formatted. \n\nTo proceed, you can try the following:\n1. **Reattempt the action** with the group name `Culture` (ensure there are no hidden spaces or special characters).\n2. If the error persists, the system may require the group name to be in lowercase (e.g., `culture`) or follow Polish naming conventions (e.g., `Kultura`). Since your existing user-defined groups are in Polish (e.g., `Wakacje nad morzem`), using `Kultura` (Polish for \"Culture\") might resolve compatibility issues.\n\nFor immediate results, try the group name **`Kultura`** (7 characters, Polish spelling) to align with your existing group structure. This is a common practice when working with multilingual systems.\n\n**Example action to try**:  \n`propose_action(set_group, group=\"Kultura\", query=\"TEATR MAŁY\")`\n\nThis ensures compatibility while meeting the system's requirements. Let me know if you need further adjustments! 🛠️"
+    },
+    {
+      "id": "prop-budget-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
       "answerOk": true,
       "tools": [
         "propose_action"
       ],
       "mode": "tools",
-      "ms": 174287,
-      "approxTokens": 2117,
-      "answer": "I've proposed moving 14 OPERATOR INTERNETU transactions to the \"Internet\" category. The user must apply this change to confirm. (Date range: 2024-01-01 to 2025-03-17)"
+      "ms": 319555,
+      "approxTokens": 2060,
+      "answer": "The category \"Rachunki\" exists in your data (29 transactions). To set the budget, ensure the exact spelling matches your system. Use `find_values` with field \"category\" and query \"Rachunki\" to confirm the correct name."
     },
     {
-      "id": "prop-rule-pl",
+      "id": "prop-budget-pl",
       "category": "action proposals",
       "lang": "pl",
       "ok": true,
@@ -848,13 +900,90 @@
         "propose_action"
       ],
       "mode": "tools",
-      "ms": 161004,
-      "approxTokens": 2103,
-      "answer": "Reguła **\"KLUB FITNESS RUCH to Sport\"** została zpropozycjonowana. 19 transakcji z tym payee są już w kategorii *Sport*. Aby zastosować regułę dla nowych transakcji, potwierdź w aplikacji."
+      "ms": 155922,
+      "approxTokens": 2114,
+      "answer": "Budżet miesięczny na kategorię **\"Artykuły spożywcze\"** został zpropozionowany na **1500 zł**. Aby zastosować zmianę, proszę potwierdzić w aplikacji."
     },
     {
-      "id": "prop-group-en",
+      "id": "prop-expense-en",
       "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 270850,
+      "approxTokens": 3324,
+      "answer": "I've proposed adding a 18 PLN cash transaction for KAWIARNIA ZIARNO on 2025-03-20 to your Portfel account. Please confirm with \"Apply\" to complete."
+    },
+    {
+      "id": "prop-expense-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 234413,
+      "approxTokens": 3318,
+      "answer": "Wydatek gotówką w wysokości 42 PLN w PIEKARNIA ZIARNO z dnia 2025-03-19 został zpropozycjonowany do potwierdzenia. Proszę potwierdzić, aby zastosować zmianę."
+    },
+    {
+      "id": "prop-share-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Apply|confirm|review|card"
+      ],
+      "tools": [
+        "propose_action",
+        "propose_action",
+        "propose_action",
+        "propose_action",
+        "propose_action",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 305718,
+      "approxTokens": 7095,
+      "answer": "_Stopped after 6 lookups._"
+    },
+    {
+      "id": "prop-share-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Zastosuj|Apply|potwierdź|zatwierdź|kart"
+      ],
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 203267,
+      "approxTokens": 2108,
+      "answer": "W grupie \"Wyjazd do Pragi\" nie ma żadnych transakcji. Twoje grupy to: **Wakacje nad morzem**, **Remont**, **Praga**.  \n*Data: 2024-01-01 do 2025-03-17*"
+    },
+    {
+      "id": "goal-save-en",
+      "category": "goals",
       "lang": "en",
       "ok": true,
       "toolOk": true,
@@ -864,9 +993,91 @@
         "propose_action"
       ],
       "mode": "tools",
-      "ms": 163820,
-      "approxTokens": 2089,
-      "answer": "I've proposed to label **13 TEATR MAŁY visits** (e.g., 2024-08-18, 2025-02-18) under the *Culture* group. This creates a new group. Please confirm by applying the change to finalize. \n\n**Date range used**: 2024-01-01 to 2025-03-17"
+      "ms": 88367,
+      "approxTokens": 2155,
+      "answer": "Your goal \"Save 10,000 PLN by June\" has been proposed. To activate it, please confirm with **Apply** in the confirmation card. This will track your savings progress toward 10,000 PLN by 2025-06-30. \n\n*(Date range used: 2025-03-20 → 2025-06-30)*"
+    },
+    {
+      "id": "goal-save-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 142115,
+      "approxTokens": 2147,
+      "answer": "Twój cel \"5000 zł do końca roku\" został zpropozycjonowany. Potwierdź go, aby oszczędzać do 31.12.2025."
+    },
+    {
+      "id": "goal-reduce-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 363630,
+      "approxTokens": 3453,
+      "answer": "I've proposed a goal to reduce your \"Restauracje i kawiarnie\" spending by 20% (compared to the average of the last 3 months) until December 31, 2025. Your current monthly spend in this category is **PLN 72.63** (March 2025). This goal will automatically track progress and adjust targets as needed. Please confirm by applying the goal. \n\n*Date range used: 2025-03-01 to 2025-03-17*"
+    },
+    {
+      "id": "goal-reduce-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "missing": [
+        "mention Zastosuj|Apply|potwierdź|zatwierdź|kart"
+      ],
+      "tools": [],
+      "mode": "tools",
+      "ms": 51467,
+      "approxTokens": 995,
+      "answer": ""
+    },
+    {
+      "id": "goal-update-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 54358,
+      "approxTokens": 2168,
+      "answer": "The deadline for your \"Wakacje\" goal has been proposed to be updated to **2025-09-30** (from the original 2025-08-31). This change will appear as a confirmation card for you to approve. \n\n✅ **Next step**: Apply the update in the app to finalize the change."
+    },
+    {
+      "id": "goal-status-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 98801,
+      "approxTokens": 2413,
+      "answer": "W grupie **Wakacje nad morzem** (2024-01-08 do 2025-03-17) wydano **3126,90 PLN** bez przychodu. Nie oszczędzasz, a wydajesz na wakacje. Najwięcej kosztuje **śniadanie i transport** (44,5% i 16,9% sumy). \n\n*Przykład top 3 wydatków:*  \n| Payee               | Kwota (PLN) | Ilość transakcji |\n|---------------------|-------------|------------------|\n| PIEKARNIA ZIARNO    | 470,81      | 8                |\n| DELIKATESY POD LIPĄ | 468,48      | 11               |\n| MARKET NA ROGU      | 451,50      | 7                |"
     }
   ]
 }

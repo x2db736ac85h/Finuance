@@ -107,18 +107,24 @@ func TestProposalsV2(t *testing.T) {
 		t.Fatalf("add_to_shared_group = %+v %s", p, out.JSON)
 	}
 
+	// a card payment the bank hasn't exported yet goes into the bank account named (ADR 0032)
+	if out, _ := run(`{"action":"add_expense","account":"konto","date":"2026-11-05","amount":19.99,"payee":"Księgarnia"}`); out.Proposal == nil ||
+		out.Proposal.AccountName != "Konto" || out.Proposal.AmountMinor != -1999 {
+		t.Errorf("add_expense into a bank account = %s", out.JSON)
+	}
+
 	// refusals go back to the model; nothing changed
 	for args, want := range map[string]string{
-		`{"action":"set_budget","to_category":"Podróże","amount":100}`:                          "There is no category",
-		`{"action":"set_budget","to_category":"Rozrywka","remove_budget":true}`:                 "has no budget of its own",
-		`{"action":"set_budget","to_category":"Jedzenie","amount":-5,"remove_budget":false}`:    "",
-		`{"action":"set_budget","to_category":"Jedzenie","amount":0}`:                           "amount must be the monthly budget",
-		`{"action":"add_expense","date":"wczoraj","amount":5,"payee":"x"}`:                      "date must be",
-		`{"action":"add_expense","date":"2026-11-05","amount":0,"payee":"x"}`:                   "amount must be",
-		`{"action":"add_expense","date":"2026-11-05","amount":5}`:                               "payee must",
-		`{"action":"add_expense","account":"Konto","date":"2026-11-05","amount":5,"payee":"x"}`: "is not a cash account",
-		`{"action":"add_to_shared_group","shared_group":"Wakacje","payee":"KINO"}`:              "shared_group must be one of: Wyjazd do Pragi",
-		`{"action":"add_to_shared_group","shared_group":"Wyjazd do Pragi"}`:                     "Give a filter",
+		`{"action":"set_budget","to_category":"Podróże","amount":100}`:                              "There is no category",
+		`{"action":"set_budget","to_category":"Rozrywka","remove_budget":true}`:                     "has no budget of its own",
+		`{"action":"set_budget","to_category":"Jedzenie","amount":-5,"remove_budget":false}`:        "",
+		`{"action":"set_budget","to_category":"Jedzenie","amount":0}`:                               "amount must be the monthly budget",
+		`{"action":"add_expense","date":"wczoraj","amount":5,"payee":"x"}`:                          "date must be",
+		`{"action":"add_expense","date":"2026-11-05","amount":0,"payee":"x"}`:                       "amount must be",
+		`{"action":"add_expense","date":"2026-11-05","amount":5}`:                                   "payee must",
+		`{"action":"add_expense","account":"Skarbonka","date":"2026-11-05","amount":5,"payee":"x"}`: "There is no account",
+		`{"action":"add_to_shared_group","shared_group":"Wakacje","payee":"KINO"}`:                  "shared_group must be one of: Wyjazd do Pragi",
+		`{"action":"add_to_shared_group","shared_group":"Wyjazd do Pragi"}`:                         "Give a filter",
 	} {
 		out, _ := run(args)
 		if want == "" {

@@ -6,7 +6,7 @@ import (
 )
 
 // TestManualTransactionsHTTP (ADR 0029): a cash account takes typed expenses that can be changed
-// and deleted, a bank account doesn't, files don't go into a cash account, and another user can't
+// and deleted (in a bank account too, ADR 0032), files don't go into a cash account, and another user can't
 // touch them. Every change is in the Activity, without amounts or payees.
 func TestManualTransactionsHTTP(t *testing.T) {
 	e := newTestEnv(t, nil, true)
@@ -37,8 +37,9 @@ func TestManualTransactionsHTTP(t *testing.T) {
 		t.Errorf("search found %v rows", q.body["total"])
 	}
 
+	// a card payment the bank hasn't exported yet can be typed into the bank account (ADR 0032)
 	expect(t, b.do("POST", "/transactions", map[string]any{"accountId": bank.body["id"], "bookedOn": "2026-10-18",
-		"amountMinor": -1, "payee": "x"}), 422, "validation_failed")
+		"amountMinor": -1, "payee": "x"}), 201, "")
 	expect(t, b.do("POST", "/transactions", map[string]any{"accountId": walletID, "bookedOn": "2026-10-18",
 		"amountMinor": 0, "payee": "x"}), 422, "validation_failed")
 	expect(t, b.upload("", "a.csv", []byte("Data;Opis;Kwota\n02.01.2025;Kawa;-12,00\n"), walletID), 422, "validation_failed")

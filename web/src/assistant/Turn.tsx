@@ -3,7 +3,7 @@
 
 import { fmtInt, plural } from '../lib/format';
 import { Icon } from '../ui/Icon';
-import type { Step } from '../api/hooks/assistant';
+import { attachmentUrl, type Step } from '../api/hooks/assistant';
 import type { AiTurn, UiTurn } from './chatStore';
 import { fixFor } from './errors';
 import { Markdown } from './md';
@@ -88,6 +88,19 @@ export function TurnView({
   if (turn.role === 'user') {
     return (
       <div className="msg user">
+        {chatId && turn.attachments && turn.attachments.length > 0 && (
+          <div className="photos">
+            {turn.attachments.map((a) => (
+              <img
+                key={a.id}
+                src={attachmentUrl(chatId, a.id)}
+                width={a.width}
+                height={a.height}
+                alt="Attached photo"
+              />
+            ))}
+          </div>
+        )}
         <div className="bub">{turn.content}</div>
       </div>
     );

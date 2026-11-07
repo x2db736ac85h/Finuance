@@ -40,8 +40,8 @@ ORDER BY entity, entity_id;
 UPDATE ai_changes SET reverted_at = @now WHERE user_id = @user_id AND id = @id;
 
 -- name: TransactionAnnotationState :many
--- What an annotation change replaces: the category (and where it came from) and the group.
-SELECT id, category_id, category_source, group_id FROM transactions
+-- What an annotation change replaces: the category (and where it came from), the group and the note.
+SELECT id, category_id, category_source, group_id, note FROM transactions
 WHERE user_id = @user_id AND id = ANY(@ids::uuid[])
 FOR UPDATE;
 

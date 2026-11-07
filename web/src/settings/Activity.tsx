@@ -80,6 +80,7 @@ const DESCRIBE: Record<ActivityAction, (m: Meta) => string> = {
   'transaction.added': () => 'Added a transaction by hand',
   'transaction.edited': () => 'Changed a transaction added by hand',
   'transaction.deleted': () => 'Deleted a transaction added by hand',
+  'transaction.merged': () => "Merged a typed card payment into the one from the bank's file",
   // Friends: the other side's log says the friend did it (`by`).
   'friend.added': (m) =>
     str(m, 'by') === 'friend'

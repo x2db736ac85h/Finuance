@@ -64,15 +64,26 @@ func TestManualTransactions(t *testing.T) {
 
 	// invalid input
 	for name, in := range map[string]ledger.ManualInput{
-		"no payee":     {AccountID: wallet.ID, BookedOn: day, AmountMinor: -1},
-		"zero amount":  {AccountID: wallet.ID, BookedOn: day, AmountMinor: 0, Payee: "x"},
-		"bad date":     {AccountID: wallet.ID, BookedOn: platform.Date{Y: 1900, M: 1, D: 1}, AmountMinor: -1, Payee: "x"},
-		"bank account": {AccountID: bank.ID, BookedOn: day, AmountMinor: -1, Payee: "x"},
+		"no payee":    {AccountID: wallet.ID, BookedOn: day, AmountMinor: -1},
+		"zero amount": {AccountID: wallet.ID, BookedOn: day, AmountMinor: 0, Payee: "x"},
+		"bad date":    {AccountID: wallet.ID, BookedOn: platform.Date{Y: 1900, M: 1, D: 1}, AmountMinor: -1, Payee: "x"},
 	} {
 		if _, err := e.l.AddManual(e.ctx, u, in); err == nil {
 			t.Errorf("%s: accepted", name)
 		} else {
 			isErr(t, err, ledger.ErrInvalid)
+		}
+	}
+
+	// a card payment typed into a bank account waits there for the bank's file (ADR 0032)
+	if card, err := e.l.AddManual(e.ctx, u, ledger.ManualInput{AccountID: bank.ID, BookedOn: day, AmountMinor: -1999, Payee: "Księgarnia"}); err != nil {
+		t.Errorf("typed into a bank account: %v", err)
+	} else {
+		if tx, err := e.l.GetTransaction(e.ctx, u, card); err != nil || tx.Origin != "manual" || tx.AccountID != bank.ID {
+			t.Errorf("typed bank row = %+v %v", tx, err)
+		}
+		if _, err := e.l.DeleteManual(e.ctx, u, card); err != nil { // the checks below read the bank account's imported rows
+			t.Fatal(err)
 		}
 	}
 

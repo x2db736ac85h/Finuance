@@ -115,6 +115,39 @@ export function useDeleteTransaction() {
   });
 }
 
+export type MergeSuggestion = Schemas['MergeSuggestion'];
+
+/** GET /transactions/merge-suggestions: typed card payments the bank's file has now (ADR 0032). */
+export function useMergeSuggestions() {
+  return useQuery({
+    queryKey: keys.mergeSuggestions,
+    queryFn: async () => data(await api.GET('/transactions/merge-suggestions')).suggestions,
+    staleTime: 30_000,
+  });
+}
+
+/** POST /transactions/{id}/merge: merge the typed row into the imported one, or keep them apart. */
+export function useMergeTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ s, keepApart }: { s: MergeSuggestion; keepApart: boolean }) => {
+      data(
+        await api.POST('/transactions/{id}/merge', {
+          params: { path: { id: s.typedId } },
+          body: { into: s.importedId, keepApart },
+        }),
+      );
+    },
+    onSuccess: (_, { s, keepApart }) => {
+      void qc.invalidateQueries({ queryKey: keys.mergeSuggestions });
+      if (keepApart) return;
+      qc.removeQueries({ queryKey: keys.transaction(s.typedId) });
+      invalidateRows(qc);
+      void qc.invalidateQueries({ queryKey: keys.shared });
+    },
+  });
+}
+
 /** GET /categories (all accounts): names for the inspector's category picker. */
 export function useCategories() {
   return useQuery({

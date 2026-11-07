@@ -117,8 +117,8 @@ func (l *Ledger) annotateTx(ctx context.Context, q *db.Queries, userID uuid.UUID
 		for i := range rows {
 			r, b := &rows[i], before[rows[i].ID]
 			items = append(items, AIItem{Entity: AIEntityTransaction, ID: r.ID,
-				Before: annotationState(b.CategoryID, b.CategorySource, b.GroupID, patch),
-				After:  annotationState(r.CategoryID, r.CategorySource, r.GroupID, patch)})
+				Before: annotationState(b.CategoryID, b.CategorySource, b.GroupID, b.Note, patch),
+				After:  annotationState(r.CategoryID, r.CategorySource, r.GroupID, r.Note, patch)})
 		}
 		if err := RecordAIChange(ctx, q, l.clock, userID, items); err != nil {
 			return 0, err

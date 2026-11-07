@@ -27,6 +27,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/goals"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
+	"github.com/x2db736ac85h/finuance/backend/internal/images"
 	"github.com/x2db736ac85h/finuance/backend/internal/insights"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
@@ -169,7 +170,8 @@ func NewHandler(d Deps) (http.Handler, error) {
 		mw.Tracing(d.Tracing),
 		mw.SecurityHeaders,
 		mw.MaxBytes(MaxJSONBody, map[string]int64{"POST /api/v1/imports": d.Config.MaxUploadBytes + multipartOverhead,
-			"POST /api/v1/legacy-imports": legacyBodyLimit(d.Config.MaxUploadBytes)}),
+			"POST /api/v1/legacy-imports":                legacyBodyLimit(d.Config.MaxUploadBytes),
+			"POST /api/v1/assistant/chats/*/attachments": images.MaxBytes}),
 		mw.Route,
 	), nil
 }

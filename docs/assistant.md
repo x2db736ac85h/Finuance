@@ -2,7 +2,7 @@
 
 The assistant answers questions about your transactions with a language model that looks the data up through read-only tools (PLAN §4.8, ADR 0015). It works with any server that speaks the OpenAI Chat Completions or Anthropic Messages API: LM Studio, Ollama, vLLM, llama.cpp, OpenAI, Anthropic, OpenRouter and others, local or in the cloud.
 
-The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and nine tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
+The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and ten tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
 
 | Tool | What it does |
 |---|---|
@@ -14,7 +14,8 @@ The model never gets a dump of your data. It gets a short description (date rang
 | `budget_status` | One month's budgets: spent, budget and what is left per category, over budget or ahead of pace first |
 | `group_summary` | One transaction group (e.g. a trip): totals, days, spending per day, the group budget, categories and top payees |
 | `goal_status` | The user's goals: saved so far against a steady pace, or this month's spending against a reduction goal's limit (ADR 0031) |
-| `propose_action` | Proposes a change (a category or group, a rule, a budget, a cash expense, sharing or a split, a goal); it changes nothing by itself |
+| `find_receipt_match` | The payments a receipt may belong to: the exact amount, within 3 days, ranked by the day and the shop's name (ADR 0032) |
+| `propose_action` | Proposes a change (a category or group, a rule, a budget, an expense, sharing or a split, a goal, a receipt in a note); it changes nothing by itself |
 
 Every lookup is shown under the answer, with exactly what went back to the model and a *Show in table* link.
 
@@ -23,6 +24,12 @@ Every lookup is shown under the answer, with exactly what went back to the model
 The assistant never changes your data. When you ask it to ("put these in Groceries", "make a rule for ŻABKA", "label these as Italy trip"), it proposes the change and the panel shows a card: what would change, why, a few of the affected transactions and *Show in table*. Nothing happens until you click **Apply**; the change then goes through the same requests as when you make it yourself. A proposal changes exactly the transactions it listed when it was made (at most 1,000), and a new category or group is created first. Applied proposals are logged without any content (ADR 0019).
 
 Since Phase 20 the assistant can also propose a category's budget, a cash expense typed into a cash account, sharing transactions with a shared group, a new split of one of your shared expenses, and a new or changed goal. Every applied proposal is recorded with what it replaced (ADR 0030): the table marks the rows with ✦ (*Source* says Assistant for a row it added; "Only what the assistant changed" in the Columns menu filters them), and **Undo** on the card or in Settings → Activity → *Assistant changes* puts everything back, as long as nothing was changed since (otherwise it says so and changes nothing). In the panel's settings, *Apply by itself* lists the kinds of proposals the panel may apply without the click (none by default); it never does so for more than 50 transactions, and the card says *Applied automatically* with Undo.
+
+### Receipts by photo
+
+With a model that reads images (the model list in the panel's settings and `llm-probe` show `vision`), the panel has a camera button: pick or take a photo of a receipt, and ask (or just send it: "Here is a receipt."). The browser shrinks the photo to at most 1,600 px and saves it as a new JPEG, so the camera's EXIF data (location, device, time) never leaves the device; the server checks it and encodes it again. The photo goes to the model with that question only and is kept with the chat (its retention deletes it).
+
+The model reads the shop, the date, the amount paid and the currency, and looks for the payment with `find_receipt_match` (money out of exactly that amount, booked within 3 days of the receipt). If it finds it, the card proposes to add "Receipt: shop · what was bought" to that transaction's note (Undo puts the old note back); if not, it proposes the expense: in a cash account, or in the bank account of a card payment whose file isn't imported yet. When that file arrives, a card above the table offers to **Merge** the typed payment into the bank's row (the bank's row stays, with the category, note, group and shared-group copy of the typed one) or to **Keep both** (ADR 0032).
 
 ## Configure one server
 
@@ -87,6 +94,23 @@ If a server rejects tool definitions before any lookup, the chat switches to **p
 - **Gemma** (planned as an alternative): some servers don't pass tool definitions to Gemma models; set `caps` `tools: false` for them (plan mode) if the status shows tool calls failing, and run the evals before making it the default.
 - **Evals on the reference machine** (2026-10-31, `docs/evals.md`; a 4 GB GPU through Vulkan): `qwen3:4b-thinking-2507` with the full toolset answered 46 of 53 correctly (87 %, arguments right 98 %), `qwen3:4b-instruct-2507` 35 (full) and 26 (compact). Thinking costs about twice the wait there (p50 112 s vs 60 s). The reference machine's connection offers both, thinking-2507 as the default; the full toolset is the default in tools mode already.
 - **Choose by answer quality**, not by the speed of a small test machine: the evals (`make eval-assistant`) on the server and model you'll actually use decide the default model and toolset.
+
+### Model notes (Phase 20): text and receipts on a 4 GB GPU
+
+Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 tokens of context, `docs/evals.md`): the 65 text questions (the 53 of Phase 18 and 12 new proposal and goal questions) and 17 receipts.
+
+| Model | On the GPU | Text: the 53 | Text: 12 new | Text: all | p50 | Receipts |
+|---|---|---:|---:|---:|---:|---:|
+| `qwen3:4b-thinking-2507` | 3.2 GB, all of it | 47 (46 on 2026-10-31) | 7 | 54 / 65 | 143 s | doesn't read images |
+| `qwen3-vl:4b-instruct` | 3.8 GB, ¾ (¼ on the CPU) | 36 | 10 | 46 / 65 | 29 s | 14 / 17 |
+| `qwen3-vl:4b-thinking` | 3.8 GB, ¾ | 27 | 6 | 33 / 65 | 300 s | 16 / 17 |
+| `gemma3:4b` | 2.9 GB, 90 % | 1 | 0 | 1 / 65 | 19 s | 10 / 17 |
+
+- **No single model holds up on both here**, so the reference machine keeps two: `qwen3:4b-thinking-2507` as the default for questions, and `qwen3-vl:4b-instruct` for receipt photos (the camera button appears only for a model that reads images). Ollama swaps them on the GPU, which costs a few seconds when switching.
+- **`qwen3-vl:4b-thinking`** reads receipts best but doesn't fit the GPU: with a quarter of it on the CPU it writes about 5 tokens a second, and 29 of the 65 questions ran into the 300 s limit. On a larger GPU it may be the one model for both; measure it there.
+- **`qwen3-vl:4b-instruct`** calls an action's name as a tool (`set_budget` instead of `propose_action` with that action); the run now reads such a call as the proposal (9 of the 12 new questions went from wrong to right with that). It is also the fastest usable model (p50 29 s), a choice for people who prefer speed.
+- **`gemma3:4b`** has no tool calling on Ollama (its capabilities say so), so it runs in plan mode and wrote ```` ```tool_code ```` instead of the plan's JSON; not usable for questions. On receipts it took the cash given or a subtotal for the total.
+- Receipts misread by the Qwen models: a UK date read as a US one (both), and by the instruct model a French total and a cash receipt's amount given.
 
 ## Limits and retention
 

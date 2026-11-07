@@ -17,10 +17,12 @@ import (
 )
 
 // Manual transactions (Phase 19, ADR 0029) are expenses and income a user types into a cash
-// account. They are ordinary transactions with origin = 'manual' and a random fingerprint, so no
-// import matches them and nothing that rebuilds imported rows (re-materialisation, deleting an
-// import, duplicate decisions) touches them. Rules and transfer detection treat them like any
-// other row; a category or transfer decision set by hand still wins.
+// account, or (Phase 20, ADR 0032) into a bank account for a card payment the bank hasn't exported
+// yet: when the import brings the bank's own row, a merge suggestion offers to keep that one with
+// the typed row's annotations. They are ordinary transactions with origin = 'manual' and a random
+// fingerprint, so no import matches them and nothing that rebuilds imported rows
+// (re-materialisation, deleting an import, duplicate decisions) touches them. Rules and transfer
+// detection treat them like any other row; a category or transfer decision set by hand still wins.
 
 const (
 	maxManualPayee       = 200
@@ -89,19 +91,7 @@ func (f manualFields) searchText(exp int) string {
 	return ingest.Norm(strings.Join([]string{date, amount, f.payee, f.description}, "\u0001"))
 }
 
-// cashAccount returns the account if it is the user's cash account.
-func cashAccount(ctx context.Context, q *db.Queries, userID, id uuid.UUID) (db.Account, error) {
-	a, err := q.GetAccount(ctx, db.GetAccountParams{UserID: userID, ID: id})
-	if err != nil {
-		return a, err
-	}
-	if a.Kind != KindCash {
-		return a, invalidf("%s is a bank account: its transactions come from imported files", a.Name)
-	}
-	return a, nil
-}
-
-// AddManual adds a transaction to a cash account and returns its id.
+// AddManual adds a transaction typed by hand to one of the user's accounts and returns its id.
 func (l *Ledger) AddManual(ctx context.Context, userID uuid.UUID, in ManualInput) (uuid.UUID, error) {
 	f, err := manualFields{in.BookedOn, in.AmountMinor, in.Payee, in.Description}.clean()
 	if err != nil {
@@ -124,7 +114,7 @@ func (l *Ledger) AddManual(ctx context.Context, userID uuid.UUID, in ManualInput
 	}
 	id := platform.NewID()
 	err = l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		a, err := cashAccount(ctx, q, userID, in.AccountID)
+		a, err := q.GetAccount(ctx, db.GetAccountParams{UserID: userID, ID: in.AccountID})
 		if err != nil {
 			return err
 		}

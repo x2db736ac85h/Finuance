@@ -94,8 +94,8 @@ func (t *Tools) proposeBudget(ctx context.Context, userID uuid.UUID, sc Scope, a
 	return proposalOutcome(sc, p, "budget "+c.Name), nil
 }
 
-// proposeExpense: add_expense types a payment into one of the user's cash accounts (bank accounts
-// get their rows from imported files).
+// proposeExpense: add_expense types a payment into one of the user's cash accounts, or into a bank
+// account named for a card payment its file doesn't have yet (ADR 0032).
 func (t *Tools) proposeExpense(ctx context.Context, userID uuid.UUID, sc Scope, a args, p *Proposal) (Outcome, error) {
 	accs, err := t.eng.Accounts(ctx, userID)
 	if err != nil {
@@ -116,21 +116,26 @@ func (t *Tools) proposeExpense(ctx context.Context, userID uuid.UUID, sc Scope, 
 	}
 	var acc *query.AccountRef
 	switch want := strings.TrimSpace(a.str("account")); {
-	case len(cash) == 0:
-		return proposalError("The user has no cash account; expenses are typed into cash accounts (they can add one with New cash account in the sidebar)"), nil
-	case want == "" && len(cash) == 1:
-		acc = &cash[0]
-	case want == "":
-		return proposalError("Name the cash account (account): " + names()), nil
-	default:
-		for i := range cash {
-			if sameName(cash[i].Name, want) {
-				acc = &cash[i]
+	case want != "":
+		// a cash account, or the bank account of a card payment its file doesn't have yet (ADR 0032)
+		for i := range accs {
+			if sameName(accs[i].Name, want) {
+				acc = &accs[i]
 			}
 		}
 		if acc == nil {
-			return proposalError(fmt.Sprintf("%q is not a cash account; the cash accounts are: %s", want, names())), nil
+			all := make([]string, len(accs))
+			for i := range accs {
+				all[i] = accs[i].Name
+			}
+			return proposalError(fmt.Sprintf("There is no account %q; the accounts are: %s", want, strings.Join(all, ", "))), nil
 		}
+	case len(cash) == 0:
+		return proposalError("The user has no cash account; name the bank account of a card payment (account), or the user can add a cash account with New cash account in the sidebar"), nil
+	case len(cash) == 1:
+		acc = &cash[0]
+	default:
+		return proposalError("Name the cash account (account): " + names()), nil
 	}
 	d := query.ParseToolDate(a.str("date"))
 	if d == nil {

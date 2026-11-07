@@ -17,6 +17,7 @@ import { useHead } from './data';
 import { Grid } from './Grid';
 import { cleared } from './chips';
 import { RuleSuggestionCard } from '../rules/RuleSuggestion';
+import { MergeSuggestionCard } from './MergeSuggestion';
 import { Toolbar } from './Toolbar';
 import { useGridController } from './controller';
 
@@ -93,6 +94,7 @@ export function Table({ viewId, title, icon, cash }: Props) {
         visible={visible}
         cash={cash}
       />
+      <MergeSuggestionCard viewId={viewId} />
       <RuleSuggestionCard />
       <Grid
         viewId={viewId}

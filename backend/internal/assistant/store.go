@@ -65,6 +65,8 @@ type Message struct {
 	Meta       *Meta
 	Error      *TurnError
 	CreatedAt  time.Time
+	// Attachments are the photos a question took (read with the chat, never stored with it).
+	Attachments []Attachment
 }
 
 // Step is one lookup as the panel shows it: exactly what went back to the model (PLAN §4.8).
@@ -305,11 +307,16 @@ func (c *Chats) Get(ctx context.Context, userID, chatID uuid.UUID) (Chat, []Mess
 		if err != nil {
 			return err
 		}
+		photos, err := attachmentRefs(ctx, q, userID, chatID)
+		if err != nil {
+			return err
+		}
 		for i := range rows {
 			msg, err := messageOf(&rows[i])
 			if err != nil {
 				return err
 			}
+			msg.Attachments = photos[msg.Seq]
 			msgs = append(msgs, msg)
 		}
 		return nil
@@ -430,6 +437,11 @@ func (c *Chats) Cleanup(ctx context.Context) (int64, error) {
 				return total, err
 			}
 			err := c.st.WithUser(ctx, id, func(q *db.Queries, _ pgx.Tx) error {
+				// photos uploaded but never sent with a question
+				if _, err := q.DeleteUnsentAssistantAttachmentsBefore(ctx, db.DeleteUnsentAssistantAttachmentsBeforeParams{UserID: id,
+					Cutoff: c.clock.Now().Add(-unsentAttachmentTTL)}); err != nil {
+					return err
+				}
 				s, err := settings(ctx, q, id)
 				if err != nil || s.RetentionDays == nil {
 					return err

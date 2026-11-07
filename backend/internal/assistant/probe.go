@@ -1,8 +1,13 @@
 package assistant
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/jpeg"
 	"strings"
 	"time"
 
@@ -81,6 +86,21 @@ func Probe(ctx context.Context, c *Connection, m ModelInfo, now time.Time, repor
 		run("thinking_high", llm.Request{System: system, Messages: []llm.Message{user}, Tools: ToolDefs(ToolsetFull),
 			Thinking: llm.ThinkHigh, Temperature: &temp})
 	}
+	if m.Caps.Vision { // receipts by photo (Phase 20): the image path end to end
+		run("vision", llm.Request{System: "You are a connection test.", Thinking: llm.ThinkOff, Temperature: &zero,
+			Messages: []llm.Message{{Role: llm.RoleUser, Content: "What colour is the square in this picture? Reply with one word.",
+				Images: []llm.Image{{MIME: "image/jpeg", Data: probeImage()}}}}})
+	}
+}
+
+// probeImage is a red square on white, as a JPEG.
+func probeImage() []byte {
+	img := image.NewRGBA(image.Rect(0, 0, 256, 256))
+	draw.Draw(img, img.Bounds(), image.White, image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(64, 64, 192, 192), &image.Uniform{C: color.RGBA{R: 220, G: 30, B: 30, A: 255}}, image.Point{}, draw.Src)
+	var b bytes.Buffer
+	_ = jpeg.Encode(&b, img, &jpeg.Options{Quality: 90}) // encoding into memory can't fail
+	return b.Bytes()
 }
 
 // Describe is a one-line summary of a probe result.

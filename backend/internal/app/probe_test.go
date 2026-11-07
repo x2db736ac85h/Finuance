@@ -50,6 +50,26 @@ func TestProbe(t *testing.T) {
 		strings.Contains(string(chat), "Authorization") {
 		t.Errorf("recorded exchange:\n%s", chat)
 	}
+	// a model that reads images gets a picture too (Phase 20)
+	mock := llmmock.New()
+	srv2 := httptest.NewServer(mock)
+	defer srv2.Close()
+	u2, _ := url.Parse(srv2.URL + "/v1")
+	cfg.AIConnections[0].BaseURL = u2
+	out.Reset()
+	if err := Probe(context.Background(), cfg, ProbeInput{Model: "mock-vl"}, func(f string, a ...any) { fmt.Fprintf(&out, f+"\n", a...) }); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "vision=true") || !strings.Contains(out.String(), "  vision ") {
+		t.Errorf("vision probe missing:\n%s", out.String())
+	}
+	images := 0
+	for _, r := range mock.Requests() {
+		images += strings.Count(string(r), "data:image/jpeg;base64,")
+	}
+	if images != 1 {
+		t.Errorf("%d images sent", images)
+	}
 	// nothing configured
 	if err := Probe(context.Background(), config.Config{}, ProbeInput{}, func(string, ...any) {}); err == nil {
 		t.Error("no connection accepted")

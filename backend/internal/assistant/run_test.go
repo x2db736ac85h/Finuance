@@ -294,6 +294,31 @@ func TestRunErrorIsStoredAndLeftOutOfHistory(t *testing.T) {
 	}
 }
 
+// TestRunActionNameAsTool: a call named after a proposal's action, as small models make it
+// ("set_budget" called as a tool), is propose_action with that action (20.8 evals).
+func TestRunActionNameAsTool(t *testing.T) {
+	re := newRunEnv(t, 1)
+	re.mock.Push(llmmock.Reply{Calls: []llmmock.Call{{Name: ActionSetBudget, Arguments: `{"to_category":"Restauracje i kawiarnie","amount":300.50}`}}},
+		llmmock.Reply{Content: "Proposed."})
+	evs := re.ask(re.newChat(), "Budget eating out at 300.50", nil)
+	st := evs[slicesIndex(evs, "step")].Data.(StepEvent)
+	if p := st.Proposal; st.Tool != ToolPropose || p == nil || p.Action != ActionSetBudget || p.BudgetMinor == nil || *p.BudgetMinor != 30050 ||
+		!strings.Contains(string(st.Args), `"action":"set_budget"`) {
+		t.Fatalf("step = %+v %s", st, st.Result)
+	}
+	for _, c := range []struct{ name, args, wantName, wantArgs string }{
+		{"create_goal", `{"action":"create_goal","goal_kind":"save"}`, ToolPropose, `{"action":"create_goal","goal_kind":"save"}`},
+		{"add_expense", `not json`, ToolPropose, `{"action":"add_expense"}`},
+		{"update_goal", `{"action":""}`, ToolPropose, `{"action":"update_goal"}`},
+		{ToolSearch, `{"query":"kino"}`, ToolSearch, `{"query":"kino"}`},
+		{"delete_everything", `{}`, "delete_everything", `{}`},
+	} {
+		if name, args := asProposal(c.name, c.args); name != c.wantName || args != c.wantArgs {
+			t.Errorf("asProposal(%s, %s) = %s %s", c.name, c.args, name, args)
+		}
+	}
+}
+
 func TestRunRoundsLimitAndLoopGuard(t *testing.T) {
 	re := newRunEnv(t, 2)
 	for range 7 {

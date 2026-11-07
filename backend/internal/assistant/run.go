@@ -67,6 +67,9 @@ type Request struct {
 	Context     query.Context
 	TimeZone    string // IANA zone for "today"; "" = DefaultTimeZone
 	Toolset     string // "" = full in tools mode, compact in plan mode
+	// AttachmentIDs are photos waiting in the chat that go with this question (a model that reads
+	// images only; at most MaxAttachments).
+	AttachmentIDs []uuid.UUID
 }
 
 // Event is one server-sent event of a run (PLAN §6.3 AssistantEvent): step, reasoning, content,
@@ -154,6 +157,7 @@ type Run struct {
 	history  []llm.Message
 	conn     *Connection
 	model    ModelInfo
+	images   []llm.Image // the question's photos
 	released sync.Once
 }
 
@@ -198,6 +202,10 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 	if req.Toolset != "" && req.Toolset != ToolsetFull && req.Toolset != ToolsetCompact {
 		ve.Add("settings.toolset", "must be full or compact")
 	}
+	req.AttachmentIDs = uniqueIDs(req.AttachmentIDs)
+	if len(req.AttachmentIDs) > MaxAttachments {
+		ve.Add("attachmentIds", fmt.Sprintf("at most %d photos per question", MaxAttachments))
+	}
 	if req.View {
 		req.Context.ToolFilter = nil
 		if err := query.Validate(userID, req.Context, nil); err != nil {
@@ -234,6 +242,15 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 			return nil, ErrConsent
 		}
 	}
+	var imgs []llm.Image
+	if len(req.AttachmentIDs) > 0 {
+		if !info.Caps.Vision {
+			return nil, fieldError("attachmentIds", fmt.Sprintf("%s doesn't read images; pick a model that does", info.ID))
+		}
+		if imgs, err = r.cfg.Chats.unsentImages(ctx, userID, req.ChatID, req.AttachmentIDs); err != nil {
+			return nil, err
+		}
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.active[userID]; ok {
@@ -245,7 +262,7 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 		return nil, ErrBusy
 	}
 	r.active[userID] = nil
-	return &Run{r: r, userID: userID, req: req, chat: chat, history: historyOf(msgs), conn: conn, model: info}, nil
+	return &Run{r: r, userID: userID, req: req, chat: chat, history: historyOf(msgs), conn: conn, model: info, images: imgs}, nil
 }
 
 // Release gives the slot back (Execute does it itself).
@@ -306,12 +323,17 @@ func (run *Run) Execute(ctx context.Context, emit func(Event)) {
 
 	store := context.WithoutCancel(ctx)
 	question := Message{Role: llm.RoleUser, Content: req.Text}
-	if _, err := r.cfg.Chats.Append(store, run.userID, req.ChatID, []Message{question},
-		ChatUpdate{Title: req.Text, Connection: run.conn.Name, Model: run.model.ID, NoTools: run.chat.NoTools}); err != nil {
+	seq, err := r.cfg.Chats.Append(store, run.userID, req.ChatID, []Message{question},
+		ChatUpdate{Title: req.Text, Connection: run.conn.Name, Model: run.model.ID, NoTools: run.chat.NoTools})
+	if err == nil && len(req.AttachmentIDs) > 0 {
+		err = r.cfg.Chats.markSent(store, run.userID, req.ChatID, req.AttachmentIDs, seq)
+	}
+	if err != nil {
 		run.fail(ctx, emit, span, "internal", err, ModeTools, t0, nil)
 		return
 	}
-	history := append(append([]llm.Message{}, run.history...), llm.Message{Role: llm.RoleUser, Content: req.Text})
+	// the photos go with this question only; later questions read the answer, not the image again
+	history := append(append([]llm.Message{}, run.history...), llm.Message{Role: llm.RoleUser, Content: req.Text, Images: run.images})
 
 	sc := Scope{Context: query.Context{}, View: req.View, MaxRows: req.MaxRows, Mask: run.conn.Cloud}
 	if req.View {
@@ -594,6 +616,7 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 
 // step executes one tool call and reports it.
 func (run *Run) step(ctx context.Context, emit func(Event), sc Scope, t *turn, name, rawArgs string) (Outcome, error) {
+	name, rawArgs = asProposal(name, rawArgs)
 	ctx, span := run.r.tracer.Start(ctx, "assistant.tool", trace.WithAttributes(attribute.String("assistant.tool", knownTool(name))))
 	defer span.End()
 	args := json.RawMessage(rawArgs)

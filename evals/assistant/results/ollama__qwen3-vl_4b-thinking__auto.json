@@ -1,0 +1,1002 @@
+{
+  "connection": "ollama",
+  "model": "qwen3-vl:4b-thinking",
+  "think": "auto",
+  "ranAt": "2026-11-06T22:09:43.825183613Z",
+  "cases": [
+    {
+      "id": "rel-last-month-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 318417,
+      "approxTokens": 2099,
+      "answer": "Last month (February 2025) you spent **5,569.62 PLN**.  \n*Date range used: 2025-02-01 to 2025-02-28*  \n\n*(Note: 49 transactions matched, all expenses; no income recorded.)*"
+    },
+    {
+      "id": "rel-last-month-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 271324,
+      "approxTokens": 2101,
+      "answer": "Zeszły miesiąc (lutego 2025) – **5 569,62 PLN**.  \nDane: 49 transakcji, netto: -5 569,62 PLN.  \n*Data: 2025-02-01 do 2025-02-28.*"
+    },
+    {
+      "id": "rel-last-week-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300017,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "rel-last-week-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300014,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "rel-this-month-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300028,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "rel-this-week-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300031,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "rel-january-income-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300034,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "rel-mar-2-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 326106,
+      "approxTokens": 2210,
+      "answer": "**Spending on 2025-03-02 (PLN):**  \nTotal spent: **2,974.11 PLN**  \n*(3 transactions)*  \n\n| Payee                          | Category               | Amount (PLN) |\n|---------------------------------|------------------------|--------------|\n| MARKETPLACE OMEGA              | Zakupy przez internet  | 48.82        |\n| DELIKATESY POD LIPĄ WARSZAWA   | Artykuły spożywcze     | 75.29        |\n| WSPÓLNOTA MIESZKANIOWA         | Mieszkanie             | 2,850.00     |\n\n*Date range used: 2025-03-02*"
+    },
+    {
+      "id": "out-yesterday-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300014,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "out-dec-2023-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [],
+      "mode": "tools",
+      "ms": 61084,
+      "approxTokens": 989,
+      "answer": "The data for December 2023 is not available, as the earliest transaction in the dataset is from 2024-01-01. The latest available date is 2025-03-17. No transactions occurred in December 2023."
+    },
+    {
+      "id": "out-april-pl",
+      "category": "out of range",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [],
+      "mode": "tools",
+      "ms": 84566,
+      "approxTokens": 986,
+      "answer": "The data only covers transactions up to **2025-03-17** (March 17, 2025). There are no transactions recorded for **April 2025** (2025-04-01 to 2025-04-30), as it falls outside the available dataset. \n\nLet me know if you'd like to check a different period!"
+    },
+    {
+      "id": "out-2026-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [],
+      "mode": "tools",
+      "ms": 59226,
+      "approxTokens": 986,
+      "answer": "The data only covers transactions from 2024-01-01 to 2025-03-17. There are no records for 2026 (the latest available date is 2025-03-17). I cannot provide income data for 2026 as it falls outside the dataset."
+    },
+    {
+      "id": "merch-kawiarnia-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300018,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "merch-kino-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300039,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "merch-taxi-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300043,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "merch-bakery-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [
+        "search_transactions"
+      ],
+      "ms": 586872,
+      "approxTokens": 0,
+      "answer": "Zapytanie o liczbę transakcji w piekarni:  \n**128 razy** (w sumie 128 transakcji z kategorii \"Artykuły spożywcze\" z payee \"PIEKARNIA ZIARNO WARSZAWA\" w okresie od 2024-01-01 do 2025-03-20).  \n\n*Data: 2024-01-01 – 2025-03-20*  \n*Wartość: 5873,29 PLN*  \n\n*Uwaga:",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "merch-energy-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 300811,
+      "approxTokens": 2587,
+      "answer": "You paid **3026.33 PLN** to \"DOSTAWCA ENERGII\" (energy supplier) in 2024.  \n**Date range used**: 2024-01-01 to 2024-12-31.  \n*Note: All transactions are categorized under \"Rachunki\" (bills).*"
+    },
+    {
+      "id": "merch-spelling-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "find_values"
+      ],
+      "mode": "tools",
+      "ms": 159020,
+      "approxTokens": 2057,
+      "answer": "The pizzeria in your data is spelled **PIZZERIA SŁONECZNA** (62 transactions). This is the most frequent match for \"pizzeria\" in your transaction records."
+    },
+    {
+      "id": "merch-pharmacy-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300018,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "cat-groceries-feb-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 168372,
+      "approxTokens": 2118,
+      "answer": "You spent **1,284.94 PLN** on groceries in February 2025 (26 transactions).  \n*Date range: 2025-02-01 to 2025-02-28*"
+    },
+    {
+      "id": "cat-transport-2024-pl",
+      "category": "categories",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 208945,
+      "approxTokens": 2112,
+      "answer": "W 2024 roku wydałeś **5448,99 PLN** na transport.  \n**Data:** 2024-01-01 do 2024-12-31  \n*Uwaga: Wszystkie transakcje w kategorii \"Transport\" są zliczane jako wydatki (wartość ujemna).*"
+    },
+    {
+      "id": "cat-top-feb-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 194476,
+      "approxTokens": 2280,
+      "answer": "Your biggest spending category last month (February 2025) was **Mieszkanie** with **2,850.00 PLN**.  \n*Date range: 2025-02-01 to 2025-02-28*  \n\n| Category          | Amount (PLN) | Count |\n|-------------------|--------------|-------|\n| Mieszkanie        | 2,850.00     | 1     |\n| Artykuły spożywcze| 1,284.94     | 26    |\n| Transport         | 649.77       | 9     |"
+    },
+    {
+      "id": "cat-restaurants-mar-pl",
+      "category": "categories",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300012,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "cat-top3-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 264166,
+      "approxTokens": 2335,
+      "answer": "Here are the top 3 spending categories (total spent in PLN):\n\n| Rank | Category                 | Amount       |\n|------|--------------------------|--------------|\n| 1    | Mieszkanie               | 42,750.00    |\n| 2    | Artykuły spożywcze       | 19,771.41    |\n| 3    | Restauracje i kawiarnie  | 7,564.86     |\n\n*Data covers all transactions from 2024-01-01 to 2025-03-17 (total 902 transactions)*"
+    },
+    {
+      "id": "grp-holiday-en",
+      "category": "groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 146687,
+      "approxTokens": 2413,
+      "answer": "The seaside holiday (\"Wakacje nad morzem\") cost **3,126.90 PLN** total.  \n- **Total spent**: 3,126.90 PLN (54 transactions)  \n- **Net**: -3,126.90 PLN (no income in this group)  \n- **Breakdown**:  \n  - *Artykuły spożywcze*: 1,390.79 PLN (44.5%)  \n  - *Transport*: 527.09 PLN (16.9%)  \n  - *Zakupy przez internet*: 514.89 PLN (16.5%)  \n  - *Rozrywka*: 235.72 PLN (7.5%)  \n  - *Restauracje i kawiarnie*: 224.84 PLN (7.2%)  \n\n*Note: Includes all accounts and transfers (e.g., group window).*  \n**Date range**: 2024-01-08 to 2025-03-17 (435 days)."
+    },
+    {
+      "id": "grp-remont-pl",
+      "category": "groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 288259,
+      "approxTokens": 2123,
+      "answer": "Grupa \"Remont\" kosztowała **758,29 PLN**. Wszystkie transakcje w tej grupie zostały zaliczone do kategorii **\"Ogród\"**.  \n*Data: 2024-01-10 do 2025-01-28 (385 dni).*"
+    },
+    {
+      "id": "grp-holiday-count-pl",
+      "category": "groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 125379,
+      "approxTokens": 2417,
+      "answer": "Grupa \"Wakacje nad morzem\" zawiera **54 transakcji** (data: 2024-01-08 do 2025-03-17).  \n*Wartości: wydatki 3126,90 PLN, przychód 0 PLN, bilans netto -3126,90 PLN.*"
+    },
+    {
+      "id": "grp-holiday-food-en",
+      "category": "groups",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 195726,
+      "approxTokens": 2423,
+      "answer": "**Groceries spent during \"Wakacje nad morzem\" (seaside holiday):**  \n- **Total spent**: 1,390.79 PLN  \n- **Category**: *Artykuły spożywcze* (44.5% of group spend)  \n- **Date range**: 2024-01-08 to 2025-03-17 (435 days)  \n\n*Note: This includes all transactions in the group, including transfers and multiple accounts.*"
+    },
+    {
+      "id": "rank-payees-2024-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "ms": 543869,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "rank-month-2024-pl",
+      "category": "rankings and trends",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 196287,
+      "approxTokens": 2338,
+      "answer": "W miesiącu 2024 roku wydałeś najwięcej w **marcu** (2024-03), gdzie wydatki wyniosły **7 761,02 PLN**.  \n*Źródło: analiza miesięcznych wydatków (2024-01–2024-12).*"
+    },
+    {
+      "id": "rank-weekday-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 260804,
+      "approxTokens": 2237,
+      "answer": "The day with the highest spending is **Tuesday** (16,385.46 PLN), followed by Friday (13,738.86 PLN) and Sunday (15,813.01 PLN).  \n**Date range used**: 2024-01-01 to 2025-03-17.  \n\n| Day       | Count | Total Spent (PLN) |\n|------------|--------|-------------------|\n| Tuesday    | 132    | 16,385.46         |\n| Friday     | 129    | 13,738.86         |\n| Sunday     | 132    | 15,813.01         |"
+    },
+    {
+      "id": "rank-largest-feb-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 279306,
+      "approxTokens": 2132,
+      "answer": "Your largest single expense in February 2025 was **2,850 PLN** on **2025-02-02** for **WSPÓLNOTA MIESZKANIOWA** (category: *Mieszkanie*).  \n*Note: Only one transaction matched the criteria (top 1 expense).*  \n*Date range used: 2025-02-01 to 2025-02-28.*"
+    },
+    {
+      "id": "rank-largest-2025-pl",
+      "category": "rankings and trends",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300017,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "trend-months-2025-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300025,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "cmp-jan-feb-en",
+      "category": "comparisons",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 322872,
+      "approxTokens": 2224,
+      "answer": "**Spending comparison for January vs February 2025**  \n- **January 2025**: Total spent = **6,675.15 PLN** (70 transactions)  \n- **February 2025**: Total spent = **5,569.62 PLN** (49 transactions)  \n\n**Conclusion**: You spent **more in January 2025** (6,675.15 PLN) compared to February 2025 (5,569.62 PLN).  \n*Data covers transactions from 2025-01-01 to 2025-02-28 (latest available date: 2025-03-17).*"
+    },
+    {
+      "id": "cmp-transport-pl",
+      "category": "comparisons",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 302615,
+      "approxTokens": 2230,
+      "answer": "**Wydatki na transport w styczniu i lutym 2025**  \n*Data: 2025-01-01 do 2025-02-28*  \n\n| **Miesiąc** | **Wynik** | **Liczba transakcji** |\n|-------------|-----------|----------------------|\n| Styczeń 2025 | **433,71 PLN** | 8 |\n| Luty 2025    | **649,77 PLN** | 9 |\n\n**Zobaczyć:** Luty 2025 był **216,06 PLN** wyższy od stycznia (12,5% wzrostu).  \n*Uwaga: Dane są w PLN, transakcje są z kategorii \"Transport\" (123 transakcji w całym zestawie).*"
+    },
+    {
+      "id": "cmp-income-q1-en",
+      "category": "comparisons",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300012,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "items-coffee-en",
+      "category": "items vs transactions",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:matched",
+        "mention transaction|payment|purchase"
+      ],
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 423297,
+      "approxTokens": 4123,
+      "answer": ""
+    },
+    {
+      "id": "items-bread-pl",
+      "category": "items vs transactions",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300012,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "inc-2024-en",
+      "category": "income and savings",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 227527,
+      "approxTokens": 2096,
+      "answer": "Your total income in 2024 was **113,081 PLN** (12 transactions).  \n*Date range: 2024-01-01 to 2024-12-31*"
+    },
+    {
+      "id": "net-feb-pl",
+      "category": "income and savings",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300011,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "inc-salary-mar-en",
+      "category": "income and savings",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300026,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "rec-list-en",
+      "category": "overview and recurring",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "recurring_payments"
+      ],
+      "mode": "tools",
+      "ms": 168819,
+      "approxTokens": 2205,
+      "answer": "Here are your active recurring payments:\n\n| Payee                     | Category       | Typical Monthly | Next Due     |\n|---------------------------|----------------|-----------------|--------------|\n| WSPÓLNOTA MIESZKANIOWA    | Mieszkanie     | 2,850 PLN       | 2025-04-02   |\n| DOSTAWCA ENERGII           | Rachunki       | 260.29 PLN      | 2025-04-15   |\n| OPERATOR INTERNETU        | Rachunki       | 79.99 PLN       | 2025-03-20   |\n\nAll three are active monthly payments (no omitted entries). The housing payment is the largest, while internet and energy bills are standard recurring expenses. Would you like to set a budget for any of these?"
+    },
+    {
+      "id": "rec-internet-pl",
+      "category": "overview and recurring",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300023,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "month-progress-pl",
+      "category": "overview and recurring",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [
+        "month_overview"
+      ],
+      "ms": 479232,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "month-summary-en",
+      "category": "overview and recurring",
+      "lang": "en",
+      "ok": false,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": false,
+      "missing": [
+        "0:total_spent"
+      ],
+      "tools": [
+        "month_overview"
+      ],
+      "mode": "tools",
+      "ms": 348019,
+      "approxTokens": 2700,
+      "answer": "**February 2025 Summary (2025-02-01 to 2025-02-28)**  \n*Currency: PLN*  \n\n- **Net**: +4,010.38 PLN  \n- **Savings rate**: 41.9% (vs. previous month’s 35.8%)  \n- **Key categories**:  \n  - ✅ **Mieszkanie** (Housing): 2,850 PLN (on budget)  \n  - ❌ **Artykuły spożywcze** (Food): 1,284.94 PLN (over budget by 24.94 PLN)  \n  - ❌ **Transport**: 649.77 PLN (over budget by 199.77 PLN)  \n  - ❌ **Rachunki** (Bills): 340.28 PLN (over budget by 20.13 PLN)  \n- **Largest expenses**:  \n  - 2,850 PLN (WSPÓLNOTA MIESZKANIOWA)  \n  - 260.29 PLN (DOSTAWCA ENERGII)  \n  - 132.60 PLN (STACJA PALIW POLNA)  \n- **Income**: 9,580 PLN (from PRACODAWCA PRZYKŁADOWY SP. Z O.O.)  \n\n*Note: Budgets are set to default values; over-budget categories require attention.*"
+    },
+    {
+      "id": "budget-now-pl",
+      "category": "budgets and groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "budget_status"
+      ],
+      "mode": "tools",
+      "ms": 172957,
+      "approxTokens": 2476,
+      "answer": "W marcu 2025 roku przekraczasz budżet w kategorii **Zdrowie i uroda** (wypłacono 57,53 PLN, a budżet to 45 PLN). Pozostałe kategorie są na czasie lub przekroczonych (np. Mieszkanie i Artykuły spożywcze).  \n**Podsumowanie**:  \n- **Całkowity wydatki**: 5 151,82 PLN  \n- **Budżet miesięczny**: 6 220 PLN  \n- **Pozostało**: 1 068,18 PLN  \n- **Kategoria przekroczona**: 1 (Zdrowie i uroda)  \n\n*Uwaga: Budżety domyślne są średnimi wartościami z poprzednich 3 miesięcy.*"
+    },
+    {
+      "id": "budget-feb-en",
+      "category": "budgets and groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "budget_status"
+      ],
+      "mode": "tools",
+      "ms": 181911,
+      "approxTokens": 2478,
+      "answer": "**February 2025 Budget Overages (PLN):**  \n- **Artykuły spożywcze**: +24.94 (spent 1,284.94 vs. budget 1,260.00)  \n- **Transport**: +199.77 (spent 649.77 vs. budget 450.00)  \n- **Rachunki**: +20.28 (spent 340.28 vs. budget 320.00)  \n\n*Note: Budgets are in PLN. \"Over budget\" means spending exceeded the set limit.*"
+    },
+    {
+      "id": "grp-holiday-days-en",
+      "category": "budgets and groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 291082,
+      "approxTokens": 2429,
+      "answer": "The seaside holiday (\"Wakacje nad morzem\") lasted **435 days** (from 2024-01-08 to 2025-03-17), with an average daily spend of **7.19 PLN**.  \n\n*Note: This includes all transactions in the group, including transfers and multiple accounts.*"
+    },
+    {
+      "id": "grp-remont-payee-pl",
+      "category": "budgets and groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 137570,
+      "approxTokens": 2133,
+      "answer": "Podczas remontu wydałeś najwięcej w kategorii **Ogród** (758,29 PLN), głównie na **CENTRUM OGRODNICZE** (15 płatności).  \n*Data: 2024-01-10 do 2025-01-28 (385 dni)*.  \n*Uwaga: Wszystkie transakcje (w tym przelewy) są uwzględnione.*"
+    },
+    {
+      "id": "prop-category-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300010,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "prop-rule-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 237724,
+      "approxTokens": 3448,
+      "answer": "Reguła \"KLUB FITNESS RUCH to Sport\" została zproponowana i jest gotowa do potwierdzenia przez użytkownika.  \n**Opis:** Wszystkie transakcje z payee \"KLUB FITNESS RUCH\" (np. \"KLUB FITNESS RUCH WARSZAWA\") zostaną automatycznie przypisane do kategorii \"Sport\".  \n**Przykładowe transakcje:**  \n- 2025-01-26: -79,06 PLN (Sport)  \n- 2025-01-20: -55,49 PLN (Sport)  \n- 2024-11-19: -27,11 PLN (Sport)  \n\nUżytkownik musi potwierdzić zmianę poprzez **Apply** w karcie potwierdzenia.  \n*Data zastosowania:* od 2025-01-01 (początek danych)."
+    },
+    {
+      "id": "prop-group-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300011,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "prop-budget-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 177177,
+      "approxTokens": 2100,
+      "answer": "Your monthly budget for **Rachunki** has been proposed to be set to **900 PLN**.  \nThis change will be shown as a confirmation card for you to **apply**.  \nLet me know when you're ready to confirm!"
+    },
+    {
+      "id": "prop-budget-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 135880,
+      "approxTokens": 2114,
+      "answer": "Wprowadzono propozycję ustawienia miesięcznego budżetu na kategorię **Artykuły spożywcze** w wysokości **1500 PLN**.  \nAby zastosować zmianę, kliknij **Zastosuj** na karcie potwierdzenia.  \n*Uwaga: Zmiana nie jest jeszcze zapisana – wymaga potwierdzenia użytkownika.*"
+    },
+    {
+      "id": "prop-expense-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300013,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "prop-expense-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300029,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "prop-share-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 378005,
+      "approxTokens": 2264,
+      "answer": "Your request to share TEATR MAŁY tickets with \"Wyjazd do Pragi\" has been proposed. 13 matching transactions (all in \"Rozrywka\" category) were found. Click \"Apply\" to confirm sharing.  \n*(Note: This action requires user confirmation; no changes are made until applied.)*"
+    },
+    {
+      "id": "prop-share-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300015,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "goal-save-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 232383,
+      "approxTokens": 2151,
+      "answer": "Your goal \"Save 10,000 PLN by June 30\" has been proposed. It will track savings progress toward the target amount by 2025-06-30.  \n**Action needed**: Confirm with \"Apply\" to activate the goal.  \n*Note: This is a draft; no changes are made until you confirm.*"
+    },
+    {
+      "id": "goal-save-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 142923,
+      "approxTokens": 2151,
+      "answer": "Twój cel **\"Zapłać 5000 zł na koniec roku\"** został zarejestrowany.  \n- **Cel:** Zapłać 5000 PLN do **2025-12-31**  \n- **Status:** W trakcie tworzenia (potrzebujesz kliknąć **\"Zastosuj\"** w karcie potwierdzenia, aby aktywować).  \n\nJeśli chcesz dodać więcej szczegółów (np. konto na które przelewać), możesz to zrobić w karcie potwierdzenia. 😊"
+    },
+    {
+      "id": "goal-reduce-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300016,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "goal-reduce-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [],
+      "ms": 300018,
+      "approxTokens": 0,
+      "answer": "",
+      "error": "timeout: the model didn't answer in time"
+    },
+    {
+      "id": "goal-update-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 232022,
+      "approxTokens": 2168,
+      "answer": "Your \"Wakacje\" goal's deadline has been updated to **2025-09-30**. The previous deadline was **2025-08-31**.  \n✅ **Action required**: Click \"Apply\" to confirm the change.  \n(Changes are not applied until you approve via the confirmation card.)"
+    },
+    {
+      "id": "goal-status-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": false,
+      "toolOk": false,
+      "argsOk": false,
+      "answerOk": false,
+      "tools": [
+        "group_summary"
+      ],
+      "ms": 401655,
+      "approxTokens": 0,
+      "answer": "**Wakacje nad morzem**  \n📅 **Data:** 2024-01-08 do 2025-03-17 (435 dni)  \n💰 **Spent:** 3 126,90 PLN (54 transakcji)  \n💸 **Net:** -3 126,90 PLN (brak przychodu)  \n\n### Rozkład wydatków:\n| Kategoria               | Spent (PLN) | %       |\n|-------------------------|-------------|---------|\n| Artykuły spożywcze      | 1 390,79    | 44,5%   |\n| Transport               | 527,09      |",
+      "error": "timeout: the model didn't answer in time"
+    }
+  ]
+}

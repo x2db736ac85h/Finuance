@@ -47,6 +47,18 @@ type AiChangeItem struct {
 	After    []byte
 }
 
+type AssistantAttachment struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	ChatID     uuid.UUID
+	MessageSeq *int32
+	Mime       string
+	Width      int32
+	Height     int32
+	Bytes      []byte
+	CreatedAt  time.Time
+}
+
 type AssistantChat struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -298,6 +310,13 @@ type LegacyImportFile struct {
 	Position       int32
 	UserID         uuid.UUID
 	Content        []byte
+}
+
+type MergeDismissal struct {
+	UserID     uuid.UUID
+	TypedID    uuid.UUID
+	ImportedID uuid.UUID
+	CreatedAt  time.Time
 }
 
 type Notification struct {

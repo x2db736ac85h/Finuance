@@ -1,0 +1,238 @@
+{
+  "connection": "ollama",
+  "model": "qwen3-vl:4b-instruct",
+  "think": "off",
+  "ranAt": "2026-11-06T12:10:43.522243329Z",
+  "cases": [
+    {
+      "id": "en-grocer",
+      "lang": "en",
+      "ok": true,
+      "read": {
+        "merchant": "NORTHGATE GROCERS",
+        "date": "2025-03-14",
+        "total": "9.3",
+        "currency": "GBP"
+      },
+      "ms": 38618,
+      "tokens": 0
+    },
+    {
+      "id": "en-cafe",
+      "lang": "en",
+      "ok": false,
+      "wrong": [
+        "date"
+      ],
+      "read": {
+        "merchant": "The Copper Kettle Café",
+        "date": "2025-02-03",
+        "total": "5.8",
+        "currency": "GBP"
+      },
+      "ms": 37751,
+      "tokens": 0
+    },
+    {
+      "id": "en-us-hardware",
+      "lang": "en",
+      "ok": true,
+      "read": {
+        "merchant": "MAPLE STREET HARDWARE",
+        "date": "2025-03-07",
+        "total": "40.54",
+        "currency": "USD"
+      },
+      "ms": 30743,
+      "tokens": 0
+    },
+    {
+      "id": "de-baeckerei",
+      "lang": "de",
+      "ok": true,
+      "read": {
+        "merchant": "Bäckerei Sonnenkorn",
+        "date": "2025-03-11",
+        "total": "8.1",
+        "currency": "EUR"
+      },
+      "ms": 36001,
+      "tokens": 0
+    },
+    {
+      "id": "de-drogerie",
+      "lang": "de",
+      "ok": true,
+      "read": {
+        "merchant": "DROGERIE LINDENHOF",
+        "date": "2025-02-05",
+        "total": "23.47",
+        "currency": "EUR"
+      },
+      "ms": 39295,
+      "tokens": 0
+    },
+    {
+      "id": "de-gasthaus",
+      "lang": "de",
+      "ok": true,
+      "read": {
+        "merchant": "Gasthaus Zum Grünen Tal",
+        "date": "2025-02-28",
+        "total": "54.3",
+        "currency": "EUR"
+      },
+      "ms": 33969,
+      "tokens": 0
+    },
+    {
+      "id": "fr-boulangerie",
+      "lang": "fr",
+      "ok": true,
+      "read": {
+        "merchant": "BOULANGERIE LES BLÉS D'OR",
+        "date": "2025-03-09",
+        "total": "9.6",
+        "currency": "EUR"
+      },
+      "ms": 33850,
+      "tokens": 0
+    },
+    {
+      "id": "fr-pharmacie",
+      "lang": "fr",
+      "ok": true,
+      "read": {
+        "merchant": "PHARMACIE DU CANAL",
+        "date": "2025-02-17",
+        "total": "18.75",
+        "currency": "EUR"
+      },
+      "ms": 36924,
+      "tokens": 0
+    },
+    {
+      "id": "fr-epicerie",
+      "lang": "fr",
+      "ok": false,
+      "wrong": [
+        "total"
+      ],
+      "read": {
+        "merchant": "Épicerie Fine Marchand",
+        "date": "2025-03-01",
+        "total": "44.96",
+        "currency": "EUR"
+      },
+      "ms": 34344,
+      "tokens": 0
+    },
+    {
+      "id": "pl-sklep",
+      "lang": "pl",
+      "ok": true,
+      "read": {
+        "merchant": "SKLEP POD LIPAMI",
+        "date": "2025-03-12",
+        "total": "47.83",
+        "currency": "PLN"
+      },
+      "ms": 30078,
+      "tokens": 0
+    },
+    {
+      "id": "pl-apteka",
+      "lang": "pl",
+      "ok": true,
+      "read": {
+        "merchant": "APTEKA POD GWIAZDĄ",
+        "date": "2025-03-06",
+        "total": "31.5",
+        "currency": "PLN"
+      },
+      "ms": 37087,
+      "tokens": 0
+    },
+    {
+      "id": "pl-stacja",
+      "lang": "pl",
+      "ok": true,
+      "read": {
+        "merchant": "STACJA PALIW ZIELONY MOST",
+        "date": "2025-03-15",
+        "total": "279.79",
+        "currency": "PLN"
+      },
+      "ms": 36643,
+      "tokens": 0
+    },
+    {
+      "id": "es-cafeteria",
+      "lang": "es",
+      "ok": true,
+      "read": {
+        "merchant": "CAFETERÍA LA ALAMEDA",
+        "date": "2025-03-08",
+        "total": "6.4",
+        "currency": "EUR"
+      },
+      "ms": 33394,
+      "tokens": 0
+    },
+    {
+      "id": "es-ferreteria",
+      "lang": "es",
+      "ok": true,
+      "read": {
+        "merchant": "FERRETERÍA HERMANOS PRADO",
+        "date": "2025-02-21",
+        "total": "27.95",
+        "currency": "€"
+      },
+      "ms": 35231,
+      "tokens": 0
+    },
+    {
+      "id": "it-alimentari",
+      "lang": "it",
+      "ok": true,
+      "read": {
+        "merchant": "ALIMENTARI DA BRUNO",
+        "date": "2025-03-13",
+        "total": "15.35",
+        "currency": "EUR"
+      },
+      "ms": 36538,
+      "tokens": 0
+    },
+    {
+      "id": "it-trattoria",
+      "lang": "it",
+      "ok": true,
+      "read": {
+        "merchant": "Trattoria Il Glicine",
+        "date": "2025-02-27",
+        "total": "64.0",
+        "currency": "EUR"
+      },
+      "ms": 34796,
+      "tokens": 0
+    },
+    {
+      "id": "cs-pekarna",
+      "lang": "cs",
+      "ok": false,
+      "wrong": [
+        "total"
+      ],
+      "read": {
+        "merchant": "PEKÁRNA U MLÝNA",
+        "date": "2025-03-10",
+        "total": "200.0",
+        "currency": "CZK"
+      },
+      "ms": 39313,
+      "tokens": 0
+    }
+  ]
+}

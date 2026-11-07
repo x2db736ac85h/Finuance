@@ -12,6 +12,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const countUnsentAssistantAttachments = `-- name: CountUnsentAssistantAttachments :one
+SELECT count(*) FROM assistant_attachments WHERE user_id = $1 AND chat_id = $2 AND message_seq IS NULL
+`
+
+type CountUnsentAssistantAttachmentsParams struct {
+	UserID uuid.UUID
+	ChatID uuid.UUID
+}
+
+func (q *Queries) CountUnsentAssistantAttachments(ctx context.Context, arg CountUnsentAssistantAttachmentsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnsentAssistantAttachments, arg.UserID, arg.ChatID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAssistantChat = `-- name: CreateAssistantChat :one
 INSERT INTO assistant_chats (id, user_id, title, connection, model, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $6)
@@ -85,6 +101,87 @@ func (q *Queries) DeleteAssistantChatsBefore(ctx context.Context, arg DeleteAssi
 	return result.RowsAffected(), nil
 }
 
+const deleteUnsentAssistantAttachmentsBefore = `-- name: DeleteUnsentAssistantAttachmentsBefore :execrows
+DELETE FROM assistant_attachments WHERE user_id = $1 AND message_seq IS NULL AND created_at < $2
+`
+
+type DeleteUnsentAssistantAttachmentsBeforeParams struct {
+	UserID uuid.UUID
+	Cutoff time.Time
+}
+
+func (q *Queries) DeleteUnsentAssistantAttachmentsBefore(ctx context.Context, arg DeleteUnsentAssistantAttachmentsBeforeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteUnsentAssistantAttachmentsBefore, arg.UserID, arg.Cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const exportAssistantAttachments = `-- name: ExportAssistantAttachments :many
+SELECT id, chat_id, message_seq, bytes FROM assistant_attachments WHERE user_id = $1 AND message_seq IS NOT NULL
+ORDER BY chat_id, message_seq, id
+`
+
+type ExportAssistantAttachmentsRow struct {
+	ID         uuid.UUID
+	ChatID     uuid.UUID
+	MessageSeq *int32
+	Bytes      []byte
+}
+
+func (q *Queries) ExportAssistantAttachments(ctx context.Context, userID uuid.UUID) ([]ExportAssistantAttachmentsRow, error) {
+	rows, err := q.db.Query(ctx, exportAssistantAttachments, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportAssistantAttachmentsRow
+	for rows.Next() {
+		var i ExportAssistantAttachmentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChatID,
+			&i.MessageSeq,
+			&i.Bytes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAssistantAttachment = `-- name: GetAssistantAttachment :one
+SELECT id, user_id, chat_id, message_seq, mime, width, height, bytes, created_at FROM assistant_attachments WHERE user_id = $1 AND chat_id = $2 AND id = $3
+`
+
+type GetAssistantAttachmentParams struct {
+	UserID uuid.UUID
+	ChatID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) GetAssistantAttachment(ctx context.Context, arg GetAssistantAttachmentParams) (AssistantAttachment, error) {
+	row := q.db.QueryRow(ctx, getAssistantAttachment, arg.UserID, arg.ChatID, arg.ID)
+	var i AssistantAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ChatID,
+		&i.MessageSeq,
+		&i.Mime,
+		&i.Width,
+		&i.Height,
+		&i.Bytes,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getAssistantChat = `-- name: GetAssistantChat :one
 SELECT id, user_id, title, connection, model, no_tools, created_at, updated_at FROM assistant_chats WHERE user_id = $1 AND id = $2
 `
@@ -127,6 +224,36 @@ func (q *Queries) GetAssistantSettings(ctx context.Context, userID uuid.UUID) (A
 		&i.AutoApply,
 	)
 	return i, err
+}
+
+const insertAssistantAttachment = `-- name: InsertAssistantAttachment :exec
+INSERT INTO assistant_attachments (id, user_id, chat_id, mime, width, height, bytes, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type InsertAssistantAttachmentParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+	ChatID uuid.UUID
+	Mime   string
+	Width  int32
+	Height int32
+	Bytes  []byte
+	Now    time.Time
+}
+
+func (q *Queries) InsertAssistantAttachment(ctx context.Context, arg InsertAssistantAttachmentParams) error {
+	_, err := q.db.Exec(ctx, insertAssistantAttachment,
+		arg.ID,
+		arg.UserID,
+		arg.ChatID,
+		arg.Mime,
+		arg.Width,
+		arg.Height,
+		arg.Bytes,
+		arg.Now,
+	)
+	return err
 }
 
 const insertAssistantMessage = `-- name: InsertAssistantMessage :one
@@ -175,6 +302,50 @@ func (q *Queries) InsertAssistantMessage(ctx context.Context, arg InsertAssistan
 	var i InsertAssistantMessageRow
 	err := row.Scan(&i.ID, &i.Seq)
 	return i, err
+}
+
+const listAssistantAttachmentRefs = `-- name: ListAssistantAttachmentRefs :many
+SELECT id, message_seq, width, height FROM assistant_attachments
+WHERE user_id = $1 AND chat_id = $2 AND message_seq IS NOT NULL
+ORDER BY message_seq, created_at, id
+`
+
+type ListAssistantAttachmentRefsParams struct {
+	UserID uuid.UUID
+	ChatID uuid.UUID
+}
+
+type ListAssistantAttachmentRefsRow struct {
+	ID         uuid.UUID
+	MessageSeq *int32
+	Width      int32
+	Height     int32
+}
+
+// What the chat shows: each sent photo's question and size, never the bytes.
+func (q *Queries) ListAssistantAttachmentRefs(ctx context.Context, arg ListAssistantAttachmentRefsParams) ([]ListAssistantAttachmentRefsRow, error) {
+	rows, err := q.db.Query(ctx, listAssistantAttachmentRefs, arg.UserID, arg.ChatID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAssistantAttachmentRefsRow
+	for rows.Next() {
+		var i ListAssistantAttachmentRefsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MessageSeq,
+			&i.Width,
+			&i.Height,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAssistantChats = `-- name: ListAssistantChats :many
@@ -285,6 +456,28 @@ func (q *Queries) ListUserIDsAfter(ctx context.Context, arg ListUserIDsAfterPara
 	return items, nil
 }
 
+const markAssistantAttachmentsSent = `-- name: MarkAssistantAttachmentsSent :exec
+UPDATE assistant_attachments SET message_seq = $1::integer
+WHERE user_id = $2 AND chat_id = $3 AND id = ANY($4::uuid[]) AND message_seq IS NULL
+`
+
+type MarkAssistantAttachmentsSentParams struct {
+	Seq    int32
+	UserID uuid.UUID
+	ChatID uuid.UUID
+	Ids    []uuid.UUID
+}
+
+func (q *Queries) MarkAssistantAttachmentsSent(ctx context.Context, arg MarkAssistantAttachmentsSentParams) error {
+	_, err := q.db.Exec(ctx, markAssistantAttachmentsSent,
+		arg.Seq,
+		arg.UserID,
+		arg.ChatID,
+		arg.Ids,
+	)
+	return err
+}
+
 const trimAssistantChats = `-- name: TrimAssistantChats :execrows
 DELETE FROM assistant_chats d
 WHERE d.user_id = $1 AND d.id NOT IN (
@@ -303,6 +496,49 @@ func (q *Queries) TrimAssistantChats(ctx context.Context, arg TrimAssistantChats
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const unsentAssistantAttachments = `-- name: UnsentAssistantAttachments :many
+SELECT id, user_id, chat_id, message_seq, mime, width, height, bytes, created_at FROM assistant_attachments
+WHERE user_id = $1 AND chat_id = $2 AND id = ANY($3::uuid[]) AND message_seq IS NULL
+ORDER BY array_position($3::uuid[], id)
+`
+
+type UnsentAssistantAttachmentsParams struct {
+	UserID uuid.UUID
+	ChatID uuid.UUID
+	Ids    []uuid.UUID
+}
+
+// The attachments of a question about to be sent, in the order asked for.
+func (q *Queries) UnsentAssistantAttachments(ctx context.Context, arg UnsentAssistantAttachmentsParams) ([]AssistantAttachment, error) {
+	rows, err := q.db.Query(ctx, unsentAssistantAttachments, arg.UserID, arg.ChatID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AssistantAttachment
+	for rows.Next() {
+		var i AssistantAttachment
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.ChatID,
+			&i.MessageSeq,
+			&i.Mime,
+			&i.Width,
+			&i.Height,
+			&i.Bytes,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateAssistantChat = `-- name: UpdateAssistantChat :exec

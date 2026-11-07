@@ -288,6 +288,9 @@ func sameAnnotation(after ledger.AnnotationState, cur db.TransactionAnnotationSt
 	if after.HasGroup && !sameID(after.GroupID, cur.GroupID) {
 		return false
 	}
+	if after.HasNote && after.Note != cur.Note {
+		return false
+	}
 	return true
 }
 
@@ -306,6 +309,7 @@ func (s *Service) undo(ctx context.Context, q *db.Queries, userID uuid.UUID, ite
 	categoryOf := map[string]*uuid.UUID{}
 	groupTo := map[string][]uuid.UUID{}
 	groupOf := map[string]*uuid.UUID{}
+	noteTo := map[string][]uuid.UUID{} // by the note each goes back to
 	for _, it := range items {
 		if it.entity != ledger.AIEntityTransaction || created(it) {
 			continue
@@ -326,6 +330,9 @@ func (s *Service) undo(ctx context.Context, q *db.Queries, userID uuid.UUID, ite
 			k := key(before.GroupID)
 			groupTo[k], groupOf[k] = append(groupTo[k], it.id), before.GroupID
 		}
+		if before.HasNote {
+			noteTo[before.Note] = append(noteTo[before.Note], it.id)
+		}
 		res.Rows++
 	}
 	for k, ids := range categoryTo {
@@ -345,6 +352,11 @@ func (s *Service) undo(ctx context.Context, q *db.Queries, userID uuid.UUID, ite
 			to = nil
 		}
 		if _, err := s.led.AnnotateTx(ctx, q, userID, ids, ledger.AnnotationPatch{SetGroup: true, GroupID: to}); err != nil {
+			return res, err
+		}
+	}
+	for note, ids := range noteTo {
+		if _, err := s.led.AnnotateTx(ctx, q, userID, ids, ledger.AnnotationPatch{SetNote: true, Note: note}); err != nil {
 			return res, err
 		}
 	}

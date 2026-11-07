@@ -26,9 +26,20 @@ func (o *openAIClient) header() http.Header {
 
 type oaMessage struct {
 	Role       string       `json:"role"`
-	Content    *string      `json:"content"`
+	Content    any          `json:"content"` // *string, or []oaPart for a user message with images
 	ToolCalls  []oaToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string       `json:"tool_call_id,omitempty"`
+}
+
+// oaPart is one part of a user message with images (text, then image_url data URLs).
+type oaPart struct {
+	Type     string   `json:"type"`
+	Text     string   `json:"text,omitempty"`
+	ImageURL *oaImage `json:"image_url,omitempty"`
+}
+
+type oaImage struct {
+	URL string `json:"url"`
 }
 
 type oaToolCall struct {
@@ -88,7 +99,16 @@ func (o *openAIClient) body(req Request) ([]byte, error) {
 			}
 			r.Messages = append(r.Messages, om)
 		default:
-			r.Messages = append(r.Messages, oaMessage{Role: "user", Content: strp(m.Content)})
+			if len(m.Images) == 0 {
+				r.Messages = append(r.Messages, oaMessage{Role: "user", Content: strp(m.Content)})
+				continue
+			}
+			parts := make([]oaPart, 0, 1+len(m.Images))
+			parts = append(parts, oaPart{Type: "text", Text: m.Content})
+			for _, im := range m.Images {
+				parts = append(parts, oaPart{Type: "image_url", ImageURL: &oaImage{URL: im.dataURL()}})
+			}
+			r.Messages = append(r.Messages, oaMessage{Role: "user", Content: parts})
 		}
 	}
 	for _, t := range req.Tools {
@@ -291,25 +311,78 @@ func (o *openAIClient) Models(ctx context.Context) ([]Model, error) {
 			out = append(out, Model{ID: m.ID})
 		}
 	}
-	o.lmStudioDetails(ctx, out)
+	if !o.lmStudioDetails(ctx, out) {
+		o.ollamaDetails(ctx, out)
+	}
 	return out, nil
 }
 
+// ollamaShowMax caps the /api/show requests of one model list.
+const ollamaShowMax = 30
+
+// ollamaDetails asks Ollama's native API (/api/show next to /v1) what each model can do: tools,
+// vision, embeddings (the context length is Ollama's own setting, OLLAMA_CONTEXT_LENGTH). Ollama
+// refuses tools to a model whose template has none, so its list is taken as it is, both ways.
+// Any error leaves a model as it is.
+func (o *openAIClient) ollamaDetails(ctx context.Context, models []Model) {
+	root := strings.TrimSuffix(o.c.BaseURL, "/v1")
+	if root == o.c.BaseURL {
+		return
+	}
+	for i := range models {
+		if i == ollamaShowMax || ctx.Err() != nil {
+			return
+		}
+		body, _ := json.Marshal(map[string]string{"model": models[i].ID})
+		res, done, err := o.c.call(ctx, http.MethodPost, root+"/api/show", o.header(), body)
+		if err != nil {
+			return // not Ollama, or unreachable: the next ones won't answer either
+		}
+		var j struct {
+			Capabilities []string `json:"capabilities"`
+		}
+		ok := res.StatusCode/100 == 2 && json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(&j) == nil
+		_ = res.Body.Close()
+		done()
+		if !ok {
+			if i == 0 {
+				return
+			}
+			continue
+		}
+		if j.Capabilities != nil {
+			tools, vision := false, false
+			for _, c := range j.Capabilities {
+				switch c {
+				case "tools":
+					tools = true
+				case "vision":
+					vision = true
+				case "embedding":
+					models[i].Embedding = true
+				}
+			}
+			models[i].ToolUse, models[i].Vision = &tools, &vision
+		}
+	}
+}
+
 // lmStudioDetails asks LM Studio's native REST API (/api/v0/models next to /v1) for each model's
-// type, context length and tool support. Any error leaves the list as it is.
-func (o *openAIClient) lmStudioDetails(ctx context.Context, models []Model) {
+// type, context length, tool support and vision. Any error leaves the list as it is; false when
+// the server isn't LM Studio.
+func (o *openAIClient) lmStudioDetails(ctx context.Context, models []Model) bool {
 	root := strings.TrimSuffix(o.c.BaseURL, "/v1")
 	if root == o.c.BaseURL || len(models) == 0 {
-		return
+		return false
 	}
 	res, done, err := o.c.call(ctx, http.MethodGet, root+"/api/v0/models", o.header(), nil)
 	if err != nil {
-		return
+		return false
 	}
 	defer done()
 	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode/100 != 2 {
-		return
+		return false
 	}
 	var j struct {
 		Data []struct {
@@ -321,7 +394,7 @@ func (o *openAIClient) lmStudioDetails(ctx context.Context, models []Model) {
 		} `json:"data"`
 	}
 	if json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(&j) != nil {
-		return
+		return false
 	}
 	for _, d := range j.Data {
 		for i := range models {
@@ -342,8 +415,11 @@ func (o *openAIClient) lmStudioDetails(ctx context.Context, models []Model) {
 					models[i].ToolUse = &t
 				}
 			}
+			v := d.Type == "vlm" // LM Studio's type for vision models
+			models[i].Vision = &v
 		}
 	}
+	return true
 }
 
 func callID() string {

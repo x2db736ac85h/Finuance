@@ -1,10 +1,12 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,6 +15,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/images"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
@@ -49,7 +52,7 @@ func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusReques
 		}
 		for _, m := range st.Models {
 			c.Models = append(c.Models, gen.AssistantModel{Id: m.ID, Tools: m.Caps.Tools,
-				Reasoning: gen.AssistantModelReasoning(m.Caps.Reasoning), ContextTokens: m.Caps.ContextTokens})
+				Reasoning: gen.AssistantModelReasoning(m.Caps.Reasoning), ContextTokens: m.Caps.ContextTokens, Vision: m.Caps.Vision})
 		}
 		out.Connections = append(out.Connections, c)
 	}
@@ -177,7 +180,15 @@ func turnsOf(msgs []assistant.Message) []gen.AssistantTurn {
 	for i := 0; i < len(msgs); {
 		m := msgs[i]
 		if m.Role == llm.RoleUser {
-			out = append(out, gen.AssistantTurn{Role: gen.AssistantTurnRoleUser, Seq: m.Seq, Content: m.Content, CreatedAt: m.CreatedAt})
+			t := gen.AssistantTurn{Role: gen.AssistantTurnRoleUser, Seq: m.Seq, Content: m.Content, CreatedAt: m.CreatedAt}
+			if len(m.Attachments) > 0 {
+				as := make([]gen.AssistantAttachment, len(m.Attachments))
+				for i, a := range m.Attachments {
+					as[i] = gen.AssistantAttachment{Id: a.ID, Width: a.Width, Height: a.Height}
+				}
+				t.Attachments = &as
+			}
+			out = append(out, t)
 			i++
 			continue
 		}
@@ -341,7 +352,10 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 		}
 		out.Split = &gen.ProposalSplit{Mode: gen.ProposalSplitMode(sp.Mode), Members: ms}
 	}
-	if p.Action == assistant.ActionAddExpense || p.Action == assistant.ActionSplitExpense {
+	if p.ReceiptLine != "" {
+		out.ReceiptLine = &p.ReceiptLine
+	}
+	if p.Action == assistant.ActionAddExpense || p.Action == assistant.ActionSplitExpense || p.Action == assistant.ActionAttachReceipt {
 		out.Amount = &gen.Money{AmountMinor: p.AmountMinor, Currency: p.Currency}
 		if d, err := platform.ParseDate(p.Date); err == nil {
 			out.Date = dateDTO(&d)
@@ -446,7 +460,7 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 		}
 	}
 	b := req.Body
-	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone)}
+	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone), AttachmentIDs: deref(b.AttachmentIds)}
 	if s := b.Settings; s != nil {
 		r.Connection, r.Model, r.Temperature = deref(s.Connection), deref(s.Model), s.Temperature
 		if s.Mode != nil {
@@ -549,4 +563,35 @@ func eventDTO(e assistant.Event) any {
 		return gen.AssistantDoneEvent{MessageSeq: d.MessageSeq, Meta: metaDTO(d.Meta)}
 	}
 	return e.Data
+}
+
+// AddAssistantAttachment stores a photo for the chat's next question (checked and re-encoded).
+func (a *api) AddAssistantAttachment(ctx context.Context, req gen.AddAssistantAttachmentRequestObject) (gen.AddAssistantAttachmentResponseObject, error) {
+	if a.ai == nil {
+		return nil, assistant.ErrDisabled
+	}
+	data, err := io.ReadAll(io.LimitReader(req.Body, images.MaxBytes+1))
+	if err != nil {
+		return nil, err // the body limit (413) or a broken upload
+	}
+	if len(data) > images.MaxBytes {
+		return nil, fmt.Errorf("the photo is larger than %d bytes: %w", images.MaxBytes, platform.ErrPayloadTooLarge)
+	}
+	at, err := a.ai.Chats.AddAttachment(ctx, identity(ctx).User.ID, req.Id, data)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AddAssistantAttachment201JSONResponse{Id: at.ID, Width: at.Width, Height: at.Height}, nil
+}
+
+// GetAssistantAttachment returns a photo of the chat (the panel's thumbnail).
+func (a *api) GetAssistantAttachment(ctx context.Context, req gen.GetAssistantAttachmentRequestObject) (gen.GetAssistantAttachmentResponseObject, error) {
+	if a.ai == nil {
+		return nil, assistant.ErrDisabled
+	}
+	data, err := a.ai.Chats.AttachmentData(ctx, identity(ctx).User.ID, req.Id, req.AttachmentId)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetAssistantAttachment200ImagejpegResponse{Body: bytes.NewReader(data), ContentLength: int64(len(data))}, nil
 }

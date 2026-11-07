@@ -70,12 +70,48 @@ function record(calls: Call[]) {
       await capture('POST', request);
       return HttpResponse.json({} as Schemas['Goal'], { status: 201 });
     }),
+    http.patch(`${API}/transactions/:id`, async ({ request }) => {
+      await capture('PATCH', request);
+      return HttpResponse.json({} as Schemas['TransactionDetail']);
+    }),
     http.patch(`${API}/goals/:id`, async ({ request }) => {
       await capture('PATCH', request);
       return HttpResponse.json({} as Schemas['Goal']);
     }),
   );
 }
+
+describe('receipt proposals (ADR 0032)', () => {
+  it('names the payment and the receipt, and writes the note through PATCH /transactions/{id}', async () => {
+    const p = base({
+      key: '00000000000000c1',
+      action: 'attach_receipt',
+      ids: ['t1'],
+      payee: 'BIEDRONKA SKLEP 123',
+      date: '2026-11-03',
+      amount: { amountMinor: -5430, currency: 'PLN' },
+      accountName: 'Konto',
+      note: 'zakupy\nReceipt: Biedronka · chleb',
+      receiptLine: 'Receipt: Biedronka · chleb',
+    });
+    expect(proposalTitle(p)).toMatch(
+      /^Add the receipt to “BIEDRONKA SKLEP 123” \(03\.11\.2026, .*54.*\) in Konto: Biedronka · chleb$/,
+    );
+    const calls: Call[] = [];
+    record(calls);
+    expect(await applyProposal(p, CHAT)).toBe(1);
+    expect(calls).toEqual([
+      {
+        method: 'PATCH',
+        path: '/transactions/t1',
+        chat: CHAT,
+        key: '00000000000000c1',
+        auto: null,
+        body: { note: 'zakupy\nReceipt: Biedronka · chleb' },
+      },
+    ]);
+  });
+});
 
 describe('goal proposals (ADR 0031)', () => {
   const holiday: NonNullable<Proposal['goal']> = {

@@ -21,6 +21,10 @@ notes of their version.
 - **Goals**: save an amount by a deadline, or spend a percentage less on a category than the months
   before. The Overview's *Goals* card shows each goal against a steady pace; the assistant answers
   "how are my goals doing" and proposes new ones. Goals are in the data export.
+- **Receipts by photo**: with a model that reads images, the panel's camera button sends a photo of
+  a receipt (shrunk and stripped of its location in the browser); the assistant finds the payment
+  and proposes the receipt in its note, or proposes the expense. Card payments typed into a bank
+  account wait for the bank's file, then a card offers to merge them.
 
 ## [0.3.0]
 

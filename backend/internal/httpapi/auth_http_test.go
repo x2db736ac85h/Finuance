@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"log/slog"
 	"net/http"
@@ -583,6 +585,11 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 	if _, err := chats.Append(ctx, u, chat.ID, []assistant.Message{{Role: llm.RoleUser, Content: "Q"}}, assistant.ChatUpdate{Title: "Q"}); err != nil {
 		t.Fatal(err)
 	}
+	var photo bytes.Buffer // a photo waiting for a question (assistant_attachments)
+	_ = jpeg.Encode(&photo, image.NewGray(image.Rect(0, 0, 4, 4)), nil)
+	if _, err := chats.AddAttachment(ctx, u, chat.ID, photo.Bytes()); err != nil {
+		t.Fatal(err)
+	}
 	if len(txIDs) == 0 {
 		t.Fatal("no transactions committed")
 	}
@@ -595,6 +602,20 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		t.Fatal(err)
 	}
 	if _, err := l.Annotate(ctx, u, txIDs[:1], ledger.AnnotationPatch{SetGroup: true, GroupID: &g.ID}); err != nil {
+		t.Fatal(err)
+	}
+	// a typed card payment kept apart from an imported row (merge_dismissals, ADR 0032)
+	imported, err := l.GetTransaction(ctx, u, txIDs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	typedID, err := l.AddManual(ctx, u, ledger.ManualInput{AccountID: imported.AccountID, BookedOn: imported.BookedOn, AmountMinor: -1, Payee: "x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.WithUser(ctx, u, func(q *db.Queries, _ pgx.Tx) error {
+		return q.DismissMerge(ctx, db.DismissMergeParams{UserID: u, TypedID: typedID, ImportedID: imported.ID, Now: time.Now()})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	// a goal (ADR 0031)

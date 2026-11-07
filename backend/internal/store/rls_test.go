@@ -91,9 +91,20 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 			BookedOn: platform.MustDate(2025, 1, 2), AmountMinor: &amount, Currency: "PLN", Raw: []byte(`[]`), SearchText: "x"}}); err != nil {
 			return fmt.Errorf("import rows: %w", err)
 		}
+		imported := platform.NewID()
 		if _, err := q.InsertTransactionsFromImport(ctx, db.InsertTransactionsFromImportParams{UserID: u, ImportID: imp.ID, AccountID: d.account,
-			Ids: []uuid.UUID{platform.NewID()}}); err != nil {
+			Ids: []uuid.UUID{imported}}); err != nil {
 			return fmt.Errorf("transactions: %w", err)
+		}
+		// a card payment typed into the bank account, kept apart from the imported one (ADR 0032)
+		typed := platform.NewID()
+		if err := q.InsertManualTransaction(ctx, db.InsertManualTransactionParams{ID: typed, UserID: u, AccountID: d.account,
+			Fingerprint: typed[:], BookedOn: platform.MustDate(2025, 1, 2), AmountMinor: -100, Currency: "PLN", Payee: "x", PayeeN: "x",
+			PayeeGroup: "x", SearchText: "x", Now: now}); err != nil {
+			return fmt.Errorf("typed transaction: %w", err)
+		}
+		if err := q.DismissMerge(ctx, db.DismissMergeParams{UserID: u, TypedID: typed, ImportedID: imported, Now: now}); err != nil {
+			return fmt.Errorf("merge dismissal: %w", err)
 		}
 		if err := q.UpsertImportProfile(ctx, db.UpsertImportProfileParams{UserID: u, HeaderSignature: []byte{1}, Mapping: []byte(`{}`), Options: []byte(`{}`), Now: now}); err != nil {
 			return fmt.Errorf("profile: %w", err)
@@ -123,6 +134,10 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		}
 		if _, err := q.InsertAssistantMessage(ctx, db.InsertAssistantMessageParams{ChatID: chat.ID, UserID: u, Role: "user", Content: "Q", Now: now}); err != nil {
 			return fmt.Errorf("assistant message: %w", err)
+		}
+		if err := q.InsertAssistantAttachment(ctx, db.InsertAssistantAttachmentParams{ID: platform.NewID(), UserID: u, ChatID: chat.ID,
+			Mime: "image/jpeg", Width: 1, Height: 1, Bytes: []byte{0xff, 0xd8, 0xff, 0xd9}, Now: now}); err != nil {
+			return fmt.Errorf("assistant attachment: %w", err)
 		}
 		run, err := q.CreateLegacyImport(ctx, db.CreateLegacyImportParams{ID: platform.NewID(), UserID: u, Manifest: []byte(`{}`), Progress: []byte(`{}`), Now: now})
 		if err != nil {

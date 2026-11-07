@@ -13,6 +13,7 @@ package llm
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 )
 
@@ -54,6 +55,20 @@ type Message struct {
 	// Replay is provider data that must be sent back unchanged with this assistant message, such
 	// as Anthropic thinking blocks and their signatures inside a tool loop.
 	Replay json.RawMessage `json:"replay,omitempty"`
+	// Images go with a user message to a model that can see (Caps.Vision; Phase 20, receipts).
+	// They are never stored with the message: the chat's attachments keep them.
+	Images []Image `json:"-"`
+}
+
+// Image is a picture of a user message, already re-encoded by the server (JPEG or PNG).
+type Image struct {
+	MIME string // image/jpeg or image/png
+	Data []byte
+}
+
+// dataURL is the image as an RFC 2397 data URL (OpenAI image_url).
+func (im Image) dataURL() string {
+	return "data:" + im.MIME + ";base64," + base64.StdEncoding.EncodeToString(im.Data)
 }
 
 // Tool is a function the model may call; Parameters is a JSON schema object.
@@ -115,6 +130,7 @@ type Model struct {
 	ContextTokens int    `json:"contextTokens,omitempty"` // 0 = unknown
 	Embedding     bool   `json:"-"`
 	ToolUse       *bool  `json:"-"` // what the server says, when it says it
+	Vision        *bool  `json:"-"` // likewise: whether it reads images
 }
 
 // Client is one connection to a model server.

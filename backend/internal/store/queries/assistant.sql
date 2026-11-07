@@ -58,3 +58,36 @@ SELECT * FROM assistant_messages WHERE user_id = @user_id AND chat_id = @chat_id
 -- Users in id order, a page at a time (the retention job visits every user under its own RLS
 -- context; users is not under RLS).
 SELECT id FROM users WHERE id > @after ORDER BY id LIMIT @page_size;
+
+-- name: InsertAssistantAttachment :exec
+INSERT INTO assistant_attachments (id, user_id, chat_id, mime, width, height, bytes, created_at)
+VALUES (@id, @user_id, @chat_id, @mime, @width, @height, @bytes, @now);
+
+-- name: CountUnsentAssistantAttachments :one
+SELECT count(*) FROM assistant_attachments WHERE user_id = @user_id AND chat_id = @chat_id AND message_seq IS NULL;
+
+-- name: GetAssistantAttachment :one
+SELECT * FROM assistant_attachments WHERE user_id = @user_id AND chat_id = @chat_id AND id = @id;
+
+-- name: UnsentAssistantAttachments :many
+-- The attachments of a question about to be sent, in the order asked for.
+SELECT * FROM assistant_attachments
+WHERE user_id = @user_id AND chat_id = @chat_id AND id = ANY(@ids::uuid[]) AND message_seq IS NULL
+ORDER BY array_position(@ids::uuid[], id);
+
+-- name: MarkAssistantAttachmentsSent :exec
+UPDATE assistant_attachments SET message_seq = @seq::integer
+WHERE user_id = @user_id AND chat_id = @chat_id AND id = ANY(@ids::uuid[]) AND message_seq IS NULL;
+
+-- name: ListAssistantAttachmentRefs :many
+-- What the chat shows: each sent photo's question and size, never the bytes.
+SELECT id, message_seq, width, height FROM assistant_attachments
+WHERE user_id = @user_id AND chat_id = @chat_id AND message_seq IS NOT NULL
+ORDER BY message_seq, created_at, id;
+
+-- name: DeleteUnsentAssistantAttachmentsBefore :execrows
+DELETE FROM assistant_attachments WHERE user_id = @user_id AND message_seq IS NULL AND created_at < @cutoff;
+
+-- name: ExportAssistantAttachments :many
+SELECT id, chat_id, message_seq, bytes FROM assistant_attachments WHERE user_id = @user_id AND message_seq IS NOT NULL
+ORDER BY chat_id, message_seq, id;

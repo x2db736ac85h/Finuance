@@ -101,23 +101,28 @@ func jsonOrNil(v any) ([]byte, error) {
 }
 
 // AnnotationState is the part of a transaction an annotation change sets, as recorded in an AI
-// change: the category and where it came from, and/or the group. Unset parts are left out, so a
-// revert compares and restores only what the change touched.
+// change: the category and where it came from, the group and/or the note (a receipt, ADR 0032).
+// Unset parts are left out, so a revert compares and restores only what the change touched.
 type AnnotationState struct {
 	CategoryID     *uuid.UUID `json:"categoryId,omitempty"`
 	CategorySource string     `json:"categorySource,omitempty"`
 	GroupID        *uuid.UUID `json:"groupId,omitempty"`
+	Note           string     `json:"note,omitempty"`
 	HasCategory    bool       `json:"hasCategory,omitempty"`
 	HasGroup       bool       `json:"hasGroup,omitempty"`
+	HasNote        bool       `json:"hasNote,omitempty"`
 }
 
-func annotationState(categoryID *uuid.UUID, source string, groupID *uuid.UUID, p AnnotationPatch) AnnotationState {
+func annotationState(categoryID *uuid.UUID, source string, groupID *uuid.UUID, note string, p AnnotationPatch) AnnotationState {
 	var s AnnotationState
 	if p.SetCategory {
 		s.HasCategory, s.CategoryID, s.CategorySource = true, categoryID, source
 	}
 	if p.SetGroup {
 		s.HasGroup, s.GroupID = true, groupID
+	}
+	if p.SetNote {
+		s.HasNote, s.Note = true, note
 	}
 	return s
 }
