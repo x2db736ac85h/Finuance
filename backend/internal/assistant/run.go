@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
@@ -70,6 +71,11 @@ type Request struct {
 	// AttachmentIDs are photos waiting in the chat that go with this question (a model that reads
 	// images only; at most MaxAttachments).
 	AttachmentIDs []uuid.UUID
+	// TokensPerDay is the user's daily token budget (0 = none): a run doesn't start once today's
+	// tokens reach it (ADR 0033).
+	TokensPerDay int64
+	// Digest marks a background digest (counted as one in the usage).
+	Digest bool
 }
 
 // Event is one server-sent event of a run (PLAN §6.3 AssistantEvent): step, reasoning, content,
@@ -118,6 +124,8 @@ type RunnerConfig struct {
 	Metrics       *Metrics
 	Tracer        trace.TracerProvider
 	Logger        *slog.Logger
+	// Instructions returns the administrator's addition to the system prompt (ADR 0034); nil: none.
+	Instructions func(ctx context.Context) string
 }
 
 // Runner runs questions: one at a time per user, at most MaxConcurrent per process.
@@ -158,6 +166,7 @@ type Run struct {
 	conn     *Connection
 	model    ModelInfo
 	images   []llm.Image // the question's photos
+	extra    string      // the administrator's instructions, read when the run starts
 	released sync.Once
 }
 
@@ -215,6 +224,15 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 	if err := ve.Err(); err != nil {
 		return nil, err
 	}
+	if req.TokensPerDay > 0 {
+		used, err := r.cfg.Chats.TokensToday(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		if used >= req.TokensPerDay {
+			return nil, &instance.LimitError{Limit: "assistantTokensPerDay", Value: req.TokensPerDay}
+		}
+	}
 	chat, msgs, err := r.cfg.Chats.Get(ctx, userID, req.ChatID)
 	if err != nil {
 		return nil, err
@@ -232,6 +250,17 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 	conn, info, err := r.cfg.Connections.Resolve(ctx, connName, model)
 	if err != nil {
 		return nil, err
+	}
+	if t := info.Tuning; t != nil { // the administrator's defaults for this model (ADR 0035)
+		if req.Temperature == nil && t.Temperature != nil {
+			req.Temperature = t.Temperature
+		}
+		if req.Think == llm.ThinkAuto && t.Think != "" {
+			req.Think = t.Think
+		}
+		if req.Toolset == "" {
+			req.Toolset = t.Toolset
+		}
 	}
 	if conn.Cloud {
 		s, err := r.cfg.Chats.Settings(ctx, userID)
@@ -345,6 +374,12 @@ func (run *Run) Execute(ctx context.Context, emit func(Event)) {
 		return
 	}
 	sc.MultiAccount = facts != nil && facts.Accounts > 1
+	if r.cfg.Instructions != nil {
+		run.extra = r.cfg.Instructions(ctx)
+	}
+	if t := run.model.Tuning; t != nil && strings.TrimSpace(t.ExtraPrompt) != "" {
+		run.extra = strings.TrimSpace(run.extra + "\n" + t.ExtraPrompt)
+	}
 
 	mode := req.Mode
 	if mode == ModeAuto {
@@ -424,7 +459,7 @@ func (run *Run) finish(ctx context.Context, emit func(Event), span trace.Span, f
 	if final.Steps == nil {
 		final.Steps = []Step{}
 	}
-	seq, err := run.store(ctx, append(t.msgs, final))
+	seq, err := run.store(ctx, append(t.msgs, final), run.usage(t, final))
 	if err != nil {
 		run.fail(ctx, emit, span, "internal", err, mode, t0, t)
 		return
@@ -452,7 +487,7 @@ func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, cod
 		}
 		msgs = t.msgs
 	}
-	seq, serr := run.store(ctx, append(msgs, final))
+	seq, serr := run.store(ctx, append(msgs, final), run.usage(t, final))
 	if serr != nil {
 		seq = 0
 	}
@@ -464,11 +499,32 @@ func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, cod
 	run.observe(span, mode, "error", code, t, t0)
 }
 
-func (run *Run) store(ctx context.Context, msgs []Message) (int, error) {
+func (run *Run) store(ctx context.Context, msgs []Message, use *RunUsage) (int, error) {
 	sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), persistGrace)
 	defer cancel()
 	return run.r.cfg.Chats.Append(sctx, run.userID, run.req.ChatID, msgs,
-		ChatUpdate{Connection: run.conn.Name, Model: run.model.ID, NoTools: run.chat.NoTools})
+		ChatUpdate{Connection: run.conn.Name, Model: run.model.ID, NoTools: run.chat.NoTools, Usage: use})
+}
+
+// usage is the run's tokens: what the server counted, else the runner's estimate of what was sent
+// plus the answer's length / 4.
+func (run *Run) usage(t *turn, final Message) *RunUsage {
+	u := &RunUsage{Digest: run.req.Digest}
+	if t == nil {
+		return u
+	}
+	if n := t.usage.Input + t.usage.Output; n > 0 {
+		u.Tokens = int64(n)
+		return u
+	}
+	out := len(final.Content) + len(final.Reasoning)
+	for i := range t.msgs {
+		if t.msgs[i].Role == llm.RoleAssistant {
+			out += len(t.msgs[i].Content) + len(t.msgs[i].Reasoning)
+		}
+	}
+	u.Tokens = int64(t.sent + out/4)
+	return u
 }
 
 // observe records the run's metrics and its one log line (no prompt, answer or tool data).
@@ -579,7 +635,7 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 	if toolset == "" {
 		toolset = ToolsetFull
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset) + instructionsBlock(run.extra)
 	defs := ToolDefs(toolset)
 	var conv []llm.Message // this turn's assistant and tool messages
 	for range maxRounds {
@@ -693,7 +749,7 @@ func (run *Run) runPlan(ctx context.Context, emit func(Event), sc Scope, facts *
 	if toolset == "" {
 		toolset = ToolsetCompact
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset) + instructionsBlock(run.extra)
 	hist := trimHistory(history, true, run.noThink(), system, run.budget())
 	zero := 0.0
 	plan, err := run.complete(ctx, emit, t, llm.Request{System: system + planInstructions(ToolDefs(toolset)), Messages: hist, Temperature: &zero}, false)

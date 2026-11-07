@@ -1740,6 +1740,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write a digest now
+         * @description Queues a digest for the signed-in user (ADR 0033), whatever the schedule; the worker writes it into a new chat of kind `digest` and a notification `assistant.digest` says when it is ready. At most one waits per user (a second request while one waits is accepted and changes nothing). `404` when digests are switched off for the instance or in demo mode, `assistant_unavailable` without a connection, `limit_reached` once the day's tokens are used.
+         */
+        post: operations["requestAssistantDigest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/demo-data": {
         parameters: {
             query?: never;
@@ -2033,6 +2053,164 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/advice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every article of the advice library (ADR 0034), without bodies */
+        get: operations["adminListAdvice"];
+        put?: never;
+        /**
+         * Write an article
+         * @description The slug is unique per language (`422` on `slug` otherwise).
+         */
+        post: operations["adminCreateAdvice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/advice/starter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add the starter articles
+         * @description Adds the eight English starter articles whose slug isn't taken in English, as drafts to read and publish.
+         */
+        post: operations["adminAddStarterAdvice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/advice/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        /** One article with its body */
+        get: operations["adminGetAdvice"];
+        /**
+         * Change an article
+         * @description Versioned (`409 stale_version` when it changed since it was read).
+         */
+        put: operations["adminUpdateAdvice"];
+        post?: never;
+        /** Delete an article */
+        delete: operations["adminDeleteAdvice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The assistant's connections (ADR 0035)
+         * @description The connections file's (read only) and those added here; never an API key.
+         */
+        get: operations["adminListConnections"];
+        put?: never;
+        /**
+         * Add a connection
+         * @description The connections file's rules apply (a local connection on a public address is refused, a cloud one must use https). An API key needs FINUANCE_INSTANCE_KEY; it is sealed and never shown again.
+         */
+        post: operations["adminCreateConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/connections/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a connection added here
+         * @description Versioned. `apiKey` keeps (`keep`), removes (`remove`) or replaces (`replace`) the key; a new address or cloud setting drops a kept key, so a key only ever goes where it was entered for.
+         */
+        put: operations["adminUpdateConnection"];
+        post?: never;
+        /** Delete a connection added here */
+        delete: operations["adminDeleteConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/tuning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-model tuning */
+        get: operations["adminListTuning"];
+        /**
+         * Save a model's tuning
+         * @description A tuning that sets nothing removes the model's.
+         */
+        put: operations["adminPutTuning"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/advice/{slug}": {
+        parameters: {
+            query?: {
+                /** @description The reader's language first, then English, then any. */
+                language?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A published article of the advice library
+         * @description What the assistant's search_advice found, for reading in full (ADR 0034).
+         */
+        get: operations["getAdvice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/developer": {
         parameters: {
             query?: never;
@@ -2185,7 +2363,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "admin.assistant_changed" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -2720,7 +2898,7 @@ export interface components {
             code: string;
         };
         /** @enum {string} */
-        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled";
+        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled" | "assistant.digest";
         /** @enum {string} */
         SharedGroupKind: "trip" | "household" | "event" | "other";
         /** @description Someone in a group as the others see them; never an e-mail address. */
@@ -3871,12 +4049,38 @@ export interface components {
             cloudConsent: string[];
             /** @description Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Left out of a PUT, the stored list stays. */
             autoApply?: ("set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal")[];
+            digest?: components["schemas"]["AssistantDigest"];
+            /**
+             * Format: date-time
+             * @description When the next digest is due (null when they are off). Ignored in a PUT.
+             */
+            digestNextAt?: string | null;
+            /**
+             * Format: int64
+             * @description Tokens used today (UTC), questions and digests together. Ignored in a PUT.
+             */
+            tokensToday?: number;
         };
+        /** @description The digest schedule (ADR 0033): off, daily, or weekly on a weekday, at an hour of the time zone, written with the connection and model named (else the instance's default). Left out of a PUT, the stored schedule stays. */
+        AssistantDigest: {
+            /** @enum {string} */
+            schedule: "off" | "daily" | "weekly";
+            hour: number;
+            /** @description ISO weekday (1 = Monday), for weekly digests. */
+            weekday: number;
+            /** @description An IANA time zone such as Europe/Warsaw. */
+            timeZone: string;
+            connection: string;
+            model: string;
+        };
+        /** @enum {string} */
+        AssistantChatKind: "chat" | "digest";
         AssistantChat: {
             /** Format: uuid */
             id: string;
-            /** @description The first question ("" before it). */
+            /** @description The first question ("" before it), or the digest's name. */
             title: string;
+            kind: components["schemas"]["AssistantChatKind"];
             connection: string;
             model: string;
             /** Format: date-time */
@@ -3892,6 +4096,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             title: string;
+            kind: components["schemas"]["AssistantChatKind"];
             connection: string;
             model: string;
             /** Format: date-time */
@@ -4239,6 +4444,8 @@ export interface components {
         Features: {
             overview: boolean;
             assistant: boolean;
+            /** @description Daily or weekly digests written in the background (off with the assistant too). */
+            assistantDigests: boolean;
             friends: boolean;
             sharedGroups: boolean;
         };
@@ -4276,6 +4483,11 @@ export interface components {
             maxSharedGroups?: number;
             /** Format: int64 */
             assistantPerHour?: number;
+            /**
+             * Format: int64
+             * @description Tokens the assistant may use per UTC day, questions and digests together (ADR 0033).
+             */
+            assistantTokensPerDay?: number;
         };
         /** @description The limits that apply to the signed-in user; 0 means no limit. */
         EffectiveLimits: {
@@ -4291,6 +4503,8 @@ export interface components {
             maxSharedGroups: number;
             /** Format: int64 */
             assistantPerHour: number;
+            /** Format: int64 */
+            assistantTokensPerDay: number;
         };
         InstanceSettingsDoc: {
             /** Format: int32 */
@@ -4300,15 +4514,142 @@ export interface components {
             features: {
                 overview?: boolean;
                 assistant?: boolean;
+                assistantDigests?: boolean;
                 friends?: boolean;
                 sharedGroups?: boolean;
             };
             limits: components["schemas"]["LimitOverrides"];
+            assistant?: components["schemas"]["InstanceAssistant"];
             /** Format: date-time */
             updatedAt?: string;
         };
+        AdminConnection: {
+            name: string;
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            baseUrl: string;
+            cloud: boolean;
+            defaultModel: string;
+            /** @description Model id patterns offered (globs); empty offers every chat model. */
+            models: string[];
+            contextTokens: number;
+            /**
+             * @description The connections file's (read only) or added here.
+             * @enum {string}
+             */
+            source: "file" | "panel";
+            hasKey: boolean;
+            /** @description The stored key was sealed under another instance key; enter it again. */
+            keyUnreadable: boolean;
+            /**
+             * Format: int32
+             * @description 0 for the file's.
+             */
+            version: number;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        AdminConnectionInput: {
+            name: string;
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            baseUrl: string;
+            cloud: boolean;
+            defaultModel: string;
+            models: string[];
+            contextTokens: number;
+            apiKey?: string;
+        };
+        AdminConnectionUpdate: {
+            /** Format: int32 */
+            version: number;
+            label: string;
+            /** @enum {string} */
+            api: "openai" | "anthropic";
+            baseUrl: string;
+            cloud: boolean;
+            defaultModel: string;
+            models: string[];
+            contextTokens: number;
+            /** @enum {string} */
+            keyAction: "keep" | "remove" | "replace";
+            /** @description The new key with `replace`. */
+            apiKey?: string;
+        };
+        /** @description An administrator's defaults for one model (ADR 0035), used when a question doesn't set them; the context size replaces the detected one and the note follows the instructions in the prompt. */
+        ModelTuning: {
+            connection: string;
+            model: string;
+            /** Format: double */
+            temperature?: number;
+            contextTokens?: number;
+            /** @enum {string} */
+            think?: "off" | "auto" | "low" | "medium" | "high";
+            /** @enum {string} */
+            toolset?: "full" | "compact";
+            extraPrompt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        /** @description The instance's settings for the assistant; left out of a PUT, the stored ones stay. */
+        InstanceAssistant: {
+            /** @description Added to every system prompt after the app's rules (ADR 0034). */
+            instructions?: string;
+        };
+        AdviceInput: {
+            slug: string;
+            language: string;
+            title: string;
+            /** @description Markdown. */
+            body: string;
+            tags: string[];
+            /** @enum {string} */
+            status: "draft" | "published";
+        };
+        AdviceUpdate: {
+            /** Format: int32 */
+            version: number;
+            slug: string;
+            language: string;
+            title: string;
+            body: string;
+            tags: string[];
+            /** @enum {string} */
+            status: "draft" | "published";
+        };
+        AdviceArticle: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            language: string;
+            title: string;
+            /** @description Markdown ("" in a listing). */
+            body: string;
+            bodyLength: number;
+            tags: string[];
+            /** @enum {string} */
+            status: "draft" | "published";
+            /** Format: int32 */
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         /** @description Counts of an account's data (never the data). */
         UserUsage: {
+            /**
+             * Format: int64
+             * @description Assistant questions and digests in the last 30 days (UTC).
+             */
+            assistantRuns: number;
+            /**
+             * Format: int64
+             * @description Their tokens in the last 30 days (UTC).
+             */
+            assistantTokens: number;
             /** Format: int64 */
             accounts: number;
             /** Format: int64 */
@@ -4400,6 +4741,11 @@ export interface components {
              * @description Questions asked to the assistant.
              */
             questions: number;
+            /**
+             * Format: int64
+             * @description The assistant's tokens, questions and digests together.
+             */
+            tokens: number;
         };
         InstanceUsage: {
             totals: components["schemas"]["UserTotals"];
@@ -4631,6 +4977,7 @@ export interface components {
     parameters: {
         AdminUserId: string;
         ThemeId: string;
+        AdviceId: string;
         /** @description Set by the assistant panel when the request applies one of the assistant's action proposals (PLAN 15.7): the chat it came from. The server records it in the user's activity log (PLAN 17.6); the request is otherwise an ordinary one. */
         AssistantChatHeader: string;
         /** @description With X-Assistant-Chat: the applied proposal's `key`, recorded in the activity log so the chat shows the proposal as applied after a reload (`appliedProposals`). The pair also records the change as the assistant's (ADR 0030): what it set before and after, so it can be undone with `POST /ai-changes/{id}/revert`. The key must be one of the chat's proposals. */
@@ -7378,6 +7725,25 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    requestAssistantDigest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     loadDemoData: {
         parameters: {
             query?: never;
@@ -7817,6 +8183,312 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InstanceUsage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Articles by language and title. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminCreateAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdviceInput"];
+            };
+        };
+        responses: {
+            /** @description Created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminAddStarterAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many were added. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        added: number;
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminGetAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The article. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdviceUpdate"];
+            };
+        };
+        responses: {
+            /** @description The article as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminDeleteAdvice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file's first, then the ones added here by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminConnection"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminCreateConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminConnectionInput"];
+            };
+        };
+        responses: {
+            /** @description Added. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminConnection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminConnectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description The connection as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminConnection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminDeleteConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminListTuning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description By connection and model. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelTuning"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminPutTuning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelTuning"];
+            };
+        };
+        responses: {
+            /** @description Saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelTuning"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAdvice: {
+        parameters: {
+            query?: {
+                /** @description The reader's language first, then English, then any. */
+                language?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The article. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdviceArticle"];
                 };
             };
             default: components["responses"]["Problem"];

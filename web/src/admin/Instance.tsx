@@ -24,9 +24,14 @@ const CARD_LABEL: Record<(typeof CARD_KEYS)[number], string> = {
   heat: 'Daily spending',
 };
 
-const FEATURES: { key: 'overview' | 'assistant' | 'friends' | 'sharedGroups'; label: string; hint: string }[] = [
+const FEATURES: {
+  key: 'overview' | 'assistant' | 'assistantDigests' | 'friends' | 'sharedGroups';
+  label: string;
+  hint: string;
+}[] = [
   { key: 'overview', label: 'Overview', hint: 'the monthly overview page' },
   { key: 'assistant', label: 'Assistant', hint: 'the AI assistant panel (also needs a connection)' },
+  { key: 'assistantDigests', label: 'Assistant digests', hint: 'daily or weekly summaries written in the background' },
   { key: 'friends', label: 'Friends', hint: 'friend codes and the friends list' },
   { key: 'sharedGroups', label: 'Shared groups', hint: 'sharing expenses with friends' },
 ];
@@ -158,7 +163,7 @@ function SettingsForm({ doc }: { doc: Doc }) {
         <div className="lbl">Default limits</div>
         <p className="hint">
           For every account without its own limits. Empty means no limit, or the server's own limit for file size and
-          assistant questions, which an administrator can only lower.
+          the assistant, which an administrator can only lower.
         </p>
         <LimitFields text={limits} onChange={setLimits} placeholder="no limit" />
       </div>

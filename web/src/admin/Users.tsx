@@ -296,6 +296,7 @@ const LIMIT_FIELDS: { key: keyof LimitOverrides; label: string; hint: string; sc
   { key: 'importsPerDay', label: 'Imports', hint: 'per 24 hours' },
   { key: 'maxUploadBytes', label: 'Largest file', hint: 'MiB', scale: 1 << 20 },
   { key: 'assistantPerHour', label: 'Assistant questions', hint: 'per hour' },
+  { key: 'assistantTokensPerDay', label: 'Assistant tokens', hint: 'per day, questions and digests' },
 ];
 
 /** The limit overrides as text fields ('' = the instance default). */
@@ -382,7 +383,8 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
       <p className="hint">
         Created {fmtDateTime(u.createdAt)} · {fmtInt(u.usage.accounts)} accounts · {fmtInt(u.usage.transactions)}{' '}
         transactions · {fmtInt(u.usage.imports)} imports · {fmtBytes(u.usage.storedBytes)} of files ·{' '}
-        {fmtInt(u.usage.chats)} chats
+        {fmtInt(u.usage.chats)} chats · the assistant in 30 days: {fmtInt(u.usage.assistantRuns)} runs,{' '}
+        {fmtInt(u.usage.assistantTokens)} tokens
         {u.usage.lastActivity ? ` · last activity ${fmtDateTime(u.usage.lastActivity)}` : ''}
       </p>
       <div className="set-actions adm-actions">

@@ -25,6 +25,19 @@ notes of their version.
   a receipt (shrunk and stripped of its location in the browser); the assistant finds the payment
   and proposes the receipt in its note, or proposes the expense. Card payments typed into a bank
   account wait for the bank's file, then a card offers to merge them.
+- **Digests**: the assistant can write a short daily or weekly summary in the background (off by
+  default; the hour and day in the panel's settings, or *Write one now*). The bell says when it is
+  ready; its proposals wait for *Apply*. Administrators can switch digests off for everyone.
+- **Advice library**: administrators write short articles (and can start from eight English
+  starter articles) that the assistant searches for general money questions and names in its
+  answer; each opens in a window from the lookup. Administrators can also add a few lines of
+  instructions to every question.
+- **Administration → Assistant**: add model connections in the panel next to the configuration
+  file's (API keys sealed under `FINUANCE_INSTANCE_KEY`, never shown again), tune a model's
+  defaults (temperature, thinking, tools, context, a note), and see each person's assistant runs
+  and tokens (never what they asked).
+- **A daily token budget** for the assistant per user, questions and digests together
+  (`FINUANCE_AI_TOKENS_PER_DAY`, 200,000 by default; a limit administrators can lower per account).
 
 ## [0.3.0]
 

@@ -1,14 +1,26 @@
-// The bell in the title bar (Phase 19, 19.8): what other people did that concerns you, newest
-// first, with the unread count. Checked every minute and when the window gets focus; opening the
-// list marks everything read. In the app only, never e-mail. The words come from the kind and
-// the data (display names, never e-mail addresses).
+// The bell in the title bar (Phase 19, 19.8): what other people did that concerns you, and the
+// assistant's digests (Phase 20), newest first, with the unread count. Checked every minute and
+// when the window gets focus; opening the list marks everything read. In the app only, never
+// e-mail. The words come from the kind and the data (display names, never e-mail addresses).
 
 import { useNavigate } from 'react-router';
 
 import { useMarkNotificationsRead, useNotifications, type Notification } from '../api/hooks/friends';
+import { useChat } from '../assistant/chatStore';
 import { fmtAgo } from '../lib/dates';
+import { useUi } from '../stores/uiStore';
 import { IconButton } from '../ui/IconButton';
 import { Popover, usePopover } from '../ui/Popover';
+import { toast } from '../ui/toastStore';
+
+/** A digest's notification: which one, and how many proposals wait in it (ADR 0033). */
+function sayDigest(d: Record<string, string>): string {
+  const which = d['schedule'] === 'weekly' ? 'weekly' : 'daily';
+  if (d['failed']) return `Your ${which} digest couldn't be written. Open the assistant to see why.`;
+  const n = Number(d['proposals'] || 0);
+  const waiting = n === 1 ? ' · 1 proposal waiting' : n > 1 ? ` · ${String(n)} proposals waiting` : '';
+  return `Your ${which} digest is ready${waiting}`;
+}
 
 /** What a notification says. Every kind of the API has an entry (the compiler checks). */
 const SAY: Record<Notification['kind'], (d: Record<string, string>) => string> = {
@@ -19,6 +31,7 @@ const SAY: Record<Notification['kind'], (d: Record<string, string>) => string> =
   'shared.left': (d) => `${d['name'] || 'A member'} left ${d['group'] || 'your shared group'}`,
   'shared.expense_added': (d) => `${d['name'] || 'A member'} added an expense to ${d['group'] || 'a shared group'}`,
   'shared.settled': (d) => `${d['name'] || 'A member'} recorded a payment in ${d['group'] || 'a shared group'}`,
+  'assistant.digest': sayDigest,
 };
 
 /** Where a notification leads. */
@@ -30,7 +43,21 @@ const LINK: Record<Notification['kind'], string> = {
   'shared.left': '/s',
   'shared.expense_added': '/s',
   'shared.settled': '/s',
+  'assistant.digest': '',
 };
+
+/** A digest opens its chat in the assistant panel, wherever the user is. */
+function openDigest(n: Notification) {
+  useUi.getState().setAiOpen(true);
+  const id = n.data['chatId'];
+  if (id)
+    void useChat
+      .getState()
+      .open(id)
+      .catch(() => {
+        toast('This digest is gone (expired or deleted)', { kind: 'error' });
+      });
+}
 
 /** Where a notification leads: a shared-group notification opens its group. */
 function linkOf(n: Notification): string {
@@ -74,7 +101,7 @@ export function NotificationsButton() {
           <div className="nt-h">Notifications</div>
           {items.length === 0 ? (
             <p className="hint nt-empty">
-              Nothing yet. Friends and shared groups tell you here when they do something.
+              Nothing yet. Friends, shared groups and the assistant's digests tell you here.
             </p>
           ) : (
             <ul className="nt-list">
@@ -84,7 +111,8 @@ export function NotificationsButton() {
                     type="button"
                     onClick={() => {
                       pop.close();
-                      void navigate(linkOf(n));
+                      if (n.kind === 'assistant.digest') openDigest(n);
+                      else void navigate(linkOf(n));
                     }}
                   >
                     <span>{describeNotification(n)}</span>

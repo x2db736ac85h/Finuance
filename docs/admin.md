@@ -60,7 +60,8 @@ reload (`409`).
   them are shown, the sidebar. These lie under each person's own preferences, so they apply to
   everything a person hasn't changed yet; their own choices always win.
 - **Features**: switching Overview or the Assistant off hides it for everyone and its API answers
-  `404`. Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
+  `404`. Switching **Assistant digests** off (or the Assistant) stops every digest and hides the
+  setting (ADR 0033). Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
   **Shared groups** off hides the Shared tab, *Share…* and their routes ([sharing.md](sharing.md)).
 - **Default limits** for every account without its own.
 
@@ -74,6 +75,7 @@ reload (`409`).
 | Imports | uploads in the last 24 hours | — |
 | Largest file | the biggest CSV upload | `FINUANCE_MAX_UPLOAD_BYTES` |
 | Assistant questions | per hour | `FINUANCE_AI_RATE_PER_HOUR` |
+| Assistant tokens | per UTC day, questions and digests together | `FINUANCE_AI_TOKENS_PER_DAY` (200,000) |
 
 An account's own limit wins over the instance default, and both are capped by the server's
 environment, so an administrator can only lower those two. A request over a limit gets
@@ -93,10 +95,33 @@ variant, plus any theme an administrator approved. To make one:
 Themes are colours only (`#rrggbb` or `#rrggbbaa`), never CSS (ADR 0026). The chart colours stay
 the same in every theme.
 
+### Assistant
+
+- **Connections**: the model servers people pick from (ADR 0035). The configuration file's are
+  listed read only; *Add a connection* stores another one (name, label, API, address, cloud or
+  not, default model, the models offered, a context size, an API key). The key is stored sealed
+  under `FINUANCE_INSTANCE_KEY` and never shown again ("stored", "none", or "unreadable" when it
+  was sealed under another instance key); changing the address drops it, so enter it again. Other
+  api replicas and the worker pick a change up within a minute.
+- **Tuning per model**: for one model, the temperature, thinking level and tool set used when a
+  question doesn't set them, the context size, and a short note for that model.
+- **Instructions for the assistant**: up to 2,000 characters added to the instructions of every
+  question and digest on the instance, after the app's own rules (which they can't change). Every
+  user's model reads them, so keep them to tone, language and pointers to articles.
+- **Advice library**: short markdown articles the assistant searches for general money questions
+  (ADR 0034). Each has a title, an address (slug, unique per language), a two-letter language,
+  tags (searched like the title) and a status: only **published** articles are found and readable.
+  *Add the starter articles* adds eight original English articles (emergency fund, splitting income,
+  subscriptions, debt, saving for a goal, irregular expenses, spending by category, sharing costs)
+  as drafts: read them, adjust them to your instance and publish the ones you want. Each ends with a
+  "general information, not financial advice" note. Saving, publishing and deleting are in your
+  Activity.
+
 ### Usage
 
-Instance totals (accounts, active people, transactions, imports, stored files) and the last 30
-days of imports and assistant questions.
+Instance totals (accounts, active people, transactions, imports, stored files, the assistant's
+tokens) and the last 30 days of imports, assistant questions and tokens. A user's detail shows
+their assistant runs and tokens over the last 30 days, never what they asked.
 
 ### Developer
 

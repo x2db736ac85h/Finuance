@@ -210,3 +210,68 @@ func readLimitedFile(name string, limit int, what string) ([]byte, error) {
 	}
 	return b, nil
 }
+
+// ConnectionSpec is a connection an administrator enters in the panel (ADR 0035).
+type ConnectionSpec struct {
+	Name, Label, API, BaseURL, DefaultModel, APIKey string
+	Cloud                                           bool
+	Models                                          []string
+	ContextTokens                                   int
+}
+
+// NewConnection checks a connection entered in the panel by the connections file's rules (a
+// local connection on a public address is refused; a cloud one must use https). The problems map
+// field names (name, baseUrl, …) to messages; empty when it is fine.
+func NewConnection(s ConnectionSpec, defaultContext int) (AIConnection, map[string]string) {
+	problems := map[string]string{}
+	if !connName.MatchString(s.Name) {
+		problems["name"] = "must be 1–40 characters of a-z, 0-9, _ and -, starting with a letter or digit"
+	}
+	api := llm.API(s.API)
+	if api != llm.OpenAI && api != llm.Anthropic {
+		problems["api"] = "must be openai or anthropic"
+	}
+	label := strings.TrimSpace(s.Label)
+	if label == "" {
+		label = s.Name
+	}
+	if len([]rune(label)) > 80 {
+		problems["label"] = "must be at most 80 characters"
+	}
+	u, err := url.Parse(strings.TrimSpace(s.BaseURL))
+	switch {
+	case err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil ||
+		len(s.BaseURL) > 500:
+		problems["baseUrl"] = "must be an absolute http(s) URL without a query or credentials"
+	case checkAddress(u, s.Cloud) != "":
+		problems["baseUrl"] = checkAddress(u, s.Cloud) + " (mark the connection as a cloud service if that is intended)"
+	case s.Cloud && u.Scheme != "https":
+		problems["baseUrl"] = "a cloud connection must use https"
+	}
+	if len(s.Models) > 50 {
+		problems["models"] = "at most 50 patterns"
+	}
+	for _, m := range s.Models {
+		if _, err := path.Match(m, ""); err != nil || m == "" || len(m) > 200 {
+			problems["models"] = fmt.Sprintf("%q is not a valid pattern", m)
+		}
+	}
+	if s.ContextTokens < 0 || s.ContextTokens > 10_000_000 {
+		problems["contextTokens"] = "must be between 0 and 10000000"
+	}
+	if len(s.DefaultModel) > 200 {
+		problems["defaultModel"] = "must be at most 200 characters"
+	}
+	if len(s.APIKey) > 1000 || strings.ContainsAny(s.APIKey, "\r\n\x00") {
+		problems["apiKey"] = "must be one line of at most 1000 characters"
+	}
+	ctx := s.ContextTokens
+	if ctx == 0 {
+		ctx = defaultContext
+	}
+	if len(problems) > 0 {
+		return AIConnection{}, problems
+	}
+	return AIConnection{Name: s.Name, Label: label, API: api, BaseURL: u, APIKey: s.APIKey, Cloud: s.Cloud, DefaultModel: s.DefaultModel,
+		Models: s.Models, ContextTokens: ctx}, nil
+}

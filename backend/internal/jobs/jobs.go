@@ -4,7 +4,8 @@
 // migrates a legacy backup (Phase 14); Reclassify applies rules and finds transfers (Phase 15);
 // CleanupAuditLog keeps the activity log to its retention and CleanupDemoUsers removes demo
 // visitors after a day (Phase 17); CleanupFriendCodes and CleanupNotifications keep Phase 19's
-// friend codes and notifications to theirs.
+// friend codes and notifications to theirs; AssistantDigestScan and AssistantDigest write the
+// assistant's digests (Phase 20, ADR 0033).
 package jobs
 
 import (
@@ -51,6 +52,7 @@ type Deps struct {
 	Rules    Reclassifier
 	Friends  Cleaner        // expired friend codes
 	Notify   Cleaner        // old notifications
+	Digests  DigestWriter   // nil: the assistant isn't configured
 	Metrics  *ImportMetrics // nil: unregistered metrics
 }
 
@@ -73,6 +75,8 @@ func Workers(d Deps) *river.Workers {
 	river.AddWorker(w, &CleanupDemoUsersWorker{Demo: d.Demo})
 	river.AddWorker(w, &CleanupFriendCodesWorker{Friends: d.Friends})
 	river.AddWorker(w, &CleanupNotificationsWorker{Notifications: d.Notify})
+	river.AddWorker(w, &AssistantDigestScanWorker{Digests: d.Digests})
+	river.AddWorker(w, &AssistantDigestWorker{Digests: d.Digests})
 	return w
 }
 
@@ -96,6 +100,9 @@ func PeriodicJobs() []*river.PeriodicJob {
 			&river.PeriodicJobOpts{RunOnStart: true}),
 		river.NewPeriodicJob(river.PeriodicInterval(24*time.Hour),
 			func() (river.JobArgs, *river.InsertOpts) { return CleanupNotificationsArgs{}, nil },
+			&river.PeriodicJobOpts{RunOnStart: true}),
+		river.NewPeriodicJob(river.PeriodicInterval(15*time.Minute),
+			func() (river.JobArgs, *river.InsertOpts) { return AssistantDigestScanArgs{}, nil },
 			&river.PeriodicJobOpts{RunOnStart: true}),
 	}
 }

@@ -927,8 +927,8 @@ func (m *Migrator) migrateChats(ctx context.Context, s *state) error {
 		return err
 	}
 	titles := map[string]bool{}
-	for _, c := range existing {
-		titles[c.Title] = true
+	for i := range existing {
+		titles[existing[i].Title] = true
 	}
 	room := m.chats.Limit() - len(existing)
 	chats := slices.Clone(s.man.Chats)

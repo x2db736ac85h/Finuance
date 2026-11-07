@@ -60,12 +60,13 @@ type User struct {
 	IsAdmin            bool
 	MustChangePassword bool
 	Limits             instance.Limits
+	Disabled           bool // an administrator disabled the account (background work skips it)
 }
 
 func userOf(u db.User) User {
 	limits, _ := instance.ParseLimits(u.Limits) // the admin service validated them when it stored them
 	return User{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, CreatedAt: u.CreatedAt,
-		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword, Limits: limits}
+		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword, Limits: limits, Disabled: u.DisabledAt != nil}
 }
 
 // Service implements signup, login, sessions and the /me operations.
@@ -333,6 +334,22 @@ func (s *Service) UserByEmail(ctx context.Context, email string) (User, error) {
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, fmt.Errorf("user %q: %w", email, platform.ErrNotFound)
+	}
+	if err != nil {
+		return User{}, err
+	}
+	return userOf(u), nil
+}
+
+// UserByID finds a user for background work (the assistant's digests read the user's limits).
+func (s *Service) UserByID(ctx context.Context, id uuid.UUID) (User, error) {
+	var u db.User
+	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) (err error) {
+		u, err = q.GetUser(ctx, id)
+		return err
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return User{}, fmt.Errorf("user %s: %w", id, platform.ErrNotFound)
 	}
 	if err != nil {
 		return User{}, err

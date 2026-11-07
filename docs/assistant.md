@@ -2,7 +2,7 @@
 
 The assistant answers questions about your transactions with a language model that looks the data up through read-only tools (PLAN §4.8, ADR 0015). It works with any server that speaks the OpenAI Chat Completions or Anthropic Messages API: LM Studio, Ollama, vLLM, llama.cpp, OpenAI, Anthropic, OpenRouter and others, local or in the cloud.
 
-The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and ten tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
+The model never gets a dump of your data. It gets a short description (date range, categories, frequent payees, column examples) and eleven tools (the first three only, for small models and plan mode, with the compact tool set). Each tool runs on the server as a read-only query over the asking user's data only:
 
 | Tool | What it does |
 |---|---|
@@ -15,6 +15,7 @@ The model never gets a dump of your data. It gets a short description (date rang
 | `group_summary` | One transaction group (e.g. a trip): totals, days, spending per day, the group budget, categories and top payees |
 | `goal_status` | The user's goals: saved so far against a steady pace, or this month's spending against a reduction goal's limit (ADR 0031) |
 | `find_receipt_match` | The payments a receipt may belong to: the exact amount, within 3 days, ranked by the day and the shop's name (ADR 0032) |
+| `search_advice` | Finds published articles of the instance's advice library for a general money question (ADR 0034) |
 | `propose_action` | Proposes a change (a category or group, a rule, a budget, an expense, sharing or a split, a goal, a receipt in a note); it changes nothing by itself |
 
 Every lookup is shown under the answer, with exactly what went back to the model and a *Show in table* link.
@@ -30,6 +31,14 @@ Since Phase 20 the assistant can also propose a category's budget, a cash expens
 With a model that reads images (the model list in the panel's settings and `llm-probe` show `vision`), the panel has a camera button: pick or take a photo of a receipt, and ask (or just send it: "Here is a receipt."). The browser shrinks the photo to at most 1,600 px and saves it as a new JPEG, so the camera's EXIF data (location, device, time) never leaves the device; the server checks it and encodes it again. The photo goes to the model with that question only and is kept with the chat (its retention deletes it).
 
 The model reads the shop, the date, the amount paid and the currency, and looks for the payment with `find_receipt_match` (money out of exactly that amount, booked within 3 days of the receipt). If it finds it, the card proposes to add "Receipt: shop · what was bought" to that transaction's note (Undo puts the old note back); if not, it proposes the expense: in a cash account, or in the bank account of a card payment whose file isn't imported yet. When that file arrives, a card above the table offers to **Merge** the typed payment into the bank's row (the bank's row stays, with the category, note, group and shared-group copy of the typed one) or to **Keep both** (ADR 0032).
+
+### Advice library
+
+For general questions about managing money ("how big should an emergency fund be?", "which debt first?"), the assistant searches the instance's advice library with `search_advice`: short articles an administrator wrote and published in Administration → Assistant. It bases the answer on them and names the article; the lookup lists the articles found, and each opens in a window. Articles are general information, not financial advice. The search folds case and accents and matches word beginnings, so it works in any language; a question finds articles in its own language first, then in any. An administrator can also add a few lines of **instructions** to every question's instructions (a tone, a language), after the app's own rules (ADR 0034).
+
+### Digests
+
+In the panel's settings, *Digest* asks the assistant for a short summary every day or every week (off by default), at an hour of your time zone: what you spent, budgets that are over or ahead of pace, how your goals are doing, payments due in the next week, and changes worth making. The worker writes it in the background with the connection and model the panel used when you switched it on, through the same read-only tools, into a chat of its own (marked *digest* in the recent chats). The bell says when it is ready and how many proposals wait in it; its proposals are never applied by themselves, whatever *Apply by itself* says. *Write one now* asks for one at once. A model server that is off at that hour means no digest that day (the bell says it couldn't be written). Demo visitors have no digests, and an administrator can switch them off for everyone (ADR 0033).
 
 ## Configure one server
 
@@ -73,6 +82,12 @@ To offer several servers, point `FINUANCE_AI_CONNECTIONS_FILE` at a JSON file in
 | `caps` | Corrections per model glob: `tools` (false = plan mode), `reasoning` (`none`, `effort`, `budget`, `switch`), `contextTokens` |
 
 An invalid file stops the api at startup and names every problem at once.
+
+## Connections and tuning in the admin panel
+
+Administrators can add further connections in **Administration → Assistant** (ADR 0035), next to the file's, which are shown there read only. The same rules apply (a local server on a private address, a cloud service over https with each user's consent). An API key entered there is sealed with AES-256-GCM under `FINUANCE_INSTANCE_KEY` (32 random bytes in base64: `openssl rand -base64 32`, or `tools/seal-secrets.sh <env> instance-key` and the chart's `assistant.instanceKeySecret` on Kubernetes); it is never shown again, and changing the connection's address drops it. Without the variable, connections without a key still work. Every api and worker process reads the stored connections every minute, so other replicas follow a change within a minute.
+
+**Tuning per model** sets, for one model of any connection, the temperature, the thinking level and the tool set used when a question doesn't set them, the context size to plan with, and a short note added after the instance's instructions. These are settings; no model is trained.
 
 ## Capabilities and thinking
 
@@ -120,9 +135,11 @@ Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 to
 | `FINUANCE_AI_IDLE_TIMEOUT` | `60s` | A model stream silent this long ends, also before its first token (at most `FINUANCE_AI_TIMEOUT`). A small GPU reading a long prompt (system prompt + tool results, ~8,000 tokens) can be silent for over a minute: raise both (e.g. `300s` / `150s` on a 4 GB card) |
 | `FINUANCE_AI_MAX_CONCURRENT` | `2` | Answers written at once per api replica (`503 assistant_busy` beyond) |
 | `FINUANCE_AI_RATE_PER_HOUR` | `30` | Questions per user per hour (`429`) |
+| `FINUANCE_INSTANCE_KEY` | (none) | Seals the API keys of connections added in the admin panel (32 bytes, base64; ADR 0035) |
+| `FINUANCE_AI_TOKENS_PER_DAY` | `200000` | Tokens per user per UTC day, questions and digests together: the outer bound of the `assistantTokensPerDay` limit (`422 limit_reached` once used; a digest is skipped) |
 | `FINUANCE_AI_MAX_CHATS` | `25` | Chats kept per user; the oldest go first |
 
-Each user can only have one answer in progress at a time (`409 run_in_progress`). Chats are deleted 48 hours after their last message unless the user picks 1–7 days or *forever* in the assistant settings. An hourly worker job applies the setting, and expired chats are never shown even before it runs. Chats are part of *Download my data* and are deleted with the account.
+Each user can only have one answer in progress at a time (`409 run_in_progress`). A run's tokens are what the model server reported, or the length of what was sent and written / 4 where it reports none; a run that started under the budget finishes even if it goes over. The worker writes digests one at a time, so on a small GPU a question asked while a digest is written waits for the digest's current model request. Chats are deleted 48 hours after their last message unless the user picks 1–7 days or *forever* in the assistant settings. An hourly worker job applies the setting, and expired chats are never shown even before it runs. Chats are part of *Download my data* and are deleted with the account.
 
 ## Checking a model: `finuance admin llm-probe`
 

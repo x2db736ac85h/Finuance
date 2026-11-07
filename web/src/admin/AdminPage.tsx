@@ -8,6 +8,7 @@ import { useDeveloperInfo } from '../api/hooks/admin';
 import type { ShellContext } from '../shell/AppShell';
 import { Icon } from '../ui/Icon';
 import type { IconName } from '../ui/icons';
+import { AssistantAdmin } from './Assistant';
 import { DeveloperAdmin } from './Developer';
 import { InstanceSettings } from './Instance';
 import { ThemesAdmin } from './Themes';
@@ -18,6 +19,7 @@ const SECTIONS = [
   { id: 'users', label: 'Users', icon: 'pen', Body: UsersAdmin },
   { id: 'instance', label: 'Defaults and features', icon: 'sliders', Body: InstanceSettings },
   { id: 'themes', label: 'Colour themes', icon: 'sun', Body: ThemesAdmin },
+  { id: 'assistant', label: 'Assistant', icon: 'ai', Body: AssistantAdmin },
   { id: 'usage', label: 'Usage', icon: 'chart', Body: UsageAdmin },
   // only while FINUANCE_DEVELOPER_MODE is on: GET /admin/developer answers 404 otherwise
   { id: 'developer', label: 'Developer', icon: 'code', Body: DeveloperAdmin },

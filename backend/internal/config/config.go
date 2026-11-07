@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/secret"
 )
 
 // Env is the deployment environment; it controls log format and cookie defaults.
@@ -46,11 +48,16 @@ type Config struct {
 	TrustedProxies       []netip.Prefix
 	// AIConnections are the model servers the assistant may use; none = assistant disabled.
 	AIConnections   []AIConnection
+	AIContextTokens int           // the context size assumed when a server reports none
 	AITimeout       time.Duration // one model request, first byte to last
 	AIIdleTimeout   time.Duration // a model stream silent this long ends (also before its first token)
 	AIMaxConcurrent int           // assistant runs at once per replica
 	AIMaxChats      int           // chats kept per user (the oldest go first)
 	AIRatePerHour   int           // messages per user per hour
+	AITokensPerDay  int64         // tokens per user per UTC day, the outer bound of assistantTokensPerDay (ADR 0033)
+	// InstanceKey seals secrets stored in the database (assistant connections' API keys, ADR 0035);
+	// nil when FINUANCE_INSTANCE_KEY is unset.
+	InstanceKey []byte
 	// Argon2id parameters for new password hashes (ADR 0010). Existing hashes keep theirs until
 	// the next successful login rehashes them.
 	Argon2MemoryKiB uint32
@@ -123,12 +130,21 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		AIMaxConcurrent:      p.int("FINUANCE_AI_MAX_CONCURRENT", 2, 1, 64),
 		AIMaxChats:           p.int("FINUANCE_AI_MAX_CHATS", 25, 1, 1000),
 		AIRatePerHour:        p.int("FINUANCE_AI_RATE_PER_HOUR", 30, 1, 10000),
+		AITokensPerDay:       int64(p.int("FINUANCE_AI_TOKENS_PER_DAY", 200_000, 1000, 1_000_000_000)),
 		Argon2MemoryKiB:      uint32(p.int("FINUANCE_ARGON2_MEMORY_KIB", 19*1024, 8*1024, 1<<20)), //nolint:gosec // bounded by p.int
 		Argon2Time:           uint32(p.int("FINUANCE_ARGON2_TIME", 2, 1, 10)),                     //nolint:gosec // bounded by p.int
 		Argon2Threads:        uint8(p.int("FINUANCE_ARGON2_THREADS", 1, 1, 16)),                   //nolint:gosec // bounded by p.int
 	}
 	c.Developer = p.developer(p.bool("FINUANCE_DEVELOPER_MODE", false))
-	c.AIConnections = p.aiConnections(p.int("FINUANCE_AI_CONTEXT_TOKENS", 8192, 1024, 10_000_000))
+	c.AIContextTokens = p.int("FINUANCE_AI_CONTEXT_TOKENS", 8192, 1024, 10_000_000)
+	c.AIConnections = p.aiConnections(c.AIContextTokens)
+	if v, ok := p.raw("FINUANCE_INSTANCE_KEY"); ok && strings.TrimSpace(v) != "" {
+		if k, err := secret.ParseKey(v); err != nil {
+			p.fail("FINUANCE_INSTANCE_KEY", err.Error())
+		} else {
+			c.InstanceKey = k
+		}
+	}
 	switch c.Env {
 	case EnvDev, EnvTest, EnvProd:
 	default:

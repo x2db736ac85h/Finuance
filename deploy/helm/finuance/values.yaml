@@ -49,7 +49,11 @@ assistant:
   # An existing secret whose keys become environment variables (the API keys the file names with
   # apiKeyEnv). Empty: none.
   envSecret: ""
-  # Where the api may connect when the assistant is on (NetworkPolicy egress): the model servers,
+  # A secret holding FINUANCE_INSTANCE_KEY (tools/seal-secrets.sh <env> instance-key), which seals the
+  # API keys of connections added in Administration → Assistant (ADR 0035). Empty: such keys can't be
+  # stored (connections without a key still can).
+  instanceKeySecret: ""
+  # Where the api and the worker (digests) may connect when the assistant is on (NetworkPolicy egress): the model servers,
   # as a `cidr` outside the cluster or `to` peers inside it.
   egress: []
   #  - cidr: 192.168.1.20/32
@@ -102,6 +106,7 @@ api:
   terminationGracePeriodSeconds: 45
 
 worker:
+  # One replica: each one writes the assistant's digests one at a time (ADR 0033).
   replicas: 1
   resources:
     requests: { cpu: 50m, memory: 128Mi }

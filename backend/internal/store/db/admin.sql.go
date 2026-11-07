@@ -53,7 +53,7 @@ func (q *Queries) AdminCountUsers(ctx context.Context, arg AdminCountUsersParams
 
 const adminListUsers = `-- name: AdminListUsers :many
 
-SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits FROM users
+SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at FROM users
 WHERE ($1::text = '' OR email ILIKE '%' || $1::text || '%')
   AND ($2::timestamptz IS NULL OR (created_at, id) < ($2::timestamptz, $3::uuid))
 ORDER BY created_at DESC, id DESC
@@ -98,6 +98,7 @@ func (q *Queries) AdminListUsers(ctx context.Context, arg AdminListUsersParams) 
 			&i.DisabledAt,
 			&i.MustChangePassword,
 			&i.Limits,
+			&i.DigestDueAt,
 		); err != nil {
 			return nil, err
 		}
@@ -205,7 +206,7 @@ func (q *Queries) CreateTheme(ctx context.Context, arg CreateThemeParams) (Theme
 const createUserWithRole = `-- name: CreateUserWithRole :one
 INSERT INTO users (id, email, password_hash, display_name, is_admin, must_change_password)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits
+RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at
 `
 
 type CreateUserWithRoleParams struct {
@@ -239,6 +240,7 @@ func (q *Queries) CreateUserWithRole(ctx context.Context, arg CreateUserWithRole
 		&i.DisabledAt,
 		&i.MustChangePassword,
 		&i.Limits,
+		&i.DigestDueAt,
 	)
 	return i, err
 }
@@ -560,7 +562,8 @@ const userActivityByDay = `-- name: UserActivityByDay :many
 SELECT d.day::date AS day,
        (SELECT count(*) FROM imports i WHERE i.user_id = $1 AND i.created_at >= d.day AND i.created_at < d.day + interval '1 day')::bigint AS imports,
        (SELECT count(*) FROM assistant_messages m WHERE m.user_id = $1 AND m.role = 'user'
-          AND m.created_at >= d.day AND m.created_at < d.day + interval '1 day')::bigint AS questions
+          AND m.created_at >= d.day AND m.created_at < d.day + interval '1 day')::bigint AS questions,
+       (SELECT coalesce(sum(u.tokens), 0) FROM assistant_usage u WHERE u.user_id = $1 AND u.day = d.day::date)::bigint AS tokens
 FROM generate_series($2::date, $3::date, interval '1 day') AS d(day)
 `
 
@@ -574,9 +577,10 @@ type UserActivityByDayRow struct {
 	Day       platform.Date
 	Imports   int64
 	Questions int64
+	Tokens    int64
 }
 
-// Imports and assistant questions per day since a date, for the instance usage page.
+// Imports, assistant questions and assistant tokens per day since a date, for the instance usage page.
 func (q *Queries) UserActivityByDay(ctx context.Context, arg UserActivityByDayParams) ([]UserActivityByDayRow, error) {
 	rows, err := q.db.Query(ctx, userActivityByDay, arg.UserID, arg.Since, arg.Until)
 	if err != nil {
@@ -586,7 +590,12 @@ func (q *Queries) UserActivityByDay(ctx context.Context, arg UserActivityByDayPa
 	var items []UserActivityByDayRow
 	for rows.Next() {
 		var i UserActivityByDayRow
-		if err := rows.Scan(&i.Day, &i.Imports, &i.Questions); err != nil {
+		if err := rows.Scan(
+			&i.Day,
+			&i.Imports,
+			&i.Questions,
+			&i.Tokens,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -604,22 +613,32 @@ SELECT
   (SELECT count(*) FROM imports i WHERE i.user_id = $1 AND i.status = 'committed') AS imports,
   (SELECT coalesce(sum(i.size_bytes), 0)::bigint FROM imports i WHERE i.user_id = $1) AS stored_bytes,
   (SELECT count(*) FROM assistant_chats c WHERE c.user_id = $1) AS chats,
+  -- the assistant since a day (ADR 0035): runs (questions and digests) and their tokens
+  (SELECT coalesce(sum(u.runs), 0)::bigint FROM assistant_usage u WHERE u.user_id = $1 AND u.day >= $2::date) AS assistant_runs,
+  (SELECT coalesce(sum(u.tokens), 0)::bigint FROM assistant_usage u WHERE u.user_id = $1 AND u.day >= $2::date) AS assistant_tokens,
   -- the epoch stands for "no activity recorded" (pgx can't scan NULL into a time)
   coalesce((SELECT max(e.at) FROM audit_log e WHERE e.user_id = $1), 'epoch'::timestamptz)::timestamptz AS last_activity
 `
 
+type UserUsageParams struct {
+	UserID uuid.UUID
+	Since  platform.Date
+}
+
 type UserUsageRow struct {
-	Accounts     int64
-	Transactions int64
-	Imports      int64
-	StoredBytes  int64
-	Chats        int64
-	LastActivity time.Time
+	Accounts        int64
+	Transactions    int64
+	Imports         int64
+	StoredBytes     int64
+	Chats           int64
+	AssistantRuns   int64
+	AssistantTokens int64
+	LastActivity    time.Time
 }
 
 // Run under the user's own RLS context: counts only.
-func (q *Queries) UserUsage(ctx context.Context, userID uuid.UUID) (UserUsageRow, error) {
-	row := q.db.QueryRow(ctx, userUsage, userID)
+func (q *Queries) UserUsage(ctx context.Context, arg UserUsageParams) (UserUsageRow, error) {
+	row := q.db.QueryRow(ctx, userUsage, arg.UserID, arg.Since)
 	var i UserUsageRow
 	err := row.Scan(
 		&i.Accounts,
@@ -627,6 +646,8 @@ func (q *Queries) UserUsage(ctx context.Context, userID uuid.UUID) (UserUsageRow
 		&i.Imports,
 		&i.StoredBytes,
 		&i.Chats,
+		&i.AssistantRuns,
+		&i.AssistantTokens,
 		&i.LastActivity,
 	)
 	return i, err

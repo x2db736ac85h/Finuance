@@ -19,13 +19,17 @@ type Limits struct {
 	MaxGroups        *int64 `json:"maxGroups,omitempty"`
 	MaxSharedGroups  *int64 `json:"maxSharedGroups,omitempty"`
 	AssistantPerHour *int64 `json:"assistantPerHour,omitempty"`
+	// AssistantTokensPerDay is the assistant's daily token budget, questions and digests together
+	// (ADR 0033).
+	AssistantTokensPerDay *int64 `json:"assistantTokensPerDay,omitempty"`
 }
 
-// Bounds are the environment's outer limits (FINUANCE_MAX_UPLOAD_BYTES, FINUANCE_AI_RATE_PER_HOUR):
-// an administrator can only tighten them.
+// Bounds are the environment's outer limits (FINUANCE_MAX_UPLOAD_BYTES, FINUANCE_AI_RATE_PER_HOUR,
+// FINUANCE_AI_TOKENS_PER_DAY): an administrator can only tighten them.
 type Bounds struct {
-	MaxUploadBytes   int64
-	AssistantPerHour int64
+	MaxUploadBytes        int64
+	AssistantPerHour      int64
+	AssistantTokensPerDay int64
 }
 
 // Effective is what applies to one user; 0 means no limit (counts only).
@@ -36,6 +40,8 @@ type Effective struct {
 	MaxGroups        int64 `json:"maxGroups"`
 	MaxSharedGroups  int64 `json:"maxSharedGroups"`
 	AssistantPerHour int64 `json:"assistantPerHour"`
+	// AssistantTokensPerDay: 0 only when the environment sets no bound (tests).
+	AssistantTokensPerDay int64 `json:"assistantTokensPerDay"`
 }
 
 // Resolve combines a user's overrides, the instance defaults and the environment's bounds.
@@ -62,6 +68,8 @@ func Resolve(user, inst Limits, b Bounds) Effective {
 		MaxGroups:        pick(user.MaxGroups, inst.MaxGroups, 0),
 		MaxSharedGroups:  pick(user.MaxSharedGroups, inst.MaxSharedGroups, 0),
 		AssistantPerHour: capped(pick(user.AssistantPerHour, inst.AssistantPerHour, b.AssistantPerHour), b.AssistantPerHour),
+		AssistantTokensPerDay: capped(pick(user.AssistantTokensPerDay, inst.AssistantTokensPerDay, b.AssistantTokensPerDay),
+			b.AssistantTokensPerDay),
 	}
 }
 
@@ -95,6 +103,7 @@ func (l Limits) validate(prefix string, ve *platform.ValidationError) {
 	check("maxGroups", l.MaxGroups, 1, 100_000)
 	check("maxSharedGroups", l.MaxSharedGroups, 1, 10_000)
 	check("assistantPerHour", l.AssistantPerHour, 1, 10_000)
+	check("assistantTokensPerDay", l.AssistantTokensPerDay, 1000, 1_000_000_000)
 }
 
 // LimitError is a request refused by a limit. It wraps platform.ErrLimitReached (422).

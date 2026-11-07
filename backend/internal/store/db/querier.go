@@ -18,6 +18,8 @@ type Querier interface {
 	AccountStats(ctx context.Context, userID uuid.UUID) ([]AccountStatsRow, error)
 	// The members an equal split goes to, in id order (the remainder cents go to the first ones).
 	ActiveSharedMemberIDs(ctx context.Context, groupID uuid.UUID) ([]uuid.UUID, error)
+	// One finished run's tokens on its UTC day (ADR 0033).
+	AddAssistantUsage(ctx context.Context, arg AddAssistantUsageParams) error
 	AddFriendship(ctx context.Context, arg AddFriendshipParams) (int64, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
 	AdminCountUsers(ctx context.Context, arg AdminCountUsersParams) (AdminCountUsersRow, error)
@@ -27,6 +29,7 @@ type Querier interface {
 	// user at a time; they return numbers, never rows.
 	// One page of accounts, newest first, optionally filtered by part of the e-mail address.
 	AdminListUsers(ctx context.Context, arg AdminListUsersParams) ([]User, error)
+	AdviceSlugs(ctx context.Context) ([]AdviceSlugsRow, error)
 	// The data export: every row of the user, oldest first.
 	AllAuditEvents(ctx context.Context, userID uuid.UUID) ([]AllAuditEventsRow, error)
 	// The proposal keys of one chat that the user applied (the panel's "Applied" state).
@@ -92,6 +95,7 @@ type Querier interface {
 	CurrentEnableNestLoop(ctx context.Context) (string, error)
 	// Cascades to the account's imports, transactions, annotations and overrides.
 	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
+	DeleteAdviceArticle(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteAnnotation(ctx context.Context, arg DeleteAnnotationParams) error
 	DeleteAssistantChat(ctx context.Context, arg DeleteAssistantChatParams) (int64, error)
 	// Retention: chats whose last message is older than the cutoff.
@@ -129,6 +133,7 @@ type Querier interface {
 	DeleteLegacyImportFiles(ctx context.Context, arg DeleteLegacyImportFilesParams) error
 	// Deletes a manual row and returns its identity, so its annotation goes too.
 	DeleteManualTransaction(ctx context.Context, arg DeleteManualTransactionParams) (DeleteManualTransactionRow, error)
+	DeleteModelSettings(ctx context.Context, arg DeleteModelSettingsParams) (int64, error)
 	DeleteOldNotifications(ctx context.Context, arg DeleteOldNotificationsParams) (int64, error)
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
@@ -140,6 +145,7 @@ type Querier interface {
 	DeleteSharedMember(ctx context.Context, arg DeleteSharedMemberParams) (int64, error)
 	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (int64, error)
 	DeleteSharedSplits(ctx context.Context, expenseID uuid.UUID) error
+	DeleteStoredConnection(ctx context.Context, name string) (int64, error)
 	DeleteTransactionsByID(ctx context.Context, arg DeleteTransactionsByIDParams) (int64, error)
 	DeleteUnsentAssistantAttachmentsBefore(ctx context.Context, arg DeleteUnsentAssistantAttachmentsBeforeParams) (int64, error)
 	// Cascades to every user-owned table.
@@ -149,6 +155,8 @@ type Querier interface {
 	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
 	DeleteUserSessions(ctx context.Context, arg DeleteUserSessionsParams) (int64, error)
 	DismissMerge(ctx context.Context, arg DismissMergeParams) error
+	// Users whose digest is due: never disabled or demo users.
+	DueDigestUsers(ctx context.Context, arg DueDigestUsersParams) ([]DueDigestUsersRow, error)
 	// The duplicate groups of the given accounts (PLAN §7.14, legacy §32.3): fingerprints with staged
 	// rows in two or more committed imports where something was merged (more linked rows than
 	// transactions) or the user decided (an override). Every token must appear in one of the rows'
@@ -194,16 +202,19 @@ type Querier interface {
 	FriendDisplayName(ctx context.Context, id uuid.UUID) (string, error)
 	GetAIChangeForUpdate(ctx context.Context, arg GetAIChangeForUpdateParams) (GetAIChangeForUpdateRow, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
+	GetAdviceArticle(ctx context.Context, id uuid.UUID) (GetAdviceArticleRow, error)
 	GetAnnotation(ctx context.Context, arg GetAnnotationParams) (TxAnnotation, error)
 	GetAssistantAttachment(ctx context.Context, arg GetAssistantAttachmentParams) (AssistantAttachment, error)
 	GetAssistantChat(ctx context.Context, arg GetAssistantChatParams) (AssistantChat, error)
 	// The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
 	GetAssistantSettings(ctx context.Context, userID uuid.UUID) (AssistantSetting, error)
+	GetAssistantUsage(ctx context.Context, arg GetAssistantUsageParams) (GetAssistantUsageRow, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
 	GetCategoryAlias(ctx context.Context, arg GetCategoryAliasParams) (*uuid.UUID, error)
 	// Duplicate review (PLAN §4.4, "Duplicate review and overrides"). ledger.Rematerialize uses these to
 	// rebuild the transactions of one (account, fingerprint) from its staged rows and override.
 	GetDedupeOverride(ctx context.Context, arg GetDedupeOverrideParams) (DedupeOverride, error)
+	GetDigestDueAt(ctx context.Context, id uuid.UUID) (*time.Time, error)
 	GetGoal(ctx context.Context, arg GetGoalParams) (Goal, error)
 	GetGoalForUpdate(ctx context.Context, arg GetGoalForUpdateParams) (Goal, error)
 	GetGroup(ctx context.Context, arg GetGroupParams) (Group, error)
@@ -226,6 +237,7 @@ type Querier interface {
 	GetSharedExpense(ctx context.Context, id uuid.UUID) (SharedExpense, error)
 	GetSharedGroup(ctx context.Context, id uuid.UUID) (SharedGroup, error)
 	GetSharedMember(ctx context.Context, arg GetSharedMemberParams) (SharedGroupMember, error)
+	GetStoredConnection(ctx context.Context, name string) (AssistantConnection, error)
 	GetTheme(ctx context.Context, id uuid.UUID) (Theme, error)
 	// Detail view: the transaction with its category and group names, the rule that set the category
 	// and the other half of a transfer pair.
@@ -252,6 +264,7 @@ type Querier interface {
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
 	// sidebar source labels b1, b2, … (task 6.12).
 	ImportLayoutLabels(ctx context.Context, userID uuid.UUID) ([]ImportLayoutLabelsRow, error)
+	InsertAdviceArticle(ctx context.Context, arg InsertAdviceArticleParams) (InsertAdviceArticleRow, error)
 	InsertAssistantAttachment(ctx context.Context, arg InsertAssistantAttachmentParams) error
 	InsertAssistantMessage(ctx context.Context, arg InsertAssistantMessageParams) (InsertAssistantMessageRow, error)
 	// The audit log (PLAN task 17.6, migration 00010). Rows are only ever inserted, listed and, after
@@ -271,6 +284,7 @@ type Querier interface {
 	InsertSharedMember(ctx context.Context, arg InsertSharedMemberParams) (SharedGroupMember, error)
 	InsertSharedSettlement(ctx context.Context, arg InsertSharedSettlementParams) (SharedSettlement, error)
 	InsertSharedSplit(ctx context.Context, arg InsertSharedSplitParams) error
+	InsertStoredConnection(ctx context.Context, arg InsertStoredConnectionParams) (AssistantConnection, error)
 	// One transaction from one staged row (its value source). The bank category resolves as in the
 	// commit; annotations are re-applied by the caller.
 	InsertTransactionFromRow(ctx context.Context, arg InsertTransactionFromRowParams) error
@@ -289,6 +303,9 @@ type Querier interface {
 	ListAIChangeItems(ctx context.Context, arg ListAIChangeItemsParams) ([]ListAIChangeItemsRow, error)
 	ListAIChanges(ctx context.Context, arg ListAIChangesParams) ([]ListAIChangesRow, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
+	// The advice library (ADR 0034; migration 00021). An instance table: administrators write it,
+	// every signed-in user reads the published articles.
+	ListAdviceArticles(ctx context.Context) ([]ListAdviceArticlesRow, error)
 	ListApprovedThemes(ctx context.Context) ([]Theme, error)
 	// What the chat shows: each sent photo's question and size, never the bytes.
 	ListAssistantAttachmentRefs(ctx context.Context, arg ListAssistantAttachmentRefsParams) ([]ListAssistantAttachmentRefsRow, error)
@@ -317,6 +334,7 @@ type Querier interface {
 	ListImports(ctx context.Context, arg ListImportsParams) ([]Import, error)
 	ListInvestmentPositions(ctx context.Context, userID uuid.UUID) ([]InvestmentPosition, error)
 	ListLegacyImports(ctx context.Context, userID uuid.UUID) ([]ListLegacyImportsRow, error)
+	ListModelSettings(ctx context.Context) ([]AssistantModelSetting, error)
 	// The groups the user is in or invited to, with their own membership.
 	ListMySharedGroups(ctx context.Context, userID *uuid.UUID) ([]ListMySharedGroupsRow, error)
 	ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]ListNotificationsRow, error)
@@ -330,6 +348,9 @@ type Querier interface {
 	ListSharedMembers(ctx context.Context, groupID uuid.UUID) ([]SharedGroupMember, error)
 	ListSharedSettlements(ctx context.Context, groupID uuid.UUID) ([]SharedSettlement, error)
 	ListSharedSplits(ctx context.Context, groupID uuid.UUID) ([]SharedExpenseSplit, error)
+	// Administration → Assistant (ADR 0035; migration 00022): stored connections and per-model tuning.
+	// Instance tables, read and written outside any user's context.
+	ListStoredConnections(ctx context.Context) ([]AssistantConnection, error)
 	ListThemes(ctx context.Context) ([]Theme, error)
 	// Users in id order, a page at a time (the retention job visits every user under its own RLS
 	// context; users is not under RLS).
@@ -371,6 +392,8 @@ type Querier interface {
 	// Mark detected pairs: out_ids[i] and in_ids[i] point at each other.
 	PairTransfers(ctx context.Context, arg PairTransfersParams) (int64, error)
 	Ping(ctx context.Context) (int32, error)
+	// The asked language first, then English, then any.
+	PublishedAdviceArticle(ctx context.Context, arg PublishedAdviceArticleParams) (PublishedAdviceArticleRow, error)
 	// Versioned: only the document the administrator read can be replaced.
 	PutInstanceSettings(ctx context.Context, arg PutInstanceSettingsParams) (int64, error)
 	// Receipts by photo (Phase 20, ADR 0032).
@@ -396,6 +419,8 @@ type Querier interface {
 	SavePreferences(ctx context.Context, arg SavePreferencesParams) (int32, error)
 	// Highest applied goose migration (the readiness check compares it with the binary's expectation).
 	SchemaVersion(ctx context.Context) (int64, error)
+	// Published articles matching a tsquery the app built from normalised words (an empty language: any).
+	SearchAdvice(ctx context.Context, arg SearchAdviceParams) ([]SearchAdviceRow, error)
 	// Mirror a manual transfer decision into tx_annotations (it survives delete + re-import).
 	SetAnnotationTransfer(ctx context.Context, arg SetAnnotationTransferParams) error
 	// Budgets are global per category (legacy behaviour).
@@ -404,6 +429,8 @@ type Querier interface {
 	SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error
 	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
 	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
+	// When the user's next digest is due (NULL: none; ADR 0033). users is not under RLS.
+	SetDigestDueAt(ctx context.Context, arg SetDigestDueAtParams) error
 	// Lets the planner use nested loops or not, for the rest of the transaction (set_config with
 	// is_local). The commit turns them off after a bulk insert (ledger/commit.go, afterBulkInsert).
 	SetEnableNestLoop(ctx context.Context, value string) error
@@ -472,6 +499,8 @@ type Querier interface {
 	// The attachments of a question about to be sent, in the order asked for.
 	UnsentAssistantAttachments(ctx context.Context, arg UnsentAssistantAttachmentsParams) ([]AssistantAttachment, error)
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
+	// Versioned: no row when the version read is no longer the stored one.
+	UpdateAdviceArticle(ctx context.Context, arg UpdateAdviceArticleParams) (UpdateAdviceArticleRow, error)
 	// After a turn: the last activity, the connection and model used, and the title (the first
 	// question) when the chat had none.
 	UpdateAssistantChat(ctx context.Context, arg UpdateAssistantChatParams) error
@@ -488,6 +517,8 @@ type Querier interface {
 	UpdateRule(ctx context.Context, arg UpdateRuleParams) (int64, error)
 	UpdateSharedExpense(ctx context.Context, arg UpdateSharedExpenseParams) (int64, error)
 	UpdateSharedGroup(ctx context.Context, arg UpdateSharedGroupParams) (SharedGroup, error)
+	// Versioned: no row when the version read is no longer the stored one.
+	UpdateStoredConnection(ctx context.Context, arg UpdateStoredConnectionParams) (AssistantConnection, error)
 	// Versioned like the settings; status changes go through SetThemeStatus.
 	UpdateTheme(ctx context.Context, arg UpdateThemeParams) (Theme, error)
 	// The user-editable fields of a set of transactions (ledger.Annotate). Each set_* flag says whether
@@ -514,11 +545,12 @@ type Querier interface {
 	// check category_aliases first (ResolveBankCategory).
 	UpsertCategory(ctx context.Context, arg UpsertCategoryParams) (uuid.UUID, error)
 	UpsertImportProfile(ctx context.Context, arg UpsertImportProfileParams) error
+	UpsertModelSettings(ctx context.Context, arg UpsertModelSettingsParams) (AssistantModelSetting, error)
 	UpsertSharedLink(ctx context.Context, arg UpsertSharedLinkParams) error
-	// Imports and assistant questions per day since a date, for the instance usage page.
+	// Imports, assistant questions and assistant tokens per day since a date, for the instance usage page.
 	UserActivityByDay(ctx context.Context, arg UserActivityByDayParams) ([]UserActivityByDayRow, error)
 	// Run under the user's own RLS context: counts only.
-	UserUsage(ctx context.Context, userID uuid.UUID) (UserUsageRow, error)
+	UserUsage(ctx context.Context, arg UserUsageParams) (UserUsageRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

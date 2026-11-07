@@ -3054,6 +3054,25 @@ body.has-qbar .toast {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
 }
+/* the articles a search_advice lookup found (ADR 0034), each opens in a window */
+.advice-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+}
+.advice-refs .ico {
+  width: 0.75rem;
+  height: 0.75rem;
+  vertical-align: -0.1rem;
+}
+.advice-body {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  max-height: 65vh;
+  overflow: auto;
+}
 .step {
   font-size: 0.72rem;
   color: var(--text-2);

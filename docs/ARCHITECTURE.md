@@ -2,7 +2,7 @@
 
 How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation; Phase 8 the web app.
 
-> 🚧 This describes the system after Phase 11, plus the Kubernetes deployment of Phase 16 ([Deployment](#deployment)). Parts from Phases 12–15 (the overview, the AI assistant and its model server; the `rules` package arrived in Phase 15) appear in the diagrams where they fit and are described in their own documents (`docs/assistant.md`, the ADRs).
+> 🚧 This describes the system after Phase 11, plus the Kubernetes deployment of Phase 16 ([Deployment](#deployment)). Parts from Phases 12–20 (the overview, the AI assistant and its model server, the `rules` package of Phase 15, administration and sharing of Phase 19) appear in the diagrams and the package table where they fit and are described in their own documents (`docs/assistant.md`, `docs/admin.md`, `docs/sharing.md`, the ADRs).
 
 ## Components
 
@@ -23,6 +23,7 @@ flowchart TB
     worker -- "pgx: tx + app.user_id" --> pg
     api -. "enqueue jobs (River InsertTx)" .-> pg
     api -. "assistant only" .-> llm
+    worker -. "assistant digests" .-> llm
 ```
 
 - **One Go binary, one image.** The subcommands are `serve`, `worker`, `migrate`, `seed-demo`, `admin`, `healthcheck` and `version`.
@@ -47,6 +48,7 @@ cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {
 | `instance`, `admin` | Instance administration (Phase 19, ADR 0025). `instance` is pure: the settings document (view defaults, feature switches, limits resolved user → instance → environment) and the colour-theme contract with its WCAG check (ADR 0026). `admin` manages accounts, settings and themes through `WithoutUser` (those tables are outside RLS, like `users`); it can't import the financial packages and reads user-owned tables only for counts, under each user's own context. |
 | `sharing`, `splits` | Shared groups (Phase 19, ADR 0028). `sharing` runs groups, invitations, expenses, settlements, the report and the timeline under each caller's own context; `splits` is the pure arithmetic (equal, shares, exact, balances, minimal transfers). The copy of a member's transaction is written by `ledger` in the same database transaction as the change that shares it. Row-level security by membership: `shared_member_role()` (SECURITY DEFINER) answers the caller's role in a group. |
 | `friends`, `notify` | Between users (Phase 19, ADR 0027). `friends` makes and redeems friend codes (hashed, outside RLS like sessions) and keeps friendships (forced RLS for the two sides); `notify` writes in-app notifications under the recipient's own context and lists them. Friends see display names only. |
+| `assistant`, `llm`, `goals`, `aichanges`, `advice`, `secret` | The assistant (Phases 13 and 20). `llm` speaks the OpenAI and Anthropic protocols (images included); `assistant` holds the connections (the file's and those stored in the panel, reloaded every minute; keys sealed by `secret`, ADR 0035), the read-only tools, the run loop, the chats, the digests (run by the worker, ADR 0033) and the daily token budget; `goals` computes progress on read (ADR 0031); `aichanges` lists and undoes the changes applied from proposals, which every write path records in the same transaction (ADR 0030); `advice` is the article library and its full-text search (ADR 0034). |
 | `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. `httpapi`'s session layer also gates `/admin` (administrators only, else `404`), the one-time-password change and switched-off features. |
 
 A guard test (`store/guard_test.go`) parses every non-test file outside `internal/store`. It fails on direct `Query`/`Exec`/`Begin` calls, and on building a sqlc querier (`db.New`) that would bypass `WithUser`.
@@ -96,6 +98,7 @@ flowchart TB
     migrate -- "5432, owner role" --> pg
     pg -- "Barman Cloud plugin" --> s3
     api -. "assistant on: one address:port" .-> llm
+    worker -. "digests: the same address" .-> llm
     secrets -. "PGPASSWORD" .-> api
     argo -. "Helm charts + values" .-> ns
     api -. "metrics, OTLP traces" .-> mon
@@ -326,6 +329,7 @@ sequenceDiagram
 
   Composite foreign keys on `(user_id, id)` would enforce this in the schema itself. That would be a schema change for a later ADR.
 - **Referential actions** (`ON DELETE CASCADE` / `SET NULL`) also run without row security. That is what makes deleting a user or an account remove all of its rows even under `FORCE` (`TestRLSCascadesStillWork`).
+- **Tables outside RLS on purpose**: `users`, `sessions` and friend codes are resolved before the user is known, so they carry `user_id` but no policy; every query of them except the lookup that finds the user (by e-mail address or by the hash of a token or code) filters by `user_id`. The instance tables (settings, themes, the advice library, assistant connections and tuning) hold no user data.
 - **Bulk loads can't use `COPY FROM`.** PostgreSQL refuses it on tables with RLS. Staged rows are inserted with `INSERT … SELECT FROM unnest(…)`, 5,000 rows per statement (`store.InsertImportRows`).
 
 ### How it is tested

@@ -1,9 +1,12 @@
 // One message of the chat (legacy renderChat and stepHtml): a question, or an answer with its
 // reasoning, its lookups (exactly what went back to the model, with Show in table) and its meta line.
 
+import { useState } from 'react';
+
 import { fmtInt, plural } from '../lib/format';
 import { Icon } from '../ui/Icon';
 import { attachmentUrl, type Step } from '../api/hooks/assistant';
+import { AdviceWindow, adviceRefs, type AdviceRef } from './Advice';
 import type { AiTurn, UiTurn } from './chatStore';
 import { fixFor } from './errors';
 import { Markdown } from './md';
@@ -17,6 +20,9 @@ const NICE: Record<string, string> = {
   recurring_payments: 'Looked for recurring payments',
   budget_status: 'Checked the budgets',
   group_summary: 'Summarised the group',
+  goal_status: 'Checked the goals',
+  find_receipt_match: 'Looked for the receipt’s payment',
+  search_advice: 'Searched the advice library',
   propose_action: 'Proposed a change',
 };
 
@@ -29,32 +35,60 @@ function pretty(json: string): string {
 }
 
 export function StepView({ step, onShow }: { step: Step; onShow?: (s: Step) => void }) {
+  const [reading, setReading] = useState<AdviceRef | null>(null);
+  const articles = step.tool === 'search_advice' ? adviceRefs(step.result) : [];
   return (
-    <details className="step">
-      <summary>
-        <Icon name="search" />
-        <span className="st-t">
-          <b>{NICE[step.tool] ?? step.tool}</b> · {step.summary}
-        </span>
-        {step.toolFilter && onShow && (
-          <button
-            type="button"
-            className="link"
-            title="Show the matching rows in the table"
-            onClick={(e) => {
-              e.preventDefault();
-              onShow(step);
-            }}
-          >
-            Show in table
-          </button>
-        )}
-      </summary>
-      <div className="step-b">
-        <div className="lbl">Sent to the model</div>
-        <pre>{pretty(step.result) + (step.truncated ? '\n…' : '')}</pre>
-      </div>
-    </details>
+    <>
+      {articles.length > 0 && (
+        <div className="advice-refs">
+          {articles.map((a) => (
+            <button
+              key={`${a.language}/${a.slug}`}
+              type="button"
+              className="link"
+              onClick={() => {
+                setReading(a);
+              }}
+            >
+              <Icon name="info" /> {a.title}
+            </button>
+          ))}
+        </div>
+      )}
+      {reading && (
+        <AdviceWindow
+          article={reading}
+          onClose={() => {
+            setReading(null);
+          }}
+        />
+      )}
+      <details className="step">
+        <summary>
+          <Icon name="search" />
+          <span className="st-t">
+            <b>{NICE[step.tool] ?? step.tool}</b> · {step.summary}
+          </span>
+          {step.toolFilter && onShow && (
+            <button
+              type="button"
+              className="link"
+              title="Show the matching rows in the table"
+              onClick={(e) => {
+                e.preventDefault();
+                onShow(step);
+              }}
+            >
+              Show in table
+            </button>
+          )}
+        </summary>
+        <div className="step-b">
+          <div className="lbl">Sent to the model</div>
+          <pre>{pretty(step.result) + (step.truncated ? '\n…' : '')}</pre>
+        </div>
+      </details>
+    </>
   );
 }
 

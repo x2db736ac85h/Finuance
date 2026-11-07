@@ -514,6 +514,7 @@ describe('ChatPanel', () => {
       {
         id: CHAT,
         title: 'Earlier question',
+        kind: 'chat',
         connection: 'lmstudio',
         model: 'qwen3-14b',
         createdAt: '2025-03-19T10:00:00Z',
@@ -529,11 +530,65 @@ describe('ChatPanel', () => {
     expect(within(cards[1] as HTMLElement).getByRole('button', { name: 'Apply' })).toBeTruthy();
   });
 
+  it('opens an article a search_advice lookup found (ADR 0034)', async () => {
+    let asked = '';
+    server.use(
+      http.get(`${API}/advice/:slug`, ({ params, request }) => {
+        asked = `${String(params['slug'])}?${new URL(request.url).searchParams.toString()}`;
+        return HttpResponse.json({
+          id: '0a000000-0000-4000-8000-000000000001',
+          slug: 'emergency-fund',
+          language: 'en',
+          title: 'Building an emergency fund',
+          body: 'Keep **three months** of spending aside.',
+          bodyLength: 40,
+          tags: ['saving'],
+          status: 'published',
+          version: 2,
+          createdAt: '2026-11-06T10:00:00Z',
+          updatedAt: '2026-11-06T10:00:00Z',
+        });
+      }),
+    );
+    st.storedSteps = [
+      {
+        tool: 'search_advice',
+        args: { query: 'emergency fund' },
+        summary: 'advice · 1 article',
+        result: JSON.stringify({
+          articles: [{ slug: 'emergency-fund', language: 'en', title: 'Building an emergency fund', excerpt: 'Keep…' }],
+          note: 'General information, not financial advice.',
+        }),
+      },
+    ];
+    st.chats = [
+      {
+        id: CHAT,
+        title: 'Earlier question',
+        kind: 'chat',
+        connection: 'lmstudio',
+        model: 'qwen3-14b',
+        createdAt: '2025-03-19T10:00:00Z',
+        updatedAt: '2025-03-19T10:00:05Z',
+      },
+    ];
+    renderApp('/t/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Earlier question'));
+    expect(await within(p).findByText(/Searched the advice library/)).toBeTruthy();
+    fireEvent.click(within(p).getByRole('button', { name: 'Building an emergency fund' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Building an emergency fund' });
+    expect((await within(dialog).findByText('three months')).tagName).toBe('B');
+    expect(within(dialog).getByText(/not financial advice/)).toBeTruthy();
+    expect(asked).toBe('emergency-fund?language=en');
+  });
+
   it('opens and deletes a recent chat', async () => {
     st.chats = [
       {
         id: CHAT,
         title: 'Earlier question',
+        kind: 'chat',
         connection: 'lmstudio',
         model: 'qwen3-14b',
         createdAt: '2025-03-19T10:00:00Z',
@@ -670,6 +725,49 @@ describe('ChatPanel', () => {
   });
 });
 
+describe('digests', () => {
+  it('opens a digest from the bell in the panel, with its proposals waiting (ADR 0033)', async () => {
+    db.prefs = { version: 1, prefs: { ai: { open: false } } };
+    useUi.setState({ ...uiDefaults, ai: { ...uiDefaults.ai, open: false } });
+    st.chats = [
+      {
+        id: CHAT,
+        title: 'Weekly digest · 9 Nov',
+        kind: 'digest',
+        connection: 'lmstudio',
+        model: 'qwen3-14b',
+        createdAt: '2026-11-09T06:00:00Z',
+        updatedAt: '2026-11-09T06:02:00Z',
+      },
+    ];
+    db.notifications = [
+      {
+        id: '0f000000-0000-4000-8000-000000000001',
+        kind: 'assistant.digest',
+        data: { chatId: CHAT, schedule: 'weekly', proposals: '2' },
+        createdAt: '2026-11-09T06:02:00Z',
+      },
+      {
+        id: '0f000000-0000-4000-8000-000000000002',
+        kind: 'assistant.digest',
+        data: { schedule: 'daily', proposals: '0', failed: 'true' },
+        createdAt: '2026-11-08T06:02:00Z',
+        readAt: '2026-11-08T07:00:00Z',
+      },
+    ];
+    renderApp('/t/all');
+    fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+    expect(await screen.findByText(/Your daily digest couldn't be written/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Your weekly digest is ready · 2 proposals waiting'));
+    const p = await panel();
+    expect(
+      await within(p).findByText((_, el) => el?.tagName === 'P' && el.textContent === 'Earlier answer'),
+    ).toBeTruthy();
+    expect(useChat.getState().chatId).toBe(CHAT);
+    expect(await within(p).findByText('digest')).toBeTruthy();
+  });
+});
+
 describe('ChatSettings', () => {
   it('saves the retention and warns about keeping chats forever', async () => {
     renderApp('/t/all');
@@ -710,6 +808,64 @@ describe('ChatSettings', () => {
     expect(useUi.getState().ai.connection).toBe('claude');
     expect(await within(p).findByText('cloud')).toBeTruthy();
     expect(within(p).getByText(/You agreed to send your questions/)).toBeTruthy();
+  });
+
+  it('switches the digest on with the model in use, and writes one now (ADR 0033)', async () => {
+    let asked = 0;
+    server.use(
+      http.put(`${API}/assistant/settings`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AssistantSettings'];
+        st.settingsPuts.push(body);
+        st.settings = { ...body, digestNextAt: body.digest?.schedule === 'off' ? null : '2026-11-09T06:00:00Z' };
+        return HttpResponse.json(st.settings);
+      }),
+      http.post(`${API}/assistant/digest`, () => {
+        asked++;
+        return new HttpResponse(null, { status: 202 });
+      }),
+    );
+    st.settings = { retentionDays: 2, cloudConsent: [], tokensToday: 12_000 };
+    renderApp('/t/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Assistant settings'));
+    const often = await within(p).findByLabelText('How often');
+    expect(within(p).queryByLabelText('On')).toBeNull();
+    expect(await within(p).findByText(/Used today: 12,000 of 200,000 tokens/)).toBeTruthy();
+    fireEvent.change(often, { target: { value: 'weekly' } });
+    await waitFor(() => {
+      expect(st.settingsPuts.at(-1)?.digest).toEqual({
+        schedule: 'weekly',
+        hour: 7,
+        weekday: 1,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        connection: 'lmstudio',
+        model: 'qwen3-14b',
+      });
+    });
+    expect(await within(p).findByText(/Next one .*, with qwen3-14b\./)).toBeTruthy();
+    fireEvent.change(within(p).getByLabelText('On'), { target: { value: '5' } });
+    await waitFor(() => {
+      expect(st.settingsPuts.at(-1)?.digest).toMatchObject({ schedule: 'weekly', weekday: 5, hour: 7 });
+    });
+    await waitFor(() => {
+      expect(within(p).getByLabelText<HTMLSelectElement>('At').disabled).toBe(false);
+    });
+    fireEvent.change(within(p).getByLabelText('At'), { target: { value: '18' } });
+    await waitFor(() => {
+      expect(st.settingsPuts.at(-1)?.digest).toMatchObject({ schedule: 'weekly', weekday: 5, hour: 18 });
+    });
+    fireEvent.click(within(p).getByRole('button', { name: 'Write one now' }));
+    expect(await screen.findByText(/A digest is being written/)).toBeTruthy();
+    expect(asked).toBe(1);
+  });
+
+  it('has no digest where the instance switched digests off', async () => {
+    db.features = { ...db.features, assistantDigests: false };
+    renderApp('/t/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Assistant settings'));
+    expect(await within(p).findByLabelText('Keep chats')).toBeTruthy();
+    expect(within(p).queryByLabelText('How often')).toBeNull();
   });
 
   it('switches the model and the thinking level', async () => {

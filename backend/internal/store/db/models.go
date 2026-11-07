@@ -27,6 +27,22 @@ type Account struct {
 	Kind                string
 }
 
+type AdviceArticle struct {
+	ID        uuid.UUID
+	Slug      string
+	Language  string
+	Title     string
+	Body      string
+	Tags      []string
+	Status    string
+	TitleN    string
+	BodyN     string
+	Search    interface{}
+	Version   int32
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type AiChange struct {
 	ID          uuid.UUID
 	UserID      uuid.UUID
@@ -68,6 +84,22 @@ type AssistantChat struct {
 	NoTools    bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	Kind       string
+}
+
+type AssistantConnection struct {
+	Name          string
+	Label         string
+	Api           string
+	BaseUrl       string
+	Cloud         bool
+	DefaultModel  string
+	Models        []string
+	ContextTokens int32
+	ApiKey        []byte
+	Version       int32
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type AssistantMessage struct {
@@ -87,12 +119,37 @@ type AssistantMessage struct {
 	CreatedAt  time.Time
 }
 
-type AssistantSetting struct {
-	UserID        uuid.UUID
-	RetentionDays *int16
-	CloudConsent  []string
+type AssistantModelSetting struct {
+	Connection    string
+	Model         string
+	Temperature   *float32
+	ContextTokens *int32
+	Think         *string
+	Toolset       *string
+	ExtraPrompt   string
 	UpdatedAt     time.Time
-	AutoApply     []string
+}
+
+type AssistantSetting struct {
+	UserID           uuid.UUID
+	RetentionDays    *int16
+	CloudConsent     []string
+	UpdatedAt        time.Time
+	AutoApply        []string
+	Digest           string
+	DigestHour       int16
+	DigestWeekday    int16
+	DigestTimeZone   string
+	DigestConnection string
+	DigestModel      string
+}
+
+type AssistantUsage struct {
+	UserID  uuid.UUID
+	Day     platform.Date
+	Runs    int32
+	Digests int32
+	Tokens  int64
 }
 
 type AuditLog struct {
@@ -506,6 +563,7 @@ type User struct {
 	DisabledAt         *time.Time
 	MustChangePassword bool
 	Limits             []byte
+	DigestDueAt        *time.Time
 }
 
 type UserPreference struct {

@@ -27,6 +27,7 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/advice"
 	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
@@ -108,7 +109,8 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	svc := auth.New(st, clk, auth.Config{Params: auth.Params{MemoryKiB: 8 * 1024, Time: 1, Threads: 1},
 		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: cfg.AllowSignup})
 	led := ledger.New(st, platform.SystemClock{})
-	adm := admin.New(st, svc, clk, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour)})
+	adm := admin.New(st, svc, clk, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour),
+		AssistantTokensPerDay: cfg.AITokensPerDay})
 	legacy := legacyimport.New(st, led, assistant.NewChats(st, platform.SystemClock{}, 25), platform.SystemClock{})
 	rs := rules.New(st, platform.SystemClock{})
 	notes := notify.New(st, clk)
@@ -133,10 +135,15 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	}
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
+	ai := assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
+		MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})
+	stored, err := assistant.NewConnectionStore(st, cfg.InstanceKey, clk, ai.Connections, cfg.AIConnections, 8192, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Commit: "0123abcd", BuildDate: "2026-11-05T10:00:00Z", SchemaVersion: st.SchemaVersion, Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), AIChanges: aichanges.New(st, led, clk), Goals: goals.New(st, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
-		Assistant: assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
-			MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})})
+		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), AIChanges: aichanges.New(st, led, clk), Goals: goals.New(st, clk), Advice: advice.New(st, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
+		Assistant: ai, AssistantAdmin: stored})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -582,7 +589,8 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chats.Append(ctx, u, chat.ID, []assistant.Message{{Role: llm.RoleUser, Content: "Q"}}, assistant.ChatUpdate{Title: "Q"}); err != nil {
+	if _, err := chats.Append(ctx, u, chat.ID, []assistant.Message{{Role: llm.RoleUser, Content: "Q"}},
+		assistant.ChatUpdate{Title: "Q", Usage: &assistant.RunUsage{Tokens: 900}}); err != nil { // and the day's tokens (assistant_usage)
 		t.Fatal(err)
 	}
 	var photo bytes.Buffer // a photo waiting for a question (assistant_attachments)

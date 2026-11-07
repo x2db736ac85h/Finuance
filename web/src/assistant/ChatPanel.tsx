@@ -542,7 +542,9 @@ function ChatMenu({ enabled }: { enabled: boolean }) {
                     });
                   }}
                 />
-                <div className="cm-s">{c.title || '…'}</div>
+                <div className="cm-s">
+                  {c.kind === 'digest' && <span className="tag">digest</span>} {c.title || '…'}
+                </div>
               </div>
             ))
           ) : (

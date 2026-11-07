@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
@@ -18,6 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/advice"
 	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
@@ -101,15 +103,20 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	for _, w := range warnings {
 		log.Warn(w)
 	}
+	stored, err := loadStored(ctx, c, cfg, conns, log)
+	if err != nil {
+		return err
+	}
 	notes := notify.New(c.store, platform.SystemClock{})
+	adm := NewAdmin(c.store, authSvc, cfg)
 	h, err := httpapi.NewHandler(httpapi.Deps{
 		Config: cfg, Version: b.Version, Commit: b.Commit, BuildDate: b.Date, SchemaVersion: c.store.SchemaVersion, Logger: log, Metrics: c.metrics, Tracing: c.tracing,
-		Auth: authSvc, Admin: NewAdmin(c.store, authSvc, cfg), Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), AIChanges: aichanges.New(c.store, led, platform.SystemClock{}), Goals: goals.New(c.store, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
+		Auth: authSvc, Admin: adm, Advice: advice.New(c.store, platform.SystemClock{}), AssistantAdmin: stored, Friends: friends.New(c.store, platform.SystemClock{}, notes), Notify: notes, Sharing: sharing.New(c.store, led, notes, platform.SystemClock{}), AIChanges: aichanges.New(c.store, led, platform.SystemClock{}), Goals: goals.New(c.store, platform.SystemClock{}), Clock: platform.SystemClock{}, Jobs: jobClient, Ledger: led, Query: query.New(c.store),
 		Legacy: legacyimport.New(c.store, led, nil, platform.SystemClock{}),
 		Rules:  rules.New(c.store, platform.SystemClock{}),
 		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
 			MaxChats: cfg.AIMaxChats, MaxConcurrent: cfg.AIMaxConcurrent, Metrics: assistant.NewMetrics(c.metrics.Registry),
-			Tracer: c.tracing.Provider, Logger: log}),
+			Tracer: c.tracing.Provider, Logger: log, Instructions: instructions(adm)}),
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
@@ -131,14 +138,21 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 	led := ledger.New(c.store, platform.SystemClock{})
 	chats := assistant.NewChats(c.store, platform.SystemClock{}, cfg.AIMaxChats)
 	authSvc := NewAuth(c.store, cfg)
+	notes := notify.New(c.store, platform.SystemClock{})
+	digests, err := newDigests(ctx, c, cfg, authSvc, notes, log)
+	if err != nil {
+		return err
+	}
 	client, err := river.NewClient(riverpgxv5.New(c.pool), &river.Config{
 		Logger: log,
-		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}},
+		// digests one at a time (ADR 0033): they share a small model server with the questions
+		Queues: map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 4}, jobs.DigestQueue: {MaxWorkers: 1}},
 		Workers: jobs.Workers(jobs.Deps{Sessions: authSvc, Demo: authSvc, Ledger: led, Audit: led, Chats: chats,
 			Migrator: legacyimport.New(c.store, led, chats, platform.SystemClock{}),
 			Rules:    rules.New(c.store, platform.SystemClock{}),
-			Friends:  friends.New(c.store, platform.SystemClock{}, notify.New(c.store, platform.SystemClock{})),
-			Notify:   notify.New(c.store, platform.SystemClock{}),
+			Friends:  friends.New(c.store, platform.SystemClock{}, notes),
+			Notify:   notes,
+			Digests:  digests,
 			Metrics:  jobs.NewImportMetrics(c.metrics.Registry)}),
 		PeriodicJobs: jobs.PeriodicJobs(),
 		Middleware: []rivertype.Middleware{jobs.NewTelemetry(c.tracing.Provider, c.tracing.Propagator,
@@ -174,6 +188,72 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 		err = errors.Join(err, fmt.Errorf("stop river: %w", serr))
 	}
 	return err
+}
+
+// loadStored reads the connections added in the panel into conns and keeps reloading them every
+// minute (ADR 0035). A database that can't be read yet leaves the file's connections only.
+func loadStored(ctx context.Context, c *common, cfg config.Config, conns *assistant.Connections, log *slog.Logger) (*assistant.ConnectionStore, error) {
+	stored, err := assistant.NewConnectionStore(c.store, cfg.InstanceKey, platform.SystemClock{}, conns, cfg.AIConnections, cfg.AIContextTokens, log)
+	if err != nil {
+		return nil, err
+	}
+	if err := stored.Load(ctx); err != nil {
+		log.Warn("assistant connections from the panel not loaded yet", "error", err)
+	}
+	go stored.Run(ctx)
+	return stored, nil
+}
+
+// newDigests is the worker's digest service (ADR 0033). The worker runs the assistant for digests
+// only, one run at a time, with the file's connections and those added in the panel.
+func newDigests(ctx context.Context, c *common, cfg config.Config, authSvc *auth.Service, notes *notify.Service, log *slog.Logger) (jobs.DigestWriter, error) {
+	conns := assistant.NewConnections(cfg.AIConnections, cfg.AITimeout, cfg.AIIdleTimeout, platform.SystemClock{}, nil)
+	warnings, err := conns.CheckHosts(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, w := range warnings {
+		log.Warn(w)
+	}
+	if _, err := loadStored(ctx, c, cfg, conns, log); err != nil {
+		return nil, err
+	}
+	adm := NewAdmin(c.store, authSvc, cfg)
+	ai := assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
+		MaxChats: cfg.AIMaxChats, MaxConcurrent: 1, Metrics: assistant.NewMetrics(c.metrics.Registry), Tracer: c.tracing.Provider, Logger: log,
+		Instructions: instructions(adm)})
+	policy := func(ctx context.Context, id uuid.UUID) (assistant.DigestPolicy, error) {
+		if cfg.DemoMode {
+			return assistant.DigestPolicy{}, nil
+		}
+		u, err := authSvc.UserByID(ctx, id)
+		if errors.Is(err, platform.ErrNotFound) { // deleted since the digest was queued
+			return assistant.DigestPolicy{}, nil
+		}
+		if err != nil || u.IsDemo || u.Disabled {
+			return assistant.DigestPolicy{}, err
+		}
+		f, err := adm.Features(ctx)
+		if err != nil || !f.AssistantDigests {
+			return assistant.DigestPolicy{}, err
+		}
+		l, err := adm.Limits(ctx, u)
+		return assistant.DigestPolicy{Allowed: true, TokensPerDay: l.AssistantTokensPerDay}, err
+	}
+	return assistant.NewDigests(assistant.DigestsConfig{Assistant: ai, Policy: policy, Notify: notes, Clock: platform.SystemClock{},
+		Logger: log}), nil
+}
+
+// instructions reads the administrator's addition to the assistant's system prompt (ADR 0034);
+// unreadable settings mean none.
+func instructions(adm *admin.Service) func(context.Context) string {
+	return func(ctx context.Context) string {
+		s, _, err := adm.Settings(ctx)
+		if err != nil || s.Assistant == nil {
+			return ""
+		}
+		return s.Assistant.Instructions
+	}
 }
 
 // serveAll runs every server until ctx ends, then shuts them all down within the grace period.
@@ -271,7 +351,8 @@ func Healthcheck(ctx context.Context, cfg config.Config) error {
 
 // NewAdmin returns the administration service with the environment's outer limits (ADR 0025).
 func NewAdmin(st *store.Store, a *auth.Service, cfg config.Config) *admin.Service {
-	return admin.New(st, a, platform.SystemClock{}, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour)})
+	return admin.New(st, a, platform.SystemClock{}, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour),
+		AssistantTokensPerDay: cfg.AITokensPerDay})
 }
 
 // NewAuth builds the auth service from the configuration.

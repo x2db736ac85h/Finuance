@@ -38,17 +38,20 @@ const (
 	AuditAssistantReverted = "assistant.change_reverted"
 	// Administrators' actions (ADR 0025): in the administrator's log with the account's e-mail,
 	// and in the affected account's log with {"by": "administrator"}.
-	AuditAdminUserCreated     = "admin.user_created"
-	AuditAdminRoleChanged     = "admin.role_changed"
-	AuditAdminUserDisabled    = "admin.user_disabled"
-	AuditAdminUserEnabled     = "admin.user_enabled"
-	AuditAdminPasswordReset   = "admin.password_reset"
-	AuditAdminSessionsRevoked = "admin.sessions_revoked"
-	AuditAdminLimitsChanged   = "admin.limits_changed"
-	AuditAdminUserDeleted     = "admin.user_deleted"
-	AuditAdminSettingsChanged = "admin.settings_changed"
-	AuditAdminThemeApproved   = "admin.theme_approved"
-	AuditAdminThemeRetired    = "admin.theme_retired"
+	AuditAdminUserCreated      = "admin.user_created"
+	AuditAdminRoleChanged      = "admin.role_changed"
+	AuditAdminUserDisabled     = "admin.user_disabled"
+	AuditAdminUserEnabled      = "admin.user_enabled"
+	AuditAdminPasswordReset    = "admin.password_reset"
+	AuditAdminSessionsRevoked  = "admin.sessions_revoked"
+	AuditAdminLimitsChanged    = "admin.limits_changed"
+	AuditAdminUserDeleted      = "admin.user_deleted"
+	AuditAdminSettingsChanged  = "admin.settings_changed"
+	AuditAdminThemeApproved    = "admin.theme_approved"
+	AuditAdminThemeRetired     = "admin.theme_retired"
+	AuditAdminAdviceChanged    = "admin.advice_changed" // an article written, changed, published or the starter ones added
+	AuditAdminAdviceDeleted    = "admin.advice_deleted"
+	AuditAdminAssistantChanged = "admin.assistant_changed" // a connection or a model's tuning (never a key)
 	// Transactions added by hand to a cash account (ADR 0029): the entity is the transaction, the
 	// meta names the account; never amounts or payees.
 	AuditTransactionAdded   = "transaction.added"
@@ -78,7 +81,8 @@ var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPass
 	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied, AuditAssistantReverted,
 	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,
 	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
-	AuditAdminThemeApproved, AuditAdminThemeRetired,
+	AuditAdminThemeApproved, AuditAdminThemeRetired, AuditAdminAdviceChanged, AuditAdminAdviceDeleted,
+	AuditAdminAssistantChanged,
 	AuditTransactionAdded, AuditTransactionEdited, AuditTransactionDeleted, AuditTransactionMerged,
 	AuditFriendAdded, AuditFriendRemoved, AuditFriendCodeFailed,
 	AuditSharedCreated, AuditSharedDeleted, AuditSharedArchived, AuditSharedInvited, AuditSharedJoined, AuditSharedDeclined, AuditSharedLeft, AuditSharedMemberRemoved, AuditSharedSettled}

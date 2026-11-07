@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -17,6 +19,17 @@ type Settings struct {
 	Defaults Defaults `json:"defaults"`
 	Features Features `json:"features"`
 	Limits   Limits   `json:"limits"`
+	// Assistant is nil in a document saved without it (the stored one stays).
+	Assistant *Assistant `json:"assistant,omitempty"`
+}
+
+// MaxInstructions is the longest addition to the assistant's system prompt (ADR 0034).
+const MaxInstructions = 2000
+
+// Assistant holds the instance's settings for the assistant.
+type Assistant struct {
+	// Instructions are the administrator's addition to every system prompt, after the app's rules.
+	Instructions string `json:"instructions,omitempty"`
 }
 
 // Defaults are the preferences a user's view starts from. The browser merges them under the
@@ -35,21 +48,27 @@ type Defaults struct {
 
 // Features switch parts of the app off for everyone. A missing switch means on.
 type Features struct {
-	Overview     *bool `json:"overview,omitempty"`
-	Assistant    *bool `json:"assistant,omitempty"`
-	Friends      *bool `json:"friends,omitempty"`
-	SharedGroups *bool `json:"sharedGroups,omitempty"`
+	Overview  *bool `json:"overview,omitempty"`
+	Assistant *bool `json:"assistant,omitempty"`
+	// AssistantDigests: the background digests (ADR 0033); off with the assistant too.
+	AssistantDigests *bool `json:"assistantDigests,omitempty"`
+	Friends          *bool `json:"friends,omitempty"`
+	SharedGroups     *bool `json:"sharedGroups,omitempty"`
 }
 
 // Effective features: nil means on.
 func (f Features) Effective() EffectiveFeatures {
 	on := func(p *bool) bool { return p == nil || *p }
-	return EffectiveFeatures{Overview: on(f.Overview), Assistant: on(f.Assistant), Friends: on(f.Friends), SharedGroups: on(f.SharedGroups)}
+	return EffectiveFeatures{Overview: on(f.Overview), Assistant: on(f.Assistant), AssistantDigests: on(f.Assistant) && on(f.AssistantDigests),
+		Friends: on(f.Friends), SharedGroups: on(f.SharedGroups)}
 }
+
+// AllOn are the switches of a fresh instance.
+var AllOn = EffectiveFeatures{Overview: true, Assistant: true, AssistantDigests: true, Friends: true, SharedGroups: true}
 
 // EffectiveFeatures are the switches as the API reports them.
 type EffectiveFeatures struct {
-	Overview, Assistant, Friends, SharedGroups bool
+	Overview, Assistant, AssistantDigests, Friends, SharedGroups bool
 }
 
 // Chart and overview cards a default may name (web/src/stores/prefs.ts CARD_KEYS).
@@ -101,6 +120,9 @@ func (s Settings) Validate() error {
 		}
 	}
 	s.Limits.validate("limits", ve)
+	if a := s.Assistant; a != nil && (utf8.RuneCountInString(a.Instructions) > MaxInstructions || strings.ContainsRune(a.Instructions, 0)) {
+		ve.Add("assistant.instructions", fmt.Sprintf("must be at most %d characters", MaxInstructions))
+	}
 	return ve.Err()
 }
 

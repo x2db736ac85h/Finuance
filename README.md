@@ -13,7 +13,7 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 </picture>
 
 > [!NOTE]
-> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 22 planned phases (0–21). **v0.1.0** (Phases 0–14) has every feature of the prototype: importing, the transaction table, groups, duplicate review, the insight charts, the monthly overview, the AI assistant and migration from the prototype's backups. **v0.2.0** (Phases 15–18) adds category rules and transfer detection, the Kubernetes deployment, monitoring with dashboards and alerts, an activity log and a demo mode, and runs on a homelab cluster. Next: sharing expenses with friends, an admin panel and colour themes (Phase 19), an assistant that can act on your behalf (Phase 20), then the public release (Phase 21). See [Status](#status).
+> 🚧 **Work in progress.** Finuance is being rebuilt from a single-file prototype (in [`legacy/`](legacy/)) into a multi-user web application, in 22 planned phases (0–21). **v0.1.0** (Phases 0–14) has every feature of the prototype: importing, the transaction table, groups, duplicate review, the insight charts, the monthly overview, the AI assistant and migration from the prototype's backups. **v0.2.0** (Phases 15–18) adds category rules and transfer detection, the Kubernetes deployment, monitoring with dashboards and alerts, an activity log and a demo mode, and runs on a homelab cluster. **v0.3.0** (Phase 19) adds an admin panel, colour themes, friends and shared groups. Phase 20, in progress, gives the assistant changes you can undo, receipts by photo, goals, digests and an advice library, and adds access tokens and the `fin` command line; then the public release (Phase 21). See [Status](#status).
 
 ## Contents
 
@@ -52,9 +52,14 @@ Download your statements as CSV from your bank (Pekao, PKO BP and mBank are test
 - **Share an instance.** Several people can use one server. Each person's data is isolated in the database itself (row-level security), not just in the application code.
 - **Run the instance for others.** Administrators create and manage accounts (one-time passwords, disable, reset), set limits, choose where a new user's view starts, switch parts of the app off and see usage, all without seeing anyone's transactions. See [docs/admin.md](docs/admin.md).
 - **Pick a colour theme.** Indigo, Fjord, Grove or Ember, each in a dark and a light variant, all readable to WCAG AA; administrators can make and approve more.
+- **Let the assistant do the typing** (🚧 Phase 20). Besides answering, it proposes changes: categories, groups and rules, a budget, a cash expense, sharing or a new split, a savings goal. You apply each with one click, or let chosen kinds apply themselves (never more than 50 rows); everything it changed is marked ✦ and can be undone from the card or Settings → Activity.
+- **Snap a receipt** (🚧 Phase 20). With a model that reads images, photograph a receipt in the panel: the assistant finds the payment and proposes the receipt in its note, or proposes the expense. The photo is shrunk and stripped of its location in your browser. A card payment typed in before the bank's file arrives is merged into the bank's row when it does.
+- **Set goals** (🚧 Phase 20): save an amount by a date, or spend a percentage less on a category than before; the Overview's *Goals* card shows each against a steady pace.
+- **Get a digest** (🚧 Phase 20): a short daily or weekly summary written in the background (budgets and goals that need attention, payments due, changes worth making), behind the bell, with its proposals waiting for you.
+- **Read the advice library** (🚧 Phase 20): short articles your admin publishes; the assistant uses them for general money questions and names them in its answer.
 - **See what happened in your account.** Settings → Activity lists sign-ins (failed ones too), password changes, revoked sessions, imports, deletions, exports and applied assistant proposals, with the address and browser of each, for a year.
 
-Coming next (🚧): an assistant that can add expenses, read receipts and track goals, and a CLI; then a public demo and v1.0.0. See [Status](#status).
+Coming next (🚧): personal access tokens and a command line, then v0.4.0 with Phase 20; then a public demo and v1.0.0. See [Status](#status).
 
 ## Screenshots
 
@@ -90,7 +95,7 @@ All screenshots use made-up demo data. They follow your GitHub theme (dark or li
 
 **Groups** are your own colour-coded labels (one per transaction), independent of the bank's categories. They work like any other column: filter, sort, export.
 
-**Privacy by design.** Data stays on your server. The database enforces that every query only sees the signed-in user's rows (PostgreSQL row-level security), passwords are hashed with Argon2id, sessions are server-side, the web app runs under a strict Content Security Policy, and an append-only activity log records every sign-in and change to your data. The optional AI assistant only reads data through read-only tools, sends a model only what it looks up, and talks to a model your admin connects; a cloud model needs each user's consent. Details are in the [threat model](docs/THREAT-MODEL.md).
+**Privacy by design.** Data stays on your server. The database enforces that every query only sees the signed-in user's rows (PostgreSQL row-level security), passwords are hashed with Argon2id, sessions are server-side, the web app runs under a strict Content Security Policy, and an append-only activity log records every sign-in and change to your data. The optional AI assistant only reads data through read-only tools, sends a model only what it looks up (and a receipt photo you attach), and talks to a model your admin connects; a cloud model needs each user's consent. Details are in the [threat model](docs/THREAT-MODEL.md).
 
 ## Architecture
 
@@ -102,6 +107,7 @@ flowchart LR
     api -.->|"queues slow work"| db
     worker["worker<br/>Go background jobs"] -->|"commits imports, rebuilds duplicates"| db
     api -.->|"optional assistant"| llm["LLM server<br/>(LM Studio, Ollama, …)"]
+    worker -.->|"assistant digests"| llm
 ```
 
 - **One Go binary** runs as the API server (`finuance serve`), the background worker (`finuance worker`), the migration step and the admin CLI. The API is specified first in [`api/openapi.yaml`](api/openapi.yaml); server code and the web app's typed client are generated from it.
@@ -211,8 +217,8 @@ Performance notes and measurements, including the load test: [docs/perf.md](docs
 | 16 | Kubernetes deployment: Helm, CloudNativePG, Argo CD, rehearsed in CI | ✅ done |
 | 17 | Observability, load tests, activity log, security scans, demo mode | ✅ done |
 | 18 | Homelab rollout on a reference environment: GitOps, TLS, backups and restore drill, monitoring and alerts, load test, OpenVAS, image admission, v0.2.0 | ✅ done |
-| 19 | Admin panel, colour themes, friends, shared groups with balances and a Shared tab | 🚧 in progress |
-| 20 | Assistant that can act (with undo), receipts by photo, goals, digests, advice library, CLI | 🚧 planned |
+| 19 | Admin panel, colour themes, friends, shared groups with balances and a Shared tab, v0.3.0 | ✅ done |
+| 20 | Assistant that can act (with undo), receipts by photo, goals, digests, advice library, access tokens and the `fin` CLI | 🚧 in progress |
 | 21 | Public release: privacy clean-up, security scanning, signed images, public demo, documentation, v1.0.0 | 🚧 planned |
 
 The detailed task list and every decision taken so far are in [docs/PROGRESS.md](docs/PROGRESS.md); the full specification is [docs/PLAN.md](docs/PLAN.md).
@@ -236,7 +242,7 @@ Start with [docs/README.md](docs/README.md), which lists every document and who 
 - [Runbook](docs/RUNBOOK.md): running it on Kubernetes, backups and restores; [SLOs](docs/SLO.md)
 - [Architecture decisions](docs/adr/): why the main choices were made
 - [API specification](api/openapi.yaml): OpenAPI 3
-- [Shared groups](docs/sharing.md), [administration](docs/admin.md)
+- [Shared groups](docs/sharing.md), [administration](docs/admin.md), [the assistant](docs/assistant.md)
 - [Moving over from the single-file app](docs/migration.md), [accessibility](docs/a11y.md), [parity report](docs/parity-report.md), [changelog](CHANGELOG.md)
 
 ## Security, contributing and license

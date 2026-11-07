@@ -5,16 +5,20 @@ SELECT * FROM assistant_settings WHERE user_id = @user_id;
 
 -- name: UpsertAssistantSettings :one
 -- retention_days NULL keeps chats until the user deletes them.
-INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, auto_apply, updated_at)
-VALUES (@user_id, sqlc.narg(retention_days), @cloud_consent, @auto_apply, @now)
+INSERT INTO assistant_settings (user_id, retention_days, cloud_consent, auto_apply, digest, digest_hour, digest_weekday,
+                                digest_time_zone, digest_connection, digest_model, updated_at)
+VALUES (@user_id, sqlc.narg(retention_days), @cloud_consent, @auto_apply, @digest, @digest_hour, @digest_weekday,
+        @digest_time_zone, @digest_connection, @digest_model, @now)
 ON CONFLICT (user_id) DO UPDATE
 SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_consent, auto_apply = excluded.auto_apply,
-    updated_at = excluded.updated_at
+    digest = excluded.digest, digest_hour = excluded.digest_hour, digest_weekday = excluded.digest_weekday,
+    digest_time_zone = excluded.digest_time_zone, digest_connection = excluded.digest_connection,
+    digest_model = excluded.digest_model, updated_at = excluded.updated_at
 RETURNING *;
 
 -- name: CreateAssistantChat :one
-INSERT INTO assistant_chats (id, user_id, title, connection, model, created_at, updated_at)
-VALUES (@id, @user_id, @title, @connection, @model, @now, @now)
+INSERT INTO assistant_chats (id, user_id, title, connection, model, kind, created_at, updated_at)
+VALUES (@id, @user_id, @title, @connection, @model, @kind, @now, @now)
 RETURNING *;
 
 -- name: GetAssistantChat :one
@@ -91,3 +95,29 @@ DELETE FROM assistant_attachments WHERE user_id = @user_id AND message_seq IS NU
 -- name: ExportAssistantAttachments :many
 SELECT id, chat_id, message_seq, bytes FROM assistant_attachments WHERE user_id = @user_id AND message_seq IS NOT NULL
 ORDER BY chat_id, message_seq, id;
+
+-- name: SetDigestDueAt :exec
+-- When the user's next digest is due (NULL: none; ADR 0033). users is not under RLS.
+UPDATE users SET digest_due_at = sqlc.narg(due_at) WHERE id = @id;
+
+-- name: DueDigestUsers :many
+-- Users whose digest is due: never disabled or demo users.
+SELECT id, digest_due_at::timestamptz AS due_at FROM users
+WHERE digest_due_at <= @now AND disabled_at IS NULL AND NOT is_demo
+ORDER BY digest_due_at, id LIMIT @page_size;
+
+-- name: AddAssistantUsage :exec
+-- One finished run's tokens on its UTC day (ADR 0033).
+INSERT INTO assistant_usage (user_id, day, runs, digests, tokens)
+VALUES (@user_id, @day, 1, CASE WHEN @digest::boolean THEN 1 ELSE 0 END, @tokens)
+ON CONFLICT (user_id, day) DO UPDATE
+SET runs = assistant_usage.runs + 1, digests = assistant_usage.digests + excluded.digests,
+    tokens = assistant_usage.tokens + excluded.tokens;
+
+-- name: GetAssistantUsage :one
+SELECT coalesce(sum(runs), 0)::bigint AS runs, coalesce(sum(digests), 0)::bigint AS digests,
+       coalesce(sum(tokens), 0)::bigint AS tokens
+FROM assistant_usage WHERE user_id = @user_id AND day = @day;
+
+-- name: GetDigestDueAt :one
+SELECT digest_due_at FROM users WHERE id = @id;

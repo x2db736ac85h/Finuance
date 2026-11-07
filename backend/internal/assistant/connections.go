@@ -33,10 +33,25 @@ type Connection struct {
 	Client llm.Client
 }
 
-// ModelInfo is a chat model a connection offers, with what it can do.
+// ModelInfo is a chat model a connection offers, with what it can do and an administrator's
+// tuning for it (nil: none).
 type ModelInfo struct {
-	ID   string
-	Caps llm.Caps
+	ID     string
+	Caps   llm.Caps
+	Tuning *Tuning
+}
+
+// Tuning is an administrator's settings for one model of one connection (ADR 0035): defaults for
+// the temperature, the thinking level and the tool set when the question doesn't set them, the
+// context size to plan with, and a short note added to the prompt.
+type Tuning struct {
+	Connection, Model string
+	Temperature       *float64
+	ContextTokens     *int
+	Think             llm.Thinking // "" = the question's
+	Toolset           string       // "" = the question's
+	ExtraPrompt       string
+	UpdatedAt         time.Time
 }
 
 // ConnectionStatus is what GET /assistant/status reports for one connection.
@@ -56,11 +71,19 @@ var (
 	ErrUnknownModel      = errors.New("model not offered by this connection")
 )
 
-// Connections holds the configured model servers, caches their model lists and remembers what
-// was learned about a model while running (a model that rejected tools is plan-only from then on).
+// Connections holds the configured model servers (the connections file's, then those stored in
+// the panel, ADR 0035), caches their model lists and remembers what was learned about a model
+// while running (a model that rejected tools is plan-only from then on).
 type Connections struct {
-	list  []*Connection
-	clock platform.Clock
+	clock     platform.Clock
+	newClient func(llm.Config) llm.Client
+	timeout   time.Duration
+	idle      time.Duration
+
+	lmu    sync.RWMutex
+	file   []*Connection
+	stored []*Connection
+	tuning map[string]*Tuning // "connection\x00model"
 
 	mu      sync.Mutex
 	cache   map[string]statusEntry
@@ -88,28 +111,110 @@ func NewConnections(cfgs []config.AIConnection, timeout, idle time.Duration, clo
 	if idle <= 0 {
 		idle = 60 * time.Second
 	}
-	cs := &Connections{clock: clock, cache: map[string]statusEntry{}, flights: map[string]*flight{}, learned: map[string]llm.Caps{}}
+	cs := &Connections{clock: clock, newClient: newClient, timeout: timeout, idle: idle, tuning: map[string]*Tuning{},
+		cache: map[string]statusEntry{}, flights: map[string]*flight{}, learned: map[string]llm.Caps{}}
 	for i := range cfgs {
-		c := &cfgs[i]
-		cl := newClient(llm.Config{API: c.API, BaseURL: c.BaseURL.String(), APIKey: c.APIKey, AllowRemote: c.Cloud,
-			Timeout: timeout, IdleTimeout: min(timeout, idle)})
-		cs.list = append(cs.list, &Connection{AIConnection: *c, Client: cl})
+		cs.file = append(cs.file, cs.connect(cfgs[i]))
 	}
 	return cs
 }
 
+func (cs *Connections) connect(c config.AIConnection) *Connection {
+	cl := cs.newClient(llm.Config{API: c.API, BaseURL: c.BaseURL.String(), APIKey: c.APIKey, AllowRemote: c.Cloud,
+		Timeout: cs.timeout, IdleTimeout: min(cs.timeout, cs.idle)})
+	return &Connection{AIConnection: c, Client: cl}
+}
+
+// all is every connection: the file's, then the stored ones.
+func (cs *Connections) all() []*Connection {
+	if cs == nil {
+		return nil
+	}
+	cs.lmu.RLock()
+	defer cs.lmu.RUnlock()
+	return append(slices.Clip(cs.file), cs.stored...)
+}
+
+// FileNames are the names of the connections file's connections (the panel can't take them).
+func (cs *Connections) FileNames() []string {
+	if cs == nil {
+		return nil
+	}
+	cs.lmu.RLock()
+	defer cs.lmu.RUnlock()
+	names := make([]string, len(cs.file))
+	for i, c := range cs.file {
+		names[i] = c.Name
+	}
+	return names
+}
+
+// SetStored replaces the connections and tuning stored in the panel (ADR 0035). A connection
+// whose settings changed gets a new client and forgets its cached model list and what was learned.
+func (cs *Connections) SetStored(conns []config.AIConnection, tuning []Tuning) {
+	cs.lmu.Lock()
+	old := map[string]*Connection{}
+	for _, c := range cs.stored {
+		old[c.Name] = c
+	}
+	var stored []*Connection
+	var changed []string
+	for i := range conns {
+		c := conns[i]
+		if o, ok := old[c.Name]; ok && sameConnection(o.AIConnection, c) {
+			stored = append(stored, o)
+			delete(old, c.Name)
+			continue
+		}
+		stored = append(stored, cs.connect(c))
+		changed = append(changed, c.Name)
+	}
+	for name := range old {
+		changed = append(changed, name)
+	}
+	cs.stored = stored
+	cs.tuning = map[string]*Tuning{}
+	for i := range tuning {
+		t := tuning[i]
+		cs.tuning[t.Connection+"\x00"+t.Model] = &t
+	}
+	cs.lmu.Unlock()
+	cs.mu.Lock()
+	for _, name := range changed {
+		delete(cs.cache, name)
+		for k := range cs.learned {
+			if strings.HasPrefix(k, name+"\x00") {
+				delete(cs.learned, k)
+			}
+		}
+	}
+	cs.mu.Unlock()
+}
+
+func sameConnection(a, b config.AIConnection) bool {
+	return a.Name == b.Name && a.Label == b.Label && a.API == b.API && a.BaseURL.String() == b.BaseURL.String() && a.APIKey == b.APIKey &&
+		a.Cloud == b.Cloud && a.DefaultModel == b.DefaultModel && slices.Equal(a.Models, b.Models) && a.ContextTokens == b.ContextTokens
+}
+
+func (cs *Connections) tuningOf(conn, model string) *Tuning {
+	cs.lmu.RLock()
+	defer cs.lmu.RUnlock()
+	return cs.tuning[conn+"\x00"+model]
+}
+
 // Enabled reports whether any connection is configured.
-func (cs *Connections) Enabled() bool { return cs != nil && len(cs.list) > 0 }
+func (cs *Connections) Enabled() bool { return len(cs.all()) > 0 }
 
 // Get returns a connection by name; "" is the first one.
 func (cs *Connections) Get(name string) (*Connection, error) {
-	if !cs.Enabled() {
+	list := cs.all()
+	if len(list) == 0 {
 		return nil, ErrUnknownConnection
 	}
 	if name == "" {
-		return cs.list[0], nil
+		return list[0], nil
 	}
-	for _, c := range cs.list {
+	for _, c := range list {
 		if c.Name == name {
 			return c, nil
 		}
@@ -125,7 +230,7 @@ func (cs *Connections) CheckHosts(ctx context.Context, r *net.Resolver) (warning
 		return nil, nil
 	}
 	var bad []string
-	for _, c := range cs.list {
+	for _, c := range cs.all() {
 		if c.Cloud {
 			continue
 		}
@@ -146,12 +251,13 @@ func (cs *Connections) CheckHosts(ctx context.Context, r *net.Resolver) (warning
 // Status returns every connection's state, checking those whose cached state expired (in
 // parallel, one check per connection at a time). refresh ignores the cache.
 func (cs *Connections) Status(ctx context.Context, refresh bool) []ConnectionStatus {
-	if !cs.Enabled() {
+	list := cs.all()
+	if len(list) == 0 {
 		return nil
 	}
-	out := make([]ConnectionStatus, len(cs.list))
+	out := make([]ConnectionStatus, len(list))
 	var wg sync.WaitGroup
-	for i, c := range cs.list {
+	for i, c := range list {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -261,12 +367,23 @@ func (cs *Connections) Resolve(ctx context.Context, conn, model string) (*Connec
 		return nil, ModelInfo{}, fmt.Errorf("%w: %q", ErrUnknownModel, model)
 	}
 	if i := slices.IndexFunc(st.Models, func(m ModelInfo) bool { return m.ID == model }); i >= 0 {
-		return c, st.Models[i], nil
+		return c, cs.tuned(c, st.Models[i]), nil
 	}
 	if st.Reachable {
 		return nil, ModelInfo{}, fmt.Errorf("%w: %q", ErrUnknownModel, model)
 	}
-	return c, cs.learnedInfo(c, ModelInfo{ID: model, Caps: llm.DetectCaps(c.API, llm.Model{ID: model}, c.ContextTokens, c.Caps)}), nil
+	return c, cs.tuned(c, cs.learnedInfo(c, ModelInfo{ID: model, Caps: llm.DetectCaps(c.API, llm.Model{ID: model}, c.ContextTokens, c.Caps)})), nil
+}
+
+// tuned adds an administrator's tuning; its context size replaces the detected one.
+func (cs *Connections) tuned(c *Connection, m ModelInfo) ModelInfo {
+	if t := cs.tuningOf(c.Name, m.ID); t != nil {
+		m.Tuning = t
+		if t.ContextTokens != nil {
+			m.Caps.ContextTokens = *t.ContextTokens
+		}
+	}
+	return m
 }
 
 // LearnNoTools remembers that a model rejected tool definitions, so later runs in this process

@@ -8,6 +8,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
+	"github.com/x2db736ac85h/finuance/backend/internal/advice"
 	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
@@ -36,6 +37,8 @@ type api struct {
 	prod              bool
 	auth              *auth.Service
 	admin             *admin.Service
+	advice            *advice.Service
+	aiAdmin           *assistant.ConnectionStore
 	aiChanges         *aichanges.Service // lists and undoes the assistant's changes (ADR 0030)
 	goals             *goals.Service     // savings and reduction goals (ADR 0031)
 	friends           *friends.Service
@@ -60,7 +63,8 @@ func (a *api) GetMeta(ctx context.Context, _ gen.GetMetaRequestObject) (gen.GetM
 	f := a.features(ctx)
 	out := gen.GetMeta200JSONResponse{Version: a.version, SignupEnabled: a.cfg.AllowSignup, DemoMode: a.cfg.DemoMode,
 		AssistantEnabled: a.conns().Enabled() && f.Assistant, Themes: []gen.PublicTheme{},
-		Features: gen.Features{Overview: f.Overview, Assistant: f.Assistant, Friends: f.Friends, SharedGroups: f.SharedGroups}}
+		Features: gen.Features{Overview: f.Overview, Assistant: f.Assistant, AssistantDigests: f.AssistantDigests && !a.cfg.DemoMode,
+			Friends: f.Friends, SharedGroups: f.SharedGroups}}
 	if a.admin != nil {
 		pub, err := a.admin.Public(ctx)
 		if err != nil {

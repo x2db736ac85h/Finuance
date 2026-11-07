@@ -8,6 +8,8 @@
 #   tools/seal-secrets.sh <env> backup-store            a random key pair for the in-cluster RustFS, sealed twice:
 #                                                       finuance-db-backup (finuance) and rustfs (s3, into <env>/rustfs/)
 #   tools/seal-secrets.sh <env> assistant <file>        finuance-assistant from KEY=value lines (API keys)
+#   tools/seal-secrets.sh <env> instance-key            finuance-instance-key: a random FINUANCE_INSTANCE_KEY, which
+#                                                       seals API keys entered in Administration → Assistant
 #   tools/seal-secrets.sh <env> pull                    ghcr-pull (image pull secret) from a token on stdin
 #                                                       (read:packages; GHCR_USER, default x2db736ac85h)
 #   tools/seal-secrets.sh <env> smtp                    finuance-alert-smtp (monitoring) from the alert mail
@@ -22,7 +24,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [ $# -ge 2 ] || usage
 env=$1 what=$2
 ns=${NAMESPACE:-finuance}
@@ -45,7 +47,7 @@ seal() {
     printf '  labels:\n    app.kubernetes.io/part-of: finuance\n'
     # CloudNativePG reloads a secret it uses (a role's password, the store's keys) on change only
     # when the secret carries this label.
-    [ "$what" = assistant ] || [ "$what" = pull ] || [ "$what" = smtp ] || [ "$what" = grafana ] || [ "$name" = rustfs ] || printf '    cnpg.io/reload: "true"\n'
+    [ "$what" = assistant ] || [ "$what" = instance-key ] || [ "$what" = pull ] || [ "$what" = smtp ] || [ "$what" = grafana ] || [ "$name" = rustfs ] || printf '    cnpg.io/reload: "true"\n'
     printf 'data:\n'
     while [ $# -gt 0 ]; do printf '  %s: %s\n' "$1" "$(b64 "$2")"; shift 2; done
   } | kubeseal "${seal_args[@]}" >"$out.tmp"
@@ -112,6 +114,11 @@ case $what in
     done <"$3"
     [ ${#pairs[@]} -gt 0 ] || { echo "seal-secrets: $3 has no KEY=value lines" >&2; exit 2; }
     seal finuance-assistant Opaque "${pairs[@]}"
+    ;;
+  instance-key)
+    # FINUANCE_INSTANCE_KEY (ADR 0035): 32 random bytes in base64. It seals the API keys entered in
+    # Administration → Assistant; sealing a new one makes those keys unreadable (enter them again).
+    seal finuance-instance-key Opaque FINUANCE_INSTANCE_KEY "$(head -c 32 /dev/urandom | base64 | tr -d '\n')"
     ;;
   *) usage ;;
 esac

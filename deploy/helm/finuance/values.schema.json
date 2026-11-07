@@ -49,6 +49,7 @@
         "enabled": { "type": "boolean" },
         "connectionsFile": { "type": "string" },
         "envSecret": { "type": "string" },
+        "instanceKeySecret": { "type": "string", "description": "A secret with FINUANCE_INSTANCE_KEY (tools/seal-secrets.sh <env> instance-key)" },
         "egress": { "$ref": "#/definitions/egress" }
       }
     },

@@ -76,7 +76,7 @@ export const freshDb = (): Db => ({
   signedIn: true,
   signupEnabled: true,
   demoMode: false,
-  features: { overview: true, assistant: true, friends: true, sharedGroups: true },
+  features: { overview: true, assistant: true, assistantDigests: true, friends: true, sharedGroups: true },
   friends: [],
   notifications: [],
   notificationsRead: 0,
@@ -98,6 +98,7 @@ export const freshDb = (): Db => ({
       maxGroups: 0,
       maxSharedGroups: 0,
       assistantPerHour: 30,
+      assistantTokensPerDay: 200_000,
     },
   },
   prefs: { version: 0, prefs: {} },
@@ -207,6 +208,10 @@ export const server = setupServer(
   ),
   // developer mode off, as on most instances (tests that need the section override this)
   http.get(`${API}/admin/developer`, () => authed(() => problem(404, 'not_found', 'Not found.'))),
+  // Administration → Assistant starts empty (tests that need more override these)
+  http.get(`${API}/admin/assistant/connections`, () => authed(() => HttpResponse.json([]))),
+  http.get(`${API}/admin/assistant/tuning`, () => authed(() => HttpResponse.json([]))),
+  http.get(`${API}/admin/advice`, () => authed(() => HttpResponse.json([]))),
   http.get(`${API}/imports`, () => authed(() => HttpResponse.json(db.imports))),
   http.post(`${API}/transactions/query`, async ({ request }) => {
     const q = (await request.json()) as Schemas['TransactionQuery'];

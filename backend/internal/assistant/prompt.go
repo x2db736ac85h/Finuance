@@ -156,7 +156,8 @@ func extraRules(toolset string) string {
 	s := ""
 	if toolset != ToolsetCompact {
 		s += "\n- Use month_overview for a month's summary, budgets and projection; recurring_payments for subscriptions and regular bills; " +
-			"budget_status for budget questions; group_summary for one transaction group such as a trip; goal_status for the user's goals." +
+			"budget_status for budget questions; group_summary for one transaction group such as a trip; goal_status for the user's goals; " +
+			"search_advice for general questions about managing money (name the article, and say it is general information, not financial advice)." +
 			"\n- To change data (categories, groups, rules, budgets, cash expenses, sharing with a shared group, goals), call propose_action: the user reviews and applies it. Never say that you changed anything." +
 			"\n- For a photo of a receipt: read the shop, the date, the total paid and the currency (not a subtotal, tax line, cash given or change), " +
 			"call find_receipt_match, then propose attach_receipt for the matching payment or add_expense when there is none."
@@ -170,6 +171,15 @@ func counted(vs []query.Counted) string {
 		parts[i] = fmt.Sprintf("%s (%d)", v.Value, v.Count)
 	}
 	return strings.Join(parts, "; ")
+}
+
+// instructionsBlock is the administrator's addition to the system prompt (ADR 0034), after the app's
+// rules, which it can't override.
+func instructionsBlock(s string) string {
+	if s = strings.TrimSpace(s); s == "" {
+		return ""
+	}
+	return "\n\nInstructions from this instance's administrator (the rules above come first):\n" + s
 }
 
 // UserTime is now in the user's time zone (default Europe/Warsaw, legacy: the browser's).

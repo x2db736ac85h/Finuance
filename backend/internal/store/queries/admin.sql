@@ -94,15 +94,19 @@ SELECT
   (SELECT count(*) FROM imports i WHERE i.user_id = @user_id AND i.status = 'committed') AS imports,
   (SELECT coalesce(sum(i.size_bytes), 0)::bigint FROM imports i WHERE i.user_id = @user_id) AS stored_bytes,
   (SELECT count(*) FROM assistant_chats c WHERE c.user_id = @user_id) AS chats,
+  -- the assistant since a day (ADR 0035): runs (questions and digests) and their tokens
+  (SELECT coalesce(sum(u.runs), 0)::bigint FROM assistant_usage u WHERE u.user_id = @user_id AND u.day >= @since::date) AS assistant_runs,
+  (SELECT coalesce(sum(u.tokens), 0)::bigint FROM assistant_usage u WHERE u.user_id = @user_id AND u.day >= @since::date) AS assistant_tokens,
   -- the epoch stands for "no activity recorded" (pgx can't scan NULL into a time)
   coalesce((SELECT max(e.at) FROM audit_log e WHERE e.user_id = @user_id), 'epoch'::timestamptz)::timestamptz AS last_activity;
 
 -- name: UserActivityByDay :many
--- Imports and assistant questions per day since a date, for the instance usage page.
+-- Imports, assistant questions and assistant tokens per day since a date, for the instance usage page.
 SELECT d.day::date AS day,
        (SELECT count(*) FROM imports i WHERE i.user_id = @user_id AND i.created_at >= d.day AND i.created_at < d.day + interval '1 day')::bigint AS imports,
        (SELECT count(*) FROM assistant_messages m WHERE m.user_id = @user_id AND m.role = 'user'
-          AND m.created_at >= d.day AND m.created_at < d.day + interval '1 day')::bigint AS questions
+          AND m.created_at >= d.day AND m.created_at < d.day + interval '1 day')::bigint AS questions,
+       (SELECT coalesce(sum(u.tokens), 0) FROM assistant_usage u WHERE u.user_id = @user_id AND u.day = d.day::date)::bigint AS tokens
 FROM generate_series(@since::date, @until::date, interval '1 day') AS d(day);
 
 -- name: CountImportsSince :one

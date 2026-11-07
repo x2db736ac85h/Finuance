@@ -89,6 +89,10 @@ spec:
     {{- include "finuance.dbEgress" . | nindent 4 }}
     {{- include "finuance.dnsEgress" . | nindent 4 }}
     {{- include "finuance.cidrEgress" .Values.otel.egress | nindent 4 }}
+    {{- if .Values.assistant.enabled }}
+    # The model servers, for the assistant's digests (ADR 0033).
+    {{- include "finuance.cidrEgress" .Values.assistant.egress | nindent 4 }}
+    {{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

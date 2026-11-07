@@ -2419,6 +2419,22 @@ paths:
           description: Stopped (or nothing was running).
         default:
           $ref: "#/components/responses/Problem"
+  /assistant/digest:
+    post:
+      operationId: requestAssistantDigest
+      summary: Write a digest now
+      description: >-
+        Queues a digest for the signed-in user (ADR 0033), whatever the schedule; the worker writes it
+        into a new chat of kind `digest` and a notification `assistant.digest` says when it is ready.
+        At most one waits per user (a second request while one waits is accepted and changes nothing).
+        `404` when digests are switched off for the instance or in demo mode, `assistant_unavailable`
+        without a connection, `limit_reached` once the day's tokens are used.
+      tags: [assistant]
+      responses:
+        "202":
+          description: Queued.
+        default:
+          $ref: "#/components/responses/Problem"
   /demo-data:
     post:
       operationId: loadDemoData
@@ -2794,6 +2810,250 @@ paths:
                 $ref: "#/components/schemas/InstanceUsage"
         default:
           $ref: "#/components/responses/Problem"
+  /admin/advice:
+    get:
+      operationId: adminListAdvice
+      summary: Every article of the advice library (ADR 0034), without bodies
+      tags: [admin]
+      responses:
+        "200":
+          description: Articles by language and title.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: adminCreateAdvice
+      summary: Write an article
+      description: The slug is unique per language (`422` on `slug` otherwise).
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdviceInput"
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/advice/starter:
+    post:
+      operationId: adminAddStarterAdvice
+      summary: Add the starter articles
+      description: Adds the eight English starter articles whose slug isn't taken in English, as drafts to read and publish.
+      tags: [admin]
+      responses:
+        "200":
+          description: How many were added.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [added]
+                properties:
+                  added:
+                    type: integer
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/advice/{id}:
+    parameters:
+      - $ref: "#/components/parameters/AdviceId"
+    get:
+      operationId: adminGetAdvice
+      summary: One article with its body
+      tags: [admin]
+      responses:
+        "200":
+          description: The article.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: adminUpdateAdvice
+      summary: Change an article
+      description: Versioned (`409 stale_version` when it changed since it was read).
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdviceUpdate"
+      responses:
+        "200":
+          description: The article as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: adminDeleteAdvice
+      summary: Delete an article
+      tags: [admin]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/connections:
+    get:
+      operationId: adminListConnections
+      summary: The assistant's connections (ADR 0035)
+      description: The connections file's (read only) and those added here; never an API key.
+      tags: [admin]
+      responses:
+        "200":
+          description: The file's first, then the ones added here by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminConnection"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: adminCreateConnection
+      summary: Add a connection
+      description: >-
+        The connections file's rules apply (a local connection on a public address is refused, a cloud one
+        must use https). An API key needs FINUANCE_INSTANCE_KEY; it is sealed and never shown again.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminConnectionInput"
+      responses:
+        "201":
+          description: Added.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConnection"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/connections/{name}:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{0,39}$"
+    put:
+      operationId: adminUpdateConnection
+      summary: Change a connection added here
+      description: >-
+        Versioned. `apiKey` keeps (`keep`), removes (`remove`) or replaces (`replace`) the key; a new address
+        or cloud setting drops a kept key, so a key only ever goes where it was entered for.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminConnectionUpdate"
+      responses:
+        "200":
+          description: The connection as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConnection"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: adminDeleteConnection
+      summary: Delete a connection added here
+      tags: [admin]
+      responses:
+        "204":
+          description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/tuning:
+    get:
+      operationId: adminListTuning
+      summary: Per-model tuning
+      tags: [admin]
+      responses:
+        "200":
+          description: By connection and model.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModelTuning"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: adminPutTuning
+      summary: Save a model's tuning
+      description: A tuning that sets nothing removes the model's.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModelTuning"
+      responses:
+        "200":
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelTuning"
+        default:
+          $ref: "#/components/responses/Problem"
+  /advice/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+      - name: language
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "^[a-z]{2}$"
+        description: The reader's language first, then English, then any.
+    get:
+      operationId: getAdvice
+      summary: A published article of the advice library
+      description: What the assistant's search_advice found, for reading in full (ADR 0034).
+      tags: [assistant]
+      responses:
+        "200":
+          description: The article.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviceArticle"
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/developer:
     get:
       operationId: adminDeveloperInfo
@@ -2911,6 +3171,13 @@ components:
         type: string
         format: uuid
     ThemeId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AdviceId:
       name: id
       in: path
       required: true
@@ -3141,6 +3408,9 @@ components:
             - admin.settings_changed
             - admin.theme_approved
             - admin.theme_retired
+            - admin.advice_changed
+            - admin.advice_deleted
+            - admin.assistant_changed
             - transaction.added
             - transaction.edited
             - transaction.deleted
@@ -4120,7 +4390,7 @@ components:
           description: Case, spaces and dashes don't matter.
     NotificationKind:
       type: string
-      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled]
+      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled, assistant.digest]
     SharedGroupKind:
       type: string
       enum: [trip, household, event, other]
@@ -6177,17 +6447,65 @@ components:
           items:
             type: string
             enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
+        digest:
+          $ref: "#/components/schemas/AssistantDigest"
+        digestNextAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the next digest is due (null when they are off). Ignored in a PUT.
+        tokensToday:
+          type: integer
+          format: int64
+          description: Tokens used today (UTC), questions and digests together. Ignored in a PUT.
+    AssistantDigest:
+      type: object
+      additionalProperties: false
+      required: [schedule, hour, weekday, timeZone, connection, model]
+      description: >-
+        The digest schedule (ADR 0033): off, daily, or weekly on a weekday, at an hour of the time zone,
+        written with the connection and model named (else the instance's default). Left out of a PUT,
+        the stored schedule stays.
+      properties:
+        schedule:
+          type: string
+          enum: ["off", daily, weekly]
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        weekday:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: ISO weekday (1 = Monday), for weekly digests.
+        timeZone:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: An IANA time zone such as Europe/Warsaw.
+        connection:
+          type: string
+          maxLength: 40
+        model:
+          type: string
+          maxLength: 200
+    AssistantChatKind:
+      type: string
+      enum: [chat, digest]
     AssistantChat:
       type: object
       additionalProperties: false
-      required: [id, title, connection, model, createdAt, updatedAt]
+      required: [id, title, kind, connection, model, createdAt, updatedAt]
       properties:
         id:
           type: string
           format: uuid
         title:
           type: string
-          description: The first question ("" before it).
+          description: The first question ("" before it), or the digest's name.
+        kind:
+          $ref: "#/components/schemas/AssistantChatKind"
         connection:
           type: string
         model:
@@ -6212,13 +6530,15 @@ components:
     AssistantChatDetail:
       type: object
       additionalProperties: false
-      required: [id, title, connection, model, createdAt, updatedAt, noTools, turns, appliedProposals]
+      required: [id, title, kind, connection, model, createdAt, updatedAt, noTools, turns, appliedProposals]
       properties:
         id:
           type: string
           format: uuid
         title:
           type: string
+        kind:
+          $ref: "#/components/schemas/AssistantChatKind"
         connection:
           type: string
         model:
@@ -6822,12 +7142,15 @@ components:
       type: object
       additionalProperties: false
       description: Parts of the app the instance offers (an administrator can switch them off).
-      required: [overview, assistant, friends, sharedGroups]
+      required: [overview, assistant, assistantDigests, friends, sharedGroups]
       properties:
         overview:
           type: boolean
         assistant:
           type: boolean
+        assistantDigests:
+          type: boolean
+          description: Daily or weekly digests written in the background (off with the assistant too).
         friends:
           type: boolean
         sharedGroups:
@@ -6897,11 +7220,16 @@ components:
           type: integer
           format: int64
           minimum: 1
+        assistantTokensPerDay:
+          type: integer
+          format: int64
+          minimum: 1000
+          description: Tokens the assistant may use per UTC day, questions and digests together (ADR 0033).
     EffectiveLimits:
       type: object
       additionalProperties: false
       description: The limits that apply to the signed-in user; 0 means no limit.
-      required: [maxUploadBytes, importsPerDay, maxAccounts, maxGroups, maxSharedGroups, assistantPerHour]
+      required: [maxUploadBytes, importsPerDay, maxAccounts, maxGroups, maxSharedGroups, assistantPerHour, assistantTokensPerDay]
       properties:
         maxUploadBytes:
           type: integer
@@ -6919,6 +7247,9 @@ components:
           type: integer
           format: int64
         assistantPerHour:
+          type: integer
+          format: int64
+        assistantTokensPerDay:
           type: integer
           format: int64
     InstanceSettingsDoc:
@@ -6941,12 +7272,274 @@ components:
               type: boolean
             assistant:
               type: boolean
+            assistantDigests:
+              type: boolean
             friends:
               type: boolean
             sharedGroups:
               type: boolean
         limits:
           $ref: "#/components/schemas/LimitOverrides"
+        assistant:
+          $ref: "#/components/schemas/InstanceAssistant"
+        updatedAt:
+          type: string
+          format: date-time
+    AdminConnection:
+      type: object
+      additionalProperties: false
+      required: [name, label, api, baseUrl, cloud, defaultModel, models, contextTokens, source, hasKey, keyUnreadable, version]
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        api:
+          type: string
+          enum: [openai, anthropic]
+        baseUrl:
+          type: string
+        cloud:
+          type: boolean
+        defaultModel:
+          type: string
+        models:
+          type: array
+          items:
+            type: string
+          description: Model id patterns offered (globs); empty offers every chat model.
+        contextTokens:
+          type: integer
+        source:
+          type: string
+          enum: [file, panel]
+          description: The connections file's (read only) or added here.
+        hasKey:
+          type: boolean
+        keyUnreadable:
+          type: boolean
+          description: The stored key was sealed under another instance key; enter it again.
+        version:
+          type: integer
+          format: int32
+          description: 0 for the file's.
+        updatedAt:
+          type: string
+          format: date-time
+    AdminConnectionInput:
+      type: object
+      additionalProperties: false
+      required: [name, label, api, baseUrl, cloud, defaultModel, models, contextTokens]
+      properties:
+        name:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{0,39}$"
+        label:
+          type: string
+          maxLength: 80
+        api:
+          type: string
+          enum: [openai, anthropic]
+        baseUrl:
+          type: string
+          maxLength: 500
+        cloud:
+          type: boolean
+        defaultModel:
+          type: string
+          maxLength: 200
+        models:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 200
+        contextTokens:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        apiKey:
+          type: string
+          maxLength: 1000
+          writeOnly: true
+    AdminConnectionUpdate:
+      type: object
+      additionalProperties: false
+      required: [version, label, api, baseUrl, cloud, defaultModel, models, contextTokens, keyAction]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+        label:
+          type: string
+          maxLength: 80
+        api:
+          type: string
+          enum: [openai, anthropic]
+        baseUrl:
+          type: string
+          maxLength: 500
+        cloud:
+          type: boolean
+        defaultModel:
+          type: string
+          maxLength: 200
+        models:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 200
+        contextTokens:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        keyAction:
+          type: string
+          enum: [keep, remove, replace]
+        apiKey:
+          type: string
+          maxLength: 1000
+          writeOnly: true
+          description: The new key with `replace`.
+    ModelTuning:
+      type: object
+      additionalProperties: false
+      required: [connection, model, extraPrompt]
+      description: >-
+        An administrator's defaults for one model (ADR 0035), used when a question doesn't set them;
+        the context size replaces the detected one and the note follows the instructions in the prompt.
+      properties:
+        connection:
+          type: string
+          minLength: 1
+          maxLength: 40
+        model:
+          type: string
+          minLength: 1
+          maxLength: 200
+        temperature:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 2
+        contextTokens:
+          type: integer
+          minimum: 1024
+          maximum: 10000000
+        think:
+          type: string
+          enum: ["off", auto, low, medium, high]
+        toolset:
+          type: string
+          enum: [full, compact]
+        extraPrompt:
+          type: string
+          maxLength: 1000
+        updatedAt:
+          type: string
+          format: date-time
+    InstanceAssistant:
+      type: object
+      additionalProperties: false
+      description: The instance's settings for the assistant; left out of a PUT, the stored ones stay.
+      properties:
+        instructions:
+          type: string
+          maxLength: 2000
+          description: Added to every system prompt after the app's rules (ADR 0034).
+    AdviceInput:
+      type: object
+      additionalProperties: false
+      required: [slug, language, title, body, tags, status]
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+        language:
+          type: string
+          pattern: "^[a-z]{2}$"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+          maxLength: 20000
+          description: Markdown.
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 40
+        status:
+          type: string
+          enum: [draft, published]
+    AdviceUpdate:
+      type: object
+      additionalProperties: false
+      required: [version, slug, language, title, body, tags, status]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+        language:
+          type: string
+          pattern: "^[a-z]{2}$"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+          maxLength: 20000
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 40
+        status:
+          type: string
+          enum: [draft, published]
+    AdviceArticle:
+      type: object
+      additionalProperties: false
+      required: [id, slug, language, title, body, bodyLength, tags, status, version, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        language:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+          description: Markdown ("" in a listing).
+        bodyLength:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, published]
+        version:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
         updatedAt:
           type: string
           format: date-time
@@ -6954,8 +7547,16 @@ components:
       type: object
       additionalProperties: false
       description: Counts of an account's data (never the data).
-      required: [accounts, transactions, imports, storedBytes, chats]
+      required: [accounts, transactions, imports, storedBytes, chats, assistantRuns, assistantTokens]
       properties:
+        assistantRuns:
+          type: integer
+          format: int64
+          description: Assistant questions and digests in the last 30 days (UTC).
+        assistantTokens:
+          type: integer
+          format: int64
+          description: Their tokens in the last 30 days (UTC).
         accounts:
           type: integer
           format: int64
@@ -7109,7 +7710,7 @@ components:
     DayUsage:
       type: object
       additionalProperties: false
-      required: [day, imports, questions]
+      required: [day, imports, questions, tokens]
       properties:
         day:
           type: string
@@ -7121,6 +7722,10 @@ components:
           type: integer
           format: int64
           description: Questions asked to the assistant.
+        tokens:
+          type: integer
+          format: int64
+          description: The assistant's tokens, questions and digests together.
     InstanceUsage:
       type: object
       additionalProperties: false

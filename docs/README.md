@@ -12,11 +12,11 @@
 | [SLO.md](SLO.md) | The service level objectives, how they are measured and alerted on, and the error budget policy |
 | [adr/](adr/) | Architecture decision records: why Go + PostgreSQL, money in minor units, row-level security, sessions and CSRF, the CSV export format, … |
 | [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3) |
-| [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities, limits, retention, the probe and the evals |
+| [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities (images included), limits and the daily token budget, retention, receipts, digests, the advice library, the probe and the evals |
 | [migration.md](migration.md) | Moving a backup of the single-file app into Finuance |
-| [admin.md](admin.md) | Administrators: the first one, the panel (accounts, limits, defaults and features, colour themes, usage) |
+| [admin.md](admin.md) | Administrators: the first one, the panel (accounts, limits, defaults and features, colour themes, the assistant's connections, tuning and advice library, usage) |
 | [sharing.md](sharing.md) | Shared groups: sharing a trip with friends, splits, balances and settling up, the Shared tab, what the others see |
-| [evals.md](evals.md) | Assistant quality per model, thinking mode and toolset on the 53 golden questions |
+| [evals.md](evals.md) | Assistant quality per model, thinking mode and toolset on the golden questions, and per model on the receipt set |
 | [perf.md](perf.md) | Performance measurements: parsing, staging, queries, the table, charts and overview with 100k rows, the bundle, the load tests (Compose and the reference cluster) |
 | [a11y.md](a11y.md) | Accessibility: what axe checks on every screen, what was fixed, the keyboard-only checklist |
 | [parity-report.md](parity-report.md) | The legacy app and Finuance on the same data, number by number (written by the parity test) |

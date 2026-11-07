@@ -262,6 +262,10 @@ jobs:
           assert len(db["data"]["ACCESS_SECRET_KEY"]) >= 40  # 32 random characters, base64
           print("backup-store: the same key pair in finuance-db-backup and s3/rustfs")
           PY
+          # instance-key: 32 random bytes in base64 (ADR 0035)
+          mkdir -p "$d/ikey"
+          SECRETS_DIR="$d/ikey" tools/seal-secrets.sh homelab instance-key
+          unseal "$d/ikey/finuance-instance-key.sealed.yaml" | python3 -c 'import base64,json,sys; s=json.load(sys.stdin); k=base64.b64decode(base64.b64decode(s["data"]["FINUANCE_INSTANCE_KEY"])); assert len(k)==32, len(k); print("instance-key: 32 random bytes sealed as finuance-instance-key")'
           # pull: a registry login from a token on stdin
           mkdir -p "$d/pull"
           printf 'fake-token' | SECRETS_DIR="$d/pull" tools/seal-secrets.sh homelab pull

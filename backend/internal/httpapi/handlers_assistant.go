@@ -16,6 +16,8 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/images"
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
+	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
@@ -102,6 +104,15 @@ func (a *api) PutAssistantSettings(ctx context.Context, req gen.PutAssistantSett
 			in.AutoApply[i] = string(x)
 		}
 	}
+	if d := req.Body.Digest; d != nil {
+		in.Digest = &assistant.DigestSettings{Schedule: string(d.Schedule), Hour: d.Hour, Weekday: d.Weekday, TimeZone: d.TimeZone,
+			Connection: d.Connection, Model: d.Model}
+		if in.Digest.Schedule != assistant.DigestOff && !a.digestsOffered(ctx) {
+			ve := &platform.ValidationError{}
+			ve.Add("digest.schedule", "digests are switched off on this instance")
+			return nil, ve
+		}
+	}
 	s, err := c.SaveSettings(ctx, identity(ctx).User.ID, in)
 	if err != nil {
 		return nil, err
@@ -114,11 +125,47 @@ func settingsDTO(s assistant.Settings) gen.AssistantSettings {
 	for i, x := range s.AutoApply {
 		auto[i] = gen.AssistantSettingsAutoApply(x)
 	}
-	return gen.AssistantSettings{RetentionDays: s.RetentionDays, CloudConsent: s.CloudConsent, AutoApply: &auto}
+	out := gen.AssistantSettings{RetentionDays: s.RetentionDays, CloudConsent: s.CloudConsent, AutoApply: &auto,
+		DigestNextAt: s.DigestNextAt, TokensToday: &s.TokensToday}
+	if d := s.Digest; d != nil {
+		out.Digest = &gen.AssistantDigest{Schedule: gen.AssistantDigestSchedule(d.Schedule), Hour: d.Hour, Weekday: d.Weekday,
+			TimeZone: d.TimeZone, Connection: d.Connection, Model: d.Model}
+	}
+	return out
+}
+
+// digestsOffered: the signed-in user may have digests (the instance switch, no demo).
+func (a *api) digestsOffered(ctx context.Context) bool {
+	return a.features(ctx).AssistantDigests && !a.cfg.DemoMode && !identity(ctx).User.IsDemo
+}
+
+// RequestAssistantDigest queues a digest now (ADR 0033).
+func (a *api) RequestAssistantDigest(ctx context.Context, _ gen.RequestAssistantDigestRequestObject) (gen.RequestAssistantDigestResponseObject, error) {
+	if !a.digestsOffered(ctx) {
+		return nil, platform.ErrNotFound
+	}
+	if a.ai == nil || !a.ai.Connections.Enabled() {
+		return nil, errAssistantOff
+	}
+	u := identity(ctx).User
+	if limit := a.effectiveLimits(ctx, u).AssistantTokensPerDay; limit > 0 {
+		used, err := a.ai.Chats.TokensToday(ctx, u.ID)
+		if err != nil {
+			return nil, err
+		}
+		if used >= limit {
+			return nil, &instance.LimitError{Limit: "assistantTokensPerDay", Value: limit}
+		}
+	}
+	if _, err := a.jobs.Insert(ctx, jobs.AssistantDigestArgs{UserID: u.ID, Manual: true}, nil); err != nil {
+		return nil, err
+	}
+	return gen.RequestAssistantDigest202Response{}, nil
 }
 
 func chatDTO(c assistant.Chat) gen.AssistantChat {
-	return gen.AssistantChat{Id: c.ID, Title: c.Title, Connection: c.Connection, Model: c.Model, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt}
+	return gen.AssistantChat{Id: c.ID, Title: c.Title, Kind: gen.AssistantChatKind(c.Kind), Connection: c.Connection, Model: c.Model,
+		CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt}
 }
 
 // ListAssistantChats lists the chats, newest first.
@@ -132,8 +179,8 @@ func (a *api) ListAssistantChats(ctx context.Context, _ gen.ListAssistantChatsRe
 		return nil, err
 	}
 	out := gen.ListAssistantChats200JSONResponse{Chats: make([]gen.AssistantChat, 0, len(list)), MaxChats: a.cfg.AIMaxChats}
-	for _, ch := range list {
-		out.Chats = append(out.Chats, chatDTO(ch))
+	for i := range list {
+		out.Chats = append(out.Chats, chatDTO(list[i]))
 	}
 	return out, nil
 }
@@ -168,7 +215,7 @@ func (a *api) GetAssistantChat(ctx context.Context, req gen.GetAssistantChatRequ
 	if applied == nil {
 		applied = []string{}
 	}
-	out := gen.GetAssistantChat200JSONResponse{Id: ch.ID, Title: ch.Title, Connection: ch.Connection, Model: ch.Model,
+	out := gen.GetAssistantChat200JSONResponse{Id: ch.ID, Title: ch.Title, Kind: gen.AssistantChatKind(ch.Kind), Connection: ch.Connection, Model: ch.Model,
 		CreatedAt: ch.CreatedAt, UpdatedAt: ch.UpdatedAt, NoTools: ch.NoTools, Turns: turnsOf(msgs), AppliedProposals: applied}
 	return out, nil
 }
@@ -460,7 +507,8 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 		}
 	}
 	b := req.Body
-	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone), AttachmentIDs: deref(b.AttachmentIds)}
+	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone), AttachmentIDs: deref(b.AttachmentIds),
+		TokensPerDay: a.effectiveLimits(ctx, identity(ctx).User).AssistantTokensPerDay}
 	if s := b.Settings; s != nil {
 		r.Connection, r.Model, r.Temperature = deref(s.Connection), deref(s.Model), s.Temperature
 		if s.Mode != nil {

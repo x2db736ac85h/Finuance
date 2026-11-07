@@ -289,7 +289,8 @@ func pick(question string) Call {
 		return Call{Name: "propose_action", Arguments: fmt.Sprintf(`{"action":%q,"payee":%q,"to_category":%q,"reason":"You asked for it"}`, action, m[2], m[3])}
 	}
 	switch {
-	case strings.Contains(q, "by category"):
+	case strings.Contains(q, "by category"), strings.HasPrefix(q, "write my daily digest"), strings.HasPrefix(q, "write my weekly digest"):
+		// a digest (ADR 0033) looks at the spending by category
 		return Call{Name: "aggregate_transactions", Arguments: `{"group_by":"category","type":"expense"}`}
 	case strings.Contains(q, "spelled"):
 		term := "a"

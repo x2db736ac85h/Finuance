@@ -168,6 +168,8 @@ deploy() {
   helm upgrade --install finuance deploy/helm/finuance -n finuance -f "$R/app-values.yaml" --wait --timeout 10m
   timing "app chart installed (migrations, rollout)" $(($(date +%s) - t0))
   wait_for 120 "https://localhost:8443/healthz through Traefik" curl_ca -f "$BASE/healthz"
+  # /healthz is the web pod's; Traefik learns the api's endpoints on its own schedule
+  wait_for 120 "the api through Traefik" curl_ca -f -o /dev/null "$BASE/api/v1/meta"
 }
 
 # run_smoke <base url> <namespace>
@@ -314,6 +316,7 @@ EOF
   fact "restored data" "both markers (before the base backup and in the WAL after it), textlike LEAKPROOF"
   helm upgrade --install finuance deploy/helm/finuance -n finuance-restore -f "$R/restore-app-values.yaml" --wait --timeout 10m
   wait_for 120 "$RESTORE_BASE/healthz" curl_ca -f "$RESTORE_BASE/healthz"
+  wait_for 120 "the restored api through Traefik" curl_ca -f -o /dev/null "$RESTORE_BASE/api/v1/meta"
   # the managed roles set the restore namespace's own passwords, and marker B can sign in
   curl_ca -f -o /dev/null -H "X-Finuance-Client: web" -H "Origin: $RESTORE_BASE" -H "Content-Type: application/json" \
     -d "{\"email\":\"$b\",\"password\":\"marker password b\"}" "$RESTORE_BASE/api/v1/auth/login"
