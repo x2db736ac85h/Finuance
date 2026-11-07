@@ -43,6 +43,8 @@ networkPolicy:
 assistant:
   # Ollama on the host (ADR 0020/0022); its connections file and egress rule come from the overlay.
   enabled: true
+  # Seals the API keys entered in Administration → Assistant (ADR 0035); secrets/README.md
+  instanceKeySecret: finuance-instance-key
 
 # Administration → Developer (docs/admin.md): administrators see the build and these links. Every
 # tool is reached through a port-forward from the machine (none is exposed), so the links point at
