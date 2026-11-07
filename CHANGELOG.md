@@ -6,6 +6,11 @@ notes of their version.
 
 ## [Unreleased]
 
+## [0.4.0]
+
+An assistant that acts with your consent and an undo, receipts by photo, goals, digests, an advice
+library, the assistant in the admin panel, personal access tokens and the `fin` command line.
+
 ### Added
 
 - **The assistant's changes, marked and undoable** (Phase 20): everything applied from an assistant
@@ -44,6 +49,35 @@ notes of their version.
   table, CSV or JSON; release binaries for Linux, macOS and Windows with checksums.
 - **A daily token budget** for the assistant per user, questions and digests together
   (`FINUANCE_AI_TOKENS_PER_DAY`, 200,000 by default; a limit administrators can lower per account).
+
+### Changed
+
+- Nine migrations (00015–00023: assistant changes, auto-apply, goals, attachments, merge
+  dismissals, digests, the advice library, stored connections, access tokens) run with the
+  migrations Job as before; take an on-demand backup first (RUNBOOK "On-demand backup").
+- The worker writes digests, so it now gets the model connections and, in the Helm chart, the
+  egress to the model servers (also in Compose).
+- Bank accounts take typed transactions too (a card payment before the bank's file arrives, or from
+  a receipt); the import that brings the same payment offers to merge them.
+- Helm chart: `assistant.instanceKeySecret` gives the api and the worker `FINUANCE_INSTANCE_KEY`,
+  needed only once connections are added in the admin panel (`tools/seal-secrets.sh <env>
+  instance-key`).
+- A model name the assistant calls as if it were a tool (`set_budget` instead of `propose_action`)
+  is read as the proposal it means; small models did this often.
+- RUNBOOK "Local ports": the Argo CD and Prometheus port-forwards use local ports 18443 and 19090,
+  with the reason for every port-forward's port (another app on 8443, the Compose stack on 9090).
+- The kind rehearsal waits for the api through Traefik before its first api request.
+
+### Security
+
+- Trivy, govulncheck and `npm audit` at every severity before the release, the charts' renders
+  included: nothing new apart from zlib CVE-2026-4738 in a web image built from the local cache
+  (a fresh build, as in the release, upgrades it to 1.4-r0). `golang.org/x/crypto` GO-2026-5932 is
+  still not reachable and stays on the tagged v0.58.0, since its fix is only an untagged commit
+  ([docs/security-scan.md](docs/security-scan.md)).
+- THREAT-MODEL: auto-apply and image injection (T12, T13), photos and decompression bombs (I18,
+  D9), background digests (D5), sealed connection keys and the administrator's instructions (I17,
+  T11), access tokens (S9, E7).
 
 ## [0.3.0]
 

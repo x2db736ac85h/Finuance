@@ -16,6 +16,18 @@ the assistant eval harness (`eval.Run` → `multierr` → zstd decoding): **fixe
 govulncheck 0 reachable, 1 in a required module (GO-2026-5932, no fix, not reachable). The released
 `v0.3.0-rc.2` images carry 1.20.1; `v0.3.0` will carry the fix.
 
+**Release scan before `v0.4.0-rc.1`: 2026-11-07**, on the reference machine, on `main` at `21d991c`;
+images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`, and
+Trivy over the charts' renders at every severity (Phase 20 changed the templates: the worker's
+connections and egress, the instance key). Web image **0 findings when built fresh**: a build from
+the local Docker cache still had zlib 1.3.2-r1 (CVE-2026-4738, MEDIUM, fixed in 1.4-r0), because the
+Dockerfile's `apk upgrade` only runs when its layer is built again; the release builds without a
+cache, so its image has 1.4-r0. api image and repository: GO-2026-5932 (`x/crypto/openpgp`, not
+imported; govulncheck 0 reachable) now lists a fix, but only as an untagged commit
+(`v0.58.1-0.20261009181718-2f1f834330b2`), so `x/crypto` stays on the tagged v0.58.0 until a release
+carries it. `npm audit --omit=dev` 0; `minimatch` (MEDIUM, development tools only) still open; no
+secrets; misconfigurations in the repository and in the renders only the ones documented below.
+
 **Release scan before `v0.3.0-rc.1`: 2026-11-04**, on the reference machine, on `main` at `9ae8f60`;
 images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`.
 Unchanged since v0.2.0 (no dependency changes in Phase 19): web image 0 findings; api image and
