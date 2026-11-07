@@ -41,6 +41,8 @@ type Client struct {
 type Identity struct {
 	User      User
 	TokenHash [32]byte // the current session; needed to keep it when revoking the others
+	// Token is set when the request came with a personal access token instead of a session.
+	Token *TokenAccess
 }
 
 // SessionInfo is one entry of the user's session list.
@@ -182,6 +184,10 @@ func (s *Service) CleanupExpiredSessions(ctx context.Context) (int64, error) {
 	var n int64
 	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) (err error) {
 		n, err = q.DeleteExpiredSessions(ctx, db.DeleteExpiredSessionsParams{Now: now, IdleCutoff: now.Add(-s.cfg.SessionIdleTTL)})
+		if err != nil {
+			return err
+		}
+		_, err = q.DeleteOldAccessTokens(ctx, now.Add(-tokenKeepDays*24*time.Hour))
 		return err
 	})
 	return n, err

@@ -1220,6 +1220,12 @@ textarea.inp.ins-note {
   font-size: 0.875rem;
   letter-spacing: 0.04em;
 }
+/* Settings → Access tokens: the new token, shown once */
+.token-secret {
+  font: 0.75rem var(--mono);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
 .adm-limits {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));

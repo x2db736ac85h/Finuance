@@ -14,10 +14,10 @@
     {
       "group": "Observability",
       "name": "Prometheus",
-      "url": "http://localhost:9090",
-      "note": "Targets, rules and queries. No sign-in; reachable only through the port-forward.",
+      "url": "http://localhost:19090",
+      "note": "Targets, rules and queries. No sign-in; reachable only through the port-forward. Local port 19090, not the usual 9090, because a Compose stack of Finuance on the same machine publishes the api's metrics on 127.0.0.1:9090 (docs/RUNBOOK.md, Local ports).",
       "commands": [
-        "kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090"
+        "kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 19090:9090"
       ]
     },
     {
@@ -32,10 +32,10 @@
     {
       "group": "Deployment",
       "name": "Argo CD",
-      "url": "https://localhost:8443",
-      "note": "User admin with the password chosen at the bootstrap (the initial secret is deleted; keep it in your password manager). The certificate is self-signed.",
+      "url": "https://localhost:18443",
+      "note": "User admin with the password chosen at the bootstrap (the initial secret is deleted; keep it in your password manager). The certificate is self-signed. Local port 18443, not the usual 8443, which another app on a Tailscale machine often holds (docs/RUNBOOK.md, Local ports).",
       "commands": [
-        "kubectl -n argocd port-forward svc/argocd-server 8443:443"
+        "kubectl -n argocd port-forward svc/argocd-server 18443:443"
       ]
     },
     {

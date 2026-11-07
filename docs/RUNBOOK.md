@@ -20,6 +20,22 @@ Traffic goes Traefik → Ingress: `/api/` → api:8080 and `/` → web:8080. Net
 
 Database logins are two CloudNativePG managed roles: `finuance_owner` (owns the schema, runs migrations) and `finuance_app` (api and worker, subject to row-level security). Their passwords live in the basic-auth secrets `finuance-db-owner` and `finuance-db-app`. The pods get them as `PGPASSWORD`, so database URLs never contain a password.
 
+## Local ports
+
+Only the ingress is exposed. Argo CD, Grafana, Prometheus and Alertmanager are reached from the machine with `kubectl port-forward`, which listens on the loopback addresses `127.0.0.1` and `[::1]`. The machine you run it on usually has other things on loopback too: Finuance's own Compose stack (`make up`), another app. So the local ports below are chosen not to meet them, and the same commands and links are in the app under Administration → Developer (`developer.links` in [`deploy/environments/homelab/values.yaml`](../deploy/environments/homelab/values.yaml)).
+
+| UI | Port-forward | Open | Why this port |
+|---|---|---|---|
+| Argo CD | `kubectl -n argocd port-forward svc/argocd-server 18443:443` | https://localhost:18443 | Not the usual 8443. 8443 is the common second HTTPS port on a Tailscale machine, because Tailscale Funnel accepts only 443, 8443 and 10000. When another app holds 8443 on the tailnet address through Tailscale Serve, anything that binds 8443 on every address fails. |
+| Prometheus | `kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 19090:9090` | http://localhost:19090 | Not Prometheus's usual 9090. The Compose stack publishes the api's admin port (metrics, pprof) on `127.0.0.1:9090`, the reason its own Prometheus (`make up-observability`) is on 9095. |
+| Grafana | `kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80` | http://localhost:3000 | Grafana's usual port. `make up-observability` uses it too, so run one of the two at a time. |
+| Alertmanager | `kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093` | http://localhost:9093 | Alertmanager's usual port; nothing else here uses it. |
+| api and worker of a drill | `tools/homelab-drill.sh` and `scripts/smoke-k8s.sh` forward 18081 and 19091 | — | The Compose stack holds 8080 (api) and 9091 (worker metrics). The restore drill by hand ([Restore drill](#restore-drill-scratch-namespace)) still uses 8080 and 9091: stop the Compose stack first. |
+
+**Why a clash is easy to miss.** `kubectl port-forward` tries both loopback addresses and **keeps going with one if the other is taken**, printing a warning once. With the Compose stack up, `port-forward … 9090:9090` got only `[::1]:9090`. `http://localhost:9090` then showed Prometheus in a browser that tries IPv6 first, `http://127.0.0.1:9090` showed the api's raw metrics, and a second port-forward failed with "unable to listen on any of the requested ports". Before choosing a port, check it with `ss -ltn 'sport = :9090'`. Traefik's host ports (80 and 443 on k3s) are NAT rules, not sockets, so `ss` doesn't list them. Don't give Tailscale Serve port 443 on such a machine: Traefik takes that traffic first.
+
+These are only local ports. Prometheus and Alertmanager link to each other by their service names in the cluster (`--web.external-url`), so moving a local port changes no link in an alert or an e-mail.
+
 ## Prerequisites
 
 - Kubernetes ≥ 1.30 (k3s is fine), `kubectl` access as cluster admin.
@@ -195,9 +211,11 @@ helm upgrade --install argocd argo/argo-cd --version 10.11.6 -n argocd --create-
 The UI and API are not exposed; reach them from the machine only:
 
 ```sh
-kubectl -n argocd port-forward svc/argocd-server 8443:443        # https://localhost:8443, user admin
+kubectl -n argocd port-forward svc/argocd-server 18443:443      # https://localhost:18443, user admin
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
 ```
+
+The local port is 18443, not the usual 8443 ([Local ports](#local-ports) says why).
 
 Change the admin password in the UI (*User Info → Update password*) and then delete `argocd-initial-admin-secret` (Argo CD's advice; it is only read once).
 
@@ -369,9 +387,11 @@ After the push the three apps sync by themselves (about 8 minutes on the referen
 ```sh
 kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d; echo
 kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
-kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090      # targets, rules
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 19090:9090     # targets, rules
 kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093    # alerts, silences
 ```
+
+Prometheus is on local port 19090 and Argo CD on 18443, not their usual ports: see [Local ports](#local-ports).
 
 **Test alert** (an e-mail now and a *resolved* one after about 5 minutes; Alertmanager's `alertmanager_notifications_total{integration="email"}` counts the sent ones, `…_failed_total` the failures by reason):
 

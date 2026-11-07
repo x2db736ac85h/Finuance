@@ -233,6 +233,9 @@ func (s *Service) UpdateUser(ctx context.Context, actor, id uuid.UUID, in Update
 				if _, err := q.DeleteUserSessions(ctx, db.DeleteUserSessionsParams{UserID: id, KeepTokenHash: []byte{}}); err != nil {
 					return err
 				}
+				if _, err := q.RevokeUserAccessTokens(ctx, db.RevokeUserAccessTokensParams{UserID: id, Now: now}); err != nil {
+					return err
+				}
 			}
 			if _, err := q.SetUserDisabled(ctx, db.SetUserDisabledParams{ID: id, DisabledAt: at}); err != nil {
 				return err
@@ -274,6 +277,9 @@ func (s *Service) ResetPassword(ctx context.Context, id uuid.UUID) (string, erro
 		if err := q.SetUserPasswordMustChange(ctx, db.SetUserPasswordMustChangeParams{ID: id, PasswordHash: phc}); err != nil {
 			return err
 		}
+		if _, err := q.RevokeUserAccessTokens(ctx, db.RevokeUserAccessTokensParams{UserID: id, Now: s.clock.Now()}); err != nil {
+			return err
+		}
 		_, err := q.DeleteUserSessions(ctx, db.DeleteUserSessionsParams{UserID: id, KeepTokenHash: []byte{}})
 		return err
 	})
@@ -288,6 +294,9 @@ func (s *Service) RevokeSessions(ctx context.Context, id uuid.UUID) (int64, erro
 	var n int64
 	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		if _, err := q.GetUser(ctx, id); err != nil {
+			return err
+		}
+		if _, err := q.RevokeUserAccessTokens(ctx, db.RevokeUserAccessTokensParams{UserID: id, Now: s.clock.Now()}); err != nil {
 			return err
 		}
 		var err error

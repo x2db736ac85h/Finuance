@@ -147,6 +147,17 @@ func TestQuestionsFile(t *testing.T) {
 	}
 }
 
+// TestSetupSharedTrip: the eval setup's shared trip has Bo and the cinema of 28 January, so the
+// split questions can be answered.
+func TestSetupSharedTrip(t *testing.T) {
+	st, u := demoUser(t)
+	out, err := assistant.NewTools(query.New(st)).Run(context.Background(), u, assistant.Scope{MaxRows: 50}, assistant.ToolPropose,
+		`{"action":"split_expense","shared_group":"Wyjazd do Pragi","payee":"kino","split_mode":"shares","members":[{"name":"me","share":2},{"name":"Bo","share":1}]}`)
+	if err != nil || out.Proposal == nil || out.Proposal.Date != "2025-01-28" {
+		t.Fatalf("split proposal = %+v %v (%s)", out.Proposal, err, out.JSON)
+	}
+}
+
 // TestRunWithMock runs two questions through the real run loop against scripted mock answers:
 // one right, one wrong.
 func TestRunWithMock(t *testing.T) {

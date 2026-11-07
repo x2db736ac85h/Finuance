@@ -40,7 +40,13 @@ func TestNoDatabaseAccessOutsideStore(t *testing.T) {
 			}
 			rel, _ := filepath.Rel(root, path)
 			if d.IsDir() {
-				if rel == filepath.Join("internal", "store") || strings.HasSuffix(rel, filepath.Join("httpapi", "gen")) {
+				if rel == filepath.Join("internal", "store") {
+					return filepath.SkipDir
+				}
+				// the generated HTTP server and client (url.Values.Query() isn't SQL): skipped, as long
+				// as they import no database package
+				if strings.HasSuffix(rel, filepath.Join("httpapi", "gen")) || strings.HasSuffix(rel, filepath.Join("client", "gen")) {
+					noDatabaseImports(t, path)
 					return filepath.SkipDir
 				}
 				return nil
@@ -117,5 +123,26 @@ func f() {
 	want := []string{"Query at line 3", "Exec at line 4", "db.New at line 5", "BeginFunc at line 6"}
 	if strings.Join(got, ";") != strings.Join(want, ";") {
 		t.Errorf("dbCalls = %v, want %v", got, want)
+	}
+}
+
+// noDatabaseImports fails when a Go file in dir imports pgx or database/sql.
+func noDatabaseImports(t *testing.T, dir string) {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("%s: no Go files (%v)", dir, err)
+	}
+	for _, f := range files {
+		file, err := parser.ParseFile(token.NewFileSet(), f, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, imp := range file.Imports {
+			p, _ := strconv.Unquote(imp.Path.Value)
+			if strings.HasPrefix(p, "github.com/jackc/pgx") || p == "database/sql" {
+				t.Errorf("%s imports %s: generated HTTP code must not reach the database", f, p)
+			}
+		}
 	}
 }

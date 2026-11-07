@@ -14,6 +14,7 @@ import { FriendsSettings } from './Friends';
 import { ProfileSettings } from './Profile';
 import { SECTIONS, type SectionId } from './sections';
 import { SessionsSettings } from './Sessions';
+import { TokensSettings } from './Tokens';
 
 const BODY: Record<SectionId, () => React.JSX.Element> = {
   appearance: () => (
@@ -24,6 +25,7 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
   ),
   profile: ProfileSettings,
   sessions: SessionsSettings,
+  tokens: TokensSettings,
   activity: ActivitySettings,
   friends: FriendsSettings,
   categories: CategoriesSettings,

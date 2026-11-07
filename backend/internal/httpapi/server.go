@@ -146,7 +146,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 		// Per matched route; the last one runs first: CSRF → session → request validation → handler.
 		Middlewares: []gen.MiddlewareFunc{
 			validator,
-			requireSession(d.Auth, d.Admin, prod),
+			requireSession(d.Auth, d.Admin, prod, mw.NewLimiter(TokenRate, clock, 0)),
 			gen.MiddlewareFunc(mw.CSRF(d.Config.PublicOrigin, func(w http.ResponseWriter, r *http.Request, err error) {
 				WriteProblem(w, r, fmt.Errorf("%w: %w", platform.ErrForbidden, err), prod)
 			})),

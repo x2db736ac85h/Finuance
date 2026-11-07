@@ -374,6 +374,10 @@ func (s *Service) setPassword(ctx context.Context, userID uuid.UUID, password st
 				return err
 			}
 		}
+		// a new password ends every session and every access token (ADR 0036)
+		if _, err := q.RevokeUserAccessTokens(ctx, db.RevokeUserAccessTokensParams{UserID: userID, Now: s.clock.Now()}); err != nil {
+			return err
+		}
 		if _, err := q.DeleteUserSessions(ctx, db.DeleteUserSessionsParams{UserID: userID, KeepTokenHash: []byte{}}); err != nil {
 			return err
 		}

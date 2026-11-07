@@ -1,7 +1,8 @@
 # Argo CD for the homelab (Phase 18, ADR 0022): chart argo/argo-cd 10.11.6 (Argo CD v3.5.6).
 # helm upgrade --install argocd argo/argo-cd --version 10.11.6 -n argocd --create-namespace \
 #   -f deploy/environments/homelab/argocd-values.yaml --wait   (docs/RUNBOOK.md "Bootstrap on single-node k3s")
-# The UI is not exposed: `kubectl -n argocd port-forward svc/argocd-server 8443:443`.
+# The UI is not exposed: `kubectl -n argocd port-forward svc/argocd-server 18443:443` (not 8443: RUNBOOK
+# "Local ports").
 
 # no SSO: the built-in admin is the only user (single-person homelab)
 dex:
