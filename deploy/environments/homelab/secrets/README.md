@@ -17,4 +17,4 @@ The files are created in Phase 18, the homelab rollout; until then this folder i
 | `finuance-db-backup.sealed.yaml` | `finuance-db-backup` | `ACCESS_KEY_ID`, `ACCESS_SECRET_KEY` | Barman Cloud plugin (object store) |
 | `ghcr-pull.sealed.yaml` | `ghcr-pull` (dockerconfigjson) | `.dockerconfigjson` (a `read:packages` token) | every pod (`imagePullSecrets`) |
 | `finuance-assistant.sealed.yaml` (optional) | `finuance-assistant` | the `apiKeyEnv` names of the connections file | api (cloud model connections) |
-| `finuance-instance-key.sealed.yaml` (optional) | `finuance-instance-key` | `FINUANCE_INSTANCE_KEY` | api and worker (API keys entered in Administration → Assistant, ADR 0035) |
+| `finuance-instance-key.sealed.yaml` (sealed 2026-11-07) | `finuance-instance-key` | `FINUANCE_INSTANCE_KEY` | api and worker (API keys entered in Administration → Assistant, ADR 0035) |
