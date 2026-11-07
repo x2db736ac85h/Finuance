@@ -74,7 +74,6 @@ function InstructionsForm({ doc }: { doc: InstanceSettings }) {
         </span>
         <Button
           variant="primary"
-          size="sm"
           disabled={put.isPending || text === (doc.assistant?.instructions ?? '')}
           onClick={() => {
             void put.mutateAsync({ ...doc, assistant: { instructions: text.trim() } }).then(
@@ -130,7 +129,6 @@ function Library({ editing, onEdit }: { editing: string | null; onEdit: (id: str
       </ul>
       <div className="set-actions">
         <Button
-          size="sm"
           disabled={starter.isPending}
           onClick={() => {
             starter.mutate(undefined, {
@@ -151,7 +149,6 @@ function Library({ editing, onEdit }: { editing: string | null; onEdit: (id: str
         </Button>
         <Button
           variant="primary"
-          size="sm"
           onClick={() => {
             onEdit('new');
           }}
@@ -246,7 +243,7 @@ function ArticleForm({ article, onDone }: { article: AdviceArticle | undefined; 
           }}
         />
       </label>
-      <div className="set-actions adm-toolbar">
+      <div className="form-row">
         <label className="st-col">
           Address (slug)
           <TextInput
@@ -292,10 +289,9 @@ function ArticleForm({ article, onDone }: { article: AdviceArticle | undefined; 
           }}
         />
       </label>
-      <div className="set-actions">
+      <div className="set-actions adm-toolbar">
         <span className="lbl">Text (markdown)</span>
         <Button
-          size="sm"
           onClick={() => {
             setPreview(!preview);
           }}
@@ -323,7 +319,6 @@ function ArticleForm({ article, onDone }: { article: AdviceArticle | undefined; 
         {article && (
           <Button
             variant="danger"
-            size="sm"
             disabled={busy}
             onClick={() => {
               del.mutate(article.id, {
@@ -339,14 +334,13 @@ function ArticleForm({ article, onDone }: { article: AdviceArticle | undefined; 
           </Button>
         )}
         <Button
-          size="sm"
           onClick={() => {
             onDone(null);
           }}
         >
           Cancel
         </Button>
-        <Button type="submit" variant="primary" size="sm" disabled={busy || !a.title.trim()}>
+        <Button type="submit" variant="primary" disabled={busy || !a.title.trim()}>
           Save
         </Button>
       </div>

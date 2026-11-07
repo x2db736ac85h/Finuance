@@ -96,7 +96,7 @@ export function SettleDialog({ detail, onClose }: SettleProps) {
           submit();
         }}
       >
-        <div className="cash-row">
+        <div className="form-row">
           <label className="st-col">
             Paid by
             <Select value={from} options={options} onChange={setFrom} />
@@ -106,7 +106,7 @@ export function SettleDialog({ detail, onClose }: SettleProps) {
             <Select value={to} options={options} onChange={setTo} />
           </label>
         </div>
-        <div className="cash-row">
+        <div className="form-row">
           <label className="st-col">
             Amount ({cur})
             <TextInput
@@ -231,7 +231,7 @@ export function ShareDialog({ from, onClose }: ShareProps) {
             never your accounts or the bank's description. New transactions you put in the group are shared too.
           </p>
         )}
-        <div className="cash-row">
+        <div className="form-row">
           <label className="st-col">
             Name
             <TextInput
@@ -340,7 +340,7 @@ export function GroupSettingsDialog({ group, onClose }: { group: SharedGroup; on
           submit();
         }}
       >
-        <div className="cash-row">
+        <div className="form-row">
           <label className="st-col">
             Name
             <TextInput
@@ -356,7 +356,7 @@ export function GroupSettingsDialog({ group, onClose }: { group: SharedGroup; on
             <Select value={kind} options={KINDS} onChange={setKind} />
           </label>
         </div>
-        <div className="cash-row">
+        <div className="form-row">
           <label className="st-col">
             From
             <TextInput

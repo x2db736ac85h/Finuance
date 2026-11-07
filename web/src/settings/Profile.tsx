@@ -59,7 +59,7 @@ function NameForm() {
         <span className="set-err" role="alert">
           {error}
         </span>
-        <Button type="submit" variant="primary" size="sm" disabled={unchanged || update.isPending}>
+        <Button type="submit" variant="primary" disabled={unchanged || update.isPending}>
           Save name
         </Button>
       </div>
@@ -148,7 +148,7 @@ function PasswordForm() {
         <span className="set-err" role="alert">
           {error}
         </span>
-        <Button type="submit" variant="primary" size="sm" disabled={!current || !next || change.isPending}>
+        <Button type="submit" variant="primary" disabled={!current || !next || change.isPending}>
           Change password
         </Button>
       </div>

@@ -68,7 +68,7 @@ describe('administration', () => {
     const adminNav = await screen.findByRole('navigation', { name: 'Administration' });
     await user.click(within(adminNav).getByRole('link', { name: 'Settings' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/settings/appearance');
+      expect(router.state.location.pathname).toBe('/settings/general');
     });
   });
 
@@ -502,6 +502,15 @@ describe('administration', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Add a connection' }));
     const form = await screen.findByRole('form', { name: 'Connection' });
+    // nothing for the browser to fill in: it put the account's e-mail into Models offered and a saved
+    // password into the API key (found at the Phase 20 gate)
+    expect(form.getAttribute('autocomplete')).toBe('off');
+    expect(
+      within(form)
+        .getByLabelText(/^API key/)
+        .getAttribute('autocomplete'),
+    ).toBe('new-password');
+    for (const box of within(form).getAllByRole('textbox')) expect(box.getAttribute('autocomplete')).toBe('off');
     fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'gpu' } });
     fireEvent.change(within(form).getByLabelText('Label'), { target: { value: 'GPU box' } });
     fireEvent.change(within(form).getByLabelText('Address'), { target: { value: 'http://10.0.0.9:11434/v1' } });

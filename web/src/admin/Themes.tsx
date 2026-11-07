@@ -117,7 +117,7 @@ function NewTheme({ onCreated }: { onCreated: (id: string) => void }) {
     >
       <div className="lbl">New theme</div>
       <p className="hint">Start from a built-in theme and change its colours. Users only see it once you approve it.</p>
-      <div className="set-actions adm-toolbar">
+      <div className="form-row">
         <label className="st-col">
           Start from
           <Select
@@ -136,7 +136,7 @@ function NewTheme({ onCreated }: { onCreated: (id: string) => void }) {
             }}
           />
         </label>
-        <Button type="submit" variant="primary" size="sm" disabled={!slugOf(name) || create.isPending}>
+        <Button type="submit" variant="primary" disabled={!slugOf(name) || create.isPending}>
           Create draft
         </Button>
       </div>
@@ -369,12 +369,11 @@ function ThemeEditor({ theme }: { theme: AdminTheme }) {
         </table>
       )}
       <div className="set-actions">
-        <Button size="sm" disabled={!dirty || !valid || update.isPending} onClick={save}>
+        <Button disabled={!dirty || !valid || update.isPending} onClick={save}>
           Save
         </Button>
         {theme.status !== 'approved' && (
           <Button
-            size="sm"
             variant="primary"
             disabled={dirty || failing.length > 0 || !valid || status.isPending}
             title={dirty ? 'Save first' : failing.length > 0 ? 'Fix the colour pairs below 4.5:1 first' : undefined}

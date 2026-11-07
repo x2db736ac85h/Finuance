@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 
-import type { UiScalePref } from '../styles/scale';
+import type { SizeStep, UiScalePref } from '../styles/scale';
 import type { ThemePref } from '../styles/theme';
 import {
   CARD_KEYS,
@@ -27,6 +27,8 @@ export type UiState = {
   /** Colour theme id ('' = the instance's default). */
   themeId: string;
   uiScalePref: UiScalePref;
+  /** The size slider's step around the auto size (used while uiScalePref is auto). */
+  uiStep: SizeStep;
   mode: Mode;
   /** The user's choice (persisted as sbOpen). Hidden by default (v7). */
   sidebarOpen: boolean;
@@ -47,6 +49,8 @@ export type UiState = {
   setTheme: (t: ThemePref) => void;
   setThemeId: (id: string) => void;
   setUiScale: (s: UiScalePref) => void;
+  /** The size slider: auto, moved by a step (replaces a fixed size from older documents). */
+  setUiStep: (step: SizeStep) => void;
   /** The title-bar toggle: shows or hides the sidebar and forgets any auto-collapse. */
   toggleSidebar: () => void;
   /** Called when the window crosses NARROW_PX (legacy resize handler). */
@@ -73,6 +77,7 @@ export const uiDefaults = {
   themePref: 'system',
   themeId: '',
   uiScalePref: 'auto',
+  uiStep: 0,
   mode: 'table',
   sidebarOpen: false,
   sidebarAutoCollapsed: false,
@@ -98,6 +103,9 @@ export const useUi = create<UiState>()((set) => ({
   },
   setUiScale: (uiScalePref) => {
     set({ uiScalePref });
+  },
+  setUiStep: (uiStep) => {
+    set({ uiScalePref: 'auto', uiStep });
   },
   toggleSidebar: () => {
     set((s) => {
@@ -154,6 +162,7 @@ export const useUi = create<UiState>()((set) => ({
       themePref: p.theme ?? s.themePref,
       themeId: p.themeId ?? s.themeId,
       uiScalePref: p.ui ?? s.uiScalePref,
+      uiStep: p.uiStep ?? s.uiStep,
       mode: p.mode ?? s.mode,
       sidebarOpen: p.sbOpen ?? s.sidebarOpen,
       // legacy applyPrefs: a saved open sidebar on a narrow window starts auto-collapsed
@@ -177,6 +186,7 @@ export function collectUi(s: UiState): Omit<PrefsDoc, 'v' | 'views'> {
     theme: s.themePref,
     themeId: s.themeId,
     ui: s.uiScalePref,
+    uiStep: s.uiStep,
     vizH: s.paneHeight,
     noViz: !s.vizOpen,
     mode: s.mode,

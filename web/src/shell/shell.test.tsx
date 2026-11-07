@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -96,6 +96,76 @@ describe('shell', () => {
     expect(db.puts[0]?.version).toBe(1);
   });
 
+  it('keeps the quick settings to looks, the shortcuts and All settings', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Settings' }));
+    const pop = screen.getByRole('dialog', { name: 'Quick settings' });
+    // the theme as one button, Mode and the size slider; no import option, account pages or sign-out
+    expect(
+      within(pop)
+        .getByRole('button', { name: /Indigo/ })
+        .getAttribute('aria-expanded'),
+    ).toBe('false');
+    expect(within(pop).queryByRole('radiogroup')).toBeNull();
+    expect(within(pop).getByRole('slider', { name: 'Interface size' })).toBeTruthy();
+    expect(within(pop).queryByRole('checkbox')).toBeNull();
+    expect(within(pop).queryByRole('menuitem')).toBeNull();
+    expect(within(pop).queryByRole('button', { name: 'Sign out' })).toBeNull();
+    await user.click(within(pop).getByRole('button', { name: 'All settings' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/settings/general');
+    });
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Quick settings' })).getByRole('button', {
+        name: /Keyboard shortcuts/,
+      }),
+    );
+    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeTruthy();
+  });
+
+  it('unfolds the other themes from the quick settings and picks one', async () => {
+    const user = userEvent.setup();
+    renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Settings' }));
+    const pop = screen.getByRole('dialog', { name: 'Quick settings' });
+    await user.click(within(pop).getByRole('button', { name: /Indigo/ }));
+    const group = within(pop).getByRole('radiogroup', { name: 'Colour theme' });
+    await user.click(within(group).getByRole('radio', { name: /Fjord/ }));
+    expect(document.documentElement.dataset['themeId']).toBe('fjord');
+    // folded again, now showing the new theme
+    expect(within(pop).queryByRole('radiogroup')).toBeNull();
+    expect(within(pop).getByRole('button', { name: /Fjord/ })).toBeTruthy();
+    await waitFor(
+      () => {
+        expect(db.puts.at(-1)?.prefs).toMatchObject({ themeId: 'fjord' });
+      },
+      { timeout: 2000 },
+    );
+  });
+
+  it('sizes the interface with the slider: Auto in the middle, steps to each side', async () => {
+    const user = userEvent.setup();
+    renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Settings' }));
+    const slider = within(screen.getByRole('dialog', { name: 'Quick settings' })).getByRole('slider', {
+      name: 'Interface size',
+    });
+    expect((slider as HTMLInputElement).value).toBe('0');
+    expect(slider.getAttribute('aria-valuetext')).toMatch(/^Auto · /);
+    fireEvent.change(slider, { target: { value: '1' } });
+    await waitFor(() => {
+      expect(slider.getAttribute('aria-valuetext')).toMatch(/^Larger · /);
+    });
+    await waitFor(
+      () => {
+        expect(db.puts.at(-1)?.prefs).toMatchObject({ ui: 'auto', uiStep: 1 });
+      },
+      { timeout: 2000 },
+    );
+  });
+
   it('opens the keyboard shortcuts with ? and closes them with Esc', async () => {
     const user = userEvent.setup();
     renderApp('/');
@@ -167,6 +237,24 @@ describe('shell', () => {
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('heading', { name: 'Profile' })).toBeTruthy();
     expect(router.state.location.pathname).toBe('/settings/profile');
+  });
+
+  it('the account menu has who is signed in, Profile and Sign out, nothing else', async () => {
+    db.user.isAdmin = true;
+    const user = userEvent.setup();
+    const { router } = renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Account menu' }));
+    const menu = screen.getByRole('menu', { name: 'Account' });
+    expect(within(menu).getByText(db.user.email)).toBeTruthy();
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((m) => m.textContent),
+    ).toEqual(['Profile', 'Sign out']);
+    await user.click(within(menu).getByRole('menuitem', { name: 'Profile' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/settings/profile');
+    });
   });
 
   it('signs out from the account menu', async () => {
@@ -250,11 +338,10 @@ describe('sidebar import history', () => {
 });
 
 describe('import settings', () => {
-  it('turns the fast path off and saves it', async () => {
+  it('turns the fast path off on Settings → General and saves it', async () => {
     const user = userEvent.setup();
-    renderApp('/');
-    await user.click(await screen.findByRole('button', { name: 'Settings' }));
-    const box = screen.getByRole('checkbox', { name: 'Import known layouts without review' });
+    renderApp('/settings/general');
+    const box = await screen.findByRole('checkbox', { name: 'Import known layouts without review' });
     expect((box as HTMLInputElement).checked).toBe(true);
     await user.click(box);
     await waitFor(

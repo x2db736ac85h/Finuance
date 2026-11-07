@@ -43,6 +43,16 @@ describe('sidebar', () => {
   });
 });
 
+describe('interface size', () => {
+  it('the slider replaces a fixed size from an older document with auto and a step', () => {
+    ui().hydrate({ ui: 1.2 }, false);
+    expect(ui().uiStep).toBe(0);
+    ui().setUiStep(-1);
+    expect(ui().uiScalePref).toBe('auto');
+    expect(ui().uiStep).toBe(-1);
+  });
+});
+
 describe('hydrate', () => {
   it('applies stored values and keeps defaults for missing ones', () => {
     ui().hydrate({ theme: 'light', ui: 1.2, sbOpen: true, noViz: true, cfg: { payeeTop: 10 } }, false);
@@ -63,9 +73,19 @@ describe('hydrate', () => {
   });
 
   it('round-trips through collectUi', () => {
-    ui().hydrate({ theme: 'dark', ui: 'auto', mode: 'ov', cardOrder: ['heat'], importFastPath: false }, false);
+    ui().hydrate(
+      { theme: 'dark', ui: 'auto', uiStep: 1, mode: 'ov', cardOrder: ['heat'], importFastPath: false },
+      false,
+    );
     const doc = collectUi(ui());
-    expect(doc).toMatchObject({ theme: 'dark', ui: 'auto', mode: 'ov', cardOrder: ['heat'], importFastPath: false });
+    expect(doc).toMatchObject({
+      theme: 'dark',
+      ui: 'auto',
+      uiStep: 1,
+      mode: 'ov',
+      cardOrder: ['heat'],
+      importFastPath: false,
+    });
     expect(doc).not.toHaveProperty('keysOpen');
     expect(doc).not.toHaveProperty('sidebarAutoCollapsed');
   });

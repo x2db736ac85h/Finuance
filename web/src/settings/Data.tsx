@@ -65,7 +65,6 @@ export function DataSettings() {
             }}
           />
           <Button
-            size="sm"
             icon="upload"
             onClick={() => {
               picker.current?.click();
@@ -107,7 +106,6 @@ export function DataSettings() {
         <div className="set-actions">
           <Button
             variant="danger"
-            size="sm"
             onClick={() => {
               setConfirming(true);
             }}

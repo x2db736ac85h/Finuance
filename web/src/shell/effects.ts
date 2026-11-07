@@ -16,6 +16,7 @@ export function useAppearance(): void {
   const themePref = useUi((s) => s.themePref);
   const themeId = useUi((s) => s.themeId);
   const scalePref = useUi((s) => s.uiScalePref);
+  const step = useUi((s) => s.uiStep);
   const meta = useMeta().data;
   const look = useMemo(
     () => resolveLook(themeId, meta?.themes ?? [], meta?.defaults.themeId),
@@ -23,14 +24,14 @@ export function useAppearance(): void {
   );
   useEffect(() => watchTheme(themePref, document.documentElement, look), [themePref, look]);
   useEffect(() => {
-    applyScale(scalePref);
+    applyScale(scalePref, undefined, step);
     if (scalePref !== 'auto') return;
-    const onResize = () => applyScale(scalePref);
+    const onResize = () => applyScale(scalePref, undefined, step);
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
     };
-  }, [scalePref]);
+  }, [scalePref, step]);
 }
 
 /** Legacy resize handler: collapse the sidebar below 900 px, restore it when the window widens. */

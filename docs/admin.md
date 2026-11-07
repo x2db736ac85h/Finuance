@@ -29,8 +29,9 @@ demoted, disabled or deleted.
 
 ## The panel
 
-Administrators find **Administration** in the account menu (the initial in the top-right corner)
-and at the end of the Settings list. Everyone else gets `404` from its routes.
+Administrators find **Administration** at the end of the Settings list (⚙ → *All settings*); the
+account menu (the initial in the top-right corner) has only Profile and Sign out. Everyone else gets
+`404` from its routes.
 
 ### Users
 

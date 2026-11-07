@@ -132,12 +132,12 @@ describe('settings', () => {
     expect(password).toBe('my password 123');
   });
 
-  it('sends unknown sections to appearance', async () => {
+  it('sends unknown sections to General, where the import setting lives', async () => {
     const { router } = renderApp('/settings/nope');
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/settings/appearance');
+      expect(router.state.location.pathname).toBe('/settings/general');
     });
-    expect(await screen.findByRole('button', { name: 'System' })).toBeTruthy();
+    expect(await screen.findByRole('checkbox', { name: 'Import known layouts without review' })).toBeTruthy();
   });
 });
 

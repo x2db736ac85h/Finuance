@@ -64,7 +64,7 @@ export function TokensSettings() {
           <code>Authorization: Bearer fin_…</code>. A read-only token can look things up; neither kind can sign in,
           change the password, or reach Administration. A new password ends every token.
         </p>
-        <div className="set-actions adm-toolbar">
+        <div className="form-row">
           <label className="st-col">
             Name
             <TextInput
@@ -84,7 +84,7 @@ export function TokensSettings() {
             Valid for
             <Select value={days} options={LIFETIMES} onChange={setDays} />
           </label>
-          <Button type="submit" variant="primary" size="sm" disabled={!name.trim() || create.isPending}>
+          <Button type="submit" variant="primary" disabled={!name.trim() || create.isPending}>
             Make a token
           </Button>
         </div>

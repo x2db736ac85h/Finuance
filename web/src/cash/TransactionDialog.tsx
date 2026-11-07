@@ -167,7 +167,7 @@ function Form({
             </label>
           ))}
         </div>
-        <div className="cash-row">
+        <div className="form-row">
           {field(
             `Amount (${dialog.currency})`,
             <TextInput
@@ -212,7 +212,7 @@ function Form({
             }}
           />,
         )}
-        <div className="cash-row">
+        <div className="form-row">
           {field(
             'Category',
             <TextInput

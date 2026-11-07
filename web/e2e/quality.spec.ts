@@ -15,8 +15,14 @@ test('settings: appearance, profile, sessions, data export', async ({ page }) =>
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Dark', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.getByLabel('Interface size').selectOption('1.2');
-  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe('19.2px');
+  // the size slider: Auto in the middle; one step larger is 10 % above the auto size (1.12 at a
+  // device pixel ratio of 1, so 1.23 → 19.68 px)
+  const size = page.getByRole('slider', { name: 'Interface size' });
+  await expect(size).toHaveAttribute('aria-valuetext', /^Auto · /);
+  await size.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(size).toHaveAttribute('aria-valuetext', /^Larger · 123/);
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe('19.68px');
 
   await page.goto('/settings/profile');
   await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Alex');

@@ -140,7 +140,7 @@ export function ExpenseDialog({ detail, expense, onClose }: Props) {
             how it is split.
           </p>
         )}
-        <div className="cash-row">
+        <div className="form-row">
           {field(
             `Amount (${cur})`,
             <TextInput
@@ -179,7 +179,7 @@ export function ExpenseDialog({ detail, expense, onClose }: Props) {
             }}
           />,
         )}
-        <div className="cash-row">
+        <div className="form-row">
           {field(
             'Category',
             <TextInput

@@ -63,7 +63,7 @@ A Vite + React + TypeScript single-page app that recreates the legacy `finuance.
 | `api/` | `openapi-fetch` client typed from `api/openapi.yaml` (`schema.d.ts` is generated). Errors become `ApiError` with the RFC 9457 problem; a `401` sends the router to `/login?next=…`. TanStack Query hooks per resource in `api/hooks/`. |
 | `stores/` | Zustand: `uiStore` (toggles, theme, size, chart and assistant settings), `viewStore` (per-view sort, columns, period; search and filters are session-only). `prefsSync.ts` saves the persisted slices with a 500 ms debounce and the document version; on `409` the server's document wins and local changes are laid back on top, once. |
 | `auth/` | Sign-in, sign-up and `RequireAuth`, which loads `/me` and `/preferences` and hydrates the stores before the app renders. |
-| `shell/` | Title bar, sidebar (accounts with their import history), status bar, empty state, drop overlay, settings popover, keyboard manager. |
+| `shell/` | Title bar, sidebar (accounts with their import history), status bar, empty state, drop overlay, quick settings (⚙: theme, mode, size, then All settings), the account menu, keyboard manager. |
 | `import/` | The upload queue (`queue.ts`: one file at a time, fast path, duplicate files) and the import window at `/imports/:id`. The window's working copy is a `PreviewEditor` (`editor.ts`): edits wait 300 ms and go to the server as one `PATCH`, and the screen renders the server's re-staged preview. Committed imports are edited locally and sent with *Reprocess*. |
 | `ui/` | Primitives: Popover and Menu (Floating UI), Modal, Toast queue, Tooltip, buttons, inputs. Open modals and popovers register as layers, so the global keyboard manager leaves their keys alone. |
 

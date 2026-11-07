@@ -60,7 +60,6 @@ export function UsersAdmin() {
           />
           <Button
             variant="primary"
-            size="sm"
             onClick={() => {
               setCreating(true);
             }}
@@ -69,48 +68,49 @@ export function UsersAdmin() {
           </Button>
         </div>
         {page.isError && <p className="set-err">{errorMessage(page.error)}</p>}
-        <table className="adm-table">
-          <thead>
-            <tr>
-              <th scope="col">Account</th>
-              <th scope="col">Role</th>
-              <th scope="col">Status</th>
-              <th scope="col">Last sign-in</th>
-              <th scope="col" className="num">
-                Transactions
-              </th>
-              <th scope="col" className="num">
-                Files
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {page.data?.users.map((u) => (
-              <tr key={u.id} className={selected === u.id ? 'on' : undefined}>
-                <td>
-                  <button
-                    type="button"
-                    className="adm-link"
-                    onClick={() => {
-                      setSelected(selected === u.id ? null : u.id);
-                    }}
-                  >
-                    {u.email}
-                  </button>
-                  {u.displayName && <span className="hint"> {u.displayName}</span>}
-                </td>
-                <td>{u.isAdmin ? 'Administrator' : u.isDemo ? 'Demo' : 'User'}</td>
-                <td>{status(u)}</td>
-                <td>{u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : 'never'}</td>
-                <td className="num">{fmtInt(u.usage.transactions)}</td>
-                <td className="num">{fmtBytes(u.usage.storedBytes)}</td>
+        <div className="adm-scroll">
+          <table className="adm-table">
+            <thead>
+              <tr>
+                <th scope="col">Account</th>
+                <th scope="col">Role</th>
+                <th scope="col">Status</th>
+                <th scope="col">Last sign-in</th>
+                <th scope="col" className="num">
+                  Transactions
+                </th>
+                <th scope="col" className="num">
+                  Files
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {page.data?.users.map((u) => (
+                <tr key={u.id} className={selected === u.id ? 'on' : undefined}>
+                  <td>
+                    <button
+                      type="button"
+                      className="adm-link"
+                      onClick={() => {
+                        setSelected(selected === u.id ? null : u.id);
+                      }}
+                    >
+                      {u.email}
+                    </button>
+                    {u.displayName && <span className="hint"> {u.displayName}</span>}
+                  </td>
+                  <td>{u.isAdmin ? 'Administrator' : u.isDemo ? 'Demo' : 'User'}</td>
+                  <td>{status(u)}</td>
+                  <td>{u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : 'never'}</td>
+                  <td className="num">{fmtInt(u.usage.transactions)}</td>
+                  <td className="num">{fmtBytes(u.usage.storedBytes)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div className="set-actions">
           <Button
-            size="sm"
             disabled={cursors.length < 2}
             onClick={() => {
               setCursors(cursors.slice(0, -1));
@@ -119,7 +119,6 @@ export function UsersAdmin() {
             Newer
           </Button>
           <Button
-            size="sm"
             disabled={!page.data?.next}
             onClick={() => {
               if (page.data?.next) setCursors([...cursors, page.data.next]);
@@ -390,7 +389,6 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
       <div className="set-actions adm-actions">
         {!u.isDemo && (
           <Button
-            size="sm"
             onClick={() => {
               patch(
                 { admin: !u.isAdmin },
@@ -402,7 +400,6 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
           </Button>
         )}
         <Button
-          size="sm"
           onClick={() => {
             patch(
               { disabled: !u.disabled },
@@ -413,7 +410,6 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
           {u.disabled ? 'Enable account' : 'Disable account'}
         </Button>
         <Button
-          size="sm"
           onClick={() => {
             reset.mutate(id, {
               onSuccess: (r) => {
@@ -426,7 +422,6 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
           Reset password
         </Button>
         <Button
-          size="sm"
           onClick={() => {
             revoke.mutate(id, {
               onSuccess: (r) => {
@@ -439,7 +434,6 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
           Sign out everywhere
         </Button>
         <Button
-          size="sm"
           variant="danger"
           onClick={() => {
             setDeleting(true);
@@ -454,7 +448,6 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
       <LimitFields text={text} onChange={setLimits} placeholder="default" />
       <div className="set-actions">
         <Button
-          size="sm"
           variant="primary"
           disabled={limits === null || update.isPending}
           onClick={() => {

@@ -80,6 +80,14 @@ describe('parsePrefs', () => {
     expect(parsePrefs({ ui: 'auto' }).ui).toBe('auto');
   });
 
+  it('keeps the size slider step only when it is one of the five', () => {
+    expect(parsePrefs({ uiStep: -2 }).uiStep).toBe(-2);
+    expect(parsePrefs({ uiStep: 0 }).uiStep).toBe(0);
+    expect(parsePrefs({ uiStep: 3 }).uiStep).toBeUndefined();
+    expect(parsePrefs({ uiStep: 0.5 }).uiStep).toBeUndefined();
+    expect(parsePrefs({ uiStep: '1' }).uiStep).toBeUndefined();
+  });
+
   it('keeps a colour theme id and drops one that is not an id', () => {
     expect(parsePrefs({ themeId: 'fjord' }).themeId).toBe('fjord');
     expect(parsePrefs({ themeId: '' }).themeId).toBe('');

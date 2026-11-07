@@ -5,7 +5,7 @@
 // parsePrefs is the only way a stored document enters the stores: it drops unknown keys and values
 // of the wrong type, so a document written by an older or newer build can't break the UI.
 
-import { MANUAL_SCALES, type UiScalePref } from '../styles/scale';
+import { MANUAL_SCALES, SIZE_STEPS, type SizeStep, type UiScalePref } from '../styles/scale';
 import type { ThemePref } from '../styles/theme';
 
 /** Grid column id (backend ColumnRegistry name, e.g. bookedOn, payee, amount). */
@@ -68,6 +68,8 @@ export type PrefsDoc = {
   /** Colour theme (Phase 19): a built-in or approved theme id; '' = the instance's default. */
   themeId: string;
   ui: UiScalePref;
+  /** The size slider's step around the auto size (−2…2; Phase 20, 20.15), used when `ui` is auto. */
+  uiStep: SizeStep;
   /** Insights pane height, a CSS length ('' = default, half the window). */
   vizH: string;
   noViz: boolean;
@@ -208,6 +210,7 @@ export function parsePrefs(raw: unknown): ParsedPrefs {
     out.themeId = raw['themeId'];
   const ui = parseScale(raw['ui']);
   if (ui !== undefined) out.ui = ui;
+  if ((SIZE_STEPS as readonly unknown[]).includes(raw['uiStep'])) out.uiStep = raw['uiStep'] as SizeStep;
   if (typeof raw['vizH'] === 'string' && /^(\d+(\.\d+)?px)?$/.test(raw['vizH'])) out.vizH = raw['vizH'];
   if (typeof raw['noViz'] === 'boolean') out.noViz = raw['noViz'];
   if (oneOf(raw['mode'], ['table', 'ov'] as const)) out.mode = raw['mode'];

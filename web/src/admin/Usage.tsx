@@ -35,42 +35,44 @@ export function UsageAdmin() {
       </div>
       <div className="set-card">
         <div className="lbl">The last 30 days</div>
-        <table className="adm-table adm-days">
-          <thead>
-            <tr>
-              <th scope="col">Day</th>
-              <th scope="col" className="num">
-                Imports
-              </th>
-              <th scope="col" className="num">
-                Assistant questions
-              </th>
-              <th scope="col" className="num">
-                Assistant tokens
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...u.days].reverse().map((d) => (
-              <tr key={d.day}>
-                <td>{fmtDay(d.day)}</td>
-                <td className="num">
-                  <span className="adm-bar" style={{ width: `${(d.imports / peak) * 100}%` }} aria-hidden="true" />
-                  {fmtInt(d.imports)}
-                </td>
-                <td className="num">
-                  <span
-                    className="adm-bar alt"
-                    style={{ width: `${(d.questions / peak) * 100}%` }}
-                    aria-hidden="true"
-                  />
-                  {fmtInt(d.questions)}
-                </td>
-                <td className="num">{fmtInt(d.tokens)}</td>
+        <div className="adm-scroll">
+          <table className="adm-table adm-days">
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                <th scope="col" className="num">
+                  Imports
+                </th>
+                <th scope="col" className="num">
+                  Assistant questions
+                </th>
+                <th scope="col" className="num">
+                  Assistant tokens
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {[...u.days].reverse().map((d) => (
+                <tr key={d.day}>
+                  <td>{fmtDay(d.day)}</td>
+                  <td className="num">
+                    <span className="adm-bar" style={{ width: `${(d.imports / peak) * 100}%` }} aria-hidden="true" />
+                    {fmtInt(d.imports)}
+                  </td>
+                  <td className="num">
+                    <span
+                      className="adm-bar alt"
+                      style={{ width: `${(d.questions / peak) * 100}%` }}
+                      aria-hidden="true"
+                    />
+                    {fmtInt(d.questions)}
+                  </td>
+                  <td className="num">{fmtInt(d.tokens)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
   );

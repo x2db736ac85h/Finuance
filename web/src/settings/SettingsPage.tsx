@@ -11,12 +11,14 @@ import { AppearanceControls } from './Appearance';
 import { CategoriesSettings } from './Categories';
 import { DataSettings } from './Data';
 import { FriendsSettings } from './Friends';
+import { GeneralSettings } from './General';
 import { ProfileSettings } from './Profile';
 import { SECTIONS, type SectionId } from './sections';
 import { SessionsSettings } from './Sessions';
 import { TokensSettings } from './Tokens';
 
 const BODY: Record<SectionId, () => React.JSX.Element> = {
+  general: GeneralSettings,
   appearance: () => (
     <div className="set-card">
       <div className="lbl">Appearance</div>
@@ -40,7 +42,7 @@ export function SettingsPage() {
   // Friends only where the instance has them: switched on, and not a demo (ADR 0027)
   const sections = SECTIONS.filter((s) => s.id !== 'friends' || (meta?.features.friends !== false && !meta?.demoMode));
   const current = sections.find((s) => s.id === section);
-  if (!current) return <Navigate to="/settings/appearance" replace />;
+  if (!current) return <Navigate to="/settings/general" replace />;
   const Body = BODY[current.id];
   return (
     <div className="settings">
