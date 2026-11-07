@@ -195,9 +195,11 @@ helm upgrade --install argocd argo/argo-cd --version 10.11.6 -n argocd --create-
 The UI and API are not exposed; reach them from the machine only:
 
 ```sh
-kubectl -n argocd port-forward svc/argocd-server 8443:443        # https://localhost:8443, user admin
+kubectl -n argocd port-forward svc/argocd-server 18443:443      # https://localhost:18443, user admin
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
 ```
+
+The local port is 18443, not the usual 8443: 8443 is the common choice for a second HTTPS app on a Tailscale machine (Tailscale Funnel accepts only 443, 8443 and 10000), so another app may hold it on the tailnet address through Tailscale Serve, and anything binding 8443 on every address then fails. Traefik keeps 443 (host ports, so `ss` doesn't list it); don't give Tailscale Serve port 443 on this machine.
 
 Change the admin password in the UI (*User Info → Update password*) and then delete `argocd-initial-admin-secret` (Argo CD's advice; it is only read once).
 
