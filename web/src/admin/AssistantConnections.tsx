@@ -89,7 +89,6 @@ export function Connections() {
         <div className="set-actions">
           <Button
             variant="primary"
-            size="sm"
             onClick={() => {
               setEditing('');
             }}
@@ -178,15 +177,17 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
     <form
       className="adm-form"
       aria-label="Connection"
+      autoComplete="off"
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <div className="set-actions adm-toolbar">
+      <div className="form-row">
         <label className="st-col">
           Name
           <TextInput
+            autoComplete="off"
             mono
             value={c.name}
             disabled={!!connection}
@@ -200,6 +201,7 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
         <label className="st-col">
           Label
           <TextInput
+            autoComplete="off"
             value={c.label}
             maxLength={80}
             onChange={(e) => {
@@ -221,6 +223,7 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
       <label className="st-col">
         Address
         <TextInput
+          autoComplete="off"
           mono
           value={c.baseUrl}
           maxLength={500}
@@ -237,10 +240,11 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
           setC({ ...c, cloud });
         }}
       />
-      <div className="set-actions adm-toolbar">
+      <div className="form-row">
         <label className="st-col">
           Default model
           <TextInput
+            autoComplete="off"
             value={c.defaultModel}
             maxLength={200}
             onChange={(e) => {
@@ -251,6 +255,7 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
         <label className="st-col">
           Context tokens <span className="hint">(empty: the server's or 8,192)</span>
           <TextInput
+            autoComplete="off"
             inputMode="numeric"
             value={c.contextTokens}
             onChange={(e) => {
@@ -262,6 +267,7 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
       <label className="st-col">
         Models offered <span className="hint">(comma-separated patterns such as qwen3*; empty: every chat model)</span>
         <TextInput
+          autoComplete="off"
           value={c.models}
           onChange={(e) => {
             setC({ ...c, models: e.target.value });
@@ -285,9 +291,14 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
       {keyAction === 'replace' && (
         <label className="st-col">
           {connection ? 'New API key' : 'API key'} <span className="hint">(stored sealed, never shown again)</span>
+          {/* new-password and the password managers' own flags: "off" is ignored on password fields,
+              and the browser then fills a saved password here and the account e-mail into the field before */}
           <TextInput
             type="password"
-            autoComplete="off"
+            autoComplete="new-password"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore
             value={apiKey}
             maxLength={1000}
             onChange={(e) => {
@@ -297,15 +308,8 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
         </label>
       )}
       <div className="set-actions">
-        <Button size="sm" onClick={onDone}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          disabled={busy || !c.baseUrl.trim() || (!connection && !c.name.trim())}
-        >
+        <Button onClick={onDone}>Cancel</Button>
+        <Button type="submit" variant="primary" disabled={busy || !c.baseUrl.trim() || (!connection && !c.name.trim())}>
           Save
         </Button>
       </div>
@@ -380,7 +384,6 @@ export function Tuning() {
       ) : (
         <div className="set-actions">
           <Button
-            size="sm"
             variant="primary"
             onClick={() => {
               setEditing({ connection: conns.data?.[0]?.name ?? '', model: '', extraPrompt: '' });
@@ -434,12 +437,13 @@ function TuningForm({
     <form
       className="adm-form"
       aria-label="Tuning"
+      autoComplete="off"
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <div className="set-actions adm-toolbar">
+      <div className="form-row">
         <label className="st-col">
           Connection
           <Select
@@ -453,6 +457,7 @@ function TuningForm({
         <label className="st-col">
           Model
           <TextInput
+            autoComplete="off"
             value={t.model}
             maxLength={200}
             placeholder="qwen3:4b-thinking-2507"
@@ -462,10 +467,11 @@ function TuningForm({
           />
         </label>
       </div>
-      <div className="set-actions adm-toolbar">
+      <div className="form-row">
         <label className="st-col">
           Temperature <span className="hint">(0–2; empty: 0.2)</span>
           <TextInput
+            autoComplete="off"
             inputMode="decimal"
             value={t.temperature}
             onChange={(e) => {
@@ -476,6 +482,7 @@ function TuningForm({
         <label className="st-col">
           Context tokens
           <TextInput
+            autoComplete="off"
             inputMode="numeric"
             value={t.contextTokens}
             onChange={(e) => {
@@ -484,7 +491,7 @@ function TuningForm({
           />
         </label>
       </div>
-      <div className="set-actions adm-toolbar">
+      <div className="form-row">
         <label className="st-col">
           Thinking
           <Select
@@ -521,7 +528,6 @@ function TuningForm({
       <div className="set-actions">
         {tuning.model && (
           <Button
-            size="sm"
             variant="danger"
             disabled={put.isPending}
             onClick={() => {
@@ -534,10 +540,8 @@ function TuningForm({
             Remove
           </Button>
         )}
-        <Button size="sm" onClick={onDone}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="primary" size="sm" disabled={put.isPending || !t.model.trim() || !t.connection}>
+        <Button onClick={onDone}>Cancel</Button>
+        <Button type="submit" variant="primary" disabled={put.isPending || !t.model.trim() || !t.connection}>
           Save
         </Button>
       </div>

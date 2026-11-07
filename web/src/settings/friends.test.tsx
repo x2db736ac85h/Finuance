@@ -92,7 +92,7 @@ describe('friends', () => {
   it('is not offered when the instance switched friends off', async () => {
     db.features = { ...db.features, friends: false };
     renderApp('/settings/friends');
-    await screen.findByRole('heading', { name: 'Appearance' });
+    await screen.findByRole('heading', { name: 'General' });
     expect(screen.queryByRole('link', { name: 'Friends' })).toBeNull();
   });
 });

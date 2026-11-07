@@ -82,7 +82,7 @@ These are only local ports. Prometheus and Alertmanager link to each other by th
    kubectl -n finuance exec -i deploy/finuance-api -- /finuance admin create-user --email you@example.com --admin --password-stdin <<<'a long password'
    ```
 
-   `--admin` makes it the instance's first administrator (Administration in the account menu,
+   `--admin` makes it the instance's first administrator (Administration in the Settings list,
    docs/admin.md). An instance that already has accounts gets one with
    `/finuance admin grant-admin --email you@example.com`.
 

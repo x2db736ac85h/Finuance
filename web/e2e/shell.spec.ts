@@ -24,7 +24,9 @@ test('theme, size and sidebar persist across a reload', async ({ page }) => {
   await signUp(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Light' }).click();
-  await page.getByLabel('Interface size').selectOption('1.2');
+  // the size slider one step right of Auto: 10 % above the auto size (1.12 at a pixel ratio of 1)
+  await page.getByRole('slider', { name: 'Interface size' }).focus();
+  await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Toggle sidebar' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -32,10 +34,10 @@ test('theme, size and sidebar persist across a reload', async ({ page }) => {
   // the debounced save has to land before the reload
   await expect
     .poll(async () => (await (await page.request.get('/api/v1/preferences')).json()) as unknown, { timeout: 5000 })
-    .toMatchObject({ prefs: { theme: 'light', ui: 1.2, sbOpen: true } });
+    .toMatchObject({ prefs: { theme: 'light', ui: 'auto', uiStep: 1, sbOpen: true } });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect(page.locator('html')).toHaveAttribute('style', /--ui-scale: 1\.2/);
+  await expect(page.locator('html')).toHaveAttribute('style', /--ui-scale: 1\.23/);
   await expect(page.getByRole('navigation', { name: 'Explorer' })).toBeVisible();
 });
 

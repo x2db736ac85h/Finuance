@@ -308,7 +308,7 @@ export function GoalDialog({ goal, onClose }: { goal?: Goal | undefined; onClose
           />,
         )}
         {kind === 'save' ? (
-          <div className="cash-row">
+          <div className="form-row">
             {field(
               `Amount (${currency})`,
               <TextInput
@@ -346,7 +346,7 @@ export function GoalDialog({ goal, onClose }: { goal?: Goal | undefined; onClose
                 onChange={setCategoryId}
               />,
             )}
-            <div className="cash-row">
+            <div className="form-row">
               {field(
                 'Spend less by (%)',
                 <TextInput
@@ -369,7 +369,7 @@ export function GoalDialog({ goal, onClose }: { goal?: Goal | undefined; onClose
             </div>
           </>
         )}
-        <div className="cash-row">
+        <div className="form-row">
           {!goal &&
             field(
               'Starts',

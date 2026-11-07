@@ -55,8 +55,10 @@ test.afterAll(async ({ request }) => {
 test('an administrator runs the instance; a new user follows it', async ({ page, browser }) => {
   const userEmail = `e2e-admin-${String(Date.now())}@example.test`;
   await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Account menu' }).click();
-  await page.getByRole('menuitem', { name: 'Administration' }).click();
+  // Administration is reached from the settings (the account menu has only Profile and Sign out)
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'All settings' }).click();
+  await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Administration' }).click();
   await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
 
   // a new account with a one-time password, limited to one account

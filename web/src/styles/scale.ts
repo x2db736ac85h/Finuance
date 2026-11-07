@@ -5,8 +5,14 @@
 export const UI_TARGET = 1.12;
 export const MIN_SCALE = 0.85;
 export const MAX_SCALE = 1.25;
-/** Manual sizes offered in Settings → Appearance. */
+/** Fixed sizes: what older preference documents and legacy backups may hold (still applied). */
 export const MANUAL_SCALES = [0.9, 1, 1.1, 1.2, 1.3] as const;
+/** The size slider (Phase 20, 20.15): steps around the auto size, each 10 % of it, Auto in the middle. */
+export const SIZE_STEPS = [-2, -1, 0, 1, 2] as const;
+export type SizeStep = (typeof SIZE_STEPS)[number];
+const STEP = 0.1;
+const MIN_STEPPED = 0.75;
+const MAX_STEPPED = 1.45;
 
 export type UiScalePref = 'auto' | number;
 
@@ -29,11 +35,30 @@ export function browserZoom(devicePixelRatio: number): number {
   return best;
 }
 
-/** The scale for a preference: manual values as given, auto from the zoom (rounded to 0.01). */
-export function calcScale(pref: UiScalePref, devicePixelRatio: number): number {
+/**
+ * The scale for a preference: a fixed size as given; auto from the zoom, then moved by the slider's
+ * step (rounded to 0.01).
+ */
+export function calcScale(pref: UiScalePref, devicePixelRatio: number, step: SizeStep = 0): number {
   if (pref !== 'auto') return pref;
-  const s = Math.max(MIN_SCALE, Math.min(MAX_SCALE, UI_TARGET / browserZoom(devicePixelRatio)));
+  let s = Math.max(MIN_SCALE, Math.min(MAX_SCALE, UI_TARGET / browserZoom(devicePixelRatio)));
+  if (step !== 0) s = Math.max(MIN_STEPPED, Math.min(MAX_STEPPED, s * (1 + STEP * step)));
   return Math.round(s * 100) / 100;
+}
+
+/** The slider position that shows a preference: its step, or for a fixed size the nearest step. */
+export function sliderStep(pref: UiScalePref, step: SizeStep, devicePixelRatio: number): SizeStep {
+  if (pref === 'auto') return step;
+  const auto = calcScale('auto', devicePixelRatio);
+  let best: SizeStep = 0;
+  for (const k of SIZE_STEPS) {
+    if (
+      Math.abs(calcScale('auto', devicePixelRatio, k) - pref) <
+      Math.abs(calcScale('auto', devicePixelRatio, best) - pref)
+    )
+      best = k;
+  }
+  return auto === pref ? 0 : best;
 }
 
 let current = 1;
@@ -44,8 +69,12 @@ export function uiScale(): number {
 }
 
 /** Sets --ui-scale on <html>. Returns the applied scale. */
-export function applyScale(pref: UiScalePref, root: HTMLElement = document.documentElement): number {
-  current = calcScale(pref, window.devicePixelRatio);
+export function applyScale(
+  pref: UiScalePref,
+  root: HTMLElement = document.documentElement,
+  step: SizeStep = 0,
+): number {
+  current = calcScale(pref, window.devicePixelRatio, step);
   root.style.setProperty('--ui-scale', String(current));
   return current;
 }

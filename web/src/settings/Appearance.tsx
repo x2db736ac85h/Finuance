@@ -1,15 +1,16 @@
 // Appearance controls (legacy appearanceHtml): the colour theme (Phase 19), System/Dark/Light and
-// the interface size, shown inline in the settings popover and on Settings → Appearance.
+// the interface size, in the quick settings (compact: the current theme, unfolding the others) and
+// on Settings → Appearance (every theme as a card). The size is a slider around Auto (Phase 20, 20.15).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 import { useMeta } from '../api/hooks/me';
 import { fmtPct } from '../lib/format';
-import { MANUAL_SCALES, uiScale } from '../styles/scale';
+import { SIZE_STEPS, sliderStep, uiScale, type SizeStep } from '../styles/scale';
 import { resolveLook, type ThemePref } from '../styles/theme';
 import { BUILTIN_THEMES, type ThemeTokens } from '../styles/themes';
 import { useUi } from '../stores/uiStore';
-import { Select, type Option } from '../ui/inputs';
+import { Icon } from '../ui/Icon';
 
 const THEMES: [ThemePref, string][] = [
   ['system', 'System'],
@@ -20,6 +21,7 @@ const THEMES: [ThemePref, string][] = [
 /** The scale in effect, refreshed on resize (auto follows the browser zoom). */
 function useCurrentScale(): number {
   const pref = useUi((s) => s.uiScalePref);
+  const step = useUi((s) => s.uiStep);
   const [scale, setScale] = useState(uiScale);
   useEffect(() => {
     const update = () => {
@@ -32,7 +34,7 @@ function useCurrentScale(): number {
       clearTimeout(t);
       window.removeEventListener('resize', update);
     };
-  }, [pref]);
+  }, [pref, step]);
   return scale;
 }
 
@@ -55,8 +57,13 @@ function Swatch({ tokens }: { tokens: ThemeTokens }) {
   );
 }
 
-/** The built-in themes and the ones an administrator approved; each shows both variants. */
-export function ThemePicker() {
+/**
+ * The built-in themes and the ones an administrator approved; each shows both variants. Compact (the
+ * quick settings): one button with the current theme, which unfolds the others as small cards.
+ */
+export function ThemePicker({ compact = false }: { compact?: boolean }) {
+  const labelId = useId();
+  const [open, setOpen] = useState(false);
   const themeId = useUi((s) => s.themeId);
   const { setThemeId } = useUi.getState();
   const meta = useMeta().data;
@@ -70,46 +77,112 @@ export function ThemePicker() {
     })),
   ];
   const current = resolveLook(themeId, meta?.themes ?? [], meta?.defaults.themeId).id;
+  const cards = (
+    <div className={compact ? 'theme-cards compact' : 'theme-cards'} role="radiogroup" aria-labelledby={labelId}>
+      {choices.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="radio"
+          aria-checked={current === t.id}
+          className={current === t.id ? 'theme-card on' : 'theme-card'}
+          title={t.description}
+          onClick={() => {
+            setThemeId(t.id);
+            setOpen(false);
+          }}
+        >
+          <Swatch tokens={t.tokens} />
+          <span className="theme-name">{t.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+  if (!compact)
+    return (
+      <div className="st-col">
+        <span id={labelId}>Colour theme</span>
+        {cards}
+      </div>
+    );
+  const shown = choices.find((t) => t.id === current) ?? choices[0];
   return (
     <div className="st-col">
-      <span id="colour-theme-label">Colour theme</span>
-      <div className="theme-cards" role="radiogroup" aria-labelledby="colour-theme-label">
-        {choices.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="radio"
-            aria-checked={current === t.id}
-            className={current === t.id ? 'theme-card on' : 'theme-card'}
-            title={t.description}
-            onClick={() => {
-              setThemeId(t.id);
-            }}
-          >
-            <Swatch tokens={t.tokens} />
-            <span className="theme-name">{t.name}</span>
-          </button>
-        ))}
-      </div>
+      <span id={labelId}>Colour theme</span>
+      <button
+        type="button"
+        className="theme-current"
+        aria-expanded={open}
+        aria-describedby={labelId}
+        onClick={() => {
+          setOpen(!open);
+        }}
+      >
+        {shown && <Swatch tokens={shown.tokens} />}
+        <span className="theme-name">{shown?.name}</span>
+        <Icon name={open ? 'chevup' : 'chev'} />
+      </button>
+      {open && cards}
     </div>
   );
 }
 
-export function AppearanceControls() {
-  const theme = useUi((s) => s.themePref);
+/** Words for a slider position. */
+function sizeWord(fixed: boolean, step: SizeStep): string {
+  if (fixed) return 'Fixed';
+  if (step === 0) return 'Auto';
+  return step < 0 ? 'Smaller' : 'Larger';
+}
+
+/**
+ * The interface size: a slider with Auto in the middle (the same size at any browser zoom) and two
+ * steps of 10 % to each side. A fixed size from an older document shows at its nearest step until
+ * the slider is moved.
+ */
+export function SizeSlider() {
   const pref = useUi((s) => s.uiScalePref);
-  const { setTheme, setUiScale } = useUi.getState();
+  const step = useUi((s) => s.uiStep);
   const now = useCurrentScale();
-  const sizes: Option<string>[] = [
-    { value: 'auto', label: `Auto — keeps the same size at any browser zoom (now ${fmtPct(now)})` },
-    ...MANUAL_SCALES.map((s) => ({ value: String(s), label: fmtPct(s) })),
-  ];
+  const id = useId();
+  const at = sliderStep(pref, step, window.devicePixelRatio);
+  const shown = `${sizeWord(pref !== 'auto', at)} · ${fmtPct(now)}`;
+  return (
+    <div className="st-col size-slider">
+      <span className="size-h">
+        <label htmlFor={id}>Interface size</label>
+        <span className="hint">{shown}</span>
+      </span>
+      <input
+        id={id}
+        type="range"
+        min={SIZE_STEPS[0]}
+        max={SIZE_STEPS[SIZE_STEPS.length - 1]}
+        step={1}
+        value={at}
+        aria-valuetext={shown}
+        onChange={(e) => {
+          useUi.getState().setUiStep(Number(e.target.value) as SizeStep);
+        }}
+      />
+      <span className="size-ticks" aria-hidden="true">
+        <span>Smaller</span>
+        <span>Auto</span>
+        <span>Larger</span>
+      </span>
+    </div>
+  );
+}
+
+export function AppearanceControls({ compact = false }: { compact?: boolean }) {
+  const theme = useUi((s) => s.themePref);
+  const { setTheme } = useUi.getState();
+  const modeId = useId();
   return (
     <>
-      <ThemePicker />
+      <ThemePicker compact={compact} />
       <div className="st-line">
-        <span id="theme-label">Mode</span>
-        <span className="seg seg-l" role="group" aria-labelledby="theme-label">
+        <span id={modeId}>Mode</span>
+        <span className="seg seg-l" role="group" aria-labelledby={modeId}>
           {THEMES.map(([k, label]) => (
             <button
               key={k}
@@ -125,16 +198,7 @@ export function AppearanceControls() {
           ))}
         </span>
       </div>
-      <label className="st-col">
-        Interface size
-        <Select
-          value={String(pref)}
-          options={sizes}
-          onChange={(v) => {
-            setUiScale(v === 'auto' ? 'auto' : Number(v));
-          }}
-        />
-      </label>
+      <SizeSlider />
     </>
   );
 }

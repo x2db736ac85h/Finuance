@@ -52,6 +52,15 @@ library, the assistant in the admin panel, personal access tokens and the `fin` 
 
 ### Changed
 
+- **Settings, simpler to find**: ⚙ opens *Quick settings* (the colour theme as one button that
+  unfolds the others, Dark/Light/System, the interface size, Keyboard shortcuts and **All
+  settings**); the import option moved to the new Settings → General; the account menu shows who is
+  signed in with Profile and Sign out only, and Administration is in the Settings list.
+- **Interface size as a slider**: Auto in the middle, two steps of 10 % smaller and larger around
+  it, still the same size at any browser zoom (a size picked from the old list keeps applying until
+  the slider is moved).
+- **One look for every form**: fields side by side line up and have one height, action buttons have
+  one size, and Settings and Administration use the same page width (wide tables scroll).
 - Nine migrations (00015–00023: assistant changes, auto-apply, goals, attachments, merge
   dismissals, digests, the advice library, stored connections, access tokens) run with the
   migrations Job as before; take an on-demand backup first (RUNBOOK "On-demand backup").
@@ -67,6 +76,12 @@ library, the assistant in the admin panel, personal access tokens and the `fin` 
 - RUNBOOK "Local ports": the Argo CD and Prometheus port-forwards use local ports 18443 and 19090,
   with the reason for every port-forward's port (another app on 8443, the Compose stack on 9090).
 - The kind rehearsal waits for the api through Traefik before its first api request.
+
+### Fixed
+
+- Administration → Assistant: a browser could fill the signed-in account's e-mail into *Models
+  offered* and a saved password into *API key* of a new connection; the form now asks browsers and
+  password managers not to fill anything in.
 
 ### Security
 

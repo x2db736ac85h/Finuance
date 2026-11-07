@@ -118,9 +118,15 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inSha
       </button>
       <SettingsPopover open={settings.open} anchor={settings.anchor} onClose={settings.close} />
       <Menu open={account.open} anchor={account.anchor} onClose={account.close} label="Account" width={240}>
+        {/* who is signed in, their profile and signing out; everything else is under Settings */}
         <div className="who">
-          <b>{user.displayName || user.email}</b>
-          {user.displayName && <span className="hint">{user.email}</span>}
+          <span className="avatar" aria-hidden="true">
+            {initial(user)}
+          </span>
+          <span className="who-t">
+            <b>{user.displayName || user.email}</b>
+            {user.displayName && <span className="hint">{user.email}</span>}
+          </span>
         </div>
         <MenuItem
           icon="pen"
@@ -131,26 +137,6 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inSha
         >
           Profile
         </MenuItem>
-        <MenuItem
-          icon="lock"
-          onSelect={() => {
-            account.close();
-            void navigate('/settings/sessions');
-          }}
-        >
-          Sessions
-        </MenuItem>
-        {user.isAdmin && (
-          <MenuItem
-            icon="cog"
-            onSelect={() => {
-              account.close();
-              void navigate('/admin/users');
-            }}
-          >
-            Administration
-          </MenuItem>
-        )}
         <MenuItem
           icon="x"
           onSelect={() => {

@@ -46,7 +46,7 @@ export function AdminPage() {
             {s.label}
           </NavLink>
         ))}
-        <NavLink to="/settings/appearance" className="mi">
+        <NavLink to="/settings/general" className="mi">
           <Icon name="cog" />
           Settings
         </NavLink>
@@ -55,7 +55,7 @@ export function AdminPage() {
           Back to transactions
         </NavLink>
       </nav>
-      <div className="set-body adm-body">
+      <div className="set-body">
         <h1>{current.label}</h1>
         <Body />
       </div>
