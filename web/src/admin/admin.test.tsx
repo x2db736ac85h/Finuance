@@ -395,7 +395,8 @@ describe('administration', () => {
     const box = await screen.findByRole('textbox', { name: 'Instructions for the assistant' });
     expect((box as HTMLTextAreaElement).value).toBe('Be brief.');
     fireEvent.change(box, { target: { value: 'Be brief. Answer in English.' } });
-    await userEvent.click(screen.getAllByRole('button', { name: 'Save' })[0] ?? document.body);
+    // the instructions card's Save ("Who picks the model" has its own above it)
+    await userEvent.click(within(box.closest('.set-card') as HTMLElement).getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(puts.at(-1)?.assistant).toEqual({ instructions: 'Be brief. Answer in English.' });
     });
@@ -445,6 +446,126 @@ describe('administration', () => {
     expect(await screen.findByText('No articles yet.')).toBeTruthy();
   });
 
+  it('decides who picks the model, and switches a connection, its models and idle time; loads and unloads on Ollama', async () => {
+    const ctl = { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0 };
+    const conns: Schemas['AdminConnection'][] = [
+      {
+        name: 'homelab',
+        label: 'Homelab Ollama',
+        api: 'openai',
+        baseUrl: 'http://10.0.0.5:11434/v1',
+        cloud: false,
+        defaultModel: 'qwen3:4b',
+        models: ['qwen3*'],
+        contextTokens: 8192,
+        source: 'file',
+        hasKey: false,
+        keyUnreadable: false,
+        version: 0,
+        controls: ctl,
+      },
+    ];
+    let srv: Schemas['AdminModelServer'] = {
+      server: 'ollama',
+      reachable: true,
+      latencyMs: 42,
+      canManage: true,
+      models: [
+        {
+          id: 'qwen3:4b',
+          offered: true,
+          tools: true,
+          vision: false,
+          loaded: true,
+          vramBytes: 3_400_000_000,
+          unloadsAt: '2026-11-08T13:00:00Z',
+        },
+        { id: 'qwen3-vl:4b', offered: true, tools: true, vision: true, loaded: false },
+      ],
+    };
+    const settingsPuts: Schemas['InstanceSettingsDoc'][] = [];
+    const controlPuts: Schemas['AdminConnectionControlsInput'][] = [];
+    const actions: string[] = [];
+    server.use(
+      http.get(`${API}/admin/settings`, () =>
+        HttpResponse.json({
+          version: 3,
+          defaults: {},
+          features: {},
+          limits: {},
+          assistant: { instructions: 'Be brief.' },
+        } satisfies Schemas['InstanceSettingsDoc']),
+      ),
+      http.put(`${API}/admin/settings`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['InstanceSettingsDoc'];
+        settingsPuts.push(body);
+        return HttpResponse.json({ ...body, version: 4 });
+      }),
+      http.get(`${API}/admin/advice`, () => HttpResponse.json([])),
+      http.get(`${API}/admin/assistant/tuning`, () => HttpResponse.json([])),
+      http.get(`${API}/admin/assistant/connections`, () => HttpResponse.json(conns)),
+      http.get(`${API}/admin/assistant/connections/homelab/models`, () => HttpResponse.json(srv)),
+      http.put(`${API}/admin/assistant/connections/homelab/controls`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AdminConnectionControlsInput'];
+        controlPuts.push(body);
+        if (conns[0]) conns[0] = { ...conns[0], controls: { ...body, version: body.version + 1 } };
+        return HttpResponse.json(conns[0]);
+      }),
+      http.post(`${API}/admin/assistant/connections/homelab/unload`, async ({ request }) => {
+        const { model } = (await request.json()) as Schemas['AdminModelAction'];
+        actions.push(`unload ${model}`);
+        srv = { ...srv, models: srv.models.map((m) => (m.id === model ? { ...m, loaded: false } : m)) };
+        return HttpResponse.json(srv);
+      }),
+    );
+    renderApp('/admin/assistant');
+
+    // who picks: the administrator unless saved otherwise; saving keeps the instructions
+    const who = await screen.findByLabelText('Who picks');
+    expect((who as HTMLSelectElement).value).toBe('admin');
+    fireEvent.change(who, { target: { value: 'people' } });
+    fireEvent.change(screen.getByLabelText('Default connection'), { target: { value: 'homelab' } });
+    const choiceCard = who.closest('.set-card') as HTMLElement;
+    await userEvent.click(within(choiceCard).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(settingsPuts[0]?.assistant).toEqual({
+        instructions: 'Be brief.',
+        modelChoice: 'people',
+        defaultConnection: 'homelab',
+      });
+    });
+
+    // a connection's models and use
+    await userEvent.click(screen.getByRole('button', { name: 'Models' }));
+    const form = await screen.findByRole('form', { name: 'Models and use of Homelab Ollama' });
+    expect(await within(form).findByText(/Connected to Ollama · 2 models · 42 ms/)).toBeTruthy();
+    expect(within(form).getByText(/3.4 GB on the GPU|3.2 GiB on the GPU|on the GPU/)).toBeTruthy();
+    await userEvent.click(within(form).getByRole('button', { name: 'Unload' }));
+    await waitFor(() => {
+      expect(actions).toEqual(['unload qwen3:4b']);
+    });
+    expect(await within(form).findAllByRole('button', { name: 'Load' })).toHaveLength(2);
+    fireEvent.change(within(form).getByLabelText('Model for photos'), { target: { value: 'qwen3-vl:4b' } });
+    fireEvent.change(within(form).getByLabelText('Unload a model after'), { target: { value: '10' } });
+    await userEvent.click(within(form).getByRole('checkbox', { name: /^On/ }));
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(controlPuts[0]).toEqual({
+        enabled: false,
+        unloadAfterMinutes: 10,
+        defaultModel: '',
+        photoModel: 'qwen3-vl:4b',
+        version: 0,
+      });
+    });
+    expect(await screen.findByText('off')).toBeTruthy();
+    // the save is confirmed (the form isn't remounted by the list coming back with a new version)
+    // (it waits behind the "Unloaded" toast)
+    expect(
+      await screen.findByText('Saved Homelab Ollama: switched off, its models unloaded', {}, { timeout: 5000 }),
+    ).toBeTruthy();
+  });
+
   it('adds and changes connections with a key that never comes back, and tunes a model (ADR 0035)', async () => {
     const conn = (over: Partial<Schemas['AdminConnection']>): Schemas['AdminConnection'] => ({
       name: 'lmstudio',
@@ -459,6 +580,7 @@ describe('administration', () => {
       hasKey: false,
       keyUnreadable: false,
       version: 0,
+      controls: { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0 },
       ...over,
     });
     let conns = [conn({})];

@@ -104,6 +104,19 @@ the same in every theme.
   under `FINUANCE_INSTANCE_KEY` and never shown again ("stored", "none", or "unreadable" when it
   was sealed under another instance key); changing the address drops it, so enter it again. Other
   api replicas and the worker pick a change up within a minute.
+- **Who picks the model**: **the administrator** (the default) or **each person**. When you pick,
+  every question and digest runs on the **default connection** (the first one that is on, unless
+  you choose one) and its default model; people see which one in the assistant's settings but
+  can't change it, and their own earlier choices come back if you let them pick again.
+- **Models** (a button on each connection, the configuration file's included): **On** (a
+  connection switched off disappears for people within a minute, its chats and digests use the
+  default connection, and its loaded models are unloaded); the **default model** (over the
+  connection's own); a **model for photos** (questions with photos go to it when the model in use
+  can't read images: the receipts model); and, for Ollama and LM Studio, **Unload a model after**
+  10, 15, 30 or 45 minutes, 1, 2 or 4 hours idle (30 by default) or the server's own setting.
+  **Test** checks the server (its kind, the models, the time it took); for Ollama the models it has
+  loaded are listed with their memory and unload time, with **Load** and **Unload**. Saving,
+  switching and loading are in your Activity (ADR 0035 addendum).
 - **Tuning per model**: for one model, the temperature, thinking level and tool set used when a
   question doesn't set them, the context size, and a short note for that model.
 - **Instructions for the assistant**: up to 2,000 characters added to the instructions of every

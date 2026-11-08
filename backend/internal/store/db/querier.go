@@ -276,6 +276,8 @@ type Querier interface {
 	// The audit log (PLAN task 17.6, migration 00010). Rows are only ever inserted, listed and, after
 	// the retention, deleted (the table's policies allow nothing else).
 	InsertAuditEvent(ctx context.Context, arg InsertAuditEventParams) error
+	// The first save; no row when another one was saved first (the caller answers stale_version).
+	InsertConnectionControls(ctx context.Context, arg InsertConnectionControlsParams) (AssistantConnectionControl, error)
 	// Goals (Phase 20, ADR 0031). User-owned with forced RLS.
 	InsertGoal(ctx context.Context, arg InsertGoalParams) (Goal, error)
 	InsertImportFile(ctx context.Context, arg InsertImportFileParams) error
@@ -324,6 +326,9 @@ type Querier interface {
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error)
 	// Every bank category name with the category it now goes to (NULL: uncategorised), for the data export.
 	ListCategoryAliases(ctx context.Context, userID uuid.UUID) ([]ListCategoryAliasesRow, error)
+	// Connection controls (migration 00024): on or off, unload after idle, the default model and the
+	// model for photos, for the file's connections and those added in the panel.
+	ListConnectionControls(ctx context.Context) ([]AssistantConnectionControl, error)
 	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
 	// The overrides of the given (account, fingerprint) pairs.
 	ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error)
@@ -518,6 +523,8 @@ type Querier interface {
 	// After a turn: the last activity, the connection and model used, and the title (the first
 	// question) when the chat had none.
 	UpdateAssistantChat(ctx context.Context, arg UpdateAssistantChatParams) error
+	// Versioned: no row when the version read is no longer the stored one.
+	UpdateConnectionControls(ctx context.Context, arg UpdateConnectionControlsParams) (AssistantConnectionControl, error)
 	// The kind, currency and start stay; version must be the one the caller read.
 	UpdateGoal(ctx context.Context, arg UpdateGoalParams) (Goal, error)
 	UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group, error)

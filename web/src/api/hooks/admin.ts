@@ -236,3 +236,63 @@ export function useTuning() {
 export function usePutTuning() {
   return useAdminMutation(async (body: ModelTuning) => data(await api.PUT('/admin/assistant/tuning', { body })));
 }
+
+// A connection's controls, its server and models (Phase 20 follow-ups): on or off, the idle time,
+// the default model and the one for photos, which models are loaded, and loading or unloading one.
+export type ConnectionControls = Schemas['AdminConnectionControls'];
+export type ModelServer = Schemas['AdminModelServer'];
+
+export function usePutConnectionControls() {
+  return useConnectionMutation(async ({ name, ...body }: Schemas['AdminConnectionControlsInput'] & { name: string }) =>
+    data(await api.PUT('/admin/assistant/connections/{name}/controls', { params: { path: { name } }, body })),
+  );
+}
+
+const serverKey = (name: string) => [...keys.admin, 'connections', name, 'models'];
+
+/** The server behind a connection: its kind, models and which are loaded (cached up to 60 s). */
+export function useModelServer(name: string, enabled = true) {
+  return useQuery({
+    queryKey: serverKey(name),
+    queryFn: async () =>
+      data(await api.GET('/admin/assistant/connections/{name}/models', { params: { path: { name } } })),
+    enabled,
+  });
+}
+
+/** Checks the server again, ignoring the state cached on the server (60 s). */
+export function useTestModelServer(name: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      data(
+        await api.GET('/admin/assistant/connections/{name}/models', {
+          params: { path: { name }, query: { refresh: true } },
+        }),
+      ),
+    onSuccess: (s) => {
+      qc.setQueryData(serverKey(name), s);
+    },
+  });
+}
+
+export function useModelAction(name: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ action, model }: { action: 'load' | 'unload'; model: string }) =>
+      action === 'load'
+        ? data(
+            await api.POST('/admin/assistant/connections/{name}/load', { params: { path: { name } }, body: { model } }),
+          )
+        : data(
+            await api.POST('/admin/assistant/connections/{name}/unload', {
+              params: { path: { name } },
+              body: { model },
+            }),
+          ),
+    onSuccess: async (s) => {
+      qc.setQueryData(serverKey(name), s);
+      await qc.invalidateQueries({ queryKey: keys.assistantStatus });
+    },
+  });
+}

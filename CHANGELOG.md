@@ -6,6 +6,27 @@ notes of their version.
 
 ## [Unreleased]
 
+### Added
+
+- **The assistant's connections under the administrator's control**: Administration → Assistant →
+  *Models* switches a connection on or off (also the configuration file's), sets the model questions
+  use and a model for photos, and how long the server keeps a model loaded after the last question
+  (10 minutes to 4 hours, 30 by default, or the server's own setting). For Ollama it lists the
+  loaded models with their memory and unload time, with *Load* and *Unload*. Every change is in the
+  Activity.
+- **Who picks the model**: the administrator (the default) or each person. When the administrator
+  picks, everyone's questions and digests use the default connection and its model, shown read only
+  in the assistant's settings.
+
+### Changed
+
+- **Photos go to the model that reads them**: a question with a photo of a receipt runs on the
+  connection's model for photos when the model in use can't read images, so receipts no longer need
+  a switch to another model by hand.
+- **Test says what it found**: in the assistant's settings, *Test* now shows "Connected to … · N
+  models · time" or why the server can't be reached, and the panel says when the model is unloaded
+  (its first answer takes a little longer).
+
 ## [0.4.0]
 
 An assistant that acts with your consent and an undo, receipts by photo, goals, digests, an advice

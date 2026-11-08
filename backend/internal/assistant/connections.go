@@ -39,7 +39,32 @@ type ModelInfo struct {
 	ID     string
 	Caps   llm.Caps
 	Tuning *Tuning
+	Loaded *bool // whether the server has it in memory now; nil when the server doesn't say
 }
+
+// Controls are an administrator's settings for one connection, the connections file's included
+// (Phase 20 follow-ups, ADR 0035 addendum): on or off, how long the server keeps a model after the
+// last question, the model questions use and the one for questions with photos.
+type Controls struct {
+	Enabled      bool
+	UnloadAfter  time.Duration // 0 = the server's own setting
+	DefaultModel string        // "" = the connection's own default
+	PhotoModel   string        // "" = none
+	Version      int32         // 0 = never saved
+	UpdatedAt    *time.Time
+}
+
+// DefaultUnloadAfter is the idle time of a connection whose controls were never saved.
+const DefaultUnloadAfter = 30 * time.Minute
+
+// DefaultControls apply to a connection until an administrator saves its controls.
+var DefaultControls = Controls{Enabled: true, UnloadAfter: DefaultUnloadAfter}
+
+// UnloadChoices are the idle times an administrator can pick, in minutes.
+var UnloadChoices = []int{10, 15, 30, 45, 60, 120, 240}
+
+// keepWarmTimeout bounds moving a model's unload time after a question.
+const keepWarmTimeout = 30 * time.Second
 
 // Tuning is an administrator's settings for one model of one connection (ADR 0035): defaults for
 // the temperature, the thinking level and the tool set when the question doesn't set them, the
@@ -62,7 +87,12 @@ type ConnectionStatus struct {
 	Reachable    bool
 	Models       []ModelInfo
 	DefaultModel string
-	Err          *llm.Error // why the model list couldn't be read
+	PhotoModel   string        // the connection's model for photos, when it offers it
+	Latency      time.Duration // how long reading the model list took
+	Server       llm.Server
+	Loaded       []llm.LoadedModel // what the server holds in memory (Ollama, LM Studio)
+	LoadedKnown  bool              // the server said which models are loaded
+	Err          *llm.Error        // why the model list couldn't be read
 }
 
 // ErrUnknownConnection and ErrUnknownModel reject a choice the instance doesn't offer.
@@ -80,10 +110,11 @@ type Connections struct {
 	timeout   time.Duration
 	idle      time.Duration
 
-	lmu    sync.RWMutex
-	file   []*Connection
-	stored []*Connection
-	tuning map[string]*Tuning // "connection\x00model"
+	lmu      sync.RWMutex
+	file     []*Connection
+	stored   []*Connection
+	tuning   map[string]*Tuning // "connection\x00model"
+	controls map[string]Controls
 
 	mu      sync.Mutex
 	cache   map[string]statusEntry
@@ -112,7 +143,7 @@ func NewConnections(cfgs []config.AIConnection, timeout, idle time.Duration, clo
 		idle = 60 * time.Second
 	}
 	cs := &Connections{clock: clock, newClient: newClient, timeout: timeout, idle: idle, tuning: map[string]*Tuning{},
-		cache: map[string]statusEntry{}, flights: map[string]*flight{}, learned: map[string]llm.Caps{}}
+		controls: map[string]Controls{}, cache: map[string]statusEntry{}, flights: map[string]*flight{}, learned: map[string]llm.Caps{}}
 	for i := range cfgs {
 		cs.file = append(cs.file, cs.connect(cfgs[i]))
 	}
@@ -135,6 +166,33 @@ func (cs *Connections) all() []*Connection {
 	return append(slices.Clip(cs.file), cs.stored...)
 }
 
+// enabled is every connection an administrator hasn't switched off: the ones people use.
+func (cs *Connections) enabled() []*Connection {
+	var out []*Connection
+	for _, c := range cs.all() {
+		if cs.ControlsOf(c.Name).Enabled {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// ControlsOf returns a connection's controls (DefaultControls until saved).
+func (cs *Connections) ControlsOf(name string) Controls {
+	if cs == nil {
+		return DefaultControls
+	}
+	cs.lmu.RLock()
+	defer cs.lmu.RUnlock()
+	if c, ok := cs.controls[name]; ok {
+		return c
+	}
+	return DefaultControls
+}
+
+// Disabled reports whether an administrator switched the connection off.
+func (cs *Connections) Disabled(name string) bool { return name != "" && !cs.ControlsOf(name).Enabled }
+
 // FileNames are the names of the connections file's connections (the panel can't take them).
 func (cs *Connections) FileNames() []string {
 	if cs == nil {
@@ -149,9 +207,10 @@ func (cs *Connections) FileNames() []string {
 	return names
 }
 
-// SetStored replaces the connections and tuning stored in the panel (ADR 0035). A connection
-// whose settings changed gets a new client and forgets its cached model list and what was learned.
-func (cs *Connections) SetStored(conns []config.AIConnection, tuning []Tuning) {
+// SetStored replaces the connections, tuning and controls stored in the panel (ADR 0035). A
+// connection whose settings changed gets a new client and forgets its cached model list and what
+// was learned; one whose controls changed forgets its cached model list.
+func (cs *Connections) SetStored(conns []config.AIConnection, tuning []Tuning, controls map[string]Controls) {
 	cs.lmu.Lock()
 	old := map[string]*Connection{}
 	for _, c := range cs.stored {
@@ -173,6 +232,20 @@ func (cs *Connections) SetStored(conns []config.AIConnection, tuning []Tuning) {
 		changed = append(changed, name)
 	}
 	cs.stored = stored
+	for name, c := range controls {
+		if o, ok := cs.controls[name]; !ok || o.Version != c.Version {
+			changed = append(changed, name)
+		}
+	}
+	for name := range cs.controls {
+		if _, ok := controls[name]; !ok {
+			changed = append(changed, name)
+		}
+	}
+	cs.controls = map[string]Controls{}
+	for name, c := range controls {
+		cs.controls[name] = c
+	}
 	cs.tuning = map[string]*Tuning{}
 	for i := range tuning {
 		t := tuning[i]
@@ -202,12 +275,20 @@ func (cs *Connections) tuningOf(conn, model string) *Tuning {
 	return cs.tuning[conn+"\x00"+model]
 }
 
-// Enabled reports whether any connection is configured.
-func (cs *Connections) Enabled() bool { return len(cs.all()) > 0 }
+// Enabled reports whether any connection is configured and switched on.
+func (cs *Connections) Enabled() bool { return len(cs.enabled()) > 0 }
 
-// Get returns a connection by name; "" is the first one.
+// Get returns a connection people may use by name; "" is the first one switched on.
 func (cs *Connections) Get(name string) (*Connection, error) {
-	list := cs.all()
+	return get(cs.enabled(), name)
+}
+
+// GetAny returns any connection by name, also one switched off (Administration).
+func (cs *Connections) GetAny(name string) (*Connection, error) {
+	return get(cs.all(), name)
+}
+
+func get(list []*Connection, name string) (*Connection, error) {
 	if len(list) == 0 {
 		return nil, ErrUnknownConnection
 	}
@@ -248,10 +329,19 @@ func (cs *Connections) CheckHosts(ctx context.Context, r *net.Resolver) (warning
 	return warnings, nil
 }
 
-// Status returns every connection's state, checking those whose cached state expired (in
-// parallel, one check per connection at a time). refresh ignores the cache.
+// StatusOf checks one connection, also one switched off (Administration).
+func (cs *Connections) StatusOf(ctx context.Context, name string, refresh bool) (ConnectionStatus, error) {
+	c, err := cs.GetAny(name)
+	if err != nil {
+		return ConnectionStatus{}, err
+	}
+	return cs.status(ctx, c, refresh), nil
+}
+
+// Status returns the state of every connection switched on, checking those whose cached state
+// expired (in parallel, one check per connection at a time). refresh ignores the cache.
 func (cs *Connections) Status(ctx context.Context, refresh bool) []ConnectionStatus {
-	list := cs.all()
+	list := cs.enabled()
 	if len(list) == 0 {
 		return nil
 	}
@@ -280,7 +370,7 @@ func (cs *Connections) status(ctx context.Context, c *Connection, refresh bool) 
 		case <-f.done:
 			return cs.withLearned(f.st)
 		case <-ctx.Done():
-			return ConnectionStatus{Name: c.Name, Label: c.Label, API: c.API, Cloud: c.Cloud, DefaultModel: c.DefaultModel,
+			return ConnectionStatus{Name: c.Name, Label: c.Label, API: c.API, Cloud: c.Cloud, DefaultModel: cs.preferred(c),
 				Err: &llm.Error{Kind: llm.KindTimeout, Message: "the check was cancelled"}}
 		}
 	}
@@ -306,30 +396,152 @@ func (cs *Connections) status(ctx context.Context, c *Connection, refresh bool) 
 	return cs.withLearned(st)
 }
 
+// preferred is the model a connection's questions use: the administrator's choice, else the
+// connection's own default.
+func (cs *Connections) preferred(c *Connection) string {
+	if m := cs.ControlsOf(c.Name).DefaultModel; m != "" {
+		return m
+	}
+	return c.DefaultModel
+}
+
 // check reads a connection's model list: chat models only (no embeddings), limited to the
-// connection's allowlist, each with its detected capabilities.
+// connection's allowlist, each with its detected capabilities, and for a server that says which
+// models are loaded (Ollama, LM Studio), that too.
 func (cs *Connections) check(ctx context.Context, c *Connection) ConnectionStatus {
-	st := ConnectionStatus{Name: c.Name, Label: c.Label, API: c.API, Cloud: c.Cloud}
+	st := ConnectionStatus{Name: c.Name, Label: c.Label, API: c.API, Cloud: c.Cloud, Server: llm.ServerOther}
+	t0 := cs.clock.Now()
 	models, err := c.Client.Models(ctx)
+	st.Latency = cs.clock.Now().Sub(t0)
 	if err != nil {
 		var le *llm.Error
 		if !errors.As(err, &le) {
 			le = &llm.Error{Kind: llm.KindUnreachable, Message: err.Error()}
 		}
 		st.Err = le
-		st.DefaultModel = c.DefaultModel
+		st.DefaultModel = cs.preferred(c)
 		return st
 	}
 	st.Reachable = true
+	loaded := map[string]bool{}
+	if m, ok := c.Client.(llm.Manager); ok {
+		st.Server = m.Server()
+		if st.Server != llm.ServerOther {
+			if list, lerr := m.Loaded(ctx); lerr == nil {
+				st.Loaded, st.LoadedKnown = list, true
+				for _, l := range list {
+					loaded[l.ID] = true
+				}
+			}
+		}
+	}
 	var chat []llm.Model
 	for _, m := range models {
 		if !llm.IsEmbedding(m) && c.offers(m.ID) {
 			chat = append(chat, m)
-			st.Models = append(st.Models, ModelInfo{ID: m.ID, Caps: llm.DetectCaps(c.API, m, c.ContextTokens, c.Caps)})
+			info := ModelInfo{ID: m.ID, Caps: llm.DetectCaps(c.API, m, c.ContextTokens, c.Caps)}
+			if st.LoadedKnown {
+				l := loaded[m.ID]
+				info.Loaded = &l
+			}
+			st.Models = append(st.Models, info)
 		}
 	}
-	st.DefaultModel = llm.DefaultModel(chat, c.DefaultModel)
+	st.DefaultModel = llm.DefaultModel(chat, cs.preferred(c))
+	if p := cs.ControlsOf(c.Name).PhotoModel; p != "" && c.offers(p) {
+		st.PhotoModel = p
+	}
 	return st
+}
+
+// Forget drops a connection's cached state, so the next check reads the server again (after
+// loading or unloading a model).
+func (cs *Connections) Forget(name string) {
+	cs.mu.Lock()
+	delete(cs.cache, name)
+	cs.mu.Unlock()
+}
+
+// KeepWarm moves the model's unload time on Ollama to the connection's idle time, in the
+// background, after a question or digest: the request itself leaves Ollama's own keep_alive. Ollama
+// then unloads the model by itself once nothing used it that long, so the api replicas and the
+// worker never need to agree on a timer.
+func (cs *Connections) KeepWarm(ctx context.Context, c *Connection, model string) {
+	d := cs.ControlsOf(c.Name).UnloadAfter
+	m, ok := c.Client.(llm.Manager)
+	if d <= 0 || !ok || model == "" || m.Server() != llm.ServerOllama {
+		return
+	}
+	// the question's request may be over (or cancelled) by now; the reset still goes out
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), keepWarmTimeout)
+	go func() {
+		defer cancel()
+		_ = m.Load(ctx, model, d)
+	}()
+}
+
+// LoadModel loads one of the connection's offered models now (Ollama), kept for its idle time.
+func (cs *Connections) LoadModel(ctx context.Context, name, model string) error {
+	c, m, err := cs.Manager(ctx, name)
+	if err != nil {
+		return err
+	}
+	if m == nil {
+		return llm.ErrCannotManage
+	}
+	if !c.offers(model) {
+		return fmt.Errorf("%w: %q", ErrUnknownModel, model)
+	}
+	defer cs.Forget(name)
+	return m.Load(ctx, model, cs.ControlsOf(name).UnloadAfter)
+}
+
+// UnloadModel frees a model the server holds now (Ollama), offered or not: it is the
+// administrator's server, and any loaded model takes its memory.
+func (cs *Connections) UnloadModel(ctx context.Context, name, model string) error {
+	_, m, err := cs.Manager(ctx, name)
+	if err != nil {
+		return err
+	}
+	if m == nil {
+		return llm.ErrCannotManage
+	}
+	defer cs.Forget(name)
+	return m.Unload(ctx, model)
+}
+
+// UnloadAll frees every model the server holds (a connection switched off); a server that can't
+// unload from here is left as it is.
+func (cs *Connections) UnloadAll(ctx context.Context, name string) error {
+	_, m, err := cs.Manager(ctx, name)
+	if err != nil || m == nil {
+		return err
+	}
+	defer cs.Forget(name)
+	loaded, err := m.Loaded(ctx)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, l := range loaded {
+		errs = append(errs, m.Unload(ctx, l.ID))
+	}
+	return errors.Join(errs...)
+}
+
+// Manager returns a connection's model manager, after a check so the server is known; nil when
+// the server can't load or unload models from here.
+func (cs *Connections) Manager(ctx context.Context, name string) (*Connection, llm.Manager, error) {
+	c, err := cs.GetAny(name)
+	if err != nil {
+		return nil, nil, err
+	}
+	cs.status(ctx, c, false)
+	m, ok := c.Client.(llm.Manager)
+	if !ok || m.Server() != llm.ServerOllama {
+		return c, nil, nil
+	}
+	return c, m, nil
 }
 
 // offers applies the connection's model allowlist (case-insensitive globs).

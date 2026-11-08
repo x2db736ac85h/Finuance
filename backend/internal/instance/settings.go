@@ -7,6 +7,7 @@ package instance
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -30,7 +31,32 @@ const MaxInstructions = 2000
 type Assistant struct {
 	// Instructions are the administrator's addition to every system prompt, after the app's rules.
 	Instructions string `json:"instructions,omitempty"`
+	// ModelChoice is who picks the connection and model: ModelChoiceAdmin ("" too, the default) or
+	// ModelChoicePeople (Phase 20 follow-ups).
+	ModelChoice string `json:"modelChoice,omitempty"`
+	// DefaultConnection is the connection questions use when the administrator picks; "" = the
+	// first one switched on.
+	DefaultConnection string `json:"defaultConnection,omitempty"`
 }
+
+// Who picks the assistant's connection and model.
+const (
+	ModelChoiceAdmin  = "admin"
+	ModelChoicePeople = "people"
+)
+
+// PeopleChoose reports whether each person picks the connection and model.
+func (a *Assistant) PeopleChoose() bool { return a != nil && a.ModelChoice == ModelChoicePeople }
+
+// Connection is the administrator's default connection ("" = the first one switched on).
+func (a *Assistant) Connection() string {
+	if a == nil {
+		return ""
+	}
+	return a.DefaultConnection
+}
+
+var connectionName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 
 // Defaults are the preferences a user's view starts from. The browser merges them under the
 // user's stored preferences, so only keys the user never saved take them; the names are the
@@ -120,8 +146,16 @@ func (s Settings) Validate() error {
 		}
 	}
 	s.Limits.validate("limits", ve)
-	if a := s.Assistant; a != nil && (utf8.RuneCountInString(a.Instructions) > MaxInstructions || strings.ContainsRune(a.Instructions, 0)) {
-		ve.Add("assistant.instructions", fmt.Sprintf("must be at most %d characters", MaxInstructions))
+	if a := s.Assistant; a != nil {
+		if utf8.RuneCountInString(a.Instructions) > MaxInstructions || strings.ContainsRune(a.Instructions, 0) {
+			ve.Add("assistant.instructions", fmt.Sprintf("must be at most %d characters", MaxInstructions))
+		}
+		if a.ModelChoice != "" && a.ModelChoice != ModelChoiceAdmin && a.ModelChoice != ModelChoicePeople {
+			ve.Add("assistant.modelChoice", "must be admin or people")
+		}
+		if a.DefaultConnection != "" && !connectionName.MatchString(a.DefaultConnection) {
+			ve.Add("assistant.defaultConnection", "must be a connection's name")
+		}
 	}
 	return ve.Err()
 }

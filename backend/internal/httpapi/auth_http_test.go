@@ -136,7 +136,8 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	ai := assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
-		MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil)})
+		MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil),
+		Choice: testChoice(adm)})
 	stored, err := assistant.NewConnectionStore(st, cfg.InstanceKey, clk, ai.Connections, cfg.AIConnections, 8192, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -169,6 +170,19 @@ type resp struct {
 	body   map[string]any
 	raw    string
 	header http.Header
+}
+
+// testChoice reads who picks the assistant's model from the instance settings as the app does,
+// except that a document that never set it lets people choose: the other assistant tests pick
+// their models (the app's default, the administrator, is tested in internal/instance).
+func testChoice(adm *admin.Service) func(context.Context) assistant.Choice {
+	return func(ctx context.Context) assistant.Choice {
+		s, _, err := adm.Settings(ctx)
+		if err != nil || s.Assistant == nil || s.Assistant.ModelChoice == "" {
+			return assistant.Choice{People: true}
+		}
+		return assistant.Choice{People: s.Assistant.PeopleChoose(), Connection: s.Assistant.Connection()}
+	}
 }
 
 func (b *browser) do(method, path string, body any) resp {

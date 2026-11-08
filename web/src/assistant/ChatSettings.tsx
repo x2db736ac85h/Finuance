@@ -2,6 +2,8 @@
 // instance config, so the user picks a connection and a model; the rest are the legacy run
 // settings (saved in the preferences) and the chat retention (a server setting).
 
+import { useState } from 'react';
+
 import {
   useAssistantSettings,
   useRefreshStatus,
@@ -24,14 +26,43 @@ import { Select, type Option } from '../ui/inputs';
 import { fixFor } from './errors';
 import { AUTO_APPLY_MAX_ROWS } from './Proposal';
 
-/** The connection and model the panel uses: the saved choice when offered, else the defaults. */
+/**
+ * The connection and model the panel uses: the saved choice when offered, else the defaults. When
+ * the administrator picks (status.choice admin), the default connection and its default model, the
+ * only ones the server uses then.
+ */
 export function pick(status: AssistantStatus | undefined, ai: Pick<AiPrefs, 'connection' | 'model'>) {
   const conns = status?.connections ?? [];
+  if (status?.choice === 'admin') {
+    const conn = conns[0];
+    return conn ? { conn, model: conn.defaultModel ?? '' } : { conn: undefined, model: '' };
+  }
   const conn = conns.find((c) => c.name === ai.connection) ?? conns[0];
   if (!conn) return { conn: undefined, model: '' };
   const offered =
     conn.models.some((m) => m.id === ai.model) || (!conn.reachable && ai.model !== '' && conn.name === ai.connection);
   return { conn, model: offered ? ai.model : (conn.defaultModel ?? '') };
+}
+
+/** Whether questions with photos can be asked: the model reads images, or the connection's model for photos does. */
+export function readsPhotos(conn: AssistantConnection | undefined, model: string): boolean {
+  if (!conn) return false;
+  const can = (id: string | undefined) => !!id && (conn.models.find((m) => m.id === id)?.vision ?? false);
+  return can(model) || can(conn.photoModel);
+}
+
+/** What a check of the connection found, as a line under Test (also in Administration). */
+export function testLine(conn: AssistantConnection): { ok: boolean; text: string } {
+  if (!conn.reachable) {
+    const why = conn.error ? `${conn.error.message} ${fixFor(conn.error.kind)}`.trim() : 'no answer';
+    return { ok: false, text: `Can't reach ${conn.label}: ${why}` };
+  }
+  const parts = [
+    `Connected to ${conn.label}`,
+    `${String(conn.models.length)} ${conn.models.length === 1 ? 'model' : 'models'}`,
+  ];
+  if (conn.latencyMs !== undefined) parts.push(`${String(conn.latencyMs)} ms`);
+  return { ok: true, text: parts.join(' · ') };
 }
 
 const MODES: Option<string>[] = [
@@ -204,8 +235,25 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
   const refresh = useRefreshStatus();
   const meta = useMeta();
   const { conn, model } = pick(status, ai);
+  const locked = status?.choice === 'admin';
+  const [tested, setTested] = useState(false);
+  const line = conn ? testLine(conn) : undefined;
   const consented = !!conn && (settings.data?.cloudConsent ?? []).includes(conn.name);
   const info = conn?.models.find((m) => m.id === model);
+  const testButton = (
+    <Button
+      size="sm"
+      icon="plug"
+      title="Check the model servers again"
+      disabled={refresh.isPending}
+      onClick={() => {
+        setTested(true);
+        refresh.mutate();
+      }}
+    >
+      Test
+    </Button>
+  );
   const retention = settings.data
     ? settings.data.retentionDays === null
       ? 'forever'
@@ -218,54 +266,76 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
         <Icon name="plug" />
         Assistant settings
       </h3>
-      <label>
-        Connection
-        <Select
-          value={conn?.name ?? ''}
-          options={(status?.connections ?? []).map((c) => ({
-            value: c.name,
-            label: c.cloud ? `${c.label} (cloud)` : c.label,
-          }))}
-          onChange={(name) => {
-            const c = status?.connections.find((x) => x.name === name);
-            setAi({ connection: name, model: '' });
-            if (c?.cloud && !(settings.data?.cloudConsent ?? []).includes(c.name)) onCloud(c);
-          }}
-        />
-      </label>
-      <label>
-        Model
-        <div className="row2 nowrap">
-          {conn && conn.models.length > 0 ? (
+      {locked ? (
+        <div className="conn-locked">
+          <span>
+            <b>{conn?.label ?? 'No connection'}</b>
+            {model ? ` · ${model}` : ''}
+          </span>
+          <span className="hint">The connection and model are set by your administrator.</span>
+          <div>{testButton}</div>
+        </div>
+      ) : (
+        <>
+          <label>
+            Connection
             <Select
-              value={model}
-              options={conn.models.map((m) => ({ value: m.id, label: m.tools ? m.id : `${m.id} (plan mode)` }))}
-              onChange={(id) => {
-                setAi({ connection: conn.name, model: id });
+              value={conn?.name ?? ''}
+              options={(status?.connections ?? []).map((c) => ({
+                value: c.name,
+                label: c.cloud ? `${c.label} (cloud)` : c.label,
+              }))}
+              onChange={(name) => {
+                const c = status?.connections.find((x) => x.name === name);
+                setAi({ connection: name, model: '' });
+                if (c?.cloud && !(settings.data?.cloudConsent ?? []).includes(c.name)) onCloud(c);
               }}
             />
-          ) : (
-            <span className="hint">
-              {conn?.reachable ? 'This server offers no chat model. Load one first.' : 'Not connected.'}
+          </label>
+          <label>
+            Model
+            <div className="row2 nowrap">
+              {conn && conn.models.length > 0 ? (
+                <Select
+                  value={model}
+                  options={conn.models.map((m) => ({ value: m.id, label: m.tools ? m.id : `${m.id} (plan mode)` }))}
+                  onChange={(id) => {
+                    setAi({ connection: conn.name, model: id });
+                  }}
+                />
+              ) : (
+                <span className="hint">
+                  {conn?.reachable ? 'This server offers no chat model. Load one first.' : 'Not connected.'}
+                </span>
+              )}
+              {testButton}
+            </div>
+          </label>
+        </>
+      )}
+      {/* the result of the last Test stays until the next one (role status: read out) */}
+      <div className="conn-test" role="status">
+        {tested &&
+          (refresh.isPending ? (
+            <span className="hint">Checking…</span>
+          ) : refresh.isError ? (
+            <span className="conn-bad">Couldn't check: {errorMessage(refresh.error)}</span>
+          ) : conn ? (
+            <span className={line?.ok ? 'conn-ok' : 'conn-bad'}>
+              {line?.ok ? '✓ ' : '✕ '}
+              {line?.text}
             </span>
-          )}
-          <Button
-            size="sm"
-            icon="plug"
-            title="Check the model servers again"
-            disabled={refresh.isPending}
-            onClick={() => {
-              refresh.mutate();
-            }}
-          >
-            Test
-          </Button>
-        </div>
-      </label>
-      {conn?.error && (
+          ) : null)}
+      </div>
+      {conn?.error && !tested && (
         <div className="conn-err">
           {conn.error.message} {fixFor(conn.error.kind)}
         </div>
+      )}
+      {info?.loaded === false && (
+        <p className="hint">
+          The model isn't loaded right now: the first answer takes a little longer while the server loads it.
+        </p>
       )}
       <label>
         How the model gets data

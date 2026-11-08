@@ -3047,6 +3047,105 @@ paths:
           description: Deleted.
         default:
           $ref: "#/components/responses/Problem"
+  /admin/assistant/connections/{name}/controls:
+    parameters:
+      - $ref: "#/components/parameters/ConnectionName"
+    put:
+      operationId: adminPutConnectionControls
+      summary: Switch a connection on or off and set its models and idle time
+      description: >-
+        For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned:
+        `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the
+        server allows it. `defaultModel` and `photoModel` must be models the connection offers ('' for none).
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminConnectionControlsInput"
+      responses:
+        "200":
+          description: The connection as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConnection"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/connections/{name}/models:
+    parameters:
+      - $ref: "#/components/parameters/ConnectionName"
+    get:
+      operationId: adminConnectionModels
+      summary: A connection's server, its models and which are loaded
+      description: >-
+        Checks the server (also a connection that is switched off): its kind, how long the model list took, and
+        for Ollama and LM Studio which models are loaded, their size and when they unload.
+      tags: [admin]
+      parameters:
+        - name: refresh
+          in: query
+          schema:
+            type: boolean
+          description: Check again instead of using the state cached for up to 60 s.
+      responses:
+        "200":
+          description: The server's state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModelServer"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/connections/{name}/load:
+    parameters:
+      - $ref: "#/components/parameters/ConnectionName"
+    post:
+      operationId: adminLoadModel
+      summary: Load a model now
+      description: >-
+        Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminModelAction"
+      responses:
+        "200":
+          description: The server's state afterwards.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModelServer"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/assistant/connections/{name}/unload:
+    parameters:
+      - $ref: "#/components/parameters/ConnectionName"
+    post:
+      operationId: adminUnloadModel
+      summary: Unload a model now
+      description: >-
+        Ollama only, as for loading; frees the model's memory on the server. Audited.
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminModelAction"
+      responses:
+        "200":
+          description: The server's state afterwards.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModelServer"
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/assistant/tuning:
     get:
       operationId: adminListTuning
@@ -3221,6 +3320,13 @@ paths:
           $ref: "#/components/responses/Problem"
 components:
   parameters:
+    ConnectionName:
+      name: name
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z0-9][a-z0-9_-]{0,39}$"
     AdminUserId:
       name: id
       in: path
@@ -6415,7 +6521,7 @@ components:
     AssistantStatus:
       type: object
       additionalProperties: false
-      required: [enabled, connections, maxRowsLimit]
+      required: [enabled, connections, maxRowsLimit, choice]
       properties:
         enabled:
           type: boolean
@@ -6423,6 +6529,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AssistantConnection"
+          description: The connections switched on; with `choice` admin only the default one.
+        choice:
+          type: string
+          enum: [admin, people]
+          description: >-
+            Who picks the connection and model: the administrator (questions use the default connection and its
+            default model, whatever they ask for) or each person.
         maxRowsLimit:
           type: integer
           description: The highest number of rows one lookup may return (legacy maxRows).
@@ -6453,6 +6566,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AssistantModel"
+        photoModel:
+          type: string
+          description: The model a question with photos uses when the chosen one can't read images.
+        latencyMs:
+          type: integer
+          description: How long the last check of the model list took.
         error:
           $ref: "#/components/schemas/AssistantError"
     AssistantModel:
@@ -6475,6 +6594,9 @@ components:
         vision:
           type: boolean
           description: Whether the model reads images (photos of receipts can be attached).
+        loaded:
+          type: boolean
+          description: Whether the server has the model loaded now (Ollama, LM Studio); absent when it doesn't say.
     AssistantError:
       type: object
       additionalProperties: false
@@ -7355,7 +7477,7 @@ components:
     AdminConnection:
       type: object
       additionalProperties: false
-      required: [name, label, api, baseUrl, cloud, defaultModel, models, contextTokens, source, hasKey, keyUnreadable, version]
+      required: [name, label, api, baseUrl, cloud, defaultModel, models, contextTokens, source, hasKey, keyUnreadable, version, controls]
       properties:
         name:
           type: string
@@ -7390,6 +7512,8 @@ components:
           type: integer
           format: int32
           description: 0 for the file's.
+        controls:
+          $ref: "#/components/schemas/AdminConnectionControls"
         updatedAt:
           type: string
           format: date-time
@@ -7561,6 +7685,111 @@ components:
         secret:
           type: string
           description: The token itself, shown once.
+    AdminConnectionControls:
+      type: object
+      additionalProperties: false
+      required: [enabled, unloadAfterMinutes, defaultModel, photoModel, version]
+      description: An administrator's controls for one connection; the defaults until they are first saved.
+      properties:
+        enabled:
+          type: boolean
+        unloadAfterMinutes:
+          type: integer
+          nullable: true
+          description: >-
+            Minutes the server keeps a model after the last question: 10, 15, 30, 45, 60, 120 or 240; null = the
+            server's own setting.
+        defaultModel:
+          type: string
+          description: The model questions use, over the connection's own default; '' = that default.
+        photoModel:
+          type: string
+          description: The model for a question with photos when the chosen one can't read images; '' = none.
+        version:
+          type: integer
+          format: int32
+          description: 0 = never saved.
+        updatedAt:
+          type: string
+          format: date-time
+    AdminConnectionControlsInput:
+      type: object
+      additionalProperties: false
+      required: [enabled, unloadAfterMinutes, defaultModel, photoModel, version]
+      properties:
+        enabled:
+          type: boolean
+        unloadAfterMinutes:
+          type: integer
+          nullable: true
+        defaultModel:
+          type: string
+          maxLength: 200
+        photoModel:
+          type: string
+          maxLength: 200
+        version:
+          type: integer
+          format: int32
+          minimum: 0
+    AdminModelAction:
+      type: object
+      additionalProperties: false
+      required: [model]
+      properties:
+        model:
+          type: string
+          minLength: 1
+          maxLength: 200
+    AdminModelServer:
+      type: object
+      additionalProperties: false
+      required: [server, reachable, canManage, models]
+      properties:
+        server:
+          type: string
+          enum: [ollama, lmstudio, other]
+          description: What the model server is, as far as its answers tell.
+        reachable:
+          type: boolean
+        latencyMs:
+          type: integer
+        canManage:
+          type: boolean
+          description: Whether models can be loaded and unloaded from here (Ollama).
+        models:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminServerModel"
+        error:
+          $ref: "#/components/schemas/AssistantError"
+    AdminServerModel:
+      type: object
+      additionalProperties: false
+      required: [id, offered, tools, vision]
+      properties:
+        id:
+          type: string
+        offered:
+          type: boolean
+          description: Offered to people (the connection's model list); loaded models outside it are listed too.
+        tools:
+          type: boolean
+        vision:
+          type: boolean
+        loaded:
+          type: boolean
+          description: Absent when the server doesn't say.
+        sizeBytes:
+          type: integer
+          format: int64
+        vramBytes:
+          type: integer
+          format: int64
+        unloadsAt:
+          type: string
+          format: date-time
+          description: When the server unloads it if nothing uses it (Ollama).
     InstanceAssistant:
       type: object
       additionalProperties: false
@@ -7570,6 +7799,14 @@ components:
           type: string
           maxLength: 2000
           description: Added to every system prompt after the app's rules (ADR 0034).
+        modelChoice:
+          type: string
+          enum: [admin, people]
+          description: Who picks the connection and model; absent = admin (the administrator's defaults).
+        defaultConnection:
+          type: string
+          maxLength: 40
+          description: The connection questions use when the administrator picks; '' = the first one switched on.
     AdviceInput:
       type: object
       additionalProperties: false

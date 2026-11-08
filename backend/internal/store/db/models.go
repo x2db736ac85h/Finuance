@@ -115,6 +115,16 @@ type AssistantConnection struct {
 	UpdatedAt     time.Time
 }
 
+type AssistantConnectionControl struct {
+	Name               string
+	Enabled            bool
+	UnloadAfterMinutes *int32
+	DefaultModel       string
+	PhotoModel         string
+	Version            int32
+	UpdatedAt          time.Time
+}
+
 type AssistantMessage struct {
 	ID         int64
 	ChatID     uuid.UUID

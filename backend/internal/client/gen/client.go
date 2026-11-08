@@ -365,6 +365,27 @@ func (e AdminConnectionUpdateKeyAction) Valid() bool {
 	}
 }
 
+// Defines values for AdminModelServerServer.
+const (
+	AdminModelServerServerLmstudio AdminModelServerServer = "lmstudio"
+	AdminModelServerServerOllama   AdminModelServerServer = "ollama"
+	AdminModelServerServerOther    AdminModelServerServer = "other"
+)
+
+// Valid indicates whether the value is a known member of the AdminModelServerServer enum.
+func (e AdminModelServerServer) Valid() bool {
+	switch e {
+	case AdminModelServerServerLmstudio:
+		return true
+	case AdminModelServerServerOllama:
+		return true
+	case AdminModelServerServerOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AdviceArticleStatus.
 const (
 	AdviceArticleStatusDraft     AdviceArticleStatus = "draft"
@@ -707,6 +728,24 @@ func (e AssistantSettingsAutoApply) Valid() bool {
 	case AssistantSettingsAutoApplySplitExpense:
 		return true
 	case AssistantSettingsAutoApplyUpdateGoal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssistantStatusChoice.
+const (
+	AssistantStatusChoiceAdmin  AssistantStatusChoice = "admin"
+	AssistantStatusChoicePeople AssistantStatusChoice = "people"
+)
+
+// Valid indicates whether the value is a known member of the AssistantStatusChoice enum.
+func (e AssistantStatusChoice) Valid() bool {
+	switch e {
+	case AssistantStatusChoiceAdmin:
+		return true
+	case AssistantStatusChoicePeople:
 		return true
 	default:
 		return false
@@ -1283,6 +1322,24 @@ func (e ImportSummaryStatus) Valid() bool {
 	case ImportSummaryStatusFailed:
 		return true
 	case ImportSummaryStatusPreviewed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstanceAssistantModelChoice.
+const (
+	InstanceAssistantModelChoiceAdmin  InstanceAssistantModelChoice = "admin"
+	InstanceAssistantModelChoicePeople InstanceAssistantModelChoice = "people"
+)
+
+// Valid indicates whether the value is a known member of the InstanceAssistantModelChoice enum.
+func (e InstanceAssistantModelChoice) Valid() bool {
+	switch e {
+	case InstanceAssistantModelChoiceAdmin:
+		return true
+	case InstanceAssistantModelChoicePeople:
 		return true
 	default:
 		return false
@@ -2510,8 +2567,11 @@ type AdminConnection struct {
 	BaseUrl       string             `json:"baseUrl"`
 	Cloud         bool               `json:"cloud"`
 	ContextTokens int                `json:"contextTokens"`
-	DefaultModel  string             `json:"defaultModel"`
-	HasKey        bool               `json:"hasKey"`
+
+	// Controls An administrator's controls for one connection; the defaults until they are first saved.
+	Controls     AdminConnectionControls `json:"controls"`
+	DefaultModel string                  `json:"defaultModel"`
+	HasKey       bool                    `json:"hasKey"`
 
 	// KeyUnreadable The stored key was sealed under another instance key; enter it again.
 	KeyUnreadable bool   `json:"keyUnreadable"`
@@ -2534,6 +2594,32 @@ type AdminConnectionApi string
 
 // AdminConnectionSource The connections file's (read only) or added here.
 type AdminConnectionSource string
+
+// AdminConnectionControls An administrator's controls for one connection; the defaults until they are first saved.
+type AdminConnectionControls struct {
+	// DefaultModel The model questions use, over the connection's own default; '' = that default.
+	DefaultModel string `json:"defaultModel"`
+	Enabled      bool   `json:"enabled"`
+
+	// PhotoModel The model for a question with photos when the chosen one can't read images; '' = none.
+	PhotoModel string `json:"photoModel"`
+
+	// UnloadAfterMinutes Minutes the server keeps a model after the last question: 10, 15, 30, 45, 60, 120 or 240; null = the server's own setting.
+	UnloadAfterMinutes *int       `json:"unloadAfterMinutes"`
+	UpdatedAt          *time.Time `json:"updatedAt,omitempty"`
+
+	// Version 0 = never saved.
+	Version int32 `json:"version"`
+}
+
+// AdminConnectionControlsInput defines model for AdminConnectionControlsInput.
+type AdminConnectionControlsInput struct {
+	DefaultModel       string `json:"defaultModel"`
+	Enabled            bool   `json:"enabled"`
+	PhotoModel         string `json:"photoModel"`
+	UnloadAfterMinutes *int   `json:"unloadAfterMinutes"`
+	Version            int32  `json:"version"`
+}
 
 // AdminConnectionInput defines model for AdminConnectionInput.
 type AdminConnectionInput struct {
@@ -2594,6 +2680,45 @@ type AdminCreatedUser struct {
 type AdminDeleteUserRequest struct {
 	// ConfirmEmail The account's e-mail address, repeated.
 	ConfirmEmail string `json:"confirmEmail"`
+}
+
+// AdminModelAction defines model for AdminModelAction.
+type AdminModelAction struct {
+	Model string `json:"model"`
+}
+
+// AdminModelServer defines model for AdminModelServer.
+type AdminModelServer struct {
+	// CanManage Whether models can be loaded and unloaded from here (Ollama).
+	CanManage bool               `json:"canManage"`
+	Error     *AssistantError    `json:"error,omitempty"`
+	LatencyMs *int               `json:"latencyMs,omitempty"`
+	Models    []AdminServerModel `json:"models"`
+	Reachable bool               `json:"reachable"`
+
+	// Server What the model server is, as far as its answers tell.
+	Server AdminModelServerServer `json:"server"`
+}
+
+// AdminModelServerServer What the model server is, as far as its answers tell.
+type AdminModelServerServer string
+
+// AdminServerModel defines model for AdminServerModel.
+type AdminServerModel struct {
+	Id string `json:"id"`
+
+	// Loaded Absent when the server doesn't say.
+	Loaded *bool `json:"loaded,omitempty"`
+
+	// Offered Offered to people (the connection's model list); loaded models outside it are listed too.
+	Offered   bool   `json:"offered"`
+	SizeBytes *int64 `json:"sizeBytes,omitempty"`
+	Tools     bool   `json:"tools"`
+
+	// UnloadsAt When the server unloads it if nothing uses it (Ollama).
+	UnloadsAt *time.Time `json:"unloadsAt,omitempty"`
+	Vision    bool       `json:"vision"`
+	VramBytes *int64     `json:"vramBytes,omitempty"`
 }
 
 // AdminUpdateUserRequest defines model for AdminUpdateUserRequest.
@@ -2738,12 +2863,18 @@ type AssistantConnection struct {
 	Error        *AssistantError `json:"error,omitempty"`
 
 	// Label Example: LM Studio (homelab)
-	Label  string           `json:"label"`
-	Models []AssistantModel `json:"models"`
+	Label string `json:"label"`
+
+	// LatencyMs How long the last check of the model list took.
+	LatencyMs *int             `json:"latencyMs,omitempty"`
+	Models    []AssistantModel `json:"models"`
 
 	// Name Example: lmstudio
-	Name      string `json:"name"`
-	Reachable bool   `json:"reachable"`
+	Name string `json:"name"`
+
+	// PhotoModel The model a question with photos uses when the chosen one can't read images.
+	PhotoModel *string `json:"photoModel,omitempty"`
+	Reachable  bool    `json:"reachable"`
 }
 
 // AssistantConnectionApi defines model for AssistantConnection.Api.
@@ -2854,6 +2985,9 @@ type AssistantModel struct {
 	// Id Example: qwen3-14b
 	Id string `json:"id"`
 
+	// Loaded Whether the server has the model loaded now (Ollama, LM Studio); absent when it doesn't say.
+	Loaded *bool `json:"loaded,omitempty"`
+
 	// Reasoning How thinking is controlled (none = no control; the model may still reason).
 	Reasoning AssistantModelReasoning `json:"reasoning"`
 
@@ -2916,6 +3050,10 @@ type AssistantSettingsAutoApply string
 
 // AssistantStatus defines model for AssistantStatus.
 type AssistantStatus struct {
+	// Choice Who picks the connection and model: the administrator (questions use the default connection and its default model, whatever they ask for) or each person.
+	Choice AssistantStatusChoice `json:"choice"`
+
+	// Connections The connections switched on; with `choice` admin only the default one.
 	Connections []AssistantConnection `json:"connections"`
 	Enabled     bool                  `json:"enabled"`
 
@@ -2924,6 +3062,9 @@ type AssistantStatus struct {
 	// Example: 50
 	MaxRowsLimit int `json:"maxRowsLimit"`
 }
+
+// AssistantStatusChoice Who picks the connection and model: the administrator (questions use the default connection and its default model, whatever they ask for) or each person.
+type AssistantStatusChoice string
 
 // AssistantStep defines model for AssistantStep.
 type AssistantStep struct {
@@ -3868,9 +4009,18 @@ type InsightSummary struct {
 
 // InstanceAssistant The instance's settings for the assistant; left out of a PUT, the stored ones stay.
 type InstanceAssistant struct {
+	// DefaultConnection The connection questions use when the administrator picks; '' = the first one switched on.
+	DefaultConnection *string `json:"defaultConnection,omitempty"`
+
 	// Instructions Added to every system prompt after the app's rules (ADR 0034).
 	Instructions *string `json:"instructions,omitempty"`
+
+	// ModelChoice Who picks the connection and model; absent = admin (the administrator's defaults).
+	ModelChoice *InstanceAssistantModelChoice `json:"modelChoice,omitempty"`
 }
+
+// InstanceAssistantModelChoice Who picks the connection and model; absent = admin (the administrator's defaults).
+type InstanceAssistantModelChoice string
 
 // InstanceSettingsDoc defines model for InstanceSettingsDoc.
 type InstanceSettingsDoc struct {
@@ -5315,6 +5465,9 @@ type AssistantChatHeader = openapi_types.UUID
 // AssistantProposalHeader defines model for AssistantProposalHeader.
 type AssistantProposalHeader = string
 
+// ConnectionName defines model for ConnectionName.
+type ConnectionName = string
+
 // Id defines model for Id.
 type Id = openapi_types.UUID
 
@@ -5323,6 +5476,12 @@ type ThemeId = openapi_types.UUID
 
 // TooManyRequests RFC 9457 problem details.
 type TooManyRequests = Problem
+
+// AdminConnectionModelsParams defines parameters for AdminConnectionModels.
+type AdminConnectionModelsParams struct {
+	// Refresh Check again instead of using the state cached for up to 60 s.
+	Refresh *bool `form:"refresh,omitempty" json:"refresh,omitempty"`
+}
 
 // AdminUsageParams defines parameters for AdminUsage.
 type AdminUsageParams struct {
@@ -5574,6 +5733,15 @@ type AdminCreateConnectionJSONRequestBody = AdminConnectionInput
 
 // AdminUpdateConnectionJSONRequestBody defines body for AdminUpdateConnection for application/json ContentType.
 type AdminUpdateConnectionJSONRequestBody = AdminConnectionUpdate
+
+// AdminPutConnectionControlsJSONRequestBody defines body for AdminPutConnectionControls for application/json ContentType.
+type AdminPutConnectionControlsJSONRequestBody = AdminConnectionControlsInput
+
+// AdminLoadModelJSONRequestBody defines body for AdminLoadModel for application/json ContentType.
+type AdminLoadModelJSONRequestBody = AdminModelAction
+
+// AdminUnloadModelJSONRequestBody defines body for AdminUnloadModel for application/json ContentType.
+type AdminUnloadModelJSONRequestBody = AdminModelAction
 
 // AdminPutTuningJSONRequestBody defines body for AdminPutTuning for application/json ContentType.
 type AdminPutTuningJSONRequestBody = ModelTuning
@@ -5971,6 +6139,67 @@ type ClientInterface interface {
 	//
 	// Corresponds with PUT /admin/assistant/connections/{name} (the `AdminUpdateConnection` operationId).
 	AdminUpdateConnection(ctx context.Context, name string, body AdminUpdateConnectionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminPutConnectionControlsWithBody Switch a connection on or off and set its models and idle time
+	//
+	// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers ('' for none).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+	AdminPutConnectionControlsWithBody(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminPutConnectionControls Switch a connection on or off and set its models and idle time
+	//
+	// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers ('' for none).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+	AdminPutConnectionControls(ctx context.Context, name ConnectionName, body AdminPutConnectionControlsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminLoadModelWithBody Load a model now
+	//
+	// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+	AdminLoadModelWithBody(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminLoadModel Load a model now
+	//
+	// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+	AdminLoadModel(ctx context.Context, name ConnectionName, body AdminLoadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminConnectionModels A connection's server, its models and which are loaded
+	//
+	// Checks the server (also a connection that is switched off): its kind, how long the model list took, and for Ollama and LM Studio which models are loaded, their size and when they unload.
+	//
+	// Corresponds with GET /admin/assistant/connections/{name}/models (the `AdminConnectionModels` operationId).
+	AdminConnectionModels(ctx context.Context, name ConnectionName, params *AdminConnectionModelsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminUnloadModelWithBody Unload a model now
+	//
+	// Ollama only, as for loading; frees the model's memory on the server. Audited.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+	AdminUnloadModelWithBody(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminUnloadModel Unload a model now
+	//
+	// Ollama only, as for loading; frees the model's memory on the server. Audited.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+	AdminUnloadModel(ctx context.Context, name ConnectionName, body AdminUnloadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AdminListTuning Per-model tuning
 	//
@@ -7854,6 +8083,137 @@ func (c *Client) AdminUpdateConnectionWithBody(ctx context.Context, name string,
 // Corresponds with PUT /admin/assistant/connections/{name} (the `AdminUpdateConnection` operationId).
 func (c *Client) AdminUpdateConnection(ctx context.Context, name string, body AdminUpdateConnectionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAdminUpdateConnectionRequest(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AdminPutConnectionControlsWithBody Switch a connection on or off and set its models and idle time
+//
+// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers (” for none).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+func (c *Client) AdminPutConnectionControlsWithBody(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminPutConnectionControlsRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AdminPutConnectionControls Switch a connection on or off and set its models and idle time
+//
+// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers (” for none).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+func (c *Client) AdminPutConnectionControls(ctx context.Context, name ConnectionName, body AdminPutConnectionControlsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminPutConnectionControlsRequest(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AdminLoadModelWithBody Load a model now
+//
+// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+func (c *Client) AdminLoadModelWithBody(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminLoadModelRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AdminLoadModel Load a model now
+//
+// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+func (c *Client) AdminLoadModel(ctx context.Context, name ConnectionName, body AdminLoadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminLoadModelRequest(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AdminConnectionModels A connection's server, its models and which are loaded
+//
+// Checks the server (also a connection that is switched off): its kind, how long the model list took, and for Ollama and LM Studio which models are loaded, their size and when they unload.
+//
+// Corresponds with GET /admin/assistant/connections/{name}/models (the `AdminConnectionModels` operationId).
+func (c *Client) AdminConnectionModels(ctx context.Context, name ConnectionName, params *AdminConnectionModelsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminConnectionModelsRequest(c.Server, name, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AdminUnloadModelWithBody Unload a model now
+//
+// Ollama only, as for loading; frees the model's memory on the server. Audited.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+func (c *Client) AdminUnloadModelWithBody(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminUnloadModelRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AdminUnloadModel Unload a model now
+//
+// Ollama only, as for loading; frees the model's memory on the server. Audited.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+func (c *Client) AdminUnloadModel(ctx context.Context, name ConnectionName, body AdminUnloadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminUnloadModelRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
 	}
@@ -11845,6 +12205,208 @@ func NewAdminUpdateConnectionRequestWithBody(server string, name string, content
 	}
 
 	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAdminPutConnectionControlsRequest calls the generic AdminPutConnectionControls builder with application/json body
+func NewAdminPutConnectionControlsRequest(server string, name ConnectionName, body AdminPutConnectionControlsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAdminPutConnectionControlsRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewAdminPutConnectionControlsRequestWithBody constructs an http.Request for the AdminPutConnectionControls method, with any body, and a specified content type
+func NewAdminPutConnectionControlsRequestWithBody(server string, name ConnectionName, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/assistant/connections/%s/controls", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAdminLoadModelRequest calls the generic AdminLoadModel builder with application/json body
+func NewAdminLoadModelRequest(server string, name ConnectionName, body AdminLoadModelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAdminLoadModelRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewAdminLoadModelRequestWithBody constructs an http.Request for the AdminLoadModel method, with any body, and a specified content type
+func NewAdminLoadModelRequestWithBody(server string, name ConnectionName, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/assistant/connections/%s/load", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAdminConnectionModelsRequest constructs an http.Request for the AdminConnectionModels method
+func NewAdminConnectionModelsRequest(server string, name ConnectionName, params *AdminConnectionModelsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/assistant/connections/%s/models", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Refresh != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refresh", *params.Refresh, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAdminUnloadModelRequest calls the generic AdminUnloadModel builder with application/json body
+func NewAdminUnloadModelRequest(server string, name ConnectionName, body AdminUnloadModelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAdminUnloadModelRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewAdminUnloadModelRequestWithBody constructs an http.Request for the AdminUnloadModel method, with any body, and a specified content type
+func NewAdminUnloadModelRequestWithBody(server string, name ConnectionName, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/assistant/connections/%s/unload", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -17804,6 +18366,69 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /admin/assistant/connections/{name} (the `AdminUpdateConnection` operationId).
 	AdminUpdateConnectionWithResponse(ctx context.Context, name string, body AdminUpdateConnectionJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminUpdateConnectionResponse, error)
 
+	// AdminPutConnectionControlsWithBodyWithResponse Switch a connection on or off and set its models and idle time
+	//
+	// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers ('' for none).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+	AdminPutConnectionControlsWithBodyWithResponse(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminPutConnectionControlsResponse, error)
+
+	// AdminPutConnectionControlsWithResponse Switch a connection on or off and set its models and idle time
+	//
+	// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers ('' for none).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+	AdminPutConnectionControlsWithResponse(ctx context.Context, name ConnectionName, body AdminPutConnectionControlsJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminPutConnectionControlsResponse, error)
+
+	// AdminLoadModelWithBodyWithResponse Load a model now
+	//
+	// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+	AdminLoadModelWithBodyWithResponse(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminLoadModelResponse, error)
+
+	// AdminLoadModelWithResponse Load a model now
+	//
+	// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+	AdminLoadModelWithResponse(ctx context.Context, name ConnectionName, body AdminLoadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminLoadModelResponse, error)
+
+	// AdminConnectionModelsWithResponse A connection's server, its models and which are loaded
+	//
+	// Checks the server (also a connection that is switched off): its kind, how long the model list took, and for Ollama and LM Studio which models are loaded, their size and when they unload.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /admin/assistant/connections/{name}/models (the `AdminConnectionModels` operationId).
+	AdminConnectionModelsWithResponse(ctx context.Context, name ConnectionName, params *AdminConnectionModelsParams, reqEditors ...RequestEditorFn) (*AdminConnectionModelsResponse, error)
+
+	// AdminUnloadModelWithBodyWithResponse Unload a model now
+	//
+	// Ollama only, as for loading; frees the model's memory on the server. Audited.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+	AdminUnloadModelWithBodyWithResponse(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminUnloadModelResponse, error)
+
+	// AdminUnloadModelWithResponse Unload a model now
+	//
+	// Ollama only, as for loading; frees the model's memory on the server. Audited.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+	AdminUnloadModelWithResponse(ctx context.Context, name ConnectionName, body AdminUnloadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminUnloadModelResponse, error)
+
 	// AdminListTuningWithResponse Per-model tuning
 	//
 	// Returns a wrapper object for the known response body format(s).
@@ -20153,6 +20778,198 @@ func (r AdminUpdateConnectionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r AdminUpdateConnectionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AdminPutConnectionControlsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AdminConnection
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AdminPutConnectionControlsResponse) GetJSON200() *AdminConnection {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r AdminPutConnectionControlsResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r AdminPutConnectionControlsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminPutConnectionControlsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminPutConnectionControlsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AdminPutConnectionControlsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AdminLoadModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AdminModelServer
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AdminLoadModelResponse) GetJSON200() *AdminModelServer {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r AdminLoadModelResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r AdminLoadModelResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminLoadModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminLoadModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AdminLoadModelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AdminConnectionModelsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AdminModelServer
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AdminConnectionModelsResponse) GetJSON200() *AdminModelServer {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r AdminConnectionModelsResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r AdminConnectionModelsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminConnectionModelsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminConnectionModelsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AdminConnectionModelsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AdminUnloadModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AdminModelServer
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AdminUnloadModelResponse) GetJSON200() *AdminModelServer {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r AdminUnloadModelResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r AdminUnloadModelResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminUnloadModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminUnloadModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AdminUnloadModelResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -26983,6 +27800,111 @@ func (c *ClientWithResponses) AdminUpdateConnectionWithResponse(ctx context.Cont
 	return ParseAdminUpdateConnectionResponse(rsp)
 }
 
+// AdminPutConnectionControlsWithBodyWithResponse Switch a connection on or off and set its models and idle time
+//
+// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers (” for none).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+func (c *ClientWithResponses) AdminPutConnectionControlsWithBodyWithResponse(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminPutConnectionControlsResponse, error) {
+	rsp, err := c.AdminPutConnectionControlsWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminPutConnectionControlsResponse(rsp)
+}
+
+// AdminPutConnectionControlsWithResponse Switch a connection on or off and set its models and idle time
+//
+// For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers (” for none).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /admin/assistant/connections/{name}/controls (the `AdminPutConnectionControls` operationId).
+func (c *ClientWithResponses) AdminPutConnectionControlsWithResponse(ctx context.Context, name ConnectionName, body AdminPutConnectionControlsJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminPutConnectionControlsResponse, error) {
+	rsp, err := c.AdminPutConnectionControls(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminPutConnectionControlsResponse(rsp)
+}
+
+// AdminLoadModelWithBodyWithResponse Load a model now
+//
+// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+func (c *ClientWithResponses) AdminLoadModelWithBodyWithResponse(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminLoadModelResponse, error) {
+	rsp, err := c.AdminLoadModelWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminLoadModelResponse(rsp)
+}
+
+// AdminLoadModelWithResponse Load a model now
+//
+// Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /admin/assistant/connections/{name}/load (the `AdminLoadModel` operationId).
+func (c *ClientWithResponses) AdminLoadModelWithResponse(ctx context.Context, name ConnectionName, body AdminLoadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminLoadModelResponse, error) {
+	rsp, err := c.AdminLoadModel(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminLoadModelResponse(rsp)
+}
+
+// AdminConnectionModelsWithResponse A connection's server, its models and which are loaded
+//
+// Checks the server (also a connection that is switched off): its kind, how long the model list took, and for Ollama and LM Studio which models are loaded, their size and when they unload.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /admin/assistant/connections/{name}/models (the `AdminConnectionModels` operationId).
+func (c *ClientWithResponses) AdminConnectionModelsWithResponse(ctx context.Context, name ConnectionName, params *AdminConnectionModelsParams, reqEditors ...RequestEditorFn) (*AdminConnectionModelsResponse, error) {
+	rsp, err := c.AdminConnectionModels(ctx, name, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminConnectionModelsResponse(rsp)
+}
+
+// AdminUnloadModelWithBodyWithResponse Unload a model now
+//
+// Ollama only, as for loading; frees the model's memory on the server. Audited.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+func (c *ClientWithResponses) AdminUnloadModelWithBodyWithResponse(ctx context.Context, name ConnectionName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminUnloadModelResponse, error) {
+	rsp, err := c.AdminUnloadModelWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminUnloadModelResponse(rsp)
+}
+
+// AdminUnloadModelWithResponse Unload a model now
+//
+// Ollama only, as for loading; frees the model's memory on the server. Audited.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /admin/assistant/connections/{name}/unload (the `AdminUnloadModel` operationId).
+func (c *ClientWithResponses) AdminUnloadModelWithResponse(ctx context.Context, name ConnectionName, body AdminUnloadModelJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminUnloadModelResponse, error) {
+	rsp, err := c.AdminUnloadModel(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminUnloadModelResponse(rsp)
+}
+
 // AdminListTuningWithResponse Per-model tuning
 //
 // Returns a wrapper object for the known response body format(s).
@@ -30281,6 +31203,138 @@ func ParseAdminUpdateConnectionResponse(rsp *http.Response) (*AdminUpdateConnect
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest AdminConnection
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAdminPutConnectionControlsResponse parses an HTTP response from a AdminPutConnectionControlsWithResponse call
+func ParseAdminPutConnectionControlsResponse(rsp *http.Response) (*AdminPutConnectionControlsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminPutConnectionControlsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminConnection
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAdminLoadModelResponse parses an HTTP response from a AdminLoadModelWithResponse call
+func ParseAdminLoadModelResponse(rsp *http.Response) (*AdminLoadModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminLoadModelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminModelServer
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAdminConnectionModelsResponse parses an HTTP response from a AdminConnectionModelsWithResponse call
+func ParseAdminConnectionModelsResponse(rsp *http.Response) (*AdminConnectionModelsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminConnectionModelsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminModelServer
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAdminUnloadModelResponse parses an HTTP response from a AdminUnloadModelWithResponse call
+func ParseAdminUnloadModelResponse(rsp *http.Response) (*AdminUnloadModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminUnloadModelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminModelServer
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

@@ -126,6 +126,16 @@ type RunnerConfig struct {
 	Logger        *slog.Logger
 	// Instructions returns the administrator's addition to the system prompt (ADR 0034); nil: none.
 	Instructions func(ctx context.Context) string
+	// Choice returns who picks the connection and model (Phase 20 follow-ups); nil: each person.
+	Choice func(ctx context.Context) Choice
+}
+
+// Choice is who picks the connection and model, from the instance settings: the administrator (the
+// default; questions and digests then use Connection and its default model, whatever they ask
+// for) or each person.
+type Choice struct {
+	People     bool
+	Connection string // the administrator's default connection; "" or one switched off: the first one on
 }
 
 // Runner runs questions: one at a time per user, at most MaxConcurrent per process.
@@ -136,6 +146,14 @@ type Runner struct {
 
 	mu     sync.Mutex
 	active map[uuid.UUID]context.CancelCauseFunc
+}
+
+// Choice is who picks the connection and model now (each person without a Choice function).
+func (r *Runner) Choice(ctx context.Context) Choice {
+	if r.cfg.Choice == nil {
+		return Choice{People: true}
+	}
+	return r.cfg.Choice(ctx)
 }
 
 // NewRunner returns a runner.
@@ -238,18 +256,31 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 		return nil, err
 	}
 	connName, model := req.Connection, req.Model
-	if connName == "" {
+	choice := r.Choice(ctx)
+	locked := !choice.People
+	if locked {
+		// the administrator picks: the default connection and its default model, whatever was asked
+		connName, model = choice.Connection, ""
+	} else if connName == "" {
 		connName = chat.Connection
 		if model == "" {
 			model = chat.Model
 		}
 	}
-	if _, err := r.cfg.Connections.Get(connName); err != nil && req.Connection == "" {
-		connName, model = "", "" // the chat's connection was removed from the config
+	if _, err := r.cfg.Connections.Get(connName); err != nil && (req.Connection == "" || locked || r.cfg.Connections.Disabled(connName)) {
+		connName, model = "", "" // removed from the config or switched off: the first connection on
 	}
 	conn, info, err := r.cfg.Connections.Resolve(ctx, connName, model)
 	if err != nil {
 		return nil, err
+	}
+	if len(req.AttachmentIDs) > 0 && !info.Caps.Vision {
+		// photos go to the connection's model for photos when the chosen model can't read images
+		if p := r.cfg.Connections.ControlsOf(conn.Name).PhotoModel; p != "" && p != info.ID {
+			if pc, pi, perr := r.cfg.Connections.Resolve(ctx, conn.Name, p); perr == nil && pi.Caps.Vision {
+				conn, info = pc, pi
+			}
+		}
 	}
 	if t := info.Tuning; t != nil { // the administrator's defaults for this model (ADR 0035)
 		if req.Temperature == nil && t.Temperature != nil {
@@ -339,6 +370,8 @@ func (t *turn) reset() {
 func (run *Run) Execute(ctx context.Context, emit func(Event)) {
 	defer run.Release()
 	r, req := run.r, run.req
+	// afterwards the model stays loaded for the connection's idle time (Ollama)
+	defer r.cfg.Connections.KeepWarm(ctx, run.conn, run.model.ID)
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	r.mu.Lock()
@@ -561,6 +594,11 @@ func (run *Run) noThink() bool {
 	return run.req.Think == llm.ThinkOff && run.model.Caps.Reasoning == llm.ReasonSwitch
 }
 
+// keepAlive is the connection's idle time, sent with each request to servers that take it (LM Studio).
+func (run *Run) keepAlive() time.Duration {
+	return run.r.cfg.Connections.ControlsOf(run.conn.Name).UnloadAfter
+}
+
 func (run *Run) temperature() *float64 {
 	if run.req.Temperature != nil {
 		return run.req.Temperature
@@ -640,7 +678,7 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 	var conv []llm.Message // this turn's assistant and tool messages
 	for range maxRounds {
 		msgs := trimHistory(append(append([]llm.Message{}, history...), conv...), false, run.noThink(), system, run.budget())
-		res, err := run.complete(ctx, emit, t, llm.Request{System: system, Messages: msgs, Tools: defs, Temperature: run.temperature()}, true)
+		res, err := run.complete(ctx, emit, t, llm.Request{System: system, Messages: msgs, Tools: defs, Temperature: run.temperature(), KeepAlive: run.keepAlive()}, true)
 		if err != nil {
 			return Message{}, err
 		}
@@ -752,7 +790,7 @@ func (run *Run) runPlan(ctx context.Context, emit func(Event), sc Scope, facts *
 	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset) + instructionsBlock(run.extra)
 	hist := trimHistory(history, true, run.noThink(), system, run.budget())
 	zero := 0.0
-	plan, err := run.complete(ctx, emit, t, llm.Request{System: system + planInstructions(ToolDefs(toolset)), Messages: hist, Temperature: &zero}, false)
+	plan, err := run.complete(ctx, emit, t, llm.Request{System: system + planInstructions(ToolDefs(toolset)), Messages: hist, Temperature: &zero, KeepAlive: run.keepAlive()}, false)
 	if err != nil {
 		return Message{}, err
 	}
@@ -793,7 +831,7 @@ func (run *Run) runPlan(ctx context.Context, emit func(Event), sc Scope, facts *
 		}
 		ans = append(ans, llm.Message{Role: llm.RoleUser, Content: q})
 	}
-	res, err := run.complete(ctx, emit, t, llm.Request{System: system, Messages: ans, Temperature: run.temperature()}, true)
+	res, err := run.complete(ctx, emit, t, llm.Request{System: system, Messages: ans, Temperature: run.temperature(), KeepAlive: run.keepAlive()}, true)
 	if err != nil {
 		return Message{}, err
 	}

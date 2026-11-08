@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -51,6 +52,7 @@ type Server struct {
 	mu       sync.Mutex
 	queue    []Reply
 	requests []json.RawMessage
+	loaded   []string // models "in memory" (Ollama's /api/ps and /api/generate)
 	// Models lists the ids GET /models answers.
 	Models []string
 }
@@ -99,9 +101,47 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.chat(w, r, false)
 	case r.Method == http.MethodPost && p == "/messages":
 		s.chat(w, r, true)
+	// Ollama's own API, enough for loading and unloading models (Phase 20 follow-ups): the mock
+	// answers /api/version like Ollama but not /api/show, so model capabilities still come from
+	// the model ids.
+	case r.Method == http.MethodGet && r.URL.Path == "/api/version":
+		writeJSON(w, map[string]string{"version": "0.0.0-mock"})
+	case r.Method == http.MethodGet && r.URL.Path == "/api/ps":
+		s.mu.Lock()
+		ms := make([]map[string]any, 0, len(s.loaded))
+		for _, m := range s.loaded {
+			ms = append(ms, map[string]any{"name": m, "model": m, "size": 1 << 30, "size_vram": 1 << 30,
+				"expires_at": time.Now().Add(30 * time.Minute).UTC().Format(time.RFC3339)})
+		}
+		s.mu.Unlock()
+		writeJSON(w, map[string]any{"models": ms})
+	case r.Method == http.MethodPost && r.URL.Path == "/api/generate":
+		s.generate(w, r)
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+// generate loads a model (keep_alive absent or not 0) or unloads it (keep_alive 0), like a
+// generate request without a prompt to Ollama.
+func (s *Server) generate(w http.ResponseWriter, r *http.Request) {
+	var b struct {
+		Model     string `json:"model"`
+		KeepAlive any    `json:"keep_alive"`
+	}
+	if json.NewDecoder(r.Body).Decode(&b) != nil || !slices.Contains(s.Models, b.Model) {
+		w.WriteHeader(http.StatusNotFound)
+		writeJSON(w, map[string]string{"error": "model not found"})
+		return
+	}
+	s.mu.Lock()
+	s.loaded = slices.DeleteFunc(s.loaded, func(m string) bool { return m == b.Model })
+	reason := "unload"
+	if b.KeepAlive != float64(0) && b.KeepAlive != "0" {
+		s.loaded, reason = append(s.loaded, b.Model), "load"
+	}
+	s.mu.Unlock()
+	writeJSON(w, map[string]any{"model": b.Model, "done": true, "done_reason": reason})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

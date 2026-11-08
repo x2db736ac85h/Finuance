@@ -46,7 +46,7 @@ func newStoredEnv(t *testing.T, key []byte, file []config.AIConnection) (*env, *
 	t.Helper()
 	e := newEnv(t)
 	if _, err := testutil.Require(t, testDB).Owner.Exec(context.Background(),
-		`DELETE FROM assistant_connections; DELETE FROM assistant_model_settings`); err != nil { // instance tables
+		`DELETE FROM assistant_connections; DELETE FROM assistant_model_settings; DELETE FROM assistant_connection_controls`); err != nil { // instance tables
 		t.Fatal(err)
 	}
 	clock := platform.FixedClock{T: time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC)}

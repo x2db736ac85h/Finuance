@@ -34,7 +34,7 @@ import { IconButton } from '../ui/IconButton';
 import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
 import { useChat, type AiTurn } from './chatStore';
-import { ChatSettings, pick } from './ChatSettings';
+import { ChatSettings, pick, readsPhotos } from './ChatSettings';
 import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';
 import { reencodePhoto } from './photos';
 import { TurnView } from './Turn';
@@ -74,7 +74,8 @@ export function ChatPanel({ viewId }: { viewId: string }) {
   const accounts = useAccounts().data ?? [];
 
   const { conn, model } = pick(status.data, ai);
-  const vision = conn?.models.find((m) => m.id === model)?.vision ?? false;
+  // photos can go with a question when the model reads them or the connection has a model for photos
+  const vision = readsPhotos(conn, model);
   const enabled = status.data?.enabled ?? false;
   const dot = status.isLoading ? 'busy' : conn?.reachable ? 'on' : conn ? 'err' : '';
 
@@ -293,10 +294,11 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         {!status.isLoading && !enabled ? (
           <div className="chat-empty">
             <Icon name="ai" />
-            <h3>The assistant isn’t set up</h3>
+            <h3>The assistant isn’t available</h3>
             <p className="hint">
-              Your admin can connect a model server (LM Studio, Ollama or a cloud service) with FINUANCE_AI_BASE_URL or
-              a connections file. See docs/assistant.md.
+              No model server is connected and switched on. Your admin connects one (LM Studio, Ollama or a cloud
+              service) with FINUANCE_AI_BASE_URL, a connections file or Administration → Assistant, where it is also
+              switched on and off. See docs/assistant.md.
             </p>
           </div>
         ) : cfgShown ? (

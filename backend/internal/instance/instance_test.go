@@ -185,3 +185,30 @@ func TestParseSettings(t *testing.T) {
 		t.Error("a retired default theme was kept")
 	}
 }
+
+// TestModelChoice: the administrator picks the assistant's model unless the settings say people do
+// (a document saved before Phase 20's follow-ups has no assistant part); values are checked.
+func TestModelChoice(t *testing.T) {
+	var none *Assistant
+	if none.PeopleChoose() || none.Connection() != "" {
+		t.Error("without settings people choose")
+	}
+	for doc, people := range map[string]bool{
+		`{"assistant":{"instructions":"Be brief."}}`:                          false,
+		`{"assistant":{"modelChoice":"admin","defaultConnection":"homelab"}}`: false,
+		`{"assistant":{"modelChoice":"people"}}`:                              true,
+	} {
+		s, err := ParseSettings([]byte(doc))
+		if err != nil {
+			t.Fatalf("%s: %v", doc, err)
+		}
+		if s.Assistant.PeopleChoose() != people {
+			t.Errorf("%s: people choose = %v", doc, !people)
+		}
+	}
+	_, err := ParseSettings([]byte(`{"assistant":{"modelChoice":"anyone","defaultConnection":"Bad Name"}}`))
+	var ve *platform.ValidationError
+	if !errors.As(err, &ve) || len(ve.Fields) != 2 {
+		t.Errorf("got %v, want 2 field errors", err)
+	}
+}

@@ -43,18 +43,45 @@ func (a *api) maxRows() int {
 	return assistant.MaxRowsLimit
 }
 
-// AssistantStatus lists the connections and their chat models.
+// AssistantStatus lists the connections switched on and their chat models. When the administrator
+// picks the model (the default), only the default connection is listed: questions use it and its
+// default model whatever the panel sends.
 func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusRequestObject) (gen.AssistantStatusResponseObject, error) {
-	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: a.maxRows()}
-	for _, st := range a.conns().Status(ctx, req.Params.Refresh != nil && *req.Params.Refresh) {
+	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: a.maxRows(),
+		Choice: gen.AssistantStatusChoicePeople}
+	refresh := req.Params.Refresh != nil && *req.Params.Refresh
+	var list []assistant.ConnectionStatus
+	if a.ai != nil && !a.ai.Runner.Choice(ctx).People {
+		out.Choice = gen.AssistantStatusChoiceAdmin
+		c, err := a.conns().Get(a.ai.Runner.Choice(ctx).Connection)
+		if err != nil {
+			c, err = a.conns().Get("") // switched off or gone: the first one on
+		}
+		if err == nil {
+			if st, err := a.conns().StatusOf(ctx, c.Name, refresh); err == nil {
+				list = append(list, st)
+			}
+		}
+	} else {
+		list = a.conns().Status(ctx, refresh)
+	}
+	for i := range list {
+		st := &list[i]
 		c := gen.AssistantConnection{Name: st.Name, Label: st.Label, Api: gen.AssistantConnectionApi(st.API), Cloud: st.Cloud,
 			Reachable: st.Reachable, Models: make([]gen.AssistantModel, 0, len(st.Models)), Error: assistantError(st.Err)}
 		if st.DefaultModel != "" {
 			c.DefaultModel = &st.DefaultModel
 		}
+		if st.PhotoModel != "" {
+			c.PhotoModel = &st.PhotoModel
+		}
+		if st.Reachable {
+			ms := int(st.Latency / time.Millisecond)
+			c.LatencyMs = &ms
+		}
 		for _, m := range st.Models {
 			c.Models = append(c.Models, gen.AssistantModel{Id: m.ID, Tools: m.Caps.Tools,
-				Reasoning: gen.AssistantModelReasoning(m.Caps.Reasoning), ContextTokens: m.Caps.ContextTokens, Vision: m.Caps.Vision})
+				Reasoning: gen.AssistantModelReasoning(m.Caps.Reasoning), ContextTokens: m.Caps.ContextTokens, Vision: m.Caps.Vision, Loaded: m.Loaded})
 		}
 		out.Connections = append(out.Connections, c)
 	}

@@ -8,13 +8,20 @@ import {
   useConnections,
   useCreateConnection,
   useDeleteConnection,
+  useModelAction,
+  useModelServer,
+  usePutConnectionControls,
   usePutTuning,
+  useTestModelServer,
   useTuning,
   useUpdateConnection,
   type AdminConnection,
+  type ModelServer,
   type ModelTuning,
 } from '../api/hooks/admin';
+import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
+import { fmtBytes } from '../lib/format';
 import { Button } from '../ui/Button';
 import { Checkbox, Select, TextInput, type Option } from '../ui/inputs';
 import { toast } from '../ui/toastStore';
@@ -32,7 +39,9 @@ export function Connections() {
   const list = useConnections();
   const del = useDeleteConnection();
   const [editing, setEditing] = useState<string | null>(null);
+  const [managing, setManaging] = useState<string | null>(null);
   const current = list.data?.find((c) => c.name === editing);
+  const managed = list.data?.find((c) => c.name === managing);
   return (
     <div className="set-card">
       <div className="lbl">Connections</div>
@@ -49,11 +58,21 @@ export function Connections() {
               <span className="tag">{c.api}</span>
               {c.cloud && <span className="tag">cloud</span>}
               <span className="tag src">{c.source === 'file' ? 'configuration file' : 'added here'}</span>
+              {!c.controls.enabled && <span className="tag off">off</span>}
               <span className="hint">
                 {c.name} · {c.baseUrl} · {keyState(c)}
                 {c.defaultModel ? ` · default ${c.defaultModel}` : ''}
               </span>
             </div>
+            <Button
+              size="sm"
+              aria-expanded={managing === c.name}
+              onClick={() => {
+                setManaging(managing === c.name ? null : c.name);
+              }}
+            >
+              Models
+            </Button>
             {c.source === 'panel' && (
               <>
                 <Button
@@ -85,6 +104,17 @@ export function Connections() {
           </li>
         ))}
       </ul>
+      {managed && (
+        <ConnectionControls
+          // by name only: a save refetches the list with a new version, and remounting would drop
+          // the save's confirmation (the version is read from the latest list when saving)
+          key={managed.name}
+          connection={managed}
+          onDone={() => {
+            setManaging(null);
+          }}
+        />
+      )}
       {editing === null ? (
         <div className="set-actions">
           <Button
@@ -106,6 +136,188 @@ export function Connections() {
         />
       )}
     </div>
+  );
+}
+
+const UNLOAD: Option<string>[] = [
+  { value: '', label: "The server's own setting" },
+  ...[10, 15, 30, 45].map((m) => ({ value: String(m), label: `${String(m)} minutes idle` })),
+  { value: '60', label: '1 hour idle' },
+  { value: '120', label: '2 hours idle' },
+  { value: '240', label: '4 hours idle' },
+];
+
+const SERVER: Record<ModelServer['server'], string> = {
+  ollama: 'Ollama',
+  lmstudio: 'LM Studio',
+  other: 'OpenAI-compatible server',
+};
+
+/** What the last check of a connection's server found. */
+export function serverLine(s: ModelServer): { ok: boolean; text: string } {
+  if (!s.reachable) return { ok: false, text: `Can't reach the server: ${s.error?.message ?? 'no answer'}` };
+  const offered = s.models.filter((m) => m.offered).length;
+  const parts = [`Connected to ${SERVER[s.server]}`, `${String(offered)} ${offered === 1 ? 'model' : 'models'}`];
+  if (s.latencyMs !== undefined) parts.push(`${String(s.latencyMs)} ms`);
+  return { ok: true, text: parts.join(' · ') };
+}
+
+/**
+ * A connection's models and use (Phase 20 follow-ups): on or off, the model questions use and the
+ * one for photos, how long the server keeps a model after the last question, and what it holds now
+ * (Ollama can load and unload from here).
+ */
+function ConnectionControls({ connection, onDone }: { connection: AdminConnection; onDone: () => void }) {
+  const ctl = connection.controls;
+  const put = usePutConnectionControls();
+  const server = useModelServer(connection.name);
+  const test = useTestModelServer(connection.name);
+  const act = useModelAction(connection.name);
+  const [enabled, setEnabled] = useState(ctl.enabled);
+  const [model, setModel] = useState(ctl.defaultModel);
+  const [photo, setPhoto] = useState(ctl.photoModel);
+  const [unload, setUnload] = useState(ctl.unloadAfterMinutes == null ? '' : String(ctl.unloadAfterMinutes));
+  const s = server.data;
+  const offered = s?.models.filter((m) => m.offered) ?? [];
+  // a saved choice the server doesn't list now (unreachable, model removed) stays selectable
+  const options = (list: string[], current: string, none: string): Option<string>[] => [
+    { value: '', label: none },
+    ...[...new Set([...list, ...(current ? [current] : [])])].map((id) => ({ value: id, label: id })),
+  ];
+  const timed = s?.server === 'ollama' || s?.server === 'lmstudio';
+  const line = s ? serverLine(s) : undefined;
+  const save = () => {
+    put.mutate(
+      {
+        name: connection.name,
+        enabled,
+        unloadAfterMinutes: unload === '' ? null : Number(unload),
+        defaultModel: model,
+        photoModel: photo,
+        version: ctl.version,
+      },
+      {
+        onSuccess: () => {
+          toast(`Saved ${connection.label}${enabled ? '' : ': switched off, its models unloaded'}`);
+        },
+        onError: fail,
+      },
+    );
+  };
+  return (
+    <form
+      className="adm-form"
+      aria-label={`Models and use of ${connection.label}`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <div className="lbl">{connection.label}: models and use</div>
+      <Checkbox checked={enabled} onChange={setEnabled} label="On: people can use this connection" />
+      <div className="conn-test" role="status">
+        {server.isLoading || test.isPending ? (
+          <span className="hint">Checking…</span>
+        ) : server.isError ? (
+          <span className="conn-bad">Couldn't check: {errorMessage(server.error)}</span>
+        ) : line ? (
+          <span className={line.ok ? 'conn-ok' : 'conn-bad'}>
+            {line.ok ? '✓ ' : '✕ '}
+            {line.text}
+          </span>
+        ) : null}
+      </div>
+      <div className="form-row">
+        <label className="st-col">
+          Default model
+          <Select
+            value={model}
+            options={options(
+              offered.map((m) => m.id),
+              model,
+              connection.defaultModel ? `The connection's own (${connection.defaultModel})` : "The server's first",
+            )}
+            onChange={setModel}
+          />
+        </label>
+        <label className="st-col">
+          Model for photos
+          <Select
+            value={photo}
+            options={options(
+              offered.filter((m) => m.vision).map((m) => m.id),
+              photo,
+              'None',
+            )}
+            onChange={setPhoto}
+          />
+        </label>
+        {timed && (
+          <label className="st-col">
+            Unload a model after
+            <Select value={unload} options={UNLOAD} onChange={setUnload} />
+          </label>
+        )}
+      </div>
+      <p className="hint">
+        Questions with photos go to the model for photos when the model in use can't read images.
+        {timed &&
+          ' The server unloads a model once nobody asked it anything for that long; the first answer after takes longer.'}
+      </p>
+      {s && s.models.some((m) => m.loaded !== undefined) && (
+        <ul className="set-list" aria-label="Models on the server">
+          {s.models.map((m) => (
+            <li key={m.id}>
+              <div className="set-li-main">
+                <b>{m.id}</b>
+                <span className={m.loaded ? 'tag on' : 'tag'}>{m.loaded ? 'loaded' : 'not loaded'}</span>
+                {!m.offered && <span className="tag">not offered</span>}
+                {m.loaded && (
+                  <span className="hint">
+                    {m.vramBytes ? `${fmtBytes(m.vramBytes)} on the GPU` : m.sizeBytes ? fmtBytes(m.sizeBytes) : ''}
+                    {m.unloadsAt ? ` · unloads ${fmtDateTime(m.unloadsAt)} if unused` : ''}
+                  </span>
+                )}
+              </div>
+              {s.canManage && (m.loaded || m.offered) && (
+                <Button
+                  size="sm"
+                  disabled={act.isPending}
+                  onClick={() => {
+                    act.mutate(
+                      { action: m.loaded ? 'unload' : 'load', model: m.id },
+                      {
+                        onSuccess: () => {
+                          toast(m.loaded ? `Unloaded ${m.id}` : `Loaded ${m.id}`);
+                        },
+                        onError: fail,
+                      },
+                    );
+                  }}
+                >
+                  {m.loaded ? 'Unload' : 'Load'}
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="set-actions">
+        <Button
+          icon="plug"
+          disabled={test.isPending}
+          onClick={() => {
+            test.mutate(undefined, { onError: fail });
+          }}
+        >
+          Test
+        </Button>
+        <Button onClick={onDone}>Close</Button>
+        <Button type="submit" variant="primary" disabled={put.isPending}>
+          Save
+        </Button>
+      </div>
+    </form>
   );
 }
 
