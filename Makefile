@@ -44,7 +44,7 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private check-env-details check-sealed check-toolchain check-no-float check-compose-prod check-db-bootstrap ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, sealed-secret, toolchain, float, prod-Compose and k8s bootstrap checks
+check: lint typecheck test gen-check fixtures-check check-private check-env-details check-sealed check-toolchain check-no-float check-compose-prod check-db-bootstrap check-port-forwards ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, sealed-secret, toolchain, float, prod-Compose, k8s bootstrap and port-forward checks
 	@echo "check: ok"
 
 .PHONY: check-compose-prod
@@ -58,6 +58,15 @@ check-db-bootstrap: ## The CloudNativePG bootstrap SQL (deploy/k8s/db) matches d
 .PHONY: check-toolchain
 check-toolchain: ## Fail when go.mod's toolchain, mise.toml and Dockerfile.backend name different Go versions
 	@tools/check-toolchain.sh
+
+.PHONY: check-port-forwards
+check-port-forwards: ## The admin tools' port-forwards use one local port everywhere, none of the Compose stack's; make observe's self-test
+	@tools/check-port-forwards.sh
+	@tools/observe-test.sh
+
+.PHONY: observe
+observe: ## Port-forwards to Grafana, Prometheus, Alertmanager and Argo CD on this machine's loopback (docs/RUNBOOK.md "Local ports"); TOOLS="prometheus grafana" for some
+	@tools/observe.sh $(TOOLS)
 
 .PHONY: check-sealed
 check-sealed: ## Every *.sealed.yaml is a SealedSecret without plain values (gitleaks allowlists these files)

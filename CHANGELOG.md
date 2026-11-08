@@ -6,6 +6,14 @@ notes of their version.
 
 ## [Unreleased]
 
+### Added
+
+- **`make observe`**: the port-forwards to Grafana, Prometheus, Alertmanager and Argo CD in one
+  command, on this machine's loopback only. Ports another program holds are refused before
+  anything starts, a forward that stops starts again, and Ctrl-C ends them all (RUNBOOK "Local
+  ports"). `make check` keeps the forwards' local ports the same in the RUNBOOK, the Developer links
+  and `make observe`, and away from the ports the Compose stack publishes.
+
 ## [0.4.0]
 
 An assistant that acts with your consent and an undo, receipts by photo, goals, digests, an advice

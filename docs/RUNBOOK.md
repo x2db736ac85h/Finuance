@@ -36,6 +36,8 @@ Only the ingress is exposed. Argo CD, Grafana, Prometheus and Alertmanager are r
 
 These are only local ports. Prometheus and Alertmanager link to each other by their service names in the cluster (`--web.external-url`), so moving a local port changes no link in an alert or an e-mail.
 
+**`make observe`** starts all four forwards, or some with `TOOLS="prometheus grafana"`, and prints where each opens and how to sign in (never a password). It checks each port on both loopback addresses first and refuses one another program holds, so the trap above can't happen. It forwards on 127.0.0.1 and [::1] only, starts a forward again when it stops (its pod restarted), and stops them all on Ctrl-C. Keep the forwards open only while you use them: Prometheus and Alertmanager have no sign-in, and Prometheus's `/-/quit` and `/-/reload` answer a plain POST, so while a forward is open any web page in a browser on the same machine could send one (THREAT-MODEL D10). `make check` keeps these ports the same in this table, the Developer links and `make observe` (`tools/check-port-forwards.sh`), and away from the Compose stack's.
+
 ## Prerequisites
 
 - Kubernetes ≥ 1.30 (k3s is fine), `kubectl` access as cluster admin.
