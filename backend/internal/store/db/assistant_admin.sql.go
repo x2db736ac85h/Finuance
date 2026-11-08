@@ -63,6 +63,45 @@ func (q *Queries) GetStoredConnection(ctx context.Context, name string) (Assista
 	return i, err
 }
 
+const insertConnectionControls = `-- name: InsertConnectionControls :one
+INSERT INTO assistant_connection_controls (name, enabled, unload_after_minutes, default_model, photo_model, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (name) DO NOTHING
+RETURNING name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at
+`
+
+type InsertConnectionControlsParams struct {
+	Name               string
+	Enabled            bool
+	UnloadAfterMinutes *int32
+	DefaultModel       string
+	PhotoModel         string
+	Now                time.Time
+}
+
+// The first save; no row when another one was saved first (the caller answers stale_version).
+func (q *Queries) InsertConnectionControls(ctx context.Context, arg InsertConnectionControlsParams) (AssistantConnectionControl, error) {
+	row := q.db.QueryRow(ctx, insertConnectionControls,
+		arg.Name,
+		arg.Enabled,
+		arg.UnloadAfterMinutes,
+		arg.DefaultModel,
+		arg.PhotoModel,
+		arg.Now,
+	)
+	var i AssistantConnectionControl
+	err := row.Scan(
+		&i.Name,
+		&i.Enabled,
+		&i.UnloadAfterMinutes,
+		&i.DefaultModel,
+		&i.PhotoModel,
+		&i.Version,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const insertStoredConnection = `-- name: InsertStoredConnection :one
 INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
@@ -111,6 +150,41 @@ func (q *Queries) InsertStoredConnection(ctx context.Context, arg InsertStoredCo
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listConnectionControls = `-- name: ListConnectionControls :many
+
+SELECT name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at FROM assistant_connection_controls ORDER BY name
+`
+
+// Connection controls (migration 00024): on or off, unload after idle, the default model and the
+// model for photos, for the file's connections and those added in the panel.
+func (q *Queries) ListConnectionControls(ctx context.Context) ([]AssistantConnectionControl, error) {
+	rows, err := q.db.Query(ctx, listConnectionControls)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AssistantConnectionControl
+	for rows.Next() {
+		var i AssistantConnectionControl
+		if err := rows.Scan(
+			&i.Name,
+			&i.Enabled,
+			&i.UnloadAfterMinutes,
+			&i.DefaultModel,
+			&i.PhotoModel,
+			&i.Version,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listModelSettings = `-- name: ListModelSettings :many
@@ -184,6 +258,48 @@ func (q *Queries) ListStoredConnections(ctx context.Context) ([]AssistantConnect
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateConnectionControls = `-- name: UpdateConnectionControls :one
+UPDATE assistant_connection_controls
+SET enabled = $1, unload_after_minutes = $2, default_model = $3,
+    photo_model = $4, version = version + 1, updated_at = $5
+WHERE name = $6 AND version = $7
+RETURNING name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at
+`
+
+type UpdateConnectionControlsParams struct {
+	Enabled            bool
+	UnloadAfterMinutes *int32
+	DefaultModel       string
+	PhotoModel         string
+	Now                time.Time
+	Name               string
+	Version            int32
+}
+
+// Versioned: no row when the version read is no longer the stored one.
+func (q *Queries) UpdateConnectionControls(ctx context.Context, arg UpdateConnectionControlsParams) (AssistantConnectionControl, error) {
+	row := q.db.QueryRow(ctx, updateConnectionControls,
+		arg.Enabled,
+		arg.UnloadAfterMinutes,
+		arg.DefaultModel,
+		arg.PhotoModel,
+		arg.Now,
+		arg.Name,
+		arg.Version,
+	)
+	var i AssistantConnectionControl
+	err := row.Scan(
+		&i.Name,
+		&i.Enabled,
+		&i.UnloadAfterMinutes,
+		&i.DefaultModel,
+		&i.PhotoModel,
+		&i.Version,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateStoredConnection = `-- name: UpdateStoredConnection :one

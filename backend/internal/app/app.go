@@ -116,7 +116,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 		Rules:  rules.New(c.store, platform.SystemClock{}),
 		Assistant: assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
 			MaxChats: cfg.AIMaxChats, MaxConcurrent: cfg.AIMaxConcurrent, Metrics: assistant.NewMetrics(c.metrics.Registry),
-			Tracer: c.tracing.Provider, Logger: log, Instructions: instructions(adm)}),
+			Tracer: c.tracing.Provider, Logger: log, Instructions: instructions(adm), Choice: choice(adm)}),
 		Ready: []httpapi.Check{{Name: "database", Probe: c.store.Ping}, {Name: "migrations", Probe: c.store.MigrationsCurrent}},
 	})
 	if err != nil {
@@ -221,7 +221,7 @@ func newDigests(ctx context.Context, c *common, cfg config.Config, authSvc *auth
 	adm := NewAdmin(c.store, authSvc, cfg)
 	ai := assistant.New(assistant.Config{Store: c.store, Query: query.New(c.store), Connections: conns, Clock: platform.SystemClock{},
 		MaxChats: cfg.AIMaxChats, MaxConcurrent: 1, Metrics: assistant.NewMetrics(c.metrics.Registry), Tracer: c.tracing.Provider, Logger: log,
-		Instructions: instructions(adm)})
+		Instructions: instructions(adm), Choice: choice(adm)})
 	policy := func(ctx context.Context, id uuid.UUID) (assistant.DigestPolicy, error) {
 		if cfg.DemoMode {
 			return assistant.DigestPolicy{}, nil
@@ -253,6 +253,19 @@ func instructions(adm *admin.Service) func(context.Context) string {
 			return ""
 		}
 		return s.Assistant.Instructions
+	}
+}
+
+// choice is who picks the assistant's connection and model, from the instance settings: the
+// administrator unless they let people choose (Phase 20 follow-ups). A settings document that
+// can't be read keeps the administrator's defaults.
+func choice(adm *admin.Service) func(context.Context) assistant.Choice {
+	return func(ctx context.Context) assistant.Choice {
+		s, _, err := adm.Settings(ctx)
+		if err != nil {
+			return assistant.Choice{}
+		}
+		return assistant.Choice{People: s.Assistant.PeopleChoose(), Connection: s.Assistant.Connection()}
 	}
 }
 

@@ -38,6 +38,8 @@ type Config struct {
 	Logger        *slog.Logger
 	// Instructions returns the administrator's addition to the system prompt (nil: none).
 	Instructions func(ctx context.Context) string
+	// Choice returns who picks the connection and model (nil: each person).
+	Choice func(ctx context.Context) Choice
 }
 
 // New builds the assistant.
@@ -46,5 +48,5 @@ func New(c Config) *Assistant {
 	tools := NewTools(c.Query).WithGoals(goals.New(c.Store, c.Clock)).WithAdvice(advice.New(c.Store, c.Clock))
 	return &Assistant{Connections: c.Connections, Chats: chats, Tools: tools, Runner: NewRunner(RunnerConfig{Connections: c.Connections,
 		Tools: tools, Chats: chats, Clock: c.Clock, MaxConcurrent: c.MaxConcurrent, Metrics: c.Metrics, Tracer: c.Tracer, Logger: c.Logger,
-		Instructions: c.Instructions})}
+		Instructions: c.Instructions, Choice: c.Choice})}
 }

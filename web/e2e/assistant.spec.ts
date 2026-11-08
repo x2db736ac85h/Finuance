@@ -5,7 +5,13 @@
 // its own origin. The mock (testutil/llmmock) turns a "quoted" word into a search for it.
 import { expect, test, type Page } from '@playwright/test';
 
-import { API_HEADERS, importViaApi, signUp } from './helpers';
+import { API_HEADERS, importViaApi, letPeoplePickModels, signUp } from './helpers';
+
+// these tests switch the mock's models (plan mode, photos); the instance's default is that the
+// administrator picks (e2e/admin/assistant-controls.spec.ts covers that)
+test.beforeAll(async ({ playwright }) => {
+  await letPeoplePickModels(playwright, test.info().project.use.baseURL ?? '');
+});
 
 /** Every request the page makes goes to its own origin; page errors fail the test. */
 function watch(page: Page, base: string): { foreign: string[]; errors: string[] } {
@@ -92,12 +98,12 @@ test('stops an answer being written', async ({ page }) => {
 
 test('says so when no model is configured', async ({ page }) => {
   await page.route('**/api/v1/assistant/status', (route) =>
-    route.fulfill({ json: { enabled: false, connections: [], maxRowsLimit: 50 } }),
+    route.fulfill({ json: { enabled: false, connections: [], maxRowsLimit: 50, choice: 'people' } }),
   );
   await signUp(page);
   await page.keyboard.press('ControlOrMeta+j');
   const panel = page.getByRole('complementary', { name: 'Assistant' });
-  await expect(panel.getByRole('heading', { name: 'The assistant isn’t set up' })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'The assistant isn’t available' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Question' })).toBeHidden();
 });
 

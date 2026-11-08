@@ -2208,6 +2208,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/assistant/connections/{name}/controls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Switch a connection on or off and set its models and idle time
+         * @description For any connection, the connections file's included (Phase 20 follow-ups, ADR 0035 addendum). Versioned: `version` 0 saves the first time. Switching a connection off also unloads its loaded models where the server allows it. `defaultModel` and `photoModel` must be models the connection offers ('' for none).
+         */
+        put: operations["adminPutConnectionControls"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/connections/{name}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        /**
+         * A connection's server, its models and which are loaded
+         * @description Checks the server (also a connection that is switched off): its kind, how long the model list took, and for Ollama and LM Studio which models are loaded, their size and when they unload.
+         */
+        get: operations["adminConnectionModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/connections/{name}/load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Load a model now
+         * @description Ollama only: the model is loaded and kept for the connection's idle time (or the server's own setting). `422` for a model the connection doesn't offer or a server that can't load models from here. Audited.
+         */
+        post: operations["adminLoadModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/assistant/connections/{name}/unload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unload a model now
+         * @description Ollama only, as for loading; frees the model's memory on the server. Audited.
+         */
+        post: operations["adminUnloadModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/assistant/tuning": {
         parameters: {
             query?: never;
@@ -4043,7 +4131,13 @@ export interface components {
         };
         AssistantStatus: {
             enabled: boolean;
+            /** @description The connections switched on; with `choice` admin only the default one. */
             connections: components["schemas"]["AssistantConnection"][];
+            /**
+             * @description Who picks the connection and model: the administrator (questions use the default connection and its default model, whatever they ask for) or each person.
+             * @enum {string}
+             */
+            choice: "admin" | "people";
             /**
              * @description The highest number of rows one lookup may return (legacy maxRows).
              * @example 50
@@ -4063,6 +4157,10 @@ export interface components {
             /** @description The model used when none is chosen; absent when the server offers none. */
             defaultModel?: string;
             models: components["schemas"]["AssistantModel"][];
+            /** @description The model a question with photos uses when the chosen one can't read images. */
+            photoModel?: string;
+            /** @description How long the last check of the model list took. */
+            latencyMs?: number;
             error?: components["schemas"]["AssistantError"];
         };
         AssistantModel: {
@@ -4078,6 +4176,8 @@ export interface components {
             contextTokens: number;
             /** @description Whether the model reads images (photos of receipts can be attached). */
             vision: boolean;
+            /** @description Whether the server has the model loaded now (Ollama, LM Studio); absent when it doesn't say. */
+            loaded?: boolean;
         };
         AssistantError: {
             /** @enum {string} */
@@ -4590,6 +4690,7 @@ export interface components {
              * @description 0 for the file's.
              */
             version: number;
+            controls: components["schemas"]["AdminConnectionControls"];
             /** Format: date-time */
             updatedAt?: string;
         };
@@ -4664,10 +4765,76 @@ export interface components {
             /** @description The token itself, shown once. */
             secret: string;
         };
+        /** @description An administrator's controls for one connection; the defaults until they are first saved. */
+        AdminConnectionControls: {
+            enabled: boolean;
+            /** @description Minutes the server keeps a model after the last question: 10, 15, 30, 45, 60, 120 or 240; null = the server's own setting. */
+            unloadAfterMinutes: number | null;
+            /** @description The model questions use, over the connection's own default; '' = that default. */
+            defaultModel: string;
+            /** @description The model for a question with photos when the chosen one can't read images; '' = none. */
+            photoModel: string;
+            /**
+             * Format: int32
+             * @description 0 = never saved.
+             */
+            version: number;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        AdminConnectionControlsInput: {
+            enabled: boolean;
+            unloadAfterMinutes: number | null;
+            defaultModel: string;
+            photoModel: string;
+            /** Format: int32 */
+            version: number;
+        };
+        AdminModelAction: {
+            model: string;
+        };
+        AdminModelServer: {
+            /**
+             * @description What the model server is, as far as its answers tell.
+             * @enum {string}
+             */
+            server: "ollama" | "lmstudio" | "other";
+            reachable: boolean;
+            latencyMs?: number;
+            /** @description Whether models can be loaded and unloaded from here (Ollama). */
+            canManage: boolean;
+            models: components["schemas"]["AdminServerModel"][];
+            error?: components["schemas"]["AssistantError"];
+        };
+        AdminServerModel: {
+            id: string;
+            /** @description Offered to people (the connection's model list); loaded models outside it are listed too. */
+            offered: boolean;
+            tools: boolean;
+            vision: boolean;
+            /** @description Absent when the server doesn't say. */
+            loaded?: boolean;
+            /** Format: int64 */
+            sizeBytes?: number;
+            /** Format: int64 */
+            vramBytes?: number;
+            /**
+             * Format: date-time
+             * @description When the server unloads it if nothing uses it (Ollama).
+             */
+            unloadsAt?: string;
+        };
         /** @description The instance's settings for the assistant; left out of a PUT, the stored ones stay. */
         InstanceAssistant: {
             /** @description Added to every system prompt after the app's rules (ADR 0034). */
             instructions?: string;
+            /**
+             * @description Who picks the connection and model; absent = admin (the administrator's defaults).
+             * @enum {string}
+             */
+            modelChoice?: "admin" | "people";
+            /** @description The connection questions use when the administrator picks; '' = the first one switched on. */
+            defaultConnection?: string;
         };
         AdviceInput: {
             slug: string;
@@ -5046,6 +5213,7 @@ export interface components {
         };
     };
     parameters: {
+        ConnectionName: string;
         AdminUserId: string;
         ThemeId: string;
         AdviceId: string;
@@ -8556,6 +8724,113 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminPutConnectionControls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminConnectionControlsInput"];
+            };
+        };
+        responses: {
+            /** @description The connection as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminConnection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminConnectionModels: {
+        parameters: {
+            query?: {
+                /** @description Check again instead of using the state cached for up to 60 s. */
+                refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The server's state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminModelServer"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminLoadModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminModelAction"];
+            };
+        };
+        responses: {
+            /** @description The server's state afterwards. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminModelServer"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminUnloadModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["ConnectionName"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminModelAction"];
+            };
+        };
+        responses: {
+            /** @description The server's state afterwards. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminModelServer"];
+                };
             };
             default: components["responses"]["Problem"];
         };

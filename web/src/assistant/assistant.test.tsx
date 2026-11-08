@@ -40,6 +40,7 @@ const CHAT = '00000000-0000-4000-8000-00000000c001';
 const status = (over: Partial<Schemas['AssistantConnection']>[] = [{}]): Schemas['AssistantStatus'] => ({
   enabled: over.length > 0,
   maxRowsLimit: 50,
+  choice: 'people',
   connections: over.map((o, i) => ({
     name: i === 0 ? 'lmstudio' : `c${String(i)}`,
     label: i === 0 ? 'LM Studio' : `Conn ${String(i)}`,
@@ -720,7 +721,7 @@ describe('ChatPanel', () => {
     st.status = status([]);
     renderApp('/t/all');
     const p = await panel();
-    expect(await within(p).findByText('The assistant isn’t set up')).toBeTruthy();
+    expect(await within(p).findByText('The assistant isn’t available')).toBeTruthy();
     expect(within(p).queryByRole('textbox', { name: 'Question' })).toBeNull();
   });
 });
@@ -881,6 +882,53 @@ describe('ChatSettings', () => {
       fireEvent.click(within(p).getByText('Done'));
     });
     expect(await within(p).findByText('Ask about your money')).toBeTruthy();
+  });
+});
+
+describe("connection checks and the administrator's choice (Phase 20 follow-ups)", () => {
+  it("says what Test found: connected with the models and the time, or why the server can't be reached", async () => {
+    st.status = status([{ latencyMs: 85 }]);
+    renderApp('/t/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Assistant settings'));
+    fireEvent.click(await within(p).findByRole('button', { name: 'Test' }));
+    expect(await within(p).findByText(/Connected to LM Studio · 2 models · 85 ms/)).toBeTruthy();
+    st.status = status([
+      { reachable: false, models: [], error: { kind: 'unreachable', message: 'connection refused' } },
+    ]);
+    fireEvent.click(within(p).getByRole('button', { name: 'Test' }));
+    expect(await within(p).findByText(/Can't reach LM Studio: connection refused/)).toBeTruthy();
+  });
+
+  it("shows the administrator's connection and model without a choice, and that the model loads first", async () => {
+    st.status = {
+      ...status([
+        {
+          defaultModel: 'qwen3-14b',
+          models: [
+            { id: 'qwen3-14b', tools: true, reasoning: 'switch', contextTokens: 8192, vision: false, loaded: false },
+          ],
+        },
+      ]),
+      choice: 'admin',
+    };
+    useUi.getState().setAi({ connection: 'lmstudio', model: 'gemma-3-12b' }); // a saved pick, unused while locked
+    renderApp('/t/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Assistant settings'));
+    expect(await within(p).findByText('The connection and model are set by your administrator.')).toBeTruthy();
+    expect(within(p).getByText('· qwen3-14b', { exact: false })).toBeTruthy(); // not the saved gemma-3-12b
+    expect(within(p).queryByText(/gemma-3-12b/)).toBeNull();
+    expect(within(p).queryByLabelText('Connection')).toBeNull();
+    expect(within(p).queryByLabelText('Model')).toBeNull();
+    expect(within(p).getByText(/The model isn't loaded right now/)).toBeTruthy();
+  });
+
+  it('offers the camera when the connection has a model for photos, though the model in use reads none', async () => {
+    st.status = status([{ photoModel: 'gemma-3-12b' }]); // qwen3-14b is chosen and can't read images
+    renderApp('/t/all');
+    const p = await panel();
+    expect(await within(p).findByRole('button', { name: 'Attach a photo of a receipt' })).toBeTruthy();
   });
 });
 

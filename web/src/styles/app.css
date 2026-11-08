@@ -3268,6 +3268,26 @@ body.has-qbar .toast {
   line-height: 1.45;
   text-align: left;
 }
+/* the result of the panel's Test, and the connection the administrator set (Phase 20 follow-ups) */
+.conn-test {
+  min-height: 1.25rem;
+  margin: -0.25rem 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.conn-ok {
+  color: var(--pos);
+}
+.conn-bad {
+  color: var(--neg);
+}
+.conn-locked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0.5rem 0 0.75rem;
+  font-size: 0.78rem;
+}
 .row2.nowrap {
   flex-wrap: nowrap;
 }

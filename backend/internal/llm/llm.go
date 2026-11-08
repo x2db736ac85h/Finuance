@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"time"
 )
 
 // API is a wire format.
@@ -100,6 +101,9 @@ type Request struct {
 	Thinking    Thinking
 	Caps        Caps // what the model can do (reasoning style decides how Thinking is sent)
 	MaxTokens   int  // answer budget; 0 = the adapter's default
+	// KeepAlive is how long the server keeps the model after this request: sent to LM Studio as
+	// its ttl (Ollama's is moved after the run, Manager.Load); 0 = the server's own setting.
+	KeepAlive time.Duration
 }
 
 // Delta is a piece of streamed output.

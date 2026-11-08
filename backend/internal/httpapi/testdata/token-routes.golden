@@ -8,6 +8,7 @@ never	DELETE /api/v1/me/tokens/{id}
 never	GET /api/v1/admin/advice
 never	GET /api/v1/admin/advice/{id}
 never	GET /api/v1/admin/assistant/connections
+never	GET /api/v1/admin/assistant/connections/{name}/models
 never	GET /api/v1/admin/assistant/tuning
 never	GET /api/v1/admin/developer
 never	GET /api/v1/admin/settings
@@ -21,6 +22,8 @@ never	PATCH /api/v1/admin/users/{id}
 never	POST /api/v1/admin/advice
 never	POST /api/v1/admin/advice/starter
 never	POST /api/v1/admin/assistant/connections
+never	POST /api/v1/admin/assistant/connections/{name}/load
+never	POST /api/v1/admin/assistant/connections/{name}/unload
 never	POST /api/v1/admin/themes
 never	POST /api/v1/admin/users
 never	POST /api/v1/admin/users/{id}/reset-password
@@ -33,6 +36,7 @@ never	POST /api/v1/me/password
 never	POST /api/v1/me/tokens
 never	PUT /api/v1/admin/advice/{id}
 never	PUT /api/v1/admin/assistant/connections/{name}
+never	PUT /api/v1/admin/assistant/connections/{name}/controls
 never	PUT /api/v1/admin/assistant/tuning
 never	PUT /api/v1/admin/settings
 never	PUT /api/v1/admin/themes/{id}

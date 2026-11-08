@@ -36,3 +36,24 @@ RETURNING *;
 
 -- name: DeleteModelSettings :execrows
 DELETE FROM assistant_model_settings WHERE connection = @connection AND model = @model;
+
+-- Connection controls (migration 00024): on or off, unload after idle, the default model and the
+-- model for photos, for the file's connections and those added in the panel.
+
+-- name: ListConnectionControls :many
+SELECT * FROM assistant_connection_controls ORDER BY name;
+
+-- name: InsertConnectionControls :one
+-- The first save; no row when another one was saved first (the caller answers stale_version).
+INSERT INTO assistant_connection_controls (name, enabled, unload_after_minutes, default_model, photo_model, updated_at)
+VALUES (@name, @enabled, sqlc.narg(unload_after_minutes), @default_model, @photo_model, @now)
+ON CONFLICT (name) DO NOTHING
+RETURNING *;
+
+-- name: UpdateConnectionControls :one
+-- Versioned: no row when the version read is no longer the stored one.
+UPDATE assistant_connection_controls
+SET enabled = @enabled, unload_after_minutes = sqlc.narg(unload_after_minutes), default_model = @default_model,
+    photo_model = @photo_model, version = version + 1, updated_at = @now
+WHERE name = @name AND version = @version
+RETURNING *;

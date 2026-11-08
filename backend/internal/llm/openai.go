@@ -9,10 +9,16 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+	"sync/atomic"
+	"time"
 )
 
 // openAIClient speaks Chat Completions (legacy complete()).
-type openAIClient struct{ c Config }
+type openAIClient struct {
+	c Config
+	// server is what the model list showed the server to be (manage.go); nil until one was read.
+	server atomic.Pointer[Server]
+}
 
 func (o *openAIClient) API() API { return OpenAI }
 
@@ -70,12 +76,17 @@ type oaRequest struct {
 	ReasoningEffort string      `json:"reasoning_effort,omitempty"`
 	MaxTokens       int         `json:"max_tokens,omitempty"`
 	Stream          bool        `json:"stream"`
+	// TTL is LM Studio's idle time in seconds for a model it loads for this request.
+	TTL int `json:"ttl,omitempty"`
 }
 
 func strp(s string) *string { return &s }
 
 func (o *openAIClient) body(req Request) ([]byte, error) {
 	r := oaRequest{Model: req.Model, Temperature: req.Temperature, Stream: true}
+	if req.KeepAlive > 0 && o.Server() == ServerLMStudio {
+		r.TTL = int(req.KeepAlive / time.Second)
+	}
 	if req.MaxTokens > 0 {
 		r.MaxTokens = req.MaxTokens
 	}
@@ -311,8 +322,13 @@ func (o *openAIClient) Models(ctx context.Context) ([]Model, error) {
 			out = append(out, Model{ID: m.ID})
 		}
 	}
-	if !o.lmStudioDetails(ctx, out) {
-		o.ollamaDetails(ctx, out)
+	switch {
+	case o.lmStudioDetails(ctx, out):
+		o.setServer(ServerLMStudio)
+	case o.ollamaDetails(ctx, out) || o.ollamaVersion(ctx):
+		o.setServer(ServerOllama)
+	default:
+		o.setServer(ServerOther)
 	}
 	return out, nil
 }
@@ -323,20 +339,20 @@ const ollamaShowMax = 30
 // ollamaDetails asks Ollama's native API (/api/show next to /v1) what each model can do: tools,
 // vision, embeddings (the context length is Ollama's own setting, OLLAMA_CONTEXT_LENGTH). Ollama
 // refuses tools to a model whose template has none, so its list is taken as it is, both ways.
-// Any error leaves a model as it is.
-func (o *openAIClient) ollamaDetails(ctx context.Context, models []Model) {
+// Any error leaves a model as it is. True when the server answered like Ollama.
+func (o *openAIClient) ollamaDetails(ctx context.Context, models []Model) (ollama bool) {
 	root := strings.TrimSuffix(o.c.BaseURL, "/v1")
 	if root == o.c.BaseURL {
-		return
+		return false
 	}
 	for i := range models {
 		if i == ollamaShowMax || ctx.Err() != nil {
-			return
+			return ollama
 		}
 		body, _ := json.Marshal(map[string]string{"model": models[i].ID})
 		res, done, err := o.c.call(ctx, http.MethodPost, root+"/api/show", o.header(), body)
 		if err != nil {
-			return // not Ollama, or unreachable: the next ones won't answer either
+			return ollama // not Ollama, or unreachable: the next ones won't answer either
 		}
 		var j struct {
 			Capabilities []string `json:"capabilities"`
@@ -346,10 +362,11 @@ func (o *openAIClient) ollamaDetails(ctx context.Context, models []Model) {
 		done()
 		if !ok {
 			if i == 0 {
-				return
+				return false
 			}
 			continue
 		}
+		ollama = true
 		if j.Capabilities != nil {
 			tools, vision := false, false
 			for _, c := range j.Capabilities {
@@ -365,6 +382,7 @@ func (o *openAIClient) ollamaDetails(ctx context.Context, models []Model) {
 			models[i].ToolUse, models[i].Vision = &tools, &vision
 		}
 	}
+	return ollama
 }
 
 // lmStudioDetails asks LM Studio's native REST API (/api/v0/models next to /v1) for each model's

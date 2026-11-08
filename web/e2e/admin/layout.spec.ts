@@ -105,6 +105,16 @@ test('settings and administration share one layout, and their forms line up', as
   await expect(page.getByRole('form', { name: 'Tuning' })).toBeVisible();
   await look('admin/assistant: tuning');
   await page.getByRole('form', { name: 'Tuning' }).getByRole('button', { name: 'Cancel' }).click();
+  // a connection's models and use (Phase 20 follow-ups)
+  await page
+    .locator('.set-list li')
+    .filter({ hasText: 'ai-mock' })
+    .first()
+    .getByRole('button', { name: 'Models' })
+    .click();
+  await expect(page.getByRole('form', { name: 'Models and use of ai-mock' }).getByText(/Connected to/)).toBeVisible();
+  await look('admin/assistant: models and use');
+  await page.getByRole('form', { name: 'Models and use of ai-mock' }).getByRole('button', { name: 'Close' }).click();
   await page.getByRole('button', { name: 'New article' }).click();
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toBeVisible();
   await look('admin/assistant: new article');
@@ -117,6 +127,7 @@ test('settings and administration share one layout, and their forms line up', as
   expect(seen['admin/assistant: new connection']?.fields).toBeGreaterThanOrEqual(8);
   expect(seen['admin/assistant: new connection']?.rows).toBeGreaterThanOrEqual(2);
   expect(seen['admin/assistant: tuning']?.rows).toBeGreaterThanOrEqual(3);
+  expect(seen['admin/assistant: models and use']?.rows).toBeGreaterThanOrEqual(2); // "Who picks" and the controls
   const problems = Object.entries(seen).flatMap(([where, l]) => l.problems.map((p) => `${where}: ${p}`));
   expect(problems).toEqual([]);
   // one content column for both sections

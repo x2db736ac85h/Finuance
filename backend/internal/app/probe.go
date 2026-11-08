@@ -49,7 +49,9 @@ func Probe(ctx context.Context, cfg config.Config, in ProbeInput, out func(forma
 	if err != nil {
 		return err
 	}
-	for _, st := range conns.Status(ctx, true) {
+	statuses := conns.Status(ctx, true)
+	for i := range statuses {
+		st := &statuses[i]
 		kind := "local"
 		if st.Cloud {
 			kind = "cloud"

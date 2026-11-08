@@ -47,6 +47,16 @@ type StoredConnection struct {
 	KeyUnreadable                           bool  // sealed under another instance key
 	Version                                 int32 // 0 for the file's
 	UpdatedAt                               *time.Time
+	Controls                                Controls // the administrator's controls, for the file's too
+}
+
+// ControlsInput is what an administrator saves for a connection; UnloadAfterMinutes nil leaves
+// the idle time to the server.
+type ControlsInput struct {
+	Enabled                  bool
+	UnloadAfterMinutes       *int
+	DefaultModel, PhotoModel string
+	Version                  int32 // 0: the first save
 }
 
 // KeyChange is what an edit does to the API key: keep it, remove it or set a new one.
@@ -92,12 +102,16 @@ func (s *ConnectionStore) Load(ctx context.Context) error {
 	var (
 		rows []db.AssistantConnection
 		tun  []db.AssistantModelSetting
+		ctl  []db.AssistantConnectionControl
 	)
 	if err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) (err error) {
 		if rows, err = q.ListStoredConnections(ctx); err != nil {
 			return err
 		}
-		tun, err = q.ListModelSettings(ctx)
+		if tun, err = q.ListModelSettings(ctx); err != nil {
+			return err
+		}
+		ctl, err = q.ListConnectionControls(ctx)
 		return err
 	}); err != nil {
 		return err
@@ -115,8 +129,20 @@ func (s *ConnectionStore) Load(ctx context.Context) error {
 	for i := range tun {
 		tuning[i] = tuningOf(&tun[i])
 	}
-	s.conns.SetStored(conns, tuning)
+	controls := make(map[string]Controls, len(ctl))
+	for i := range ctl {
+		controls[ctl[i].Name] = controlsOf(&ctl[i])
+	}
+	s.conns.SetStored(conns, tuning, controls)
 	return nil
+}
+
+func controlsOf(r *db.AssistantConnectionControl) Controls {
+	c := Controls{Enabled: r.Enabled, DefaultModel: r.DefaultModel, PhotoModel: r.PhotoModel, Version: r.Version, UpdatedAt: &r.UpdatedAt}
+	if r.UnloadAfterMinutes != nil {
+		c.UnloadAfter = time.Duration(*r.UnloadAfterMinutes) * time.Minute
+	}
+	return c
 }
 
 // Run reloads every ReloadEvery until ctx ends (other replicas' changes arrive within a minute).
@@ -182,12 +208,93 @@ func (s *ConnectionStore) List(ctx context.Context) ([]StoredConnection, error) 
 	}
 	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		rows, err := q.ListStoredConnections(ctx)
+		if err != nil {
+			return err
+		}
 		for i := range rows {
 			out = append(out, s.storedOf(&rows[i]))
 		}
-		return err
+		ctl, err := q.ListConnectionControls(ctx)
+		if err != nil {
+			return err
+		}
+		byName := map[string]Controls{}
+		for i := range ctl {
+			byName[ctl[i].Name] = controlsOf(&ctl[i])
+		}
+		for i := range out {
+			out[i].Controls = DefaultControls
+			if c, ok := byName[out[i].Name]; ok {
+				out[i].Controls = c
+			}
+		}
+		return nil
 	})
 	return out, err
+}
+
+// One returns a connection as List shows it.
+func (s *ConnectionStore) One(ctx context.Context, name string) (StoredConnection, error) {
+	list, err := s.List(ctx)
+	if err != nil {
+		return StoredConnection{}, err
+	}
+	for i := range list {
+		if list[i].Name == name {
+			return list[i], nil
+		}
+	}
+	return StoredConnection{}, fmt.Errorf("connection %q: %w", name, platform.ErrNotFound)
+}
+
+// SetControls saves an administrator's controls for a connection, the file's included. The models
+// must be ones the connection offers (” for none); the idle time one of UnloadChoices.
+func (s *ConnectionStore) SetControls(ctx context.Context, name string, in ControlsInput) (StoredConnection, error) {
+	c, err := s.conns.GetAny(name)
+	if err != nil {
+		return StoredConnection{}, fmt.Errorf("connection %q: %w", name, platform.ErrNotFound)
+	}
+	bad := map[string]string{}
+	if m := in.UnloadAfterMinutes; m != nil && !slices.Contains(UnloadChoices, *m) {
+		bad["unloadAfterMinutes"] = "must be 10, 15, 30, 45, 60, 120 or 240 minutes, or null for the server's own setting"
+	}
+	for field, model := range map[string]string{"defaultModel": in.DefaultModel, "photoModel": in.PhotoModel} {
+		switch {
+		case len(model) > 200 || strings.ContainsRune(model, 0):
+			bad[field] = "must be at most 200 characters"
+		case model != "" && !c.offers(model):
+			bad[field] = "isn't a model this connection offers"
+		}
+	}
+	if err := problems(bad); err != nil {
+		return StoredConnection{}, err
+	}
+	var minutes *int32
+	if m := in.UnloadAfterMinutes; m != nil {
+		v := int32(*m) //nolint:gosec // one of UnloadChoices
+		minutes = &v
+	}
+	err = s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		var err error
+		if in.Version == 0 {
+			_, err = q.InsertConnectionControls(ctx, db.InsertConnectionControlsParams{Name: name, Enabled: in.Enabled,
+				UnloadAfterMinutes: minutes, DefaultModel: in.DefaultModel, PhotoModel: in.PhotoModel, Now: s.clock.Now()})
+		} else {
+			_, err = q.UpdateConnectionControls(ctx, db.UpdateConnectionControlsParams{Name: name, Version: in.Version, Enabled: in.Enabled,
+				UnloadAfterMinutes: minutes, DefaultModel: in.DefaultModel, PhotoModel: in.PhotoModel, Now: s.clock.Now()})
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("connection %q controls: %w", name, platform.ErrStaleVersion)
+		}
+		return err
+	})
+	if err != nil {
+		return StoredConnection{}, err
+	}
+	if err := s.Load(ctx); err != nil {
+		return StoredConnection{}, err
+	}
+	return s.One(ctx, name)
 }
 
 func nonNil(s []string) []string {

@@ -60,3 +60,47 @@ Administrators also need to see how much the assistant is used per person, never
   database with every query.
 - **Moving the file's connections into the database at first start**: two sources of truth after
   the next file change; the file stays the source for its own connections.
+
+## Addendum (2026-11-08, Phase 20 follow-ups 20.17–20.20): controls, model loading, who picks
+
+Our Product Engineer asked for a way to switch the homelab's Ollama connection off, unload and load
+models, unload a model by itself after an idle time, see what *Test* found, and decide whether
+people may pick the model.
+
+- **Controls per connection** (migration 00024, `assistant_connection_controls`, an instance table
+  outside RLS like the connections): on or off, how long the server keeps a model after the last
+  question (10, 15, 30 or 45 minutes, 1, 2 or 4 hours, or the server's own setting), the model
+  questions use (over the connection's own default) and a **model for photos**. They apply to the
+  connections file's connections too, whose own fields stay read only. A connection without a row is
+  on with 30 minutes. They reload with the connections every minute.
+- **Switched off**: the connection is left out of people's status and refused for questions; its
+  chats and digests go to the first connection that is on, and its loaded models are unloaded
+  (Ollama). Administration still checks it.
+- **Unloading after idle time uses the server's own timer**: Ollama keeps a model for its
+  `keep_alive` after the last request and unloads it by itself. After every question and digest the
+  runner moves that time to the connection's setting (`POST /api/generate` without a prompt and
+  with `keep_alive`), because requests through the OpenAI-compatible endpoint leave Ollama's own
+  default. No Finuance process keeps a timer, so the api replicas and the worker never have to
+  agree; the host's `OLLAMA_KEEP_ALIVE` stays as the fallback when the setting is the server's own
+  or a reset fails. LM Studio gets the time as `ttl` with each request (it applies to models it
+  loaded on demand).
+- **Loading and unloading** from Administration (`/admin/assistant/connections/{name}/load` and
+  `/unload`, audited) work on Ollama, which the client recognises by its native API (`/api/show`,
+  else `/api/version`); its `/api/ps` lists the loaded models with their memory and unload time.
+  LM Studio's list says which models are loaded, but its REST API is not used to load or unload;
+  other servers get the switch only.
+- **Who picks** (`instance_settings.assistant.modelChoice`, `defaultConnection`): **the
+  administrator** by default: every question and digest runs on the default connection and its
+  default model, whatever the panel asks for, and people's status lists only that connection;
+  people's own choices stay saved for when the administrator lets them pick again (**each
+  person**). A question with photos runs on the connection's model for photos whenever the model in
+  use can't read images, in both modes (the default text model on a 4 GB GPU reads no images,
+  20.8).
+- **Test** reports what the check found: the models, how long the list took and, where the server
+  says, whether the model is loaded (the first answer after unloading takes longer).
+
+Alternatives considered: a timer in Finuance (the api replicas and the worker would need to share
+the last question's time, through the database or a leader); unloading through a host script
+(outside the app and the audit log); locking the model per connection only (an administrator asked
+for one switch; the connection's default model plays that role).
+

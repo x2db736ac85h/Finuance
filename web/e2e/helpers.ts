@@ -1,7 +1,7 @@
 // Shared E2E steps.
 import { readFileSync } from 'node:fs';
 
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type PlaywrightWorkerArgs } from '@playwright/test';
 
 export const PASSWORD = 'e2e password long enough';
 
@@ -90,4 +90,44 @@ export async function importInto(page: Page, accountId: string, ...rel: string[]
     importIds.push(id);
   }
   return importIds;
+}
+
+/** The E2E administrator (created with the CLI by make test-e2e and the CI job). */
+export const ADMIN_EMAIL = process.env['E2E_ADMIN_EMAIL'] ?? 'admin@example.test';
+export const ADMIN_PASSWORD = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e admin password long enough';
+
+type AssistantSettings = { modelChoice?: 'admin' | 'people'; defaultConnection?: string; instructions?: string };
+
+/**
+ * Sets who picks the assistant's model on the instance (Phase 20 follow-ups) through the
+ * administrator's API and returns what it was. The instance's default is the administrator.
+ */
+export async function setModelChoice(
+  playwright: PlaywrightWorkerArgs['playwright'],
+  baseURL: string,
+  change: (a: AssistantSettings) => AssistantSettings,
+): Promise<AssistantSettings> {
+  const api = await playwright.request.newContext({ baseURL });
+  const login = await api.post('/api/v1/auth/login', {
+    headers: API_HEADERS,
+    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+  });
+  expect(login.ok()).toBe(true);
+  const doc = (await (await api.get('/api/v1/admin/settings')).json()) as { assistant?: AssistantSettings };
+  const was = doc.assistant ?? {};
+  const put = await api.put('/api/v1/admin/settings', {
+    headers: API_HEADERS,
+    data: { ...doc, assistant: change(was) },
+  });
+  expect(put.ok()).toBe(true);
+  await api.dispose();
+  return was;
+}
+
+/** Lets each person pick the assistant's model, for specs that switch the mock's models. */
+export async function letPeoplePickModels(
+  playwright: PlaywrightWorkerArgs['playwright'],
+  baseURL: string,
+): Promise<void> {
+  await setModelChoice(playwright, baseURL, (a) => ({ ...a, modelChoice: 'people' }));
 }

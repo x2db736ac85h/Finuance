@@ -9,6 +9,7 @@ import {
   useAddStarterAdvice,
   useAdviceArticle,
   useAdviceList,
+  useConnections,
   useCreateAdvice,
   useDeleteAdvice,
   useInstanceSettings,
@@ -32,12 +33,88 @@ export function AssistantAdmin() {
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <>
+      <ModelChoice />
       <Connections />
       <Tuning />
       <Instructions />
       <Library editing={editing} onEdit={setEditing} />
       {editing && <ArticleEditor key={editing} id={editing === 'new' ? null : editing} onDone={setEditing} />}
     </>
+  );
+}
+
+function ModelChoice() {
+  const settings = useInstanceSettings();
+  if (!settings.data)
+    return <div className="set-card">{settings.isError ? errorMessage(settings.error) : 'Loading…'}</div>;
+  return <ModelChoiceForm key={settings.data.version} doc={settings.data} />;
+}
+
+/**
+ * Who picks the assistant's model (Phase 20 follow-ups): the administrator by default (everyone's
+ * questions use the default connection and its default model), or each person.
+ */
+function ModelChoiceForm({ doc }: { doc: InstanceSettings }) {
+  const put = usePutInstanceSettings();
+  const conns = useConnections();
+  const [choice, setChoice] = useState<'admin' | 'people'>(doc.assistant?.modelChoice ?? 'admin');
+  const [conn, setConn] = useState(doc.assistant?.defaultConnection ?? '');
+  const on = (conns.data ?? []).filter((c) => c.controls.enabled || c.name === conn);
+  const unchanged =
+    choice === (doc.assistant?.modelChoice ?? 'admin') && conn === (doc.assistant?.defaultConnection ?? '');
+  return (
+    <div className="set-card">
+      <div className="lbl">Who picks the model</div>
+      <p className="hint">
+        The administrator: everyone's questions use the default connection and its default model, and photos its model
+        for photos; people see which one but can't change it. Each person: people pick among the connections that are on
+        and the models they offer.
+      </p>
+      <div className="form-row">
+        <label className="st-col">
+          Who picks
+          <Select
+            value={choice}
+            options={[
+              { value: 'admin', label: 'The administrator' },
+              { value: 'people', label: 'Each person' },
+            ]}
+            onChange={setChoice}
+          />
+        </label>
+        <label className="st-col">
+          Default connection
+          <Select
+            value={conn}
+            options={[
+              { value: '', label: 'The first one that is on' },
+              ...on.map((c) => ({ value: c.name, label: c.label })),
+            ]}
+            onChange={setConn}
+          />
+        </label>
+      </div>
+      <div className="set-actions">
+        <Button
+          variant="primary"
+          disabled={put.isPending || unchanged}
+          onClick={() => {
+            void put
+              .mutateAsync({ ...doc, assistant: { ...doc.assistant, modelChoice: choice, defaultConnection: conn } })
+              .then(
+                () => {
+                  toast(choice === 'admin' ? 'Saved: you pick the model' : 'Saved: each person picks the model');
+                },
+                (e: unknown) => {
+                  toast(errorMessage(e), { kind: 'error' });
+                },
+              );
+          }}
+        >
+          Save
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -76,7 +153,7 @@ function InstructionsForm({ doc }: { doc: InstanceSettings }) {
           variant="primary"
           disabled={put.isPending || text === (doc.assistant?.instructions ?? '')}
           onClick={() => {
-            void put.mutateAsync({ ...doc, assistant: { instructions: text.trim() } }).then(
+            void put.mutateAsync({ ...doc, assistant: { ...doc.assistant, instructions: text.trim() } }).then(
               () => {
                 toast('Saved the instructions');
               },
