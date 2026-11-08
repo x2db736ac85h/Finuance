@@ -6,6 +6,11 @@ notes of their version.
 
 ## [Unreleased]
 
+## [0.4.1]
+
+The assistant's model servers under the administrator's control, receipts that find the model that
+reads them, and the admin tools' port-forwards in one command.
+
 ### Added
 
 - **The assistant's connections under the administrator's control**: Administration → Assistant →
