@@ -16,6 +16,15 @@ the assistant eval harness (`eval.Run` → `multierr` → zstd decoding): **fixe
 govulncheck 0 reachable, 1 in a required module (GO-2026-5932, no fix, not reachable). The released
 `v0.3.0-rc.2` images carry 1.20.1; `v0.3.0` will carry the fix.
 
+**Release scan before `v0.4.1-rc.1`: 2026-11-08**, on the reference machine, on `main` at `912ab56`;
+both images built without the Docker cache (as the release builds), Trivy 0.76.0 with that day's
+database, govulncheck, `npm audit`. The charts' templates are unchanged since `v0.4.0` (the
+follow-ups changed the app, not the deployment). Nothing new: web image 0 findings, api image only
+GO-2026-5932 (`x/crypto/openpgp`, not imported; govulncheck 0 reachable; the fix is still an
+untagged commit), repository `minimatch` (MEDIUM, development tools only: ESLint 10.14 and
+typescript-eslint 8.72.1 still require `minimatch` 10), `npm audit --omit=dev` 0, no secrets, the
+misconfigurations documented below.
+
 **Release scan before `v0.4.0-rc.1`: 2026-11-07**, on the reference machine, on `main` at `21d991c`;
 images built locally from it, Trivy 0.76.0 with that day's database, govulncheck, `npm audit`, and
 Trivy over the charts' renders at every severity (Phase 20 changed the templates: the worker's
