@@ -17,6 +17,11 @@ notes of their version.
 - **Who picks the model**: the administrator (the default) or each person. When the administrator
   picks, everyone's questions and digests use the default connection and its model, shown read only
   in the assistant's settings.
+- **`make observe`**: the port-forwards to Grafana, Prometheus, Alertmanager and Argo CD in one
+  command, on this machine's loopback only. Ports another program holds are refused before
+  anything starts, a forward that stops starts again, and Ctrl-C ends them all (RUNBOOK "Local
+  ports"). `make check` keeps the forwards' local ports the same in the RUNBOOK, the Developer links
+  and `make observe`, and away from the ports the Compose stack publishes.
 
 ### Changed
 
