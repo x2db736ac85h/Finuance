@@ -5,7 +5,7 @@
 
 image:
   # Bumped by release.yml (a pull request per release, vX.Y.Z tags only).
-  tag: "0.4.0"
+  tag: "0.4.1-rc.1"
 # The images are private: a registry login that may only read packages
 # (tools/seal-secrets.sh homelab pull → secrets/ghcr-pull.sealed.yaml).
 imagePullSecrets:
