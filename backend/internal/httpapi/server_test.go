@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
@@ -303,6 +304,8 @@ func TestProblemMapping(t *testing.T) {
 		{ledger.ErrConflict, "conflict", 409},
 		{ledger.ErrState, "conflict", 409},
 		{fmt.Errorf("name too long: %w", ledger.ErrInvalid), "validation_failed", 422},
+		{fmt.Errorf("get user: %w", &pgconn.PgError{Code: "22021"}), "validation_failed", 422},
+		{&pgconn.PgError{Code: "42P01"}, "internal", 500},
 		{errors.New("pq: relation x does not exist"), "internal", 500},
 	} {
 		p := ProblemFor(tc.err, r, false)

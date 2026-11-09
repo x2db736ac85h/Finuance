@@ -275,6 +275,9 @@ func TestAuthFlow(t *testing.T) {
 	// Login with a stale cookie: rotation revokes it and issues a new one.
 	expect(t, b.do("POST", "/auth/login", map[string]any{"email": email, "password": "wrong password!"}), 401, "unauthenticated")
 	expect(t, b.do("POST", "/auth/login", map[string]any{"email": "nobody-" + email, "password": password}), 401, "unauthenticated")
+	// PostgreSQL refuses NUL characters: 422, not 500 (found by the weekly ZAP scan).
+	expect(t, b.do("POST", "/auth/login", map[string]any{"email": "a\u0000" + email, "password": password}), 422, "validation_failed")
+	expect(t, b.do("POST", "/auth/signup", map[string]any{"email": "a\u0000" + email, "password": password}), 422, "validation_failed")
 	expect(t, b.do("POST", "/auth/login", map[string]any{"email": email, "password": password}), 200, "")
 	second := b.cookie()
 	if second == first || second == "" {
