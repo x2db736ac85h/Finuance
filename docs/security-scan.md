@@ -173,7 +173,9 @@ The weekly runs of 2026-11-02 and 2026-11-09 failed on *A server error response 
   mock model server, as the E2E stack does, so the assistant's operations are scanned working.
 
 The step that names server errors now reports nginx's own error lines first: the first runs named
-the failing routes but not the reason.
+the failing routes but not the reason. With the three fixes the weekly workflow passed on their
+branch (2026-11-09): no server error in either scan, no error line from nginx or the api, and the
+k6 smoke test and the demo E2E green.
 
 Remaining alerts, each with its rule in [`.zap/rules.tsv`](../.zap/rules.tsv):
 
