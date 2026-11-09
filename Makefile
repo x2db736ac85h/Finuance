@@ -77,8 +77,9 @@ check-env-details: ## Fail on private environment details (patterns from the pri
 	@tools/check-env-details.sh
 
 .PHONY: check-private
-check-private: ## Fail on IBAN-like numbers or files under testdata/private/
+check-private: ## Fail on account numbers, e-mail addresses, tailnet names, postcodes in test data, or files under testdata/private/
 	@tools/check-private.sh
+	@tools/check-private-test.sh
 
 .PHONY: check-no-float
 check-no-float: ## Fail on floating point in internal/money or the fingerprint path

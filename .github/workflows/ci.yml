@@ -39,7 +39,7 @@ jobs:
         run: gitleaks git --no-banner --redact --verbose .
 
       - name: Private-data check
-        run: tools/check-private.sh
+        run: tools/check-private.sh && tools/check-private-test.sh
 
       - uses: actions/setup-go@v7.0.0
         with:

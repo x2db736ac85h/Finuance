@@ -24,12 +24,13 @@
 
 ## Working documents (how the rebuild is planned and tracked)
 
-These are written for the team and the AI agent that builds Finuance. They are detailed, and they describe future phases as well as finished ones.
+These are written for the maintainer and the AI agent that writes most of the code. They are detailed, and they describe future phases as well as finished ones.
 
 | Document | What it covers |
 |---|---|
-| [PLAN.md](PLAN.md) | The full specification and the phase plan (Phases 0–19), with tasks, tests and the review gate of each phase |
-| [PROGRESS.md](PROGRESS.md) | The current phase, every decision taken by the maintainer, deviations from the plan, follow-ups |
+| [PLAN.md](PLAN.md) | The full specification and the phase plan, with tasks, tests and the review gate of each phase |
+| [PROGRESS.md](PROGRESS.md) | The current phase and its tasks, the decisions that still apply, follow-ups and the backlog |
+| [ROADMAP.md](ROADMAP.md) | What has shipped, what is next and what comes later |
 | [PARITY.md](PARITY.md) | Every capability of the legacy prototype and the phase that ports (or retires) it |
 | [perf-phase7-plans.md](perf-phase7-plans.md) | Raw `EXPLAIN ANALYZE` output behind the Phase 7 query measurements |
 | [../testdata/oracle/ALLOWED_DIFFS.md](../testdata/oracle/ALLOWED_DIFFS.md) | The deliberate differences from the legacy prototype's behaviour |

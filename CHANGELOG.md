@@ -6,6 +6,18 @@ notes of their version.
 
 ## [Unreleased]
 
+### Changed
+
+- **Safe when started without settings**: an instance without `FINUANCE_ENV` now runs in production
+  mode, and sign-up is off unless `FINUANCE_ALLOW_SIGNUP=true`. Compose and the Helm chart already
+  set both; if you start the binary yourself for development, add `FINUANCE_ENV=dev` and
+  `FINUANCE_ALLOW_SIGNUP=true` to your `.env` (the new `.env.example` has them).
+- **Profiling endpoints are off by default**: `/debug/pprof` on the admin port needs
+  `FINUANCE_PPROF=true`.
+- **`compose.prod.yaml`**: the env template's passwords are empty, so the stack refuses to start
+  until you set them; the stack has its own subnet (`FINUANCE_SUBNET`, default `172.30.42.0/24`),
+  and only that subnet is trusted to pass on the visitor's address.
+
 ### Fixed
 
 - **`502` under heavy traffic in Compose**: the web server opened a new connection to the api for

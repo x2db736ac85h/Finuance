@@ -3591,6 +3591,15 @@ the Backlog.
 
 ### Phase 21 — Public release: privacy clean-up, security, demo, documentation, v1.0.0 · Size L (was Phase 19, before that Phase 18)
 
+> **Phase regrouping (2026-11-09, the maintainer).** The repository goes public first, with a small
+> scope, and the rest follows in public: **Phase 21 — Going public** does only what must happen
+> before strangers can read the repository (synthetic fixtures instead of the anonymised exports,
+> neutral wording and no machine details, fail-closed defaults and the other security hotfixes, a
+> lean PROGRESS and a ROADMAP, a rewritten README, the publish script with one root commit).
+> **Phase 22 — Phone and touch** and **Phase 23 — Release 1.0** (the rest of the tasks below:
+> security scanners in CI, signed images enforced, the demo host, write-ups, `v1.0.0`) are built in
+> the public repository. `docs/PROGRESS.md` has the task list.
+
 **Goal:** a public repository and something a recruiter can click on, plus documents that make the
 engineering visible.
 
