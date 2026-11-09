@@ -197,7 +197,7 @@ What the tests cover:
 - **End to end:** Playwright specs for every screen and flow against a fresh Compose stack, accessibility checks with axe, and a parity harness that runs the prototype next to the new app on the same data ([report](docs/parity-report.md)).
 - **Legacy oracle:** [`tools/legacy-oracle`](tools/legacy-oracle) runs the original prototype in a headless browser and records its results (parsing, de-duplication, filters, …) on [synthetic fixtures](testdata/fixtures). The new backend is tested against those recordings, so it behaves like the prototype. The few deliberate differences are listed in [`testdata/oracle/ALLOWED_DIFFS.md`](testdata/oracle/ALLOWED_DIFFS.md).
 
-All test data is synthetic, or real exports passed through the [anonymiser](backend/cmd/anonymize) and reviewed before commit.
+All test data is synthetic: the bank look-alikes copy the structure of real exports with every value invented.
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs all of this on every push, plus a secret scan, Trivy scans of the images and the repository (HIGH and CRITICAL fail the build), `npm audit` and Go vulnerability checks. Every week, and on deployment changes, a [kind cluster rehearsal](.github/workflows/k8s-rehearsal.yml) installs the charts, kills pods under load and restores a backup; the [weekly workflow](.github/workflows/weekly.yml) runs the ZAP scans, a k6 smoke test against the SLOs and the demo-mode tests.
 

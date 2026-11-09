@@ -138,15 +138,13 @@ async function importFamily(page: Page, rel: string): Promise<{ rows: number; er
   return { ...imp.stats, transactions: await txCount(page, accountId) };
 }
 
-// The bank look-alikes and the anonymised real exports; for mBank and PKO BP the legacy picked a
+// The bank look-alikes; for mBank and PKO BP the legacy picked a
 // wrong header row (ALLOWED_DIFFS.md row 4), so only the others are compared with its row count.
 const FAMILIES: [string, boolean][] = [
   ['synthetic/banks/pekao-like.csv', true],
   ['synthetic/banks/mbank-like.csv', false],
   ['synthetic/banks/pko-bp-like.csv', false],
-  ['real/pekao/pekao_example.csv', true],
-  ['real/mbank/mbank_example.csv', false],
-  ['real/pko-bp/pko_bp_example.csv', false],
+  ['synthetic/banks/mbank-like-long.csv', false],
   ['synthetic/same-name/a/export.csv', true],
   ['synthetic/42-bank-a-layout.csv', true],
   ['synthetic/28-debit-credit.csv', true],

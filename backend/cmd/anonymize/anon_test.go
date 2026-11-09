@@ -28,7 +28,7 @@ func pekaoReal() string {
 	return strings.Join([]string{
 		"Data księgowania;Data waluty;Nadawca / Odbiorca;Adres nadawcy / odbiorcy;Rachunek źródłowy;Rachunek docelowy;Tytułem;Kwota operacji;Waluta;Numer referencyjny;Typ operacji;Kategoria",
 		"01.03.2025;01.03.2025;KWIATOSZ MARKETPLACE;KWIATOSZ.PL 38 AVENUE JOHNA KENNEDYEGO,LUXEMBOURG;'" + a1 + ";;BLIK REF       86772307062;-127,13;PLN;'C992506002418351;PŁATNOŚĆ BLIK;Zakupy przez internet",
-		"01.03.2025;28.02.2025;ZABCIA Z6373 K.1        RASZYN;;'" + a1 + ";;*********0229197;-44,98;PLN;'C992505922368031;TRANSAKCJA KARTĄ PŁATNICZĄ;Artykuły spożywcze",
+		"01.03.2025;28.02.2025;ZABCIA Z1001 K.1        GDANSK;;'" + a1 + ";;*********0229197;-44,98;PLN;'C992505922368031;TRANSAKCJA KARTĄ PŁATNICZĄ;Artykuły spożywcze",
 		"15.04.2024;15.04.2024;BALTAZAR GĄBKA;UL. PASTELOWA 8 60-198 POZNAŃ;'" + a1 + ";'" + a2 + ";Zwrot za obiad Baltazar;1 200,00;PLN;'328244F604005273;PRZELEW MOBILE;Bez kategorii",
 		"15.04.2024;14.04.2024;UBERTO   * EATS PENDING  AMSTERDAM;;'" + a1 + ";;*********0060980;-235,00;PLN;'C992410521886798;TRANSAKCJA KARTĄ PŁATNICZĄ;Restauracje i kawiarnie",
 	}, "\n") + "\n"
@@ -68,7 +68,7 @@ func pkoReal() []byte {
 
 // sensitive lists tokens of the realistic inputs that must not survive anonymisation.
 var sensitive = []string{
-	"KWIATOSZ", "KENNEDYEGO", "ZABCIA", "RASZYN", "BALTAZAR", "GĄBKA", "PASTELOWA", "UBERTO", "AMSTERDAM",
+	"KWIATOSZ", "KENNEDYEGO", "ZABCIA", "GDANSK", "BALTAZAR", "GĄBKA", "PASTELOWA", "UBERTO", "AMSTERDAM",
 	"86772307062", "0229197", "992506002418351", "604005273", "0060980", "Baltazar", "PLANETARIUM", "MAKATKA",
 	"GRZEGORZ", "STRASZNA", "LIDLOWO", "Długa", "Szeroka", "425125", "000134679", "10204027", "1965",
 	acct("32124023"), acct("91124017"), acct("53114020"),

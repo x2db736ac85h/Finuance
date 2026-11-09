@@ -134,13 +134,13 @@ func TestFingerprintVectors(t *testing.T) {
 	if k := FingerprintKey(&ref, 2); k != "r|'c992506002418351|-127.13" {
 		t.Errorf("reference key = %q", k)
 	}
-	plain := StagedRow{BookedOn: platform.MustDate(2025, 3, 1), AmountMinor: -4498, Payee: "ŻABKA  Z6373 K.1   RASZYN", Description: "Zakupy\tspożywcze"}
+	plain := StagedRow{BookedOn: platform.MustDate(2025, 3, 1), AmountMinor: -4498, Payee: "ŻABKA  Z1001 K.1   GDANSK", Description: "Zakupy\tspożywcze"}
 	key := FingerprintKey(&plain, 2)
-	if key != "2025-03-01|-44.98|zabka z6373 k.1 raszyn|zakupy spozywcze" {
+	if key != "2025-03-01|-44.98|zabka z1001 k.1 gdansk|zakupy spozywcze" {
 		t.Errorf("plain key = %q", key)
 	}
 	fp := Fingerprint(key)
-	if got := hex.EncodeToString(fp[:]); got != "1d42b746b540675e589a7e35b7efea5c917e6e3412ad690d7ab0455c26731d14" {
+	if got := hex.EncodeToString(fp[:]); got != "f2f7e680f333d7e640f4a23eb107bdbd87d7ff5ba35187da028a238b0aa680f8" {
 		t.Errorf("fingerprint = %s", got)
 	}
 	sig := HeaderSignature([]string{"Data", "Kwota"}, ';')

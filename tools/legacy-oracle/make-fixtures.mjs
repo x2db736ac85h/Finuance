@@ -147,7 +147,7 @@ fx('48-reference-column.csv', 'Has a reference column (dedupe key uses ref + amo
 /* -- bank look-alikes (structure copied from real exports, every value invented) -- */
 fx('banks/pekao-like.csv', 'Pekao layout: UTF-8, LF, ";", dd.mm.yyyy, comma decimals, \' account/reference prefixes, payee padded with spaces before the city.', [PEKAO_H,
   pekao('01.03.2025', '01.03.2025', 'SKLEP INTERNETOWY ALFA', 'ALFA.PL UL. PRZYKŁADOWA 1,WARSZAWA', 'BLIK REF       10000000001', '-127,13', "'C000000000000001", 'PŁATNOŚĆ BLIK', 'Zakupy przez internet'),
-  pekao('01.03.2025', '28.02.2025', 'MINIMARKET Z1001 K.1   RASZYN', '', '*********0000001', '-44,98', "'C000000000000002", 'TRANSAKCJA KARTĄ PŁATNICZĄ', 'Artykuły spożywcze'),
+  pekao('01.03.2025', '28.02.2025', 'MINIMARKET Z1001 K.1   GDANSK', '', '*********0000001', '-44,98', "'C000000000000002", 'TRANSAKCJA KARTĄ PŁATNICZĄ', 'Artykuły spożywcze'),
   pekao('28.02.2025', '28.02.2025', 'GALERIA SZTUKI         WARSZAWA', '', '*********0000001', '-40,00', "'C000000000000003", 'TRANSAKCJA KARTĄ PŁATNICZĄ', 'Sport'),
   [`15.04.2024`, '15.04.2024', 'PŁATNOŚCI S.A.', 'UL. TESTOWA 8 00-001 POZNAŃ', ACC1, ACC2, '/OPT/X/////P24-A1B-C2D-E3F M00001-00001', '-200,00', 'PLN', "'000000F000000001", 'PRZELEW MOBILE', 'Bez kategorii'].join(';'),
   pekao('15.04.2024', '14.04.2024', 'RIDES  * FOOD PENDING  AMSTERDAM', '', '*********0000002', '-235,00', "'C000000000000004", 'TRANSAKCJA KARTĄ PŁATNICZĄ', 'Restauracje i kawiarnie'),
@@ -187,6 +187,30 @@ fx('banks/mbank-like.csv', 'mBank layout: UTF-8 with BOM, CRLF, ";". A ~25-line 
   mb('2026-03-16', pad('UBEZPIECZYCIEL.PL', 81) + pad('BLIK ZAKUP E-COMMERCE', 84), 'Ubezpieczenie domu', '-843,43'),
   mb('2026-03-15', pad('FIRMA R', 81) + pad('BLIK ZAKUP E-COMMERCE', 84), 'Zajęcia dodatkowe', '-1 190,00'),
   '', '', ''], {bom: true, eol: '\r\n'});
+
+// A longer export of the same layout: here the 7-field data rows outnumber the preamble lines, so
+// the legacy rule takes the first transaction as the header instead of the bank's address line.
+const MB_PRE = ['mBank Przykładowy S.A. Bankowość Detaliczna;', '\t\t\tSkrytka Pocztowa 0000;', '\t\t\t00-000 Miasto 2;', '\t\t\twww.example.pl;', '\t\t\tInfolinia: 000 000 000;', '\t\t\t+48 (00) 0 000 000;', '\t\t\t', '',
+  '#Klient;', 'JAN PRZYKŁADOWY;', '', 'Lista operacji;', '', '#Za okres:;', '01.01.2026;31.03.2026;', '',
+  '#zgodnie z wybranymi filtrami wyszukiwania;', '      #dla rachunków:;', '      Konto - 00000000000000000000000003;', '      ',
+  '      #Lista nie jest dokumentem w rozumieniu art. 7 Ustawy Prawo Bankowe, ponieważ operacje można samodzielnie edytować.;', '      ',
+  '      #Waluta;#Wpływy;#Wydatki;', 'PLN;9 600,00;-4 204,50;', '      ',
+  '#Data operacji;#Opis operacji;#Rachunek;#Kategoria;#Kwota;'];
+const mbLong = [];
+for (let m = 3; m >= 1; m--){
+  const mm = String(m).padStart(2, '0');
+  mbLong.push(
+    mb(`2026-${mm}-27`, pad('SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY', 110), 'Żywność i chemia domowa', `-${120 + m},40`),
+    mb(`2026-${mm}-21`, pad('KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY', 110), 'Jedzenie poza domem', `-${17 + m},00`),
+    mb(`2026-${mm}-18`, pad('APTEKA DELTA', 81) + pad('BLIK ZAKUP E-COMMERCE', 84), 'Zdrowie i uroda', `-${40 + 3 * m},99`),
+    mb(`2026-${mm}-15`, pad('OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026', 118) + pad('PRZELEW ZEWNĘTRZNY WYCHODZĄCY', 82) + pad('00000000000000000000001003', 28), 'Multimedia, książki i prasa', '-59,00'),
+    mb(`2026-${mm}-10`, pad('PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO', 120) + pad('PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY', 82) + pad('00000000000000000000001004', 28), 'Wynagrodzenie', '3 200,00'),
+    mb(`2026-${mm}-05`, pad('STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY', 110), 'Paliwo', `-${200 + 11 * m},30`),
+    mb(`2026-${mm}-03`, pad('WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026', 118) + pad('PRZELEW ZEWNĘTRZNY WYCHODZĄCY', 82) + pad('00000000000000000000001005', 28), 'Czynsz i wynajem', '-900,00'),
+    mb(`2026-${mm}-01`, pad('OPŁATA ZA KARTĘ', 31), 'Opłaty i odsetki', '-10,00'));
+}
+fx('banks/mbank-like-long.csv', 'mBank layout, a longer export (24 operations after the same ~25-line preamble): the data rows outnumber the preamble lines, so the legacy rule takes the first transaction as the header (the other form of the MVP bug).', [
+  ...MB_PRE, ...mbLong, '', '', ''], {bom: true, eol: '\r\n'});
 
 /* -- overlap set: dedupe across overlapping exports of one account -- */
 const OV_H = 'Data operacji;Kontrahent;Tytuł;Kwota;Kategoria';

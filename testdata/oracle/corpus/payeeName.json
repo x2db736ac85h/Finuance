@@ -1,8 +1,8 @@
 {
   "cases": [
     {
-      "in": "ZABKA Z6373 K.1        RASZYN",
-      "out": "ZABKA Z6373 K.1"
+      "in": "ZABKA Z1001 K.1        GDANSK",
+      "out": "ZABKA Z1001 K.1"
     },
     {
       "in": "ZACHETA                WARSZAWA",

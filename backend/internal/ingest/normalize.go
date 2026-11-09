@@ -167,7 +167,7 @@ func Collapse(s string) string { return jsCollapse(s) }
 // PayeeName is the grouping key for payees and recurring payments (legacy `payeeName`, PLAN §4.1).
 // Bank exports pad the merchant name with spaces before the city:
 //
-//	"ZABKA Z6373 K.1        RASZYN" → "ZABKA Z6373 K.1"
+//	"ZABKA Z1001 K.1        GDANSK" → "ZABKA Z1001 K.1"
 //
 // Steps: trim; take the text before the first run of 2+ whitespace; collapse whitespace; an empty
 // result becomes "(unknown)".

@@ -131,7 +131,7 @@
       "valueOn": "2025-02-28",
       "amountMinor": -4498,
       "currency": "PLN",
-      "payee": "MINIMARKET Z1001 K.1   RASZYN",
+      "payee": "MINIMARKET Z1001 K.1   GDANSK",
       "description": "*********0000001",
       "reference": "C000000000000002",
       "txType": "TRANSAKCJA KARTĄ PŁATNICZĄ",
@@ -148,7 +148,7 @@
         },
         {
           "header": "Nadawca / Odbiorca",
-          "value": "MINIMARKET Z1001 K.1   RASZYN"
+          "value": "MINIMARKET Z1001 K.1   GDANSK"
         },
         {
           "header": "Adres nadawcy / odbiorcy",
@@ -187,8 +187,8 @@
           "value": "Artykuły spożywcze"
         }
       ],
-      "searchText": "01.03.2025\u000128.02.2025\u0001minimarket z1001 k.1   raszyn\u0001\u000100000000000000000000000001\u0001\u0001*********0000001\u0001-44,98\u0001pln\u0001c000000000000002\u0001transakcja karta platnicza\u0001artykuly spozywcze",
-      "payeeN": "minimarket z1001 k.1 raszyn",
+      "searchText": "01.03.2025\u000128.02.2025\u0001minimarket z1001 k.1   gdansk\u0001\u000100000000000000000000000001\u0001\u0001*********0000001\u0001-44,98\u0001pln\u0001c000000000000002\u0001transakcja karta platnicza\u0001artykuly spozywcze",
+      "payeeN": "minimarket z1001 k.1 gdansk",
       "descriptionN": "*********0000001",
       "referenceN": "c000000000000002",
       "txTypeN": "transakcja karta platnicza",

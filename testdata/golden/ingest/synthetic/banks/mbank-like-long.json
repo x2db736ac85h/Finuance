@@ -1,0 +1,899 @@
+{
+  "fixture": "synthetic/banks/mbank-like-long.csv",
+  "encoding": "utf-8",
+  "delimiter": ";",
+  "headerAt": 26,
+  "dropped": 0,
+  "headers": [
+    "#Data operacji",
+    "#Opis operacji",
+    "#Rachunek",
+    "#Kategoria",
+    "#Kwota"
+  ],
+  "types": [
+    "date",
+    "text",
+    "text",
+    "text",
+    "number"
+  ],
+  "roles": {
+    "amount": "#Kwota",
+    "bookedOn": "#Data operacji",
+    "category": "#Kategoria",
+    "payee": "#Opis operacji"
+  },
+  "headerSignature": "ae75dcb36f9dc9841198af6b6ee9e2df06025993914f867d35342217e792907e",
+  "stats": {
+    "rows": 24,
+    "valid": 24,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "rowIndex": 0,
+      "bookedOn": "2026-03-27",
+      "amountMinor": -12340,
+      "currency": "PLN",
+      "payee": "SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Żywność i chemia domowa",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-27"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Żywność i chemia domowa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-123,40 PLN"
+        }
+      ],
+      "searchText": "2026-03-27\u0001sklep przykladowy beta  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001zywnosc i chemia domowa\u0001-123,40 pln",
+      "payeeN": "sklep przykladowy beta zakup przy uzyciu karty",
+      "bankCategoryN": "zywnosc i chemia domowa",
+      "payeeGroup": "SKLEP PRZYKŁADOWY BETA",
+      "occurrence": 1,
+      "fingerprint": "70a57e684db80419e45ebaf4018ed482571d1f4b0218a801afc6592635385459"
+    },
+    {
+      "rowIndex": 1,
+      "bookedOn": "2026-03-21",
+      "amountMinor": -2000,
+      "currency": "PLN",
+      "payee": "KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Jedzenie poza domem",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-21"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Jedzenie poza domem"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-20,00 PLN"
+        }
+      ],
+      "searchText": "2026-03-21\u0001kawiarnia gamma  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001jedzenie poza domem\u0001-20,00 pln",
+      "payeeN": "kawiarnia gamma zakup przy uzyciu karty",
+      "bankCategoryN": "jedzenie poza domem",
+      "payeeGroup": "KAWIARNIA GAMMA",
+      "occurrence": 1,
+      "fingerprint": "6a26158ecd54b159e97de61aaf6c8fd25e4f390cb6fe6b966e59a3d70438e0f0"
+    },
+    {
+      "rowIndex": 2,
+      "bookedOn": "2026-03-18",
+      "amountMinor": -4999,
+      "currency": "PLN",
+      "payee": "APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE",
+      "bankCategory": "Zdrowie i uroda",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-18"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Zdrowie i uroda"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-49,99 PLN"
+        }
+      ],
+      "searchText": "2026-03-18\u0001apteka delta                                                                     blik zakup e-commerce\u0001konto 0000 ... 0003\u0001zdrowie i uroda\u0001-49,99 pln",
+      "payeeN": "apteka delta blik zakup e-commerce",
+      "bankCategoryN": "zdrowie i uroda",
+      "payeeGroup": "APTEKA DELTA",
+      "occurrence": 1,
+      "fingerprint": "27e57b7bb61efbb1ccff2382d51a0b858e7d151e4a68351062a0f6fe528b6436"
+    },
+    {
+      "rowIndex": 3,
+      "bookedOn": "2026-03-15",
+      "amountMinor": -5900,
+      "currency": "PLN",
+      "payee": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003",
+      "bankCategory": "Multimedia, książki i prasa",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-15"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Multimedia, książki i prasa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-59,00 PLN"
+        }
+      ],
+      "searchText": "2026-03-15\u0001operator przykladowy, faktura 0${m}/2026                                                                              przelew zewnetrzny wychodzacy                                                     00000000000000000000001003\u0001konto 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-59,00 pln",
+      "payeeN": "operator przykladowy, faktura 0${m}/2026 przelew zewnetrzny wychodzacy 00000000000000000000001003",
+      "bankCategoryN": "multimedia, ksiazki i prasa",
+      "payeeGroup": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026",
+      "occurrence": 1,
+      "fingerprint": "c7fb237668d3fbd996f1473a3561ca7d61c64e4ae322991c22f0b27aa164f920"
+    },
+    {
+      "rowIndex": 4,
+      "bookedOn": "2026-03-10",
+      "amountMinor": 320000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004",
+      "bankCategory": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-10"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Wynagrodzenie"
+        },
+        {
+          "header": "#Kwota",
+          "value": "3 200,00 PLN"
+        }
+      ],
+      "searchText": "2026-03-10\u0001pracodawca przykladowy  ul.firmowa 1                      00-002 miasto                                                 przelew zewnetrzny przychodzacy                                                   00000000000000000000001004\u0001konto 0000 ... 0003\u0001wynagrodzenie\u00013 200,00 pln",
+      "payeeN": "pracodawca przykladowy ul.firmowa 1 00-002 miasto przelew zewnetrzny przychodzacy 00000000000000000000001004",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA PRZYKŁADOWY",
+      "occurrence": 1,
+      "fingerprint": "cce4cfab9d6482303c1d5e94fac063d31c3b4e2595a23a9495658c5315c8345f"
+    },
+    {
+      "rowIndex": 5,
+      "bookedOn": "2026-03-05",
+      "amountMinor": -23330,
+      "currency": "PLN",
+      "payee": "STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Paliwo",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-05"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Paliwo"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-233,30 PLN"
+        }
+      ],
+      "searchText": "2026-03-05\u0001stacja paliw epsilon  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001paliwo\u0001-233,30 pln",
+      "payeeN": "stacja paliw epsilon zakup przy uzyciu karty",
+      "bankCategoryN": "paliwo",
+      "payeeGroup": "STACJA PALIW EPSILON",
+      "occurrence": 1,
+      "fingerprint": "93a7213319b84b34dbafe34d6a14e7d8530fdfac6ddc1d851f7fc86b48c4ccd8"
+    },
+    {
+      "rowIndex": 6,
+      "bookedOn": "2026-03-03",
+      "amountMinor": -90000,
+      "currency": "PLN",
+      "payee": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005",
+      "bankCategory": "Czynsz i wynajem",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-03"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Czynsz i wynajem"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-900,00 PLN"
+        }
+      ],
+      "searchText": "2026-03-03\u0001wspolnota przykladowa, czynsz 0${m}/2026                                                                              przelew zewnetrzny wychodzacy                                                     00000000000000000000001005\u0001konto 0000 ... 0003\u0001czynsz i wynajem\u0001-900,00 pln",
+      "payeeN": "wspolnota przykladowa, czynsz 0${m}/2026 przelew zewnetrzny wychodzacy 00000000000000000000001005",
+      "bankCategoryN": "czynsz i wynajem",
+      "payeeGroup": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026",
+      "occurrence": 1,
+      "fingerprint": "9b2b01d31e836c7fbcfc7ea1dcde9bac1388846c252465bd8904d1d402ba833c"
+    },
+    {
+      "rowIndex": 7,
+      "bookedOn": "2026-03-01",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "OPŁATA ZA KARTĘ",
+      "bankCategory": "Opłaty i odsetki",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-03-01"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "OPŁATA ZA KARTĘ"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Opłaty i odsetki"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-10,00 PLN"
+        }
+      ],
+      "searchText": "2026-03-01\u0001oplata za karte\u0001konto 0000 ... 0003\u0001oplaty i odsetki\u0001-10,00 pln",
+      "payeeN": "oplata za karte",
+      "bankCategoryN": "oplaty i odsetki",
+      "payeeGroup": "OPŁATA ZA KARTĘ",
+      "occurrence": 1,
+      "fingerprint": "5ca3a548975b56fff1d1c6f3a8f60df7afc429eccf5cb8b08cc0898a2789d35e"
+    },
+    {
+      "rowIndex": 8,
+      "bookedOn": "2026-02-27",
+      "amountMinor": -12240,
+      "currency": "PLN",
+      "payee": "SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Żywność i chemia domowa",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-27"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Żywność i chemia domowa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-122,40 PLN"
+        }
+      ],
+      "searchText": "2026-02-27\u0001sklep przykladowy beta  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001zywnosc i chemia domowa\u0001-122,40 pln",
+      "payeeN": "sklep przykladowy beta zakup przy uzyciu karty",
+      "bankCategoryN": "zywnosc i chemia domowa",
+      "payeeGroup": "SKLEP PRZYKŁADOWY BETA",
+      "occurrence": 1,
+      "fingerprint": "dd6af40e60b9a08b500b3f6cac5c69d1f25329a0acefe0fab4ca3ae4200a617c"
+    },
+    {
+      "rowIndex": 9,
+      "bookedOn": "2026-02-21",
+      "amountMinor": -1900,
+      "currency": "PLN",
+      "payee": "KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Jedzenie poza domem",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-21"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Jedzenie poza domem"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-19,00 PLN"
+        }
+      ],
+      "searchText": "2026-02-21\u0001kawiarnia gamma  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001jedzenie poza domem\u0001-19,00 pln",
+      "payeeN": "kawiarnia gamma zakup przy uzyciu karty",
+      "bankCategoryN": "jedzenie poza domem",
+      "payeeGroup": "KAWIARNIA GAMMA",
+      "occurrence": 1,
+      "fingerprint": "f5eeafe6b2262739301b5ece19a345c6bb1ccd3a14eaf2ed548598a84bf8ed6d"
+    },
+    {
+      "rowIndex": 10,
+      "bookedOn": "2026-02-18",
+      "amountMinor": -4699,
+      "currency": "PLN",
+      "payee": "APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE",
+      "bankCategory": "Zdrowie i uroda",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-18"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Zdrowie i uroda"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-46,99 PLN"
+        }
+      ],
+      "searchText": "2026-02-18\u0001apteka delta                                                                     blik zakup e-commerce\u0001konto 0000 ... 0003\u0001zdrowie i uroda\u0001-46,99 pln",
+      "payeeN": "apteka delta blik zakup e-commerce",
+      "bankCategoryN": "zdrowie i uroda",
+      "payeeGroup": "APTEKA DELTA",
+      "occurrence": 1,
+      "fingerprint": "9f3d4667be9f7ecfc82dde1c3942adc7535020894ed816770772b3fcd3a28dd7"
+    },
+    {
+      "rowIndex": 11,
+      "bookedOn": "2026-02-15",
+      "amountMinor": -5900,
+      "currency": "PLN",
+      "payee": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003",
+      "bankCategory": "Multimedia, książki i prasa",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-15"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Multimedia, książki i prasa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-59,00 PLN"
+        }
+      ],
+      "searchText": "2026-02-15\u0001operator przykladowy, faktura 0${m}/2026                                                                              przelew zewnetrzny wychodzacy                                                     00000000000000000000001003\u0001konto 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-59,00 pln",
+      "payeeN": "operator przykladowy, faktura 0${m}/2026 przelew zewnetrzny wychodzacy 00000000000000000000001003",
+      "bankCategoryN": "multimedia, ksiazki i prasa",
+      "payeeGroup": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026",
+      "occurrence": 1,
+      "fingerprint": "7feddffa8e51bdcb9d3cc8340cf077884d1c4d05953e989537ad3696c2de79c2"
+    },
+    {
+      "rowIndex": 12,
+      "bookedOn": "2026-02-10",
+      "amountMinor": 320000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004",
+      "bankCategory": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-10"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Wynagrodzenie"
+        },
+        {
+          "header": "#Kwota",
+          "value": "3 200,00 PLN"
+        }
+      ],
+      "searchText": "2026-02-10\u0001pracodawca przykladowy  ul.firmowa 1                      00-002 miasto                                                 przelew zewnetrzny przychodzacy                                                   00000000000000000000001004\u0001konto 0000 ... 0003\u0001wynagrodzenie\u00013 200,00 pln",
+      "payeeN": "pracodawca przykladowy ul.firmowa 1 00-002 miasto przelew zewnetrzny przychodzacy 00000000000000000000001004",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA PRZYKŁADOWY",
+      "occurrence": 1,
+      "fingerprint": "1ebfcefaa1f18953a365d72807b11bdbe431b9b30f880979808e2631c2f2f90a"
+    },
+    {
+      "rowIndex": 13,
+      "bookedOn": "2026-02-05",
+      "amountMinor": -22230,
+      "currency": "PLN",
+      "payee": "STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Paliwo",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-05"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Paliwo"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-222,30 PLN"
+        }
+      ],
+      "searchText": "2026-02-05\u0001stacja paliw epsilon  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001paliwo\u0001-222,30 pln",
+      "payeeN": "stacja paliw epsilon zakup przy uzyciu karty",
+      "bankCategoryN": "paliwo",
+      "payeeGroup": "STACJA PALIW EPSILON",
+      "occurrence": 1,
+      "fingerprint": "841333157b2fa5480cf1be60c0a8c8b1ba2fad24a914203b21058f4e852c6a5c"
+    },
+    {
+      "rowIndex": 14,
+      "bookedOn": "2026-02-03",
+      "amountMinor": -90000,
+      "currency": "PLN",
+      "payee": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005",
+      "bankCategory": "Czynsz i wynajem",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-03"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Czynsz i wynajem"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-900,00 PLN"
+        }
+      ],
+      "searchText": "2026-02-03\u0001wspolnota przykladowa, czynsz 0${m}/2026                                                                              przelew zewnetrzny wychodzacy                                                     00000000000000000000001005\u0001konto 0000 ... 0003\u0001czynsz i wynajem\u0001-900,00 pln",
+      "payeeN": "wspolnota przykladowa, czynsz 0${m}/2026 przelew zewnetrzny wychodzacy 00000000000000000000001005",
+      "bankCategoryN": "czynsz i wynajem",
+      "payeeGroup": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026",
+      "occurrence": 1,
+      "fingerprint": "7bdb31018f3aa916fd722f14d84e2e78825b13b2a56e01c29c15aaeb9a9eb78f"
+    },
+    {
+      "rowIndex": 15,
+      "bookedOn": "2026-02-01",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "OPŁATA ZA KARTĘ",
+      "bankCategory": "Opłaty i odsetki",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-02-01"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "OPŁATA ZA KARTĘ"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Opłaty i odsetki"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-10,00 PLN"
+        }
+      ],
+      "searchText": "2026-02-01\u0001oplata za karte\u0001konto 0000 ... 0003\u0001oplaty i odsetki\u0001-10,00 pln",
+      "payeeN": "oplata za karte",
+      "bankCategoryN": "oplaty i odsetki",
+      "payeeGroup": "OPŁATA ZA KARTĘ",
+      "occurrence": 1,
+      "fingerprint": "cef21741b23e315942fbd987fad4fe220885e54941da765b6ae1036878b47f48"
+    },
+    {
+      "rowIndex": 16,
+      "bookedOn": "2026-01-27",
+      "amountMinor": -12140,
+      "currency": "PLN",
+      "payee": "SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Żywność i chemia domowa",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-27"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Żywność i chemia domowa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-121,40 PLN"
+        }
+      ],
+      "searchText": "2026-01-27\u0001sklep przykladowy beta  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001zywnosc i chemia domowa\u0001-121,40 pln",
+      "payeeN": "sklep przykladowy beta zakup przy uzyciu karty",
+      "bankCategoryN": "zywnosc i chemia domowa",
+      "payeeGroup": "SKLEP PRZYKŁADOWY BETA",
+      "occurrence": 1,
+      "fingerprint": "fe9aae3835b2d72745d1e5b9b4203c62287ea84008849bf1265ad626c86a0749"
+    },
+    {
+      "rowIndex": 17,
+      "bookedOn": "2026-01-21",
+      "amountMinor": -1800,
+      "currency": "PLN",
+      "payee": "KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Jedzenie poza domem",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-21"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Jedzenie poza domem"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-18,00 PLN"
+        }
+      ],
+      "searchText": "2026-01-21\u0001kawiarnia gamma  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001jedzenie poza domem\u0001-18,00 pln",
+      "payeeN": "kawiarnia gamma zakup przy uzyciu karty",
+      "bankCategoryN": "jedzenie poza domem",
+      "payeeGroup": "KAWIARNIA GAMMA",
+      "occurrence": 1,
+      "fingerprint": "e3d9e5e2e4b2b82c404ead0e5b7f40638bfad840923230645b328c35b48089e2"
+    },
+    {
+      "rowIndex": 18,
+      "bookedOn": "2026-01-18",
+      "amountMinor": -4399,
+      "currency": "PLN",
+      "payee": "APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE",
+      "bankCategory": "Zdrowie i uroda",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-18"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Zdrowie i uroda"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-43,99 PLN"
+        }
+      ],
+      "searchText": "2026-01-18\u0001apteka delta                                                                     blik zakup e-commerce\u0001konto 0000 ... 0003\u0001zdrowie i uroda\u0001-43,99 pln",
+      "payeeN": "apteka delta blik zakup e-commerce",
+      "bankCategoryN": "zdrowie i uroda",
+      "payeeGroup": "APTEKA DELTA",
+      "occurrence": 1,
+      "fingerprint": "a9000b2db77017a593b175fa0b67634fe142b5b59deef03cdc14a8c6d0da65ee"
+    },
+    {
+      "rowIndex": 19,
+      "bookedOn": "2026-01-15",
+      "amountMinor": -5900,
+      "currency": "PLN",
+      "payee": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003",
+      "bankCategory": "Multimedia, książki i prasa",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-15"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Multimedia, książki i prasa"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-59,00 PLN"
+        }
+      ],
+      "searchText": "2026-01-15\u0001operator przykladowy, faktura 0${m}/2026                                                                              przelew zewnetrzny wychodzacy                                                     00000000000000000000001003\u0001konto 0000 ... 0003\u0001multimedia, ksiazki i prasa\u0001-59,00 pln",
+      "payeeN": "operator przykladowy, faktura 0${m}/2026 przelew zewnetrzny wychodzacy 00000000000000000000001003",
+      "bankCategoryN": "multimedia, ksiazki i prasa",
+      "payeeGroup": "OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026",
+      "occurrence": 1,
+      "fingerprint": "b0ca3c15089ece27feadfc9907c91bd98d37d4b355f0048e407a7d3b0c6041b5"
+    },
+    {
+      "rowIndex": 20,
+      "bookedOn": "2026-01-10",
+      "amountMinor": 320000,
+      "currency": "PLN",
+      "payee": "PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004",
+      "bankCategory": "Wynagrodzenie",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-10"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Wynagrodzenie"
+        },
+        {
+          "header": "#Kwota",
+          "value": "3 200,00 PLN"
+        }
+      ],
+      "searchText": "2026-01-10\u0001pracodawca przykladowy  ul.firmowa 1                      00-002 miasto                                                 przelew zewnetrzny przychodzacy                                                   00000000000000000000001004\u0001konto 0000 ... 0003\u0001wynagrodzenie\u00013 200,00 pln",
+      "payeeN": "pracodawca przykladowy ul.firmowa 1 00-002 miasto przelew zewnetrzny przychodzacy 00000000000000000000001004",
+      "bankCategoryN": "wynagrodzenie",
+      "payeeGroup": "PRACODAWCA PRZYKŁADOWY",
+      "occurrence": 1,
+      "fingerprint": "b93ff786b9247d6727b4796ee38fa7bac8153cb3198aef23d0b8f2b7dab80842"
+    },
+    {
+      "rowIndex": 21,
+      "bookedOn": "2026-01-05",
+      "amountMinor": -21130,
+      "currency": "PLN",
+      "payee": "STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY",
+      "bankCategory": "Paliwo",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-05"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Paliwo"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-211,30 PLN"
+        }
+      ],
+      "searchText": "2026-01-05\u0001stacja paliw epsilon  zakup przy uzyciu karty\u0001konto 0000 ... 0003\u0001paliwo\u0001-211,30 pln",
+      "payeeN": "stacja paliw epsilon zakup przy uzyciu karty",
+      "bankCategoryN": "paliwo",
+      "payeeGroup": "STACJA PALIW EPSILON",
+      "occurrence": 1,
+      "fingerprint": "f36d0b5af5f7b5cd0ee6c2955fb6f50e77545d9f2534c4a52bcc2dc8c9c4cda9"
+    },
+    {
+      "rowIndex": 22,
+      "bookedOn": "2026-01-03",
+      "amountMinor": -90000,
+      "currency": "PLN",
+      "payee": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005",
+      "bankCategory": "Czynsz i wynajem",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-03"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Czynsz i wynajem"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-900,00 PLN"
+        }
+      ],
+      "searchText": "2026-01-03\u0001wspolnota przykladowa, czynsz 0${m}/2026                                                                              przelew zewnetrzny wychodzacy                                                     00000000000000000000001005\u0001konto 0000 ... 0003\u0001czynsz i wynajem\u0001-900,00 pln",
+      "payeeN": "wspolnota przykladowa, czynsz 0${m}/2026 przelew zewnetrzny wychodzacy 00000000000000000000001005",
+      "bankCategoryN": "czynsz i wynajem",
+      "payeeGroup": "WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026",
+      "occurrence": 1,
+      "fingerprint": "3fc7610d286530947ac5427775fdf9b5b4adfe56551d220624e8f3f3eb0627b6"
+    },
+    {
+      "rowIndex": 23,
+      "bookedOn": "2026-01-01",
+      "amountMinor": -1000,
+      "currency": "PLN",
+      "payee": "OPŁATA ZA KARTĘ",
+      "bankCategory": "Opłaty i odsetki",
+      "raw": [
+        {
+          "header": "#Data operacji",
+          "value": "2026-01-01"
+        },
+        {
+          "header": "#Opis operacji",
+          "value": "OPŁATA ZA KARTĘ"
+        },
+        {
+          "header": "#Rachunek",
+          "value": "Konto 0000 ... 0003"
+        },
+        {
+          "header": "#Kategoria",
+          "value": "Opłaty i odsetki"
+        },
+        {
+          "header": "#Kwota",
+          "value": "-10,00 PLN"
+        }
+      ],
+      "searchText": "2026-01-01\u0001oplata za karte\u0001konto 0000 ... 0003\u0001oplaty i odsetki\u0001-10,00 pln",
+      "payeeN": "oplata za karte",
+      "bankCategoryN": "oplaty i odsetki",
+      "payeeGroup": "OPŁATA ZA KARTĘ",
+      "occurrence": 1,
+      "fingerprint": "e4ffc78beed32e07f56a20205ec2afaf022cda04651384610565c5011116cdf5"
+    }
+  ]
+}

@@ -124,21 +124,21 @@ func num(v any) int {
 func TestImportFlowHTTP(t *testing.T) {
 	e := newTestEnv(t, nil, true)
 	b := signedIn(t, e, testEmail(t))
-	pekao := fixture(t, "real/pekao/pekao_example.csv")
+	pekao := fixture(t, "synthetic/banks/pekao-like.csv")
 
 	// The account's number hint matches the file's own account: the upload pre-fills it.
-	acc := b.do("POST", "/accounts", map[string]any{"name": "Pekao", "numberHint": "4971"})
+	acc := b.do("POST", "/accounts", map[string]any{"name": "Pekao", "numberHint": "0001"})
 	expect(t, acc, 201, "")
 	accID := acc.body["id"].(string)
 
-	up := b.upload("", "C:\\exports\\pekao_example.csv", pekao, "")
+	up := b.upload("", "C:\\exports\\pekao-like.csv", pekao, "")
 	expect(t, up, 201, "")
 	imp := obj(t, up.body, "import")
 	id := imp["id"].(string)
 	if imp["accountId"] != accID || imp["status"] != "previewed" || imp["mappingSource"] != "detected" {
 		t.Fatalf("preview import = %v", imp)
 	}
-	if imp["filename"] != "pekao_example.csv" {
+	if imp["filename"] != "pekao-like.csv" {
 		t.Errorf("filename = %v, want the base name", imp["filename"])
 	}
 	stats := obj(t, up.body, "stats")
@@ -250,7 +250,7 @@ func TestImportFlowHTTP(t *testing.T) {
 	if file.raw != string(pekao) {
 		t.Error("downloaded file differs from the upload")
 	}
-	if cd := file.header.Get("Content-Disposition"); !strings.Contains(cd, `filename=pekao_example.csv`) {
+	if cd := file.header.Get("Content-Disposition"); !strings.Contains(cd, `filename=pekao-like.csv`) {
 		t.Errorf("Content-Disposition = %q", cd)
 	}
 

@@ -104,7 +104,7 @@ async function main(){
   const csv = (name, b64, cfg) => ({name, b64, cfg});
 
   /* ingest: every committed fixture, default options */
-  const files = ['synthetic', 'demo', 'real'].flatMap(d => walk(join(FIX, d))).filter(p => p.endsWith('.csv')).sort();
+  const files = ['synthetic', 'demo'].flatMap(d => walk(join(FIX, d))).filter(p => p.endsWith('.csv')).sort();
   for (const p of files){
     const rel = relative(FIX, p), b64 = readFileSync(p).toString('base64');
     const res = await withPage(rel, page => call(page, 'ingest', csv(rel.split('/').pop(), b64)));
