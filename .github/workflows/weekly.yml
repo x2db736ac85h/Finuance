@@ -22,7 +22,13 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
+      # With the mock model server, as in CI's E2E: the assistant's operations are scanned working,
+      # not answering 503 "no assistant connection is configured" (2026-11-09).
       - name: Start the stack
+        env:
+          COMPOSE_PROFILES: ai-mock
+          FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
+          FINUANCE_AI_DEFAULT_MODEL: mock-tools
         run: |
           (cd web && npm ci --no-audit --no-fund)
           make up
@@ -36,11 +42,16 @@ jobs:
             jq -r --arg f "$f" '.site[].alerts[] | "::notice title=ZAP \($f | sub(".*/"; "") | sub(".json"; "")) \(.pluginid)::\(.alert) (\(.riskdesc)), \(.instances | length) instance(s), e.g. \(.instances[0].method) \(.instances[0].uri)"' "$f"
           done
       # Server errors are bugs, so each one is named (reports can't be read from every session):
-      # ZAP's instances, nginx's status per path (502/504 = the api didn't answer) and the api's
-      # error lines (route, status, error kind; never bodies). Query strings are cut.
+      # nginx's own error lines first (why it couldn't reach the api; GitHub shows only the first 10
+      # warnings of a step), ZAP's instances, nginx's status per path (502/504 = the api didn't
+      # answer) and the api's error lines (route, status, error kind; never bodies). Query strings
+      # are cut.
       - name: Server errors as annotations
         if: always()
         run: |
+          docker compose --env-file .env -f deploy/compose/compose.yaml logs --no-log-prefix web 2>/dev/null \
+            | grep -E '\[(emerg|alert|crit|error)\]' | sed -E 's/^.*\[([a-z]+)\] [0-9#]+: (\*[0-9]+ )?/\1 /; s/, client:.*//; s/ to [0-9.:]+ / /' \
+            | sort | uniq -c | sort -rn | head -10 | sed 's/^ */::error title=nginx error::/'
           for f in zap-reports/baseline.json zap-reports/api.json; do
             [ -f "$f" ] || continue
             jq -r '.site[].alerts[] | select(.alert | test("Server Error")) | .instances[] | "\(.method) \(.uri | sub("\\?.*"; ""))"' "$f"

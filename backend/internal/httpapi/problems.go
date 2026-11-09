@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/friends"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
@@ -69,7 +71,14 @@ func ProblemFor(err error, r *http.Request, prod bool) gen.Problem {
 	p := gen.Problem{Code: gen.Internal, Status: http.StatusInternalServerError, Title: "Internal error"}
 	var ve *platform.ValidationError
 	var mbe *http.MaxBytesError
+	var pgErr *pgconn.PgError
 	switch {
+	case errors.As(err, &pgErr) && pgErr.Code == "22021":
+		// character_not_in_repertoire: PostgreSQL refuses a NUL character (JSON allows \u0000). The
+		// ledger maps it itself (Phase 7); this catches every other path, sign-in included (found by
+		// the weekly ZAP scan, 2026-11-09).
+		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
+		err = errors.New("text must not contain NUL characters")
 	case errors.As(err, &ve):
 		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
 		fields := make([]gen.FieldError, 0, len(ve.Fields))

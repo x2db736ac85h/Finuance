@@ -153,6 +153,30 @@ them:
   specs pass with it); `headers.spec.ts` checks both arrive once.
 - **10106 HTTP Only Site** and **10049 Storable and Cacheable Content**: ignored, see below.
 
+The weekly runs of 2026-11-02 and 2026-11-09 failed on *A server error response code was returned*
+(41 and 121 instances, spread over most operations). Three causes, all fixed:
+- **nginx ran out of local ports.** It opened a new connection to the api for every request, and
+  each closed connection held a local port for a minute (TIME_WAIT), about 28,000 in all. On the
+  Actions runner nginx answered thousands of the scan's requests `502` without the api ever seeing
+  them (hundreds per operation in nginx's log, no error in the api's). The reference machine's
+  run of the same scan (131,382 requests in 13 minutes) stayed below the limit, so the cause was
+  shown on a web container limited to 500 local ports: 261,915 of 262,414 requests got `502`, with
+  `connect() failed (99: Address not available)` in nginx's log. nginx now keeps a pool of
+  connections to the api alive (`upstream … keepalive`, closed after 60 s, before the api's 120 s
+  idle timeout); the same load then got no `502` in 169,763 requests. Only Compose deployments were
+  affected: in Kubernetes, Traefik sends `/api/` to the api directly.
+- **A NUL character in the sign-in e-mail** reached PostgreSQL, which refuses it, and the api
+  answered `500`. Every NUL that reaches PostgreSQL is now `422 validation_failed`, whatever the
+  route (the ledger already mapped its own; sign-in and sign-up didn't).
+- **`POST /assistant/digest` answered `503 assistant_unavailable`** because the weekly stack had no
+  model server. That answer is right for an instance without one; the weekly scan now runs with the
+  mock model server, as the E2E stack does, so the assistant's operations are scanned working.
+
+The step that names server errors now reports nginx's own error lines first: the first runs named
+the failing routes but not the reason. With the three fixes the weekly workflow passed on their
+branch (2026-11-09): no server error in either scan, no error line from nginx or the api, and the
+k6 smoke test and the demo E2E green.
+
 Remaining alerts, each with its rule in [`.zap/rules.tsv`](../.zap/rules.tsv):
 
 | Rule | Alert | Decision |
