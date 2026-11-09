@@ -6,6 +6,14 @@ notes of their version.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`502` under heavy traffic in Compose**: the web server opened a new connection to the api for
+  every request and could run out of local ports; it now keeps its connections to the api open
+  (found by the weekly security scan). Kubernetes deployments weren't affected.
+- **A NUL character in a request's text** (such as the sign-in e-mail) is answered
+  `422 validation_failed` on every route instead of `500`.
+
 ## [0.4.1]
 
 The assistant's model servers under the administrator's control, receipts that find the model that
