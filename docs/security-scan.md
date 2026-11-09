@@ -215,7 +215,7 @@ Log entries worth a decision:
 | 443 | *`includeSubDomains` / `preload` Missing in HSTS Header* | **Deliberate for now:** the host is a single `*.ts.net` name; `preload` needs the registrable domain, which isn't ours. Decided again with the public demo's own domain (Phase 21) |
 | 80, 443 | *HTTP Server Banner*: `Server: nginx`, no version | Accepted: no version is disclosed (`server_tokens off`) |
 | 80 | *HSTS Missing* | Expected: port 80 only answers `301` to HTTPS; HSTS is sent over HTTPS |
-| 11434 | *HTTP Security Headers*, *Allowed HTTP Methods*: Ollama's API answers every tailnet device without authentication | **Deliberate** (ADR 0020/0022): only the tailnet reaches it (the LAN scan below finds it closed); a Tailscale ACL that limits port 11434 to this machine would narrow it to the cluster (our Product Engineer's tailnet settings) |
+| 11434 | *HTTP Security Headers*, *Allowed HTTP Methods*: Ollama's API answers every tailnet device without authentication | **Deliberate** (ADR 0020/0022): only the tailnet reaches it (the LAN scan below finds it closed); a Tailscale ACL that limits port 11434 to this machine would narrow it to the cluster (the maintainer's tailnet settings) |
 | 443 | HPKP missing | Expected: HPKP is deprecated and removed from browsers |
 
 **Port scan from the LAN** (`tools/openvas-scan.sh lan-view`: nmap 7.95, all 65,535 TCP ports from
@@ -223,7 +223,7 @@ Docker's bridge network, i.e. through the host's firewall like another device on
 **no open port** (27 minutes; closed ports drop). Confirms THREAT-MODEL T7 independently of the
 phone test in 18.2.
 
-**Image admission (KSV-0125), decided 2026-11-02 by our Product Engineer:** Kubernetes' built-in
+**Image admission (KSV-0125), decided 2026-11-02 by the maintainer:** Kubernetes' built-in
 `ValidatingAdmissionPolicy` (`deploy/k8s/admission/image-policy.yaml`, Argo CD app
 `admission-policy`; no extra component) checks every pod created in `finuance`, `finuance-restore`,
 `s3` and `monitoring`: only images from the registries listed for that namespace (Finuance's own only

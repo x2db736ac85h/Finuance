@@ -29,7 +29,7 @@ These are written for the team and the AI agent that builds Finuance. They are d
 | Document | What it covers |
 |---|---|
 | [PLAN.md](PLAN.md) | The full specification and the phase plan (Phases 0–19), with tasks, tests and the review gate of each phase |
-| [PROGRESS.md](PROGRESS.md) | The current phase, every decision taken by our Product Engineer, deviations from the plan, follow-ups |
+| [PROGRESS.md](PROGRESS.md) | The current phase, every decision taken by the maintainer, deviations from the plan, follow-ups |
 | [PARITY.md](PARITY.md) | Every capability of the legacy prototype and the phase that ports (or retires) it |
 | [perf-phase7-plans.md](perf-phase7-plans.md) | Raw `EXPLAIN ANALYZE` output behind the Phase 7 query measurements |
 | [../testdata/oracle/ALLOWED_DIFFS.md](../testdata/oracle/ALLOWED_DIFFS.md) | The deliberate differences from the legacy prototype's behaviour |

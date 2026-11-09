@@ -229,9 +229,9 @@ The detailed task list and every decision taken so far are in [docs/PROGRESS.md]
 
 Finuance is developed by an AI coding agent ([Claude Code](https://claude.com/claude-code)) working from a written plan, phase by phase, with a human in the loop:
 
-1. The agent proposes each phase's tasks and open questions. Our Product Engineer answers them and approves the plan.
+1. The agent proposes each phase's tasks and open questions. The maintainer answers them and approves the plan.
 2. The agent builds the phase on its own branch: code, tests and documentation together, with `make check` before every commit.
-3. CI must be green. Our Product Engineer then reviews the phase's *gate* (hands-on checks, screenshots, measurements) before it is merged into `main`.
+3. CI must be green. The maintainer then reviews the phase's *gate* (hands-on checks, screenshots, measurements) before it is merged into `main`.
 
 The instructions the agent works from are part of the repository: [`CLAUDE.md`](CLAUDE.md) (plus one per area in `backend/` and `web/`) and [`.claude/commands`](.claude/commands). Decisions are recorded in [docs/PROGRESS.md](docs/PROGRESS.md) and [ADRs](docs/adr/).
 

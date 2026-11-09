@@ -18,7 +18,7 @@ import (
 )
 
 // DefaultRetentionDays is how long a chat is kept after its last message unless the user
-// chooses otherwise (our Product Engineer's decision, Phase 13).
+// chooses otherwise (the maintainer's decision, Phase 13).
 const DefaultRetentionDays = 2
 
 // MaxRetentionDays is the longest choosable retention short of keeping chats forever.

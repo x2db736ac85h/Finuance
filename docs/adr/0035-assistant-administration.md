@@ -63,7 +63,7 @@ Administrators also need to see how much the assistant is used per person, never
 
 ## Addendum (2026-11-08, Phase 20 follow-ups 20.17–20.20): controls, model loading, who picks
 
-Our Product Engineer asked for a way to switch the homelab's Ollama connection off, unload and load
+The maintainer asked for a way to switch the homelab's Ollama connection off, unload and load
 models, unload a model by itself after an idle time, see what *Test* found, and decide whether
 people may pick the model.
 

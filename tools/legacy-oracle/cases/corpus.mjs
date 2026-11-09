@@ -74,7 +74,7 @@ export const payeeName = [
   null, 0, 123, 'x'.repeat(200), 'NAME' + ' '.repeat(50) + 'CITY',
   ...Array.from({length: 110}, (_, i) => {
     const names = ['SKLEP', 'KAWIARNIA', 'Bistro', 'apteka', 'STACJA PALIW', 'Kino Pod Gwiazdami', 'BLIK', 'PRZELEW'];
-    const cities = ['WARSZAWA', 'Kraków', 'ŁÓDŹ', 'gdańsk', 'POZNAŃ', ''];
+    const cities = ['WARSZAWA', 'Kraków', 'ŁÓDŹ', 'gdańsk', 'KRAKÓW', ''];
     const pads = ['', ' ', '  ', '   ', '\t', '        ', '  \t  '];
     return `${i % 3 === 0 ? ' ' : ''}${names[i % names.length]} ${i}${pads[i % pads.length]}${cities[i % cities.length]}${i % 4 === 0 ? '  ' : ''}`;
   })

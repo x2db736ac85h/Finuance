@@ -149,22 +149,22 @@ fx('banks/pekao-like.csv', 'Pekao layout: UTF-8, LF, ";", dd.mm.yyyy, comma deci
   pekao('01.03.2025', '01.03.2025', 'SKLEP INTERNETOWY ALFA', 'ALFA.PL UL. PRZYKŁADOWA 1,WARSZAWA', 'BLIK REF       10000000001', '-127,13', "'C000000000000001", 'PŁATNOŚĆ BLIK', 'Zakupy przez internet'),
   pekao('01.03.2025', '28.02.2025', 'MINIMARKET Z1001 K.1   GDANSK', '', '*********0000001', '-44,98', "'C000000000000002", 'TRANSAKCJA KARTĄ PŁATNICZĄ', 'Artykuły spożywcze'),
   pekao('28.02.2025', '28.02.2025', 'GALERIA SZTUKI         WARSZAWA', '', '*********0000001', '-40,00', "'C000000000000003", 'TRANSAKCJA KARTĄ PŁATNICZĄ', 'Sport'),
-  [`15.04.2024`, '15.04.2024', 'PŁATNOŚCI S.A.', 'UL. TESTOWA 8 00-001 POZNAŃ', ACC1, ACC2, '/OPT/X/////P24-A1B-C2D-E3F M00001-00001', '-200,00', 'PLN', "'000000F000000001", 'PRZELEW MOBILE', 'Bez kategorii'].join(';'),
+  [`15.04.2024`, '15.04.2024', 'PŁATNOŚCI S.A.', 'UL. TESTOWA 8 00-001 KRAKÓW', ACC1, ACC2, '/OPT/X/////P24-A1B-C2D-E3F M00001-00001', '-200,00', 'PLN', "'000000F000000001", 'PRZELEW MOBILE', 'Bez kategorii'].join(';'),
   pekao('15.04.2024', '14.04.2024', 'RIDES  * FOOD PENDING  AMSTERDAM', '', '*********0000002', '-235,00', "'C000000000000004", 'TRANSAKCJA KARTĄ PŁATNICZĄ', 'Restauracje i kawiarnie'),
   pekao('10.04.2024', '10.04.2024', 'PRACODAWCA PRZYKŁADOWY SP. Z O.O.', 'UL. FIRMOWA 1 00-002 WARSZAWA', 'WYNAGRODZENIE 04/2024', '9 250,00', "'C000000000000005", 'PRZELEW PRZYCHODZĄCY', 'Wynagrodzenie')], {final: true});
 const pkoCard = (d, v, amt, title, shop, city, when) => [d, v, 'Płatność kartą', amt, 'PLN', `Tytuł: ${title}`, `Lokalizacja: Adres: ${shop} Miasto: ${city} Kraj: POLSKA`,
   `Data wykonania operacji: ${when}`, 'Kwota Cash Back:  0.00', `Oryginalna kwota operacji: ${(-amt).toFixed(2)}`, 'Numer karty: 000000******0001'].join(',');
 fx('banks/pko-bp-like.csv', 'PKO BP layout: Windows-1250, CRLF, ",", ISO dates, dot decimals without fixed scale. The header has 6 named + 5 blank columns and extra description fields spill into the blank columns, so the legacy header rule picks a data row (MVP bug). Blank lines between groups; one quoted field contains a comma.', [
   'Data operacji,Data waluty,Typ transakcji,Kwota,Waluta,Opis transakcji,,,,,',
-  pkoCard('2026-04-04', '2026-04-03', -43.52, '000000001 00000000000000000000001', 'SKLEP DYSKONT Długa', 'Poznan', '2026-04-03 07:21'),
+  pkoCard('2026-04-04', '2026-04-03', -43.52, '000000001 00000000000000000000001', 'SKLEP DYSKONT Długa', 'Krakow', '2026-04-03 07:21'),
   '2026-04-04,2026-04-04,Opłata za użytkowanie karty,-10,PLN,"Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 000000******0001, 28.02-28.03",,,,,',
-  '2026-04-02,2026-03-31,Płatność kartą,-265.13,PLN,Tytuł: 000000002 00000000000000000000002,Lokalizacja: Adres: STACJA PALIW Miasto: POZNAN Kraj: POLSKA,Data wykonania operacji: 2026-03-31,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 265.13,Numer karty: 000000******0001',
+  '2026-04-02,2026-03-31,Płatność kartą,-265.13,PLN,Tytuł: 000000002 00000000000000000000002,Lokalizacja: Adres: STACJA PALIW Miasto: KRAKOW Kraj: POLSKA,Data wykonania operacji: 2026-03-31,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 265.13,Numer karty: 000000******0001',
   '',
-  pkoCard('2026-03-31', '2026-03-30', -5.65, '000000001 00000000000000000000003', 'SKLEP DYSKONT Długa', 'Poznan', '2026-03-30 16:40'),
-  [ '2026-03-13', '2026-03-12', 'Płatność kartą', '-25', 'PLN', 'Tytuł: 000000001 00000000000000000000004', '"Lokalizacja: Adres: BAR SZYBKI 1, Poznan 1 Miasto: Poznan Kraj: POLSKA"', 'Data wykonania operacji: 2026-03-12 13:03', 'Kwota Cash Back:  0.00', 'Oryginalna kwota operacji: 25.00', 'Numer karty: 000000******0001'].join(','),
+  pkoCard('2026-03-31', '2026-03-30', -5.65, '000000001 00000000000000000000003', 'SKLEP DYSKONT Długa', 'Krakow', '2026-03-30 16:40'),
+  [ '2026-03-13', '2026-03-12', 'Płatność kartą', '-25', 'PLN', 'Tytuł: 000000001 00000000000000000000004', '"Lokalizacja: Adres: BAR SZYBKI 1, Krakow 1 Miasto: Krakow Kraj: POLSKA"', 'Data wykonania operacji: 2026-03-12 13:03', 'Kwota Cash Back:  0.00', 'Oryginalna kwota operacji: 25.00', 'Numer karty: 000000******0001'].join(','),
   '2026-03-10,2026-03-10,Przelew przychodzący,3200,PLN,Tytuł: WYNAGRODZENIE 03/2026,Nadawca: PRACODAWCA PRZYKŁADOWY,Rachunek nadawcy: 00000000000000000000000003,,,',
   '',
-  '2026-02-20,2026-02-19,Wypłata z bankomatu,-1600,PLN,Tytuł: BANKOMAT 0000000000000000A0000,Lokalizacja: Adres: Szeroka 1 Miasto: POZNAN Kraj: POLSKA,Data wykonania operacji: 2026-02-19 17:57,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 1600.00,Numer karty: 000000******0001',
+  '2026-02-20,2026-02-19,Wypłata z bankomatu,-1600,PLN,Tytuł: BANKOMAT 0000000000000000A0000,Lokalizacja: Adres: Szeroka 1 Miasto: KRAKOW Kraj: POLSKA,Data wykonania operacji: 2026-02-19 17:57,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 1600.00,Numer karty: 000000******0001',
   ''], {enc: 'windows-1250', eol: '\r\n'});
 const pad = (s, n) => s + ' '.repeat(Math.max(1, n - s.length));
 const mb = (d, desc, cat, amt) => `${d};"${desc}";"Konto 0000 ... 0003";"${cat}";${amt} PLN;;`;

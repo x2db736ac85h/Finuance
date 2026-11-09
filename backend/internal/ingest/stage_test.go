@@ -14,7 +14,7 @@ func table(headers []string, rows ...[]string) *Table { return &Table{Headers: h
 
 func TestStageBasics(t *testing.T) {
 	tb := table([]string{"Data", "Kontrahent", "Tytuł", "Kwota", "Waluta", "Kategoria", "Hash"},
-		[]string{"02.01.2025", "KAWIARNIA  POZNAŃ", "Kawa  z  mlekiem", "-12,50", "", "Restauracje", "x1"},
+		[]string{"02.01.2025", "KAWIARNIA  KRAKÓW", "Kawa  z  mlekiem", "-12,50", "", "Restauracje", "x1"},
 		[]string{"03.01.2025", "SKLEP", "Zakupy", "-1 234,56", "EUR", "Zakupy", "x2"},
 		[]string{"", "BRAK DATY", "", "-1,00", "", "", "x3"},
 		[]string{"31.02.2025", "ZŁA DATA", "", "abc", "", "", "x4"},
@@ -32,13 +32,13 @@ func TestStageBasics(t *testing.T) {
 	if r.BookedOn != platform.MustDate(2025, 1, 2) || r.AmountMinor != -1250 || r.Currency != "PLN" || r.BankCategory != "Restauracje" {
 		t.Errorf("row 0 = %+v", r)
 	}
-	if r.PayeeN != "kawiarnia poznan" || r.DescriptionN != "kawa z mlekiem" || r.PayeeGroup != "KAWIARNIA" {
+	if r.PayeeN != "kawiarnia krakow" || r.DescriptionN != "kawa z mlekiem" || r.PayeeGroup != "KAWIARNIA" {
 		t.Errorf("shadow fields: %q %q %q", r.PayeeN, r.DescriptionN, r.PayeeGroup)
 	}
 	if len(r.Raw) != 6 || r.Raw[5].Header != "Kategoria" || strings.Contains(r.SearchText, "x1") {
 		t.Errorf("ignored column leaked into raw/search: %+v %q", r.Raw, r.SearchText)
 	}
-	if r.SearchText != Norm("02.01.2025\u0001KAWIARNIA  POZNAŃ\u0001Kawa  z  mlekiem\u0001-12,50\u0001\u0001Restauracje") {
+	if r.SearchText != Norm("02.01.2025\u0001KAWIARNIA  KRAKÓW\u0001Kawa  z  mlekiem\u0001-12,50\u0001\u0001Restauracje") {
 		t.Errorf("search text = %q", r.SearchText)
 	}
 	if rows[1].Currency != "EUR" || rows[1].AmountMinor != -123456 {

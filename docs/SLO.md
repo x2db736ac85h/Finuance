@@ -77,7 +77,7 @@ on its own route: once, no "resolved". `tests/digest.test.yaml` checks the text 
 
 The digest runs on the same machine as everything it reports on: a day without it means the machine,
 Prometheus, Alertmanager or the mail path was down (as on 2026-11-05, when the machine lost its
-network for 9½ hours). There is deliberately no outside heartbeat (our Product Engineer, 2026-11-06).
+network for 9½ hours). There is deliberately no outside heartbeat (the maintainer, 2026-11-06).
 
 ## Error budget policy
 

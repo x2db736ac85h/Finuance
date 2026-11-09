@@ -1,7 +1,7 @@
 # Monitoring secrets (homelab)
 
 `finuance-alert-smtp.sealed.yaml`: the SealedSecret `monitoring/finuance-alert-smtp` (key `password`)
-with the app password of the Gmail account that sends Finuance's alert e-mails (Phase 18.6; read by
+with the password of the mail account that sends Finuance's alert e-mails (Phase 18.6; read by
 the AlertmanagerConfig of `deploy/k8s/observability`). Made with
 
     tools/seal-secrets.sh homelab smtp

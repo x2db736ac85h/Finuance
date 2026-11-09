@@ -176,7 +176,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Strict CSP, all output escaped | §18 | 8 | ported (nginx CSP `connect-src 'self'`, no inline scripts or styles, ESLint ban on `innerHTML`; e2e `no CSP violations`) |
 | Rename migration `csv-inspector` → `finuance` | §32.1 | — | retired: one-time browser storage migration; the backup importer accepts `csvInspectorBackup` |
 
-## 10. Known MVP failures (reported by our Product Engineer)
+## 10. Known MVP failures (reported by the maintainer)
 
 | Failure | Cause (from the oracle) | Fix in phase |
 |---|---|---|

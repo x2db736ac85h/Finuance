@@ -297,7 +297,7 @@
         },
         {
           "header": "Adres nadawcy / odbiorcy",
-          "value": "UL. TESTOWA 8 00-001 POZNAŃ"
+          "value": "UL. TESTOWA 8 00-001 KRAKÓW"
         },
         {
           "header": "Rachunek źródłowy",
@@ -332,7 +332,7 @@
           "value": "Bez kategorii"
         }
       ],
-      "searchText": "15.04.2024\u000115.04.2024\u0001platnosci s.a.\u0001ul. testowa 8 00-001 poznan\u000100000000000000000000000001\u000100000000000000000000000002\u0001/opt/x/////p24-a1b-c2d-e3f m00001-00001\u0001-200,00\u0001pln\u0001000000f000000001\u0001przelew mobile\u0001bez kategorii",
+      "searchText": "15.04.2024\u000115.04.2024\u0001platnosci s.a.\u0001ul. testowa 8 00-001 krakow\u000100000000000000000000000001\u000100000000000000000000000002\u0001/opt/x/////p24-a1b-c2d-e3f m00001-00001\u0001-200,00\u0001pln\u0001000000f000000001\u0001przelew mobile\u0001bez kategorii",
       "payeeN": "platnosci s.a.",
       "descriptionN": "/opt/x/////p24-a1b-c2d-e3f m00001-00001",
       "referenceN": "000000f000000001",
