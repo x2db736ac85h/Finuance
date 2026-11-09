@@ -123,7 +123,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 		return err
 	}
 	api := httpapi.NewServer(cfg.HTTPAddr, h, log)
-	admin := observability.NewAdminServer(cfg.AdminAddr, c.metrics, nil)
+	admin := observability.NewAdminServer(cfg.AdminAddr, c.metrics, cfg.Profiling, nil)
 	log.Info("finuance api starting", "version", b.Version, "http", cfg.HTTPAddr, "admin", cfg.AdminAddr, "env", cfg.Env)
 	return serveAll(ctx, log, api, admin)
 }
@@ -176,7 +176,7 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 			}
 		}},
 	}
-	admin := observability.NewAdminServer(cfg.AdminAddr, c.metrics, func(mux *http.ServeMux) {
+	admin := observability.NewAdminServer(cfg.AdminAddr, c.metrics, cfg.Profiling, func(mux *http.ServeMux) {
 		mux.Handle("GET /healthz", httpapi.HealthzHandler())
 		mux.Handle("GET /readyz", httpapi.ReadyzHandler(checks))
 	})

@@ -24,7 +24,7 @@ func TestDefaults(t *testing.T) {
 		name      string
 		got, want any
 	}{
-		{"Env", c.Env, EnvDev},
+		{"Env", c.Env, EnvProd}, // fail closed: an instance started without FINUANCE_ENV is a production one
 		{"HTTPAddr", c.HTTPAddr, ":8080"},
 		{"AdminAddr", c.AdminAddr, ":9090"},
 		{"PublicOrigin", c.PublicOrigin.String(), "http://localhost:8000"},
@@ -32,7 +32,8 @@ func TestDefaults(t *testing.T) {
 		{"SessionTTL", c.SessionTTL, 720 * time.Hour},
 		{"SessionIdleTTL", c.SessionIdleTTL, 168 * time.Hour},
 		{"CookieSecure", c.CookieSecure, true},
-		{"AllowSignup", c.AllowSignup, true},
+		{"AllowSignup", c.AllowSignup, false},
+		{"Profiling", c.Profiling, false},
 		{"DemoMode", c.DemoMode, false},
 		{"MaxUploadBytes", c.MaxUploadBytes, int64(20971520)},
 		{"MaxLegacyImportBytes", c.MaxLegacyImportBytes, int64(209715200)},
@@ -197,7 +198,7 @@ func TestDemoMode(t *testing.T) {
 	if v := vars(err); len(v) != 1 || v[0] != "FINUANCE_ALLOW_SIGNUP" {
 		t.Errorf("demo with sign-up: %v", err)
 	}
-	c, err = Load(env(map[string]string{"FINUANCE_AI_BASE_URL": "http://localhost:1234/v1"}), ForHealthcheck)
+	c, err = Load(env(map[string]string{"FINUANCE_AI_BASE_URL": "http://localhost:1234/v1", "FINUANCE_ALLOW_SIGNUP": "true"}), ForHealthcheck)
 	if err != nil || !c.AllowSignup || c.MaxUploadBytes != 20<<20 || len(c.AIConnections) != 1 {
 		t.Errorf("not a demo: %+v, %v", c, err)
 	}

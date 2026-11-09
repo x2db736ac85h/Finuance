@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":semanticCommits", ":pinAllExceptPeerDependencies"],
+  "extends": ["config:recommended", ":semanticCommits", ":pinAllExceptPeerDependencies", "helpers:pinGitHubActionDigests", "docker:pinDigests"],
   "timezone": "Europe/Warsaw",
   "schedule": ["before 6am on monday"],
   "prConcurrentLimit": 5,

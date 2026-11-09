@@ -51,6 +51,7 @@ services:
       FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
       FINUANCE_COOKIE_SECURE: ${FINUANCE_COOKIE_SECURE:-false}
       FINUANCE_ALLOW_SIGNUP: ${FINUANCE_ALLOW_SIGNUP:-true}
+      FINUANCE_PPROF: ${FINUANCE_PPROF:-true} # dev only; off unless set (the admin port is on 127.0.0.1)
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       # web (nginx) forwards the client address; trust it from the Compose network only.
       FINUANCE_TRUSTED_PROXIES: ${FINUANCE_TRUSTED_PROXIES:-172.16.0.0/12}

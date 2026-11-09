@@ -4,7 +4,8 @@
 #   docker compose --env-file .env -f compose.prod.yaml up -d
 #
 # Only web is published (on 127.0.0.1:8000 by default; FINUANCE_WEB_BIND=0.0.0.0 to listen on every
-# interface). Put a TLS reverse proxy in front: production mode sends secure cookies only. The
+# interface). Put a TLS reverse proxy in front: production mode sends secure cookies only. The stack
+# has its own subnet (FINUANCE_SUBNET), and the api trusts X-Forwarded-For from that subnet only. The
 # database bootstrap below is a copy of deploy/db/ (`make check` keeps them in sync).
 name: finuance
 
@@ -41,7 +42,7 @@ services:
       start_period: 10s
 
   migrate:
-    <<: *backend
+    <<: [*backend, *hardening]
     command: ["migrate", "up"]
     environment:
       FINUANCE_MIGRATE_DATABASE_URL: postgres://finuance_owner:${FINUANCE_OWNER_PASSWORD}@db:5432/finuance?sslmode=disable
@@ -60,7 +61,7 @@ services:
       FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
       FINUANCE_COOKIE_SECURE: "true"
       FINUANCE_ALLOW_SIGNUP: ${FINUANCE_ALLOW_SIGNUP:-false}
-      FINUANCE_TRUSTED_PROXIES: ${FINUANCE_TRUSTED_PROXIES:-172.16.0.0/12}
+      FINUANCE_TRUSTED_PROXIES: ${FINUANCE_TRUSTED_PROXIES:-${FINUANCE_SUBNET:-172.30.42.0/24}}
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       FINUANCE_AI_BASE_URL: ${FINUANCE_AI_BASE_URL:-}
       FINUANCE_AI_API: ${FINUANCE_AI_API:-}
@@ -127,6 +128,12 @@ services:
     restart: unless-stopped
     tmpfs: ["/etc/nginx/conf.d:uid=101,gid=101", "/tmp:uid=101,gid=101"]
 
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${FINUANCE_SUBNET:-172.30.42.0/24}
+
 volumes:
   db-data:
 
@@ -157,7 +164,7 @@ configs:
       CREATE EXTENSION IF NOT EXISTS pg_trgm;
       CREATE EXTENSION IF NOT EXISTS citext;
 
-      -- Let LIKE serve as an index condition under row-level security (Phase 7, our Product Engineer's decision; docs/perf.md).
+      -- Let LIKE serve as an index condition under row-level security (Phase 7, the maintainer's decision; docs/perf.md).
       -- PostgreSQL only uses leakproof operators in index scans on RLS tables. textlike can raise an error
       -- only for a malformed pattern, never because of the row's value, so it can't reveal other users'
       -- rows. The flag lives in this database's catalog: repeat it after a dump/restore into a new cluster.
