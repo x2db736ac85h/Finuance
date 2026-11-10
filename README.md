@@ -130,7 +130,7 @@ Released: **0.4.1**. Next: a phone and touch layout (0.5), then more security ch
 
 I wrote the specification and the phase plan, made the decisions, reviewed each phase hands-on before merging it, and run the deployment. Most of the code was written by an AI coding agent ([Claude Code](https://claude.com/claude-code)) working from that plan, one phase per branch, with tests and documentation in the same change and CI green before review.
 
-Nothing about that is hidden: the agent's instructions are in [`CLAUDE.md`](CLAUDE.md), the specification is [docs/PLAN.md](docs/PLAN.md), and the decisions are in the [ADRs](docs/adr/). The repository starts with a single commit because the earlier history contained personal details.
+Nothing about that is hidden: the agent's instructions are in [`CLAUDE.md`](CLAUDE.md), the specification is [docs/PLAN.md](docs/PLAN.md), and the decisions are in the [ADRs](docs/adr/).
 
 <details>
 <summary><b>More screenshots</b> (made-up demo data; they follow your GitHub theme)</summary>

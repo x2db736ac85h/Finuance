@@ -92,5 +92,41 @@ fi
 git -C "$src" mv docs/kowalski.md docs/thanks.md && git_q -C "$src" commit -q -m "seventh"
 (cd "$src" && PUBLISH_NAME=handle PUBLISH_EMAIL="$noreply" PUBLISH_PATTERNS="$tmp/patterns.txt" "$publish" --dry-run HEAD >/dev/null 2>&1) || fail "a clean tree was refused with a patterns file"
 
+# --history: every commit goes along, a private address becomes the no-reply one, names and
+# messages stay, the fingerprints follow their commits, other refs stay behind
+hist="$tmp/hist"
+mkdir -p "$hist/tools"
+cp "$root/tools/check-private.sh" "$hist/tools/"
+git -C "$hist" init -q -b main
+echo one >"$hist/a.txt"
+git -C "$hist" add -A && git -C "$hist" -c user.name=Handle -c user.email="$noreply" -c commit.gpgsign=false commit -q -m "one"
+echo two >"$hist/a.txt"
+git -C "$hist" add -A && git -C "$hist" -c user.name=Jan -c user.email="$real" -c commit.gpgsign=false commit -q -m "two, by a private address"
+private_commit="$(git -C "$hist" rev-parse HEAD)"
+printf '# header\n%s:a.txt:rule:1\n' "$private_commit" >"$hist/.gitleaksignore"
+git -C "$hist" add -A && git -C "$hist" -c user.name=Handle -c user.email="$noreply" -c commit.gpgsign=false commit -q -m "three"
+git -C "$hist" tag v0.0.1
+git -C "$hist" branch side HEAD~1
+hbare="$tmp/hist.git"
+git init -q --bare "$hbare"
+out="$(cd "$hist" && PUBLISH_NAME=handle PUBLISH_EMAIL="$noreply" "$publish" --history HEAD "$hbare" 2>&1)" || fail "publishing with history failed: $out"
+[ "$(git -C "$hbare" rev-list --count main 2>/dev/null)" = 4 ] || fail "history: expected the three commits and the fingerprint commit"
+[ "$(git -C "$hbare" for-each-ref --format='%(refname)')" = "refs/heads/main" ] || fail "history: a tag or another branch reached the remote"
+! git -C "$hbare" log main --format='%ae %ce' | grep -q -v 'users.noreply.github.com' || fail "history: a private address reached the remote"
+git -C "$hbare" log main --format='%an|%s' | grep -q '^Jan|two, by a private address$' || fail "history: the author name or message changed"
+! git -C "$hbare" cat-file -e "$private_commit" 2>/dev/null || fail "history: the commit with the private address reached the remote"
+new_commit="$(git -C "$hbare" log main --format='%H %s' | sed -n 's/ two, by a private address$//p')"
+git -C "$hbare" show main:.gitleaksignore | grep -q "^$new_commit:a.txt:rule:1$" || fail "history: the fingerprint doesn't name the rewritten commit"
+[ "$(git -C "$hbare" show main:a.txt)" = two ] || fail "history: the tree changed"
+# a term that only an old version of a file had is found
+printf 'Kowalski\n' >"$tmp/patterns2.txt"
+echo "by KOWALSKI" >"$hist/b.txt"
+git -C "$hist" add -A && git -C "$hist" -c user.name=Handle -c user.email="$noreply" -c commit.gpgsign=false commit -q -m "four"
+git -C "$hist" rm -q b.txt && git -C "$hist" -c user.name=Handle -c user.email="$noreply" -c commit.gpgsign=false commit -q -m "five"
+if (cd "$hist" && PUBLISH_NAME=handle PUBLISH_EMAIL="$noreply" PUBLISH_PATTERNS="$tmp/patterns2.txt" "$publish" --dry-run --history HEAD >/dev/null 2>&1); then
+  fail "history: a personal term in a deleted file was not refused"
+fi
+(cd "$hist" && PUBLISH_NAME=handle PUBLISH_EMAIL="$noreply" PUBLISH_PATTERNS="$tmp/patterns2.txt" "$publish" --dry-run HEAD >/dev/null 2>&1) || fail "the same tree without its history was refused"
+
 [ "$fails" -eq 0 ] || { echo "publish-public-test: $fails failed" >&2; exit 1; }
 echo "publish-public-test: ok"
