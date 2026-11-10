@@ -512,50 +512,51 @@ A phase can point the Argo CD apps at its branch (`targetRevision`) to try chang
    `main`): it follows `main` with auto-sync again, re-points the child apps at `main`, and their
    content is the same as before, so nothing restarts.
 
-## Moving to the public repository
+## Making the repository public
 
-The old repository itself is never switched to public: some of its commits carry a private e-mail
-address as their author, and GitHub keeps such commits reachable (pull-request refs, Actions logs)
-whatever is pushed later. `tools/publish-public.sh` publishes into a new, empty repository instead,
-and the old one stays private as the archive. With `--history` the history of the ref goes along,
-rewritten so that every address that is not a no-reply address becomes the given one (names and
-messages stay; tags, other branches and pull-request refs stay behind). Without it, the tree becomes
-a single root commit.
+The repository is switched to public as it is, with its history, pull requests, releases and
+workflow runs. Before that was decided, every branch and the whole history of `main` were searched
+for private values (`tools/check-private.sh` for the tree; the patterns of the private environment
+repository over every commit message and every line the history ever added).
+
+Before the switch:
+
+1. Copy the Sealed Secrets controller key off the machine (*Back up the controller key* below).
+2. Delete branches that are merged or abandoned; a public repository shows all of them.
+3. Read what becomes public besides the code: open pull requests and issues, release notes, and the
+   log of a recent workflow run.
+4. Repository settings: a ruleset for `main` (pull requests, the CI jobs, no force pushes) and one
+   for `v*` tags, secret scanning with push protection, private vulnerability reporting, Dependabot
+   alerts, a read-only default token for Actions, approval for workflows of outside contributors.
+
+Then *Settings → General → Danger Zone → Change repository visibility*. Nothing moves: Argo CD, the
+deploy key, the Go module path and the image names stay as they are. Afterwards make the packages
+`finuance-api` and `finuance-web` public; the cluster's pull secret is then no longer needed.
+
+If something private is found later: switch the repository back to private at once, and publish
+with the alternative below.
+
+### Alternative: a new repository without the old history
+
+When a history must not be published (a private commit address, a secret that was once committed),
+`tools/publish-public.sh` fills a new, empty repository instead, and the old one stays private.
+Rewriting the old repository in place is not enough: GitHub keeps the original commits reachable
+through pull-request refs.
 
 ```sh
 export PUBLISH_NAME=<handle> PUBLISH_EMAIL=<id>+<handle>@users.noreply.github.com
 export PUBLISH_PATTERNS=../finuance-env/private-patterns.txt   # personal terms, kept outside this repository
-tools/publish-public.sh --dry-run --history main               # leaves a folder: read it
-tools/publish-public.sh --history main git@github.com:<owner>/<repository>.git
+tools/publish-public.sh --dry-run [--history] main             # leaves a folder: read it
+tools/publish-public.sh [--history] main git@github.com:<owner>/<repository>.git
 ```
 
-The script runs the exported tree's own guards (`check-private.sh`, `check-sealed.sh`, gitleaks when
-installed), fails on any term of the patterns file (it prints `file:line`, never the term; with
-`--history` it also searches every commit message and every line the history ever added), carries
-the `.gitleaksignore` fingerprints over to the rewritten commit ids, checks that only no-reply
-addresses are left and refuses a remote that has any ref.
-
-Order, so the cluster never follows a repository that isn't there:
-
-1. Copy the Sealed Secrets controller key off the machine (*Back up the controller key* below).
-2. Pause the root app as in *Back to main after a phase*, step 1.
-3. Rename the old repository (it stays private) and create the new, empty, public one **with the old
-   name**: the Argo CD applications, the Go module path and the image names then stay as they are.
-4. Publish with the script. Move Argo CD's read-only deploy key to the new repository: delete it from
-   the old one (a deploy key belongs to one repository), print its public half with
-   `kubectl -n argocd get secret repo-finuance -o jsonpath='{.data.sshPrivateKey}' | base64 -d | ssh-keygen -y -f /dev/stdin`
-   and add it under *Settings → Deploy keys* (read-only).
-5. Apply the root app again (`kubectl apply -f deploy/k8s/argocd/root.yaml`). The tree is the one
-   the cluster already runs (plus the fingerprint file), so every app returns to `Synced` without
-   a restart.
-6. Repository settings: a ruleset for `main` (pull requests, the CI jobs, no force pushes) and one
-   for `v*` tags, secret scanning with push protection, private vulnerability reporting, Dependabot
-   alerts, a read-only default token for Actions, approval for workflows of outside contributors.
-7. Packages: link `finuance-api` and `finuance-web` to the new repository; make them public once
-   the old image versions are deleted.
-
-If something private is found after publishing: delete the public repository (a force push leaves
-the old commits fetchable by id), fix the tree, and publish again.
+Without `--history` the tree becomes a single root commit. With it, the history of the ref goes
+along with every author or committer address that is not a no-reply address replaced by the given
+one (names and messages stay; tags, other branches and pull-request refs stay behind). Either way
+the script runs the tree's own guards (and gitleaks when installed), fails on any term of the
+patterns file without printing it, and refuses a remote that has any ref. Give the new repository
+the old one's name (rename the old one first) and move Argo CD's read-only deploy key to it, and
+the applications, the module path and the image names stay as they are.
 
 ## Rollback
 
