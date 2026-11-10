@@ -1,8 +1,8 @@
 {
   "cases": [
     {
-      "in": "ZABKA Z6373 K.1        RASZYN",
-      "out": "ZABKA Z6373 K.1"
+      "in": "ZABKA Z1001 K.1        GDANSK",
+      "out": "ZABKA Z1001 K.1"
     },
     {
       "in": "ZACHETA                WARSZAWA",
@@ -189,8 +189,8 @@
       "out": "apteka 3"
     },
     {
-      "in": "STACJA PALIW 4\tPOZNAŃ  ",
-      "out": "STACJA PALIW 4 POZNAŃ"
+      "in": "STACJA PALIW 4\tKRAKÓW  ",
+      "out": "STACJA PALIW 4 KRAKÓW"
     },
     {
       "in": "Kino Pod Gwiazdami 5        ",
@@ -213,7 +213,7 @@
       "out": "KAWIARNIA 9"
     },
     {
-      "in": "Bistro 10   POZNAŃ",
+      "in": "Bistro 10   KRAKÓW",
       "out": "Bistro 10"
     },
     {
@@ -237,7 +237,7 @@
       "out": "PRZELEW 15 gdańsk"
     },
     {
-      "in": "SKLEP 16  POZNAŃ  ",
+      "in": "SKLEP 16  KRAKÓW  ",
       "out": "SKLEP 16"
     },
     {
@@ -261,8 +261,8 @@
       "out": "Kino Pod Gwiazdami 21gdańsk"
     },
     {
-      "in": "BLIK 22 POZNAŃ",
-      "out": "BLIK 22 POZNAŃ"
+      "in": "BLIK 22 KRAKÓW",
+      "out": "BLIK 22 KRAKÓW"
     },
     {
       "in": "PRZELEW 23  ",
@@ -285,8 +285,8 @@
       "out": "apteka 27"
     },
     {
-      "in": "STACJA PALIW 28POZNAŃ  ",
-      "out": "STACJA PALIW 28POZNAŃ"
+      "in": "STACJA PALIW 28KRAKÓW  ",
+      "out": "STACJA PALIW 28KRAKÓW"
     },
     {
       "in": "Kino Pod Gwiazdami 29 ",
@@ -309,7 +309,7 @@
       "out": "KAWIARNIA 33"
     },
     {
-      "in": "Bistro 34  \t  POZNAŃ",
+      "in": "Bistro 34  \t  KRAKÓW",
       "out": "Bistro 34"
     },
     {
@@ -333,7 +333,7 @@
       "out": "PRZELEW 39 gdańsk"
     },
     {
-      "in": "SKLEP 40        POZNAŃ  ",
+      "in": "SKLEP 40        KRAKÓW  ",
       "out": "SKLEP 40"
     },
     {
@@ -357,8 +357,8 @@
       "out": "Kino Pod Gwiazdami 45"
     },
     {
-      "in": "BLIK 46\tPOZNAŃ",
-      "out": "BLIK 46 POZNAŃ"
+      "in": "BLIK 46\tKRAKÓW",
+      "out": "BLIK 46 KRAKÓW"
     },
     {
       "in": "PRZELEW 47        ",
@@ -381,7 +381,7 @@
       "out": "apteka 51"
     },
     {
-      "in": "STACJA PALIW 52   POZNAŃ  ",
+      "in": "STACJA PALIW 52   KRAKÓW  ",
       "out": "STACJA PALIW 52"
     },
     {
@@ -405,7 +405,7 @@
       "out": "KAWIARNIA 57 gdańsk"
     },
     {
-      "in": "Bistro 58  POZNAŃ",
+      "in": "Bistro 58  KRAKÓW",
       "out": "Bistro 58"
     },
     {
@@ -429,8 +429,8 @@
       "out": "PRZELEW 63gdańsk"
     },
     {
-      "in": "SKLEP 64 POZNAŃ  ",
-      "out": "SKLEP 64 POZNAŃ"
+      "in": "SKLEP 64 KRAKÓW  ",
+      "out": "SKLEP 64 KRAKÓW"
     },
     {
       "in": "KAWIARNIA 65  ",
@@ -453,8 +453,8 @@
       "out": "Kino Pod Gwiazdami 69"
     },
     {
-      "in": "BLIK 70POZNAŃ",
-      "out": "BLIK 70POZNAŃ"
+      "in": "BLIK 70KRAKÓW",
+      "out": "BLIK 70KRAKÓW"
     },
     {
       "in": "PRZELEW 71 ",
@@ -477,7 +477,7 @@
       "out": "apteka 75"
     },
     {
-      "in": "STACJA PALIW 76  \t  POZNAŃ  ",
+      "in": "STACJA PALIW 76  \t  KRAKÓW  ",
       "out": "STACJA PALIW 76"
     },
     {
@@ -501,7 +501,7 @@
       "out": "KAWIARNIA 81 gdańsk"
     },
     {
-      "in": "Bistro 82        POZNAŃ",
+      "in": "Bistro 82        KRAKÓW",
       "out": "Bistro 82"
     },
     {
@@ -525,8 +525,8 @@
       "out": "PRZELEW 87"
     },
     {
-      "in": "SKLEP 88\tPOZNAŃ  ",
-      "out": "SKLEP 88 POZNAŃ"
+      "in": "SKLEP 88\tKRAKÓW  ",
+      "out": "SKLEP 88 KRAKÓW"
     },
     {
       "in": "KAWIARNIA 89        ",
@@ -549,7 +549,7 @@
       "out": "Kino Pod Gwiazdami 93"
     },
     {
-      "in": "BLIK 94   POZNAŃ",
+      "in": "BLIK 94   KRAKÓW",
       "out": "BLIK 94"
     },
     {
@@ -573,7 +573,7 @@
       "out": "apteka 99 gdańsk"
     },
     {
-      "in": "STACJA PALIW 100  POZNAŃ  ",
+      "in": "STACJA PALIW 100  KRAKÓW  ",
       "out": "STACJA PALIW 100"
     },
     {
@@ -597,8 +597,8 @@
       "out": "KAWIARNIA 105gdańsk"
     },
     {
-      "in": "Bistro 106 POZNAŃ",
-      "out": "Bistro 106 POZNAŃ"
+      "in": "Bistro 106 KRAKÓW",
+      "out": "Bistro 106 KRAKÓW"
     },
     {
       "in": "apteka 107  ",

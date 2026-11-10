@@ -14,7 +14,7 @@ func table(headers []string, rows ...[]string) *Table { return &Table{Headers: h
 
 func TestStageBasics(t *testing.T) {
 	tb := table([]string{"Data", "Kontrahent", "Tytuł", "Kwota", "Waluta", "Kategoria", "Hash"},
-		[]string{"02.01.2025", "KAWIARNIA  POZNAŃ", "Kawa  z  mlekiem", "-12,50", "", "Restauracje", "x1"},
+		[]string{"02.01.2025", "KAWIARNIA  KRAKÓW", "Kawa  z  mlekiem", "-12,50", "", "Restauracje", "x1"},
 		[]string{"03.01.2025", "SKLEP", "Zakupy", "-1 234,56", "EUR", "Zakupy", "x2"},
 		[]string{"", "BRAK DATY", "", "-1,00", "", "", "x3"},
 		[]string{"31.02.2025", "ZŁA DATA", "", "abc", "", "", "x4"},
@@ -32,13 +32,13 @@ func TestStageBasics(t *testing.T) {
 	if r.BookedOn != platform.MustDate(2025, 1, 2) || r.AmountMinor != -1250 || r.Currency != "PLN" || r.BankCategory != "Restauracje" {
 		t.Errorf("row 0 = %+v", r)
 	}
-	if r.PayeeN != "kawiarnia poznan" || r.DescriptionN != "kawa z mlekiem" || r.PayeeGroup != "KAWIARNIA" {
+	if r.PayeeN != "kawiarnia krakow" || r.DescriptionN != "kawa z mlekiem" || r.PayeeGroup != "KAWIARNIA" {
 		t.Errorf("shadow fields: %q %q %q", r.PayeeN, r.DescriptionN, r.PayeeGroup)
 	}
 	if len(r.Raw) != 6 || r.Raw[5].Header != "Kategoria" || strings.Contains(r.SearchText, "x1") {
 		t.Errorf("ignored column leaked into raw/search: %+v %q", r.Raw, r.SearchText)
 	}
-	if r.SearchText != Norm("02.01.2025\u0001KAWIARNIA  POZNAŃ\u0001Kawa  z  mlekiem\u0001-12,50\u0001\u0001Restauracje") {
+	if r.SearchText != Norm("02.01.2025\u0001KAWIARNIA  KRAKÓW\u0001Kawa  z  mlekiem\u0001-12,50\u0001\u0001Restauracje") {
 		t.Errorf("search text = %q", r.SearchText)
 	}
 	if rows[1].Currency != "EUR" || rows[1].AmountMinor != -123456 {
@@ -134,13 +134,13 @@ func TestFingerprintVectors(t *testing.T) {
 	if k := FingerprintKey(&ref, 2); k != "r|'c992506002418351|-127.13" {
 		t.Errorf("reference key = %q", k)
 	}
-	plain := StagedRow{BookedOn: platform.MustDate(2025, 3, 1), AmountMinor: -4498, Payee: "ŻABKA  Z6373 K.1   RASZYN", Description: "Zakupy\tspożywcze"}
+	plain := StagedRow{BookedOn: platform.MustDate(2025, 3, 1), AmountMinor: -4498, Payee: "ŻABKA  Z1001 K.1   GDANSK", Description: "Zakupy\tspożywcze"}
 	key := FingerprintKey(&plain, 2)
-	if key != "2025-03-01|-44.98|zabka z6373 k.1 raszyn|zakupy spozywcze" {
+	if key != "2025-03-01|-44.98|zabka z1001 k.1 gdansk|zakupy spozywcze" {
 		t.Errorf("plain key = %q", key)
 	}
 	fp := Fingerprint(key)
-	if got := hex.EncodeToString(fp[:]); got != "1d42b746b540675e589a7e35b7efea5c917e6e3412ad690d7ab0455c26731d14" {
+	if got := hex.EncodeToString(fp[:]); got != "f2f7e680f333d7e640f4a23eb107bdbd87d7ff5ba35187da028a238b0aa680f8" {
 		t.Errorf("fingerprint = %s", got)
 	}
 	sig := HeaderSignature([]string{"Data", "Kwota"}, ';')

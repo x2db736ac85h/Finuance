@@ -158,12 +158,11 @@ func legacyViewOf(t *testing.T, o oracleIngest, ours legacyView) legacyView {
 // value is the real header record. For these, the automatic result must equal Parse with that
 // header row set explicitly, which the cfg parity suite checks against the legacy.
 var headerFixes = map[string]int{
-	"synthetic/06-bank-preamble.csv":  6,
-	"synthetic/21-blank-headers.csv":  1,
-	"synthetic/banks/mbank-like.csv":  26,
-	"synthetic/banks/pko-bp-like.csv": 1,
-	"real/mbank/mbank_example.csv":    26,
-	"real/pko-bp/pko_bp_example.csv":  1,
+	"synthetic/06-bank-preamble.csv":      6,
+	"synthetic/21-blank-headers.csv":      1,
+	"synthetic/banks/mbank-like.csv":      26,
+	"synthetic/banks/pko-bp-like.csv":     1,
+	"synthetic/banks/mbank-like-long.csv": 26,
 }
 
 // TestOracleIngest: every fixture through Parse with default options equals the legacy pipeline,

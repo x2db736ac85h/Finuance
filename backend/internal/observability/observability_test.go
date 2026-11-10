@@ -45,7 +45,7 @@ func TestNoopTracingAndAdmin(t *testing.T) {
 	}
 	m := NewMetrics()
 	m.HTTPRequests.WithLabelValues("GET /x", "GET", "2xx").Inc()
-	srv := NewAdminServer(":0", m, nil)
+	srv := NewAdminServer(":0", m, true, nil)
 	w := httptest.NewRecorder()
 	srv.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/metrics", nil))
 	for _, want := range []string{"http_server_requests_total", "go_goroutines", "process_cpu_seconds_total"} {
@@ -58,6 +58,15 @@ func TestNoopTracingAndAdmin(t *testing.T) {
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "goroutine") {
 		t.Errorf("pprof index: %d", w.Code)
 	}
+	// Profiling is off unless asked for: the admin port then has metrics and nothing else.
+	off := NewAdminServer(":0", m, false, nil)
+	for path, want := range map[string]int{"/metrics": 200, "/debug/pprof/": 404, "/debug/pprof/profile": 404, "/debug/pprof/trace": 404} {
+		w = httptest.NewRecorder()
+		off.Handler.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != want {
+			t.Errorf("profiling off: GET %s = %d, want %d", path, w.Code, want)
+		}
+	}
 }
 
 // The latency SLO counts requests faster than 300 ms (docs/SLO.md); the histogram needs that
@@ -65,7 +74,7 @@ func TestNoopTracingAndAdmin(t *testing.T) {
 func TestLatencyHistogramHasTheSLOBucket(t *testing.T) {
 	m := NewMetrics()
 	m.HTTPDuration.WithLabelValues("POST /api/v1/transactions/query").Observe(0.27)
-	srv := NewAdminServer(":0", m, nil)
+	srv := NewAdminServer(":0", m, false, nil)
 	w := httptest.NewRecorder()
 	srv.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/metrics", nil))
 	if !strings.Contains(w.Body.String(), `http_server_request_duration_seconds_bucket{route="POST /api/v1/transactions/query",le="0.3"} 1`) {

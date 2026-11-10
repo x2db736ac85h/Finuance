@@ -80,7 +80,7 @@ func goldenOf(fixture string, raw []byte) golden {
 // `go test ./internal/ingest -run Golden -update` after an intended change and review the diff.
 func TestGolden(t *testing.T) {
 	var fixtures []string
-	for _, dir := range []string{"synthetic", "real"} {
+	for _, dir := range []string{"synthetic"} {
 		err := filepath.WalkDir(filepath.Join(fixturesDir, dir), func(p string, d fs.DirEntry, err error) error {
 			if err == nil && !d.IsDir() && strings.HasSuffix(p, ".csv") {
 				rel, _ := filepath.Rel(fixturesDir, p)

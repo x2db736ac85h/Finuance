@@ -5,7 +5,7 @@
 
 ## Context
 
-ADR 0015 made the assistant provider-agnostic: the instance lists named connections in a connections file, and users pick one of them and a model. Our Product Engineer chose **LM Studio** for dev and prod (Phase 13). On Kubernetes (PLAN 16.8) two questions remain:
+ADR 0015 made the assistant provider-agnostic: the instance lists named connections in a connections file, and users pick one of them and a model. The maintainer chose **LM Studio** for dev and prod (Phase 13). On Kubernetes (PLAN 16.8) two questions remain:
 
 - Where does the model server run?
 - How does the api reach it, given that the chart denies all egress by default?

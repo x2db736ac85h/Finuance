@@ -39,7 +39,7 @@ Phase 21: **cosign signature verification** for Finuance's images (keyless, the 
 identity) in a policy controller, and Finuance's images **deployed by digest** (chart values, and the
 `gitops-bump` pull request writing the digests the release signed).
 
-Decided by our Product Engineer on 2026-11-02 (registries now, digests and signatures in Phase 21).
+Decided by the maintainer on 2026-11-02 (registries now, digests and signatures in Phase 21).
 
 ## Consequences (positive, negative, follow-ups)
 

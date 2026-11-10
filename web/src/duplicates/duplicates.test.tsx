@@ -178,7 +178,7 @@ describe('duplicates window', () => {
   });
 
   // 75 groups render in ~2 s alone, but over 5 s when the full parallel suite shares a busy machine
-  // (our Product Engineer, 2026-11-06: a longer limit for this test; Backlog: a cheaper first render)
+  // (the maintainer, 2026-11-06: a longer limit for this test; Backlog: a cheaper first render)
   it('filters and pages 60 at a time', async () => {
     groups = Array.from({ length: 75 }, (_, i) => group(i + 1));
     const user = userEvent.setup();

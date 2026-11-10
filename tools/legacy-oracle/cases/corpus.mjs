@@ -57,7 +57,7 @@ const words = ['PŁATNOŚĆ', 'płatność', 'Łódź', 'ŁÓDŹ', 'Zażółć g
   'Café', 'naïve', 'Ångström', 'Straße', 'İstanbul', 'ǅemal', 'Øre', 'Æble', 'œuvre', 'ﬁnance', 'Ⅻ', '①', 'ｆｕｌｌ'];
 export const norm = [
   ...words, ...words.map(w => w.toLowerCase()), ...words.map(w => '  ' + w + '\t'),
-  '', ' ', 'a', 'A', '123', '-127,13', 'BLIK REF       86772307062', 'ZABKA Z6373 K.1        RASZYN', 'é', 'Ȩ́',
+  '', ' ', 'a', 'A', '123', '-127,13', 'BLIK REF       86772307062', 'ZABKA Z1001 K.1        GDANSK', 'é', 'Ȩ́',
   'à́̂', 'l̵', 'ł́', 'Ł́', ' ', 'x​y', 'tab\there', 'new\nline', 'cr\rlf', 'emoji 💸',
   'ß', 'ẞ', 'ﬀ', 'Ǆ', 'ǆ', 'ı', 'İ', 'ŉ', 'ĳ', 'Ĳ', 'ð', 'Þ', 'đ', 'Đ', 'ħ', 'ŧ', 'ŀ', 'ſ', 'µ', 'Ω', 'Å', 'ǻ',
   'Ŭ', 'ǖ', 'ṩ', 'ộ', 'ừ', 'ỹ', 'ı̇', 'ģ', 'ķ', 'ļ', 'ņ', 'ŗ', 'ș', 'ț', 'ş', 'ţ', 'ğ', 'ž', 'š', 'č', 'ř', 'ď', 'ť', 'ň',
@@ -65,7 +65,7 @@ export const norm = [
 ];
 
 export const payeeName = [
-  'ZABKA Z6373 K.1        RASZYN', 'ZACHETA                WARSZAWA', 'UBER   * EATS PENDING  AMSTERDAM', 'IA *CEBULEKWIATOWE     CZESTOCHOWA',
+  'ZABKA Z1001 K.1        GDANSK', 'ZACHETA                WARSZAWA', 'UBER   * EATS PENDING  AMSTERDAM', 'IA *CEBULEKWIATOWE     CZESTOCHOWA',
   'AMAZON MARKETPLACE', 'PAYPRO S.A.', 'CITY-NAV SPOLKA Z OGRAN', '  LEADING SPACES', 'TRAILING SPACES  ', '  BOTH  ', '',
   ' ', '   ', 'A', 'A  B', 'A B', 'A\tB', 'A\t\tB', 'A \tB', 'A  B', 'A\nB', 'A\n\nB', 'A\r\nB', 'MULTI   SPACE   RUNS',
   'single space only here', 'X  ', '  X', 'one  two  three  four', 'Tab\tin\tmiddle', 'MARKET NA ROGU       WARSZAWA',
@@ -74,7 +74,7 @@ export const payeeName = [
   null, 0, 123, 'x'.repeat(200), 'NAME' + ' '.repeat(50) + 'CITY',
   ...Array.from({length: 110}, (_, i) => {
     const names = ['SKLEP', 'KAWIARNIA', 'Bistro', 'apteka', 'STACJA PALIW', 'Kino Pod Gwiazdami', 'BLIK', 'PRZELEW'];
-    const cities = ['WARSZAWA', 'Kraków', 'ŁÓDŹ', 'gdańsk', 'POZNAŃ', ''];
+    const cities = ['WARSZAWA', 'Kraków', 'ŁÓDŹ', 'gdańsk', 'KRAKÓW', ''];
     const pads = ['', ' ', '  ', '   ', '\t', '        ', '  \t  '];
     return `${i % 3 === 0 ? ' ' : ''}${names[i % names.length]} ${i}${pads[i % pads.length]}${cities[i % cities.length]}${i % 4 === 0 ? '  ' : ''}`;
   })

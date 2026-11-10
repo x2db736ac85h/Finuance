@@ -8,7 +8,7 @@ import (
 
 func TestPlainText(t *testing.T) {
 	for s, want := range map[string]bool{
-		"ZABKA Z6373 K.1":    true,
+		"ZABKA Z1001 K.1":    true,
 		"OPERATOR INTERNETU": true,
 		"=ZABKA":             false, // exact match
 		"!ZABKA":             false,

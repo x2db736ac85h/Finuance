@@ -260,7 +260,7 @@ Charts and the overview need semantic columns. Roles are guessed from header nam
 
 **Sign convention:** negative amount = spending, positive = income. Everything financial depends on this.
 
-`payeeName(s)` normalises merchants by taking the text before the first run of 2+ spaces (bank exports pad store name and city with spaces: `ZABKA Z6373 K.1        RASZYN` → `ZABKA Z6373 K.1`).
+`payeeName(s)` normalises merchants by taking the text before the first run of 2+ spaces (bank exports pad store name and city with spaces: `ZABKA Z1001 K.1        GDANSK` → `ZABKA Z1001 K.1`).
 
 ---
 

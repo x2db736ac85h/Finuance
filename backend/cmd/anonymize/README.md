@@ -1,11 +1,11 @@
 # anonymize
 
-Turns real bank CSV exports into fixtures that can be committed. The structure stays the same and the personal data goes.
+Turns real bank CSV exports into files with the same structure and none of the personal values, for reproducing a parsing problem locally. Its output still follows a real spending pattern, so it stays under `testdata/private/` (gitignored); the committed fixtures are synthetic (`testdata/fixtures/synthetic/banks/`).
 
 ```sh
 export FINUANCE_ANON_KEY="$(head -c 32 /dev/urandom | base64)"   # keep it with the private files, never commit it
 cd backend
-go run ./cmd/anonymize -out ../testdata/fixtures/real/pekao ../testdata/private/pekao_*.csv
+go run ./cmd/anonymize -out ../testdata/private/anonymised ../testdata/private/pekao_*.csv
 ```
 
 | Flag | Default | Meaning |

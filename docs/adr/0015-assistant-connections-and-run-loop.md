@@ -6,7 +6,7 @@
 ## Context
 
 The legacy app talked to one local OpenAI-compatible server from the browser. The rebuild runs the
-assistant on the server (PLAN §4.8), and our Product Engineer wants it **provider- and
+assistant on the server (PLAN §4.8), and the maintainer wants it **provider- and
 model-agnostic**: LM Studio in dev and prod, but users should be able to pick whatever an instance
 offers, local or cloud (Ollama, vLLM, llama.cpp, OpenAI, Anthropic, any compatible server), with
 thinking used when a model supports it, and with the model able to query the data for context.
@@ -75,5 +75,5 @@ differ widely in tool calling and reasoning output; local models are small and s
   against the oracle.
 - **User-entered endpoints.** Server-side requests to user-chosen URLs are an SSRF hole; endpoints
   stay instance config.
-- **Storing chats until deleted (the legacy kept the last N).** Our Product Engineer chose a short
+- **Storing chats until deleted (the legacy kept the last N).** The maintainer chose a short
   default retention with a user choice instead: chats hold financial details in free text.

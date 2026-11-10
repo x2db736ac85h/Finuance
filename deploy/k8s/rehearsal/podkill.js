@@ -12,9 +12,9 @@ const PASSWORD = __ENV.K6_PASSWORD;
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'X-Finuance-Client': 'web', Origin: BASE };
 
 export const options = {
-  // the rehearsal's throwaway CA isn't in k6's trust store (curl checks the chain in the smoke tests);
-  // a real certificate is checked with VERIFY_TLS=true
-  insecureSkipTLSVerify: __ENV.VERIFY_TLS !== 'true',
+  // The certificate is checked unless SKIP_TLS_VERIFY=true. Only the kind rehearsal sets that: its
+  // throwaway CA isn't in k6's trust store (curl checks the chain in the smoke tests there).
+  insecureSkipTLSVerify: __ENV.SKIP_TLS_VERIFY === 'true',
   scenarios: {
     steady: { executor: 'constant-vus', vus: Number(__ENV.VUS || 10), duration: __ENV.DURATION || '75s' },
   },

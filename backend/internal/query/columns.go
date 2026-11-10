@@ -46,7 +46,7 @@ type Column struct {
 }
 
 // The legacy shows amounts and dates as the file wrote them; the rebuild uses one fixed text form
-// (our Product Engineer's decision, Phase 7): comma decimals without grouping and dd.mm.yyyy. It equals the Pekao
+// (the maintainer's decision, Phase 7): comma decimals without grouping and dd.mm.yyyy. It equals the Pekao
 // and demo files.
 func dateText(expr string) string { return "to_char(" + expr + ", 'DD.MM.YYYY')" }
 

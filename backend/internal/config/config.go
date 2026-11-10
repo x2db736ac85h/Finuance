@@ -37,6 +37,7 @@ type Config struct {
 	SessionIdleTTL     time.Duration
 	CookieSecure       bool
 	AllowSignup        bool
+	Profiling          bool // /debug/pprof on the admin port (FINUANCE_PPROF)
 	DemoMode           bool
 	DemoAssistant      bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
 	// Developer is the administrators' Developer section; nil unless FINUANCE_DEVELOPER_MODE=true.
@@ -108,7 +109,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		}
 	}
 	c := Config{
-		Env:                  Env(p.str("FINUANCE_ENV", "dev")),
+		Env:                  Env(p.str("FINUANCE_ENV", "prod")),
 		HTTPAddr:             p.addr("FINUANCE_HTTP_ADDR", ":8080"),
 		AdminAddr:            p.addr("FINUANCE_ADMIN_ADDR", ":9090"),
 		PublicOrigin:         p.origin("FINUANCE_PUBLIC_ORIGIN"),
@@ -117,7 +118,8 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		DBMaxConns:           int32(p.int("FINUANCE_DB_MAX_CONNS", 10, 1, 1000)), //nolint:gosec // bounded to 1..1000 by p.int
 		SessionTTL:           p.duration("FINUANCE_SESSION_TTL", 720*time.Hour),
 		SessionIdleTTL:       p.duration("FINUANCE_SESSION_IDLE_TTL", 168*time.Hour),
-		AllowSignup:          p.bool("FINUANCE_ALLOW_SIGNUP", true),
+		AllowSignup:          p.bool("FINUANCE_ALLOW_SIGNUP", false),
+		Profiling:            p.bool("FINUANCE_PPROF", false),
 		DemoMode:             p.bool("FINUANCE_DEMO_MODE", false),
 		DemoAssistant:        p.bool("FINUANCE_DEMO_ASSISTANT", false),
 		MaxUploadBytes:       int64(p.int("FINUANCE_MAX_UPLOAD_BYTES", 20<<20, 1024, 1<<31)),

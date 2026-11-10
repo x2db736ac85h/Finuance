@@ -8,17 +8,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// NewAdminServer serves /metrics and /debug/pprof/* on the admin address. It must never be
-// exposed through the ingress (docs/PLAN.md §3.5). extra may register more routes (the worker adds
-// /healthz and /readyz, because it has no API port).
-func NewAdminServer(addr string, m *Metrics, extra func(*http.ServeMux)) *http.Server {
+// NewAdminServer serves /metrics on the admin address, and /debug/pprof/* when profiling is on
+// (FINUANCE_PPROF; off by default, because whoever may scrape metrics could otherwise also pull
+// heap dumps). The address must never be exposed through the ingress (docs/PLAN.md §3.5). extra may
+// register more routes (the worker adds /healthz and /readyz, because it has no API port).
+func NewAdminServer(addr string, m *Metrics, profiling bool, extra func(*http.ServeMux)) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{Registry: m.Registry}))
-	mux.HandleFunc("GET /debug/pprof/", pprof.Index)
-	mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
+	if profiling {
+		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+		mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
+	}
 	if extra != nil {
 		extra(mux)
 	}

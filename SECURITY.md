@@ -10,6 +10,6 @@ Include what you found, how to reproduce it, and what an attacker could do with 
 
 ## Scope and status
 
-Finuance is pre-release software (see the [status table](README.md#status)); there are no supported releases yet, so fixes land on `main`. The protections in place today, and the ones still planned, are listed in the [threat model](docs/THREAT-MODEL.md).
+Finuance is pre-1.0 software. Security fixes land on `main` and ship in the next release; only the latest release is supported, so please check that a problem still exists there. The protections in place today, the risks accepted on purpose, and what is still planned are listed in the [threat model](docs/THREAT-MODEL.md); the scans and their open findings are in [docs/security-scan.md](docs/security-scan.md).
 
 Never include real bank data in a report. Synthetic data or a description of the file's layout is enough.

@@ -1,0 +1,53 @@
+﻿mBank Przykładowy S.A. Bankowość Detaliczna;
+			Skrytka Pocztowa 0000;
+			00-000 Miasto 2;
+			www.example.pl;
+			Infolinia: 000 000 000;
+			+48 (00) 0 000 000;
+			
+
+#Klient;
+JAN PRZYKŁADOWY;
+
+Lista operacji;
+
+#Za okres:;
+01.01.2026;31.03.2026;
+
+#zgodnie z wybranymi filtrami wyszukiwania;
+      #dla rachunków:;
+      Konto - 00000000000000000000000003;
+      
+      #Lista nie jest dokumentem w rozumieniu art. 7 Ustawy Prawo Bankowe, ponieważ operacje można samodzielnie edytować.;
+      
+      #Waluta;#Wpływy;#Wydatki;
+PLN;9 600,00;-4 204,50;
+      
+#Data operacji;#Opis operacji;#Rachunek;#Kategoria;#Kwota;
+2026-03-27;"SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY                                                               ";"Konto 0000 ... 0003";"Żywność i chemia domowa";-123,40 PLN;;
+2026-03-21;"KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY                                                                      ";"Konto 0000 ... 0003";"Jedzenie poza domem";-20,00 PLN;;
+2026-03-18;"APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE                                                               ";"Konto 0000 ... 0003";"Zdrowie i uroda";-49,99 PLN;;
+2026-03-15;"OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003  ";"Konto 0000 ... 0003";"Multimedia, książki i prasa";-59,00 PLN;;
+2026-03-10;"PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004  ";"Konto 0000 ... 0003";"Wynagrodzenie";3 200,00 PLN;;
+2026-03-05;"STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY                                                                 ";"Konto 0000 ... 0003";"Paliwo";-233,30 PLN;;
+2026-03-03;"WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005  ";"Konto 0000 ... 0003";"Czynsz i wynajem";-900,00 PLN;;
+2026-03-01;"OPŁATA ZA KARTĘ                ";"Konto 0000 ... 0003";"Opłaty i odsetki";-10,00 PLN;;
+2026-02-27;"SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY                                                               ";"Konto 0000 ... 0003";"Żywność i chemia domowa";-122,40 PLN;;
+2026-02-21;"KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY                                                                      ";"Konto 0000 ... 0003";"Jedzenie poza domem";-19,00 PLN;;
+2026-02-18;"APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE                                                               ";"Konto 0000 ... 0003";"Zdrowie i uroda";-46,99 PLN;;
+2026-02-15;"OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003  ";"Konto 0000 ... 0003";"Multimedia, książki i prasa";-59,00 PLN;;
+2026-02-10;"PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004  ";"Konto 0000 ... 0003";"Wynagrodzenie";3 200,00 PLN;;
+2026-02-05;"STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY                                                                 ";"Konto 0000 ... 0003";"Paliwo";-222,30 PLN;;
+2026-02-03;"WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005  ";"Konto 0000 ... 0003";"Czynsz i wynajem";-900,00 PLN;;
+2026-02-01;"OPŁATA ZA KARTĘ                ";"Konto 0000 ... 0003";"Opłaty i odsetki";-10,00 PLN;;
+2026-01-27;"SKLEP PRZYKŁADOWY BETA  ZAKUP PRZY UŻYCIU KARTY                                                               ";"Konto 0000 ... 0003";"Żywność i chemia domowa";-121,40 PLN;;
+2026-01-21;"KAWIARNIA GAMMA  ZAKUP PRZY UŻYCIU KARTY                                                                      ";"Konto 0000 ... 0003";"Jedzenie poza domem";-18,00 PLN;;
+2026-01-18;"APTEKA DELTA                                                                     BLIK ZAKUP E-COMMERCE                                                               ";"Konto 0000 ... 0003";"Zdrowie i uroda";-43,99 PLN;;
+2026-01-15;"OPERATOR PRZYKŁADOWY, FAKTURA 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001003  ";"Konto 0000 ... 0003";"Multimedia, książki i prasa";-59,00 PLN;;
+2026-01-10;"PRACODAWCA PRZYKŁADOWY  UL.FIRMOWA 1                      00-002 MIASTO                                                 PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY                                                   00000000000000000000001004  ";"Konto 0000 ... 0003";"Wynagrodzenie";3 200,00 PLN;;
+2026-01-05;"STACJA PALIW EPSILON  ZAKUP PRZY UŻYCIU KARTY                                                                 ";"Konto 0000 ... 0003";"Paliwo";-211,30 PLN;;
+2026-01-03;"WSPÓLNOTA PRZYKŁADOWA, CZYNSZ 0${m}/2026                                                                              PRZELEW ZEWNĘTRZNY WYCHODZĄCY                                                     00000000000000000000001005  ";"Konto 0000 ... 0003";"Czynsz i wynajem";-900,00 PLN;;
+2026-01-01;"OPŁATA ZA KARTĘ                ";"Konto 0000 ... 0003";"Opłaty i odsetki";-10,00 PLN;;
+
+
+

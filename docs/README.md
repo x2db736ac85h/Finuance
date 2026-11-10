@@ -4,7 +4,9 @@
 
 | Document | What it covers |
 |---|---|
-| [Main README](../README.md) | What Finuance does, screenshots, key concepts, quick start, deployment, status |
+| [Main README](../README.md) | What Finuance is, the stack, quick start, design decisions, operations, testing |
+| [features.md](features.md) | Everything it does, the filter language, how duplicates are recognised |
+| [deploying.md](deploying.md) | Running a release with Docker Compose, demo mode, verifying images, the Kubernetes charts |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, backend packages, data model (ERD), row-level security, request flow, the web app |
 | [RUNBOOK.md](RUNBOOK.md) | Running it on Kubernetes: bootstrap (also on single-node k3s, step by step: TLS, GitOps, monitoring, scans, image admission), deploy, rollback, failed migrations, secrets, scaling, backups and restores, drills, playbooks |
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Assets, attackers, threats and the controls (with the tests that prove them), and the security scans |
@@ -24,12 +26,13 @@
 
 ## Working documents (how the rebuild is planned and tracked)
 
-These are written for the team and the AI agent that builds Finuance. They are detailed, and they describe future phases as well as finished ones.
+These are written for the maintainer and the AI agent that writes most of the code. They are detailed, and they describe future phases as well as finished ones.
 
 | Document | What it covers |
 |---|---|
-| [PLAN.md](PLAN.md) | The full specification and the phase plan (Phases 0–19), with tasks, tests and the review gate of each phase |
-| [PROGRESS.md](PROGRESS.md) | The current phase, every decision taken by our Product Engineer, deviations from the plan, follow-ups |
+| [PLAN.md](PLAN.md) | The full specification and the phase plan, with tasks, tests and the review gate of each phase |
+| [PROGRESS.md](PROGRESS.md) | The current phase and its tasks, the decisions that still apply, follow-ups and the backlog |
+| [ROADMAP.md](ROADMAP.md) | What has shipped, what is next and what comes later |
 | [PARITY.md](PARITY.md) | Every capability of the legacy prototype and the phase that ports (or retires) it |
 | [perf-phase7-plans.md](perf-phase7-plans.md) | Raw `EXPLAIN ANALYZE` output behind the Phase 7 query measurements |
 | [../testdata/oracle/ALLOWED_DIFFS.md](../testdata/oracle/ALLOWED_DIFFS.md) | The deliberate differences from the legacy prototype's behaviour |

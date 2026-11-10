@@ -2,7 +2,7 @@
 -- (sign-ins, exports, deletions, …), shown to that user on Settings → Activity and nowhere else.
 --
 -- Append-only for the app: finuance_app may read and insert its own rows, never update them, and
--- may delete only rows older than the retention (365 days, our Product Engineer's decision), which
+-- may delete only rows older than the retention (365 days, the maintainer's decision), which
 -- the daily cleanup job does. Recent history can't be erased through the app, even by a bug.
 -- Deleting the user removes their rows (ON DELETE CASCADE; referential actions bypass RLS).
 -- `at` is the database's clock, not a parameter, and the insert policy refuses any other time, so

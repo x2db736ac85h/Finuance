@@ -28,8 +28,8 @@ func pekaoReal() string {
 	return strings.Join([]string{
 		"Data księgowania;Data waluty;Nadawca / Odbiorca;Adres nadawcy / odbiorcy;Rachunek źródłowy;Rachunek docelowy;Tytułem;Kwota operacji;Waluta;Numer referencyjny;Typ operacji;Kategoria",
 		"01.03.2025;01.03.2025;KWIATOSZ MARKETPLACE;KWIATOSZ.PL 38 AVENUE JOHNA KENNEDYEGO,LUXEMBOURG;'" + a1 + ";;BLIK REF       86772307062;-127,13;PLN;'C992506002418351;PŁATNOŚĆ BLIK;Zakupy przez internet",
-		"01.03.2025;28.02.2025;ZABCIA Z6373 K.1        RASZYN;;'" + a1 + ";;*********0229197;-44,98;PLN;'C992505922368031;TRANSAKCJA KARTĄ PŁATNICZĄ;Artykuły spożywcze",
-		"15.04.2024;15.04.2024;BALTAZAR GĄBKA;UL. PASTELOWA 8 60-198 POZNAŃ;'" + a1 + ";'" + a2 + ";Zwrot za obiad Baltazar;1 200,00;PLN;'328244F604005273;PRZELEW MOBILE;Bez kategorii",
+		"01.03.2025;28.02.2025;ZABCIA Z1001 K.1        GDANSK;;'" + a1 + ";;*********0229197;-44,98;PLN;'C992505922368031;TRANSAKCJA KARTĄ PŁATNICZĄ;Artykuły spożywcze",
+		"15.04.2024;15.04.2024;BALTAZAR GĄBKA;UL. PASTELOWA 8 60-198 KRAKÓW;'" + a1 + ";'" + a2 + ";Zwrot za obiad Baltazar;1 200,00;PLN;'328244F604005273;PRZELEW MOBILE;Bez kategorii",
 		"15.04.2024;14.04.2024;UBERTO   * EATS PENDING  AMSTERDAM;;'" + a1 + ";;*********0060980;-235,00;PLN;'C992410521886798;TRANSAKCJA KARTĄ PŁATNICZĄ;Restauracje i kawiarnie",
 	}, "\n") + "\n"
 }
@@ -45,7 +45,7 @@ func mbankReal() string {
 		"#Data operacji;#Opis operacji;#Rachunek;#Kategoria;#Kwota;",
 		row("2026-04-08", "BLIK WYPŁATA ATM WŁASNY  PLANETARIUM CASH          BLIK WYPŁATA ATM WŁASNY     ", "Wypłata gotówki", "-800,00"),
 		row("2026-04-02", "FUNDACJA MAKATKA, DAROWIZNA NA CELE STATUTOWE        PRZELEW WEWNĘTRZNY WYCHODZĄCY      "+a+"  ", "Bez kategorii", "-1 200,00"),
-		row("2026-04-01", "KONTRAHENT GRZEGORZ  UL.STRASZNA 3        60-123 POZNAŃ   PRZELEW WEWNĘTRZNY PRZYCHODZĄCY", "Wpływy - inne", "300,00"),
+		row("2026-04-01", "KONTRAHENT GRZEGORZ  UL.STRASZNA 3        60-123 KRAKÓW   PRZELEW WEWNĘTRZNY PRZYCHODZĄCY", "Wpływy - inne", "300,00"),
 		"", "",
 	}, "\r\n")
 }
@@ -53,10 +53,10 @@ func mbankReal() string {
 func pkoReal() []byte {
 	text := strings.Join([]string{
 		"Data operacji,Data waluty,Typ transakcji,Kwota,Waluta,Opis transakcji,,,,,",
-		"2026-04-04,2026-04-03,Płatność kartą,-43.52,PLN,Tytuł: 000134679 00000000000000000000000,Lokalizacja: Adres: LIDLOWO Długa Miasto: Poznan Kraj: POLSKA,Data wykonania operacji: 2026-04-03 07:21,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 43.52,Numer karty: 425125******7890",
+		"2026-04-04,2026-04-03,Płatność kartą,-43.52,PLN,Tytuł: 000134679 00000000000000000000000,Lokalizacja: Adres: LIDLOWO Długa Miasto: Krakow Kraj: POLSKA,Data wykonania operacji: 2026-04-03 07:21,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 43.52,Numer karty: 425125******7890",
 		`2026-04-04,2026-04-04,Opłata za użytkowanie karty,-10,PLN,"Tytuł: OPŁATA MIESIĘCZNA ZA KARTĘ 425125******7890, 28.02-28.03",,,,,`,
 		"",
-		"2026-02-20,2026-02-19,Wypłata z bankomatu,-1600,PLN,Tytuł: PKO BP 10204027S1PO1965N6625C1252,Lokalizacja: Adres: Szeroka 67 Miasto: POZNAN Kraj: POLSKA,Data wykonania operacji: 2026-02-19 17:57,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 1600.00,Numer karty: 425125******7890",
+		"2026-02-20,2026-02-19,Wypłata z bankomatu,-1600,PLN,Tytuł: PKO BP 10204027S1PO1965N6625C1252,Lokalizacja: Adres: Szeroka 67 Miasto: KRAKOW Kraj: POLSKA,Data wykonania operacji: 2026-02-19 17:57,Kwota Cash Back:  0.00,Oryginalna kwota operacji: 1600.00,Numer karty: 425125******7890",
 		"",
 	}, "\r\n")
 	b, err := encode(text, source{Enc: "windows-1250"})
@@ -68,7 +68,7 @@ func pkoReal() []byte {
 
 // sensitive lists tokens of the realistic inputs that must not survive anonymisation.
 var sensitive = []string{
-	"KWIATOSZ", "KENNEDYEGO", "ZABCIA", "RASZYN", "BALTAZAR", "GĄBKA", "PASTELOWA", "UBERTO", "AMSTERDAM",
+	"KWIATOSZ", "KENNEDYEGO", "ZABCIA", "GDANSK", "BALTAZAR", "GĄBKA", "PASTELOWA", "UBERTO", "AMSTERDAM",
 	"86772307062", "0229197", "992506002418351", "604005273", "0060980", "Baltazar", "PLANETARIUM", "MAKATKA",
 	"GRZEGORZ", "STRASZNA", "LIDLOWO", "Długa", "Szeroka", "425125", "000134679", "10204027", "1965",
 	acct("32124023"), acct("91124017"), acct("53114020"),

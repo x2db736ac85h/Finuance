@@ -20,7 +20,7 @@ Playwright is pinned to **1.56.1**. Its Chromium build is the one preinstalled i
 
 | Path | Content |
 |---|---|
-| `testdata/oracle/ingest/**.json` | Every fixture under `testdata/fixtures/{synthetic,demo,real}` with default options (`enc=auto`, `delim=auto`, `strip=true`). Each file holds the encoding, delimiter, `headerAt`, `dropped`, headers, rows, per-column type / parsed numbers / parsed dates, `roles` and `rowNorm`. |
+| `testdata/oracle/ingest/**.json` | Every fixture under `testdata/fixtures/{synthetic,demo}` with default options (`enc=auto`, `delim=auto`, `strip=true`). Each file holds the encoding, delimiter, `headerAt`, `dropped`, headers, rows, per-column type / parsed numbers / parsed dates, `roles` and `rowNorm`. |
 | `testdata/oracle/ingest-cfg/<fixture>/<variant>.json` | The same, with the explicit per-file settings (`e.cfg`) from `cases/cfg.mjs`: header row, none + skip, `dropShort`, `dateOrder`, invert, full mappings incl. debit/credit/ignore, manual encodings and delimiters. The cfg used is recorded in each file. |
 | `testdata/oracle/corpus/*.json` | `parseNum`, `parseDate`, `looseDate`, `norm` and `payeeName`, each over 150+ inputs from `cases/corpus.mjs`. |
 | `testdata/oracle/dedupe/*.json` | `getDataset('merged')` for the overlap, same-name, duplicate-versions and two-bank sets: kept rows (sorted), `dupes`, and the `ds.dup` groups (versions, files, kept flags). Most sets are then rebuilt via `dupChanged()` with `S.dupPick` (every group prefers its last file) and with `S.dupKeep` (keep both). |

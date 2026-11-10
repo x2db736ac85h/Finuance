@@ -123,7 +123,10 @@ jobs:
           set -euo pipefail
           cd deploy/compose
           sed -e "s/^FINUANCE_VERSION=.*/FINUANCE_VERSION=${{ steps.v.outputs.version }}/" \
-              -e "s|^FINUANCE_PUBLIC_ORIGIN=.*|FINUANCE_PUBLIC_ORIGIN=http://localhost:8000|" .env.prod.example > .env
+              -e "s|^FINUANCE_PUBLIC_ORIGIN=.*|FINUANCE_PUBLIC_ORIGIN=http://localhost:8000|" \
+              -e "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 24)/" \
+              -e "s/^FINUANCE_OWNER_PASSWORD=.*/FINUANCE_OWNER_PASSWORD=$(openssl rand -hex 24)/" \
+              -e "s/^FINUANCE_APP_PASSWORD=.*/FINUANCE_APP_PASSWORD=$(openssl rand -hex 24)/" .env.prod.example > .env
           docker compose --env-file .env -f compose.prod.yaml up -d --wait
           curl -fsS http://localhost:8000/healthz
           # the api answers through nginx: an unknown login is a 401 problem

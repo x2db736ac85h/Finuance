@@ -243,7 +243,7 @@ print(f"{events}\t{first:.1f}\t{done:.1f}")
 podkill() {
   log "load while api and web pods are deleted and rolled"
   mkdir -p "$WORK/k6" && chmod 777 "$WORK/k6"
-  docker run --rm --network host -v "$PWD/$R:/scripts:ro" -v "$WORK/k6:/out" -e BASE_URL="$BASE" -e DURATION=90s \
+  docker run --rm --network host -v "$PWD/$R:/scripts:ro" -v "$WORK/k6:/out" -e BASE_URL="$BASE" -e DURATION=90s -e SKIP_TLS_VERIFY=true \
     "$K6_IMAGE" run --quiet --summary-export=/out/summary.json /scripts/podkill.js >"$WORK/k6/out.txt" 2>&1 &
   local k6=$!
   sleep 15

@@ -167,7 +167,7 @@ podkill() {
   # the password reaches k6 through the environment (-e NAME without a value), not the command line
   K6_EMAIL=$email K6_PASSWORD=$pass docker run --rm --network host \
     -v "$PWD/deploy/k8s/rehearsal:/scripts:ro" -v "$work/k6:/out" \
-    -e BASE_URL="$BASE" -e DURATION=90s -e VERIFY_TLS=true -e K6_EMAIL -e K6_PASSWORD \
+    -e BASE_URL="$BASE" -e DURATION=90s -e K6_EMAIL -e K6_PASSWORD \
     "$K6_IMAGE" run --quiet --summary-export=/out/summary.json /scripts/podkill.js >"$work/k6/out.txt" 2>&1 &
   local k6=$! pod
   sleep 15
