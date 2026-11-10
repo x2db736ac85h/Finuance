@@ -4,7 +4,9 @@
 
 | Document | What it covers |
 |---|---|
-| [Main README](../README.md) | What Finuance does, screenshots, key concepts, quick start, deployment, status |
+| [Main README](../README.md) | What Finuance is, the stack, quick start, design decisions, operations, testing |
+| [features.md](features.md) | Everything it does, the filter language, how duplicates are recognised |
+| [deploying.md](deploying.md) | Running a release with Docker Compose, demo mode, verifying images, the Kubernetes charts |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, backend packages, data model (ERD), row-level security, request flow, the web app |
 | [RUNBOOK.md](RUNBOOK.md) | Running it on Kubernetes: bootstrap (also on single-node k3s, step by step: TLS, GitOps, monitoring, scans, image admission), deploy, rollback, failed migrations, secrets, scaling, backups and restores, drills, playbooks |
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Assets, attackers, threats and the controls (with the tests that prove them), and the security scans |

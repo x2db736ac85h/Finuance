@@ -512,6 +512,44 @@ A phase can point the Argo CD apps at its branch (`targetRevision`) to try chang
    `main`): it follows `main` with auto-sync again, re-points the child apps at `main`, and their
    content is the same as before, so nothing restarts.
 
+## Moving to the public repository
+
+The repository's history is not published: it carries personal commit authors, links and the files
+that were removed before going public. `tools/publish-public.sh` puts one commit's tree into a new,
+empty repository as a single root commit, and the old repository stays private as the archive.
+
+```sh
+export PUBLISH_NAME=<handle> PUBLISH_EMAIL=<id>+<handle>@users.noreply.github.com
+export PUBLISH_PATTERNS=../finuance-env/private-patterns.txt   # personal terms, kept outside this repository
+tools/publish-public.sh --dry-run main                         # leaves a folder: read it
+tools/publish-public.sh main git@github.com:<owner>/<repository>.git
+```
+
+The script runs the exported tree's own guards (`check-private.sh`, `check-sealed.sh`, gitleaks when
+installed), fails on any term of the patterns file (it prints `file:line`, never the term), empties
+`.gitleaksignore`, commits as the given no-reply identity and refuses a remote that has any ref.
+
+Order, so the cluster never follows a repository that isn't there:
+
+1. Copy the Sealed Secrets controller key off the machine (*Back up the controller key* below).
+2. Pause the root app as in *Back to main after a phase*, step 1.
+3. Rename the old repository (it stays private) and create the new, empty, public one **with the old
+   name**: the Argo CD applications, the Go module path and the image names then stay as they are.
+4. Publish with the script. Move Argo CD's read-only deploy key to the new repository: delete it from
+   the old one (a deploy key belongs to one repository), print its public half with
+   `kubectl -n argocd get secret repo-finuance -o jsonpath='{.data.sshPrivateKey}' | base64 -d | ssh-keygen -y -f /dev/stdin`
+   and add it under *Settings → Deploy keys* (read-only).
+5. Apply the root app again (`kubectl apply -f deploy/k8s/argocd/root.yaml`). The tree is the one
+   the cluster already runs, so every app returns to `Synced` without a restart.
+6. Repository settings: a ruleset for `main` (pull requests, the CI jobs, no force pushes) and one
+   for `v*` tags, secret scanning with push protection, private vulnerability reporting, Dependabot
+   alerts, a read-only default token for Actions, approval for workflows of outside contributors.
+7. Packages: link `finuance-api` and `finuance-web` to the new repository; make them public once
+   the old image versions are deleted.
+
+If something private is found after publishing: delete the public repository (a force push leaves
+the old commits fetchable by id), fix the tree, and publish again.
+
 ## Rollback
 
 **Revert the pull request** that deployed the version and merge the revert. Argo CD rolls the Deployments back to the previous image.

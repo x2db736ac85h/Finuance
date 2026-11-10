@@ -2,7 +2,7 @@
 
 Thank you for your interest in Finuance!
 
-The project is in the middle of a planned rebuild (see the [status table](README.md#status)), so **pull requests are not accepted yet**: changes have to follow the phase plan in [docs/PLAN.md](docs/PLAN.md) and go through each phase's review. This will open up after the first release.
+Finuance is built phase by phase from a written plan ([roadmap](docs/ROADMAP.md)), so **pull requests are not accepted yet**: please open an issue first, and we can see where the change fits. This will open up with 1.0.
 
 What helps right now:
 

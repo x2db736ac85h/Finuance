@@ -80,6 +80,7 @@ check-env-details: ## Fail on private environment details (patterns from the pri
 check-private: ## Fail on account numbers, e-mail addresses, tailnet names, postcodes in test data, or files under testdata/private/
 	@tools/check-private.sh
 	@tools/check-private-test.sh
+	@tools/publish-public-test.sh
 
 .PHONY: check-no-float
 check-no-float: ## Fail on floating point in internal/money or the fingerprint path

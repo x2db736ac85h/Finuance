@@ -26,7 +26,7 @@ notes of their version.
 - **A NUL character in a request's text** (such as the sign-in e-mail) is answered
   `422 validation_failed` on every route instead of `500`.
 
-## [0.4.1]
+## [0.4.1] - 2026-11-09
 
 The assistant's model servers under the administrator's control, receipts that find the model that
 reads them, and the admin tools' port-forwards in one command.
@@ -57,7 +57,7 @@ reads them, and the admin tools' port-forwards in one command.
   models · time" or why the server can't be reached, and the panel says when the model is unloaded
   (its first answer takes a little longer).
 
-## [0.4.0]
+## [0.4.0] - 2026-11-08
 
 An assistant that acts with your consent and an undo, receipts by photo, goals, digests, an advice
 library, the assistant in the admin panel, personal access tokens and the `fin` command line.
@@ -145,7 +145,7 @@ library, the assistant in the admin panel, personal access tokens and the `fin` 
   D9), background digests (D5), sealed connection keys and the administrator's instructions (I17,
   T11), access tokens (S9, E7).
 
-## [0.3.0]
+## [0.3.0] - 2026-11-06
 
 Administrators, colour themes, cash accounts, friends, notifications and shared groups with
 settle-up.
@@ -192,7 +192,7 @@ settle-up.
 - Settings and Administration are centred beside their section list; Settings links to
   Administration for administrators, and back.
 
-## [0.2.0]
+## [0.2.0] - 2026-11-03
 
 Categories, rules and transfers, group reports, assistant actions, an activity log, demo mode, and
 what's needed to run Finuance on Kubernetes with observability and security scans.
@@ -259,7 +259,7 @@ what's needed to run Finuance on Kubernetes with observability and security scan
 - Trivy, govulncheck and `npm audit` at every severity before the release: nothing open apart from
   `golang.org/x/crypto` GO-2026-5932, which has no fix and isn't reachable ([docs/security-scan.md](docs/security-scan.md)).
 
-## [0.1.0]
+## [0.1.0] - 2026-10-23
 
 The first release: the single-file prototype rebuilt as a self-hosted, multi-user web application,
 with every feature of the prototype and a way to move its backups over.

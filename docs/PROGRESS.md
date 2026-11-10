@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 21 — Going public · **Branch:** `claude/wizardly-goodall-pu69jr` · **Status:** in progress (21.0–21.4 done; next the README, the publish script and the move to the public repository)
+**Current phase:** 21 — Going public · **Branch:** `claude/wizardly-goodall-pu69jr` · **Status:** in progress (21.0–21.6 done; next the move to the public repository, which only the maintainer can do)
 
 **Released:** `v0.4.1` (2026-11-09). Phases 0–20 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of those phases (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
 
@@ -37,8 +37,8 @@ Phase 21 — Going public (PLAN §9, regrouping note of 2026-11-09). Only what m
 - [x] 21.2 details that describe one person or machine: a store code and place names in samples and test strings replaced with invented ones (oracle and goldens follow); `check-private.sh` gains the e-mail, tailnet and postcode rules with `tools/check-private-test.sh`
 - [x] 21.3 documents: neutral wording ("the maintainer"), this lean PROGRESS and `docs/ROADMAP.md`; SECURITY.md's support policy; THREAT-MODEL I3 says what is open
 - [x] 21.4 security hotfixes: fail-closed defaults (`TestDefaults`), profiling behind `FINUANCE_PPROF` (`TestNoopTracingAndAdmin`), empty passwords in the production env template (the release smoke test generates them), `compose.prod.yaml` with its own subnet as the only trusted proxy range and a hardened `migrate`, the pod-kill script checks the certificate by default, Renovate pins actions and images by digest
-- [ ] 21.5 README rewrite (shorter, first person, the overview screenshot first, tech stack, design decisions, operations, roadmap, how it was built); `docs/features.md` takes the long feature list; CHANGELOG dates; CONTRIBUTING; issue templates
-- [ ] 21.6 `tools/publish-public.sh <ref> <empty-remote>`: every guard, one root commit by the no-reply identity, refuses a remote with refs, `--dry-run` tested in `make check`; references to pull-request numbers and commit ids that would dangle removed; `.gitleaksignore` emptied in the exported tree
+- [x] 21.5 README rewrite: about 1,700 words instead of 4,100, first person, the overview screenshot first, why it might interest you, tech stack, design decisions with their ADRs, operations with a Grafana screenshot, testing, roadmap, how it was built; the long feature list and key concepts moved to `docs/features.md`, deployment to `docs/deploying.md`; CHANGELOG release dates; CONTRIBUTING; issue templates (bug, bank layout); every relative link checked
+- [x] 21.6 `tools/publish-public.sh [--dry-run] <ref> [<empty-remote>]`: exports the tree, runs its guards (and gitleaks when installed), fails on a term of `PUBLISH_PATTERNS` without printing it, empties `.gitleaksignore`, one root commit by a no-reply identity, refuses a remote with refs; `tools/publish-public-test.sh` in `make check` (one commit, identity, no old objects or trailers on the remote, each refusal); a dry run on this repository passes; RUNBOOK "Moving to the public repository"
 - [ ] 21.7 the move (the maintainer): the current repository renamed and kept private, a new public one from the publish script, repository settings, Argo CD on the new URL, packages public
 - [ ] Gate (the maintainer): the exported tree read through, `make check`, `make test-integration` and E2E green, the quick start from a fresh clone
 
@@ -78,4 +78,4 @@ Not run in the session that did 21.1–21.4 (no Docker there): `make test-integr
 
 ## Session log
 
-- 2026-11-09 — Audit before going public (private data, security, first impression): no credentials and no serious flaw, but the history and a few files must not be published. Phase 21 regrouped to "going public" and 21.0–21.4 done: synthetic fixtures only, neutral wording, new guard rules, fail-closed defaults and the other security hotfixes. Next: the README (21.5), the publish script (21.6), then the move.
+- 2026-11-09 — Audit before going public (private data, security, first impression): no credentials and no serious flaw, but the history and a few files must not be published. Phase 21 regrouped to "going public" and 21.0–21.4 done: synthetic fixtures only, neutral wording, new guard rules, fail-closed defaults and the other security hotfixes. Then the README rewritten for readers new to the project (21.5) and the publish script with its tests (21.6). Next: the move (21.7), by the maintainer.
