@@ -12,20 +12,25 @@ What has shipped, what is being worked on and what comes later. The task list of
 | **0.4.0** | The assistant proposes changes you can apply and undo; goals; receipts by photo; digests; an advice library; personal access tokens and the `fin` command line |
 | **0.4.1** | Administrators switch model servers on and off, load and unload models and choose who picks the model |
 
+The repository became public in November 2026 with synthetic test data only and a README for people who are new to the project.
+
 ## Now
 
-**Going public.** Synthetic test data only, a README for people who are new to the project, and the move to a public repository.
+**Security first (0.4.2, then 0.5.0).**
+- Every dependency and image patched and pinned; a scan every day, not only when someone pushes; more checks in CI: CodeQL, dependency review, workflow linting, OpenSSF Scorecard; build provenance.
+- Only signed images run in the cluster, deployed by digest.
+- Telemetry that can't carry private data; limits at the ingress; two-step sign-in.
 
 ## Next
 
-**Phone and touch (0.5.0).** A bottom tab bar, a two-line transaction list, windows that fit small screens, and installing the app on a phone's home screen.
+- **Observability.** Logs collected and joined to traces, so one request can be followed from the browser to the background job.
+- **A traffic simulator (0.6.0).** Ten animal-named synthetic users on a lab instance, a separate service with a page to tune what they do. Their traffic is labelled by the server and can be shown or hidden everywhere.
+- **A cloud model for the assistant (0.7.0).** Google's Vertex AI with short-lived credentials, tried on synthetic data only; a local model stays the default.
+- **A lab on Google Cloud.** Terraform and GKE Autopilot, created and destroyed on demand.
 
 ## Later
 
-**1.0.**
-- More security checks in CI: CodeQL, dependency review, workflow linting, OpenSSF Scorecard.
-- Only signed images run in the cluster, deployed by digest.
-- A public demo with made-up data.
-- Write-ups of the parts worth explaining: the import pipeline and de-duplication, row-level security, the assistant's tools and undo, running it like production on one machine.
+- **A new interface that works on a phone (0.8.0).** Several design directions and prototypes first, then the build: a bottom tab bar, a two-line transaction list, windows that fit small screens, installing the app on a home screen.
+- **1.0.** A public demo with made-up data, and write-ups of the parts worth explaining: the import pipeline and de-duplication, row-level security, the assistant's tools and undo, running it like production on one machine, synthetic users, a cluster you can delete.
 
-**Ideas without a date** are in the backlog at the end of [PROGRESS.md](PROGRESS.md): currency conversion, per-month budgets with rollover, restoring a data export into a new instance, the CLI as an MCP server.
+**Ideas without a date** are in the backlog at the end of [PROGRESS.md](PROGRESS.md): currency conversion, per-month budgets with rollover, restoring a data export into a new instance, the CLI as an MCP server, passkeys.

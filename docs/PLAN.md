@@ -27,6 +27,28 @@
 
 ## Revision history
 
+### Rev 5 — 2026-11-16 · regrouping after going public
+
+The repository is public (the maintainer, 2026-11-16). An audit on that day (security scans of the
+pinned versions, the observability code, the deployment and assistant layers, the open backlog)
+and four decisions of the maintainer regroup everything after Phase 21. Security comes first, the
+new interface gets its own design-led phase, and the release is last:
+
+| Phase | Content |
+|---|---|
+| **22** (new) | Security I: the patches the audit found, everything pinned, the scanners of the old Phase 21 task 21.5, a daily scan, Renovate actually running, build provenance; `v0.4.2` |
+| **23** (new) | Security II: images by digest with signatures enforced, telemetry that can't carry private data, the assistant's cloud transport guard, limits at the ingress, two-step sign-in, THREAT-MODEL v3, the full scan with nothing ignored; `v0.5.0` |
+| **24** (new) | Observability: panics counted, logs correlated with traces and collected (Loki + Alloy), complete traces, the missing metrics, and a trusted marker for synthetic traffic |
+| **25** (new) | The traffic simulator: ten animal-named synthetic users on a lab instance, a separate service with its own tuning page; `v0.6.0` |
+| **26** (new) | Cloud AI: a Vertex AI connection for the assistant (short-lived tokens, no keys), on synthetic data only; `v0.7.0` |
+| **27** (new) | Google Cloud lab: Terraform and GKE Autopilot, brought up and destroyed on demand, synthetic data only |
+| **28** (was 22) | New interface and phone: design exploration with several directions and prototypes first, then the build; `v0.8.0` |
+| **29** (was 23) | Release 1.0: the public demo host, write-ups, screenshots, `v1.0.0` (its security tasks moved to Phases 22 and 23) |
+
+The decisions, the findings behind each phase and the task lists are in §9 (from
+[Phase 22](#phase-22--security-i-patches-pins-and-scanners--size-m) on) and in `docs/PROGRESS.md`.
+A map of the components as built is in `docs/COMPONENTS.md`.
+
 ### Rev 4 — 2026-11-03 · regrouping after Phase 18
 
 Phase 18 (homelab rollout) is complete. Before the public release, the maintainer wants more product
@@ -2081,7 +2103,10 @@ Write `docs/THREAT-MODEL.md` in Phase 5 and update it in Phase 16. Baseline cont
 | **M4 Product depth** | 15 Categories, rules, transfers, assistant actions, group reports (+ FX stretch) | Features the legacy app could not have |
 | **M5 Production** | 16 Deploy (Helm, CNPG, Argo CD, LLM endpoint) · 17 Observability, load, security · 18 Homelab rollout | Running on the homelab with GitOps, backups, monitoring and alerts (`v0.2.0`) |
 | **M6 Sharing and agents** | 19 Admin, themes, friends, shared groups · 20 Agentic assistant, advice library, CLI | Several people share expenses; the assistant can act (with consent and undo); agents use the app |
-| **M7 Public release** | 21 Privacy clean-up, security CI, signed images, public demo, docs | `v1.0.0` in a public repository + public demo |
+| **M7 Going public** | 21 Synthetic test data, neutral wording, fail-closed defaults, README | The repository is public |
+| **M8 Secure and observable** (Rev 5) | 22 Security I: patches, pins, scanners · 23 Security II: runtime, cluster, privacy, two-step sign-in · 24 Observability and the synthetic marker | Every known finding closed; signed images enforced; one request can be followed through logs, traces and jobs (`v0.5.0`) |
+| **M9 Lab and cloud** (Rev 5) | 25 Traffic simulator · 26 Cloud AI (Vertex AI) · 27 Google Cloud lab (Terraform, GKE) | A lab instance with ten synthetic users, also on GKE on demand, with a cloud model on synthetic data (`v0.7.0`) |
+| **M10 Interface and release** (Rev 5) | 28 New interface and phone · 29 Release 1.0 | A redesigned interface that works on a phone (`v0.8.0`), then `v1.0.0` with a public demo |
 
 Each phase below lists: **Goal · Size · Read first · Tasks · Acceptance criteria · Gate**. Tasks are ordered. Each numbered task should be its own commit, or a few commits.
 
@@ -3599,6 +3624,10 @@ the Backlog.
 > **Phase 22 — Phone and touch** and **Phase 23 — Release 1.0** (the rest of the tasks below:
 > security scanners in CI, signed images enforced, the demo host, write-ups, `v1.0.0`) are built in
 > the public repository. `docs/PROGRESS.md` has the task list.
+>
+> **Renumbered by Rev 5 (2026-11-16).** Phone and touch is now part of **Phase 28** and Release 1.0
+> is **Phase 29**; tasks 21.5–21.7 below (security in CI, the security documents, signed images
+> only) are done in **Phases 22 and 23**. The sections after this one are the current plan.
 
 **Goal:** a public repository and something a recruiter can click on, plus documents that make the
 engineering visible.
@@ -3681,6 +3710,1095 @@ private vulnerability reporting, packages made public).
 - [ ] The public demo works from a phone and a laptop; the 24 h cleanup is verified.
 - [ ] README reviewed by the maintainer; all write-ups present.
 - [ ] `v1.0.0` released with signed images and deployed via GitOps by digest, with signatures enforced.
+
+**Gate (the maintainer):** final review, then share the link.
+
+---
+
+### Rev 5 — the plan after going public (2026-11-16)
+
+Phases 22–29 below replace the remaining tasks of Phase 21 above. They were planned in one
+session from an audit of the tree at `4815f59` (the merge of Phase 21) and from the maintainer's
+answers. Each phase starts the usual way (`/phase-start NN`): read its section, check the facts
+marked *re-check* against the current state, propose the task breakdown, wait for approval.
+
+**Decisions of the maintainer (2026-11-16)**
+
+1. **Security first.** The repository is public, so everything security-related comes before any
+   other work: Phase 22, then Phase 23. Nothing else starts before both gates.
+2. **Order after that:** observability (24), the traffic simulator (25), cloud AI (26), the Google
+   Cloud lab (27), the new interface and phone (28), Release 1.0 (29).
+3. **The new interface is its own large phase** (28). It begins with brainstorming, several design
+   directions and prototypes; the build follows what is chosen. The phone work of the old Phase 22
+   is part of it.
+4. **The simulator runs against a separate lab instance**, never the instance with real data.
+5. **Cloud AI sees synthetic data only at first.** The instance with real data keeps its local
+   model. Opening a cloud model to real data later is a configuration change plus each user's
+   consent, and a separate decision.
+6. **The Google Cloud environment is an on-demand lab** with synthetic data only: created with
+   Terraform, destroyed after use. The public demo stays on a small VPS (decision of 2026-11-03).
+7. **Approved on 2026-11-17:** two-step sign-in with one-time codes (task 23.7), and the
+   dependency `golang.org/x/oauth2` for Google credentials (task 26.0).
+8. **Also on 2026-11-17:** sensitive detail (findings not yet fixed, anything about one machine)
+   lives in the private environment repository, and this plan says what to build. The history
+   keeps the old test fixtures (not real data as they stand; no rewrite). Backups on the same
+   disk are accepted for now, with the way to connect outside storage written down so that it can
+   be done on demand. The maintainer installs the Renovate app. The browser-error endpoint (24.8)
+   is approved.
+
+**Facts that move.** Versions, advisories, prices and cloud product details in these sections
+were found on 2026-11-16. Several come from search results, not from the vendor's page (the
+session could not reach every documentation host). Anything marked *re-check* must be confirmed
+against the vendor's current documentation before it is built on.
+
+**What the audit found, in one paragraph per area**
+
+- **Security.** Upstream security releases appeared after the last scan; the patches, a scan on
+  a schedule, automatic update pull requests, pinned references and the scanners planned for the
+  public release (CodeQL, dependency review, workflow linting, Scorecard) are Phase 22.
+- **Runtime.** Images by digest with signatures checked at admission, stricter handling of trace
+  context and of what telemetry may carry, a guard on the assistant's cloud transport, limits at
+  the ingress and a second factor at sign-in are Phase 23.
+- **The private register.** The detailed findings (a code review of 2026-11-06 with 54 entries and
+  this audit's notes) are kept in the private environment repository under `security/`, not here.
+  Tasks below cite its ids (`IMP-1`, `DB-4`, …). An agent working on Phases 22 and 23 needs that
+  repository attached; without it, ask the maintainer.
+- **Logging and tracing.** Metrics, SLO rules, alerts and the request → job → SQL trace are good
+  and well tested. Logs are the weak part: they are only on the containers' standard output, most
+  lines carry no trace id, and a request that panics is missing from the access log and from the
+  request counter, so it does not count against the availability objective. Details: Phase 24.
+- **Synthetic traffic.** Nothing marks it today. The Phase 17 and 18 load tests counted towards
+  the SLO numbers.
+- **Deployment.** The chart assumes Traefik and an Ingress, the Argo CD applications name the
+  homelab's files, and backups know only S3 credentials. The bootstrap needs a real superuser
+  (`ALTER FUNCTION pg_catalog.textlike … LEAKPROOF`), which rules out managed PostgreSQL.
+- **Assistant.** Two wire formats (OpenAI chat completions, Anthropic messages) with a static key.
+  No token source, no per-connection headers, model management written for Ollama and LM Studio.
+  Cloud consent per user and connection, and masking of long numbers, already exist.
+
+---
+
+### Phase 22 — Security I: patches, pins and scanners · Size M
+
+**Goal:** close every finding of the 2026-11-16 audit that lives in the repository and its
+pipelines, and make sure the next advisory is noticed within a day without anyone pushing a commit.
+
+**Read first:** `docs/security-scan.md`, `SECURITY.md`, `docs/THREAT-MODEL.md`, `.github/workflows/*.yml`,
+`renovate.json`, `Makefile` (the `check` targets), `tools/check-toolchain.sh`, `tools/bin-tools.sh`,
+Phase 21 tasks 21.1 and 21.5 above, ADR 0024.
+
+**Findings (2026-11-16; re-check every row at the start, versions move weekly)**
+
+| Component @ pin | Finding | Fixed in | Reachable here | Recorded before |
+|---|---|---|---|---|
+| Go standard library @ 1.27.3 | GO-2026-6859 (`net/http`, `MaxBytesReader`): crash of HTTP/1 servers; `govulncheck` reports it reachable (`middleware/headers.go` wraps every body) | 1.27.4 | yes; the CI `govulncheck` step fails on the next run | no |
+| Go toolchain @ 1.27.3 | GO-2026-6848 … 6858: build-time issues in `cmd/go` and cgo | 1.27.4 | no (`CGO_ENABLED=0`, own code only) | no |
+| PostgreSQL @ 18.6 | 18.7 of 2026-11-12, with fixes that touch row-level security (among them a check of `ON CONFLICT` target rows against policies, `DROP OWNED BY` and policies, a leakproof check) | 18.7 | yes: the design rests on RLS | no |
+| Grafana @ 13.3.0 (kube-prometheus-stack 92.16.1) | six CVEs fixed in 13.3.1 | chart with 13.3.1 | only through a port-forward | no |
+| Tempo @ 2.9.0 | GHSA-p4r4-xvrq-gvmc (memory exhaustion by query limits), GHSA-ffqx-q65f-36jf (not reachable: local storage) | 2.9.2 / 2.10.3 | from Grafana only | no |
+| Helm CLI @ 3.18.4 (CI, rehearsal) | three moderate advisories | 3.20.2 or newer | CI tool | no |
+| Node build image @ 22.22.0 | five security releases since | 22.23.x | build time only | no |
+| `golang.org/x/crypto` @ 0.58.0 | GO-2026-5932 (`openpgp`, not imported) | 0.59.0 (2026-11-11) | no | yes, now fixable |
+| `minimatch` @ 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 | 11.0.1, accepted by ESLint 10.15.0 and typescript-eslint 8.73.0 | no | yes, now fixable |
+
+Clean on that day: every other Go module, the npm production dependencies, `tools/legacy-oracle`,
+Traefik, Argo CD, cert-manager, CloudNativePG, Sealed Secrets, the four GitHub actions in use.
+Not run in the audit session (no Docker daemon): Trivy, gitleaks, ZAP and the image scans.
+
+Structural findings:
+
+- **No scan on a schedule.** `govulncheck`, Trivy and `npm audit` run on pushes and pull requests
+  only; `nightly.yml` fuzzes, `weekly.yml` runs ZAP and k6. An advisory published after the last
+  push is not seen. That is what happened in the week of 2026-11-09.
+- **Update pull requests.** `renovate.json` exists; the app has to be installed (the maintainer),
+  and its configuration extended to every kind of pin: the chart versions in
+  `deploy/k8s/argocd/apps/*.yaml`, the images in raw manifests, tool versions in workflow `env:`
+  blocks and in shell scripts, `K6_IMAGE` in the `Makefile`.
+- **References by tag.** Actions and several tool images are pinned by tag, not by digest. Tags
+  can be repointed (in March 2026 the tags of a widely used scanner action were).
+- **Workflow permissions** are wider than each job needs (register: `OPS-5`, `OPS-8`, `OPS-10`).
+- **Missing scanners** (confirmed absent by search): CodeQL, dependency review, zizmor, actionlint,
+  osv-scanner, OpenSSF Scorecard, SARIF upload, build provenance, `CODEOWNERS`.
+- **Left over from task 21.1:** `check-env-details` is not run in CI; no card-number pattern in
+  `check-private.sh`.
+
+**Tasks**
+
+22.0 **Re-run the audit's scans** on the current `main` (`govulncheck`, `npm audit` in `web/` and
+`tools/legacy-oracle/`, Trivy on the tree and on both images, gitleaks) and compare with the table
+above. Add what is new, drop what is gone. Check the newest patch release of each row.
+
+22.1 **The public repository's settings** (the maintainer; the agent prepares the checklist in
+`docs/RUNBOOK.md` → "Making the repository public" and verifies what the API shows):
+* a ruleset on `main`: pull request required, the CI jobs as required checks, no force push, no
+  deletion;
+* secret scanning with push protection, private vulnerability reporting, Dependabot *alerts*
+  (the dependency graph is already on);
+* Actions: read-only default token, approval required for workflows from first-time contributors,
+  and "allow Actions to create pull requests" only because `gitops-bump` needs it;
+* the stale branches deleted (45 besides `main` on 2026-11-16: `phase/*`, `deploy/*`, `fix/*`,
+  `chore/*`, `docs/*`, `revert-*`, `feat/*`, `claude/*`), each only after checking that it is
+  merged;
+* the packages public, then the `ghcr-pull` secret and `imagePullSecrets` removed from
+  `deploy/environments/homelab` (this closes the follow-up "renew the registry pull token");
+* the housekeeping list in the private repository's README (`finuance-env`: secrets, keys,
+  rotation) worked through.
+Record the result in `docs/PROGRESS.md`; this also closes task 21.7.
+
+22.2 **Patches** (one commit per component; `make check` and `make test-integration` after each):
+* **Go 1.27.4** (or newer): `backend/go.mod` (`toolchain`), `mise.toml`, the `golang` image and its
+  digest in `deploy/docker/Dockerfile.backend`; `tools/check-toolchain.sh` keeps the three equal.
+  *Done on 2026-11-17, ahead of the phase (it failed every CI run); check only for a newer patch.*
+* **`golang.org/x/crypto` 0.59.0** and `go mod tidy`.
+* **PostgreSQL 18.7:** `deploy/compose/compose.yaml`, `compose.prod.yaml` (and any other Compose
+  file that names the image), `imageName` in `deploy/k8s/db/values.yaml` (check that the
+  CloudNativePG operand image `18.7-standard-trixie` exists), the test image
+  (`PostgresImage` in `backend/testutil/postgres.go`). Read the 18.7 release notes: they ask for a reindex in some cases
+  and for a fresh base backup; write the steps for the homelab into `docs/RUNBOOK.md`
+  ("Upgrading PostgreSQL"). Run the whole RLS suite (`backend/internal/store/rls_test.go`) and the
+  property test of the de-duplication model on 18.7, since the fixes touch policies and
+  `ON CONFLICT`.
+* **ESLint 10.15.x and typescript-eslint 8.73.x** in `web/` so that `minimatch` moves to 11.x;
+  `npm audit` must report zero at every severity. Remove the follow-up "every pull request until
+  fixed" from `docs/PROGRESS.md` and update the entry in `docs/security-scan.md`.
+* **Node build image** to the newest 22.x (digest too) in `deploy/docker/Dockerfile.web`.
+* **Cluster third parties:** Tempo to a fixed 2.x (its digest in `deploy/k8s/tempo/tempo.yaml` and
+  in `deploy/k8s/admission/image-policy.yaml`), kube-prometheus-stack to a chart with Grafana
+  13.3.1 or newer (`deploy/k8s/argocd/apps/kube-prometheus-stack.yaml`; run
+  `tools/check-observability.sh` and the rules tests), the Helm CLI and the Trivy version in the
+  workflows and in `tools/rehearsal.sh`. k3s and Argo CD patch releases are the maintainer's, on
+  the machine.
+* Release **`v0.4.2-rc.1`**, deploy through the `gitops-bump` pull request, then **`v0.4.2`**.
+
+22.3 **Renovate running, and seeing everything.**
+* The maintainer installs the Renovate GitHub App on the repository (or says to use a self-hosted
+  workflow instead; ask). The first run must create the dependency dashboard issue.
+* `renovate.json`: `osvVulnerabilityAlerts: true`; security updates bypass `minimumReleaseAge` and
+  the Monday schedule (`vulnerabilityAlerts` with `schedule: ["at any time"]`); the `argocd`
+  manager for `deploy/k8s/argocd/apps/*.yaml`; the `kubernetes` manager for the raw manifests under
+  `deploy/k8s/`; `customManagers` (regex) for versions in workflow `env:` blocks, `Makefile`
+  (`K6_IMAGE`), `tools/bin-tools.sh` and `tools/rehearsal.sh`, each marked with a
+  `# renovate: datasource=… depName=…` comment above the line.
+* Validate with `renovate-config-validator` in CI (run through `npx` with a pinned version).
+* Acceptance: the dashboard lists every pin of the table in `docs/security-scan.md`
+  ("Pinned versions"), which this task adds and which names where each version is written.
+
+22.4 **Everything pinned.**
+* Every `uses:` by full commit SHA with the version in a comment (`actions/checkout@<sha> # v7.0.1`).
+* Every image the repository runs but does not build, by digest: `postgres` in Compose, Trivy, k6,
+  ZAP, the kind node image, any `busybox` or `curl` helper in manifests and scripts.
+* `tools/check-pins.sh` in `make check` and in the `guardrails` job: fails on a `uses:` without a
+  40-character SHA and on an `image:` or `FROM` without `@sha256:`, with an allowlist for the
+  images the repository builds itself (`finuance-*:dev`, `finuance-*:rehearsal`,
+  `ghcr.io/x2db736ac85h/finuance-*`, which Phase 23 pins by digest). A test script beside it
+  (`tools/check-pins-test.sh`), like `check-private-test.sh`.
+
+22.5 **Workflow hardening.**
+* `release.yml`: permissions per job (only the build job gets `packages: write` and
+  `id-token: write`; only `gitops-bump` gets `contents: write` and `pull-requests: write`); the
+  registry login reads the token from standard input, never from an argument.
+* `persist-credentials: false` on every checkout that does not push.
+* Trivy without the Docker socket: scan the image from a tarball (`docker save` → `trivy image
+  --input`) with a Trivy binary downloaded by version and verified by checksum, like gitleaks
+  already is.
+* `timeout-minutes` on every job; a `concurrency` group per workflow and ref.
+* **zizmor** and **actionlint** as a CI job, and in `make check` when the binaries are present;
+  fix or justify every finding (a `zizmor.yml` with reasons, no blanket ignores).
+
+22.6 **Code and dependency scanning.**
+* **CodeQL** (`.github/workflows/codeql.yml`): languages `go`, `javascript-typescript` and
+  `actions`; on pull requests, on pushes to `main` and weekly. Triage every alert: fixed, or
+  dismissed with a reason that is also written into `docs/security-scan.md`.
+* **Dependency review** on pull requests: fail on moderate or higher and on a licence outside an
+  allowlist (MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, 0BSD, Unlicense, CC0-1.0,
+  PostgreSQL; extend only with the maintainer's OK).
+* **osv-scanner** over `backend/go.mod`, `web/package-lock.json` and
+  `tools/legacy-oracle/package-lock.json`.
+* **Trivy results as SARIF** uploaded to code scanning (tree, both images, rendered charts).
+* **OpenSSF Scorecard** (`scorecard.yml`, weekly and on pushes to `main`, results published);
+  record the first score in `docs/security-scan.md` and fix what is cheap (pinned dependencies,
+  token permissions, branch protection are covered by 22.1, 22.4 and 22.5).
+* **trufflehog** over the whole history once (verified secrets only); gitleaks stays the gate.
+
+22.7 **A daily scan that tells someone.** `.github/workflows/daily-scan.yml`, once a day:
+`govulncheck`, `npm audit` (both lockfiles), osv-scanner, and Trivy against the **released** image
+digests of the newest release tag (what is running, not what is in the tree). On a finding the job
+fails and opens or updates one issue labelled `security-scan` (`issues: write` for that job only);
+it closes the issue when a later run is clean. `workflow_dispatch` takes an optional image
+reference so that the alert path can be proven once with a known vulnerable image.
+
+22.8 **Build provenance.** The release workflow attests SLSA build provenance for both images
+(`actions/attest-build-provenance`, pinned by SHA) next to the SBOM attestation. `SECURITY.md` and
+`docs/deploying.md` show the two verification commands (`cosign verify` with the workflow identity,
+`gh attestation verify`). The release smoke test runs both.
+
+22.9 **Repository hygiene.** `.github/CODEOWNERS` (the maintainer owns `.github/`, `deploy/`,
+`tools/`, `api/`, `backend/internal/store/migrations/`); `SECURITY.md` names the supported
+versions, how to verify an image and what a reporter can expect; `check-private.sh` gains a
+card-number rule (13–19 digits passing the Luhn check, outside the documented test numbers) with a
+case in `check-private-test.sh`; `check-env-details` runs in CI when its patterns are available
+from a repository secret and is skipped, visibly, on pull requests from forks.
+
+22.10 **Node 26 LTS** (the follow-up with the deadline 2027-04-30): CI's `node-version`,
+`Dockerfile.web`, `mise.toml`, and the two upload tests that fail on it. If the tests need more
+than a day, stop, keep Node 22, and move this task to Phase 24 with what was learned.
+
+22.12 **First fixes from the private register** (a fix branch from `main`, small and covered by
+tests; details and reproduction notes are in the register, not here). Start by marking every
+register row *fixed*, *open* or *not applicable* against the current `main` (some were closed in
+Phase 21, for example the sign-up and profiling defaults).
+* `IMP-1`, `IMP-6`: resource limits in the import parser, with golden and fuzz tests.
+* `API-4`: bounds on every money input (schema and table checks, a `422` instead of a `500`).
+* `AI-1` (first half), `WEB-2`: which proposal kinds may apply by themselves; a proposal without
+  its target is refused.
+* `OPS-5` (first half, the maintainer): a ruleset for `v*` tags and a required reviewer on the
+  release environment.
+* `DB-4`, `IMP-2`: statement, lock and idle-in-transaction timeouts set in one place.
+These ship in `v0.4.2`. If one of them needs a security advisory for people running a release,
+draft it privately on GitHub and publish it with the fix.
+
+22.13 **Sealed secrets leave the public repository.** The `*.sealed.yaml` files and the Argo CD
+application that reads them move to the private overlay (ADR 0023 gets an update;
+`tools/seal-secrets.sh`, `tools/check-sealed.sh`, the rehearsal and `deploy/environments/homelab`
+follow; the public tree keeps templates and the README that explains the flow). The maintainer
+rotates the values on the machine (the list is in the private README). The rehearsal keeps
+proving the sealing round trip with throw-away values.
+
+22.14 **The web image build fails clearly** when a native optional package is missing after
+`npm ci` (seen once in CI on 2026-11-17: the install skipped it without an error): check for it
+before `vite build`, with one retry of the install.
+
+22.11 **Documents.** `docs/security-scan.md`: a section dated with the day of the scan, every
+finding of the table above with its decision, the "Pinned versions" table of 22.3, and the wording
+that still says "Phase 21" for signatures corrected to Phase 23. `CHANGELOG.md`, `docs/PROGRESS.md`.
+
+**Acceptance criteria**
+- [ ] `govulncheck`, `npm audit` (every severity), osv-scanner and Trivy (HIGH and CRITICAL) are clean on `main`; `.trivyignore` is empty.
+- [ ] Code scanning shows no open alert, or each open one has a written dismissal.
+- [ ] `tools/check-pins.sh` passes; zizmor and actionlint pass.
+- [ ] The Renovate dashboard exists and lists the pins of every kind named in 22.3.
+- [ ] The daily scan has opened an issue for a deliberately vulnerable image and closed it again.
+- [ ] `v0.4.2` is released with provenance and runs on the homelab.
+
+**Gate (the maintainer):** the repository settings of 22.1 checked by hand; the new section of
+`docs/security-scan.md` read; one Renovate pull request merged the normal way.
+
+**Not in this phase:** signature enforcement and deploying by digest (Phase 23); anything in the
+application's code beyond dependency updates.
+
+---
+
+### Phase 23 — Security II: runtime, cluster and privacy hardening · Size L
+
+**Goal:** what runs is what was built and signed; no telemetry path can carry private data; the
+assistant's cloud transport can't be turned against the instance; signing in can require a second
+factor; and a full scan at every severity ends with nothing ignored.
+
+**Read first:** ADR 0024 (image admission), ADR 0020 (the model server's address), ADR 0011
+(sessions), ADR 0012 (rate limits), ADR 0021 (audit log), ADR 0036 (access tokens),
+`docs/THREAT-MODEL.md`, `deploy/k8s/admission/image-policy.yaml`, `deploy/helm/finuance/templates/`,
+`tools/bump-homelab-tag.sh`, `.github/workflows/release.yml`, `backend/internal/observability/`,
+`backend/internal/httpapi/middleware/`, `backend/internal/jobs/telemetry.go`,
+`backend/internal/llm/http.go`, `deploy/docker/nginx.conf`, `backend/internal/auth/`.
+
+Three pull requests into `main`, each with full CI and the maintainer's OK.
+
+*PR 1 — signed images, by digest*
+
+23.1 **Deploy by digest.** The chart takes `image.api.digest` and `image.web.digest`; when set,
+the image is rendered as `repository@sha256:…` and the tag is ignored (`_helpers.tpl`,
+`values.schema.json`, `tools/check-helm.sh` renders both forms). The release workflow passes the
+pushed digests to `gitops-bump`; `tools/bump-homelab-tag.sh` writes tag and digest. `check-pins.sh`
+(22.4) then requires a digest in every environment's values.
+
+23.2 **Signatures enforced** (the follow-up of ADR 0024). Sigstore policy-controller with one
+`ClusterImagePolicy` for the project's images: keyless, issuer
+`https://token.actions.githubusercontent.com`, subject the release workflow on a version tag (the
+identity `release.yml` already verifies). It applies to the namespaces `finuance` and
+`finuance-restore`; the registry allowlist of the `ValidatingAdmissionPolicy` stays as the first
+check. *Re-check* the current policy-controller version, its resource needs on one node and how
+it behaves when the registry or Rekor can't be reached (fail closed, with a documented way to roll
+back). An Argo CD application in an early wave; the kind rehearsal installs it and proves both
+directions: an unsigned copy of the image is refused, the released one is admitted. The homelab
+rollout is the maintainer's. Update ADR 0024 or write its successor, and remove "Phase 21" from
+`image-policy.yaml`'s comment.
+
+*PR 2 — private data stays out of telemetry; the transport and the edge*
+
+23.3 **Trace context from clients is not trusted.**
+* The API is a public endpoint: an inbound `traceparent` must not decide sampling or the trace id.
+  Start a new root span and keep the client's context only as a span link
+  (`otelhttp.WithPublicEndpoint()` or the equivalent in the pinned version; *re-check*).
+* Only the W3C trace context is propagated; baggage is not (nothing reads it). Phase 24 carries
+  the synthetic marker a different, trusted way.
+* Tests: a request with forged `traceparent` and `baggage` gets its own trace id, and nothing a
+  client sent in those headers is stored with the job it enqueues.
+
+23.4 **No user text in spans or logs.**
+* A test with an in-memory span exporter records which attributes `otelhttp` and `otelpgx` set on a
+  request to `GET /duplicates?q=…` and on a failing query. Whatever carries the query string, the
+  user agent or error text with values is dropped or replaced (a span processor or the
+  instrumentation's filter options). `client.address` stays out of spans; the access log already
+  has the client address.
+* PostgreSQL errors: log the SQLSTATE, the constraint and the table, never `Detail` or the
+  statement (a helper in `store` or `platform` that every `request failed`, job and assistant error
+  line goes through). A unique-violation detail contains the conflicting value.
+* The slow-query log: `log_parameter_max_length = 0` and `log_parameter_max_length_on_error = 0`
+  in `deploy/k8s/db/values.yaml` and in the Compose files, so `log_min_duration_statement` can't
+  write bound values (amounts, payees) into the database's log.
+* nginx (`deploy/docker/nginx.conf`): an explicit `log_format` with `$uri` (never `$request` or
+  `$args`), status, sizes, timing and the request id; `X-Request-ID` is passed to the API so one id
+  covers both hops.
+* One helper for the hashed user id in logs (8 bytes everywhere; the assistant's run line uses 6
+  today).
+* **A canary test for the assistant rule** ("never log prompts, model output or tool results"):
+  run a chat against `llmmock` with marker strings in the question, in the model's answer and in a
+  transaction the tool returns; capture every log line and every span; none of the markers may
+  appear. Until now the rule was kept by convention only.
+
+23.5 **The cloud transport guard** (needed before Phase 26; register: `AI-3`, `AI-7`). A cloud
+connection may only reach public addresses: refuse loopback, private, link-local and carrier-grade
+NAT destinations at dial time (the inverse of the local guard, same place in `llm/http.go`), and
+treat link-local as not private for local connections; follow no redirect to another host and
+never carry a key across hosts; require TLS 1.2 or newer. Tests for each refusal, including a DNS
+name that resolves to a private address. ADR 0020 gets a note: its `0.0.0.0/0:443` rule for cloud
+providers is replaced in Phase 26.
+
+23.6 **Limits at the ingress.** The application's limiters are per replica and in memory
+(ADR 0012, an accepted risk). Add optional Traefik middlewares to the chart: a rate limit per
+client address for `/api/v1/auth/` (strict) and for the rest (generous), and a cap on requests in
+flight per address. Off by default, on in `deploy/environments/demo` (Phase 29) and documented for
+any instance reachable from the internet. The rehearsal proves that a burst gets `429` at the
+ingress and that normal use, the k6 smoke profile and streamed answers are not affected.
+
+*PR 3 — two-step sign-in*
+
+23.7 **A second factor (TOTP).** *Approved by the maintainer on 2026-11-17.*
+A finance application on a public repository with password-only sign-in is the largest remaining
+product gap (THREAT-MODEL lists "no MFA" as accepted). Time-based one-time passwords (RFC 6238)
+need no new dependency: HMAC-SHA1 from the standard library.
+* Schema: one row per user with the secret sealed under the instance key (package `secret`, the
+  user id as associated data), the confirmation time, the last accepted time step (a code can't be
+  used twice), and ten recovery codes stored as hashes. Outside RLS like `sessions`, every query by
+  `user_id`.
+* API (`api/openapi.yaml`, session only, never with an access token): start enrolment (returns the
+  secret and an `otpauth://` URI), confirm with a code, disable (password and a code), new recovery
+  codes; sign-in returns "second step required" and a short-lived, single-purpose challenge, and a
+  second request with the code completes it. Limits: five attempts per challenge, a limiter per
+  user. Codes are compared in constant time, one step of clock drift either way.
+* Administrators: an instance setting "administrators must use two-step sign-in"; an administrator
+  can remove another user's second factor (an audit event for both, like a password reset);
+  `finuance admin` gets the same for the locked-out last administrator.
+* Access tokens are not affected (they are created inside a signed-in session; ADR 0036 gets a
+  paragraph). Demo users can't enrol.
+* Web: Settings → Security (enrol with the secret as text and as a QR code drawn without a new
+  dependency, or as text only if that is not small; recovery codes shown once), the second step on
+  the sign-in page. Audit events for enrol, disable, recovery code used, failed second step.
+* Tests: RFC 6238 vectors, replay, drift, recovery codes used once, the limiter, the
+  token-routes golden file; E2E for enrol → sign out → sign in with a code → sign in with a
+  recovery code; axe on the new screens.
+* A new ADR. Passkeys (WebAuthn) need a library and stay in the backlog with a note.
+
+*Closing the phase*
+
+23.10 **The rest of the private register.** Every row ends as done, moved to the backlog with a
+reason, or accepted in THREAT-MODEL with its context. Grouped (ids in the register):
+* accounts and sessions: `API-1`, `SYS-4`, `WEB-1`;
+* between users: `API-2`, `API-3`, `API-5` to `API-8`, `DB-2`, `DB-6`;
+* the assistant: `AI-1` (server side), `AI-2`, `AI-4` to `AI-6`, `AI-8`, `AI-9`, `AI-10`;
+* imports and jobs: `IMP-3` to `IMP-5`, `IMP-7`, `IMP-8`;
+* the database: `DB-1`, `DB-3`, `DB-5`, `DB-7`, `OPS-6`;
+* the cluster and delivery: `OPS-1`, `OPS-4`, `OPS-5` (second half), `OPS-9`, `OPS-10`;
+* the edge and the web app: `OPS-2`, `OPS-7`, `WEB-3`, `WEB-4`, `API-9` to `API-11`, `OPS-11`.
+Several overlap tasks above (23.2, 23.4, 23.5, 23.6); do them there and tick the row.
+
+23.8 **THREAT-MODEL v3:** the public repository (pull requests from forks, the supply chain, what
+22.x controls), the admission chain, trace context and telemetry as a data path, the cloud
+transport, the second factor, and a place-holder boundary for the lab and for cloud models that
+Phases 25–27 fill in. `SECURITY.md` for the 0.5 line.
+
+23.9 **The full scan with nothing ignored** (the old acceptance criterion of Phase 21): Trivy at
+every severity on the tree, the images and the rendered charts; `govulncheck`; `npm audit`;
+osv-scanner; CodeQL; ZAP baseline and active scan; OpenVAS and an outside port scan against the
+homelab (the maintainer, `tools/openvas-scan.sh`). Every finding fixed or decided in
+`docs/security-scan.md`. Release **`v0.5.0`** (rc first), deployed by digest with signatures
+enforced.
+
+**Acceptance criteria**
+- [ ] The rehearsal refuses an unsigned image and admits the signed release; the homelab runs by digest.
+- [ ] The canary test, the forged-trace test and the span-attribute test pass; the slow-query log shows no parameter values.
+- [ ] A cloud connection can't reach a private, loopback or link-local address, also through a redirect.
+- [ ] Two-step sign-in works end to end, with recovery codes and the administrator's reset.
+- [ ] The full scan is recorded with no ignored finding.
+- [ ] Every row of the private register is done, in the backlog with a reason, or accepted in THREAT-MODEL.
+
+**Gate (the maintainer):** enrol a second factor and sign in with it; watch the rehearsal refuse an
+unsigned image; read THREAT-MODEL v3.
+
+**Considered and left out:** composite foreign keys on `(user_id, id)` so that the schema itself
+refuses a reference to another user's row (today `ledger/owned.go` checks it in the same
+transaction, `docs/ARCHITECTURE.md` → "What RLS does not cover"): a schema-wide migration with
+real risk for little gain while the guard test and the RLS suite hold; in the backlog. Argo CD
+sign-in through an identity provider: still only when its UI is reachable beyond a port-forward.
+
+---
+
+### Phase 24 — Observability: correlated logs, complete traces, the synthetic marker · Size M
+
+**Goal:** from any one request id you reach its log lines, its trace and the job it started; logs
+are collected and searchable; and traffic made by synthetic users is labelled by the server itself,
+so that it can be shown or left out everywhere.
+
+**Verdict of the audit (what is good enough and stays):** route-pattern labels and bounded
+cardinality; the SLO recording rules, burn-rate alerts and their `promtool` tests; trace
+propagation from request to job to SQL with its three tests; SQL text kept out of spans; the admin
+port with profiling off by default; the `/readyz` design; the drift guards (`TestMetricNames`,
+`tools/check-observability.sh`); the tests that keep secrets out of the access log; the audit log.
+What follows are the gaps.
+
+**Read first:** §8.2, Phase 17 above, `docs/SLO.md`, `docs/RUNBOOK.md` (monitoring),
+`backend/internal/observability/`, `backend/internal/httpapi/middleware/` and `server.go` (the
+chain), `backend/internal/jobs/telemetry.go`, `backend/internal/assistant/metrics.go` and `run.go`,
+`backend/internal/llm/http.go`, `deploy/k8s/observability/`, `deploy/k8s/tempo/`,
+`deploy/compose/compose.observability.yaml`, ADR 0021, ADR 0025.
+
+**Tasks**
+
+24.1 **Panics are counted** (a bug). `Recover` is the outermost layer and `Logging` and `Metrics`
+record after `next.ServeHTTP` returns, without `defer`. A panicking request therefore gets the
+`panic` log line but no access-log line and no `http_server_requests_total` increment: it never
+burns the availability budget. Record in a `defer` in both layers (status 500 when nothing was
+written), set the span's status to error, add `finuance_panics_total` and an alert on any increase.
+Test: a handler that panics yields one access line with `status=500`, one `5xx` count, one span
+with error status and the 500 problem response.
+
+24.2 **Every log line can be joined to its trace.**
+* A `slog.Handler` wrapper in `observability` adds `trace_id` and `span_id` from the context's
+  span to every record. Today only the access line has `trace_id`; `request failed`, panic, job and
+  assistant lines have none, because the request logger is created before the tracing layer.
+* Every call site logs with its context (`InfoContext`, …); `sloglint` (part of golangci-lint)
+  enforces it.
+* Jobs: a River middleware puts a logger with `job_id`, `kind` and `attempt` into the context;
+  today job lines fall back to the default logger and carry none of them.
+* The assistant's run line uses the context logger; `finuance migrate` logs through `slog` too.
+* The field contract (`time, level, msg, request_id, trace_id, span_id, user, route, method,
+  status, bytes, duration_ms, client_ip, job_id, kind, attempt, traffic`) is written down in a new
+  `docs/observability.md` and checked by a test. §8.2 is corrected to the names the code uses
+  (`user`, not `user_id`; the import metrics' `kind` and `retried`).
+
+24.3 **Probes are quiet.** `/healthz` and `/readyz` are on the main port inside the whole chain, so
+every kubelet probe is logged and traced at 100 %. Skip tracing for them (the instrumentation's
+filter) and log them at debug level.
+
+24.4 **Complete traces.**
+* A client span around each request to the model server (`llm.request`: connection, model, round,
+  time to first byte, token counts when the server reports them, error kind) **without** sending
+  `traceparent` to the model server. Attribute names follow the OpenTelemetry GenAI conventions
+  where they exist (*re-check*: still in development in November 2026); prompt and answer text is
+  never an attribute (the canary test of 23.4 covers the new span).
+* `assistant.tool` sets error status when the tool fails.
+* Resource attributes: `deployment.environment.name`, `service.instance.id`, the pod and namespace
+  (a chart value `otel.resourceAttributes` from the downward API; `extraEnv` only accepts
+  `FINUANCE_*` names).
+* Sampling: `FINUANCE_OTEL_SAMPLE_RATIO` (default `1`), parent-based below the public endpoint.
+
+24.5 **Missing metrics, and one wrong filter.**
+* `finuance_llm_request_duration_seconds{connection}` and
+  `finuance_llm_time_to_first_token_seconds{connection}` (§8.2 lists the first; it was never
+  built), `finuance_llm_tokens_total{connection,direction}` from reported usage.
+* `finuance_rate_limited_total{limiter}` and `finuance_auth_failures_total{reason}` (bounded
+  reasons).
+* Exemplars: the HTTP duration histogram records the trace id (`ObserveWithExemplar`, OpenMetrics
+  on the metrics handler); Prometheus stores exemplars and Grafana links them to Tempo.
+* The assistant dashboard and `FinuanceAssistantModelErrors` filter `job="finuance-api"`, so the
+  worker's digest runs are not watched: match both jobs.
+* `deploy/k8s/observability/metrics.txt`, the dashboards and the rules tests follow.
+
+24.6 **Logs are collected** (§9 task 17.1 planned Loki and Alloy; neither was deployed, and no
+deviation was recorded). Loki as a single binary with file-system storage and 14 days of
+retention, and Grafana Alloy as the collector, both as Argo CD applications with NetworkPolicies,
+digests and entries in the admission policy. **Traces go through Alloy too** (OTLP in, Tempo out):
+one place to drop attributes as a second line of defence, and the place where Phase 27 adds a
+second destination; a separate OpenTelemetry Collector is not needed at this size. Grafana: a Loki
+data source with a derived field from `trace_id` to Tempo, Tempo's "trace to logs" back to Loki,
+log panels on the API and jobs dashboards. Compose: the `otel-lgtm` container already has Loki;
+ship the containers' logs to it in `compose.observability.yaml`. Measure what the two cost on the
+reference machine and keep them switchable (Appendix H: the homelab may be too small). This task
+comes after 23.4 on purpose: logs are only collected once they are known to be clean. A new ADR
+(log and trace pipeline).
+
+24.7 **The synthetic marker.** Phase 25 needs it; it is observability, so it is built here.
+* **Who is synthetic is a fact about the user, decided by the server**, never a request header:
+  a header could be set by anyone to hide from the SLO numbers. Migration: `users.kind`
+  (`person`, the default, or `synthetic`). Only `finuance admin synthetic-users` sets it
+  (Phase 25), and only on an instance started with `FINUANCE_SIMULATION=true`.
+* The session and token layer copies it into the request's `Info`. From there: `traffic=synthetic`
+  on the access line, the span attributes `finuance.synthetic=true` and
+  `user_agent.synthetic.type=test`, and a `traffic` label (`real`, `synthetic`) on
+  `http_server_requests_total`, the duration histogram and the job and assistant counters.
+  Requests without a user (sign-in, probes) are `real`.
+* Jobs: the marker is written into River job metadata at enqueue (from the server's own context,
+  not from a header) and read by the worker.
+* Rules and dashboards: the SLO recording rules count `traffic!="synthetic"` unless the chart
+  value `slo.includeSynthetic` is set (the lab sets it); every dashboard gets a `traffic` variable.
+* Guard rails on the kind: a synthetic user can't be an administrator, can't become friends with a
+  person (and the other way round), is counted separately in Administration → Usage and carries a
+  badge in Administration → Users; on an instance without `FINUANCE_SIMULATION` a synthetic user
+  can't sign in.
+* Tests: no header, cookie or body field changes the label; a job enqueued by a synthetic user is
+  labelled; the SLO rules ignore synthetic errors (`promtool`); the friend-code refusal.
+* A new ADR (synthetic users). `users.is_demo` stays as it is; merging the two flags into one
+  column is noted in the backlog.
+
+24.8 **The browser's errors are visible** (approved 2026-11-17).
+* Error messages show the problem's `requestId` ("Reference: …", copyable); today a user who sees
+  "Internal error" has nothing to quote.
+* An error boundary around the routes, and `window.onerror` / `unhandledrejection` handlers that
+  post to `POST /api/v1/client-events`: the kind, the error's name, the route pattern and the
+  application version. No message text, no URL with a query, at most 1 KiB, limited per address.
+  The server counts `finuance_client_errors_total{kind}` and writes one line. The CSP's
+  `report-to` points at the same endpoint. The CSP stays `connect-src 'self'`.
+
+24.9 **Small operations items from the backlog:** a `profiling` chart value for `FINUANCE_PPROF`
+(and the Compose comment that contradicts its default); a dead-man's switch: Alertmanager's
+`Watchdog` alert also goes to a heartbeat URL outside the machine, kept in a sealed secret
+(*the maintainer chooses the service, or says no*), which answers the backlog item "an alert path
+that survives an outage of the machine itself".
+
+24.10 **Documents.** `docs/observability.md` (the signals, the field contract, "following one
+request": request id → log lines → trace → job, how to show or hide synthetic traffic in Grafana,
+Loki and Tempo); `docs/ARCHITECTURE.md` brought up to the current system (it still says "after
+Phase 11") with `docs/COMPONENTS.md` as its map; `docs/SLO.md`; `docs/RUNBOOK.md`.
+
+**Acceptance criteria**
+- [ ] A panic appears in the access log, in the 5xx counter and in an alert.
+- [ ] From a request id, Grafana shows the request's log lines, its trace and the job's lines and spans.
+- [ ] Logs of api, worker, web and the database are in Loki with 14 days of retention.
+- [ ] A synthetic user's requests and jobs are labelled in logs, metrics and traces, and no client input can set or clear the label.
+- [ ] `make check`, `make test-integration`, `tools/check-observability.sh` and the rehearsal pass.
+
+**Gate (the maintainer):** a Grafana walk-through: one failed import followed from the toast's
+reference to the job's trace.
+
+---
+
+### Phase 25 — The traffic simulator: ten animals on a lab instance · Size L
+
+**Goal:** a separate service that plays about ten active users, each with a name, a character and
+habits, against a lab instance through the same front door a browser uses, so that dashboards,
+logs and traces always have realistic traffic to show. A page of its own tunes who is active, what
+they do and how much. Everything it causes is labelled synthetic by the server (24.7).
+
+**Read first:** Phase 24 task 24.7 and its ADR, `api/openapi.yaml` (the path list),
+`backend/internal/client/gen/` and `backend/internal/fincli/` (the generated client and how it
+authenticates), ADR 0036 (access tokens), ADR 0012 (rate limits), `backend/internal/demo/`,
+`loadtest/`, `backend/testutil/llmmock/`, `docs/perf.md` (the load tests), `docs/SLO.md`,
+`deploy/helm/finuance/templates/networkpolicy.yaml`, `deploy/k8s/admission/image-policy.yaml`,
+`deploy/k8s/rehearsal/`.
+
+**Design decisions** (to be recorded in a new ADR; change one only with the maintainer's OK)
+
+1. **Go, not k6.** Personas keep state (their accounts, the last statement they imported), think
+   between actions, run for days and take orders from a control API. The generated client covers
+   all 155 operations and is importable inside the module, so this needs no new dependency. k6
+   stays the tool for load and breaking-point tests (`loadtest/`, `docs/perf.md`); k6 2.x also removed
+   the externally controlled executor a tuning page would have needed (*re-check*).
+2. **A separate binary and image**, `backend/cmd/finuance-sim` → `finuance-sim`, with its code in
+   `backend/internal/sim/`. The production image stays free of it. It is deployed with its own
+   small chart (`deploy/helm/finuance-sim`) into its own namespace.
+3. **Through the front door.** The simulator calls the lab's public address (ingress → nginx →
+   API), not the API's service, so the whole path is exercised and no NetworkPolicy has to open.
+4. **The lab is an instance that says so.** A new setting `FINUANCE_SIMULATION` (default `false`).
+   Only with it: synthetic users can exist and sign in, `GET /meta` reports `simulation: true`,
+   and the web app shows a "Lab" chip in the title bar. The simulator refuses to start against an
+   instance whose `/meta` does not report it. It can therefore never be pointed at the instance
+   with real data by mistake.
+5. **Personas authenticate like people, then like scripts.** Each signs in once with a session
+   (cookie, `X-Finuance-Client: web`, the `Origin`), creates its own access token with the `write`
+   scope (`POST /me/tokens` is session-only) and uses the token from then on: one sign-in per
+   persona per start, not one per action (each sign-in writes a session row and an audit event).
+   On start it revokes its earlier `sim-*` tokens (25 live tokens per user is the limit).
+6. **No secret travels between the instance and the simulator.** Both get one random seed
+   (`FINUANCE_SIM_SEED`, a secret). `finuance admin synthetic-users` on the instance and the
+   simulator both derive each persona's password from it (HKDF-SHA256 over the persona's name).
+   `finuance-sim password <animal>` prints one, so that the maintainer can sign in as an animal
+   and look at its screens.
+7. **Hard ceilings in the code**, not only in the page: at most 50 personas, a maximum action rate
+   per persona, at most one assistant run at a time across all personas (the API allows two per
+   replica and they would starve each other), back-off on `429` and on five consecutive `5xx`.
+   The page can't turn the simulator into a denial-of-service tool.
+8. **The model behind the lab's assistant is the mock** (`llmmock`, published as an image for the
+   lab only) unless a real connection is configured there; Phases 26 and 27 add a cloud model with
+   a daily cap on questions.
+
+**The animals** (defaults in `backend/internal/sim/personas.go`; e-mail `<name>@sim.invalid`)
+
+| Animal | Character | Mostly does |
+|---|---|---|
+| Otter | the tidy one | imports each new month in its first days, categorises everything, keeps rules in order, opens the overview daily |
+| Owl | the analyst | long periods, every insight chart, searches and filters with the filter language, CSV exports |
+| Badger | the budgeter | budgets and goals, the pace chart, changes limits at the start of a month |
+| Magpie | the collector | groups for every trip, bulk selection and labelling, group reports and the timeline |
+| Heron | the sharer | friends by code, shared groups with Magpie and Badger, expenses, settling up, notifications |
+| Hedgehog | cash only | a cash account, expenses typed in by hand, edits and deletions, receipts by photo |
+| Fox | the one who asks | questions to the assistant, applies and reverts proposals, asks for a digest |
+| Squirrel | the hoarder | two banks, overlapping exports, deleting and importing again, the duplicates window |
+| Mole | the rare visitor | signs in once a week, looks at the overview, sometimes mistypes the password |
+| Sloth | slow and clumsy | broken files, abandoned previews, stopped answers, validation errors: the 4xx traffic |
+
+Each persona has weights over the action catalogue, active hours (a daily curve in the instance's
+time zone, switchable off), a think-time distribution and its own random stream seeded from its
+name, so a run can be repeated.
+
+**The action catalogue** (`backend/internal/sim/actions/`, one file per feature area). An action
+declares its name, its feature area, a cost class (light, heavy, model), the state it needs and
+whether it makes the server recompute categories (those are paced). Areas and examples:
+
+| Area | Actions |
+|---|---|
+| table | a window with a sort, a filter expression, a search, distinct values, an id range |
+| insights | the six charts for a period; the overview |
+| imports | upload a fresh statement → preview → sometimes change the mapping → commit → poll; an overlapping statement; delete and import again; abandon a preview |
+| labels | category, note or group on one row and on many |
+| groups | create, rename, timeline, report |
+| rules and categories | a rule from a suggestion, preview, apply; create and merge categories (rare) |
+| budgets and goals | set, change, read |
+| duplicates | list, prefer one import, keep both, clear |
+| cash | add, edit, delete a hand-typed transaction; attach a receipt |
+| assistant | ask (reading the stream to its end), stop half-way, apply a proposal, revert a change, request a digest |
+| friends and sharing | make and redeem a friend code, create a shared group, invite, accept, add an expense, settle, leave |
+| account | preferences, notifications read, data export (rare), a failed sign-in, an unknown path |
+
+**Statements on demand** (`backend/internal/sim/statements/`). A persona's bank history is a pure
+function of the persona and the calendar day (the random stream is re-seeded per day from the
+persona's name and the date), so any date range reproduces the same rows and overlapping ranges
+de-duplicate exactly as real overlapping exports do. `internal/demo` can't be reused as it is: its
+stream restarts at the start of the requested range. Two layouts (the Pekao-like one of
+`internal/demo` and an mBank-like one) so that detection and saved profiles are exercised; salary,
+rent, subscriptions and transfers between a persona's two accounts so that recurring payments and
+transfer detection have something to find. All merchants are invented and the files must pass
+`tools/check-private.sh`. Every upload is byte-unique (the API answers `409` to a known file).
+**The data calendar can run faster than the clock** (`clockRate`: one day per minute at most), so
+personas reach month ends and imports often; when a persona's calendar reaches today it continues
+in real time, or deletes its account and starts again three years back (which exercises the
+cascade).
+
+**The control API and the tuning page**
+
+* The simulator listens on one port for its control API, its page and its own `/metrics`.
+  The contract is `api/sim.openapi.yaml`, with a generated server and generated TypeScript types
+  like the main API (the "never edit generated code" rule and `make gen` cover them).
+* It is **not published through the ingress**: a ClusterIP service reached by `make observe`
+  (one more port-forward, `tools/check-port-forwards.sh` updated). Because any page in the same
+  browser can reach a port-forward (THREAT-MODEL D10), the API still requires a control token
+  (a secret, compared in constant time) and the `X-Finuance-Client` header and `Origin` check the
+  main API uses.
+* Endpoints: the state (running or paused, the target, each persona's current action, counters,
+  last error); the configuration (get, replace with a version check, reset to defaults); start,
+  pause, stop; "act now" for one persona and one action; a server-sent stream of recent actions
+  (time, animal, action, status, duration, request id, trace id).
+* Configuration: which animals are active and how many (1 to the ceiling), a global intensity
+  (0 to 3×), each feature area on or off, weights per action, overrides per animal, active hours
+  on or off, the clock rate, the daily cap on assistant questions, a share of deliberate mistakes.
+  Presets: *quiet day*, *month end*, *assistant heavy*, *import flood*, *error storm*. The
+  configuration lives in memory; defaults come from the chart's values, and the page can export
+  the current one as values.
+* The page (`web/sim/`, a second Vite entry that reuses `web/src/ui/`, the theme tokens and the
+  lint rules; built into its own bundle and embedded in the `finuance-sim` image): a header with
+  the target, the state and the intensity; one card per animal (on or off, what it is doing, a
+  small activity bar); the feature and weight matrix; schedule and limits; the presets; the live
+  feed, where each line's request id can be copied and each has links to the logs and the trace
+  in Grafana. The same CSP as the main app.
+
+**Being easy to spot**
+
+* Server side, trusted: the `traffic=synthetic` label, span attributes and log field of 24.7,
+  because every animal is a `synthetic` user.
+* Client side, informative only: `User-Agent: finuance-sim/<version> (<animal>)` and request ids
+  that start with `sim-<animal>-`.
+* The simulator's own metrics: `finuance_sim_actions_total{persona,action,result}`,
+  `finuance_sim_action_duration_seconds{action}`, `finuance_sim_active_personas`,
+  `finuance_sim_paused`, `finuance_sim_config_generation`; a Grafana dashboard "Simulator" (actions
+  per minute by animal and by area, errors, latency seen by the client next to the server's).
+
+**Tasks**
+
+25.1 The ADR, `FINUANCE_SIMULATION` (config, `/meta`, the "Lab" chip, sign-in refused for
+synthetic users without it), `finuance admin synthetic-users -count=N -seed-stdin` (idempotent,
+refuses without the setting), the THREAT-MODEL entries (the simulator pointed at the wrong
+instance; the control API; the seed).
+
+25.2 The statement generator with its tests: the same day is identical in any range; two
+overlapping ranges import to the same transactions as one covering range (through the real import
+pipeline in an integration test); every file passes `check-private.sh`.
+
+25.3 The engine: personas, the scheduler (with a fake clock in tests), the ceilings, back-off,
+sign-in and token handling, discovery of a persona's state from the instance at start (the
+simulator stores nothing itself).
+
+25.4 The action catalogue, area by area, each action with an integration test against the real
+API with PostgreSQL and the in-process mock model. **A coverage test** runs every action once and
+asserts that each succeeded and that each request it made was labelled synthetic in the access log
+and in the metrics.
+
+25.5 `api/sim.openapi.yaml`, the control API, the simulator's metrics and its own access log.
+
+25.6 The tuning page, with unit tests and a Playwright suite (`web/e2e/sim/`): change a weight,
+pause, "act now", the feed shows the request id; axe on the page in every theme.
+
+25.7 `llmmock` fit for days of use and for an image: its request history becomes a bounded ring
+(it grows without limit today), then the images `finuance-sim` and `finuance-llmmock` in
+`Dockerfile.backend` and in the release workflow (built, scanned, signed, attested like the two
+others). The admission policy names exact image repositories per namespace: the `finuance`
+namespace admits only `finuance-api` and `finuance-web`, the lab's namespaces also the two new
+ones.
+
+25.8 The lab stack on one machine: `make sim-up` (a Compose profile with the lab instance, the
+mock model, the simulator and the observability stack), `make sim-down`, `make sim-password
+ANIMAL=fox`. The Compose fix from the backlog comes with it (nginx re-resolves the API's address
+after the API container is recreated).
+
+25.9 The lab on Kubernetes: `deploy/environments/lab/` (a second release of the main chart in
+`finuance-lab` with `FINUANCE_SIMULATION`, sign-up off, one small database instance, the mock
+model, `slo.includeSynthetic`), `deploy/helm/finuance-sim` (one replica, restricted Pod Security,
+default-deny NetworkPolicies with egress only to DNS and the lab's address, metrics for
+Prometheus), the hook job that creates the animals. The kind rehearsal gains a stage: five minutes
+at 3× intensity with no `5xx`, then a check that the SLO rules of a mixed instance did not count
+it. Running the lab on the homelab is optional and the maintainer's choice (it needs memory for a
+second database); Phase 27 runs it on GKE.
+
+25.10 The k6 load test: its users become synthetic users (so a load test no longer burns the SLO
+budget of the instance it runs against), k6 moves to 2.x (*re-check* the script against the
+removed features), and `loadtest/README.md` says which tool is for what.
+
+25.11 Documents: `docs/simulator.md` (what it is, the animals, running it, tuning it, finding its
+traffic, what it must never be pointed at), `docs/observability.md`, the RUNBOOK, the README's
+operations section, `CHANGELOG.md`; release **`v0.6.0`**.
+
+25.12 **A day in the lab.** Run all ten animals for 24 hours on the Compose lab. Every `5xx` and
+every unexpected `4xx` is a finding: fix it or file it. Measure the overview and the duplicates
+window with the animals' data; the backlog items "cache the month aggregates" and "the duplicates
+window's first render" are decided on these numbers. Record the run in `docs/perf.md`.
+
+**Acceptance criteria**
+- [ ] The simulator refuses an instance without `FINUANCE_SIMULATION`, and such an instance refuses synthetic users.
+- [ ] The coverage test runs every action; each feature area of the table is exercised.
+- [ ] In Grafana, the `traffic` variable separates the animals from everything else; Loki and Tempo find them by one label; the SLO numbers of a mixed instance ignore them.
+- [ ] A change on the tuning page takes effect within five seconds; "Fox, ask now" appears in the feed with a request id that leads to its log lines and trace.
+- [ ] 24 hours with ten animals: no unexplained `5xx`; memory of the simulator and of the mock stays flat.
+- [ ] `make check`, `make test-integration`, the E2E suites and the rehearsal pass.
+
+**Gate (the maintainer):** an evening with the page: switch presets, sign in as an animal, follow
+one action to its trace.
+
+---
+
+### Phase 26 — Cloud AI: a Vertex AI connection for the assistant · Size M
+
+**Goal:** the assistant can use models on Google Cloud (Gemini and the open models offered through
+the same endpoint) with short-lived credentials and no stored key, measured with the existing eval
+suite, on synthetic data only.
+
+**Scope decision (2026-11-16):** synthetic data only. This phase changes no default, ships no
+connection, and leaves the instance with real data on its local model. A cloud connection still
+needs `cloud: true`, and with it each user's consent and the masking of long numbers, as today.
+
+**Read first:** §4.8, ADR 0015, ADR 0020, ADR 0035, `docs/assistant.md`, `docs/evals.md`,
+`backend/internal/llm/` (all of it), `backend/internal/assistant/connections.go`, `stored.go`,
+`run.go`, `caps.go`, `backend/internal/config/ai.go`, `backend/testutil/llmmock/`, Phase 23 task
+23.5, `docs/THREAT-MODEL.md` (B4, I7, I18).
+
+**What was found (2026-11-16, all *re-check*: this product changes monthly)**
+
+- Vertex AI (renamed "Gemini Enterprise Agent Platform" in 2026; hosts and paths unchanged) has an
+  **OpenAI-compatible endpoint**:
+  `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/openapi`,
+  to which the client appends `/chat/completions`. Gemini models are named `google/<id>`, open
+  models `publisher/model-maas`. Streaming, tool calls, image input and structured output are
+  documented for Gemini; tool calling of each open model is not confirmed. This fits the existing
+  `openai` client.
+- **Authentication is an OAuth2 access token that lives about an hour**, not a key. The client has
+  only a static key today (`llm/openai.go`, `anthropic.go`: the header is fixed when the client is
+  built). API keys bound to a service account exist, but Google warns about them and they are not
+  accepted everywhere; they are not used.
+- **Claude on Vertex is not the Anthropic wire format unchanged:** the model is in the URL
+  (`…/publishers/anthropic/models/{model}:streamRawPredict`), the body carries `anthropic_version`
+  (`vertex-2023-10-16`) and no `model`, and the header is a bearer token.
+- **Data terms.** On an account without invoiced billing, prompts may be logged for abuse
+  monitoring (up to about 30–90 days) unless an exception is granted; a 24-hour in-memory cache is
+  on by default at project level; the `global` location gives no control over where data is
+  processed, a regional or EU multi-region location does. These are the reasons for the scope
+  decision.
+- **Models and prices** of that day, as a starting point for the evals only: a small, cheap model
+  with tools and vision (`gemini-3.5-flash-lite`, about 0.30 USD per million input tokens) and a
+  step up (`gemini-3.8-flash`). Model ids are configuration, never code.
+- Budgets in Google Cloud alert; they do not stop spending.
+
+**Tasks**
+
+26.0 **The dependency** (approved by the maintainer on 2026-11-17): `golang.org/x/oauth2`, with its
+`google` package, for the token sources below. Credential handling is the code not to write twice,
+and the Go team maintains it. Add it with `go get`, check what it pulls in (`go mod graph`), run
+`govulncheck` and dependency review on the result, and name the approval in the pull request.
+The modules it brings along (list them in the pull request) are covered; any other new module
+needs its own question.
+
+26.1 **A token source in `llm`.** `llm.Config` gains an optional source of the `Authorization`
+value, asked per request; the static key becomes one implementation of it. The Google
+implementation finds credentials the standard way (workload identity on GKE through the metadata
+server; a developer's own login for local runs; an external-account file for a cluster outside
+Google), caches the token and renews it before it expires; a `401` forces one renewal and one
+retry. The token is never logged and never a span attribute (extend the canary test of 23.4).
+
+26.2 **The connection knows how it authenticates.** `config.AIConnection` and the stored
+connection (`ConnectionSpec`, a migration) gain `auth` (`key`, the default, or `google`) and, for
+`google`, `project` and `location`; the base address is derived from them unless given. Validation:
+`auth: google` requires `cloud: true` and `https`; the host must be one of Google's API hosts for
+this service (`{location}-aiplatform.googleapis.com`, `aiplatform.googleapis.com`,
+`aiplatform.{multi-region}.rep.googleapis.com`), so a bearer token can't be sent anywhere else by
+a wrong address or a redirect (23.5 already refuses redirects to other hosts). `location` has no
+default of `global`: it must be chosen, and the documents recommend an EU location.
+
+26.3 **A cloud endpoint is not a local model server.** For `auth: google`: no probing for
+LM Studio or Ollama beside the base address (`openai.go` does it on `Models()` today); the model
+list is the connection's own `models` list when the endpoint has none; load, unload and keep-warm
+answer "not applicable" instead of an error in Administration → Assistant; capabilities come from
+overrides, which connections stored in the panel can't carry yet (`stored.go`), so add them there;
+`caps.go` learns the Gemini names for vision and for reasoning effort.
+
+26.4 **Real token counts and a budget per connection.** Send `stream_options.include_usage` so
+that a streamed answer reports its usage (without it the daily budget runs on an estimate of
+characters divided by four). `finuance_llm_tokens_total{connection,direction}` (24.5) uses it.
+A new limit per connection, tokens per day across all users, because a cloud model's cost falls on
+whoever runs the instance: refused with the existing `limit_reached` problem and shown in
+Administration → Assistant. *Re-check* whether the endpoint accepts request labels for cost
+attribution through the OpenAI format; use them if it does (the instance's name, never a user).
+
+26.5 **Consent says who and where.** The consent dialog and the "cloud" badge name the provider
+and the location from the connection ("Google Cloud, Vertex AI, europe-west…"), with one sentence
+on retention from the instance's settings (an administrator's text). The system prompt's "a
+private, self-hosted app" (`assistant/prompt.go`) is worded neutrally for cloud connections.
+`docs/features.md` and THREAT-MODEL B4/I7 keep their promise and gain the provider boundary: what
+leaves, what is masked, what the provider may keep.
+
+26.6 **Tests without Google.** `llmmock` gains a Vertex mode: the long path, bearer tokens that
+expire (a `401` after a configurable time), no model list. A fake metadata server for the token
+source. Tests: renewal before expiry, one retry after `401`, concurrent requests share one
+renewal, the host allowlist, the guard of 23.5 with `auth: google`, model management answers.
+
+26.7 **Evals on synthetic data.** `make eval-assistant CONNECTION=vertex MODEL=…` from the
+maintainer's machine with their own Google login, against the demo data, for two or three models;
+receipts too. `docs/evals.md` gains the results next to the local models, with latency and the
+measured cost of one run. This is also the backlog item "evals on candidate models".
+
+26.8 **Documents.** A new ADR (cloud model providers: how a connection authenticates, token
+sources, the host allowlist, the location rule, the budget; it replaces ADR 0020's
+`0.0.0.0/0:443`), `docs/assistant.md` → "Using a cloud model" (the Google project, the role
+`roles/aiplatform.user`, choosing a location, asking for the abuse-logging exception, switching
+the cache off, a budget alert), THREAT-MODEL (the provider boundary, token theft through the
+metadata address, cost exhaustion), `CHANGELOG.md`; release **`v0.7.0`**.
+
+26.9 *(stretch, own pull request)* **Claude on Vertex:** a variant of the `anthropic` client for
+`auth: google` (model in the path, `anthropic_version` in the body, bearer header, the streaming
+path), with a mock mode and the same evals.
+
+**Acceptance criteria**
+- [ ] The eval suite completes against a Gemini model on Vertex with no Google key stored anywhere.
+- [ ] A token is renewed without a failed request; it appears in no log line and no span.
+- [ ] A `google` connection can't send its token to a host outside the allowlist.
+- [ ] The budget per connection stops runs; the dashboard shows tokens per connection from reported usage.
+- [ ] No default changed: an instance without a cloud connection behaves exactly as before.
+
+**Gate (the maintainer):** read the data-terms section of `docs/assistant.md`; run one eval; look
+at the cost in Google Cloud's billing report.
+
+**Later, as separate decisions:** a cloud model for the instance with real data (needs a token
+source from a cluster outside Google: a workload identity pool that trusts the cluster's service
+account issuer, with the key set uploaded); stronger masking than long numbers; keys per user
+(in the backlog, and more interesting once a cloud model exists).
+
+---
+
+### Phase 27 — Google Cloud lab: Terraform and GKE Autopilot on demand · Size L
+
+**Goal:** `make gcp-up` builds a complete lab on Google Cloud from nothing (network, cluster,
+identities, the lab instance, the simulator, monitoring, the Vertex AI connection),
+`make gcp-down` removes all of it, and nothing with a cost is left behind. Synthetic data only.
+
+**Read first:** Phase 16, `docs/RUNBOOK.md`, ADR 0022, ADR 0023, ADR 0024, Phases 25 and 26,
+`deploy/helm/finuance/` (every template), `deploy/k8s/db/`, `deploy/k8s/argocd/`,
+`deploy/environments/homelab/`, `tools/rehearsal.sh`, `tools/seal-secrets.sh`,
+`tools/check-env-details.sh`.
+
+**Decisions** (a new ADR; the facts are of 2026-11-16 and *re-check*)
+
+| Question | Decision | Why |
+|---|---|---|
+| Cluster mode | **GKE Autopilot**, one zonal-fee cluster, Spot pods for everything but the database | Pods are billed by their requests, the management fee is covered by the free-tier credit for one cluster, and Shielded nodes, workload identity and Dataplane V2 (NetworkPolicy enforcement) can't be switched off. Estimate: a few US cents per hour while up, nothing for compute when destroyed |
+| Database | **CloudNativePG, one instance**, backups to a Cloud Storage bucket through the Barman Cloud plugin with workload identity | The same manifests as the homelab. Cloud SQL is ruled out: the bootstrap's `ALTER FUNCTION pg_catalog.textlike … LEAKPROOF` needs a real superuser, without it search loses its index under RLS; it also costs while idle |
+| Front door | **Gateway API** (GKE's gateway controller), a certificate from Certificate Manager, a Cloud Armor policy | The chart only knows Ingress with Traefik annotations; Gateway API support is also the direction for every other cluster. The policy admits only the maintainer's addresses and the cluster's own outbound address (the simulator comes in through the front door) and limits rates |
+| Secrets | **Secret Manager**, synced into the cluster by GKE's add-on (*re-check* Autopilot support; otherwise External Secrets Operator), values generated by Terraform as write-only so they are in neither git nor the state | Sealed Secrets are tied to one cluster's key; a cluster that is created and destroyed has a new key each time |
+| Google APIs from pods | **Private Google Access** with a private DNS zone, so that `*.googleapis.com` resolves to the four addresses of `private.googleapis.com` and the NetworkPolicy allows exactly that range on 443 | A plain NetworkPolicy can't name a host; FQDN policies on GKE are a non-standard resource and their tier is unclear |
+| GitOps | **Argo CD**, installed by Terraform in a second step, reading the same repository | The same delivery path as the homelab. The applications become per environment |
+| Tooling | **Terraform** (written so that OpenTofu runs it too), the `hashicorp/google` provider pinned, hand-written resources, no large module | One cluster does not need a module that changes its major version several times a year |
+| Access | The cluster's API through its DNS endpoint with IAM, private nodes, no public node addresses | No allowlist of addresses to maintain for `kubectl` |
+| Out of scope | Real data, the public demo, running all the time, Cloud SQL, more than one region, registering the homelab cluster with Google, a tailnet operator (not supported on Autopilot) | The decision of 2026-11-16 |
+
+**Tasks**
+
+27.1 **The chart learns a second kind of cluster** (useful beyond Google):
+* `gateway.enabled`: `HTTPRoute`s for `/` and `/api/` instead of the Ingress; HSTS as a response
+  header filter; nothing Traefik-specific rendered. For GKE: the `Gateway`, a `HealthCheckPolicy`
+  on `/readyz`, a `GCPBackendPolicy` with the Cloud Armor policy and a **backend timeout longer
+  than the assistant's** (the default of 30 seconds would cut streamed answers).
+* NetworkPolicy: ingress sources by address range (Google's front ends and health checks, the
+  load balancer's proxy subnet), database egress by range as an alternative to the CloudNativePG
+  selector, egress to the metadata server for workload identity, egress to the Google API range.
+  `trustedProxies` for the same ranges.
+* ServiceAccount annotations as a value (workload identity).
+* `deploy/k8s/db`: the `ObjectStore` accepts Google credentials by workload identity next to S3
+  keys, and the cluster's service account template carries the annotation.
+* The storage class of Tempo and Loki as a value (it is `local-path` in the manifests today).
+* `tools/check-helm.sh` renders the GKE values; kubeconform gets the Gateway API schemas.
+
+27.2 **Argo CD applications per environment.** `deploy/k8s/argocd/apps/` names the homelab's
+files in every application. Move to one directory per environment (`envs/homelab`, `envs/gke-lab`)
+or an ApplicationSet (its controller is switched off in the homelab's values today); the homelab's
+rendered result must not change (`check-helm.sh` compares). The private overlay (ADR 0023) gets a
+`gke-lab` file for what must not be public: the host name, the project id in annotations and
+bucket names.
+
+27.3 **Terraform** in `deploy/terraform/`:
+* `modules/network` (VPC, subnet with secondary ranges, the proxy-only subnet, Cloud NAT with one
+  static address, Private Google Access and the private DNS zone), `modules/cluster` (Autopilot,
+  the regular release channel, the DNS endpoint, private nodes, Gateway API, a node service
+  account with the minimal role), `modules/identities` (IAM for the Kubernetes service accounts by
+  workload identity: `roles/aiplatform.user` for the lab's API and worker, object access on the
+  backup bucket for the database's account), `modules/edge` (the address, the certificate, the
+  Cloud Armor policy), `modules/secrets`, `modules/budget` (a budget with alerts at 5, 10 and
+  20 USD).
+* `envs/lab/infra` and `envs/lab/bootstrap` as two roots (the second installs Argo CD and the root
+  application through the Helm provider; it is destroyed first).
+* State in a Cloud Storage bucket (versioned, no public access) whose name is passed at `init`
+  (`backend.hcl`, not committed). Nothing that identifies the project is committed:
+  `terraform.tfvars.example` with placeholders, `*.tfvars` and `backend.hcl` in `.gitignore`,
+  `tools/check-env-details.sh` extended for project ids and numbers.
+* Versions of Terraform, the provider and tflint in `mise.toml` and pinned in CI; Renovate sees
+  them (22.3).
+
+27.4 **Terraform in CI, without cloud credentials for strangers.** On every pull request:
+`terraform fmt -check`, `validate`, tflint, `trivy config` on the directory, and `terraform test`
+with mocked providers for the modules (no call to Google). `plan`, `apply` and `destroy` exist
+only as a manually started workflow in a GitHub environment that requires the maintainer's
+approval, authenticated by workload identity federation (`google-github-actions/auth`, pinned by
+SHA; the provider's condition on the numeric repository and owner ids, never on names). No service
+account key exists.
+
+27.5 **`make gcp-up`, `make gcp-down`, `make gcp-verify-empty`.** Up: infra, bootstrap, wait for
+Argo CD, the smoke scripts through the gateway. Down: bootstrap, then infra. Verify-empty lists
+what would still cost (disks, addresses, load balancers, buckets other than the state) and fails
+when it finds any. A scheduled workflow (off until the maintainer enables it) opens an issue when
+the lab has been up for more than 24 hours.
+
+27.6 **The lab on GKE:** `deploy/environments/gke-lab/` (the lab values of 25.9 plus the Google
+specifics), the simulator, the monitoring stack without node-exporter (Autopilot forbids host
+access; node metrics come from Google), Loki, Tempo and Alloy as on the homelab so that every
+dashboard works unchanged, the admission policy for the new namespaces, policy-controller (23.2)
+on Autopilot (*re-check*). Stretch: Alloy also sends traces to Google's OTLP endpoint, and the
+JSON log fields Google's logging expects (`severity`, the trace field) are added behind a setting.
+
+27.7 **Vertex AI in the lab:** the connection of Phase 26 with `auth: google` by workload
+identity, an EU location, the simulator's daily cap on Fox's questions, tokens and errors on the
+assistant dashboard. The first complete cloud path: an animal asks, a Google model answers.
+
+27.8 **Security of the environment:** Pod Security `restricted` as everywhere; default-deny
+NetworkPolicies with the new ranges and an **egress** probe in the smoke test (a pod can't reach
+the internet; the rehearsal only probes ingress today); the Cloud Armor policy proven from an
+address outside the allowlist; Google's security posture findings triaged; `trivy config` on the
+Terraform with no HIGH finding; no key of any service account exists (checked by a script).
+
+27.9 **The rehearsal against a real cluster.** `tools/rehearsal.sh` gets a target mode: skip
+creating kind and installing Traefik, run the smoke scripts, the streamed answer through the
+gateway, the NetworkPolicy probes, the pod-kill test and **backup → restore from the bucket**.
+
+27.10 **Small robustness items from the backlog** that a cluster starting from nothing needs: the
+API and the worker retry their first database connection instead of restarting once.
+
+27.11 **Documents.** `docs/gcp.md` (what it creates, the prerequisites the maintainer does by
+hand once: a project, billing, the state bucket, the identity pool for CI; up and down; what it
+cost, taken from the billing report of the gate session), the ADR, the RUNBOOK, THREAT-MODEL (the
+cloud environment and its identities), `docs/COMPONENTS.md`.
+
+**Acceptance criteria**
+- [ ] From nothing to green smoke tests with `make gcp-up`, in a measured and recorded time.
+- [ ] Ten animals run for an hour on GKE; one of them gets an answer from a model on Vertex AI; dashboards, logs and traces show it.
+- [ ] The restore from the bucket passes.
+- [ ] After `make gcp-down`, `make gcp-verify-empty` finds nothing; the session's cost is recorded.
+- [ ] No project id, key or address of the environment is in the repository (`check-env-details`); no service account key exists.
+
+**Gate (the maintainer):** up, look around, down, alone with `docs/gcp.md`.
+
+---
+
+### Phase 28 — New interface and phone · Size XL (was Phase 22, "Phone and touch")
+
+**Goal:** an interface designed on purpose, for a phone as much as for a desk, chosen from
+several directions the maintainer has seen and tried. The interface today is the legacy
+prototype's, ported faithfully (§7.1); that was the right goal for parity and is not the goal now.
+
+**How this phase works.** It is design-led and planned in detail when it starts. The stages below
+are fixed; their contents come out of each stage's review with the maintainer.
+
+**A — Understand (no code).** What is good and what hurts in today's interface, per screen (the
+table, import, the overview, insights, the assistant, Shared, settings, administration); which
+devices and situations matter (a phone in a shop adding a receipt; a desk reconciling a month);
+what must survive (the keyboard map of §7.11, the theme contract of ADR 0026 and its WCAG AA
+check, the strict CSP, accessibility as in `docs/a11y.md`). Two decisions that are cheap now and
+expensive later are taken here: **interface languages** (Polish is in Appendix J) and whether the
+legacy class names and the verbatim legacy CSS stay.
+
+**B — Directions.** Three clearly different design directions (for example: a denser desk-first
+tool; a calm card-based layout that folds to a phone; a phone-first layout with a bottom bar that
+grows to a desk), each as a clickable prototype of the same five flows on a phone and on a desk
+width, fed with the animals' data from the lab (Phase 25). The maintainer tries them and says
+what to keep from each.
+
+**C — One design.** The chosen direction worked out: navigation, the table on a narrow screen (a
+two-line list), windows and menus that fit small screens, tokens and spacing, the component
+changes, motion, empty and error states. An ADR. Screens in every built-in theme and mode.
+
+**D — Build**, screen by screen behind a setting until complete, each with its tests: the old
+Phase 22 scope (a bottom tab bar, the two-line list, windows that fit, installable on a home
+screen without offline data) inside the new design.
+
+**E — Prove.** The E2E suite at phone and desk sizes, touch included; axe on every screen, theme
+and mode; the performance budgets of §7.12 on a mid-range phone profile; screenshots; release
+**`v0.8.0`**.
+
+**Backlog items that belong here:** a thinking toggle next to the question field; the duplicates
+window's first render of many groups; a cheaper first render for the Vitest files that time out.
+
+**Gate (the maintainer):** after B (choose), after C (approve the design), and at the end on
+their own phone.
+
+---
+
+### Phase 29 — Release 1.0 · Size M (was Phase 23)
+
+**Goal:** `v1.0.0`, a public demo and documents that make the engineering visible.
+
+What remains of the Phase 21 task list above after Phases 22 and 23 took its security work:
+
+* **The demo environment** (21.8): `deploy/environments/demo/` on a small VPS with single-node
+  k3s (decision of 2026-11-03; revisit only with Phase 27's measured costs in hand), demo mode,
+  the assistant off, the ingress limits of 23.6 on, images by digest with signatures enforced,
+  its own THREAT-MODEL section, a daily smoke test of the public address, `security.txt`.
+* **A full scan against the demo** at every severity with nothing ignored, and an outside port
+  scan.
+* **Write-ups** (21.11), with two new candidates: "Synthetic users: a simulator you can leave
+  running" and "A cluster you can delete: Terraform, GKE Autopilot and workload identity".
+* **Screenshots** in every theme of the new interface, a recording of the assistant (21.12).
+* Final `PARITY.md`, `ARCHITECTURE.md`, README, `CHANGELOG.md`; tag **`v1.0.0`** (21.13).
 
 **Gate (the maintainer):** final review, then share the link.
 
@@ -3948,7 +5066,7 @@ Template `docs/adr/0000-template.md`:
 
 ### Appendix J — Backlog (not scheduled)
 
-* OIDC login (Authentik/Keycloak/Zitadel); WebAuthn passkeys.
+* OIDC login (Authentik/Keycloak/Zitadel); WebAuthn passkeys. *(A second factor by one-time code: Phase 23; passkeys stay here, they need a library.)*
 * Household sharing (multiple users per account with roles). *(Phase 19 shares groups of expenses between friends instead; shared accounts stay here.)*
 * Manual transactions and split transactions; attachments (receipts). *(Manual cash expenses and splits in shared groups: Phase 19; receipts: Phase 20.)*
 * Budgets per month with rollover; savings goals. *(Goals: Phase 20.)*
@@ -3963,6 +5081,6 @@ Template `docs/adr/0000-template.md`:
 * Import from email attachments, e.g. an n8n workflow posting statements to `POST /imports`, with an API token. *(API tokens: Phase 20.)*
 * Anomaly alerts (unusual spend, new subscription detected), email/ntfy notifications. *(In-app notifications: Phase 19; assistant digests: Phase 20.)*
 * Re-import of `GET /me/export` archives (full restore).
-* PWA / offline read-only cache; mobile layout.
+* PWA / offline read-only cache; mobile layout. *(The phone layout and installing without offline data: Phase 28.)*
 * Desktop app (Wails v3) reusing the SPA. Explicitly out of scope for this plan.
-* UI i18n (Polish).
+* UI i18n (Polish). *(Decided in Phase 28, stage A: a redesign is the cheap moment for it.)*
