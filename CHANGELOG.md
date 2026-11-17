@@ -18,6 +18,12 @@ notes of their version.
   until you set them; the stack has its own subnet (`FINUANCE_SUBNET`, default `172.30.42.0/24`),
   and only that subnet is trusted to pass on the visitor's address.
 
+### Security
+
+- **Go 1.27.4**: the release fixes a crash of HTTP/1 servers in the standard library's request-size
+  limit (GO-2026-6859), which Finuance applies to every request body. Images built from this
+  version on are not affected.
+
 ### Fixed
 
 - **`502` under heavy traffic in Compose**: the web server opened a new connection to the api for

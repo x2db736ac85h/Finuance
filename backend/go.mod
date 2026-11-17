@@ -2,7 +2,7 @@ module github.com/x2db736ac85h/finuance/backend
 
 go 1.27.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	github.com/exaring/otelpgx v0.13.0
