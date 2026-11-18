@@ -1,7 +1,8 @@
 # Security scan
 
 Every finding of every scan, and what happened to it: fixed, or not exploitable and why. HIGH and
-CRITICAL findings fail the build and are never accepted (`.trivyignore` is empty). The scans and
+CRITICAL findings fail the build. A finding is fixed, not ignored; `.trivyignore` holds only what
+cannot be fixed yet, each entry with a reason and an expiry (one entry since 2026-11-18, below). The scans and
 when they run are listed in [THREAT-MODEL.md](THREAT-MODEL.md) §7. Phase 18 adds the OpenVAS /
 Nessus scan of the deployed instance, and the Phase 23 gate repeats everything right before the
 demo goes public.
