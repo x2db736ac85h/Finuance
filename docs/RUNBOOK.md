@@ -596,11 +596,11 @@ All secrets are SealedSecrets in the private environment repository (ADR 0023): 
 | Secret | Made with | Rotation |
 |---|---|---|
 | `finuance-db-owner`, `finuance-db-app` | `tools/seal-secrets.sh homelab db` (32 random characters each) | below |
-| `finuance-db-backup` | `ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh homelab backup` | new key at the store, re-seal, merge; the plugin reloads it (`cnpg.io/reload`) |
-| `ghcr-pull` | `tools/seal-secrets.sh homelab pull` (a `read:packages` token on stdin) | new token before it expires, re-seal, merge |
-| `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, merge |
-| `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, merge, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
-| `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, merge, then `kubectl -n finuance rollout restart deploy/finuance-api` |
+| `finuance-db-backup` | `ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh homelab backup` | new key at the store, re-seal, push the environment repository; the plugin reloads it (`cnpg.io/reload`) |
+| `ghcr-pull` | `tools/seal-secrets.sh homelab pull` (a `read:packages` token on stdin) | new token before it expires, re-seal, push the environment repository |
+| `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, push the environment repository |
+| `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, push the environment repository, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
+| `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, push the environment repository, then `kubectl -n finuance rollout restart deploy/finuance-api` |
 | `finuance-instance-key` (optional) | `tools/seal-secrets.sh homelab instance-key` (random), `assistant.instanceKeySecret: finuance-instance-key` | a new key makes the API keys entered in Administration → Assistant unreadable: enter them again after the rollout (ADR 0035) |
 
 ### Back up the controller key
