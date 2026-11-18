@@ -341,7 +341,7 @@ The order that worked, with what to look at between the steps:
 
 1. **Root app:** `kubectl apply -f deploy/k8s/argocd/root.yaml`. The CNPG operator, the Barman Cloud plugin and the Sealed Secrets controller come up (wave −5/−4, about a minute); `rustfs` waits for its secret.
 2. **Back up the controller key** at once (see [Secrets](#back-up-the-controller-key)): into a file readable only by you (e.g. `~/.local/share/finuance/`, mode 600), outside both repositories, and the public certificate into the environment repository (`homelab/sealed-secrets.pem`). The controller adds a key every 30 days: back up again after each one.
-3. **Seal and commit:** `tools/seal-secrets.sh homelab db`, `… backup-store`, and `… pull` (a classic GitHub token with only `read:packages`, typed on stdin; note its expiry). They land in the environment repository: commit and push there.
+3. **Seal and commit:** `tools/seal-secrets.sh homelab db` and `… backup-store`; `… pull` only if the images are private (a classic GitHub token with only `read:packages`, typed on stdin; note its expiry, and set `imagePullSecrets: [{name: ghcr-pull}]` in the values). They land in the environment repository: commit and push there.
 4. **RustFS and the secrets sync by themselves** (refresh in Argo CD). If `rustfs` started before its secret was in git, its sync retries the old revision until it gives up; it then syncs the new one.
 5. **Sync `finuance-db` by hand** after reading the diff (UI *Sync*, or `POST /api/v1/applications/finuance-db/sync`): 2 instances healthy in about 70 s, WAL archiving on, the immediate first backup completed. Check the bootstrap SQL: `citext`, `pg_trgm`, `textlike` leakproof, PUBLIC can't connect.
 6. **The app syncs by itself:** the migrations Job (may restart once, see the note above), then api, worker and web.
@@ -597,7 +597,7 @@ All secrets are SealedSecrets in the private environment repository (ADR 0023): 
 |---|---|---|
 | `finuance-db-owner`, `finuance-db-app` | `tools/seal-secrets.sh homelab db` (32 random characters each) | below |
 | `finuance-db-backup` | `ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh homelab backup` | new key at the store, re-seal, push the environment repository; the plugin reloads it (`cnpg.io/reload`) |
-| `ghcr-pull` | `tools/seal-secrets.sh homelab pull` (a `read:packages` token on stdin) | new token before it expires, re-seal, push the environment repository |
+| `ghcr-pull` (only for private images) | `tools/seal-secrets.sh homelab pull` (a `read:packages` token on stdin) | new token before it expires, re-seal, push the environment repository. The homelab's images are public (task 22.1), so it uses none |
 | `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, push the environment repository |
 | `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, push the environment repository, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
 | `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, push the environment repository, then `kubectl -n finuance rollout restart deploy/finuance-api` |
