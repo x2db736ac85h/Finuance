@@ -25,6 +25,17 @@
 | [a11y.md](a11y.md) | Accessibility: what axe checks on every screen, what was fixed, the keyboard-only checklist |
 | [parity-report.md](parity-report.md) | The legacy app and Finuance on the same data, number by number (written by the parity test) |
 
+## Elsewhere in the repository
+
+| Document | What it covers |
+|---|---|
+| [../CHANGELOG.md](../CHANGELOG.md), [../CONTRIBUTING.md](../CONTRIBUTING.md), [../SECURITY.md](../SECURITY.md) | Release notes, how to contribute, how to report a vulnerability |
+| [adr/README.md](adr/README.md) | The index of the decision records |
+| [../deploy/k8s/README.md](../deploy/k8s/README.md), [../deploy/helm/finuance/README.md](../deploy/helm/finuance/README.md), [../deploy/environments/homelab/README.md](../deploy/environments/homelab/README.md) | The Kubernetes manifests, the application chart and its values, the reference environment's files |
+| [../loadtest/README.md](../loadtest/README.md), [../evals/assistant/README.md](../evals/assistant/README.md) | Running the load test and the assistant evals |
+| [../tools/legacy-oracle/README.md](../tools/legacy-oracle/README.md), [../legacy/README.md](../legacy/README.md) | The oracle that drives the single-file prototype (it also generates the synthetic fixtures), and the prototype itself |
+| [../backend/cmd/anonymize/README.md](../backend/cmd/anonymize/README.md) | The anonymiser for bank exports |
+
 ## Working documents (how the rebuild is planned and tracked)
 
 These are written for the maintainer and the AI agent that writes most of the code. They are detailed, and they describe future phases as well as finished ones.

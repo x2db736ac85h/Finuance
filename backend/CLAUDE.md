@@ -9,7 +9,7 @@
 - **New endpoint:** edit `api/openapi.yaml` → `make gen` → implement the strict handler method in
   `internal/httpapi/handlers_<area>.go` → map errors in `problems.go` → HTTP test with real DB + tenancy test.
 - **New static query:** add to `internal/store/queries/<area>.sql` → `make gen` → wrap in a domain repo → integration test.
-- **Dynamic query:** extend `query.ColumnRegistry` / the CTE builder; never concatenate user input; add a fuzz seed.
+- **Dynamic query:** extend the column whitelist (`columns` in `internal/query/columns.go`) / the CTE builder; never concatenate user input; add a fuzz seed.
 - **New migration:** `make migrate-new name=…` → SQL with `-- +goose Up/Down` → `make test-integration` (runs up/down/up).
   New user-owned table ⇒ `user_id` column + RLS policy + RLS test.
 - **New job:** args struct + worker in `internal/jobs`, register in the registry, enqueue with `InsertTx` inside the

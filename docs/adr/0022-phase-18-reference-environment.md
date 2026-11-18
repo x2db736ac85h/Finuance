@@ -1,14 +1,15 @@
 # 0022. Phase 18 runs on a single-node k3s reference environment
 
-- Status: accepted
+- Status: accepted; amended
+- Update (2026-11-18): the repository is public since November 2026 and the images follow (PLAN Phase 22 task 22.1), so the deploy key and the pull secret described below are only needed while something is private. The always-on host and the public demo are Phase 29.
 - Date: 2026-10-27 (machine details moved to the private environment repository on 2026-10-30)
 
 ## Context
 
 Phase 18 (homelab rollout) deploys the Phase 16 and 17 artifacts on a real cluster: Argo CD,
 sealed secrets, CloudNativePG with backups, TLS, the restore drill, the model endpoint,
-observability, a load test and an OpenVAS scan. The homelab is still out of reach. Our Product
-Engineer has a personal machine that can run the whole stack: enough memory for the cluster and a
+observability, a load test and an OpenVAS scan. The homelab is still out of reach. The
+maintainer has a personal machine that can run the whole stack: enough memory for the cluster and a
 small NVIDIA GPU for a local model.
 
 The cloud session that builds Finuance can't reach a private machine, so the hands-on work runs in
@@ -57,7 +58,7 @@ Every tool is pinned by version in `docs/RUNBOOK.md`. None of them is an app dep
   an image pull secret, both sealed.
 - Machine-specific values (hardware, network, host name, measurements) are kept out of this
   repository; the RUNBOOK uses placeholders and the host files are templates.
-- Follow-up: Phase 21 chooses an always-on host for the instance and the public demo. These values
+- Follow-up: Phase 29 chooses an always-on host for the instance and the public demo. These values
   then move there with only host, storage and bucket changing.
 
 ## Alternatives considered

@@ -11,7 +11,9 @@ It is a rebuild of the single-file legacy app in `legacy/`.
 @docs/PROGRESS.md
 
 ## Sources of truth
-- Plan and specs: `docs/PLAN.md` (§4 domain rules, §5 schema, §6 API, §7 frontend).
+- Plan and specs: `docs/PLAN.md` (§4 domain rules, §5 schema, §6 API, §7 frontend; these describe Phases 0–18).
+- What was built after that: the ADRs from 0025 on, `docs/COMPONENTS.md` (the map), and the feature documents (`docs/admin.md`, `docs/sharing.md`, `docs/assistant.md`).
+- Findings that are not fixed yet and anything about one machine: the private environment repository (`finuance-env`), never this one. Cite its ids; do not copy its text here.
 - Behaviour not covered there: `legacy/DESIGN.md` and `legacy/finuance.html`.
 - API contract: `api/openapi.yaml`. Decisions: `docs/adr/`. Legacy parity: `docs/PARITY.md`.
 
@@ -36,4 +38,4 @@ It is a rebuild of the single-file legacy app in `legacy/`.
 - `make dev-api`, `make dev-worker`, `make dev-web` — local dev processes
 - `make oracle` — regenerate legacy expectations (Playwright)
 - `make fixtures` — regenerate the synthetic CSV fixtures (`make fixtures-check` is part of `make check`)
-- `make eval-assistant MODEL=…` — assistant eval suite against a real local model (not part of CI)
+- `make eval-assistant CONNECTION=… MODEL=…` — assistant eval suite against a real model (not part of CI)

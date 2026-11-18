@@ -14,7 +14,7 @@
 - **New persisted preference:** add to the persisted slice in `uiStore`/`viewStore`, include in the prefs schema,
   test hydration.
 - **New grid column:** add to the column registry (type, label, default width, visibility) and to the backend
-  `ColumnRegistry`; extend export.
+  column whitelist (`columns` in `backend/internal/query/columns.go`); extend export.
 
 ## Tests
 - `npm run test` (Vitest + MSW), `npm run e2e` (Playwright; needs `make up`).

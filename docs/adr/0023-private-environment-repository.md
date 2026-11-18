@@ -45,7 +45,7 @@ access to the private repository. `make check-env-details` fails when the enviro
   in the environment repository too. The example overlay and its render check make that visible.
 - Argo CD needs credentials for a second repository (another sealed deploy key).
 - Deploying from a fresh clone needs both repositories; the RUNBOOK says so.
-- Follow-up: the Phase 21 demo host gets its own folder in the environment repository.
+- Follow-up: the Phase 29 demo host gets its own folder in the environment repository.
 
 ## Alternatives considered
 
