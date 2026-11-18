@@ -57,7 +57,8 @@ grafana:
   persistence:
     enabled: false   # dashboards come from ConfigMaps, the admin login from the sealed Secret below
   # The chart's default admin password is public: the login is a SealedSecret made by
-  # `tools/seal-secrets.sh homelab grafana` (monitoring/grafana-admin.sealed.yaml, synced by this app).
+  # `tools/seal-secrets.sh homelab grafana` (homelab/monitoring/grafana-admin.sealed.yaml in the private
+  # environment repository, synced by this app).
   admin:
     existingSecret: grafana-admin
     userKey: admin-user

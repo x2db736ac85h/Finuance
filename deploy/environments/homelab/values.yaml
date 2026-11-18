@@ -7,7 +7,8 @@ image:
   # Bumped by release.yml (a pull request per release, vX.Y.Z tags only).
   tag: "0.4.1"
 # The images are private: a registry login that may only read packages
-# (tools/seal-secrets.sh homelab pull → secrets/ghcr-pull.sealed.yaml).
+# (tools/seal-secrets.sh homelab pull → homelab/secrets/ghcr-pull.sealed.yaml in the private
+# environment repository).
 imagePullSecrets:
   - name: ghcr-pull
 
@@ -43,7 +44,7 @@ networkPolicy:
 assistant:
   # Ollama on the host (ADR 0020/0022); its connections file and egress rule come from the overlay.
   enabled: true
-  # Seals the API keys entered in Administration → Assistant (ADR 0035); secrets/README.md
+  # Seals the API keys entered in Administration → Assistant (ADR 0035; RUNBOOK "Secrets")
   instanceKeySecret: finuance-instance-key
 
 # Administration → Developer (docs/admin.md): administrators see the build and these links. Every

@@ -1,35 +1,39 @@
 #!/usr/bin/env bash
-# Makes the SealedSecrets of an environment (PLAN task 16.3, docs/RUNBOOK.md "Secrets") into
-# deploy/environments/<env>/secrets/<name>.sealed.yaml. Plain values never touch the disk or a
-# command line: each Secret is written to kubeseal's stdin, and only the encrypted result is saved.
+# Makes the SealedSecrets of an environment (PLAN task 16.3, docs/RUNBOOK.md "Secrets") into the
+# private environment repository: <env>/secrets/<name>.sealed.yaml there (ADR 0023). Plain values
+# never touch the disk or a command line: each Secret is written to kubeseal's stdin, and only the
+# encrypted result is saved.
 #
 #   tools/seal-secrets.sh <env> db                      random passwords for finuance-db-owner and finuance-db-app
 #   tools/seal-secrets.sh <env> backup                  finuance-db-backup from $ACCESS_KEY_ID and $ACCESS_SECRET_KEY
 #   tools/seal-secrets.sh <env> backup-store            a random key pair for the in-cluster RustFS, sealed twice:
-#                                                       finuance-db-backup (finuance) and rustfs (s3, into <env>/rustfs/)
+#                                                       finuance-db-backup (finuance) and rustfs (s3, <env>/rustfs/)
 #   tools/seal-secrets.sh <env> assistant <file>        finuance-assistant from KEY=value lines (API keys)
 #   tools/seal-secrets.sh <env> instance-key            finuance-instance-key: a random FINUANCE_INSTANCE_KEY, which
 #                                                       seals API keys entered in Administration → Assistant
 #   tools/seal-secrets.sh <env> pull                    ghcr-pull (image pull secret) from a token on stdin
 #                                                       (read:packages; GHCR_USER, default x2db736ac85h)
-#   tools/seal-secrets.sh <env> smtp                    finuance-alert-smtp (monitoring) from the alert mail
-#                                                       account's app password on stdin
-#   tools/seal-secrets.sh <env> grafana                 grafana-admin (monitoring): user admin, a random password
+#   tools/seal-secrets.sh <env> smtp                    finuance-alert-smtp (monitoring, <env>/monitoring/) from
+#                                                       the alert mail account's app password on stdin
+#   tools/seal-secrets.sh <env> grafana                 grafana-admin (monitoring, <env>/monitoring/): user admin,
+#                                                       a random password
 #
 # kubeseal fetches the controller's public certificate from the cluster (kube-system /
 # sealed-secrets-controller); set SEAL_CERT=<file> to seal offline with a saved certificate
 # (kubeseal --fetch-cert > cert.pem). NAMESPACE (default finuance) is the namespace the secrets are
 # bound to (strict scope: a sealed secret only decrypts under its own name and namespace).
-# SECRETS_DIR overrides the output folder (the CI rehearsal seals into a scratch folder).
+# FINUANCE_ENV_DIR is the environment repository (default: ../finuance-env, cloned next to this one);
+# SECRETS_DIR, RUSTFS_SECRETS_DIR, SMTP_SECRETS_DIR and GRAFANA_SECRETS_DIR override single folders
+# (CI and the rehearsal seal into scratch folders).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [ $# -ge 2 ] || usage
 env=$1 what=$2
 ns=${NAMESPACE:-finuance}
-dir=${SECRETS_DIR:-deploy/environments/$env/secrets}
-[ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
+env_dir=${FINUANCE_ENV_DIR:-../finuance-env}
+dir=${SECRETS_DIR:-$env_dir/$env/secrets}
 command -v kubeseal >/dev/null || { echo "seal-secrets: kubeseal is not installed (docs/RUNBOOK.md)" >&2; exit 1; }
 seal_args=(--format yaml)
 [ -n "${SEAL_CERT:-}" ] && seal_args+=(--cert "$SEAL_CERT")
@@ -42,6 +46,7 @@ password() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 32 
 seal() {
   local name=$1 type=$2; shift 2
   local out="$dir/$name.sealed.yaml"
+  [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist (clone the environment repository next to this one, or set FINUANCE_ENV_DIR)" >&2; exit 1; }
   {
     printf 'apiVersion: v1\nkind: Secret\ntype: %s\nmetadata:\n  name: %s\n  namespace: %s\n' "$type" "$name" "$ns"
     printf '  labels:\n    app.kubernetes.io/part-of: finuance\n'
@@ -70,8 +75,7 @@ case $what in
     # store's own keys must be the same.
     key_id=$(password | head -c 20) key_secret=$(password)
     seal finuance-db-backup Opaque ACCESS_KEY_ID "$key_id" ACCESS_SECRET_KEY "$key_secret"
-    ns=s3 dir=${RUSTFS_SECRETS_DIR:-deploy/environments/$env/rustfs}
-    [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
+    ns=s3 dir=${RUSTFS_SECRETS_DIR:-$env_dir/$env/rustfs}
     seal rustfs Opaque RUSTFS_ACCESS_KEY "$key_id" RUSTFS_SECRET_KEY "$key_secret"
     ;;
   pull)
@@ -92,15 +96,13 @@ case $what in
     IFS= read -rs secret || true; [ -t 0 ] && echo >&2
     [ -n "$secret" ] || { echo "seal-secrets: no password on stdin" >&2; exit 2; }
     secret=${secret// /}   # Google shows app passwords in groups of four with spaces
-    ns=${NAMESPACE:-monitoring} dir=${SMTP_SECRETS_DIR:-deploy/environments/$env/monitoring}
-    [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
+    ns=${NAMESPACE:-monitoring} dir=${SMTP_SECRETS_DIR:-$env_dir/$env/monitoring}
     seal finuance-alert-smtp Opaque password "$secret"
     ;;
   grafana)
     # Grafana's admin login (the chart's default password is public). Read it back with kubectl when
     # needed (docs/RUNBOOK.md "Monitoring"); a new run replaces it.
-    ns=${NAMESPACE:-monitoring} dir=${GRAFANA_SECRETS_DIR:-deploy/environments/$env/monitoring}
-    [ -d "$dir" ] || { echo "seal-secrets: $dir does not exist" >&2; exit 1; }
+    ns=${NAMESPACE:-monitoring} dir=${GRAFANA_SECRETS_DIR:-$env_dir/$env/monitoring}
     seal grafana-admin Opaque admin-user admin admin-password "$(password)"
     ;;
   assistant)

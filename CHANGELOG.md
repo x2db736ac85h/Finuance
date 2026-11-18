@@ -17,6 +17,10 @@ notes of their version.
 - **`compose.prod.yaml`**: the env template's passwords are empty, so the stack refuses to start
   until you set them; the stack has its own subnet (`FINUANCE_SUBNET`, default `172.30.42.0/24`),
   and only that subnet is trusted to pass on the visitor's address.
+- **`tools/seal-secrets.sh` writes into the environment repository**: sealed files now go to
+  `${FINUANCE_ENV_DIR:-../finuance-env}/<env>/…` instead of `deploy/environments/<env>/`, where the
+  homelab's SealedSecrets moved too (ADR 0023). `SECRETS_DIR`, `RUSTFS_SECRETS_DIR`,
+  `SMTP_SECRETS_DIR` and `GRAFANA_SECRETS_DIR` still choose another folder.
 
 ### Security
 

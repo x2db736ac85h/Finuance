@@ -1,6 +1,7 @@
 # Monitoring for the homelab (Phase 18.6): Prometheus, Alertmanager, Grafana (dashboard sidecar),
 # kube-state-metrics, node-exporter. Values: deploy/environments/homelab/monitoring-values.yaml.
-# After Sealed Secrets (Grafana's admin login is a SealedSecret, synced here so Grafana can start) and
+# After Sealed Secrets (Grafana's admin login is a SealedSecret in the private environment repository,
+# homelab/monitoring/, synced here so Grafana can start; this app prunes, so keep its name there) and
 # before the database and the app (their PodMonitors need its CRDs). Server-side apply: the CRDs are
 # too large for a client-side apply's annotation.
 apiVersion: argoproj.io/v1alpha1
@@ -23,9 +24,9 @@ spec:
     - repoURL: git@github.com:x2db736ac85h/Finuance.git
       targetRevision: main
       ref: values
-    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+    - repoURL: git@github.com:x2db736ac85h/finuance-env.git
       targetRevision: main
-      path: deploy/environments/homelab/monitoring
+      path: homelab/monitoring
       directory:
         include: grafana-admin.sealed.yaml
   destination:
