@@ -1,8 +1,10 @@
 # Progress
 
-**Current phase:** 21 — Going public · **Branch:** `claude/wizardly-goodall-pu69jr` · **Status:** in progress (21.0–21.6 done; next the visibility switch, which only the maintainer can do)
+**Current phase:** 22 — Security I: patches, pins and scanners · **Branch:** `phase/22-security-patches` (not created yet) · **Status:** planned on 2026-11-16, not started. Phase 21 is closed except for the settings check that moved into 22.1.
 
-**Released:** `v0.4.1` (2026-11-09). Phases 0–20 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of those phases (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
+**Released:** `v0.4.1` (2026-11-09). Phases 0–21 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
+
+**The plan from here:** `docs/PLAN.md` §9, "Rev 5 — the plan after going public" and Phases 22–29. A map of the system as built: [COMPONENTS.md](COMPONENTS.md).
 
 ## Decisions that still apply
 
@@ -11,6 +13,20 @@ Project
 - Changes reach `main` only through pull requests with every CI job green, merged with a merge commit. A pull request's head commit never carries `[skip ci]`.
 - Conventional Commits. New architectural decisions get an ADR (`docs/adr/`, 0001–0036 so far).
 - No new dependencies without the maintainer's approval. Every accepted vulnerability needs a reason and an expiry (`.trivyignore` is empty).
+
+Order of work (the maintainer, 2026-11-16)
+- **Security first:** Phases 22 and 23 before anything else, because the repository is public.
+- Then observability (24), the traffic simulator (25), cloud AI (26), the Google Cloud lab (27), the new interface and phone (28, design-led, its own large phase), Release 1.0 (29).
+- The simulator runs against a **separate lab instance**, never the instance with real data.
+- A cloud model sees **synthetic data only** at first; the instance with real data keeps its local model.
+- The Google Cloud environment is an **on-demand lab** with synthetic data, created and destroyed with Terraform. The public demo stays on a small VPS (decision of 2026-11-03).
+- Approved on 2026-11-17: **two-step sign-in with one-time codes (TOTP)** in Phase 23 (task 23.7), and the dependency **`golang.org/x/oauth2`** for Google credentials in Phase 26 (task 26.0).
+
+What is written where (the maintainer, 2026-11-17)
+- **Sensitive detail lives in the private environment repository** (`finuance-env`): findings that are not fixed yet (its `security/` folder, with a register whose ids the plan cites), anything that describes one machine, and the housekeeping list for the homelab. This repository says what to build. An agent working on Phases 22 and 23 needs the private repository attached.
+- The history keeps the old test fixtures: they are not real data as they stand, so no rewrite.
+- Backups on the same disk as the database are accepted for now; `docs/RUNBOOK.md` must say how to connect storage outside the machine (an S3-compatible bucket or a second machine) so that it can be done on demand.
+- The maintainer installs the Renovate app. The browser-error endpoint of task 24.8 is approved.
 
 Data and tests
 - **All committed test data is synthetic.** Real bank exports stay under `testdata/private/` (gitignored), also after the anonymiser: its output keeps a real spending pattern. The bank look-alikes in `testdata/fixtures/synthetic/banks/` copy the structure of real files with every value invented.
@@ -30,55 +46,97 @@ Deployment
 
 ## Current phase tasks
 
-Phase 21 — Going public (PLAN §9, regrouping note of 2026-11-09). Only what must happen before the repository is readable by anyone.
+Phase 22 — Security I: patches, pins and scanners (PLAN §9, with the findings of 2026-11-16 and every task in detail). To be confirmed with `/phase-start 22`.
 
-- [x] 21.0 regrouping: the public release comes first with a small scope; Phone and touch becomes Phase 22 and the rest of the release work Phase 23 (PLAN note, this file, ROADMAP)
-- [x] 21.1 synthetic bank fixtures replace the anonymised real exports: `testdata/fixtures/real/` and its oracle and golden twins removed; `oracle_test.go` (header fixes), `imports_http_test.go` and `quality.spec.ts` moved onto the look-alikes with the same assertions; a new `banks/mbank-like-long.csv` covers the legacy's second header failure (the first transaction taken as the header); oracle regenerated twice with zero diff, goldens updated
-- [x] 21.2 details that describe one person or machine: a store code and place names in samples and test strings replaced with invented ones (oracle and goldens follow); `check-private.sh` gains the e-mail, tailnet and postcode rules with `tools/check-private-test.sh`
-- [x] 21.3 documents: neutral wording ("the maintainer"), this lean PROGRESS and `docs/ROADMAP.md`; SECURITY.md's support policy; THREAT-MODEL I3 says what is open
-- [x] 21.4 security hotfixes: fail-closed defaults (`TestDefaults`), profiling behind `FINUANCE_PPROF` (`TestNoopTracingAndAdmin`), empty passwords in the production env template (the release smoke test generates them), `compose.prod.yaml` with its own subnet as the only trusted proxy range and a hardened `migrate`, the pod-kill script checks the certificate by default, Renovate pins actions and images by digest
-- [x] 21.5 README rewrite: about 1,700 words instead of 4,100, first person, the overview screenshot first, why it might interest you, tech stack, design decisions with their ADRs, operations with a Grafana screenshot, testing, roadmap, how it was built; the long feature list and key concepts moved to `docs/features.md`, deployment to `docs/deploying.md`; CHANGELOG release dates; CONTRIBUTING; issue templates (bug, bank layout); every relative link checked
-- [x] 21.6 `tools/publish-public.sh [--dry-run] <ref> [<empty-remote>]`: exports the tree, runs its guards (and gitleaks when installed), fails on a term of `PUBLISH_PATTERNS` without printing it, empties `.gitleaksignore`, one root commit by a no-reply identity, refuses a remote with refs; `tools/publish-public-test.sh` in `make check` (one commit, identity, no old objects or trailers on the remote, each refusal); a dry run on this repository passes; RUNBOOK "Making the repository public" (the script is the alternative there). `--history` keeps the history of the ref with every address that is not a no-reply address rewritten (the full history of `main` was searched first: the private address is only in the author field of 9 merge commits, never in a file or a message, and no machine detail is in it): tests for the rewritten address, kept names and messages, moved fingerprints, tags and branches left behind, a term in a deleted file
-- [ ] 21.7 the switch (the maintainer): this repository made public as it is, after the pull request is merged: stale branches deleted, repository settings (rulesets, secret scanning, private vulnerability reporting, Actions), then the packages public. Nothing moves for Argo CD, the module path or the images
-- [ ] Gate (the maintainer): the pull request read through with every CI job green (`make test-integration`, E2E and `make helm-lint` run there), the quick start from a fresh clone
+- [ ] 22.0 re-run the audit's scans on the current `main` and compare with the findings table
+- [ ] 22.1 the public repository's settings (the maintainer): ruleset, secret scanning with push protection, private vulnerability reporting, Actions settings, stale branches, public packages, and the housekeeping list in the private repository's README
+- [ ] 22.2 patches: ~~Go 1.27.4~~ (done 2026-11-17, pull request 34, ahead of the phase start because it failed every CI run), `x/crypto` 0.59.0, PostgreSQL 18.7 (RLS suite and the de-duplication property test on it), ESLint and typescript-eslint (`minimatch`), the Node build image, Tempo, Grafana, the Helm CLI; `v0.4.2`
+- [ ] 22.3 Renovate installed (the maintainer) and seeing every kind of pin
+- [ ] 22.4 everything pinned: actions by SHA, images by digest, `tools/check-pins.sh`
+- [ ] 22.5 workflow hardening: permissions per job, no token on a command line, Trivy without the Docker socket, zizmor and actionlint
+- [ ] 22.6 CodeQL, dependency review with a licence allowlist, osv-scanner, SARIF, OpenSSF Scorecard, trufflehog once
+- [ ] 22.7 a daily scan of the released images that opens an issue
+- [ ] 22.8 build provenance next to the SBOM
+- [ ] 22.9 `CODEOWNERS`, `SECURITY.md`, the card-number rule, `check-env-details` in CI
+- [ ] 22.10 Node 26 LTS (moves to Phase 24 if the two upload tests need more than a day)
+- [ ] 22.11 `docs/security-scan.md` with every finding decided
+- [ ] 22.12 first fixes from the private register (`IMP-1`, `IMP-6`, `API-4`, `AI-1` first half, `WEB-2`, `OPS-5` first half, `DB-4`, `IMP-2`), after marking every row fixed, open or not applicable
+- [ ] 22.13 sealed secrets move to the private overlay; the maintainer rotates the values
+- [ ] 22.14 the web image build fails clearly when a native optional package is missing
+- [ ] Gate (the maintainer): the settings checked by hand, the scan section read, one Renovate pull request merged
 
-Not run in the session that did 21.1–21.4 (no Docker there): `make test-integration`, the E2E suite and `make helm-lint`. CI runs them on the pull request.
+Phase 21 — Going public (closed)
+
+- [x] 21.0 regrouping: the public release comes first with a small scope
+- [x] 21.1 synthetic bank fixtures replace the anonymised real exports
+- [x] 21.2 details that describe one person or machine replaced; `check-private.sh` gains the e-mail, tailnet and postcode rules
+- [x] 21.3 documents: neutral wording, this lean PROGRESS and `docs/ROADMAP.md`; SECURITY.md's support policy
+- [x] 21.4 security hotfixes: fail-closed defaults, profiling behind `FINUANCE_PPROF`, empty passwords in the production env template, `compose.prod.yaml` hardened, the pod-kill script checks the certificate
+- [x] 21.5 README rewrite; `docs/features.md`, `docs/deploying.md`; CONTRIBUTING; issue templates
+- [x] 21.6 `tools/publish-public.sh` with `--history`, tested, as the alternative that was not needed
+- [x] 21.7 the switch: the repository is public (the maintainer, reported 2026-11-16). Its checklist (stale branches, rulesets, secret scanning, private vulnerability reporting, Actions settings, public packages) is verified in 22.1; on 2026-11-16 the 45 old branches still existed
+- [x] Gate: the pull request was merged with every CI job green; the nightly, weekly and rehearsal runs on `main` have been green since
 
 ## Next phases
 
-- **Phase 22 — Phone and touch**: a bottom tab bar, a two-line list, windows that fit small screens, installable without offline data; `v0.5.0`.
-- **Phase 23 — Release 1.0** (PLAN Phase 21 tasks that remain): CodeQL, dependency review, workflow linting and Scorecard; signed images enforced in the cluster and deployed by digest; the demo host; write-ups; screenshots in every theme; `v1.0.0`.
+In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance criteria and gate.
+
+- **Phase 23 — Security II: runtime, cluster and privacy hardening**: images by digest with signatures enforced; trace context and baggage from clients not trusted; no user text in spans, the nginx log or the database's slow-query log; the cloud transport guard; limits at the ingress; two-step sign-in (TOTP, approved 2026-11-17); the rest of the private register (23.10); THREAT-MODEL v3; the full scan with nothing ignored; `v0.5.0`.
+- **Phase 24 — Observability**: panics counted; trace ids on every log line; Loki and Alloy; complete traces; the missing metrics; the trusted marker for synthetic traffic.
+- **Phase 25 — The traffic simulator**: ten animals on a lab instance, a separate service and image with its own tuning page; `v0.6.0`.
+- **Phase 26 — Cloud AI**: a Vertex AI connection with short-lived tokens, on synthetic data; `v0.7.0`.
+- **Phase 27 — Google Cloud lab**: Terraform and GKE Autopilot, up and down on demand.
+- **Phase 28 — New interface and phone**: several design directions and prototypes first, then the build; `v0.8.0`.
+- **Phase 29 — Release 1.0**: the demo host, write-ups, screenshots, `v1.0.0`.
 
 ## Deviations from the plan (with reason)
 
 - Phase 21 (2026-11-09): `docs/PLAN.md` stays in the repository (about 210 files refer to its sections) instead of being archived; only its wording was made neutral.
 - 21.2: `192.168.1.20` stays as the example address of a model server on a home network (it has to be a private address for the dial guard's tests, and it names no one). The time zone (`Europe/Warsaw`) stays too: the product is built around Polish bank exports.
-- 21.4: actions and images are not pinned by digest by hand (the session had no registry access to look digests up); Renovate's `helpers:pinGitHubActionDigests` and `docker:pinDigests` open that pull request. The Argo CD applications keep the overlay repository's real URL, because the cluster reads them from git (a private repository's name reveals nothing in it).
-
-- 21.7 (2026-11-10, the maintainer): no new repository. Every branch and the whole history were searched; the only private value is the maintainer's e-mail address as the author of 9 merge commits, which they accept (the account has two-factor authentication and a passkey). The existing repository keeps its pull requests, releases and CI history, which a new one would lose. `tools/publish-public.sh` stays as the tested alternative.
+- 21.4: actions and images were not pinned by digest by hand; the task relied on Renovate's pinning pull request, which needs the app installed. Phase 22 tasks 22.3 and 22.4 do both. The Argo CD applications keep the overlay repository's real URL, because the cluster reads them from git (a private repository's name reveals nothing in it).
+- 21.7 (2026-11-10, the maintainer): no new repository. Every branch and the whole history were searched; the maintainer's e-mail address is in the author field of 9 merge commits, which they accept (the account has two-factor authentication and a passkey), and the anonymised fixtures removed in 21.1 remain in the history, which they also accept (2026-11-17: not real data as they stand). The existing repository keeps its pull requests, releases and CI history, which a new one would lose. `tools/publish-public.sh` stays as the tested alternative.
+- Phase 17, found 2026-11-16: task 17.1 planned Loki and Alloy for logs; neither was deployed and nothing recorded it. Logs are on the containers' standard output only. Phase 24 task 24.6 builds it.
+- Rev 5 (2026-11-16): the old Phase 22 (Phone and touch) and Phase 23 (Release 1.0) are now Phases 28 and 29, and the security tasks of the old Phase 23 moved forward into Phases 22 and 23.
 
 ## Follow-ups (must be done in a later phase)
 
-- **Before 21.7:** a copy of the Sealed Secrets controller key outside the machine.
-- **Every pull request until fixed:** `minimatch` (MEDIUM, development tools only; `docs/security-scan.md`): upgrade as soon as ESLint and openapi-typescript accept the fixed major.
-- **Phase 23:** the full security scan with nothing ignored before the demo is public; cosign verification in the cluster and deploy by digest; Argo CD sign-in through an identity provider as soon as its UI is reachable beyond a port-forward.
-- Renew the registry pull token before it expires (not needed once the images are public).
-- Move to Node 26 LTS before Node 22's end of life (2027-04-30): CI, `Dockerfile.web`, `mise.toml`, and the two upload tests that fail there.
+- **Phase 22:** everything in the findings table of PLAN Phase 22 except its first row: Go 1.27.4 is on `main` since 2026-11-17 and `govulncheck` passes again. Images released before that (`v0.4.1` and earlier) are still built with Go 1.27.3 until `v0.4.2`.
+- **Phase 22, a known intermittent test:** `web/e2e/admin/admin.spec.ts` "the Developer section is for administrators only" failed four times in a row on one head on 2026-11-17 (axe `color-contrast` on `.toast`, light pass only, first attempt and retry in two jobs) and passed on `main` in the same minutes and on the next push. The branch changed no web code. The cause is not known: a theme-switch race was tried on a minimal page and did not reproduce, and the trace could not be read. `web/e2e/axe.ts` now prints what axe measured and the element's opacity, colours, theme and running animations on a failure; fix it from that output the next time it fails, and do not re-run it away.
+- **With the documentation fixes (next pull request):** `docs/RUNBOOK.md` gains "Connecting backup storage outside the machine" (an S3-compatible bucket, or a second machine), step by step, so the accepted same-disk backups can be changed on demand.
+- **Heartbeat outside the machine (24.9):** the maintainer chooses the service; options were listed on 2026-11-17.
+- **After this pull request:** the documentation fixes from the repository review of 2026-11-17 (stale phase numbers, ADRs 0020, 0022 and 0024, the PLAN header and table of contents, agent instruction references, the README's roadmap line, an ADR index) and the wording about the reference machine, as one pull request.
+- **Phase 23:** the full security scan with nothing ignored; cosign verification in the cluster and deploy by digest; Argo CD sign-in through an identity provider as soon as its UI is reachable beyond a port-forward.
+- **Phase 22 (22.10) or 24:** Node 26 LTS before Node 22's end of life (2027-04-30): CI, `Dockerfile.web`, `mise.toml`, and the two upload tests that fail there.
+- **Phase 24:** `docs/ARCHITECTURE.md` still describes the system "after Phase 11"; bring it up to date with `docs/COMPONENTS.md` as its map.
 
 ## Backlog (ideas, not scheduled)
 
-- A cheaper first render for the Vitest files that time out when the full parallel suite shares a busy machine; the duplicates window's first render of many groups.
-- `fin mcp`: the CLI as an MCP server over stdio.
-- A thinking toggle next to the question field; evals on the model server actually used and on candidate models.
-- An alert path that survives an outage of the machine itself (today a daily digest e-mail shows it by its absence).
-- The api and worker retry their first database connection instead of restarting once.
+Reviewed on 2026-11-16. Scheduled items moved into a phase; the rest stay here with a note.
+
+Scheduled by Rev 5
+- A `profiling` value in the Helm chart for `FINUANCE_PPROF` → 24.9.
+- An alert path that survives an outage of the machine itself → 24.9 (a heartbeat outside the machine; the maintainer chooses the service).
+- Compose: nginx re-resolves the api upstream after the api container is recreated → 25.8.
+- Overview under load: cache the month aggregates → decided on the numbers of 25.12.
+- The api and worker retry their first database connection instead of restarting once → 27.10.
+- Evals on the model server actually used and on candidate models → 26.7.
+- A thinking toggle next to the question field; the duplicates window's first render of many groups; a cheaper first render for the Vitest files that time out → Phase 28.
+
+Still ideas
+- `fin mcp`: the CLI as an MCP server over stdio. Worth a decision after Phase 26: it needs either a library or a hand-written JSON-RPC layer.
+- Per-user model API keys. More interesting once a cloud model exists (Phase 26): each person would pay for and consent to their own provider.
+- Passkeys (WebAuthn) after the one-time-code second factor of Phase 23; needs a library.
+- Composite foreign keys on `(user_id, id)`, so the schema itself refuses a reference to another user's row (considered in Phase 23 and left out).
+- One `users.kind` column instead of `is_demo` plus `kind` (after Phase 24).
+- A cloud model for the instance with real data: a token source from a cluster outside Google, stronger masking (after Phase 26, a separate decision).
 - FX conversion with central-bank rates; the assistant names the category of a suggested rule.
-- Restore a data export into a new instance; per-user model API keys; per-month budgets with rollover; balance reconciliation against the bank's balance column.
-- Compose: nginx re-resolves the api upstream after the api container is recreated.
-- Overview under load: cache the month aggregates.
-- A `profiling` value in the Helm chart for `FINUANCE_PPROF`.
+- Restore a data export into a new instance; per-month budgets with rollover; balance reconciliation against the bank's balance column.
+- Interface languages (Polish): decided in Phase 28, stage A.
 
 ## Session log
 
 - 2026-11-09 — Audit before going public (private data, security, first impression): no credentials and no serious flaw, but the history and a few files must not be published. Phase 21 regrouped to "going public" and 21.0–21.4 done: synthetic fixtures only, neutral wording, new guard rules, fail-closed defaults and the other security hotfixes. Then the README rewritten for readers new to the project (21.5) and the publish script with its tests (21.6). Next: the move (21.7), by the maintainer.
 - 2026-11-10 — The publish script learned `--history`; then a search of every branch showed one private value only (a commit author address), so the plan changed to the simple one: this repository becomes public as it is. RUNBOOK section rewritten. Next: the pull request into `main`, then the switch (21.7).
+- 2026-11-16 — Planning session, no code changed. An audit of the public repository: a scan of every pinned version, the logging and tracing code (good metrics and traces, weak logs, a panic that is not counted), the deployment and assistant layers (what a second kind of cluster and a cloud model need), the API surface for a simulator, and the backlog. With the maintainer's four decisions this became PLAN Rev 5: Phases 22–29, security first. `docs/COMPONENTS.md` added as the component map. Next: `/phase-start 22`.
+- 2026-11-17 — The maintainer approved two-step sign-in (23.7) and `golang.org/x/oauth2` (26.0); both recorded in the plan. The plan goes to `main` as a pull request. Still open: the backup target outside the machine, the browser-error endpoint (24.8) and the heartbeat service (24.9). The plan's pull request failed at `govulncheck` exactly as the audit predicted, so the Go 1.27.4 bump went ahead on its own (`fix/go-1.27.4`, pull request 34, merged the same day) and `main` was merged into the plan's branch. The plan's pull request then failed twice in the E2E job on the accessibility check described under Follow-ups; diagnostics were added to the axe helper, and the next run was green.
+- 2026-11-17 (later) — A review of the repository's structure and of what it shows in public. An unmerged branch with a detailed security review was removed from the public repository; the review and the detailed wording of this plan's security sections are now in the private environment repository, and Phases 22 and 23 cite the register's ids (tasks 22.12 and 23.10). Decisions recorded above. A second unrelated CI failure (the web image's install skipped a native package) passed on its one re-run and became task 22.14.

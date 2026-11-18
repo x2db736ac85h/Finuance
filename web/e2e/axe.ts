@@ -12,14 +12,40 @@ export async function check(page: Page, name: string, within?: string) {
     let axe = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
     if (within) axe = axe.include(within);
     const r = await axe.analyze();
-    const bad = r.violations
-      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-      .map((v) => ({
+    const serious = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    const bad = [];
+    for (const v of serious) {
+      const nodes = v.nodes.slice(0, 5);
+      // what the page looked like for each failing element, read right after the analysis: a
+      // failure then says whether the element was half-way through a fade or in the wrong theme
+      const seen = await page.evaluate(
+        (selectors) =>
+          selectors.map((sel) => {
+            const el = document.querySelector(sel);
+            const cs = el ? getComputedStyle(el) : undefined;
+            return {
+              class: el?.getAttribute('class') ?? null,
+              text: el?.textContent.trim().slice(0, 60) ?? null,
+              opacity: cs?.opacity ?? null,
+              color: cs?.color ?? null,
+              background: cs?.backgroundColor ?? null,
+              theme: document.documentElement.dataset['theme'] ?? null,
+              themeId: document.documentElement.dataset['themeId'] ?? null,
+              animationsRunning: document.getAnimations().length,
+            };
+          }),
+        nodes.map((n) => n.target.join(' ')),
+      );
+      bad.push({
         id: v.id,
         impact: v.impact,
         help: v.help,
-        nodes: v.nodes.slice(0, 5).map((n) => n.target.join(' ')),
-      }));
+        nodes: nodes.map((n) => n.target.join(' ')),
+        // what axe measured (colour-contrast: foreground, background, ratio, required ratio)
+        measured: nodes.map((n) => [...n.any, ...n.all, ...n.none].map((c) => c.data as unknown).filter(Boolean)),
+        seen,
+      });
+    }
     expect(bad, `${name} (${scheme})`).toEqual([]);
   }
 }
