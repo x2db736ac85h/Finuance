@@ -7,8 +7,22 @@ import { expect, type Page } from '@playwright/test';
 export async function check(page: Page, name: string, within?: string) {
   for (const scheme of ['dark', 'light'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
-    // the theme switch fades colours; measure once every transition has ended
-    await page.waitForFunction(() => document.getAnimations().length === 0);
+    // The theme switch fades colours, and a fade can start a frame or two after the switch (seen in
+    // CI on 2026-11-18: axe measured a toast half-way between the dark and the light colours,
+    // #7f7f83 on #8c8c8e, although no animation was running when the wait returned). So wait for
+    // five consecutive frames without any animation, not for one instant without one.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          let quiet = 0;
+          const tick = () => {
+            quiet = document.getAnimations().length === 0 ? quiet + 1 : 0;
+            if (quiet >= 5) resolve();
+            else requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
     let axe = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
     if (within) axe = axe.include(within);
     const r = await axe.analyze();

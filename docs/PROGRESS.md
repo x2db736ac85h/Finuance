@@ -12,7 +12,7 @@ Project
 - Name **Finuance**, MIT license, Go module path `github.com/x2db736ac85h/finuance/backend`.
 - Changes reach `main` only through pull requests with every CI job green, merged with a merge commit. A pull request's head commit never carries `[skip ci]`.
 - Conventional Commits. New architectural decisions get an ADR (`docs/adr/`, 0001–0036 so far).
-- No new dependencies without the maintainer's approval. Every accepted vulnerability needs a reason and an expiry (`.trivyignore` is empty).
+- No new dependencies without the maintainer's approval. Every accepted vulnerability needs a reason and an expiry. **Findings are fixed, not ignored** (the maintainer, 2026-11-18): an entry in `.trivyignore` is only for a finding that cannot be fixed yet, it is revisited in every phase, and an expiry is never extended without trying the fix first. One entry exists: `picomatch` (development tools, no fixed version), until 2026-12-02.
 
 Order of work (the maintainer, 2026-11-16)
 - **Security first:** Phases 22 and 23 before anything else, because the repository is public.
@@ -63,6 +63,7 @@ Phase 22 — Security I: patches, pins and scanners (PLAN §9, with the findings
 - [ ] 22.12 first fixes from the private register (`IMP-1`, `IMP-6`, `API-4`, `AI-1` first half, `WEB-2`, `OPS-5` first half, `DB-4`, `IMP-2`), after marking every row fixed, open or not applicable
 - [ ] 22.13 sealed secrets move to the private overlay; the maintainer rotates the values
 - [ ] 22.14 the web image build fails clearly when a native optional package is missing
+- [ ] 22.15 accepted findings revisited: every entry of `.trivyignore` fixed or justified again; the daily scan warns before an entry expires; CI lists the entries in its summary
 - [ ] Gate (the maintainer): the settings checked by hand, the scan section read, one Renovate pull request merged
 
 Phase 21 — Going public (closed)
@@ -100,8 +101,9 @@ In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance crit
 
 ## Follow-ups (must be done in a later phase)
 
+- **Every phase, first task:** read `.trivyignore`. For each entry, check whether a fixed version exists now and apply it; remove the entry. Today: `picomatch` 4.0.7 (CVE-2026-112366, accepted 2026-11-18 until 2026-12-02; `docs/security-scan.md`).
 - **Phase 22:** everything in the findings table of PLAN Phase 22 except its first row: Go 1.27.4 is on `main` since 2026-11-17 and `govulncheck` passes again. Images released before that (`v0.4.1` and earlier) are still built with Go 1.27.3 until `v0.4.2`.
-- **Phase 22, a known intermittent test:** `web/e2e/admin/admin.spec.ts` "the Developer section is for administrators only" failed four times in a row on one head on 2026-11-17 (axe `color-contrast` on `.toast`, light pass only, first attempt and retry in two jobs) and passed on `main` in the same minutes and on the next push. The branch changed no web code. The cause is not known: a theme-switch race was tried on a minimal page and did not reproduce, and the trace could not be read. `web/e2e/axe.ts` now prints what axe measured and the element's opacity, colours, theme and running animations on a failure; fix it from that output the next time it fails, and do not re-run it away.
+- **The intermittent accessibility check in `web/e2e/admin/admin.spec.ts`** ("the Developer section is for administrators only", `color-contrast` on `.toast`, light pass): explained on 2026-11-18 by the diagnostics added the day before. axe measured the toast half-way through the theme switch's colour fade (`#7f7f83` on `#8c8c8e`) although no animation was running when the wait returned; right afterwards the toast was settled and passes. `web/e2e/axe.ts` now waits for five consecutive frames without an animation. If it fails again, the diagnostics are still there: read them, do not re-run it away.
 - **With the documentation fixes (next pull request):** `docs/RUNBOOK.md` gains "Connecting backup storage outside the machine" (an S3-compatible bucket, or a second machine), step by step, so the accepted same-disk backups can be changed on demand.
 - **Heartbeat outside the machine (24.9):** the maintainer chooses the service; options were listed on 2026-11-17.
 - **After this pull request:** the documentation fixes from the repository review of 2026-11-17 (stale phase numbers, ADRs 0020, 0022 and 0024, the PLAN header and table of contents, agent instruction references, the README's roadmap line, an ADR index) and the wording about the reference machine, as one pull request.

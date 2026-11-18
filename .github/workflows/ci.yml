@@ -191,7 +191,9 @@ jobs:
         working-directory: web
         run: |
           npm audit --omit=dev --audit-level=high
-          npm audit --audit-level=high
+          # every dependency: accepted findings come from .trivyignore, with an expiry
+          node ../tools/npm-audit.mjs --self-test
+          npm audit --json | node ../tools/npm-audit.mjs ../.trivyignore
 
   helm:
     name: helm (charts, Argo CD manifests, dashboards and alert rules)
