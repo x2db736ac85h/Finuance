@@ -2,7 +2,7 @@
 # homelab (Phase 18.6; Argo CD app deploy/k8s/argocd/apps/finuance-observability.yaml). The e-mail
 # receiver (provider and addresses) is switched on by the private overlay (ADR 0023; shape:
 # observability-values.example.yaml); its password is the SealedSecret monitoring/finuance-alert-smtp
-# (deploy/environments/homelab/monitoring/).
+# (homelab/monitoring/ in the private environment repository).
 appNamespace: finuance
 # k3s's bundled Traefik (kube-system), with router labels (host/traefik-config.yaml)
 ingress:

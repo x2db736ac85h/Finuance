@@ -47,3 +47,6 @@ zap-reports/
 
 # written by scripts/query-smoke.sh (an export to open in a spreadsheet)
 query-smoke-export.csv
+
+# Claude Code: per-user settings (local paths, permissions)
+.claude/settings.local.json

@@ -15,6 +15,8 @@ spec:
     - https://prometheus-community.github.io/helm-charts
     # the monitoring stack's values and Tempo's manifests (deploy/environments/homelab, deploy/k8s/tempo)
     - git@github.com:x2db736ac85h/Finuance.git
+    # Grafana's sealed admin login in the private environment repository (ADR 0023)
+    - git@github.com:x2db736ac85h/finuance-env.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: cnpg-system
@@ -37,7 +39,7 @@ spec:
   description: The Finuance app, its PostgreSQL cluster, its backup bucket and its sealed secrets.
   sourceRepos:
     - git@github.com:x2db736ac85h/Finuance.git
-    # the private environment repository with the per-machine overlay (ADR 0023)
+    # the private environment repository with the per-machine overlay and the sealed secrets (ADR 0023)
     - git@github.com:x2db736ac85h/finuance-env.git
   destinations:
     - server: https://kubernetes.default.svc

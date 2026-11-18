@@ -57,3 +57,25 @@ access to the private repository. `make check-env-details` fails when the enviro
   public history to the machine and adds a decryption plugin to Argo CD.
 
 *Note (2026-11-03): the follow-up phase was renumbered from 19 to 21 when Phases 19–20 were added (PLAN Rev 4).*
+
+## Addendum (2026-11-18): the cluster's SealedSecrets move to the environment repository
+
+The homelab's SealedSecrets (`homelab/secrets/`, `homelab/rustfs/`, `homelab/monitoring/`) and the
+controller's public certificate (`homelab/sealed-secrets.pem`) now live in the environment
+repository, not here. They are encrypted for this one cluster's controller, so they mean nothing
+outside it. They are credentials of the environment, like its host name, and a public repository
+is no place for them (plan task 22.13). The history keeps the old files: changing the values, not
+moving the files, is what makes those copies worthless, so the maintainer rotates them after the
+move, when sealing already writes into the environment repository. The applications `finuance-secrets` and
+`rustfs` (project `finuance`) and `kube-prometheus-stack` (project `platform`, which now also allows
+the environment repository) and `finuance-observability` read them from there.
+`tools/seal-secrets.sh <env> …` writes into `${FINUANCE_ENV_DIR:-../finuance-env}/<env>/…`, and
+`make check-sealed` checks both repositories.
+
+- The switch must not leave an application without its files: two of them prune. The copies went
+  into the environment repository first, byte for byte, and the source change followed.
+- A push to the environment repository's `main` deploys a secret change, without a pull request or
+  CI. Its README says so.
+- The plaintext material (the controller's key backup, tokens, app passwords) stays out of *both*
+  repositories. Argo CD can read the environment repository, so the key that decrypts every secret
+  doesn't belong there.

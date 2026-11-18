@@ -12,7 +12,7 @@ How to run Finuance on Kubernetes: the first install, deploys and rollbacks, sec
 | CloudNativePG operator | `cnpg-system` | Helm chart `cloudnative-pg` (pinned in [`apps/cnpg-operator.yaml`](../deploy/k8s/argocd/apps/cnpg-operator.yaml)) | automated |
 | Barman Cloud plugin (backups) | `cnpg-system` | Helm chart `plugin-barman-cloud` | automated |
 | Sealed Secrets controller | `kube-system` | Helm chart `sealed-secrets` | automated |
-| Sealed secrets | `finuance` | [`deploy/environments/homelab/secrets/`](../deploy/environments/homelab/secrets) | automated, no prune |
+| Sealed secrets | `finuance`, `s3`, `monitoring` | private environment repository: `homelab/secrets/`, `homelab/rustfs/`, `homelab/monitoring/` ([Secrets](#secrets)) | automated (no prune in `finuance` and `s3`) |
 | PostgreSQL cluster `finuance-db` (2 instances) | `finuance` | [`deploy/k8s/db`](../deploy/k8s/db) + `homelab/db-values.yaml` | **manual** |
 | api (2–4 pods, HPA), worker, web (2 pods), migrations Job | `finuance` | [`deploy/helm/finuance`](../deploy/helm/finuance) + `homelab/values.yaml` | automated, prune + self-heal |
 
@@ -68,12 +68,12 @@ These are only local ports. Prometheus and Alertmanager link to each other by th
 2. **Set the homelab values** in `deploy/environments/homelab/values.yaml` and `db-values.yaml` (every *Phase 18* comment: host, issuer, pod CIDR, storage class, bucket), then merge them to `main`.
 3. **Apply the root app** once: `kubectl apply -f deploy/k8s/argocd/root.yaml`. Argo CD creates the projects, the operators and the Sealed Secrets controller. `finuance-db` waits for a manual sync, so `finuance` (wave 0) waits too: the Application health check counts a child app that has never synced (`Missing`) as `Progressing` (`homelab/argocd-values.yaml`); with Argo CD's documented snippet alone the next wave went ahead and the migrations Job ran before the database existed (Phase 18).
 4. **Back up the Sealed Secrets key** as soon as the controller runs (see [Secrets](#secrets)).
-5. **Seal the secrets** and commit them:
+5. **Seal the secrets** into the private environment repository (cloned next to this one; `FINUANCE_ENV_DIR` points elsewhere) and commit them there:
 
    ```sh
    tools/seal-secrets.sh homelab db                                      # random passwords for both roles
    ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh homelab backup
-   git add deploy/environments/homelab/secrets && git commit -m "chore(deploy): homelab secrets"
+   git -C ../finuance-env add homelab/secrets && git -C ../finuance-env commit -m "homelab: secrets"
    ```
 
 6. **Sync the database** in Argo CD (`finuance-db` → Sync) and wait for `kubectl -n finuance get cluster finuance-db` to report *Cluster in healthy state*. The first base backup starts right away (`backup.immediate`); check it with `kubectl -n finuance get backups`.
@@ -268,7 +268,7 @@ Without a bucket outside the machine, backups go to RustFS inside the cluster ([
 Its keys and the database's backup credentials are one random pair, sealed twice (18.3; values never shown or saved):
 
 ```sh
-tools/seal-secrets.sh homelab backup-store   # finuance-db-backup (finuance) + rustfs (s3, deploy/environments/homelab/rustfs/)
+tools/seal-secrets.sh homelab backup-store   # finuance-db-backup (finuance) + rustfs (s3), into the environment repository's homelab/secrets/ and homelab/rustfs/
 ```
 
 **Check** (2026-10-30, applied by hand into a scratch `s3` namespace with throwaway keys, then deleted): accepted under the `restricted` Pod Security Standard; volume bound; the job created the bucket, and after a pod restart a second run found it (the data is on the volume); a pod in `finuance` with `cnpg.io/cluster` reaches port 9000, the same pod without the label and a pod in `default` don't.
@@ -340,8 +340,8 @@ k3s enforces NetworkPolicies with kube-router, which adds a new pod's address to
 The order that worked, with what to look at between the steps:
 
 1. **Root app:** `kubectl apply -f deploy/k8s/argocd/root.yaml`. The CNPG operator, the Barman Cloud plugin and the Sealed Secrets controller come up (wave −5/−4, about a minute); `rustfs` waits for its secret.
-2. **Back up the controller key** at once (see [Secrets](#back-up-the-controller-key)): into a file readable only by you (e.g. `~/.local/share/finuance/`, mode 600), outside both repositories, and the public certificate into `deploy/environments/homelab/sealed-secrets.pem`. The controller adds a key every 30 days: back up again from time to time.
-3. **Seal and commit:** `tools/seal-secrets.sh homelab db`, `… backup-store`, and `… pull` (a classic GitHub token with only `read:packages`, typed on stdin; note its expiry). Push.
+2. **Back up the controller key** at once (see [Secrets](#back-up-the-controller-key)): into a file readable only by you (e.g. `~/.local/share/finuance/`, mode 600), outside both repositories, and the public certificate into the environment repository (`homelab/sealed-secrets.pem`). The controller adds a key every 30 days: back up again after each one.
+3. **Seal and commit:** `tools/seal-secrets.sh homelab db`, `… backup-store`, and `… pull` (a classic GitHub token with only `read:packages`, typed on stdin; note its expiry). They land in the environment repository: commit and push there.
 4. **RustFS and the secrets sync by themselves** (refresh in Argo CD). If `rustfs` started before its secret was in git, its sync retries the old revision until it gives up; it then syncs the new one.
 5. **Sync `finuance-db` by hand** after reading the diff (UI *Sync*, or `POST /api/v1/applications/finuance-db/sync`): 2 instances healthy in about 70 s, WAL archiving on, the immediate first backup completed. Check the bootstrap SQL: `citext`, `pg_trgm`, `textlike` leakproof, PUBLIC can't connect.
 6. **The app syncs by itself:** the migrations Job (may restart once, see the note above), then api, worker and web.
@@ -589,16 +589,18 @@ A failed `finuance-migrate` Job fails the sync. **The old pods keep serving**, b
 
 ## Secrets
 
-All secrets are SealedSecrets in `deploy/environments/homelab/secrets/`. They are encrypted with the controller's public key and bound to their name and namespace (strict scope). Only the controller in the cluster can decrypt them. [`tools/seal-secrets.sh`](../tools/seal-secrets.sh) writes each Secret into `kubeseal` through a pipe, so plain values never touch the disk or a command line.
+All secrets are SealedSecrets in the private environment repository (ADR 0023): `homelab/secrets/` (namespace `finuance`, Argo CD app `finuance-secrets`), `homelab/rustfs/` (`s3`, app `rustfs`) and `homelab/monitoring/` (`monitoring`, apps `kube-prometheus-stack` and `finuance-observability`). They are encrypted with the controller's public key and bound to their name and namespace (strict scope). Only the controller in the cluster can decrypt them, so they mean nothing outside this cluster and stay out of this repository. [`tools/seal-secrets.sh`](../tools/seal-secrets.sh) writes each Secret into `kubeseal` through a pipe, so plain values never touch the disk or a command line, and saves the result in `${FINUANCE_ENV_DIR:-../finuance-env}/<env>/…`; commit and push it there (a push to the environment repository's `main` deploys, like a merge here). `make check-sealed` checks both repositories: only SealedSecrets, no plain data.
+
+**Don't rename or delete a sealed file by accident.** `kube-prometheus-stack` and `finuance-observability` prune, so a file that disappears from `homelab/monitoring/` deletes its Secret on the next sync; `finuance-secrets` and `rustfs` don't prune.
 
 | Secret | Made with | Rotation |
 |---|---|---|
 | `finuance-db-owner`, `finuance-db-app` | `tools/seal-secrets.sh homelab db` (32 random characters each) | below |
-| `finuance-db-backup` | `ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh homelab backup` | new key at the store, re-seal, merge; the plugin reloads it (`cnpg.io/reload`) |
-| `ghcr-pull` | `tools/seal-secrets.sh homelab pull` (a `read:packages` token on stdin) | new token before it expires, re-seal, merge |
-| `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, merge |
-| `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, merge, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
-| `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, merge, then `kubectl -n finuance rollout restart deploy/finuance-api` |
+| `finuance-db-backup` | `ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh homelab backup` | new key at the store, re-seal, push the environment repository; the plugin reloads it (`cnpg.io/reload`) |
+| `ghcr-pull` | `tools/seal-secrets.sh homelab pull` (a `read:packages` token on stdin) | new token before it expires, re-seal, push the environment repository |
+| `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, push the environment repository |
+| `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, push the environment repository, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
+| `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, push the environment repository, then `kubectl -n finuance rollout restart deploy/finuance-api` |
 | `finuance-instance-key` (optional) | `tools/seal-secrets.sh homelab instance-key` (random), `assistant.instanceKeySecret: finuance-instance-key` | a new key makes the API keys entered in Administration → Assistant unreadable: enter them again after the rollout (ADR 0035) |
 
 ### Back up the controller key
@@ -609,7 +611,7 @@ Without it, nobody can decrypt the committed secrets after a cluster loss. Right
 kubectl -n kube-system get secret -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > sealed-secrets-keys.yaml
 ```
 
-Keep the file **outside git and outside the cluster**, in a password manager or on an encrypted drive. Save the public certificate too, so you can seal offline: `kubeseal --fetch-cert > deploy/environments/homelab/sealed-secrets.pem` (public, may be committed); then `SEAL_CERT=deploy/environments/homelab/sealed-secrets.pem tools/seal-secrets.sh …`.
+Keep the file **outside git and outside the cluster**, in a password manager or on an encrypted drive. It decrypts every sealed secret, so it never goes into a repository, not even the private one (Argo CD can read that one). Save the public certificate too, so you can seal offline: `kubeseal --fetch-cert > ../finuance-env/homelab/sealed-secrets.pem` (public, but specific to this cluster); then `SEAL_CERT=../finuance-env/homelab/sealed-secrets.pem tools/seal-secrets.sh …`.
 
 ### Rotate the database passwords
 
