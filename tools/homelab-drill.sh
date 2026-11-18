@@ -119,13 +119,13 @@ EOF
     sh -c "[ \"\$(kubectl -n finuance exec \$(kubectl -n finuance get cluster finuance-db -o jsonpath='{.status.currentPrimary}') -c postgres -- psql -U postgres -d finuance -XAtqc \"SELECT coalesce(extract(epoch FROM last_archived_time)::bigint, 0) FROM pg_stat_archiver\")\" -ge $tb ]"
   result "RPO (a write until its WAL is archived; archive_timeout 5 min)" "$(($(date +%s) - tb)) s"
 
-  # the scratch namespace: the bucket's keys and the registry login copied from finuance (they are
-  # read, never shown), fresh random role passwords sealed for this namespace
+  # the scratch namespace: the bucket's keys copied from finuance (read, never shown), fresh random
+  # role passwords sealed for this namespace
   t0=$(date +%s)
   kubectl create namespace "$RNS" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
   kubectl label namespace "$RNS" --overwrite pod-security.kubernetes.io/enforce=restricted \
     pod-security.kubernetes.io/enforce-version=latest >/dev/null
-  for s in finuance-db-backup ghcr-pull; do
+  for s in finuance-db-backup; do
     kubectl -n finuance get secret "$s" -o json \
       | jq --arg ns "$RNS" '{apiVersion, kind, type, data, metadata: {name: .metadata.name, namespace: $ns, labels: .metadata.labels}}' \
       | kubectl apply -f - >/dev/null
