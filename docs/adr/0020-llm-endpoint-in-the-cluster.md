@@ -1,6 +1,7 @@
 # 0020. Where the assistant's model runs when Finuance is on Kubernetes
 
-- Status: accepted (the address is set in Phase 18)
+- Status: accepted (the address is set in Phase 18); amended
+- Update (2026-11-18): the reference environment runs **Ollama on the cluster's host** instead of LM Studio on a separate desktop (`docs/RUNBOOK.md`, "Ollama (model server on the host)"); the decision below (one address and port, outside the cluster, reached through a single egress rule) is unchanged. The rule for cloud providers (`0.0.0.0/0:443`) is replaced in Phase 26 (PLAN §9); the transport guard for cloud connections is Phase 23 task 23.5.
 - Date: 2026-10-24
 
 ## Context

@@ -1,8 +1,8 @@
 # Runbook
 
-How to run Finuance on Kubernetes: the first install, deploys and rollbacks, secrets, scaling, backups and restores, and what to do when something breaks. The Compose install is in the [main README](../README.md#deploying).
+How to run Finuance on Kubernetes: the first install, deploys and rollbacks, secrets, scaling, backups and restores, and what to do when something breaks. The Compose install is in [deploying.md](deploying.md).
 
-> **Status (Phase 16).** The manifests are written and checked in CI: `make helm-lint` and the `helm` job render, validate and scan them; the kind rehearsal (`tools/rehearsal.sh`, workflow `k8s-rehearsal`) installs everything on a throwaway cluster and runs the drills below. Nothing is deployed on the homelab yet. Values marked *Phase 18* in `deploy/environments/homelab/` are set during the homelab rollout, and the timings below come from the CI rehearsal until then.
+> **Status.** The manifests are checked in CI (`make helm-lint`, the `helm` job) and the kind rehearsal (`tools/rehearsal.sh`, workflow `k8s-rehearsal`) installs everything on a throwaway cluster and runs the drills below. The same manifests run on a single-node k3s reference environment since Phase 18 ([Bootstrap on single-node k3s](#bootstrap-on-single-node-k3s)); values that describe one machine are not in this repository (ADR 0023).
 
 ## What runs where
 
@@ -184,7 +184,7 @@ In the admin console (DNS page): **MagicDNS** on, **HTTPS Certificates** on.
 
 **Names are public.** Tailscale's certificates come from Let's Encrypt, so the full name of every machine that gets one is written to the public Certificate Transparency logs for good (not its address, and the name only resolves inside the tailnet). Keep the tailnet's random name (`tailXXXXXX`, no custom or "fun" name), give the machine a meaningless one (no OS, project or personal name), and request a certificate on this machine only.
 
-**Machine names stay out of this repository** (`<host>`, `<tailnet-ip>`). The deployed host name lives in the private environment repository (18.2). A private CA would publish nothing but needs its root trusted on every device; an own domain with a wildcard certificate is the Phase 21 option.
+**Machine names stay out of this repository** (`<host>`, `<tailnet-ip>`). The deployed host name lives in the private environment repository (18.2). A private CA would publish nothing but needs its root trusted on every device; an own domain with a wildcard certificate is the Phase 29 option.
 
 **Check:** `tailscale status` shows the machine online at `<tailnet-ip>`; MagicDNS on; one certificate domain. MagicDNS only adds a `ts.net` route to systemd-resolved (`tailscale0`: `100.100.100.100`), so CoreDNS still forwards to the router and the nftables table (which drops `100.64.0.0/10`) doesn't break pod DNS. A pod reaches `<tailnet-ip>` (local delivery, not forwarded), which the Ollama connection uses. No ufw rule for `tailscale0` yet: Traefik's traffic is forwarded, not input; 18.2 tests from a tailnet and a LAN device and adds only what that needs.
 
@@ -202,7 +202,7 @@ helm upgrade --install cert-manager jetstack/cert-manager --version v1.21.3 \
 
 ### 5. Argo CD
 
-Chart `argo-cd` 10.11.6 (Argo CD v3.5.6) with [`homelab/argocd-values.yaml`](../deploy/environments/homelab/argocd-values.yaml): the Application health check from [Bootstrap](#bootstrap-first-install) step 1 is part of the values (no hand edit of `argocd-cm`), no Dex (the built-in admin is the only user; sign-in through Dex and GitHub is planned for Phase 21, once the UI is reachable beyond the port-forward), no notifications (alerts go through Alertmanager), the unused ApplicationSet controller at 0 replicas. The chart's own NetworkPolicies stay on.
+Chart `argo-cd` 10.11.6 (Argo CD v3.5.6) with [`homelab/argocd-values.yaml`](../deploy/environments/homelab/argocd-values.yaml): the Application health check from [Bootstrap](#bootstrap-first-install) step 1 is part of the values (no hand edit of `argocd-cm`), no Dex (the built-in admin is the only user; sign-in through Dex and GitHub is planned for Phase 23, once the UI is reachable beyond the port-forward), no notifications (alerts go through Alertmanager), the unused ApplicationSet controller at 0 replicas. The chart's own NetworkPolicies stay on.
 
 ```sh
 helm repo add argo https://argoproj.github.io/argo-helm
@@ -657,6 +657,32 @@ EOF
 kubectl -n finuance get backup finuance-db-manual-1 -w   # until phase: completed
 ```
 
+### Connecting backup storage outside the machine
+
+Backups in the cluster's own bucket share the node's disk with the database: they protect against mistakes and a lost volume, not against a lost disk or machine. Moving them outside is a change of values and one secret, and can be done at any time without downtime. Two ways:
+
+**A bucket at a provider** (any S3-compatible service).
+
+1. Create a private bucket and a key pair that can read and write only that bucket. Turn on the provider's encryption at rest; the backups are not encrypted by PostgreSQL.
+2. Seal the key pair: `ACCESS_KEY_ID=… ACCESS_SECRET_KEY=… tools/seal-secrets.sh <env> backup`, commit.
+3. In the environment's database values (`db-values.yaml`): `objectStore.destinationPath: s3://<bucket>/`, `objectStore.endpointURL` (empty for AWS S3, the provider's endpoint otherwise), `objectStore.regionKey` if the store needs a region.
+4. Sync `finuance-db` by hand after reading the diff.
+
+**A second machine you own** (an S3-compatible server such as MinIO, Garage or RustFS on it).
+
+1. Run the server on the other machine with its own disk, a bucket and a key pair. Serve it over TLS; for a private certificate authority put its certificate into a secret and name it in `objectStore.endpointCA`.
+2. Make it reachable from the database pods: a route over the LAN or the tailnet, and the host firewall of the cluster machine must let pod traffic out to that address and port (on the single-node k3s setup the nftables table in `host/` drops pod traffic to private ranges by default).
+3. Steps 2 to 4 above, with `objectStore.endpointURL: https://<host>:<port>`.
+
+**After the switch, in either case:**
+
+- `kubectl cnpg status finuance-db -n finuance` shows WAL archiving working, and the `finuance-db-store` ObjectStore gets a first recoverability point. The new location starts empty: take an [on-demand backup](#on-demand-backup) at once.
+- Keep the old bucket until the new one covers the recovery window you want (14 days by default), then remove the in-cluster store (`rustfs`) if nothing else uses it.
+- Run the [restore drill](#restore-drill-scratch-namespace) once against the new location. A backup that was never restored is a hope.
+- Record where the backups are, and who can read them, in the threat model of the environment.
+
+To go back, restore the previous values and secret; nothing is deleted by switching.
+
 ## Restore
 
 A restore creates a **new** cluster from the bucket (CNPG never restores in place). The new cluster gets the database, its roles, the extensions and the `textlike` LEAKPROOF flag from the backup. It must archive to **another folder** than its origin (`backup.serverName`); the chart refuses to render otherwise.
@@ -697,7 +723,7 @@ Record the times in the table below: **RTO** is from `helm install finuance-db` 
 | Drill | Where | Data | RTO | RPO | Notes |
 |---|---|---|---|---|---|
 | 2026-10-25 | CI rehearsal (kind, 3 nodes, RustFS bucket) | smoke-test data | 75 s (restored cluster ready after 56 s) | 51 s (a write until its WAL was archived; at most `archive_timeout`, 5 min) | on-demand base backup 159 s; both markers back (before the base backup, and only in the WAL after it); `textlike` still LEAKPROOF; the restored roles took the scratch namespace's new passwords |
-| 2026-10-31 | reference machine (single-node k3s, RustFS in the cluster on the same disk; `tools/homelab-drill.sh restore`) | production database with one real account, two marker users | **71 s** (restored cluster ready after 55 s) | **96 s** (a write until its WAL was archived; at most `archive_timeout`, 5 min) | on-demand base backup 8 s; both markers back (before the base backup, and only in the WAL after it); `textlike` still LEAKPROOF; marker B signed in on the restored database; smoke scripts 15 + 18 + 17 steps on the temporary app; markers and namespace deleted afterwards |
+| 2026-10-31 | reference machine (single-node k3s, RustFS in the cluster on the same disk; `tools/homelab-drill.sh restore`) | the environment's database, two marker users | **71 s** (restored cluster ready after 55 s) | **96 s** (a write until its WAL was archived; at most `archive_timeout`, 5 min) | on-demand base backup 8 s; both markers back (before the base backup, and only in the WAL after it); `textlike` still LEAKPROOF; marker B signed in on the restored database; smoke scripts 15 + 18 + 17 steps on the temporary app; markers and namespace deleted afterwards |
 
 ### Pod kills under load
 

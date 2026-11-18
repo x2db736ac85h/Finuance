@@ -4,7 +4,7 @@
 > **Purpose:** rebuild the single-file `finuance.html` MVP (formerly CSV Inspector) as a separated frontend/backend, multi-user, self-hostable personal-finance application that is production-grade and portfolio-worthy.
 > **Scope:** web app only. **No desktop app** in this plan (see §1.4).
 > **Name:** **Finuance** (formerly CSV Inspector; purple book-with-$ logo). Code identifiers, env vars and DB roles use `finuance` / `FINUANCE_`.
-> **Revision 3 (2026-10-20):** synced with the Finuance release of the legacy app (rename, duplicates window, Investment / Yield on cost / FI/RE cards, settings clean-up), plus a full consistency review. See [Revision history](#revision-history).
+> **Revision 5 (2026-11-16):** the plan after the repository became public: Phases 22–29, security first. §1–§8 describe Phases 0–18 as specified; what was built later is in the ADRs and in `docs/COMPONENTS.md`. See [Revision history](#revision-history).
 
 ---
 
@@ -21,6 +21,10 @@
 7. [Frontend specification](#7-frontend-specification)
 8. [Cross-cutting concerns](#8-cross-cutting-concerns)
 9. [Phased implementation plan](#9-phased-implementation-plan)
+   - Phases 0–21: done ([overview](#overview))
+   - [Rev 5: the plan after going public](#rev-5--the-plan-after-going-public-2026-11-16)
+   - [22 Security I](#phase-22--security-i-patches-pins-and-scanners--size-m) · [23 Security II](#phase-23--security-ii-runtime-cluster-and-privacy-hardening--size-l) · [24 Observability](#phase-24--observability-correlated-logs-complete-traces-the-synthetic-marker--size-m) · [25 Simulator](#phase-25--the-traffic-simulator-ten-animals-on-a-lab-instance--size-l)
+   - [26 Cloud AI](#phase-26--cloud-ai-a-vertex-ai-connection-for-the-assistant--size-m) · [27 Google Cloud lab](#phase-27--google-cloud-lab-terraform-and-gke-autopilot-on-demand--size-l) · [28 New interface and phone](#phase-28--new-interface-and-phone--size-xl-was-phase-22-phone-and-touch) · [29 Release 1.0](#phase-29--release-10--size-m-was-phase-23)
 10. [Appendices](#10-appendices)
 
 ---
@@ -3615,6 +3619,8 @@ the Backlog.
 ---
 
 ### Phase 21 — Public release: privacy clean-up, security, demo, documentation, v1.0.0 · Size L (was Phase 19, before that Phase 18)
+
+> **Superseded.** This section is the Phase 21 that was *planned*. What Phase 21 actually did ("Going public", tasks 21.0–21.7 in `docs/PROGRESS.md`) is different, and its task numbers do not match the ones below. Where later sections cite "21.5", "21.8", "21.11" and so on, they mean the tasks of this section; they now belong to Phases 22, 23 and 29.
 
 > **Phase regrouping (2026-11-09, the maintainer).** The repository goes public first, with a small
 > scope, and the rest follows in public: **Phase 21 — Going public** does only what must happen

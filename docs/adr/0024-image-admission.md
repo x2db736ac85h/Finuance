@@ -1,8 +1,8 @@
-# 0024. Image admission on the cluster: registries now, signatures in Phase 21
+# 0024. Image admission on the cluster: registries now, signatures in Phase 23
 
 - Status: accepted
 - Date: 2026-11-02
-- Note (2026-11-03): the follow-up phase was renumbered from 19 to 21 when Phases 19–20 were added (PLAN Rev 4).
+- Note (2026-11-18): the follow-up phase (digests and signatures) is **Phase 23** since PLAN Rev 5 (tasks 23.1 and 23.2); it was Phase 19, then 21.
 
 ## Context
 
@@ -35,11 +35,11 @@ created or updated in `finuance`, `finuance-restore`, `s3` and `monitoring`:
   from the registries it uses);
 - the images we pin ourselves (RustFS, the AWS CLI, Tempo) carry their digest.
 
-Phase 21: **cosign signature verification** for Finuance's images (keyless, the release workflow's
+Phase 23: **cosign signature verification** for Finuance's images (keyless, the release workflow's
 identity) in a policy controller, and Finuance's images **deployed by digest** (chart values, and the
 `gitops-bump` pull request writing the digests the release signed).
 
-Decided by the maintainer on 2026-11-02 (registries now, digests and signatures in Phase 21).
+Decided by the maintainer on 2026-11-02 (registries now, digests and signatures in Phase 23).
 
 ## Consequences (positive, negative, follow-ups)
 
@@ -51,7 +51,7 @@ Decided by the maintainer on 2026-11-02 (registries now, digests and signatures 
   the policy. That is intended, and the RUNBOOK says so; Renovate's chart bumps should be checked
   against the list.
 - Tags can still move: a registry we allow could serve different bytes under the same tag. That is
-  what Phase 21's digests and signatures close.
+  what Phase 23's digests and signatures close.
 - Trivy keeps reporting KSV-0125 for the manifests (it can't see the cluster's policy); the findings
   stay listed with a reference here.
 
@@ -61,5 +61,5 @@ Decided by the maintainer on 2026-11-02 (registries now, digests and signatures 
   deploys by digest; most of that is the third-party charts' choice, not ours.
 - **Kyverno or Sigstore policy-controller now:** verifies signatures, but adds a controller with
   cluster-wide webhooks to a single test machine; better placed with the public demo host
-  (Phase 21), where it matters most.
+  (Phase 23), where it matters most.
 - **No policy, keep KSV-0125 as deliberate:** leaves the gap the threat model names open.

@@ -124,7 +124,7 @@ All test data is synthetic.
 
 ## Roadmap
 
-Released: **0.4.1**. Next: a phone and touch layout (0.5), then more security checks in CI, signature verification in the cluster, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
+Released: **0.4.1**. Next: security first (patches and more checks in CI in 0.4.2; signed images enforced and two-step sign-in in 0.5), then better observability, a traffic simulator, a cloud model option, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
 
 ## How it was built
 
