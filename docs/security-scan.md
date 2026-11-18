@@ -59,6 +59,16 @@ Dockerfile (still no rebuilt base). After the changes: web image 0 findings; api
 repository only GO-2026-5932 (no fix exists); `npm audit` 0; govulncheck 0 reachable, 1 in a required
 module (GO-2026-5932). The repository's misconfiguration findings are unchanged (below).
 
+**CI finding: 2026-11-18**, the security job on a documentation pull request: CVE-2026-112366 /
+GHSA-fc5q-39xc-vjpf in `picomatch` 4.0.7 (HIGH, a denial of service by a crafted glob pattern),
+from `web/package-lock.json` through `vite`, `vitest` and `tinyglobby`. **Accepted until
+2026-12-02, the first entry `.trivyignore` has had:** no fixed version exists (4.0.7 is the newest
+release), the package is used by development tools only with patterns from the repository's own
+configuration, and nothing of it is in the web image (`npm audit --omit=dev`: 0). `npm audit` has
+no way to accept one advisory, so `tools/npm-audit.mjs` now applies the same file, with the same
+expiry, to the audit of every dependency. The rule from here on: a finding is fixed, not ignored;
+the entry is removed as soon as a fixed version exists (PLAN task 22.15).
+
 ## Summary
 
 | Scan | Result | Open |

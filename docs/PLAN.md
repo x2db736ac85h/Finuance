@@ -3970,6 +3970,21 @@ follow; the public tree keeps templates and the README that explains the flow). 
 rotates the values on the machine (the list is in the private README). The rehearsal keeps
 proving the sealing round trip with throw-away values.
 
+22.15 **Accepted findings are revisited, and fixed.** The rule (the maintainer, 2026-11-18): a
+finding is fixed, not ignored, unless a fix is impossible for now. `.trivyignore` is the one list
+of accepted findings (Trivy reads it; `tools/npm-audit.mjs` reads it for `npm audit`), and every
+entry has a reason and an expiry.
+* At the start of this phase and of every later one: for each entry, look for a fixed version,
+  apply it and delete the entry. An expiry is extended only after that was tried, with the date
+  and the reason written next to it.
+* The daily scan (22.7) fails a week before an entry expires, so that it is looked at before CI
+  turns red for everyone.
+* The CI summary of the `security` job lists the accepted entries with their expiry, so they
+  stay visible.
+* `govulncheck` and osv-scanner get no ignore list. If one of them ever needs an exception, it
+  goes through the same file and the same rule, by a decision of the maintainer.
+* The Phase 23 gate requires the file to be empty (task 23.9).
+
 22.14 **The web image build fails clearly** when a native optional package is missing after
 `npm ci` (seen once in CI on 2026-11-17: the install skipped it without an error): check for it
 before `vite build`, with one retry of the install.
@@ -3979,7 +3994,7 @@ finding of the table above with its decision, the "Pinned versions" table of 22.
 that still says "Phase 21" for signatures corrected to Phase 23. `CHANGELOG.md`, `docs/PROGRESS.md`.
 
 **Acceptance criteria**
-- [ ] `govulncheck`, `npm audit` (every severity), osv-scanner and Trivy (HIGH and CRITICAL) are clean on `main`; `.trivyignore` is empty.
+- [ ] `govulncheck`, `npm audit` (every severity), osv-scanner and Trivy (HIGH and CRITICAL) are clean on `main`; `.trivyignore` is empty, or each remaining entry has no fix available on the day of the gate and says so.
 - [ ] Code scanning shows no open alert, or each open one has a written dismissal.
 - [ ] `tools/check-pins.sh` passes; zizmor and actionlint pass.
 - [ ] The Renovate dashboard exists and lists the pins of every kind named in 22.3.
