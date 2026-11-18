@@ -50,7 +50,9 @@ test('two friends share a trip, add expenses and settle up', async ({ browser })
 
   // Share… from the group menu, inviting Bo
   await alex.goto('/t/all');
-  await alex.getByRole('button', { name: 'Groups', exact: true }).click();
+  // "Groups", then "Groups 1" once the count has loaded; a regex, because "Shared with friends"
+  // must not match either
+  await alex.getByRole('button', { name: /^Groups(?: \d+)?$/ }).click();
   await alex.getByRole('button', { name: 'Share Kraków…' }).click();
   const share = alex.getByRole('dialog', { name: 'Share Kraków' });
   await share.getByRole('checkbox', { name: 'Bo' }).check();
