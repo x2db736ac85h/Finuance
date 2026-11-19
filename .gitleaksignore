@@ -12,3 +12,12 @@ aab9a660daf983aa93e3b274fd55a39d8e6edd01:backend/internal/httpapi/auth_http_test
 aab9a660daf983aa93e3b274fd55a39d8e6edd01:backend/internal/store/rls_test.go:generic-api-key:148
 aab9a660daf983aa93e3b274fd55a39d8e6edd01:web/src/settings/activity.test.tsx:generic-api-key:42
 aab9a660daf983aa93e3b274fd55a39d8e6edd01:web/src/settings/activity.test.tsx:generic-api-key:51
+#
+# 4e4a616 (Phase 23, 23.7): the test key of RFC 6238's appendix B ("12345678901234567890" in
+# base32), public since 2011, as the secret of a made-up two-step sign-in in a Vitest fixture and
+# in the texts of the QR encoder's reference symbols (an otpauth:// address has "secret=" in it).
+4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/src/settings/security.test.tsx:generic-api-key:23
+4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/scripts/qr-fixtures.mjs:generic-api-key:9
+4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/src/lib/qr.fixtures.json:generic-api-key:123
+4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/src/lib/qr.fixtures.json:generic-api-key:166
+4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/src/lib/qr.fixtures.json:generic-api-key:221
