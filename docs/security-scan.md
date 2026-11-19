@@ -333,7 +333,11 @@ updates at once; `renovate-config-validator` checks the configuration in CI. A l
 
 ## Next
 
+- Every day: the daily scan (released images, dependencies, expiring acceptances), with the
+  `security-scan` issue. Every pull request and push to `main`: CodeQL, Trivy's SARIF, osv-scanner,
+  the dependency review. Weekly: Scorecard. Renovate proposes updates once its app is installed.
 - Phase 23: signature verification (cosign) for Finuance's images in the admission policy, and the
-  images deployed by digest. When the nginx base is rebuilt with fixed zlib and musl, the
+  images deployed by digest. When the nginx base ships the fixed zlib, musl and OpenSSL itself, the
   Dockerfile's upgrade step can go.
-- Phase 23 gate: repeat every scan above on the release candidate, with nothing open above LOW.
+- Phase 23 gate: repeat every scan above on the release candidate, with nothing open above LOW and
+  `.trivyignore` empty.
