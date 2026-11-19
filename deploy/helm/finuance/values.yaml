@@ -156,6 +156,21 @@ ingress:
   hsts:
     enabled: true
     maxAge: 31536000
+  # Limits per client address at the ingress (Traefik Middlewares; PLAN 23.6, docs/deploying.md).
+  # The application's own limiters count per replica and in memory (ADR 0012); these count once,
+  # in front of every replica. Off by default: switch them on for an instance that the internet
+  # can reach. Behind one shared address (a company NAT, a tunnel) every user counts as one client.
+  limits:
+    enabled: false
+    # How Traefik finds the client's address: 0 is the address of the connection; N takes the Nth
+    # address from the right of X-Forwarded-For, for N trusted proxies in front of Traefik.
+    forwardedDepth: 0
+    # Everything except /api/v1/auth/: `average` requests per `period`, with bursts up to `burst`.
+    requests: { average: 50, period: 1s, burst: 200 }
+    # /api/v1/auth/ (sign-in, sign-up, sign-out): a person needs a handful per session.
+    auth: { average: 20, period: 1m, burst: 20 }
+    # Requests in flight at once; an upload, an export and a streamed answer each hold one.
+    inFlight: 50
   annotations: {}
 
 networkPolicy:

@@ -25,6 +25,9 @@ notes of their version.
   only and only over https (TLS 1.2 or newer), a local one no longer reaches link-local addresses,
   and neither follows a redirect to another host. **If you run a model server on a link-local
   address (169.254.x.x, fe80::), move it to a private one.**
+- The Helm chart can limit requests per client address at the ingress (`ingress.limits`, off by
+  default): a strict limit for sign-in and sign-up, a generous one for the rest and a cap on
+  requests in flight, for instances the internet can reach.
 
 ## [0.4.2] - 2026-11-19
 

@@ -82,6 +82,26 @@ echo "== assistant connections file is mounted where it is read"
   | .name' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a container reads the developer links without mounting them"; exit 1; }
 "$YQ" -e 'select(.kind == "Deployment" and .metadata.name != "finuance-api") | .spec.template.spec.containers[].env[]? | select(.name == "FINUANCE_DEVELOPER_LINKS_FILE")' \
   "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a component other than the api reads the developer links"; exit 1; }
+# Limits at the ingress (PLAN 23.6): off by default (no Middleware but the HSTS one, one Ingress);
+# on: /api/v1/auth/ has its own Ingress with the strict limit, the rest the general one, both the
+# in-flight cap, and every Middleware an Ingress names exists.
+[ "$("$YQ" -N 'select(.kind == "Ingress" or (.kind == "Middleware" and .metadata.name != "finuance-headers")) | .metadata.name' "$out/app-homelab-like-values.yaml" | tr '\n' ' ')" = "finuance " ] ||
+  { echo "check-helm: the ingress limits are rendered although they are off"; exit 1; }
+lim="$out/app-limits-values.yaml"
+[ "$("$YQ" -N 'select(.kind == "Ingress" and .metadata.name == "finuance-auth") | .spec.rules[0].http.paths[0].path' "$lim")" = /api/v1/auth/ ] ||
+  { echo "check-helm: no Ingress for /api/v1/auth/ with the limits on"; exit 1; }
+for pair in "finuance:finuance-ratelimit" "finuance-auth:finuance-ratelimit-auth" "finuance:finuance-inflight" "finuance-auth:finuance-inflight"; do
+  "$YQ" -N "select(.kind == \"Ingress\" and .metadata.name == \"${pair%%:*}\") | .metadata.annotations.\"traefik.ingress.kubernetes.io/router.middlewares\"" "$lim" |
+    grep -q "finuance-${pair##*:}@kubernetescrd" || { echo "check-helm: Ingress ${pair%%:*} does not use Middleware ${pair##*:}"; exit 1; }
+done
+"$YQ" -N 'select(.kind == "Ingress" and .metadata.name == "finuance-auth") | .metadata.annotations."traefik.ingress.kubernetes.io/router.middlewares"' "$lim" |
+  grep -q 'finuance-ratelimit@' && { echo "check-helm: the auth Ingress also has the general limit"; exit 1; }
+for name in $("$YQ" -N 'select(.kind == "Ingress") | .metadata.annotations."traefik.ingress.kubernetes.io/router.middlewares"' "$lim" | tr ',' '\n' | sed 's/^finuance-//; s/@kubernetescrd$//' | sort -u); do
+  [ "$("$YQ" -N "select(.kind == \"Middleware\" and .metadata.name == \"$name\") | .metadata.name" "$lim")" = "$name" ] ||
+    { echo "check-helm: an Ingress names Middleware $name, which the chart does not render"; exit 1; }
+done
+[ "$("$YQ" -N 'select(.kind == "Middleware" and .metadata.name == "finuance-ratelimit-auth") | .spec.rateLimit.sourceCriterion.ipStrategy.depth' "$lim")" = 1 ] ||
+  { echo "check-helm: forwardedDepth does not reach the Middlewares"; exit 1; }
 # Deploy by digest (PLAN 23.1): with image.digests set every container runs registry/name@sha256:…
 # and no tag; without them, the tag. The homelab's values carry digests.
 d1="sha256:$(printf '1%.0s' $(seq 64))" d2="sha256:$(printf '2%.0s' $(seq 64))"
@@ -156,6 +176,8 @@ must_fail "a developer link isn't http(s)" "developer" "$app" "${o[@]}" --set in
 must_fail "an image digest is malformed" "/image/digests/api" "$app" "${o[@]}" --set ingress.tls.mode=none --set image.digests.api=sha256:abc --set image.digests.web="$d2"
 must_fail "an image digest carries a tag" "/image/digests/web" "$app" "${o[@]}" --set ingress.tls.mode=none --set image.digests.api="$d1" --set image.digests.web="0.4.2@$d2"
 must_fail "only one image digest is set" "image.digests needs both" "$app" "${o[@]}" --set ingress.tls.mode=none --set image.digests.api="$d1"
+must_fail "a rate limit's period has no unit" "/ingress/limits/requests/period" "$app" "${o[@]}" --set ingress.tls.mode=none --set ingress.limits.enabled=true --set ingress.limits.requests.period=60
+must_fail "a rate limit is zero" "/ingress/limits/auth/average" "$app" "${o[@]}" --set ingress.tls.mode=none --set ingress.limits.enabled=true --set ingress.limits.auth.average=0
 must_fail "extraEnv sets a non-FINUANCE variable" "^FINUANCE_[A-Z0-9_]+$" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.PATH=/tmp
 must_fail "the backup has no bucket" "objectStore.destinationPath is required" "$db"
 must_fail "the backup schedule has 5 fields" "/backup/schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"
