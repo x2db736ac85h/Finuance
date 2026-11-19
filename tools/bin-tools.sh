@@ -7,11 +7,17 @@
 # CI installs the scanners the same way (PLAN task 22.5: no scanner image, no Docker socket).
 set -euo pipefail
 
+# renovate: datasource=github-releases depName=sqlc-dev/sqlc
 SQLC_VERSION=1.31.1
+# renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_VERSION=2.15.0
+# renovate: datasource=github-releases depName=aquasecurity/trivy
 TRIVY_VERSION=0.76.2
+# renovate: datasource=github-releases depName=rhysd/actionlint
 ACTIONLINT_VERSION=1.7.12
+# renovate: datasource=github-releases depName=zizmorcore/zizmor
 ZIZMOR_VERSION=1.32.0
+# renovate: datasource=github-releases depName=google/osv-scanner
 OSV_SCANNER_VERSION=2.7.1
 
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"

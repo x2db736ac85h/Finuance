@@ -27,9 +27,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # renovate: datasource=go depName=helm.sh/helm/v3
   HELM_VERSION: v3.22.1
+  # renovate: datasource=go depName=sigs.k8s.io/kind
   KIND_VERSION: v0.29.0
+  # renovate: datasource=go depName=github.com/bitnami/sealed-secrets
   KUBESEAL_VERSION: v0.40.0
+  # renovate: datasource=go depName=github.com/mikefarah/yq/v4
   YQ_VERSION: v4.54.1
 
 jobs:

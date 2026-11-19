@@ -272,6 +272,32 @@ yet: Finuance's images, CloudNativePG's PostgreSQL and the monitoring stack's ch
 **Phase 23:** cosign signature verification for Finuance's images, deployed by digest (the release
 already records the digests it signs). Checked with server-side dry runs (RUNBOOK step 15).
 
+## Pinned versions
+
+Every version the repository depends on, where it is written, and what keeps it current (PLAN
+tasks 22.3 and 22.4). `tools/check-pins.sh` (in `make check`) refuses an action by tag and an image
+by tag alone. Renovate (the hosted app, `renovate.json`) proposes updates on Mondays and security
+updates at once; `renovate-config-validator` checks the configuration in CI. A local
+`renovate --platform=local --dry-run=extract` of 2026-11-19 found every row below.
+
+| What | Where | Pinned as | Renovate manager |
+|---|---|---|---|
+| Go | `backend/go.mod` (`toolchain`), `mise.toml`, the `golang` image of `Dockerfile.backend` | version; the image by digest; `tools/check-toolchain.sh` keeps the three equal | `gomod`, `mise`, `dockerfile` (one group) |
+| Go modules | `backend/go.mod`, `backend/go.sum` | version and checksum | `gomod` |
+| npm packages | `web/package.json`, `tools/legacy-oracle/package.json` and their lockfiles | exact version and lockfile | `npm` |
+| Base images | `deploy/docker/Dockerfile.backend`, `Dockerfile.web` | tag and digest | `dockerfile` |
+| Compose images | `deploy/compose/*.yaml`, `tools/openvas/compose.override.yaml` | tag and digest (the repository's own images by tag) | `docker-compose` |
+| Manifest images | `deploy/k8s/rehearsal`, `rustfs`, `tempo` | tag and digest | `kubernetes` |
+| PostgreSQL in the cluster | `deploy/k8s/db/values.yaml` (`imageName`) | CloudNativePG tag (`18.7-standard-trixie`) | regex |
+| Cluster charts | `deploy/k8s/argocd/apps/*.yaml` (CloudNativePG, Barman Cloud plugin, Sealed Secrets, kube-prometheus-stack) | chart version | `argocd` |
+| GitHub actions | `.github/workflows/*.yml` (`uses:`) | commit SHA, the version in a comment | `github-actions` |
+| Node in CI | `.github/workflows/*.yml` (`node-version`) | major version | `github-actions` |
+| Tools installed in workflows | `env:` blocks: Helm, kind, kubeseal, kubeconform, yq, cosign, syft (`go install`), gitleaks (with its checksum), the Renovate validator | version, marked by a `# renovate:` comment | regex |
+| Scanners and generators | `tools/bin-tools.sh`: sqlc, golangci-lint, Trivy, actionlint, zizmor, osv-scanner | version and four checksums each | regex; the checksums are updated by hand, CI fails until they are |
+| Images run by scripts | `Makefile` (`K6_IMAGE`), `tools/rehearsal.sh`, `tools/homelab-drill.sh`, `tools/check-observability.sh` (promtool), `tools/zap-scan.sh`, `tools/openvas-scan.sh` | tag and digest | regex |
+| Finuance's own images | `deploy/environments/homelab/values.yaml`, `compose.prod.yaml` | release tag; by digest and signature from Phase 23 | the release's `gitops-bump` pull request |
+| The machine's software | k3s, Argo CD, Traefik, cert-manager on the reference machine | installed by the maintainer | none (RUNBOOK) |
+
 ## Next
 
 - Phase 23: signature verification (cosign) for Finuance's images in the admission policy, and the

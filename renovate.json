@@ -6,6 +6,47 @@
   "prConcurrentLimit": 5,
   "minimumReleaseAge": "7 days",
   "labels": ["dependencies"],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "description": "Security updates come at once, outside the Monday window and without the release-age wait (PLAN task 22.3)",
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null,
+    "labels": ["dependencies", "security"]
+  },
+  "argocd": {
+    "managerFilePatterns": ["/^deploy/k8s/argocd/apps/.+\\.yaml$/"]
+  },
+  "kubernetes": {
+    "description": "The raw manifests with images; deploy/k8s/db and deploy/k8s/observability are Helm charts",
+    "managerFilePatterns": ["/^deploy/k8s/(rehearsal|rustfs|tempo)/.+\\.yaml$/"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tool versions in workflow env: blocks and tools/bin-tools.sh (and the validator's own version in ci.yml), marked by a `# renovate:` comment on the line above. A version with a checksum next to it (gitleaks, bin-tools.sh) fails CI until the checksum is updated by hand.",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^tools/bin-tools\\.sh$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n\\s*[A-Z_]+_VERSION\\s*[:=]\\s*\"?(?<currentValue>[^\\s\"]+)\"?"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "Images pinned by digest in make and shell variables (K6_IMAGE, the rehearsal's helpers, promtool, ZAP)",
+      "managerFilePatterns": ["/^Makefile$/", "/^tools/.+\\.sh$/"],
+      "matchStrings": [
+        "[A-Z0-9_]*IMAGE\\s*:?=\\s*(?:\\$\\{[A-Z0-9_]+:-)?(?<depName>[a-z0-9][a-z0-9./_-]*):(?<currentValue>[\\w.-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "The CloudNativePG operand image of the database chart (a tag like 18.7-standard-trixie)",
+      "managerFilePatterns": ["/^deploy/k8s/db/values\\.yaml$/"],
+      "matchStrings": ["imageName:\\s*(?<depName>[^\\s:]+):(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)-(?<compatibility>.+)$"
+    }
+  ],
   "packageRules": [
     {
       "description": "Major updates need an explicit review",
@@ -31,8 +72,15 @@
       "matchManagers": ["docker-compose", "dockerfile"]
     },
     {
+      "description": "Release tags carry a v that the versions in tools/bin-tools.sh and gitleaks leave out",
+      "matchManagers": ["custom.regex"],
+      "matchDatasources": ["github-releases"],
+      "matchCurrentValue": "/^\\d/",
+      "extractVersion": "^v(?<version>.+)$"
+    },
+    {
       "description": "Postgres majors change the data layout; upgrade deliberately",
-      "matchPackageNames": ["postgres"],
+      "matchPackageNames": ["postgres", "ghcr.io/cloudnative-pg/postgresql"],
       "matchUpdateTypes": ["major"],
       "enabled": false
     },
