@@ -1,0 +1,36 @@
+# OpenSSF Scorecard (PLAN task 22.6): the repository's supply-chain practices, weekly and on pushes
+# to main. The results are published (scorecard.dev, the badge) and go to code scanning. Scorecard
+# accepts published results only from a workflow like this one: read-only by default, no run steps,
+# only the actions it allows.
+name: Scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "37 4 * * 3" # Wednesdays 04:37 UTC
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: scorecard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      security-events: write # the results in code scanning
+      id-token: write # publishing the results
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ossf/scorecard-action@23f22cd43608bae7a1f1fa2603d7314dee9538a5 # v2.6.0
+        with:
+          results_file: scorecard.sarif
+          results_format: sarif
+          publish_results: true
+      - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: scorecard.sarif
+          category: scorecard

@@ -7,7 +7,20 @@ Two ways to run Finuance: Docker Compose on one host, or Kubernetes with Helm, C
 - Put a reverse proxy with TLS in front of port 8000 (Caddy, Traefik, nginx) and set `FINUANCE_PUBLIC_ORIGIN` to its URL. Production mode sends secure cookies only, so the app works over HTTPS, or over plain http on `localhost` (e.g. through an ssh tunnel to a server).
 - Sign-up is off by default. Create accounts with the admin CLI: `docker compose … exec -T api /finuance admin create-user --email you@example.com --password-stdin` (it reads the password from standard input), or set `FINUANCE_ALLOW_SIGNUP=true`.
 - Demo mode (`FINUANCE_DEMO_MODE=true`): visitors start their own throwaway demo user from the sign-in page ("Try the demo"), deleted with its data after 24 hours. Sign-up is off, uploads are limited to 2 MiB, the migration from the single-file app is refused, at most 5 demo users start per hour and address, and the assistant stays off unless `FINUANCE_DEMO_ASSISTANT=true` (then 10 questions per visitor). `make test-e2e-demo` runs it with [`compose.demo.yaml`](../deploy/compose/compose.demo.yaml).
-- Verify an image: `cosign verify ghcr.io/x2db736ac85h/finuance-api:<version> --certificate-identity-regexp 'https://github.com/x2db736ac85h/Finuance/' --certificate-oidc-issuer https://token.actions.githubusercontent.com`.
+- Verify an image before you run it (both commands appear with the exact digests in every [release](https://github.com/x2db736ac85h/Finuance/releases)'s notes; [SECURITY.md](../SECURITY.md) explains them). The signature, made by the release workflow for a version tag and nothing else:
+
+  ```sh
+  cosign verify ghcr.io/x2db736ac85h/finuance-api:<version> \
+    --certificate-identity-regexp '^https://github\.com/x2db736ac85h/Finuance/\.github/workflows/release\.yml@refs/tags/v[0-9]' \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com
+  ```
+
+  The build provenance (from `v0.4.2`), which says which commit and workflow built it:
+
+  ```sh
+  gh attestation verify oci://ghcr.io/x2db736ac85h/finuance-api:<version> \
+    --repo x2db736ac85h/Finuance --signer-workflow x2db736ac85h/Finuance/.github/workflows/release.yml
+  ```
 - Back up the database volume regularly. It holds your original CSV files too.
 
 **Kubernetes with Helm, CloudNativePG and Argo CD** (rehearsed weekly in CI on a kind cluster, including a backup restore and pod kills; running on a reference environment, single-node k3s with a small NVIDIA GPU, since Phase 18):

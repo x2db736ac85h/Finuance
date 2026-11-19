@@ -89,6 +89,7 @@ audit's table of 2026-11-16, row by row, with the newest release on the day:
 | `minimatch` 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 (MEDIUM) | ESLint 10.15.0, typescript-eslint 8.73.0 | **Fixed** 2026-11-19: both updated, `minimatch` 11.0.9, `npm audit` 0 at every severity; `minimatch` 5.1.9 under openapi-typescript is outside the advisory's range (≥ 7.0.0) |
 | `picomatch` 4.0.7 (development tools) | GHSA-fc5q-39xc-vjpf | 4.0.7 | **Gone:** the advisory was withdrawn (above) |
 | nginx 1.30.6 (web image base) | CVE-2026-113425, CVE-2026-121810, CVE-2026-123007, CVE-2026-123633, CVE-2026-123634 (HIGH; nginx 1.30.7 of 2026-11-18), found by CI's image scan on this phase's first pull request at 03:03 UTC, after the scan above | 1.30.7 (`ghcr.io/nginx/nginx-unprivileged:1.30.7-alpine`; Docker Hub did not have it yet) | **Fixed** 2026-11-19: the base from NGINX's GHCR by digest (the same digest as on their ECR); the web image scans with 0 findings at every severity |
+| OpenSSL 3.5.9-r0 (`libssl3`, `libcrypto3`, the nginx 1.30.7 base) | CVE-2026-107496, CVE-2026-88822, CVE-2026-88823, CVE-2026-95691, CVE-2026-95692 (MEDIUM), found by the first SARIF upload to code scanning (pull request 41) | 3.5.9-r1 | **Fixed** 2026-11-19: the Dockerfile upgrades OpenSSL from the Alpine mirror with zlib and musl; the web image scans with 0 findings at every severity |
 | Trivy 0.76.0 (CI, release) | none | 0.76.2 | **Updated** 2026-11-19 to 0.76.2 (CI, release); a binary checked by checksum instead of the image in task 22.5 |
 
 Nothing new: web image 0 findings; api image only GO-2026-5932; repository only `minimatch` and
@@ -97,6 +98,10 @@ GO-2026-5932, and the misconfigurations documented below (the same files and che
 CloudNativePG (1.30.1, its Barman Cloud plugin 0.15.1), Sealed Secrets (0.40.0), cert-manager,
 Traefik and Argo CD have no advisory on OSV for the versions running; their updates are routine and
 belong with the machine's maintenance.
+
+**trufflehog over the whole history: 2026-11-19** (PLAN task 22.6, once; gitleaks stays the gate
+on every push): trufflehog 3.99.9 (checked against its release's checksums), `git file://.`,
+8,535 chunks (17.6 MB): **0 verified and 0 unverified secrets**.
 
 ## Summary
 
@@ -271,6 +276,32 @@ ourselves (RustFS, the AWS CLI, Tempo) only by digest. "Digests only" for everyt
 yet: Finuance's images, CloudNativePG's PostgreSQL and the monitoring stack's charts deploy by tag.
 **Phase 23:** cosign signature verification for Finuance's images, deployed by digest (the release
 already records the digests it signs). Checked with server-side dry runs (RUNBOOK step 15).
+
+## Pinned versions
+
+Every version the repository depends on, where it is written, and what keeps it current (PLAN
+tasks 22.3 and 22.4). `tools/check-pins.sh` (in `make check`) refuses an action by tag and an image
+by tag alone. Renovate (the hosted app, `renovate.json`) proposes updates on Mondays and security
+updates at once; `renovate-config-validator` checks the configuration in CI. A local
+`renovate --platform=local --dry-run=extract` of 2026-11-19 found every row below.
+
+| What | Where | Pinned as | Renovate manager |
+|---|---|---|---|
+| Go | `backend/go.mod` (`toolchain`), `mise.toml`, the `golang` image of `Dockerfile.backend` | version; the image by digest; `tools/check-toolchain.sh` keeps the three equal | `gomod`, `mise`, `dockerfile` (one group) |
+| Go modules | `backend/go.mod`, `backend/go.sum` | version and checksum | `gomod` |
+| npm packages | `web/package.json`, `tools/legacy-oracle/package.json` and their lockfiles | exact version and lockfile | `npm` |
+| Base images | `deploy/docker/Dockerfile.backend`, `Dockerfile.web` | tag and digest | `dockerfile` |
+| Compose images | `deploy/compose/*.yaml`, `tools/openvas/compose.override.yaml` | tag and digest (the repository's own images by tag) | `docker-compose` |
+| Manifest images | `deploy/k8s/rehearsal`, `rustfs`, `tempo` | tag and digest | `kubernetes` |
+| PostgreSQL in the cluster | `deploy/k8s/db/values.yaml` (`imageName`) | CloudNativePG tag (`18.7-standard-trixie`) | regex |
+| Cluster charts | `deploy/k8s/argocd/apps/*.yaml` (CloudNativePG, Barman Cloud plugin, Sealed Secrets, kube-prometheus-stack) | chart version | `argocd` |
+| GitHub actions | `.github/workflows/*.yml` (`uses:`) | commit SHA, the version in a comment | `github-actions` |
+| Node in CI | `.github/workflows/*.yml` (`node-version`) | major version | `github-actions` |
+| Tools installed in workflows | `env:` blocks: Helm, kind, kubeseal, kubeconform, yq, cosign, syft (`go install`), gitleaks (with its checksum), the Renovate validator | version, marked by a `# renovate:` comment | regex |
+| Scanners and generators | `tools/bin-tools.sh`: sqlc, golangci-lint, Trivy, actionlint, zizmor, osv-scanner | version and four checksums each | regex; the checksums are updated by hand, CI fails until they are |
+| Images run by scripts | `Makefile` (`K6_IMAGE`), `tools/rehearsal.sh`, `tools/homelab-drill.sh`, `tools/check-observability.sh` (promtool), `tools/zap-scan.sh`, `tools/openvas-scan.sh` | tag and digest | regex |
+| Finuance's own images | `deploy/environments/homelab/values.yaml`, `compose.prod.yaml` | release tag; by digest and signature from Phase 23 | the release's `gitops-bump` pull request |
+| The machine's software | k3s, Argo CD, Traefik, cert-manager on the reference machine | installed by the maintainer | none (RUNBOOK) |
 
 ## Next
 

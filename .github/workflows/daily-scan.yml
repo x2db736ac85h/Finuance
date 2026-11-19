@@ -1,0 +1,155 @@
+# The daily scan (PLAN task 22.7): what is released and what the tree depends on, checked against
+# that day's advisories, so that a new one is noticed within a day without anyone pushing a commit.
+# govulncheck, npm audit of both lockfiles (with the accepted findings of .trivyignore), osv-scanner,
+# and Trivy against the image digests of the latest release (what runs, not what is in the tree).
+# It also fails a week before an accepted finding expires (task 22.15). On a finding the run fails
+# and the report job opens or updates the one open issue labelled `security-scan`; a clean run
+# closes it. A manual run can scan another image instead, to prove the alert path once.
+name: Daily scan
+
+on:
+  schedule:
+    - cron: "11 6 * * *" # 06:11 UTC
+  workflow_dispatch:
+    inputs:
+      image:
+        description: An image to scan instead of the latest release's (to prove the alert path)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: scan (dependencies, released images, accepted findings)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      failed: ${{ steps.result.outputs.failed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Tools (trivy, osv-scanner)
+        run: |
+          tools/bin-tools.sh trivy
+          tools/bin-tools.sh osv-scanner
+
+      - name: govulncheck
+        id: govulncheck
+        continue-on-error: true
+        working-directory: backend
+        run: go tool govulncheck ./...
+      - name: npm audit (both lockfiles)
+        id: npm
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          (cd web && npm audit --json | node ../tools/npm-audit.mjs ../.trivyignore)
+          (cd tools/legacy-oracle && npm audit --json | node ../npm-audit.mjs ../../.trivyignore)
+      - name: osv-scanner
+        id: osv
+        continue-on-error: true
+        run: backend/bin/osv-scanner scan -L backend/go.mod -L web/package-lock.json -L tools/legacy-oracle/package-lock.json
+      - name: Trivy on the released images
+        id: trivy
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ inputs.image }}
+        run: |
+          set -euo pipefail
+          if [ -n "$IMAGE" ]; then
+            echo "scanning $IMAGE (manual run)"
+            backend/bin/trivy image --ignorefile .trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress "$IMAGE"
+            exit 0
+          fi
+          # the latest release lists the digests it signed (release.yml, "Images")
+          tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+          mapfile -t images < <(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
+            | grep -oE 'ghcr\.io/x2db736ac85h/finuance-(api|web)@sha256:[0-9a-f]{64}' | sort -u)
+          [ "${#images[@]}" -eq 2 ] || { echo "::error::release $tag lists ${#images[@]} image digests, expected 2"; exit 1; }
+          echo "release $tag"
+          for img in "${images[@]}"; do
+            for platform in linux/amd64 linux/arm64; do
+              backend/bin/trivy image --ignorefile .trivyignore --platform "$platform" --scanners vuln \
+                --severity HIGH,CRITICAL --exit-code 1 --no-progress "$img"
+            done
+          done
+      - name: Accepted findings expiring within a week
+        id: expiry
+        continue-on-error: true
+        run: |
+          soon="$(date -u -d '+7 days' +%F)"
+          late="$(grep -oE '^[^#[:space:]]+[[:space:]]+exp:[0-9]{4}-[0-9]{2}-[0-9]{2}' .trivyignore \
+            | awk -v soon="$soon" '{ split($2, e, ":"); if (e[2] <= soon) print $1 " expires " e[2] }' || true)"
+          if [ -n "$late" ]; then
+            while read -r line; do echo "::error title=.trivyignore::$line"; done <<<"$late"
+            exit 1
+          fi
+          echo "no accepted finding expires before $soon"
+
+      - name: Result
+        id: result
+        env:
+          GOVULNCHECK: ${{ steps.govulncheck.outcome }}
+          NPM: ${{ steps.npm.outcome }}
+          OSV: ${{ steps.osv.outcome }}
+          TRIVY: ${{ steps.trivy.outcome }}
+          EXPIRY: ${{ steps.expiry.outcome }}
+        run: |
+          failed=""
+          for s in "govulncheck:$GOVULNCHECK" "npm audit:$NPM" "osv-scanner:$OSV" "Trivy:$TRIVY" "expiring acceptances:$EXPIRY"; do
+            [ "${s##*:}" = success ] || failed="${failed:+$failed, }${s%:*}"
+          done
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          { echo '### Daily scan'; echo; echo "${failed:-Nothing found.}"; } >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$failed" ]; then echo "::error::daily scan: $failed"; exit 1; fi
+
+  report:
+    name: report (the security-scan issue)
+    needs: scan
+    if: always() && needs.scan.result != 'cancelled'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write # the one issue labelled security-scan
+    steps:
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          FAILED: ${{ needs.scan.outputs.failed }}
+          RESULT: ${{ needs.scan.result }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # a scan job that failed before its result counts as a finding: someone has to look
+          if [ "$RESULT" != success ] && [ -z "$FAILED" ]; then FAILED="the scan job itself"; fi
+          gh label create security-scan --color B60205 --description "Found by the daily scan" 2>/dev/null || true
+          open="$(gh issue list --label security-scan --state open --json number --jq '.[0].number // empty')"
+          day="$(date -u +%F)"
+          if [ -n "$FAILED" ]; then
+            body="The daily scan of $day found something in: $FAILED. Details: $RUN"
+            if [ -n "$open" ]; then
+              gh issue comment "$open" --body "$body"
+            else
+              gh issue create --title "Daily scan: findings" --label security-scan --body "$body
+
+          Fix the finding, or, if no fix exists yet, accept it in .trivyignore with a reason and an expiry (docs/security-scan.md). A clean run closes this issue."
+            fi
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --comment "The daily scan of $day is clean: $RUN"
+          fi
