@@ -11,6 +11,11 @@ const (
 	DefaultMaxRows    = 200_000
 	DefaultMaxColumns = 200
 	ctxCheckEvery     = 10_000 // rows between cancellation checks
+
+	// MaxCellBytes bounds one cell at staging: a longer one is cut to it and its row is an error
+	// (IMP-6). MaxSearchTextBytes bounds a row's search text (every raw cell, normalised).
+	MaxCellBytes       = 4 << 10
+	MaxSearchTextBytes = 16 << 10
 )
 
 // Errors from Parse besides ErrEmptyFile and ErrHeaderRowOutOfRange.
@@ -79,7 +84,7 @@ func Parse(ctx context.Context, raw []byte, o Options) (*Result, error) {
 func tokenize(ctx context.Context, text string, delim rune, maxRows, maxCols int) ([][]string, error) {
 	var outErr error
 	n := 0
-	records := tokenizeEach(text, delim, func(rec []string) bool {
+	records := tokenizeEach(text, delim, maxRows, maxCols, func(rec []string) bool {
 		n++
 		switch {
 		case len(rec) > maxCols:

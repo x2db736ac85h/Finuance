@@ -3,9 +3,11 @@ package ingest
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
@@ -49,6 +51,48 @@ func TestStageBasics(t *testing.T) {
 	}
 	if rows[2].Occurrence != 0 || rows[0].Occurrence != 1 {
 		t.Error("errored rows get occurrence 0")
+	}
+}
+
+// TestStageBoundsCellsAndSearchText: a 1 MiB cell is cut to MaxCellBytes and its row is an error
+// (the table itself is left alone); a valid row's search text is cut to MaxSearchTextBytes; both
+// cuts keep whole characters (IMP-6).
+func TestStageBoundsCellsAndSearchText(t *testing.T) {
+	huge := strings.Repeat("ż", 1<<19) // 1 MiB of two-byte characters
+	wide := make([]string, 0, 10)
+	headers := []string{"Data", "Kwota"}
+	wide = append(wide, "02.01.2025", "-1,00")
+	for k := range 8 {
+		headers = append(headers, "Opis "+string(rune('A'+k)))
+		wide = append(wide, strings.Repeat("€", MaxCellBytes/3-1)) // under the cell limit; Norm keeps "€" at 3 bytes
+	}
+	tb := table(headers, append([]string{"02.01.2025", "-1,00", huge}, wide[3:]...), wide)
+	m := NewMapping()
+	m.BookedOn, m.Amount = 0, 1
+	rows, st, err := Stage(context.Background(), tb, m, StageOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Valid != 1 || st.Errors != 1 {
+		t.Errorf("stats = %+v", st)
+	}
+	if want := fmt.Sprintf("%q is longer than 4 KB", "Opis A"); rows[0].Error != want {
+		t.Errorf("error = %q, want %q", rows[0].Error, want)
+	}
+	if v := rows[0].Raw[2].Value; len(v) > MaxCellBytes || !utf8.ValidString(v) || !strings.HasPrefix(huge, v) {
+		t.Errorf("cut cell: %d bytes, valid %v", len(v), utf8.ValidString(v))
+	}
+	if tb.Rows[0][2] != huge {
+		t.Error("the table was changed")
+	}
+	for i, r := range rows {
+		if len(r.SearchText) > MaxSearchTextBytes || !utf8.ValidString(r.SearchText) {
+			t.Errorf("row %d: search text %d bytes, valid %v", i, len(r.SearchText), utf8.ValidString(r.SearchText))
+		}
+	}
+	full := Norm(strings.Join(wide, "\u0001"))
+	if len(full) <= MaxSearchTextBytes || rows[1].Error != "" || len(rows[1].SearchText) < MaxSearchTextBytes-3 || !strings.HasPrefix(full, rows[1].SearchText) {
+		t.Errorf("valid row: %q; search text %d of %d bytes, or not a prefix of the full one", rows[1].Error, len(rows[1].SearchText), len(full))
 	}
 }
 

@@ -3,11 +3,59 @@ package ingest
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+// allocated is the number of bytes f allocates on the heap.
+func allocated(f func()) uint64 {
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	f()
+	runtime.ReadMemStats(&after)
+	return after.TotalAlloc - before.TotalAlloc
+}
+
+// TestParseHostileShapesStayBounded: a file of the default upload size (20 MiB) that is one line
+// of delimiters or only line breaks is refused by the limits, and the work before the refusal
+// stays proportional to the limits, not to the file (IMP-1).
+func TestParseHostileShapesStayBounded(t *testing.T) {
+	const size = 20 << 20
+	cases := []struct {
+		name  string
+		raw   string
+		o     Options
+		want  error
+		limit uint64
+	}{
+		// the field count is checked while the line is split: about the decoded copy of the file
+		{"one line of delimiters", strings.Repeat(";", size), Options{}, ErrTooManyColumns, 3 * size},
+		{"one line of a non-ASCII delimiter", strings.Repeat("¦", size/2), Options{Delimiter: '¦'}, ErrTooManyColumns, 4 * size},
+		// at most DefaultMaxRows+1 records: the pre-sizing follows the limit, not the line count
+		{"only line breaks", strings.Repeat("\n", size), Options{}, ErrTooManyRows, 64 << 20},
+	}
+	for _, c := range cases {
+		var err error
+		got := allocated(func() { _, err = Parse(context.Background(), []byte(c.raw), c.o) })
+		if !errors.Is(err, c.want) {
+			t.Errorf("%s: %v, want %v", c.name, err, c.want)
+		}
+		if got > c.limit {
+			t.Errorf("%s: allocated %d MiB, limit %d MiB", c.name, got>>20, c.limit>>20)
+		}
+	}
+	// the limit itself is unchanged: maxCols fields pass, one more is refused
+	if _, err := Parse(context.Background(), []byte(strings.Repeat("x;", 199)+"x\n1;2\n"), Options{}); err != nil {
+		t.Errorf("200 columns: %v", err)
+	}
+	if _, err := Parse(context.Background(), []byte(strings.Repeat("x;", 200)+"x\n1;2\n"), Options{}); !errors.Is(err, ErrTooManyColumns) {
+		t.Errorf("201 columns: %v", err)
+	}
+}
 
 func TestParseLimitsAndCancellation(t *testing.T) {
 	ctx := context.Background()

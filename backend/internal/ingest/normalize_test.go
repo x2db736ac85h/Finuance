@@ -76,7 +76,7 @@ func TestNormFastPathsMatchFull(t *testing.T) {
 
 func TestTokenizeEdgeCases(t *testing.T) {
 	for _, in := range []string{`"`, `""`, `"""`, `""x`, `"""x"`, `a;`, `;`, "a\r", "a\r\nb", `"a;b";c`, `x"y;z`, "\"open\nend", `"a"b"c";d`, ""} {
-		if b, r := Tokenize(in, ';'), tokenizeRunes(in, ';', nil); !reflect.DeepEqual(b, r) {
+		if b, r := Tokenize(in, ';'), tokenizeRunes(in, ';', 0, nil); !reflect.DeepEqual(b, r) {
 			t.Errorf("Tokenize(%q) = %q, rune reference %q", in, b, r)
 		}
 	}

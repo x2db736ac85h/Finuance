@@ -36,7 +36,7 @@ func FuzzTokenize(f *testing.F) {
 			return
 		}
 		recs := Tokenize(text, delim)
-		if runes := tokenizeRunes(text, delim, nil); !reflect.DeepEqual(recs, runes) {
+		if runes := tokenizeRunes(text, delim, 0, nil); !reflect.DeepEqual(recs, runes) {
 			t.Fatalf("byte and rune tokenizers differ for %q:\n%q\n%q", text, recs, runes)
 		}
 		if strings.ContainsRune(text, '"') || text == "" {
