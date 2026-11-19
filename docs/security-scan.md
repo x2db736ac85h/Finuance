@@ -103,6 +103,21 @@ belong with the machine's maintenance.
 on every push): trufflehog 3.99.9 (checked against its release's checksums), `git file://.`,
 8,535 chunks (17.6 MB): **0 verified and 0 unverified secrets**.
 
+**OpenSSF Scorecard: 2026-11-19, 6.8 of 10** (PLAN task 22.6; `scorecard.yml`, published), on
+`main` at `9a5134c`. 10 of 10: pinned dependencies, token permissions, dangerous workflows,
+vulnerabilities, security policy, dependency updates, fuzzing, CI tests, packaging, licence, binary
+artifacts. The rest, with what was decided:
+
+| Check | Score | Decision |
+|---|---|---|
+| Signed-Releases | 0 | **Fixed for `v0.4.2`:** each release attaches the provenance bundles of both images (`*.intoto.jsonl`) and a cosign signature bundle of the `fin` checksum file; the images were signed already, in the registry |
+| SAST | 7 | Rises by itself: CodeQL runs on every pull request and push to `main` since this day |
+| Branch-Protection | 3 | Accepted: one maintainer, who can't approve their own pull requests; the ruleset requires a pull request and every CI job |
+| Code-Review | 0 | Accepted for the same reason |
+| Contributors | 3 | Accepted: one maintainer |
+| Maintained | 0 | Rises by itself: the repository is younger than 90 days |
+| CII-Best-Practices | 0 | Open: the OpenSSF best-practices badge is a registration, the maintainer's choice |
+
 ## Summary
 
 | Scan | Result | Open |

@@ -141,12 +141,14 @@ jobs:
           cosign sign --yes "$WEB"
 
       - name: Build provenance (api)
+        id: provenance-api
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/x2db736ac85h/finuance-api
           subject-digest: ${{ env.API_DIGEST }}
           push-to-registry: true
       - name: Build provenance (web)
+        id: provenance-web
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/x2db736ac85h/finuance-web
@@ -198,11 +200,15 @@ jobs:
             done
           done
           cd ../dist && sha256sum fin_*.tar.gz fin_*.zip > "fin_${v}_checksums.txt" && cat "fin_${v}_checksums.txt"
+          # the checksum file is signed like the images (cosign verify-blob, SECURITY.md)
+          cosign sign-blob --yes --bundle "fin_${v}_checksums.txt.sigstore.json" "fin_${v}_checksums.txt" >/dev/null
           "../dist/fin_${v}_linux_amd64/fin" version | grep -qx "fin $v"
 
       - name: GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROVENANCE_API: ${{ steps.provenance-api.outputs.bundle-path }}
+          PROVENANCE_WEB: ${{ steps.provenance-web.outputs.bundle-path }}
         run: |
           pre=()
           [[ "$PRERELEASE" == "true" ]] && pre=(--prerelease)
@@ -223,12 +229,16 @@ jobs:
             echo
             echo "### fin (command line)"
             echo
-            echo "\`fin_${VERSION}_<os>_<arch>\` for Linux, macOS and Windows (amd64, arm64); check the download against \`fin_${VERSION}_checksums.txt\`. Make a token in Settings → Access tokens, then \`fin login --url https://…\` (docs/cli.md)."
+            echo "\`fin_${VERSION}_<os>_<arch>\` for Linux, macOS and Windows (amd64, arm64); check the download against \`fin_${VERSION}_checksums.txt\`, whose signature \`cosign verify-blob --bundle fin_${VERSION}_checksums.txt.sigstore.json --certificate-identity-regexp '$SIGNER' --certificate-oidc-issuer https://token.actions.githubusercontent.com fin_${VERSION}_checksums.txt\` checks. Make a token in Settings → Access tokens, then \`fin login --url https://…\` (docs/cli.md)."
           } > release.md
           # GitHub drops a leading dot from asset names (".env.prod.example" became "default.env.prod.example")
           cp deploy/compose/compose.prod.yaml .
           cp deploy/compose/.env.prod.example finuance.env.example
-          files=(compose.prod.yaml finuance.env.example finuance-api.spdx.json finuance-web.spdx.json dist/fin_*.tar.gz dist/fin_*.zip dist/fin_*_checksums.txt)
+          # the provenance bundles travel with the release too, next to the SBOMs
+          cp "$PROVENANCE_API" finuance-api.intoto.jsonl
+          cp "$PROVENANCE_WEB" finuance-web.intoto.jsonl
+          files=(compose.prod.yaml finuance.env.example finuance-api.spdx.json finuance-web.spdx.json finuance-api.intoto.jsonl finuance-web.intoto.jsonl
+            dist/fin_*.tar.gz dist/fin_*.zip dist/fin_*_checksums.txt dist/fin_*_checksums.txt.sigstore.json)
           title="Finuance $VERSION"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             # created by hand in the GitHub web UI (which also creates the tag), or a re-run
