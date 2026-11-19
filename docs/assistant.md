@@ -51,7 +51,7 @@ FINUANCE_AI_DEFAULT_MODEL=qwen3-14b                # optional; otherwise the fir
 FINUANCE_AI_API_KEY=                               # if the server wants one
 ```
 
-By default the address must be private: loopback, RFC 1918, link-local, or a Tailscale/CGNAT address. The api checks this at startup and again on every connection, so a DNS change can't redirect it. Set `FINUANCE_AI_ALLOW_REMOTE=true` only for a cloud service; it then counts as a cloud connection (see below).
+By default the address must be private: loopback, RFC 1918, or a Tailscale/CGNAT address (not link-local). A connection marked `cloud` is the opposite: it reaches public addresses only, over https, and never the instance's own network. Neither kind follows a redirect to another host. The api checks this at startup and again on every connection, so a DNS change can't redirect it. Set `FINUANCE_AI_ALLOW_REMOTE=true` only for a cloud service; it then counts as a cloud connection (see below).
 
 ## Configure several connections
 

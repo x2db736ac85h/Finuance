@@ -21,6 +21,10 @@ notes of their version.
   constraint and table, never its message or detail; the database logs statements without their
   bound values; the web server's access log names the path without its query string, and one
   request id covers the web server and the API.
+- The assistant's connections are held to their kind: a cloud connection reaches public addresses
+  only and only over https (TLS 1.2 or newer), a local one no longer reaches link-local addresses,
+  and neither follows a redirect to another host. **If you run a model server on a link-local
+  address (169.254.x.x, fe80::), move it to a private one.**
 
 ## [0.4.2] - 2026-11-19
 

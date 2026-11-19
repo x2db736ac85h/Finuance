@@ -129,6 +129,12 @@ func transportError(ctx context.Context, err error) error {
 	if errors.As(err, &e) {
 		return e
 	}
+	switch {
+	case errors.Is(err, errRedirect):
+		return &Error{Kind: KindBadResponse, Message: "the model server redirected to another address, which is not followed"}
+	case errors.Is(err, errPlaintext):
+		return &Error{Kind: KindUnreachable, Message: "a cloud connection must use https"}
+	}
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, errIdle) {
 		return &Error{Kind: KindTimeout, Message: "the model didn't answer in time"}
 	}

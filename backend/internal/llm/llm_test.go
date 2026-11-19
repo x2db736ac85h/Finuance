@@ -38,7 +38,7 @@ func serve(t *testing.T, status int, contentType, file string) (*httptest.Server
 }
 
 func client(api API, url string) Client {
-	return New(Config{API: api, BaseURL: url, AllowRemote: true, Timeout: 5 * time.Second, IdleTimeout: 2 * time.Second})
+	return New(Config{API: api, BaseURL: url, Timeout: 5 * time.Second, IdleTimeout: 2 * time.Second})
 }
 
 func run(t *testing.T, c Client, req Request) (Result, []Delta, error) {
@@ -399,14 +399,14 @@ func TestTimeoutsAndCancel(t *testing.T) {
 	}))
 	defer srv.Close()
 	defer close(release)
-	c := New(Config{API: OpenAI, BaseURL: srv.URL, AllowRemote: true, Timeout: 5 * time.Second, IdleTimeout: 200 * time.Millisecond})
+	c := New(Config{API: OpenAI, BaseURL: srv.URL, Timeout: 5 * time.Second, IdleTimeout: 200 * time.Millisecond})
 	t0 := time.Now()
 	_, err := c.Chat(context.Background(), Request{Model: "m"}, nil)
 	if KindOf(err) != KindTimeout || time.Since(t0) > 2*time.Second {
 		t.Errorf("idle stream: %v after %s", err, time.Since(t0))
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	c = New(Config{API: OpenAI, BaseURL: srv.URL, AllowRemote: true, Timeout: 5 * time.Second, IdleTimeout: 5 * time.Second})
+	c = New(Config{API: OpenAI, BaseURL: srv.URL, Timeout: 5 * time.Second, IdleTimeout: 5 * time.Second})
 	go func() { time.Sleep(100 * time.Millisecond); cancel() }()
 	if _, err := c.Chat(ctx, Request{Model: "m"}, nil); !errors.Is(err, context.Canceled) {
 		t.Errorf("cancel: %v", err)
@@ -418,7 +418,7 @@ func TestPrivateAddressGuard(t *testing.T) {
 		ip string
 		ok bool
 	}{{"127.0.0.1", true}, {"10.1.2.3", true}, {"192.168.1.20", true}, {"172.20.0.5", true}, {"100.101.102.103", true},
-		{"169.254.1.1", true}, {"::1", true}, {"fd7a:115c:a1e0::1", true}, {"8.8.8.8", false}, {"100.128.0.1", false},
+		{"169.254.1.1", false}, {"169.254.169.254", false}, {"fe80::1", false}, {"::1", true}, {"fd7a:115c:a1e0::1", true}, {"8.8.8.8", false}, {"100.128.0.1", false},
 		{"2606:4700::1111", false}, {"::ffff:10.0.0.1", true}} {
 		if PrivateAddr(netip.MustParseAddr(c.ip)) != c.ok {
 			t.Errorf("%s: want %v", c.ip, c.ok)

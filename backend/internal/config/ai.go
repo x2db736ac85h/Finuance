@@ -79,7 +79,14 @@ func (p *parser) aiConnections(defaultContext int) []AIConnection {
 		c := AIConnection{Name: "default", Label: u.Hostname(), API: api, BaseURL: u, APIKey: p.str("FINUANCE_AI_API_KEY", ""),
 			Cloud: cloud, DefaultModel: p.str("FINUANCE_AI_DEFAULT_MODEL", ""), ContextTokens: defaultContext}
 		if msg := checkAddress(u, cloud); msg != "" {
-			p.fail("FINUANCE_AI_BASE_URL", msg+" (set FINUANCE_AI_ALLOW_REMOTE=true for a cloud service)")
+			if !cloud {
+				msg += " (set FINUANCE_AI_ALLOW_REMOTE=true for a cloud service)"
+			}
+			p.fail("FINUANCE_AI_BASE_URL", msg)
+			return nil
+		}
+		if cloud && u.Scheme != "https" {
+			p.fail("FINUANCE_AI_BASE_URL", "a cloud connection must use https")
 			return nil
 		}
 		return []AIConnection{c}
@@ -127,7 +134,10 @@ func (p *parser) aiConnections(defaultContext int) []AIConnection {
 			continue
 		}
 		if msg := checkAddress(u, fc.Cloud); msg != "" {
-			bad(msg + ` (add "cloud": true for a cloud service)`)
+			if !fc.Cloud {
+				msg += ` (add "cloud": true for a cloud service)`
+			}
+			bad(msg)
 		}
 		if fc.Cloud && u.Scheme != "https" {
 			bad("a cloud connection must use https")
@@ -177,13 +187,18 @@ func (p *parser) aiConnections(defaultContext int) []AIConnection {
 	return out
 }
 
-// checkAddress refuses a local connection whose host is a public IP literal. Host names are
-// resolved and checked at startup (assistant.CheckConnections) and on every dial (llm).
+// checkAddress refuses a local connection whose host is a public IP literal and a cloud connection
+// whose host is any other kind of literal. Host names are resolved and checked at startup
+// (assistant.CheckConnections, local connections) and on every dial (llm, both kinds).
 func checkAddress(u *url.URL, cloud bool) string {
+	ip, err := netip.ParseAddr(u.Hostname())
 	if cloud {
+		// the inverse rule (PLAN 23.5): a cloud connection never points into the instance's own network
+		if err == nil && !llm.PublicAddr(ip) {
+			return fmt.Sprintf("%s is not a public address, and a cloud connection may only reach public ones", u.Hostname())
+		}
 		return ""
 	}
-	ip, err := netip.ParseAddr(u.Hostname())
 	if err == nil && !llm.PrivateAddr(ip) {
 		return fmt.Sprintf("%s is a public address", u.Hostname())
 	}
@@ -244,7 +259,10 @@ func NewConnection(s ConnectionSpec, defaultContext int) (AIConnection, map[stri
 		len(s.BaseURL) > 500:
 		problems["baseUrl"] = "must be an absolute http(s) URL without a query or credentials"
 	case checkAddress(u, s.Cloud) != "":
-		problems["baseUrl"] = checkAddress(u, s.Cloud) + " (mark the connection as a cloud service if that is intended)"
+		problems["baseUrl"] = checkAddress(u, s.Cloud)
+		if !s.Cloud {
+			problems["baseUrl"] += " (mark the connection as a cloud service if that is intended)"
+		}
 	case s.Cloud && u.Scheme != "https":
 		problems["baseUrl"] = "a cloud connection must use https"
 	}

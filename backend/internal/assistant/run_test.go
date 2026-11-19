@@ -44,7 +44,12 @@ func newRunEnv(t *testing.T, maxConcurrent int) *runEnv {
 		{Name: "mock", Label: "Mock", API: llm.OpenAI, BaseURL: u, ContextTokens: 32768},
 		{Name: "claude", Label: "Mock Anthropic", API: llm.Anthropic, BaseURL: root, ContextTokens: 32768},
 		{Name: "cloud", Label: "Mock cloud", API: llm.OpenAI, BaseURL: u, Cloud: true, ContextTokens: 32768},
-	}, 10*time.Second, 0, clock, nil)
+	}, 10*time.Second, 0, clock, func(c llm.Config) llm.Client {
+		// the "cloud" connection is the mock on loopback, which the cloud dial guard refuses
+		// (llm.TestCloudTransportGuard tests the guard itself)
+		c.HTTPClient = srv.Client()
+		return llm.New(c)
+	})
 	chats := NewChats(e.st, clock, 25)
 	runner := NewRunner(RunnerConfig{Connections: conns, Tools: NewTools(e.q), Chats: chats, Clock: clock, MaxConcurrent: maxConcurrent})
 	// each test gets its own user with the demo data (copy of the shared demo user's file)
