@@ -18,15 +18,15 @@ cd "$(dirname "$0")/.."
 
 R=deploy/k8s/rehearsal
 CLUSTER=${CLUSTER:-finuance-rehearsal}
-KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.33.1}
+KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f}
 WORK=${WORK:-$PWD/.rehearsal}
 SUMMARY=${SUMMARY:-$WORK/summary.md}
 YQ=${YQ:-yq}
 TRAEFIK_CHART=42.1.3
 CERT_MANAGER_CHART=v1.21.3
-K6_IMAGE=grafana/k6:1.8.2
-AWS_CLI_IMAGE=amazon/aws-cli:2.38.1
-BUSYBOX_IMAGE=busybox:1.37.0
+K6_IMAGE=grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
+AWS_CLI_IMAGE=amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868ddee1f611b73be795a9cc2e706bfd
+BUSYBOX_IMAGE=busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
 API_IMAGE=ghcr.io/x2db736ac85h/finuance-api:rehearsal
 WEB_IMAGE=ghcr.io/x2db736ac85h/finuance-web:rehearsal
 MOCK_IMAGE=finuance-llmmock:rehearsal

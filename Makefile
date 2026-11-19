@@ -11,7 +11,7 @@ ORACLE   := tools/legacy-oracle
 COMPOSE  := docker compose --env-file $(ENV_FILE) -f deploy/compose/compose.yaml
 COMPOSE_CI := $(COMPOSE) -f deploy/compose/compose.ci.yaml
 # Load test (PLAN 17.5): k6 pinned like the rehearsal's; the plan's size is 50 users × 20,000 rows.
-K6_IMAGE := grafana/k6:1.8.2
+K6_IMAGE := grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
 LOADTEST_BASE_URL ?= http://localhost:8000
 LOADTEST_USERS ?= 50
 LOADTEST_ROWS ?= 20000
@@ -44,7 +44,7 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private check-env-details check-sealed check-toolchain check-no-float check-compose-prod check-db-bootstrap check-port-forwards ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, sealed-secret, toolchain, float, prod-Compose, k8s bootstrap and port-forward checks
+check: lint typecheck test gen-check fixtures-check check-private check-env-details check-sealed check-toolchain check-no-float check-compose-prod check-db-bootstrap check-port-forwards check-pins check-workflows ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, sealed-secret, toolchain, float, prod-Compose, k8s bootstrap, port-forward, pin and workflow checks
 	@echo "check: ok"
 
 .PHONY: check-compose-prod
@@ -54,6 +54,17 @@ check-compose-prod: ## compose.prod.yaml's inline database bootstrap equals depl
 .PHONY: check-db-bootstrap
 check-db-bootstrap: ## The CloudNativePG bootstrap SQL (deploy/k8s/db) matches deploy/db/bootstrap.sql
 	@tools/check-db-bootstrap.sh
+
+.PHONY: check-pins
+check-pins: ## Every action by commit SHA and every image the repository doesn't build by digest
+	@tools/check-pins.sh
+	@tools/check-pins-test.sh
+
+.PHONY: check-workflows
+check-workflows: ## actionlint and zizmor (offline) over the workflows, when tools/bin-tools.sh installed them; CI always runs them
+	@if [ -x backend/bin/actionlint ] && [ -x backend/bin/zizmor ]; then \
+	  backend/bin/actionlint && backend/bin/zizmor --offline --quiet .github/workflows && echo "check-workflows: ok"; \
+	else echo "check-workflows: skipped (tools/bin-tools.sh actionlint and zizmor install them)"; fi
 
 .PHONY: check-toolchain
 check-toolchain: ## Fail when go.mod's toolchain, mise.toml and Dockerfile.backend name different Go versions

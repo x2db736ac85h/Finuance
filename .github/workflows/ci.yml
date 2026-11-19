@@ -22,8 +22,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0 # gitleaks scans the full history
 
       - name: Install gitleaks
@@ -41,11 +42,11 @@ jobs:
       - name: Private-data check
         run: tools/check-private.sh && tools/check-private-test.sh
 
-      - uses: actions/setup-go@v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -62,12 +63,33 @@ jobs:
             exit 1
           }
 
+  workflows:
+    name: workflows (actionlint, zizmor)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Pinned, checksum-verified binaries (tools/bin-tools.sh). zizmor runs online here: the token
+      # lets it check the pinned commits against their tags and against known vulnerable actions.
+      - name: actionlint and zizmor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools/bin-tools.sh actionlint
+          tools/bin-tools.sh zizmor
+          backend/bin/actionlint
+          backend/bin/zizmor --format github .github/workflows
+
   db:
     name: db bootstrap (Compose)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Start Postgres
         run: make db-up
@@ -91,12 +113,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-go@v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -130,8 +154,13 @@ jobs:
     name: images (backend + web)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write # the Trivy results in code scanning
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Build
         run: make images
       - name: Size and user
@@ -147,10 +176,22 @@ jobs:
           test "$gz" -le 15000000 || { echo "::error::image exceeds 15 MB compressed"; exit 1; }
       - name: Smoke test
         run: docker run --rm finuance-backend:dev version
-      - name: Trivy (HIGH/CRITICAL fail the build)
+      # Trivy is the checksum-verified binary (tools/bin-tools.sh) and reads the image from a
+      # tarball, without the Docker socket. Every severity goes to code scanning; HIGH and CRITICAL
+      # fail the build.
+      - name: Trivy api image (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.2 \
-            image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-backend:dev
+          set -euo pipefail
+          tools/bin-tools.sh trivy
+          docker save finuance-backend:dev -o "$RUNNER_TEMP/api.tar"
+          backend/bin/trivy image --input "$RUNNER_TEMP/api.tar" --scanners vuln --format sarif --output trivy-api.sarif --no-progress
+          backend/bin/trivy image --input "$RUNNER_TEMP/api.tar" --ignorefile .trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress
+      - name: Upload trivy-api.sarif to code scanning
+        if: hashFiles('trivy-api.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: trivy-api.sarif
+          category: trivy-api-image
       - name: Web image runs as non-root and serves the app with the CSP
         run: |
           set -euo pipefail
@@ -164,27 +205,60 @@ jobs:
           docker rm -f web-smoke
       - name: Trivy web image (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.2 \
-            image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
+          set -euo pipefail
+          docker save finuance-web:dev -o "$RUNNER_TEMP/web.tar"
+          backend/bin/trivy image --input "$RUNNER_TEMP/web.tar" --scanners vuln --format sarif --output trivy-web.sarif --no-progress
+          backend/bin/trivy image --input "$RUNNER_TEMP/web.tar" --ignorefile .trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress
+      - name: Upload trivy-web.sarif to code scanning
+        if: hashFiles('trivy-web.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: trivy-web.sarif
+          category: trivy-web-image
 
   security:
     name: security (repository scan, npm audit)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write # the Trivy results in code scanning
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # PLAN 17.6 and the Phase 14 gate follow-up: no accepted findings before the public demo.
       # Go and npm dependencies (dev dependencies included), secrets, and the misconfiguration
       # checks for the Dockerfiles, Compose and Kubernetes files. The two Helm charts are rendered
       # with every values file and config-scanned by the helm job, so their sources are skipped
       # here (they don't render without the required values).
+      - name: Accepted findings (.trivyignore) in the summary
+        run: |
+          {
+            echo '### Accepted findings (`.trivyignore`)'; echo
+            entries="$(grep -vE '^[[:space:]]*(#|$)' .trivyignore || true)"
+            if [ -z "$entries" ]; then echo 'None.'; else echo '| Id | Expires |'; echo '|---|---|'; echo "$entries" | sed -E 's/^([^ ]+).*exp:([0-9-]+).*$/| \1 | \2 |/'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Trivy repository scan (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v "$PWD:/repo:ro" -w /repo -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.2 \
-            fs --ignorefile /.trivyignore --scanners vuln,secret,misconfig --include-dev-deps \
-            --severity HIGH,CRITICAL --exit-code 1 --no-progress \
-            --skip-dirs deploy/helm/finuance --skip-dirs deploy/k8s/db .
-      - uses: actions/setup-node@v7.1.0
+          set -euo pipefail
+          tools/bin-tools.sh trivy
+          skip=(--skip-dirs deploy/helm/finuance --skip-dirs deploy/k8s/db --skip-dirs backend/bin)
+          backend/bin/trivy fs --scanners vuln,secret,misconfig --include-dev-deps "${skip[@]}" --format sarif --output trivy-repo.sarif --no-progress .
+          backend/bin/trivy fs --ignorefile .trivyignore --scanners vuln,secret,misconfig --include-dev-deps "${skip[@]}" \
+            --severity HIGH,CRITICAL --exit-code 1 --no-progress .
+      - name: Upload trivy-repo.sarif to code scanning
+        if: hashFiles('trivy-repo.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: trivy-repo.sarif
+          category: trivy-repository
+      # A second database (OSV) over the three lockfiles; any finding fails, there is no ignore list.
+      - name: osv-scanner
+        run: |
+          tools/bin-tools.sh osv-scanner
+          backend/bin/osv-scanner scan -L backend/go.mod -L web/package-lock.json -L tools/legacy-oracle/package-lock.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - name: npm audit (HIGH/CRITICAL fail the build)
@@ -205,8 +279,10 @@ jobs:
       KUBESEAL_VERSION: v0.40.0
       YQ_VERSION: v4.54.1
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-go@v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
           cache: false
@@ -218,16 +294,17 @@ jobs:
           go install "helm.sh/helm/v3/cmd/helm@${HELM_VERSION}"
           go install "github.com/yannh/kubeconform/cmd/kubeconform@${KUBECONFORM_VERSION}"
           go install "github.com/bitnami/sealed-secrets/cmd/kubeseal@${KUBESEAL_VERSION}"
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       # tools/check-observability.sh also runs promtool from the pinned prom/prometheus image.
       - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas, promtool)
         run: RENDER_DIR="$RUNNER_TEMP/rendered" YQ="$(go env GOPATH)/bin/yq" make helm-lint
+      # The rendered files exist only on the runner, so they are not uploaded to code scanning.
       - name: Trivy config scan of the rendered manifests (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v "$RUNNER_TEMP/rendered:/manifests:ro" aquasec/trivy:0.76.2 \
-            config --severity HIGH,CRITICAL --exit-code 1 --disable-telemetry /manifests
+          tools/bin-tools.sh trivy
+          backend/bin/trivy config --severity HIGH,CRITICAL --exit-code 1 --disable-telemetry "$RUNNER_TEMP/rendered"
       - name: GitOps bump (tools/bump-homelab-tag.sh changes only the tag line)
         run: |
           set -euo pipefail
@@ -286,8 +363,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -312,8 +391,10 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -349,8 +430,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -365,7 +448,7 @@ jobs:
       - name: Compose logs
         if: failure()
         run: docker compose --env-file .env -f deploy/compose/compose.yaml -f deploy/compose/compose.ci.yaml logs --tail=200
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
           name: playwright-report
@@ -373,7 +456,7 @@ jobs:
             web/playwright-report
             web/test-results
           retention-days: 7
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: screenshots-and-parity

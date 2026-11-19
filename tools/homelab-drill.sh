@@ -21,7 +21,7 @@ cd "$(dirname "$0")/.."
 H=deploy/environments/homelab
 BASE=${BASE_URL:-https://$(tailscale status --json | jq -r '.Self.DNSName' | sed 's/\.$//')}
 TAG=$(yq '.image.tag' "$H/values.yaml")
-K6_IMAGE=grafana/k6:1.8.2
+K6_IMAGE=grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
 RNS=finuance-restore
 RAPI=http://localhost:18081       # port-forward to the restored api
 RORIGIN=http://localhost:18080    # the temporary app's public origin (restore-app-values.yaml)
