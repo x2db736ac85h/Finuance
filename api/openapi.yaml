@@ -6632,10 +6632,11 @@ components:
           maxItems: 16
           description: >-
             Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one
-            touching more than 50 transactions. Left out of a PUT, the stored list stays.
+            touching more than 50 transactions. Sharing with a shared group and changing a shared split
+            always wait for a click. Left out of a PUT, the stored list stays.
           items:
             type: string
-            enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal]
+            enum: [set_category, set_group, create_rule, set_budget, add_expense, create_goal, update_goal]
         digest:
           $ref: "#/components/schemas/AssistantDigest"
         digestNextAt:

@@ -250,6 +250,10 @@ func TestAutoApplyHTTP(t *testing.T) {
 		t.Errorf("after a save without autoApply: %v", again.body)
 	}
 	expect(t, b.do("PUT", "/assistant/settings", map[string]any{"retentionDays": 2, "cloudConsent": []any{}, "autoApply": []any{"delete_everything"}}), 422, "validation_failed")
+	// sharing with a shared group and changing a shared split always wait for a click (AI-1)
+	for _, kind := range []string{"add_to_shared_group", "split_expense"} {
+		expect(t, b.do("PUT", "/assistant/settings", map[string]any{"retentionDays": 2, "cloudConsent": []any{}, "autoApply": []any{"set_budget", kind}}), 422, "validation_failed")
+	}
 
 	chat := b.do("POST", "/assistant/chats", nil).body["id"].(string)
 	ask := b.do("POST", "/assistant/chats/"+chat+"/messages", map[string]any{"text": `put "OPERATOR INTERNETU" in Rachunki`, "settings": map[string]any{"mode": "auto", "think": "auto"}})

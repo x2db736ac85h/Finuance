@@ -94,15 +94,16 @@ type Props = {
   onDone: () => void;
 };
 
-/** The kinds of proposals a user can let the panel apply by itself (ADR 0030). */
+/**
+ * The kinds of proposals a user can let the panel apply by itself (ADR 0030). Sharing with a shared
+ * group and changing a shared split always wait for a click: other people read the result.
+ */
 const AUTO_KINDS: [NonNullable<Schemas['AssistantSettings']['autoApply']>[number], string][] = [
   ['set_category', 'Set a category'],
   ['set_group', 'Put transactions in a group'],
   ['create_rule', 'Create a rule'],
   ['set_budget', 'Set or remove a budget'],
   ['add_expense', 'Add a cash expense'],
-  ['add_to_shared_group', 'Share with a shared group'],
-  ['split_expense', 'Change how a shared expense is split'],
   ['create_goal', 'Set a goal'],
   ['update_goal', 'Change a goal'],
 ];
