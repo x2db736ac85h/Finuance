@@ -57,6 +57,8 @@ func dbErr(what string, err error) error {
 			return fmt.Errorf("%s: %w: %s", what, ErrInvalid, pgErr.ConstraintName)
 		case "22021": // character_not_in_repertoire: a NUL character in text (JSON allows \u0000)
 			return fmt.Errorf("%s: %w: text must not contain NUL characters", what, ErrInvalid)
+		case "22003": // numeric_value_out_of_range: a sum beyond bigint (API-4)
+			return fmt.Errorf("%s: %w: an amount or a total is out of range", what, ErrInvalid)
 		}
 	}
 	return fmt.Errorf("%s: %w", what, err)

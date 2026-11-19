@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/money"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -136,6 +138,8 @@ type Stats struct {
 //   - Currency: the row's currency cell, else the import currency, else the account currency,
 //     else PLN.
 //   - Raw keeps every column except the ignored ones, in order; SearchText is built from it.
+//   - Size: a cell longer than MaxCellBytes is cut to it and makes its row an error; SearchText is
+//     cut to MaxSearchTextBytes (IMP-6). Both cuts keep whole characters.
 func Stage(ctx context.Context, t *Table, m Mapping, o StageOptions) ([]StagedRow, Stats, error) {
 	ignored := map[int]bool{}
 	for _, k := range m.Ignore {
@@ -205,7 +209,7 @@ func Stage(ctx context.Context, t *Table, m Mapping, o StageOptions) ([]StagedRo
 
 // stageRow fills r from data row i and reports whether it is valid (see Stage for the rules).
 func stageRow(r *StagedRow, i int, t *Table, m Mapping, o StageOptions, mode AmountMode, mdy, ignored map[int]bool, unknown map[string]bool) bool {
-	cells := t.Rows[i]
+	cells, long := boundCells(t.Rows[i], t.Headers)
 	cell := func(k int) string {
 		if k < 0 || k >= len(cells) {
 			return ""
@@ -224,6 +228,9 @@ func stageRow(r *StagedRow, i int, t *Table, m Mapping, o StageOptions, mode Amo
 	}
 
 	var errs []string
+	for _, h := range long {
+		errs = append(errs, fmt.Sprintf("%q is longer than %d KB", h, MaxCellBytes>>10))
+	}
 	order := func(k int) DateOrder {
 		if mdy[k] {
 			return DateOrderMDY
@@ -269,7 +276,7 @@ func stageRow(r *StagedRow, i int, t *Table, m Mapping, o StageOptions, mode Amo
 		r.Raw = append(r.Raw, RawField{Header: t.Headers[k], Value: v})
 		values = append(values, v)
 	}
-	r.SearchText = Norm(strings.Join(values, "\u0001"))
+	r.SearchText = cutUTF8(Norm(strings.Join(values, "\u0001")), MaxSearchTextBytes)
 	r.PayeeN, r.DescriptionN, r.ReferenceN = shadow(r.Payee), shadow(r.Description), shadow(r.Reference)
 	r.TxTypeN, r.BankCategoryN, r.CounterpartyN = shadow(r.TxType), shadow(r.BankCategory), shadow(r.CounterpartyAccount)
 	r.PayeeGroup = PayeeName(r.Payee)
@@ -289,6 +296,9 @@ func stageAmount(cell func(int) string, m Mapping, mode AmountMode, exp int) (in
 		if err != nil {
 			return 0, fmt.Sprintf("%s %q is not an amount", what, v)
 		}
+		if !money.InRange(x) {
+			return 0, fmt.Sprintf("%s %q is out of range", what, v)
+		}
 		return x, ""
 	}
 	if mode == AmountDebitCredit {
@@ -305,6 +315,12 @@ func stageAmount(cell func(int) string, m Mapping, mode AmountMode, exp int) (in
 		c, errC := money.ParseMinor(credit, exp)
 		if errD != nil && errC != nil {
 			return 0, fmt.Sprintf("neither debit %q nor credit %q is an amount", debit, credit)
+		}
+		if errD == nil && !money.InRange(d) {
+			return 0, fmt.Sprintf("debit %q is out of range", debit)
+		}
+		if errC == nil && !money.InRange(c) {
+			return 0, fmt.Sprintf("credit %q is out of range", credit)
 		}
 		if errD != nil {
 			d = 0
@@ -332,6 +348,34 @@ func abs(x int64) int64 {
 }
 
 func shadow(s string) string { return Collapse(Norm(s)) }
+
+// boundCells returns the row with every cell cut to MaxCellBytes (a copy only when one was longer;
+// the table is not changed) and the headers of the cells that were cut.
+func boundCells(cells, headers []string) ([]string, []string) {
+	var long []string
+	for k, v := range cells {
+		if len(v) <= MaxCellBytes {
+			continue
+		}
+		if long == nil {
+			cells = slices.Clone(cells)
+		}
+		cells[k] = cutUTF8(v, MaxCellBytes)
+		long = append(long, headers[k])
+	}
+	return cells, long
+}
+
+// cutUTF8 shortens s to at most n bytes without splitting a character.
+func cutUTF8(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
+}
 
 func firstNonEmpty(vs ...string) string {
 	for _, v := range vs {

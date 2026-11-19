@@ -38,9 +38,11 @@ type Settings struct {
 	TokensToday  int64
 }
 
-// AutoApplyActions are the proposal actions a user can let the panel apply by itself.
+// AutoApplyActions are the proposal actions a user can let the panel apply by itself. Sharing with a
+// shared group and changing a shared split are not among them: other people read the result, so
+// they always wait for a click (AI-1; migration 00025 keeps the table to this list).
 var AutoApplyActions = []string{ActionSetCategory, ActionSetGroup, ActionCreateRule, ActionSetBudget, ActionAddExpense,
-	ActionAddToSharedGroup, ActionSplitExpense, ActionCreateGoal, ActionUpdateGoal}
+	ActionCreateGoal, ActionUpdateGoal}
 
 // Consented reports whether the user agreed to send data to a cloud connection.
 func (s Settings) Consented(conn string) bool { return slices.Contains(s.CloudConsent, conn) }

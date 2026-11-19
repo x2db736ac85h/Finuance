@@ -136,7 +136,7 @@ func TestJobTraceEndToEnd(t *testing.T) {
 	defer cancel()
 	rec, tp := recorder()
 	prop := propagation.TraceContext{}
-	pool, err := store.Open(ctx, tdb.AppDSN, 4, tp)
+	pool, err := store.Open(ctx, tdb.AppDSN, 4, tp, store.Timeouts{})
 	if err != nil {
 		t.Fatal(err)
 	}

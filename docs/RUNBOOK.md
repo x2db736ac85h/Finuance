@@ -825,6 +825,27 @@ three search indexes are GIN: `tx_user_search_trgm_idx`, `tx_search_trgm_idx`,
 full base backups. 18.7 also tightens row-level security (`ON CONFLICT` target rows, `DROP OWNED BY`,
 leaky quals), which the RLS suite checks on it.
 
+## Validating the amount checks
+
+Migration 00026 (`v0.4.2`) bounds every amount a user enters or imports to ±10¹² minor units
+(`money.MaxAbsMinor`). Its checks are `NOT VALID`: they hold for every row written since, and the
+migration never reads the existing rows, so it cannot fail on old data. To have PostgreSQL confirm
+the old rows too, once, on the primary:
+
+```sh
+kubectl cnpg psql finuance-db -n finuance -- -d finuance -c "DO \$\$ DECLARE r record; BEGIN
+  FOR r IN SELECT conrelid::regclass AS t, conname FROM pg_constraint
+           WHERE conname LIKE '%\_minor\_range' AND NOT convalidated LOOP
+    EXECUTE format('ALTER TABLE %s VALIDATE CONSTRAINT %I', r.t, r.conname);
+  END LOOP; END \$\$"
+```
+
+It reads each table once and blocks no writes. If it stops on a constraint, that table holds an
+amount out of range (most likely a column mapped wrongly in an old import): find it with
+`SELECT count(*) FROM <table> WHERE <column> NOT BETWEEN -1000000000000 AND 1000000000000`, fix or
+delete that import, and run the statement again. Compose: the same through
+`docker compose --env-file .env -f compose.prod.yaml exec db psql -U postgres -d finuance`.
+
 ## PostgreSQL major upgrade
 
 CloudNativePG (≥ 1.26) upgrades in place when `cluster.imageName` moves to a newer major (for example `…/postgresql:19.x-standard-trixie`). It runs `pg_upgrade` offline: **the database is down for the duration** (minutes at this size).

@@ -54,14 +54,14 @@ type common struct {
 	store   *store.Store
 }
 
-func setup(ctx context.Context, cfg config.Config, b Build, log *slog.Logger, service string) (*common, error) {
+func setup(ctx context.Context, cfg config.Config, b Build, log *slog.Logger, service string, timeouts store.Timeouts) (*common, error) {
 	m := observability.NewMetrics()
 	m.BuildInfo.WithLabelValues(b.Version, b.Commit).Set(1)
 	tr, err := observability.NewTracing(ctx, cfg.OTLPEndpoint, service, b.Version)
 	if err != nil {
 		return nil, err
 	}
-	pool, err := store.Open(ctx, cfg.DatabaseURL, cfg.DBMaxConns, tr.Provider)
+	pool, err := store.Open(ctx, cfg.DatabaseURL, cfg.DBMaxConns, tr.Provider, timeouts)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (c *common) close(ctx context.Context) {
 
 // Serve runs the API and the admin server until ctx is cancelled (SIGINT/SIGTERM), then drains.
 func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) error {
-	c, err := setup(ctx, cfg, b, log, "finuance-api")
+	c, err := setup(ctx, cfg, b, log, "finuance-api", store.RequestTimeouts)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 
 // Worker runs the River client plus an admin server with /metrics, /healthz and /readyz.
 func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) error {
-	c, err := setup(ctx, cfg, b, log, "finuance-worker")
+	c, err := setup(ctx, cfg, b, log, "finuance-worker", store.Timeouts{})
 	if err != nil {
 		return err
 	}

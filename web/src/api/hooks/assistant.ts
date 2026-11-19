@@ -212,6 +212,35 @@ async function groupFor(p: Proposal, header: ApplyHeader): Promise<string> {
 }
 
 /**
+ * The target a proposal needs and lacks, or null (WEB-2). A proposal is never applied with an id
+ * left out: for a shared group that would mean "no group", for a path the wrong route.
+ */
+export function missingTarget(p: Proposal): string | null {
+  const ids = (p.ids?.length ?? 0) > 0;
+  switch (p.action) {
+    case 'set_category':
+    case 'set_group':
+      return ids ? null : 'the transactions';
+    case 'set_budget':
+      return p.categoryId ? null : 'the category';
+    case 'add_expense':
+      return p.accountId ? null : 'the account';
+    case 'add_to_shared_group':
+      return !ids ? 'the transactions' : p.groupId ? null : 'the shared group';
+    case 'split_expense':
+      return p.sharedGroupId && p.expenseId ? null : 'the shared expense';
+    case 'create_goal':
+      return p.goal ? null : 'the goal';
+    case 'update_goal':
+      return p.goal?.id ? null : 'the goal';
+    case 'attach_receipt':
+      return p.ids?.[0] ? null : 'the transaction';
+    default:
+      return null;
+  }
+}
+
+/**
  * Applies an assistant proposal (PLAN 15.7) through the normal endpoints with the user's session:
  * the category or group first when it is new, then the bulk change or the rule. Every request
  * carries X-Assistant-Chat and X-Assistant-Proposal: the server records the change as the
@@ -220,6 +249,16 @@ async function groupFor(p: Proposal, header: ApplyHeader): Promise<string> {
  * how many transactions changed (set_*) or the rule's current matches (create_rule).
  */
 export async function applyProposal(p: Proposal, chatId: string, auto = false): Promise<number> {
+  const missing = missingTarget(p);
+  if (missing) {
+    throw new ApiError({
+      type: '/problems/validation_failed',
+      code: 'validation_failed',
+      status: 422,
+      title: 'Validation failed',
+      detail: `This proposal doesn't say which ${missing.replace(/^the /, '')} it is for, so it wasn't applied. Ask the assistant again.`,
+    });
+  }
   const header: ApplyHeader = {
     'X-Assistant-Chat': chatId,
     'X-Assistant-Proposal': p.key,

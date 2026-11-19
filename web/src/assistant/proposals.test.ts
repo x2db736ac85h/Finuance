@@ -2,7 +2,8 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { Schemas } from '../api/client';
-import { applyProposal, type Proposal } from '../api/hooks/assistant';
+import { ApiError } from '../api/client';
+import { applyProposal, missingTarget, type Proposal } from '../api/hooks/assistant';
 import { API, server } from '../test/server';
 import { proposalTitle } from './Proposal';
 
@@ -192,6 +193,41 @@ describe('goal proposals (ADR 0031)', () => {
         },
       },
     ]);
+  });
+});
+
+describe('a proposal without its target (WEB-2)', () => {
+  const g = { kind: 'save' as const, name: 'Wakacje', currency: 'PLN', deadline: '2027-06-30', baselineMonths: 6 };
+  const incomplete: [string, Proposal][] = [
+    ['shared group', base({ action: 'add_to_shared_group', ids: ['1', '2'], matched: 2 })],
+    ['transactions', base({ action: 'add_to_shared_group', ids: [], groupId: 'g1', matched: 0 })],
+    ['transactions', base({ action: 'set_category', ids: [], categoryId: CAT })],
+    ['transactions', base({ action: 'set_group', groupName: 'Trip' })],
+    ['category', base({ action: 'set_budget', budget: { amountMinor: 1000, currency: 'PLN' } })],
+    ['account', base({ action: 'add_expense', date: '2026-11-05', amount: { amountMinor: -100, currency: 'PLN' } })],
+    ['shared expense', base({ action: 'split_expense', sharedGroupId: 'sg1' })],
+    ['shared expense', base({ action: 'split_expense', expenseId: 'x1' })],
+    ['goal', base({ action: 'create_goal' })],
+    ['goal', base({ action: 'update_goal', goal: g })],
+    ['transaction', base({ action: 'attach_receipt', ids: [] })],
+  ];
+
+  it('is refused before any request, with a message that names what is missing', async () => {
+    const calls: Call[] = [];
+    record(calls);
+    for (const [what, p] of incomplete) {
+      expect(missingTarget(p), p.action).toBe(`the ${what}`);
+      const err = await applyProposal(p, CHAT).catch((e: unknown) => e);
+      expect(err, p.action).toBeInstanceOf(ApiError);
+      expect((err as ApiError).message).toContain(`which ${what} it is for`);
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it('lets a complete proposal through', () => {
+    expect(missingTarget(base({ action: 'add_to_shared_group', ids: ['1'], groupId: 'g1' }))).toBeNull();
+    expect(missingTarget(base({ action: 'set_budget', categoryId: CAT }))).toBeNull();
+    expect(missingTarget(base({ action: 'update_goal', goal: { ...g, id: 'goal1' } }))).toBeNull();
   });
 });
 
