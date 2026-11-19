@@ -111,6 +111,7 @@ JavaScript/TypeScript, actions, Python), at `9a5134c`: 8 alerts, each decided.
 | `go/incorrect-integer-conversion` ×4 | `backend/internal/config/config.go` (the pool size and the three argon2 settings) | **False positive, dismissed:** `parser.int` refuses a value outside its range (1–1000, 8 KiB–1 GiB, 1–10, 1–16) before the conversion; CodeQL does not follow the bound across the call |
 | `go/incorrect-integer-conversion` | `backend/internal/money/parse.go` (`FromParts`) | **Fixed:** each branch now has its own bound before the conversion. Reading it showed a real slip next to it: rounding up the largest unsigned value wrapped to zero without an error. `ParseMinor` never passes such digits (its splitter refuses them first), but `FromParts` is exported; it now answers `ErrOverflow`, with a test |
 | `go/path-injection` | `backend/internal/app/probe.go` (`finuance admin llm-probe -out=dir`) | **Dismissed (won't fix):** the directory is the operator's own command-line flag, and the file name is the request path with everything outside `[A-Za-z0-9_-]` replaced |
+| `go/incorrect-integer-conversion` (reported after the fixes above) | `backend/internal/legacyimport/migrate.go` (the legacy investment rates) | **Fixed:** the rate is bounded to the 32-bit range before the conversion; on 64-bit builds nothing changes, since it is clamped to a few thousand basis points right after (`TestInvestmentRatesAreClamped`) |
 | `js/incomplete-sanitization` ×2 | `web/e2e/parity.spec.ts`, `tools/legacy-oracle/make-fixtures.mjs` (Markdown table cells) | **Fixed:** backslashes are escaped before the pipes. Both build reports from the repository's own text; the generated files are unchanged |
 
 **OpenSSF Scorecard: 2026-11-19, 6.8 of 10** (PLAN task 22.6; `scorecard.yml`, published), on
@@ -332,7 +333,11 @@ updates at once; `renovate-config-validator` checks the configuration in CI. A l
 
 ## Next
 
+- Every day: the daily scan (released images, dependencies, expiring acceptances), with the
+  `security-scan` issue. Every pull request and push to `main`: CodeQL, Trivy's SARIF, osv-scanner,
+  the dependency review. Weekly: Scorecard. Renovate proposes updates once its app is installed.
 - Phase 23: signature verification (cosign) for Finuance's images in the admission policy, and the
-  images deployed by digest. When the nginx base is rebuilt with fixed zlib and musl, the
+  images deployed by digest. When the nginx base ships the fixed zlib, musl and OpenSSL itself, the
   Dockerfile's upgrade step can go.
-- Phase 23 gate: repeat every scan above on the release candidate, with nothing open above LOW.
+- Phase 23 gate: repeat every scan above on the release candidate, with nothing open above LOW and
+  `.trivyignore` empty.

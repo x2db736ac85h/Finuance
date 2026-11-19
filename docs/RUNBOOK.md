@@ -46,7 +46,7 @@ These are only local ports. Prometheus and Alertmanager link to each other by th
 - Argo CD (`argocd` namespace).
 - A storage class for the database volumes (k3s: `local-path`).
 - An S3-compatible bucket for backups, **outside the cluster's disks** (MinIO on another machine, Backblaze B2, S3, …).
-- Tools on your machine: `kubectl`, `helm` (3.18), `kubeseal` (0.40), mikefarah's `yq` (v4), optionally the `kubectl cnpg` plugin.
+- Tools on your machine: `kubectl`, `helm` (3.22), `kubeseal` (0.40), mikefarah's `yq` (v4), optionally the `kubectl cnpg` plugin.
 
 ## Bootstrap (first install)
 
@@ -536,6 +536,28 @@ deploy key, the Go module path and the image names stay as they are. Afterwards 
 If something private is found later: switch the repository back to private at once, and publish
 with the alternative below.
 
+### Checking the settings
+
+Each setting, where it is set, and the call that shows it (PLAN task 22.1; `R=repos/x2db736ac85h/Finuance`,
+`gh` signed in as the maintainer). The last column is what the API showed on 2026-11-19.
+
+| Setting | Where | Check | 2026-11-19 |
+|---|---|---|---|
+| Ruleset on `main`: pull request, every CI job required, no force push, no deletion | Settings → Rules | `gh api $R/rulesets` and `gh api $R/rulesets/<id>` | ✅ nine required jobs; add `workflows (actionlint, zizmor)` and `dependency review (vulnerabilities, licences)` |
+| Ruleset on `v*` tags: created by the maintainer only, no deletion (register `OPS-5`) | Settings → Rules | `gh api $R/rulesets` (a `tag` ruleset) | ❌ |
+| `release` environment with the maintainer as required reviewer (`OPS-5`) | Settings → Environments | `gh api $R/environments/release --jq .protection_rules` | ⚠️ exists (the first release run created it), no reviewer yet |
+| Secret scanning with push protection | Settings → Advanced Security | `gh api $R --jq .security_and_analysis` | ✅ |
+| Private vulnerability reporting | Settings → Advanced Security | `gh api $R/private-vulnerability-reporting` | ✅ |
+| Dependabot alerts (the dependency graph is on) | Settings → Advanced Security | `gh api $R/vulnerability-alerts -i` (`204`) | ✅ |
+| Read-only default token; Actions may open pull requests (for `gitops-bump`) | Settings → Actions → General | `gh api $R/actions/permissions/workflow` | ✅ |
+| Approval for workflows from outside contributors | Settings → Actions → General | `gh api $R/actions/permissions/fork-pr-contributor-approval` | ✅ all outside contributors |
+| Only the actions in use, pinned to a full commit SHA | Settings → Actions → General | `gh api $R/actions/permissions` (`allowed_actions`, `sha_pinning_required`) | ❌ all actions, no SHA rule |
+| Head branches deleted on merge | Settings → General | `gh api $R --jq .delete_branch_on_merge` | ❌ |
+| Merged branches deleted | — | `gh api "$R/branches?per_page=100" --jq length` | ✅ 50 deleted on 2026-11-19 |
+| `FINUANCE_ENV_PATTERNS` secret for `check-env-details` | Settings → Secrets → Actions | `gh api $R/actions/secrets --jq '.secrets[].name'` | ❌ |
+| Renovate app installed | GitHub Marketplace → Renovate | its "Dependency Dashboard" issue | ❌ |
+| Packages `finuance-api` and `finuance-web` public | the package's settings | an anonymous pull: `curl -s "https://ghcr.io/token?scope=repository:x2db736ac85h/finuance-api:pull"` gives a token that reads `https://ghcr.io/v2/x2db736ac85h/finuance-api/manifests/latest` | ✅ (2026-11-18) |
+
 ### Alternative: a new repository without the old history
 
 When a history must not be published (a private commit address, a secret that was once committed),
@@ -792,21 +814,27 @@ written in five places that move together: `deploy/compose/compose.yaml` and `co
 1. **Read the release notes' "Migration" section.** Some minors ask for a `REINDEX` of certain kinds
    of index, or for a new full backup. Steps 4 and 5 are those.
 2. **Take an [on-demand backup](#on-demand-backup).**
-3. **Merge, then sync `finuance-db` by hand** (it never syncs by itself). CloudNativePG replaces the
-   replica first, then switches the primary over (`primaryUpdateStrategy: unsupervised`): writes
-   pause for a few seconds and the api reconnects. Wait until `kubectl cnpg status finuance-db -n
-   finuance` shows both instances healthy, and check the version:
+3. **Merge, then sync `finuance-db` by hand** (it never syncs by itself; Argo CD's diff should show
+   only `imageName`). CloudNativePG replaces the replica first, then the primary. The cluster uses
+   CloudNativePG's default `primaryUpdateMethod: restart`, so the primary restarts in place and the
+   app can't write for as long as that takes, tens of seconds; the api and worker reconnect by
+   themselves (18.7 on the reference machine, 2026-11-19: neither restarted). Watch
+   `kubectl -n finuance get pods -l cnpg.io/cluster=finuance-db -w` until both run again and
+   `kubectl -n finuance get cluster finuance-db` says *Cluster in healthy state*, then check the
+   version on the primary:
 
    ```sh
-   kubectl cnpg psql finuance-db -n finuance -- -d finuance -XAtc 'SELECT version()'
+   P=$(kubectl -n finuance get cluster finuance-db -o jsonpath='{.status.currentPrimary}')
+   kubectl -n finuance exec "$P" -c postgres -- psql -U postgres -d finuance -XAtc 'SELECT version()'
    ```
 
 4. **Reindex**, when the notes ask for it. At this database's size the whole database is quickest
    to get right, and `CONCURRENTLY` keeps it writable (system catalogs are skipped, which the notes
-   so far never needed):
+   so far never needed). It prints `REINDEX`; an error about a duplicate key would mean an index
+   really was damaged, so stop there and look:
 
    ```sh
-   kubectl cnpg psql finuance-db -n finuance -- -d finuance -c 'REINDEX DATABASE CONCURRENTLY finuance'
+   kubectl -n finuance exec "$P" -c postgres -- psql -U postgres -d finuance -c 'REINDEX DATABASE CONCURRENTLY finuance'
    ```
 
 5. **Take a new base backup** (on-demand, as in step 2) so that the next recovery starts from the
@@ -833,7 +861,8 @@ migration never reads the existing rows, so it cannot fail on old data. To have 
 the old rows too, once, on the primary:
 
 ```sh
-kubectl cnpg psql finuance-db -n finuance -- -d finuance -c "DO \$\$ DECLARE r record; BEGIN
+P=$(kubectl -n finuance get cluster finuance-db -o jsonpath='{.status.currentPrimary}')
+kubectl -n finuance exec "$P" -c postgres -- psql -U postgres -d finuance -c "DO \$\$ DECLARE r record; BEGIN
   FOR r IN SELECT conrelid::regclass AS t, conname FROM pg_constraint
            WHERE conname LIKE '%\_minor\_range' AND NOT convalidated LOOP
     EXECUTE format('ALTER TABLE %s VALIDATE CONSTRAINT %I', r.t, r.conname);
