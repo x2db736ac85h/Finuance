@@ -88,6 +88,7 @@ audit's table of 2026-11-16, row by row, with the newest release on the day:
 | Node build image 22.22.0 | five security releases since | 22.23.5 | **Fixed** 2026-11-19: `node:22.23.5-alpine` by digest; the web image builds from source on it |
 | `minimatch` 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 (MEDIUM) | ESLint 10.15.0, typescript-eslint 8.73.0 | **Fixed** 2026-11-19: both updated, `minimatch` 11.0.9, `npm audit` 0 at every severity; `minimatch` 5.1.9 under openapi-typescript is outside the advisory's range (≥ 7.0.0) |
 | `picomatch` 4.0.7 (development tools) | GHSA-fc5q-39xc-vjpf | 4.0.7 | **Gone:** the advisory was withdrawn (above) |
+| nginx 1.30.6 (web image base) | CVE-2026-113425, CVE-2026-121810, CVE-2026-123007, CVE-2026-123633, CVE-2026-123634 (HIGH; nginx 1.30.7 of 2026-11-18), found by CI's image scan on this phase's first pull request at 03:03 UTC, after the scan above | 1.30.7 (`ghcr.io/nginx/nginx-unprivileged:1.30.7-alpine`; Docker Hub did not have it yet) | **Fixed** 2026-11-19: the base from NGINX's GHCR by digest (the same digest as on their ECR); the web image scans with 0 findings at every severity |
 | Trivy 0.76.0 (CI, release) | none | 0.76.2 | **Updated** 2026-11-19 to 0.76.2 (CI, release); a binary checked by checksum instead of the image in task 22.5 |
 
 Nothing new: web image 0 findings; api image only GO-2026-5932; repository only `minimatch` and
