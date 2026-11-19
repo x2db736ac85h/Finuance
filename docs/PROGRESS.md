@@ -1,8 +1,8 @@
 # Progress
 
-**Current phase:** 22 — Security I: patches, pins and scanners · **Branch:** `phase/22-gate` (the closing pull request) · **Status:** complete on 2026-11-19, the gate with the maintainer; `v0.4.2` released and on the homelab. Next: Phase 23.
+**Current phase:** 23 — Security II: runtime, cluster and privacy hardening · **Branch:** `phase/23-signed-images` (pull request 1 of 6) · **Status:** started on 2026-11-19 (`/phase-start 23`). Phase 22 is closed: its gate was approved and pull request 49 merged on 2026-11-19.
 
-**Released:** `v0.4.2` (2026-11-19). Phases 0–21 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
+**Released:** `v0.4.2` (2026-11-19). Phases 0–22 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
 
 **The plan from here:** `docs/PLAN.md` §9, "Rev 5 — the plan after going public" and Phases 22–29. A map of the system as built: [COMPONENTS.md](COMPONENTS.md).
 
@@ -47,7 +47,32 @@ Deployment
 
 ## Current phase tasks
 
-Phase 22 — Security I: patches, pins and scanners (PLAN §9, with the findings of 2026-11-16 and every task in detail). Confirmed with `/phase-start 22` on 2026-11-19.
+Phase 23 — Security II: runtime, cluster and privacy hardening (PLAN §9). Confirmed with `/phase-start 23` on 2026-11-19.
+
+Pull requests, each merged on the maintainer's OK:
+- **1** `phase/23-signed-images`: 23.1, 23.2 (the repository's side; the homelab rollout of the policy controller is the maintainer's, in the RUNBOOK's steps).
+- **2** `phase/23-telemetry-edge`: 23.3–23.6 and the register rows they cover.
+- **3** `phase/23-two-step`: 23.7.
+- **4** `fix/register-app`: 23.10, the application rows (accounts, between users, the assistant, imports, the database).
+- **5** `fix/register-cluster`: 23.10, the cluster, delivery, edge and web rows.
+- **Release** `v0.5.0-rc.1`, then `v0.5.0`, deployed by digest.
+- **6** `phase/23-close`: 23.8, the records of 23.9, the phase close.
+
+Decisions at the phase start (the maintainer, 2026-11-19): the enrolment screen draws its QR code with an encoder written here (no dependency); with "administrators must use two-step sign-in" on, an administrator who has not enrolled can sign in but every administration route answers 403 until they enrol, and only an enrolled administrator can switch the setting on; the register ships as pull requests 4 and 5, each starting with its list of rows and what is intended for each. Approved: Sigstore policy-controller in the cluster (named in the plan; the version after 23.2's re-check). No new Go or npm dependency.
+
+- [ ] 23.1 deploy by digest: `image.api.digest` and `image.web.digest` in the chart, the release passes the pushed digests to `gitops-bump`, `check-pins.sh` requires them in every environment's values
+- [ ] 23.2 signatures enforced: policy-controller with one `ClusterImagePolicy` (keyless, the release workflow's identity) for `finuance` and `finuance-restore`; the rehearsal refuses an unsigned image and admits the released one; RUNBOOK rollout and rollback; the successor of ADR 0024
+- [ ] 23.3 trace context from clients is not trusted: a new root span with the client's context as a link, no baggage
+- [ ] 23.4 no user text in spans or logs: span attributes filtered, PostgreSQL errors as SQLSTATE, constraint and table, no parameters in the database's log, an explicit nginx log format with one request id over both hops, one helper for the hashed user id, the canary test for the assistant rule
+- [ ] 23.5 the cloud transport guard (`AI-3`, `AI-7`)
+- [ ] 23.6 limits at the ingress: optional Traefik middlewares, off by default; the rehearsal proves `429` and normal use
+- [ ] 23.7 two-step sign-in (TOTP): schema, API, the administrators' setting and reset, Settings → Security and the sign-in page's second step, audit events, a new ADR
+- [ ] 23.10 the rest of the private register: every row done, in the backlog with a reason, or accepted in THREAT-MODEL
+- [ ] 23.8 THREAT-MODEL v3; `SECURITY.md` for the 0.5 line
+- [ ] 23.9 the full scan with nothing ignored (OpenVAS and the outside port scan are the maintainer's); `v0.5.0`
+- [ ] Gate (the maintainer): enrol a second factor and sign in with it; watch the rehearsal refuse an unsigned image; read THREAT-MODEL v3
+
+Phase 22 — Security I: patches, pins and scanners (closed; PLAN §9, with the findings of 2026-11-16 and every task in detail). Confirmed with `/phase-start 22` on 2026-11-19.
 
 Pull requests, each merged on the maintainer's OK:
 - **A** `phase/22-security-patches`: 22.0, the patches of 22.2, 22.14, the first pass of 22.15. Merging it rolls out Tempo and Grafana on the homelab by itself; PostgreSQL 18.7 waits for the maintainer's manual sync of `finuance-db` (RUNBOOK "Upgrading PostgreSQL (minor release)": replica first, then a switchover, then a reindex).
@@ -74,7 +99,7 @@ Decisions at the phase start (the maintainer, 2026-11-19): Renovate runs as the 
 - [x] 22.13 sealed secrets move to the private overlay; the maintainer rotates the values — so far (2026-11-18, ahead of the phase start, branch `chore/env-split`): the eight SealedSecrets and the public certificate copied byte for byte into `finuance-env` and pushed there first (`kube-prometheus-stack` and `finuance-observability` prune); the Argo CD apps `finuance-secrets`, `rustfs`, `kube-prometheus-stack` and `finuance-observability` read them from there (`platform` allows the repository); `tools/seal-secrets.sh` writes there (the folder is checked only where a file is written, so CI's round trip needs none); `make check-sealed` checks both repositories; the folders and their READMEs removed here, `deploy/environments/homelab/README.md` and RUNBOOK "Secrets" explain the flow; THREAT-MODEL I10, ADR 0023 addendum. Merged as pull request 37 (2026-11-18): every Argo CD app `Synced`/`Healthy`, the eight Secrets kept their UIDs and data; the same pull request fixed the flaky shared-trip E2E test. Rotated on 2026-11-19: the alert mail's app password (the test alert arrived, no failed notification), and the pull token is gone with 22.1. The remaining values: Phase 23 (Follow-ups) — done 2026-11-19: the values reachable from the internet are rotated or removed; the rest is To do 5 of the private README, a Phase 23 follow-up by the maintainer's decision
 - [x] 22.14 the web image build fails clearly when a native optional package is missing — 2026-11-19: `web/scripts/check-native.mjs` loads Rolldown and Lightning CSS (Vite's two native packages) after `npm ci` and names each one that does not load; `Dockerfile.web` installs once more, then stops with that name. Its self-test and a real run are part of `make test`; checked by hand with a binding removed (exit 1 with the package's own error) and in the image build
 - [x] 22.15 accepted findings revisited: every entry of `.trivyignore` fixed or justified again; the daily scan warns a week before an entry expires; CI lists the entries in its summary — so far (2026-11-19): the one entry (`picomatch`) removed, its advisory withdrawn; the file is empty; the `security` job's summary lists the entries, and the daily scan fails a week before one expires (pull request C) — done
-- [ ] Gate (the maintainer): the settings checked by hand, the scan section read, one Renovate pull request merged — all three done on 2026-11-19 (the settings read back through the API, the scan section read, pull request 48 merged); the gate is approved with the closing pull request
+- [x] Gate (the maintainer): the settings checked by hand, the scan section read, one Renovate pull request merged — approved on 2026-11-19 (pull request 49)
 
 Phase 21 — Going public (closed)
 
@@ -92,7 +117,6 @@ Phase 21 — Going public (closed)
 
 In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance criteria and gate.
 
-- **Phase 23 — Security II: runtime, cluster and privacy hardening**: images by digest with signatures enforced; trace context and baggage from clients not trusted; no user text in spans, the nginx log or the database's slow-query log; the cloud transport guard; limits at the ingress; two-step sign-in (TOTP, approved 2026-11-17); the rest of the private register (23.10); THREAT-MODEL v3; the full scan with nothing ignored; `v0.5.0`.
 - **Phase 24 — Observability**: panics counted; trace ids on every log line; Loki and Alloy; complete traces; the missing metrics; the trusted marker for synthetic traffic.
 - **Phase 25 — The traffic simulator**: ten animals on a lab instance, a separate service and image with its own tuning page; `v0.6.0`.
 - **Phase 26 — Cloud AI**: a Vertex AI connection with short-lived tokens, on synthetic data; `v0.7.0`.
@@ -161,5 +185,6 @@ Still ideas
 - 2026-11-18 — The plan was merged. Documentation fixes from the repository review: phase numbers after the renumbering (ADRs 0022–0024, THREAT-MODEL, security-scan, RUNBOOK, ARCHITECTURE, the admission policy), update notes on ADRs 0020, 0022 and 0024, an ADR index, the PLAN header, contents and a note on the superseded Phase 21 section, agent instruction references, the README's roadmap line, the docs index, and `docs/RUNBOOK.md` "Connecting backup storage outside the machine". On the same day a new advisory without a fix (`picomatch`, development tools) was accepted with an expiry and the rule "fixed, not ignored" recorded (pull request 36), and the intermittent accessibility check was explained and fixed.
 - 2026-11-18 (later) — Task 22.13 taken ahead of the phase start (the maintainer): an audit of both repositories for credentials and details of the environment (this repository's tracked files are clean), then the homelab's SealedSecrets and public certificate moved to `finuance-env`, the Argo CD sources switched and sealing pointed there. The private repository's README became one list of what to fix on the homelab (the controller key backup off the machine and its 30-day key renewals, the rotation order, the pull token's expiry). Next: push `finuance-env`, then the pull request and the merge on the maintainer's OK, then the rotation.
 - 2026-11-18 (evening) — Pull request 37 merged (22.13): the four applications read the sealed files from the private repository, every app `Synced`/`Healthy`, `main`'s CI and the rehearsal green. Then 22.1's public packages (the maintainer's choice over a new pull token): `imagePullSecrets` removed from the homelab values and the restore drill, merged once an anonymous pull works.
+- 2026-11-19 (night) — Phase 22's gate approved, pull request 49 merged. `/phase-start 23`: the plan approved with three decisions and split into six pull requests; branch `phase/23-signed-images`. Next: 23.1.
 - 2026-11-19 (evening) — Pull request D (44) merged, the maintainer set every repository setting (read back through the API), `v0.4.2` tagged: the release waited for the maintainer's approval, then published signed images with provenance; verified from outside, the homelab bumped (45), advisory GHSA-mhqr-8c3c-ghqw published. The daily scan proven (issue 46 opened and closed). Renovate's dashboard (47) and first pull request (48, merged by the maintainer). Acceptance criteria met; `/phase-close` opens the gate's pull request.
 - 2026-11-19 — Pull request 38 merged; the `ghcr-pull` secret removed from the private repository and the cluster, its token deleted; the alert mail's app password rotated and proven with a test alert; the controller key copied off the machine. Then `/phase-start 22`: the repository settings read from the API (above, 22.1), the plan approved with four decisions and split into pull requests A–D, branch `phase/22-security-patches` created. The same day: 22.0 (nothing new, `picomatch` withdrawn, so `.trivyignore` is empty), the patches of 22.2 one commit each, 22.14, the 50 merged branches deleted, and every row of the private register marked. A Helm 3.22 surprise: schema errors are worded differently, so four negative cases of `check-helm.sh` changed. Pull request A (39) found five new nginx CVEs in its first CI run, a few hours after the phase's scan, and took nginx 1.30.7; merged and rolled out. Pull request B (40) with the first register fixes; the E2E suite passed locally for both (after installing the Chromium build Playwright 1.56.1 needs). C (41) merged after its new `workflows` job found six shellcheck findings in the workflow scripts and its first SARIF upload found OpenSSL 3.5.9-r0 in the web image, both fixed in it; the misconfiguration alerts dismissed with their documented reasons. A private draft advisory for the import limits waits for `v0.4.2`. `CHANGELOG.md` `[0.4.2]` with signed release assets and CodeQL's first findings fixed (pull request 42). `v0.4.2-rc.1` released and verified from outside: both signatures with the anchored identity (another workflow refused), the SLSA provenance (built from the tag at `3fff539`), the signed checksum file, and 0 findings at every severity in both images. rc.1 then on the homelab after the maintainer moved the database to PostgreSQL 18.7 (backups, reindex). CodeQL's analysis after pull request 42 found one more conversion, fixed in D. 22.10 (Node 26) moved to Phase 24 by the maintainer's decision. Next: pull request D (records, RUNBOOK corrections), then `v0.4.2` and its advisory.
