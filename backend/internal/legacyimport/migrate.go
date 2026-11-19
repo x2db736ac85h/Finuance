@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -883,6 +884,14 @@ func investmentsOf(inv *Inv) (investments.Doc, bool) {
 		v, ok := n.minor()
 		if !ok {
 			return def
+		}
+		// clamped to a few thousand basis points below; bounded here first, so that the
+		// conversion can't cut it where int has 32 bits
+		if v > math.MaxInt32 {
+			return math.MaxInt32
+		}
+		if v < math.MinInt32 {
+			return math.MinInt32
 		}
 		return int(v)
 	}
