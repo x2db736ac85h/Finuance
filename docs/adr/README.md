@@ -42,3 +42,4 @@ One file per decision, numbered in the order they were taken. A record is not re
 | [0036](0036-personal-access-tokens.md) | Personal access tokens: bearer tokens with a read or write scope, never for the sensitive routes | accepted | 2026-11-06 |
 | [0037](0037-supply-chain.md) | Supply chain: pinned references, checked tools, scans on a schedule, approved and attested releases | accepted | 2026-11-19 |
 | [0038](0038-request-path-database-limits.md) | Time limits for the request path's database work: one place, different for the api and the worker | accepted | 2026-11-19 |
+| [0039](0039-image-signatures.md) | Image signatures at admission: Sigstore policy-controller, Finuance's images by digest | accepted | 2026-11-19 |

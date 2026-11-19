@@ -116,6 +116,19 @@ validate deploy/k8s/tempo/
 echo "== image admission policy"
 validate deploy/k8s/admission/
 
+echo "== image signature policies (Sigstore policy-controller)"
+validate deploy/k8s/policy-controller/policies/ deploy/k8s/rehearsal/signature-test-policy.yaml
+# the rehearsal's test policy must hold its image to the same signer as Finuance's own images
+[ "$("$YQ" 'select(.metadata.name == "finuance-images") | .spec.authorities[0].keyless.identities[0]' deploy/k8s/policy-controller/policies/finuance-images.yaml)" = \
+  "$("$YQ" '.spec.authorities[0].keyless.identities[0]' deploy/k8s/rehearsal/signature-test-policy.yaml)" ] ||
+  { echo "check-helm: the rehearsal's test policy and finuance-images name different signers"; exit 1; }
+# the signer is the identity release.yml verifies before it publishes
+signer=$("$YQ" 'select(.metadata.name == "finuance-images") | .spec.authorities[0].keyless.identities[0].subjectRegExp' deploy/k8s/policy-controller/policies/finuance-images.yaml | sed 's/\.\*\$$//')
+[ "${#signer}" -gt 40 ] || { echo "check-helm: finuance-images names no signer"; exit 1; }
+grep -qF -- "$signer" .github/workflows/release.yml ||
+  { echo "check-helm: finuance-images' signer is not the identity in release.yml"; exit 1; }
+echo "ok"
+
 # Wrong settings must stop the render with a message that says what to set.
 o=(--set publicOrigin=https://f.example.com --set ingress.host=f.example.com)
 must_fail "publicOrigin is empty" "publicOrigin" "$app" --set ingress.host=f.example.com

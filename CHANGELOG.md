@@ -11,6 +11,10 @@ notes of their version.
 - The Helm chart can deploy by digest: with `image.digests.api` and `image.digests.web` set, the
   images are `name@sha256:…` and the tag only labels the release. A release writes both digests
   into the reference environment's values, and that environment must have them.
+- Image signatures can be enforced in the cluster: an Argo CD application for Sigstore
+  policy-controller with a policy that admits Finuance's images only with the release workflow's
+  signature (ADR 0039). It applies to namespaces that carry the label; the deployment rehearsal
+  proves both directions.
 
 ## [0.4.2] - 2026-11-19
 

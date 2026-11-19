@@ -8,11 +8,12 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-10"
 spec:
-  description: Operators Finuance depends on (CloudNativePG, Barman Cloud plugin, Sealed Secrets) and the monitoring stack.
+  description: Operators Finuance depends on (CloudNativePG, Barman Cloud plugin, Sealed Secrets, Sigstore policy-controller) and the monitoring stack.
   sourceRepos:
     - https://cloudnative-pg.github.io/charts
     - https://bitnami.github.io/sealed-secrets
     - https://prometheus-community.github.io/helm-charts
+    - https://sigstore.github.io/helm-charts
     # the monitoring stack's values and Tempo's manifests (deploy/environments/homelab, deploy/k8s/tempo)
     - git@github.com:x2db736ac85h/Finuance.git
     # Grafana's sealed admin login in the private environment repository (ADR 0023)
@@ -24,6 +25,9 @@ spec:
       namespace: kube-system
     - server: https://kubernetes.default.svc
       namespace: monitoring
+    # Sigstore policy-controller (image signatures, ADR 0039)
+    - server: https://kubernetes.default.svc
+      namespace: cosign-system
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"

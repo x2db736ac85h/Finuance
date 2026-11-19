@@ -125,6 +125,10 @@ EOF
   # role passwords sealed for this namespace
   t0=$(date +%s)
   kubectl create namespace "$RNS" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  # the same signature check as the app's namespace, when it is switched on there (RUNBOOK "Image signatures")
+  if [ "$(kubectl get namespace finuance -o jsonpath='{.metadata.labels.policy\.sigstore\.dev/include}')" = true ]; then
+    kubectl label namespace "$RNS" --overwrite policy.sigstore.dev/include=true >/dev/null
+  fi
   kubectl label namespace "$RNS" --overwrite pod-security.kubernetes.io/enforce=restricted \
     pod-security.kubernetes.io/enforce-version=latest >/dev/null
   for s in finuance-db-backup; do
