@@ -1,0 +1,23 @@
+# Rehearsal only (tools/rehearsal.sh signatures, PLAN 23.2): holds an image that this repository's
+# release workflow never signed to the same authority as Finuance's own images, so the rehearsal can
+# watch the controller refuse it. (It can't push an unsigned copy to Finuance's registry to try.)
+apiVersion: policy.sigstore.dev/v1beta1
+kind: ClusterImagePolicy
+metadata:
+  name: rehearsal-not-ours
+spec:
+  images:
+    - glob: "registry.k8s.io/pause**"
+  authorities:
+    - name: release-workflow
+      keyless:
+        url: https://fulcio.sigstore.dev
+        identities:
+          - issuer: https://token.actions.githubusercontent.com
+            subjectRegExp: '^https://github\.com/x2db736ac85h/Finuance/\.github/workflows/release\.yml@refs/tags/v[0-9].*$'
+      ctlog:
+        url: https://rekor.sigstore.dev
+      signatureFormat: bundle
+      attestations:
+        - name: build-provenance
+          predicateType: https://slsa.dev/provenance/v1

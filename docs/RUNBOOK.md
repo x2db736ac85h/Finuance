@@ -475,6 +475,62 @@ whose spec Argo CD rejects (here: a destination namespace the project doesn't al
 the root's sync waits forever and doesn't pick up the fix from git either. Apply the fixed
 Application once by hand (`kubectl apply -f deploy/k8s/argocd/apps/<app>.yaml`); the root continues.
 
+### 16. Image signatures (Phase 23)
+
+The second admission check (ADR 0039): Sigstore policy-controller lets a pod start in a labelled
+namespace only when its image matches a `ClusterImagePolicy`
+(`deploy/k8s/policy-controller/policies/`). Finuance's own images need the build provenance that the release
+workflow signed; CloudNativePG's pass on the registry list; any other image is refused. The
+webhook looks only at namespaces labelled `policy.sigstore.dev/include: "true"`, so installing it
+changes nothing until a namespace is labelled. The label is the switch, and removing it is the way
+back.
+
+It needs the network at admission: the registry (`ghcr.io`, for the signature) and Sigstore's
+public services (the trust root, refreshed in the background). While they can't be reached, or
+while the webhook's pod is down, **new pods in a labelled namespace are refused** (fail closed).
+Running pods and restarts of their containers are not affected.
+
+Roll it out in this order:
+
+1. **Deploy by digest first** (task 23.1): `deploy/environments/homelab/values.yaml` carries
+   `image.digests`, and the pods show `…@sha256:…` (`kubectl -n finuance get pods -o jsonpath='{..image}'`).
+2. **Sync the app `policy-controller`** in Argo CD after reading the diff (manual sync, like
+   `finuance-db`). One pod in `cosign-system` (50m CPU and 128 MiB requested), two CRDs, four
+   webhook configurations, the two policies. Nothing is checked yet.
+3. **Try it in a scratch namespace** (server-side dry runs; nothing is created):
+
+   ```sh
+   kubectl create namespace signature-check
+   kubectl label namespace signature-check policy.sigstore.dev/include=true
+   try() { kubectl -n signature-check run probe --image "$1" --restart=Never --dry-run=server -o name 2>&1 | tail -1; }
+   try "ghcr.io/x2db736ac85h/finuance-api@$(yq '.image.digests.api' deploy/environments/homelab/values.yaml)"   # pod/probe created (server dry run)
+   try "ghcr.io/x2db736ac85h/finuance-web@$(yq '.image.digests.web' deploy/environments/homelab/values.yaml)"   # pod/probe created (server dry run)
+   try ghcr.io/cloudnative-pg/postgresql:18.7-standard-trixie                                                    # created: the registry list alone
+   try docker.io/library/busybox:1.37                                                                            # refused: no matching policies
+   kubectl delete namespace signature-check
+   ```
+
+4. **Label the namespace:** `kubectl label namespace finuance policy.sigstore.dev/include=true`.
+   Then start new pods under the policy: `kubectl -n finuance rollout restart deploy/finuance-web`
+   and watch `kubectl -n finuance get pods,events`. A refused pod shows as a `FailedCreate` event
+   on its ReplicaSet, Job or CloudNativePG cluster, naming the policy.
+5. **`finuance-restore`** exists only during a restore drill; `tools/homelab-drill.sh` labels it.
+6. Tell the repository: once the label has been on for a while, it goes into git with the
+   namespaces (a follow-up in PROGRESS), and the app's sync wave moves before the admission policy.
+
+**The way back**, in order of reach: remove the label (`kubectl label namespace finuance
+policy.sigstore.dev/include-`; pods are admitted on the registry list alone again, at once);
+if the webhook itself misbehaves, delete the app `policy-controller` in Argo CD (its webhook
+configurations go with it).
+
+**Upgrading it:** the chart version is pinned in the Argo CD application and Renovate proposes
+bumps; the kubectl image of its uninstall job is pinned by digest in
+`deploy/k8s/policy-controller/values.yaml` by hand. Sync by hand after reading the release notes;
+the rehearsal runs the new version against the policies first.
+
+**A release candidate** is signed by the same workflow on its `v…-rc.N` tag, so it is admitted.
+An image built by hand, by a branch or by another workflow is not: deploy what a tag released.
+
 ### After a reboot
 
 On a single node a reboot is the node-failure drill (also after a system update that rebuilds the GPU driver):
@@ -489,7 +545,7 @@ Then repeat the pod test from step 2 (router blocked, DNS and internet working),
 
 ## Deploy
 
-1. A `vX.Y.Z` tag runs `release.yml`: images, scans, signatures, the GitHub release, then a pull request **chore(deploy): homelab to vX.Y.Z** that changes `image.tag` in `deploy/environments/homelab/values.yaml`. Release candidates (`-rc.N`) get no pull request.
+1. A `vX.Y.Z` tag runs `release.yml`: images, scans, signatures, the GitHub release, then a pull request **chore(deploy): homelab to vX.Y.Z** that changes `image.tag` and `image.digests` (the digests the release pushed and signed; the cluster runs those) in `deploy/environments/homelab/values.yaml`. Release candidates (`-rc.N`) get no pull request; to try one on the cluster, run `tools/bump-homelab-tag.sh X.Y.Z-rc.N sha256:<api> sha256:<web>` with the digests from the release's notes on a branch and open the pull request yourself.
    Tag a commit whose message has no `[skip ci]` (nor `[ci skip]`, `[no ci]`, …) **anywhere, the body included**: GitHub skips every push-triggered workflow for such a commit, the tag push included, and the release never starts (it happened with the first `v0.2.0-rc.1` tag, and a commit body that only mentioned the marker skipped the gate's CI run). Check with `git log -1 --format=%B | grep -iE '\[(skip ci|ci skip|no ci|skip actions|actions skip)\]'` before pushing.
 2. The pull request is opened with the workflow token, so CI doesn't start on its own. Close and reopen it to run the checks. The pull request then also lists a run started by `github-actions[bot]` that "failed" within a minute with "a workflow file issue": that is GitHub refusing to run workflows for the token's own event, not a failing check; the run from the reopen is the one that counts (and the one the `main` ruleset requires).
 3. Merge it. Argo CD syncs `main` (within its polling interval, or press *Refresh*):

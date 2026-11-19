@@ -8,11 +8,14 @@
 #   - an assistant answer streamed through Traefik without buffering (the mock's slow answer);
 #   - no failed request under load while api and web pods are deleted and rolled (k6);
 #   - backup → restore into a scratch namespace → a temporary app on it → the smoke scripts,
-#     with the restored data checked and the RPO/RTO measured.
+#     with the restored data checked and the RPO/RTO measured;
+#   - image signatures (Sigstore policy-controller with the homelab's policies): the released
+#     images are admitted in a labelled namespace, an image without the release workflow's
+#     signature and an image no policy names are refused (needs ghcr.io and Sigstore's services).
 # Timings go to $SUMMARY (and the GitHub job summary). Needs docker, kind, kubectl, helm, kubeseal,
 # mikefarah's yq ($YQ), curl, openssl and python3.
 #
-#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|netpol|sse|podkill|restore|summary|diagnostics|report|down]
+#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|netpol|sse|podkill|restore|signatures|summary|diagnostics|report|down]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -27,6 +30,8 @@ CERT_MANAGER_CHART=v1.21.3
 K6_IMAGE=grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
 AWS_CLI_IMAGE=amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868ddee1f611b73be795a9cc2e706bfd
 BUSYBOX_IMAGE=busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+# an image this repository's release workflow never signed (the signatures step)
+PAUSE_IMAGE=registry.k8s.io/pause:3.10.1@sha256:278fb9dbcca9518083ad1e11276933a2e96f23de604a3a08cc3c80002767d24c
 API_IMAGE=ghcr.io/x2db736ac85h/finuance-api:rehearsal
 WEB_IMAGE=ghcr.io/x2db736ac85h/finuance-web:rehearsal
 MOCK_IMAGE=finuance-llmmock:rehearsal
@@ -40,7 +45,7 @@ log() { printf '\n== %s\n' "$*"; }
 timing() { printf '%s\t%s\n' "$1" "$2" >>"$WORK/timings.tsv"; echo "   $1: $2 s"; }
 fact() { printf '%s\t%s\n' "$1" "$2" >>"$WORK/facts.tsv"; echo "   $1: $2"; }
 # chart version pinned in an Argo CD application (one source of truth for the homelab and here)
-argo_version() { "$YQ" '.spec.source.targetRevision' "deploy/k8s/argocd/apps/$1.yaml"; }
+argo_version() { "$YQ" '(.spec.source // .spec.sources[0]).targetRevision' "deploy/k8s/argocd/apps/$1.yaml"; }
 # wait_for <timeout s> <description> <command…>
 wait_for() {
   local limit=$1 what=$2; shift 2
@@ -324,6 +329,47 @@ EOF
   timing "RTO: restore started until the smoke scripts pass on it" $(($(date +%s) - t0))
 }
 
+# try_image <namespace> <image>: would a pod with this image be created? (a server-side dry run goes
+# through admission and creates nothing); prints the API server's answer
+try_image() { kubectl -n "$1" run signature-probe --image "$2" --restart=Never --dry-run=server -o name 2>&1; }
+
+signatures() {
+  log "image signatures: Sigstore policy-controller (PLAN 23.2)"
+  local t0; t0=$(date +%s)
+  helm repo add sigstore https://sigstore.github.io/helm-charts --force-update >/dev/null
+  helm upgrade --install policy-controller sigstore/policy-controller --version "$(argo_version policy-controller)" \
+    -n cosign-system --create-namespace -f deploy/k8s/policy-controller/values.yaml --wait --timeout 5m
+  kubectl apply -f deploy/k8s/policy-controller/policies/ -f "$R/signature-test-policy.yaml"
+  kubectl create namespace signed --dry-run=client -o yaml | kubectl apply -f -
+  kubectl label namespace signed --overwrite policy.sigstore.dev/include=true
+  timing "policy-controller installed" $(($(date +%s) - t0))
+
+  # the released images, by the digests the homelab deploys
+  local api web out
+  api="ghcr.io/x2db736ac85h/finuance-api@$("$YQ" '.image.digests.api' deploy/environments/homelab/values.yaml)"
+  web="ghcr.io/x2db736ac85h/finuance-web@$("$YQ" '.image.digests.web' deploy/environments/homelab/values.yaml)"
+  # the policies reach the webhook a moment after they are applied
+  wait_for 180 "the released api image is admitted" try_image signed "$api" || { try_image signed "$api" >&2; return 1; }
+  try_image signed "$web" >/dev/null || { echo "the released web image was refused:" >&2; try_image signed "$web" >&2; return 1; }
+
+  # refused: an image the release workflow did not sign (held to the same authority by the test policy)
+  refused_by_policy() { ! out=$(try_image signed "$PAUSE_IMAGE") && grep -q 'rehearsal-not-ours' <<<"$out"; }
+  wait_for 120 "an image without the release workflow's signature is refused" refused_by_policy ||
+    { echo "expected a refusal naming the policy rehearsal-not-ours, got:" >&2; try_image signed "$PAUSE_IMAGE" >&2; return 1; }
+  # refused: this checkout's own build, which nobody signed (it is not in the registry at all)
+  if out=$(try_image signed "$API_IMAGE"); then echo "the unsigned local build was admitted in a labelled namespace" >&2; return 1; fi
+  # refused: an image no policy names
+  if out=$(try_image signed "$BUSYBOX_IMAGE"); then echo "an image no policy names was admitted" >&2; return 1; fi
+  grep -q 'no matching policies' <<<"$out" || { echo "expected 'no matching policies', got: $out" >&2; return 1; }
+  # CloudNativePG's images pass on the registry list (the static policy)
+  try_image signed "$("$YQ" '.cluster.imageName // .imageName' deploy/k8s/db/values.yaml)" >/dev/null ||
+    { echo "the PostgreSQL image was refused in a labelled namespace" >&2; return 1; }
+  # a namespace without the label is not checked
+  try_image default "$PAUSE_IMAGE" >/dev/null || { echo "a namespace without the label was checked" >&2; return 1; }
+  kubectl delete namespace signed --wait=false >/dev/null
+  fact "Image signatures" "released api and web admitted by digest; refused: an image without the release workflow's signature, the unsigned local build, an image no policy names; unlabelled namespace not checked"
+}
+
 summary() {
   {
     echo "### Deployment rehearsal (kind, $(date -u +%Y-%m-%d))"
@@ -407,9 +453,9 @@ down() { kind delete cluster --name "$CLUSTER" || true; }
 case ${1:-all} in
   all)
     rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
-    images; cluster; platform; deploy; smoke; netpol; sse; podkill; restore; summary
+    images; cluster; platform; deploy; smoke; netpol; sse; podkill; restore; signatures; summary
     ;;
-  images | cluster | platform | deploy | smoke | netpol | sse | podkill | restore)
+  images | cluster | platform | deploy | smoke | netpol | sse | podkill | restore | signatures)
     mkdir -p "$WORK/logs"
     "$1" 2>&1 | tee "$WORK/logs/$1.log"
     ;;

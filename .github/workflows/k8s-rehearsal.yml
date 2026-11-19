@@ -82,6 +82,8 @@ jobs:
         run: tools/rehearsal.sh podkill
       - name: Backup, restore into a scratch namespace, smoke
         run: tools/rehearsal.sh restore
+      - name: Image signatures (policy-controller admits the released images, refuses the rest)
+        run: tools/rehearsal.sh signatures
       - name: Summary (RPO/RTO and timings)
         if: always()
         run: tools/rehearsal.sh summary

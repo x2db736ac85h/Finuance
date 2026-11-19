@@ -1,0 +1,42 @@
+# Sigstore policy-controller (PLAN 23.2, ADR 0039): an admission webhook that lets a pod start in a
+# labelled namespace only when its image matches a ClusterImagePolicy (deploy/k8s/policy-controller/
+# policies): Finuance's own images must carry the release workflow's signature.
+# Manual sync only: the controller decides whether pods may start, so it is installed and upgraded
+# when someone presses Sync after reading the diff (RUNBOOK "Image signatures"). Nothing is checked
+# in a namespace until it carries the label `policy.sigstore.dev/include: "true"`.
+# Last wave for now: the root app waits for an application that has never been synced, and nothing
+# should wait behind this one. Once the namespaces carry the label in git, it moves before the
+# admission policy's wave, so that the webhook is there before the first pod.
+# Server-side apply: the CRDs are too large for a client-side apply's annotation.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: policy-controller
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://sigstore.github.io/helm-charts
+      chart: policy-controller
+      targetRevision: 0.10.8 # policy-controller v0.13.1
+      helm:
+        releaseName: policy-controller
+        valueFiles:
+          - $values/deploy/k8s/policy-controller/values.yaml
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: main
+      ref: values
+    - repoURL: git@github.com:x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/k8s/policy-controller/policies
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cosign-system
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # the policies' kind arrives with the chart in the same sync
+      - SkipDryRunOnMissingResource=true

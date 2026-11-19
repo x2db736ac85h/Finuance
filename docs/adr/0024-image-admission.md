@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-11-02
+- Note (2026-11-19): the follow-up is built: digests and signatures are [ADR 0039](0039-image-signatures.md). The registry list decided here stays as the first check.
 - Note (2026-11-18): the follow-up phase (digests and signatures) is **Phase 23** since PLAN Rev 5 (tasks 23.1 and 23.2); it was Phase 19, then 21.
 
 ## Context

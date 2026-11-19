@@ -2,8 +2,9 @@
 # Kubernetes' built-in ValidatingAdmissionPolicy (no extra component). Every pod in Finuance's
 # namespaces may only run images from the registries listed for its namespace, and the images we pin
 # by digest ourselves must keep their digest. Finuance's own images come only from
-# ghcr.io/x2db736ac85h. Phase 23 adds signature checks (cosign) and deploys Finuance's images by
-# digest (ADR 0024). A refused pod shows up as a FailedCreate event on its ReplicaSet, Job or Cluster.
+# ghcr.io/x2db736ac85h. This is the first check; the second is the signature (Sigstore
+# policy-controller, deploy/k8s/policy-controller, ADR 0039), and Finuance's images are deployed by
+# digest. A refused pod shows up as a FailedCreate event on its ReplicaSet, Job or Cluster.
 #
 # Adding an image from a new registry (a chart upgrade, a new tool): add its prefix below first.
 apiVersion: admissionregistration.k8s.io/v1
@@ -31,6 +32,7 @@ spec:
         {
           'finuance': ['ghcr.io/x2db736ac85h/', 'ghcr.io/cloudnative-pg/'],
           'finuance-restore': ['ghcr.io/x2db736ac85h/', 'ghcr.io/cloudnative-pg/'],
+          'cosign-system': ['ghcr.io/sigstore/policy-controller/', 'cgr.dev/chainguard/kubectl@'],
           's3': ['rustfs/rustfs:', 'docker.io/rustfs/rustfs:', 'amazon/aws-cli:', 'docker.io/amazon/aws-cli:'],
           'monitoring': ['quay.io/prometheus/', 'quay.io/prometheus-operator/', 'quay.io/kiwigrid/k8s-sidecar:',
                          'registry.k8s.io/kube-state-metrics/', 'docker.io/grafana/grafana:',
@@ -67,4 +69,4 @@ spec:
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: In
-          values: [finuance, finuance-restore, s3, monitoring]
+          values: [finuance, finuance-restore, s3, monitoring, cosign-system]

@@ -1,0 +1,24 @@
+# Values for the Sigstore policy-controller chart (deploy/k8s/argocd/apps/policy-controller.yaml,
+# the rehearsal; PLAN 23.2, ADR 0039). The chart pins the webhook's image by digest itself.
+webhook:
+  # One replica on one node. If the webhook is down, pods in labelled namespaces can't be created
+  # (fail closed); running pods are not affected. RUNBOOK "Image signatures" has the way back.
+  replicaCount: 1
+  failurePolicy: Fail
+  podDisruptionBudget:
+    enabled: false # with one replica it would only block a node drain
+  configData:
+    # An image that no ClusterImagePolicy names is refused in a labelled namespace. This is the
+    # controller's default; written down so that a chart upgrade can't change it quietly.
+    no-match-policy: deny
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+# The chart's post-delete job (it removes the webhook's leases when the release is deleted) uses a
+# moving tag by default; pinned here like every other image (tools/check-pins.sh can't see it).
+leasescleanup:
+  image:
+    repository: cgr.dev/chainguard/kubectl
+    # docker buildx imagetools inspect cgr.dev/chainguard/kubectl:latest-dev (2026-11-19)
+    version: sha256:ee975dba7273819f032fec5e7b2ccf27189b1389f0d0930a5a9c98a8d8e3dd80

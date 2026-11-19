@@ -353,14 +353,24 @@ jobs:
         run: |
           tools/bin-tools.sh trivy
           backend/bin/trivy config --severity HIGH,CRITICAL --exit-code 1 --disable-telemetry "$RUNNER_TEMP/rendered"
-      - name: GitOps bump (tools/bump-homelab-tag.sh changes only the tag line)
+      - name: GitOps bump (tools/bump-homelab-tag.sh changes only the tag and the two digests)
         run: |
           set -euo pipefail
           f="$RUNNER_TEMP/values.yaml"; cp deploy/environments/homelab/values.yaml "$f"
-          YQ="$(go env GOPATH)/bin/yq" tools/bump-homelab-tag.sh 9.8.7 "$f"
-          test "$(diff deploy/environments/homelab/values.yaml "$f" | grep -c '^[<>]')" -eq 2
+          YQ="$(go env GOPATH)/bin/yq"; export YQ
+          a="sha256:$(printf 'a%.0s' $(seq 64))" w="sha256:$(printf 'b%.0s' $(seq 64))"
+          tools/bump-homelab-tag.sh 9.8.7 "$a" "$w" "$f"
+          test "$(diff deploy/environments/homelab/values.yaml "$f" | grep -c '^[<>]')" -eq 6
           grep -q '^  tag: "9.8.7"$' "$f"
-          if YQ="$(go env GOPATH)/bin/yq" tools/bump-homelab-tag.sh 9.8 "$f"; then exit 1; fi
+          grep -q "^    api: \"$a\"$" "$f"
+          grep -q "^    web: \"$w\"$" "$f"
+          # the bumped file still renders, by digest
+          helm template finuance deploy/helm/finuance -n finuance --kube-version 1.33.0 -f "$f" -f deploy/environments/homelab/host-values.example.yaml \
+            | grep -c "image: ghcr.io/x2db736ac85h/finuance-api@$a" | grep -qx 3
+          if tools/bump-homelab-tag.sh 9.8 "$a" "$w" "$f"; then exit 1; fi
+          if tools/bump-homelab-tag.sh 9.8.7-beta "$a" "$w" "$f"; then exit 1; fi
+          tools/bump-homelab-tag.sh 9.8.8-rc.1 "$a" "$w" "$f"
+          if tools/bump-homelab-tag.sh 9.8.8 "$a" sha256:short "$f"; then exit 1; fi
       - name: Sealing round trip (tools/seal-secrets.sh with a throwaway key)
         run: |
           set -euo pipefail

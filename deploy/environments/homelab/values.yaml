@@ -4,8 +4,12 @@
 # repository as a second Argo CD source (ADR 0023; example: host-values.example.yaml) and win.
 
 image:
-  # Bumped by release.yml (a pull request per release, vX.Y.Z tags only).
+  # Bumped by release.yml (a pull request per release, vX.Y.Z tags only): the tag and the digests
+  # of the images that release pushed and signed. The cluster runs the digests (PLAN 23.1).
   tag: "0.4.2"
+  digests:
+    api: "sha256:24341762246e7a271477b82ed29d6f24c63f66a5c6e5dcc756e188d3ead55c3b"
+    web: "sha256:42e5aa1850ee56539c2caeac07f70fb5e149265607a260e5764ad2ef63edf984"
 # The images are public (Phase 22 task 22.1), so no registry login (imagePullSecrets) is needed.
 
 # Set by the private overlay (<host>); the placeholders here keep a render without it obviously wrong.

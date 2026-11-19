@@ -12,6 +12,14 @@
         "api": { "type": "string", "minLength": 1 },
         "web": { "type": "string", "minLength": 1 },
         "tag": { "type": "string" },
+        "digests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "api": { "type": "string", "pattern": "^(sha256:[0-9a-f]{64})?$" },
+            "web": { "type": "string", "pattern": "^(sha256:[0-9a-f]{64})?$" }
+          }
+        },
         "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
       }
     },

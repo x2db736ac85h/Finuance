@@ -48,7 +48,7 @@ socket mounted, and several scanners planned for the public release were missing
   fails until they are), and every release waits for the maintainer's approval.
 - One maintainer can't approve their own pull requests, so Scorecard's code-review and
   branch-protection checks stay low by design.
-- Phase 23: the cluster admits only signed images and deploys them by digest (ADR 0024).
+- Phase 23: the cluster admits only signed images and deploys them by digest (ADR 0039).
 
 ## Alternatives considered
 
