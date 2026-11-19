@@ -291,7 +291,8 @@ function compare(path: string, legacy: Facts, next: Facts): Row[] {
 
 test.afterAll(() => {
   if (report.length === 0) return;
-  const cell = (s: string) => (s.length > 120 ? `${s.slice(0, 117)}…` : s).replace(/\|/g, '\\|');
+  // a Markdown table cell: backslashes first, then the pipes, so neither can end the cell early
+  const cell = (s: string) => (s.length > 120 ? `${s.slice(0, 117)}…` : s).replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
   const lines = [
     '# Parity report',
     '',

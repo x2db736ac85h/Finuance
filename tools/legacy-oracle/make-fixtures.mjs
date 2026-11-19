@@ -263,7 +263,7 @@ function readme(){
     `${F.length} files.\n`;
   for (const [title, pred] of sets){
     s += `\n## ${title}\n\n| File | Encoding | EOL | BOM | Intent |\n|---|---|---|---|---|\n`;
-    for (const f of F.filter(pred)) s += `| \`${f.path}\` | ${f.enc} | ${eolName(f)} | ${f.bom ? 'yes' : 'no'} | ${f.intent.replace(/\|/g, '\\|')} |\n`;
+    for (const f of F.filter(pred)) s += `| \`${f.path}\` | ${f.enc} | ${eolName(f)} | ${f.bom ? 'yes' : 'no'} | ${f.intent.replace(/\\/g, '\\\\').replace(/\|/g, '\\|')} |\n`;
   }
   return s;
 }

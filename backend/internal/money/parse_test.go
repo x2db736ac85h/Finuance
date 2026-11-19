@@ -105,6 +105,15 @@ func TestOverflowAndCanonical(t *testing.T) {
 	if _, err := FromParts(Parts{Int: "99999999999999999999"}, 0); !errors.Is(err, ErrOverflow) {
 		t.Errorf("huge: %v", err)
 	}
+	// MaxUint64 rounded up must not wrap to zero (found while triaging CodeQL, 2026-11-19)
+	for _, p := range []Parts{{Int: "18446744073709551615", Frac: "5"}, {Negative: true, Int: "184467440737095516", Frac: "155"}} {
+		if v, err := FromParts(p, len(p.Frac)-1); !errors.Is(err, ErrOverflow) {
+			t.Errorf("%+v rounded up: %d, %v", p, v, err)
+		}
+	}
+	if v, err := FromParts(Parts{Int: "9223372036854775806", Frac: "5"}, 0); err != nil || v != math.MaxInt64 {
+		t.Errorf("MaxInt64 by rounding up: %d %v", v, err)
+	}
 	for _, bad := range []string{"1.5", "1", "1.500", "", "-", ".50", "1,50"} {
 		if _, err := ParseCanonical(bad, 2); err == nil {
 			t.Errorf("ParseCanonical(%q) accepted", bad)
