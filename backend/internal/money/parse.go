@@ -201,16 +201,22 @@ func FromParts(p Parts, exp int) (int64, error) {
 		return 0, ErrOverflow
 	}
 	if roundUp {
+		if u == math.MaxUint64 { // rounding up would wrap to zero
+			return 0, ErrOverflow
+		}
 		u++
 	}
-	// The magnitude may be at most MaxInt64, or MaxInt64+1 for negative values.
-	if u > math.MaxInt64 && (!p.Negative || u != math.MaxInt64+1) {
-		return 0, ErrOverflow
-	}
+	// The magnitude may be at most MaxInt64, or MaxInt64+1 for negative values (MinInt64).
 	if p.Negative {
+		if u > math.MaxInt64+1 {
+			return 0, ErrOverflow
+		}
 		return int64(-u), nil //nolint:gosec // range checked above; -u wraps to MinInt64 on purpose
 	}
-	return int64(u), nil //nolint:gosec // range checked above
+	if u > math.MaxInt64 {
+		return 0, ErrOverflow
+	}
+	return int64(u), nil
 }
 
 func isDigits(s string) bool {

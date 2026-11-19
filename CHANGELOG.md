@@ -6,6 +6,37 @@ notes of their version.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-19
+
+### Security
+
+- **Imports can no longer exhaust the api's memory**: a signed-in user could upload a file within the
+  size limit whose shape made the api allocate many times its size until its container restarted.
+  The import limits now apply while a file is read, and a single cell (4 KB) and a row's search text
+  (16 KB) have a size limit; a longer cell makes its row an error. Upgrade if people you don't fully
+  trust have accounts, or sign-ups are on.
+- **Time limits for the api's database work**: a request waits at most 5 s for a lock (an import
+  being committed holds its account's), runs a statement at most 30 s and ends a transaction left
+  idle after a minute, so one user can no longer keep the api's database connections busy. Answers
+  `409 account_busy` and `503 timeout` (with `Retry-After`); a streamed export may take 15 minutes.
+  The worker keeps waiting as before.
+- **Every amount has a bound**: amounts in requests and in imported files are at most ±10¹² minor
+  units (ten billion in a two-decimal currency), so totals of the shared and personal views can't
+  overflow; a larger amount in a file is a row error.
+- **The assistant never shares by itself**: sharing with a shared group and changing a shared split
+  are no longer kinds the panel may apply automatically (others read the result); choices made
+  earlier are removed. A proposal that lacks the id it acts on is refused before anything is sent.
+- **PostgreSQL 18.7** (row-level security fixes among others; Compose and the Helm chart). It asks
+  for a reindex: see `docs/RUNBOOK.md`, "Upgrading PostgreSQL (minor release)".
+- **nginx 1.30.7 and OpenSSL 3.5.9-r1** in the web image, **`golang.org/x/crypto` 0.59.0**, **Node
+  22.23.5** for the web build; for Kubernetes deployments, **Grafana 13.3.1** (kube-prometheus-stack
+  93.4.1) and **Tempo 2.9.5** in the monitoring stack.
+- **Verifiable releases**: images now carry SLSA build provenance next to the SBOM, and the
+  signature check names the release workflow exactly. `SECURITY.md` shows both commands.
+- **Go 1.27.4**: the release fixes a crash of HTTP/1 servers in the standard library's request-size
+  limit (GO-2026-6859), which Finuance applies to every request body. Images built from this
+  version on are not affected.
+
 ### Changed
 
 - **Safe when started without settings**: an instance without `FINUANCE_ENV` now runs in production
@@ -21,12 +52,9 @@ notes of their version.
   `${FINUANCE_ENV_DIR:-../finuance-env}/<env>/…` instead of `deploy/environments/<env>/`, where the
   homelab's SealedSecrets moved too (ADR 0023). `SECRETS_DIR`, `RUSTFS_SECRETS_DIR`,
   `SMTP_SECRETS_DIR` and `GRAFANA_SECRETS_DIR` still choose another folder.
-
-### Security
-
-- **Go 1.27.4**: the release fixes a crash of HTTP/1 servers in the standard library's request-size
-  limit (GO-2026-6859), which Finuance applies to every request body. Images built from this
-  version on are not affected.
+- **Searches** take at most 16 words, and table offsets at most 1,000,000 (`422` beyond).
+- **Upgrading from 0.4.1**: migrations 00025 and 00026 run quickly and cannot fail on existing
+  data; `docs/RUNBOOK.md`, "Validating the amount checks", confirms the existing rows once.
 
 ### Fixed
 
@@ -35,6 +63,8 @@ notes of their version.
   (found by the weekly security scan). Kubernetes deployments weren't affected.
 - **A NUL character in a request's text** (such as the sign-in e-mail) is answered
   `422 validation_failed` on every route instead of `500`.
+- **The web image build** names a native package that `npm ci` left out, and tries once more,
+  instead of failing later in the build.
 
 ## [0.4.1] - 2026-11-09
 

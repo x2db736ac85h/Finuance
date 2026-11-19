@@ -103,6 +103,33 @@ belong with the machine's maintenance.
 on every push): trufflehog 3.99.9 (checked against its release's checksums), `git file://.`,
 8,535 chunks (17.6 MB): **0 verified and 0 unverified secrets**.
 
+**CodeQL, first analysis of `main`: 2026-11-19** (PLAN task 22.6; `codeql.yml`, Go,
+JavaScript/TypeScript, actions, Python), at `9a5134c`: 8 alerts, each decided.
+
+| Alert | Where | Decision |
+|---|---|---|
+| `go/incorrect-integer-conversion` ×4 | `backend/internal/config/config.go` (the pool size and the three argon2 settings) | **False positive, dismissed:** `parser.int` refuses a value outside its range (1–1000, 8 KiB–1 GiB, 1–10, 1–16) before the conversion; CodeQL does not follow the bound across the call |
+| `go/incorrect-integer-conversion` | `backend/internal/money/parse.go` (`FromParts`) | **Fixed:** each branch now has its own bound before the conversion. Reading it showed a real slip next to it: rounding up the largest unsigned value wrapped to zero without an error. `ParseMinor` never passes such digits (its splitter refuses them first), but `FromParts` is exported; it now answers `ErrOverflow`, with a test |
+| `go/path-injection` | `backend/internal/app/probe.go` (`finuance admin llm-probe -out=dir`) | **Dismissed (won't fix):** the directory is the operator's own command-line flag, and the file name is the request path with everything outside `[A-Za-z0-9_-]` replaced |
+| `js/incomplete-sanitization` ×2 | `web/e2e/parity.spec.ts`, `tools/legacy-oracle/make-fixtures.mjs` (Markdown table cells) | **Fixed:** backslashes are escaped before the pipes. Both build reports from the repository's own text; the generated files are unchanged |
+
+**OpenSSF Scorecard: 2026-11-19, 6.8 of 10** (PLAN task 22.6; `scorecard.yml`, published), on
+`main` at `9a5134c`. 10 of 10: pinned dependencies, token permissions, dangerous workflows,
+vulnerabilities, security policy, dependency updates, fuzzing, CI tests, packaging, licence, binary
+artifacts. The rest, with what was decided:
+
+| Check | Score | Decision |
+|---|---|---|
+| Signed-Releases | 0 | **Fixed for `v0.4.2`:** each release attaches the provenance bundles of both images (`*.intoto.jsonl`) and a cosign signature bundle of the `fin` checksum file; the images were signed already, in the registry |
+| SAST | 7 | Rises by itself: CodeQL runs on every pull request and push to `main` since this day |
+| Branch-Protection | 3 | Accepted: one maintainer, who can't approve their own pull requests; the ruleset requires a pull request and every CI job |
+| Code-Review | 0 | Accepted for the same reason |
+| Contributors | 3 | Accepted: one maintainer |
+| Maintained | 0 | Rises by itself: the repository is younger than 90 days |
+| CII-Best-Practices | 0 | Open: the OpenSSF best-practices badge is a registration, the maintainer's choice |
+
+Scorecard files the checks below 10 as code scanning alerts too; each is dismissed with the decision above.
+
 ## Summary
 
 | Scan | Result | Open |
