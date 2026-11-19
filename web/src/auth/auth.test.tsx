@@ -41,6 +41,67 @@ describe('login', () => {
     expect(screen.getByText('Enter your email and password.')).toBeTruthy();
   });
 
+  it('asks for a code when the account uses two-step sign-in, and signs in with it', async () => {
+    const steps: unknown[] = [];
+    server.use(
+      http.post(`${API}/auth/login`, () =>
+        HttpResponse.json({ challenge: 'challenge-token', expiresAt: '2099-01-01T00:00:00Z' }, { status: 202 }),
+      ),
+      http.post(`${API}/auth/login/second-step`, async ({ request }) => {
+        const body = (await request.json()) as { challenge: string; code: string };
+        steps.push(body);
+        if (body.code !== '123456') return problem(401, 'unauthenticated', 'The code is not valid.');
+        db.signedIn = true;
+        db.user = { ...db.user, secondFactor: true };
+        return HttpResponse.json(db.user);
+      }),
+    );
+    const user = userEvent.setup();
+    const { router } = renderApp('/login?next=/settings/security');
+    await user.type(await screen.findByRole('textbox', { name: 'Email' }), 'a@b.c');
+    await user.type(screen.getByLabelText('Password'), 'the right password');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    // the password alone signs nobody in: the page asks for the code and stays on /login
+    const code = await screen.findByRole('textbox', { name: 'Code' });
+    expect(screen.getByRole('heading', { name: 'Enter your code' })).toBeTruthy();
+    expect(screen.queryByLabelText('Password')).toBeNull();
+    expect(code.getAttribute('autocomplete')).toBe('one-time-code');
+    expect(router.state.location.pathname).toBe('/login');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(screen.getByText('Enter the code from your authenticator app.')).toBeTruthy();
+    await user.type(code, '000000');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect((await screen.findByText('The code is not valid.')).getAttribute('role')).toBe('alert');
+    await waitFor(() => {
+      expect(code).toHaveProperty('value', '');
+    });
+    await user.type(code, '123456');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/settings/security');
+    });
+    expect(steps).toEqual([
+      { challenge: 'challenge-token', code: '000000' },
+      { challenge: 'challenge-token', code: '123456' },
+    ]);
+  });
+
+  it('lets someone start again with the password from the code step', async () => {
+    server.use(
+      http.post(`${API}/auth/login`, () =>
+        HttpResponse.json({ challenge: 'c', expiresAt: '2099-01-01T00:00:00Z' }, { status: 202 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp('/login');
+    await user.type(await screen.findByRole('textbox', { name: 'Email' }), 'a@b.c');
+    await user.type(screen.getByLabelText('Password'), 'pw pw pw pw');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    await user.click(await screen.findByRole('button', { name: 'Start again with your password' }));
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy();
+    expect(screen.getByLabelText<HTMLInputElement>('Password').value).toBe('');
+  });
+
   it('links to sign-up only when it is enabled', async () => {
     renderApp('/login');
     expect(await screen.findByRole('link', { name: 'Create an account' })).toBeTruthy();

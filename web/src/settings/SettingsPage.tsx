@@ -15,6 +15,7 @@ import { GeneralSettings } from './General';
 import { ProfileSettings } from './Profile';
 import { SECTIONS, type SectionId } from './sections';
 import { SessionsSettings } from './Sessions';
+import { SecuritySettings } from './Security';
 import { TokensSettings } from './Tokens';
 
 const BODY: Record<SectionId, () => React.JSX.Element> = {
@@ -26,6 +27,7 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
     </div>
   ),
   profile: ProfileSettings,
+  security: SecuritySettings,
   sessions: SessionsSettings,
   tokens: TokensSettings,
   activity: ActivitySettings,

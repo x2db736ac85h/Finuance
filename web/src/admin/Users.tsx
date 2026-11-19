@@ -10,6 +10,7 @@ import {
   useCreateUser,
   useDeleteUser,
   useResetPassword,
+  useRemoveSecondFactor,
   useRevokeUserSessions,
   useUpdateUser,
   type AdminUser,
@@ -27,7 +28,7 @@ import { toast } from '../ui/toastStore';
 function status(u: AdminUser): string {
   if (u.disabled) return 'disabled';
   if (u.mustChangePassword) return 'one-time password';
-  return 'active';
+  return u.secondFactor ? 'active · two-step' : 'active';
 }
 
 export function UsersAdmin() {
@@ -354,6 +355,7 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
   const update = useUpdateUser();
   const reset = useResetPassword();
   const revoke = useRevokeUserSessions();
+  const removeFactor = useRemoveSecondFactor();
   const del = useDeleteUser();
   const [limits, setLimits] = useState<Record<string, string> | null>(null);
   const [oneTime, setOneTime] = useState('');
@@ -433,6 +435,20 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
         >
           Sign out everywhere
         </Button>
+        {u.secondFactor && (
+          <Button
+            onClick={() => {
+              removeFactor.mutate(id, {
+                onSuccess: () => {
+                  toast(`Removed the two-step sign-in of ${u.email}; they sign in with their password alone`);
+                },
+                onError: fail,
+              });
+            }}
+          >
+            Remove two-step sign-in
+          </Button>
+        )}
         <Button
           variant="danger"
           onClick={() => {

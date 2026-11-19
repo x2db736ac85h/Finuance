@@ -25,6 +25,19 @@ export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: Schemas['LoginRequest']) => data(await api.POST('/auth/login', { body })),
+    onSuccess: (result) => {
+      if ('challenge' in result) return; // two-step sign-in: no session yet (useLoginSecondStep)
+      qc.clear();
+      qc.setQueryData(keys.me, result);
+    },
+  });
+}
+
+/** Finishes a sign-in that answered with a challenge: a code from the app or a recovery code (ADR 0040). */
+export function useLoginSecondStep() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Schemas['SecondStepRequest']) => data(await api.POST('/auth/login/second-step', { body })),
     onSuccess: (user) => {
       qc.clear();
       qc.setQueryData(keys.me, user);

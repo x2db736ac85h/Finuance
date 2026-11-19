@@ -273,6 +273,7 @@ describe('administration', () => {
         defaults: { cards: ['sum', 'cat', 'flow', 'pace', 'payee'] },
         features: { overview: false, assistantDigests: false },
         limits: { maxAccounts: 3, assistantTokensPerDay: 50000 },
+        security: { adminsNeedSecondFactor: false },
       });
     });
     // the saved version remounts the form; the confirmation still comes

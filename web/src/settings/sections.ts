@@ -1,11 +1,13 @@
 import type { IconName } from '../ui/icons';
 
 /** Settings pages (PLAN §7.3); categories and rules since Phase 15, activity since Phase 17, friends since Phase 19,
- * access tokens and General (the first, where /settings opens) since Phase 20. */
+ * access tokens and General (the first, where /settings opens) since Phase 20, security (two-step sign-in) since
+ * Phase 23. */
 export const SECTIONS = [
   { id: 'general', label: 'General', icon: 'layers' },
   { id: 'appearance', label: 'Appearance', icon: 'sun' },
   { id: 'profile', label: 'Profile', icon: 'pen' },
+  { id: 'security', label: 'Security', icon: 'shield' },
   { id: 'sessions', label: 'Sessions', icon: 'lock' },
   { id: 'tokens', label: 'Access tokens', icon: 'code' },
   { id: 'activity', label: 'Activity', icon: 'book' },
