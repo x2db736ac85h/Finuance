@@ -3715,6 +3715,8 @@ components:
         openingBalanceMinor:
           type: integer
           format: int64
+          minimum: -1000000000000
+          maximum: 1000000000000
         archived:
           type: boolean
         kind:
@@ -4518,6 +4520,8 @@ components:
         amountMinor:
           type: integer
           format: int64
+          minimum: -1000000000000
+          maximum: 1000000000000
           description: Negative = money out; never zero.
         payee:
           type: string
@@ -4657,6 +4661,7 @@ components:
           type: integer
           format: int64
           minimum: 1
+          maximum: 1000000000000
         archived:
           type: boolean
           description: Update only.
@@ -4754,6 +4759,8 @@ components:
               shareMinor:
                 type: integer
                 format: int64
+                minimum: -1000000000000
+                maximum: 1000000000000
     SharedExpenseInput:
       type: object
       additionalProperties: false
@@ -4764,6 +4771,8 @@ components:
         amountMinor:
           type: integer
           format: int64
+          minimum: -1000000000000
+          maximum: 1000000000000
         payee:
           type: string
           maxLength: 200
@@ -4818,6 +4827,7 @@ components:
           type: integer
           format: int64
           minimum: 1
+          maximum: 1000000000000
         settledOn:
           type: string
           format: date
@@ -5112,6 +5122,8 @@ components:
         amountMinor:
           type: integer
           format: int64
+          minimum: -1000000000000
+          maximum: 1000000000000
           description: Negative = money out; never zero.
         payee:
           type: string
@@ -6291,6 +6303,7 @@ components:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
           nullable: true
           description: The monthly limit; null resets to the default budget.
     GoalList:
@@ -6406,6 +6419,7 @@ components:
           type: integer
           format: int64
           minimum: 1
+          maximum: 1000000000000
         currency:
           type: string
           pattern: "^[A-Z]{3}$"
@@ -6443,6 +6457,7 @@ components:
           type: integer
           format: int64
           minimum: 1
+          maximum: 1000000000000
         accountId:
           type: string
           format: uuid
@@ -6478,18 +6493,22 @@ components:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
         employerMinor:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
         stateMinor:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
         valueMinor:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
     InvestmentPosition:
       type: object
       additionalProperties: false
@@ -6510,14 +6529,17 @@ components:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
         valueMinor:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
         annualIncomeMinor:
           type: integer
           format: int64
           minimum: 0
+          maximum: 1000000000000
     AssistantStatus:
       type: object
       additionalProperties: false

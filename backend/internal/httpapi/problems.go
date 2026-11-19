@@ -79,6 +79,10 @@ func ProblemFor(err error, r *http.Request, prod bool) gen.Problem {
 		// the weekly ZAP scan, 2026-11-09).
 		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
 		err = errors.New("text must not contain NUL characters")
+	case errors.As(err, &pgErr) && pgErr.Code == "22003":
+		// numeric_value_out_of_range: a total beyond bigint, on any path (API-4; the inputs are bounded)
+		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
+		err = errors.New("an amount or a total is out of range")
 	case errors.As(err, &pgErr) && pgErr.Code == "55P03":
 		// lock_not_available: the request path's lock_timeout (store.RequestTimeouts, IMP-2), most
 		// often the account lock of an import being committed.

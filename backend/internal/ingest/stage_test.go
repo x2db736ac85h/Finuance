@@ -96,6 +96,38 @@ func TestStageBoundsCellsAndSearchText(t *testing.T) {
 	}
 }
 
+// TestStageAmountRange: an amount, debit or credit beyond money.MaxAbsMinor is a row error, and one
+// at the bound is a valid row (API-4).
+func TestStageAmountRange(t *testing.T) {
+	tb := table([]string{"Data", "Kwota", "Wn", "Ma"},
+		[]string{"02.01.2025", "-10 000 000 000,00", "", ""},
+		[]string{"02.01.2025", "10 000 000 000,01", "", ""},
+		[]string{"02.01.2025", "", "10 000 000 000,01", ""},
+		[]string{"02.01.2025", "", "", "-10 000 000 000,01"},
+	)
+	m := NewMapping()
+	m.BookedOn, m.Amount = 0, 1
+	rows, _, err := Stage(context.Background(), table(tb.Headers, tb.Rows[:2]...), m, StageOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].Error != "" || rows[0].AmountMinor != -1_000_000_000_000 {
+		t.Errorf("at the bound: %+v", rows[0])
+	}
+	if rows[1].Error != `amount "10 000 000 000,01" is out of range` {
+		t.Errorf("beyond: %q", rows[1].Error)
+	}
+	m = NewMapping()
+	m.BookedOn, m.Debit, m.Credit = 0, 2, 3
+	rows, _, err = Stage(context.Background(), table(tb.Headers, tb.Rows[2:]...), m, StageOptions{AmountMode: AmountDebitCredit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].Error != `debit "10 000 000 000,01" is out of range` || rows[1].Error != `credit "-10 000 000 000,01" is out of range` {
+		t.Errorf("debit/credit: %q / %q", rows[0].Error, rows[1].Error)
+	}
+}
+
 func TestStageAmountModes(t *testing.T) {
 	tb := table([]string{"Data", "Opis", "Wydatki", "Wpływy", "Kwota"},
 		[]string{"02.01.2025", "a", "45,20", "", "-45,20"},

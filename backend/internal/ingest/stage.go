@@ -296,6 +296,9 @@ func stageAmount(cell func(int) string, m Mapping, mode AmountMode, exp int) (in
 		if err != nil {
 			return 0, fmt.Sprintf("%s %q is not an amount", what, v)
 		}
+		if !money.InRange(x) {
+			return 0, fmt.Sprintf("%s %q is out of range", what, v)
+		}
 		return x, ""
 	}
 	if mode == AmountDebitCredit {
@@ -312,6 +315,12 @@ func stageAmount(cell func(int) string, m Mapping, mode AmountMode, exp int) (in
 		c, errC := money.ParseMinor(credit, exp)
 		if errD != nil && errC != nil {
 			return 0, fmt.Sprintf("neither debit %q nor credit %q is an amount", debit, credit)
+		}
+		if errD == nil && !money.InRange(d) {
+			return 0, fmt.Sprintf("debit %q is out of range", debit)
+		}
+		if errC == nil && !money.InRange(c) {
+			return 0, fmt.Sprintf("credit %q is out of range", credit)
 		}
 		if errD != nil {
 			d = 0
