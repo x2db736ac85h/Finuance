@@ -56,7 +56,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Sort cycle asc → desc → off; collator numeric/base; empties last; stable | §9 `sortOrder` | 7, 10 | ported |
 | Row click → inspector; double-click cell → copy; ↑/↓, j/k, PgUp/PgDn | §10, §22 | 10 | ported |
 | Empty result row "No rows match … Clear all" | §10 | 10 | ported |
-| Global search: all tokens, accent-insensitive (`platnosc` → `PŁATNOŚĆ`) 🧪 | §9 | 7, 10 | ported |
+| Global search: all tokens, accent-insensitive (`platnosc` → `PŁATNOŚĆ`) 🧪; at most 16 words since Phase 22 (the legacy had no limit; ADR 0038) | §9 | 7, 10, 22 | ported |
 | Column filter language: `!x`, `=x`, `=`, `!=`, `> >= < <= =` for numbers and dates, `a..b`, `looseDate` intervals, contains fallback 🧪 | §9 `compileCond` | 7 | ported (`query/dsl`, `query/compile.go`; 84 oracle filter cases, ALLOWED_DIFFS row 12) |
 | Value checklist (Excel-style): counts, search, All/None on shown values, cap 600 | §12 `openColMenu` | 10 | ported |
 | Column menu: sort, condition with type-specific help, checklist, hide, clear | §12 | 10 | ported |

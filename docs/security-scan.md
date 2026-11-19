@@ -135,13 +135,19 @@ Scorecard files the checks below 10 as code scanning alerts too; each is dismiss
 
 | Scan | Result | Open |
 |---|---|---|
-| Trivy, api image | 2 findings; 1 fixed by a base image bump | 1 (UNKNOWN, not reachable) |
-| Trivy, web image | 3 findings (MEDIUM / UNKNOWN), no fixed base yet; fixed 2026-10-30 by upgrading zlib and musl in the Dockerfile | 0 |
-| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` (MEDIUM, development tools, 2026-11-02) | deliberate; `minimatch` **fixed** 2026-11-19 (ESLint 10.15.0, typescript-eslint 8.73.0) |
+| Trivy, api image | 2 findings; 1 fixed by a base image bump; GO-2026-5932 fixed by `x/crypto` 0.59.0 (2026-11-19) | 0 (`v0.4.2`, every severity, both platforms) |
+| Trivy, web image | 3 findings fixed 2026-10-30 (zlib, musl); 2026-11-19: nginx 1.30.7 (5 HIGH) and OpenSSL 3.5.9-r1 (5 MEDIUM) | 0 (`v0.4.2`, every severity, both platforms) |
+| Trivy, repository (vuln, secret, misconfig) | LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` and the Go finding fixed 2026-11-19 | the misconfigurations, deliberate and dismissed in code scanning with their reasons |
 | Trivy config, rendered charts (all severities) | 2 LOW fixed (web uid); 4 kinds LOW/MEDIUM left | all deliberate |
-| `npm audit` (production and all) | 0 | – |
+| `npm audit` (production and all, both lockfiles) | 0 at every severity (2026-11-19) | – |
+| osv-scanner (`backend/go.mod`, both lockfiles) | 0 (every push and daily, since 2026-11-19) | – |
+| CodeQL (Go, JavaScript/TypeScript, actions, Python) | 9 alerts on its first analyses (2026-11-19): 4 fixed, 5 dismissed with reasons | 0 |
+| OpenSSF Scorecard | 6.8 (2026-11-19); Signed-Releases fixed for `v0.4.2` | the checks a single maintainer can't raise, dismissed with reasons |
+| actionlint (with shellcheck), zizmor | 0 after the fixes of 2026-11-19 | 1 reasoned ignore (`gitops-bump` pushes) |
+| Daily scan (released images, dependencies, expiring acceptances) | runs since 2026-11-19; proven with `v0.4.1`'s web image (issue 46 opened and closed) | – |
 | govulncheck | 0 reachable (CI; 2026-10-30 locally: 2 new `x/net` module findings, fixed by 0.62.0) | – |
 | gitleaks | 0 (CI) | – |
+| trufflehog (the whole history, once) | 0 verified, 0 unverified (2026-11-19) | – |
 | ZAP baseline | 0 WARN, 0 FAIL, 61 rules pass; the first Actions run added 90004 (fixed), 10106 and 10049 | 3 ignored with reasons |
 | ZAP API scan (active, signed in) | 0 WARN, 0 FAIL, 112 rules pass; ~100,000 requests, no 5xx | 2 INFO, 1 ignored |
 | OpenVAS (Greenbone CE, Full and fast) against the instance | 0 High, 0 Medium, 0 Low; 47 Log. From the Log entries: CBC-SHA suites under TLS 1.2 and TLS on port 80 (both fixed) | HSTS without `includeSubDomains`/`preload`, `Server: nginx`, Ollama on the tailnet (deliberate) |

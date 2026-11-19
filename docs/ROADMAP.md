@@ -11,13 +11,13 @@ What has shipped, what is being worked on and what comes later. The task list of
 | **0.3.0** | Administration without access to financial data; colour themes and a theme editor; cash accounts; friends and shared groups with splits and settling up |
 | **0.4.0** | The assistant proposes changes you can apply and undo; goals; receipts by photo; digests; an advice library; personal access tokens and the `fin` command line |
 | **0.4.1** | Administrators switch model servers on and off, load and unload models and choose who picks the model |
+| **0.4.2** | Security I: every dependency patched and pinned, PostgreSQL 18.7; limits on imports, amounts and the database work a request may cause; CodeQL, dependency review, OpenSSF Scorecard and a daily scan of the released images; releases approved by the maintainer, with build provenance |
 
 The repository became public in November 2026 with synthetic test data only and a README for people who are new to the project.
 
 ## Now
 
-**Security first (0.4.2, then 0.5.0).**
-- Every dependency and image patched and pinned; a scan every day, not only when someone pushes; more checks in CI: CodeQL, dependency review, workflow linting, OpenSSF Scorecard; build provenance.
+**Security, second part (0.5.0).** The first part shipped as 0.4.2.
 - Only signed images run in the cluster, deployed by digest.
 - Telemetry that can't carry private data; limits at the ingress; two-step sign-in.
 
