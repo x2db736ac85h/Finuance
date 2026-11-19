@@ -781,6 +781,50 @@ Symptoms: api pods not ready (`/readyz` 503), the app shows errors, `finuance-db
 
 The worker runs commits: `kubectl -n finuance logs deploy/finuance-worker`, and the `finuance_jobs_total` / `finuance_imports_total` metrics on its port 9090. A failed job is retried, then the import is marked failed and can be retried from the UI (*Try again*).
 
+## Upgrading PostgreSQL (minor release)
+
+A minor release (18.6 → 18.7) replaces the binaries only: no dump and no `pg_upgrade`. The version is
+written in five places that move together: `deploy/compose/compose.yaml` and `compose.prod.yaml`
+(by digest), `backend/testutil/postgres.go` (the same reference, for the tests), and
+`cluster.imageName` in `deploy/k8s/db/values.yaml` with `appVersion` in its `Chart.yaml`.
+`make test-integration` (the RLS suite included) runs on the new version before the merge.
+
+1. **Read the release notes' "Migration" section.** Some minors ask for a `REINDEX` of certain kinds
+   of index, or for a new full backup. Steps 4 and 5 are those.
+2. **Take an [on-demand backup](#on-demand-backup).**
+3. **Merge, then sync `finuance-db` by hand** (it never syncs by itself). CloudNativePG replaces the
+   replica first, then switches the primary over (`primaryUpdateStrategy: unsupervised`): writes
+   pause for a few seconds and the api reconnects. Wait until `kubectl cnpg status finuance-db -n
+   finuance` shows both instances healthy, and check the version:
+
+   ```sh
+   kubectl cnpg psql finuance-db -n finuance -- -d finuance -XAtc 'SELECT version()'
+   ```
+
+4. **Reindex**, when the notes ask for it. At this database's size the whole database is quickest
+   to get right, and `CONCURRENTLY` keeps it writable (system catalogs are skipped, which the notes
+   so far never needed):
+
+   ```sh
+   kubectl cnpg psql finuance-db -n finuance -- -d finuance -c 'REINDEX DATABASE CONCURRENTLY finuance'
+   ```
+
+5. **Take a new base backup** (on-demand, as in step 2) so that the next recovery starts from the
+   new version and the rebuilt indexes.
+
+Compose (`compose.prod.yaml`): set the new image (a release of Finuance carries it), then
+`docker compose --env-file .env -f compose.prod.yaml up -d db` recreates the database container
+on the same volume; the reindex is the same statement through
+`docker compose --env-file .env -f compose.prod.yaml exec db psql -U postgres -d finuance -c '…'`.
+
+**18.7 (2026-11-12) asks for a reindex.** Its fixes for index corruption cover GIN indexes (the
+three search indexes are GIN: `tx_user_search_trgm_idx`, `tx_search_trgm_idx`,
+`advice_articles_search_idx`), B-tree indexes on `char(n)` columns (the currency columns are
+`char(3)`) and indexes that a `VACUUM` with several index passes could leave inconsistent. Run step
+4 after the upgrade. Its note on incremental backups does not apply: the Barman Cloud plugin takes
+full base backups. 18.7 also tightens row-level security (`ON CONFLICT` target rows, `DROP OWNED BY`,
+leaky quals), which the RLS suite checks on it.
+
 ## PostgreSQL major upgrade
 
 CloudNativePG (≥ 1.26) upgrades in place when `cluster.imageName` moves to a newer major (for example `…/postgresql:19.x-standard-trixie`). It runs `pg_upgrade` offline: **the database is down for the duration** (minutes at this size).

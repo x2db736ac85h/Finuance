@@ -50,7 +50,7 @@ Deployment
 Phase 22 — Security I: patches, pins and scanners (PLAN §9, with the findings of 2026-11-16 and every task in detail). Confirmed with `/phase-start 22` on 2026-11-19.
 
 Pull requests, each merged on the maintainer's OK:
-- **A** `phase/22-security-patches`: 22.0, the patches of 22.2, 22.14, the first pass of 22.15. Merging it deploys PostgreSQL 18.7 (a database restart), Tempo and Grafana to the homelab, so the maintainer picks the time.
+- **A** `phase/22-security-patches`: 22.0, the patches of 22.2, 22.14, the first pass of 22.15. Merging it rolls out Tempo and Grafana on the homelab by itself; PostgreSQL 18.7 waits for the maintainer's manual sync of `finuance-db` (RUNBOOK "Upgrading PostgreSQL (minor release)": replica first, then a switchover, then a reindex).
 - **B** `fix/register-batch-1` (from `main` after A): the code fixes of 22.12.
 - **C** `phase/22-pipeline` (after A): 22.3–22.9.
 - **Release** `v0.4.2-rc.1`, then `v0.4.2` and its `gitops-bump` pull request, once B and C are merged (the fixes and the provenance ship in it).
