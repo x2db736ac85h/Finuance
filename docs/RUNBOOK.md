@@ -103,7 +103,7 @@ The Phase 18 reference environment (ADR 0022): single-node k3s on a personal mac
 
 | Tool | Version | Installed with |
 |---|---|---|
-| helm | v3.18.4 | `go install helm.sh/helm/v3/cmd/helm@v3.18.4` |
+| helm | v3.22.1 | `go install helm.sh/helm/v3/cmd/helm@v3.22.1` |
 | kubeseal | v0.40.0 | `go install github.com/bitnami/sealed-secrets/cmd/kubeseal@v0.40.0` |
 | yq (mikefarah) | v4.54.1 | `go install github.com/mikefarah/yq/v4@v4.54.1` |
 | kubeconform | v0.7.0 | `go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0` |
@@ -121,7 +121,7 @@ The commands use `pacman` (Arch); other distributions have the same packages und
 The same versions as CI (`.github/workflows/ci.yml`), so `make helm-lint` behaves the same locally. Distribution packages may ship Helm 4 or a different `yq`, so they are not used.
 
 ```sh
-go install helm.sh/helm/v3/cmd/helm@v3.18.4
+go install helm.sh/helm/v3/cmd/helm@v3.22.1
 go install github.com/bitnami/sealed-secrets/cmd/kubeseal@v0.40.0
 go install github.com/mikefarah/yq/v4@v4.54.1
 go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0

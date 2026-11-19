@@ -30,6 +30,9 @@ render() {
 
 # must_fail <what> <expected message part> <chart> [helm args...]
 failures=0
+# Schema errors name the value by its JSON pointer since Helm 3.22 (`at '/ingress/tls/mode'`). Helm
+# 3.22 reports a propertyNames error at a wrong location (`/otel` for `extraEnv`), so that case
+# matches the pattern instead.
 must_fail() {
   local what=$1 want=$2 chart=$3; shift 3
   local msg
@@ -110,15 +113,15 @@ must_fail "publicOrigin has a path" "publicOrigin" "$app" --set publicOrigin=htt
 must_fail "the ingress host is empty" "ingress.host is required" "$app" --set publicOrigin=https://f.example.com
 must_fail "certManager has no issuer" "ingress.tls.clusterIssuer is required" "$app" "${o[@]}"
 must_fail "traefik TLS has no resolver" "ingress.tls.certResolver is required" "$app" "${o[@]}" --set ingress.tls.mode=traefik
-must_fail "an unknown TLS mode is set" "ingress.tls.mode" "$app" "${o[@]}" --set ingress.tls.mode=acme
-must_fail "the OTLP endpoint has no path" "otel.endpoint" "$app" "${o[@]}" --set ingress.tls.mode=none --set otel.endpoint=http://tempo.monitoring.svc:4318
+must_fail "an unknown TLS mode is set" "/ingress/tls/mode" "$app" "${o[@]}" --set ingress.tls.mode=acme
+must_fail "the OTLP endpoint has no path" "/otel/endpoint" "$app" "${o[@]}" --set ingress.tls.mode=none --set otel.endpoint=http://tempo.monitoring.svc:4318
 must_fail "a developer link carries a password" "developer" "$app" "${o[@]}" --set ingress.tls.mode=none \
   --set developer.enabled=true --set 'developer.links[0].name=Grafana' --set 'developer.links[0].url=https://admin:pw@grafana.example.com'
 must_fail "a developer link isn't http(s)" "developer" "$app" "${o[@]}" --set ingress.tls.mode=none \
   --set developer.enabled=true --set 'developer.links[0].name=X' --set 'developer.links[0].url=javascript:alert(1)'
-must_fail "extraEnv sets a non-FINUANCE variable" "extraEnv" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.PATH=/tmp
+must_fail "extraEnv sets a non-FINUANCE variable" "^FINUANCE_[A-Z0-9_]+$" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.PATH=/tmp
 must_fail "the backup has no bucket" "objectStore.destinationPath is required" "$db"
-must_fail "the backup schedule has 5 fields" "backup.schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"
+must_fail "the backup schedule has 5 fields" "/backup/schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"
 must_fail "a restore archives into its origin's folder" "must archive to another folder" "$db" \
   --set objectStore.destinationPath=s3://b/ --set recovery.enabled=true
 [ $failures -eq 0 ] || exit 1

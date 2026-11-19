@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  HELM_VERSION: v3.18.4
+  HELM_VERSION: v3.22.1
   KIND_VERSION: v0.29.0
   KUBESEAL_VERSION: v0.40.0
   YQ_VERSION: v4.54.1

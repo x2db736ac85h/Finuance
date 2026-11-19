@@ -149,7 +149,7 @@ jobs:
         run: docker run --rm finuance-backend:dev version
       - name: Trivy (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.2 \
             image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-backend:dev
       - name: Web image runs as non-root and serves the app with the CSP
         run: |
@@ -164,7 +164,7 @@ jobs:
           docker rm -f web-smoke
       - name: Trivy web image (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.2 \
             image --ignorefile /.trivyignore --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress finuance-web:dev
 
   security:
@@ -180,7 +180,7 @@ jobs:
       # here (they don't render without the required values).
       - name: Trivy repository scan (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v "$PWD:/repo:ro" -w /repo -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.0 \
+          docker run --rm -v "$PWD:/repo:ro" -w /repo -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.76.2 \
             fs --ignorefile /.trivyignore --scanners vuln,secret,misconfig --include-dev-deps \
             --severity HIGH,CRITICAL --exit-code 1 --no-progress \
             --skip-dirs deploy/helm/finuance --skip-dirs deploy/k8s/db .
@@ -200,7 +200,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      HELM_VERSION: v3.18.4
+      HELM_VERSION: v3.22.1
       KUBECONFORM_VERSION: v0.7.0
       KUBESEAL_VERSION: v0.40.0
       YQ_VERSION: v4.54.1
@@ -226,7 +226,7 @@ jobs:
         run: RENDER_DIR="$RUNNER_TEMP/rendered" YQ="$(go env GOPATH)/bin/yq" make helm-lint
       - name: Trivy config scan of the rendered manifests (HIGH/CRITICAL fail the build)
         run: |
-          docker run --rm -v "$RUNNER_TEMP/rendered:/manifests:ro" aquasec/trivy:0.76.0 \
+          docker run --rm -v "$RUNNER_TEMP/rendered:/manifests:ro" aquasec/trivy:0.76.2 \
             config --severity HIGH,CRITICAL --exit-code 1 --disable-telemetry /manifests
       - name: GitOps bump (tools/bump-homelab-tag.sh changes only the tag line)
         run: |
