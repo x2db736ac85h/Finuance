@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -20,9 +21,13 @@ type Config struct {
 	API     API
 	BaseURL string // e.g. http://localhost:1234/v1 (OpenAI) or https://api.anthropic.com (Anthropic)
 	APIKey  string
-	// AllowRemote lets the connection reach public addresses. Without it every dial is checked:
-	// only loopback, private, link-local and CGNAT/tailnet addresses are allowed, so a DNS answer
-	// that changes after startup can't send data elsewhere.
+	// AllowRemote marks a cloud connection. Every dial is checked, either way, against the address
+	// the name resolved to at that moment (PLAN 23.5):
+	//   - a local connection (false) reaches only loopback, private and CGNAT/tailnet addresses, so a
+	//     DNS answer that changes after startup can't send data elsewhere;
+	//   - a cloud connection (true) reaches only public addresses and only over TLS, so its URL or a
+	//     DNS answer can't point the server at itself, its network or a metadata service.
+	// Neither follows a redirect to another host.
 	AllowRemote bool
 	// Timeout bounds one model call from request to last byte; IdleTimeout bounds the silence
 	// between two chunks of a stream (and the wait for the first one).
@@ -35,6 +40,8 @@ type Config struct {
 var (
 	errIdle           = errors.New("stream idle")
 	errBlockedAddress = errors.New("address not allowed")
+	errRedirect       = errors.New("redirect to another host")
+	errPlaintext      = errors.New("a cloud connection must use https")
 )
 
 // New returns a client for the connection's wire format.
@@ -46,7 +53,12 @@ func New(c Config) Client {
 		c.IdleTimeout = 60 * time.Second
 	}
 	if c.HTTPClient == nil {
-		c.HTTPClient = &http.Client{Transport: transport(c.AllowRemote)}
+		c.HTTPClient = &http.Client{Transport: Transport(c.AllowRemote)}
+	}
+	if c.HTTPClient.CheckRedirect == nil {
+		hc := *c.HTTPClient // the caller's client stays as it is
+		hc.CheckRedirect = sameHostOnly
+		c.HTTPClient = &hc
 	}
 	c.BaseURL = strings.TrimRight(c.BaseURL, "/")
 	if c.API == Anthropic {
@@ -55,27 +67,62 @@ func New(c Config) Client {
 	return &openAIClient{c: c}
 }
 
-// Transport is the HTTP transport New uses: no proxy, and unless allowRemote, dials to public
-// addresses refused. Wrappers (llm-probe's recorder) build on it to keep the guard.
-func Transport(allowRemote bool) *http.Transport { return transport(allowRemote) }
+// Transport is the HTTP transport New uses: no proxy, TLS 1.2 or newer, every dial checked (see
+// Config.AllowRemote), and for a cloud connection no request without TLS. Wrappers (llm-probe's
+// recorder) build on it to keep the guard.
+func Transport(allowRemote bool) http.RoundTripper {
+	t := transport(allowRemote)
+	if allowRemote {
+		return httpsOnly{t}
+	}
+	return t
+}
+
+// httpsOnly refuses a request that would leave without TLS (the first one or a redirect's).
+type httpsOnly struct{ next http.RoundTripper }
+
+func (h httpsOnly) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.URL.Scheme != "https" {
+		return nil, errPlaintext
+	}
+	return h.next.RoundTrip(req)
+}
+
+// sameHostOnly is the clients' redirect policy: a model server may redirect within itself
+// (a trailing slash, a versioned path), never to another host, port or scheme. Go drops the
+// Authorization header on such a redirect but not an x-api-key header, and the request's body
+// (the prompt) would follow in any case.
+func sameHostOnly(req *http.Request, via []*http.Request) error {
+	if len(via) >= 5 {
+		return errors.New("stopped after 5 redirects")
+	}
+	if first := via[0].URL; req.URL.Scheme != first.Scheme || req.URL.Host != first.Host {
+		return errRedirect
+	}
+	return nil
+}
 
 func transport(allowRemote bool) *http.Transport {
 	d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
-	if !allowRemote {
-		d.Control = func(_, address string, _ syscall.RawConn) error {
-			host, _, err := net.SplitHostPort(address)
-			if err != nil {
-				return err
-			}
-			ip, err := netip.ParseAddr(host)
-			if err != nil || !PrivateAddr(ip) {
-				return fmt.Errorf("%w: %s is not a private address", errBlockedAddress, host)
-			}
-			return nil
+	// Control runs for every connection attempt with the address that was resolved, so a name that
+	// resolves differently later is checked again.
+	d.Control = func(_, address string, _ syscall.RawConn) error {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil {
+			return err
 		}
+		ip, err := netip.ParseAddr(host)
+		switch {
+		case allowRemote && (err != nil || !PublicAddr(ip)):
+			return fmt.Errorf("%w: %s is not a public address", errBlockedAddress, host)
+		case !allowRemote && (err != nil || !PrivateAddr(ip)):
+			return fmt.Errorf("%w: %s is not a private address", errBlockedAddress, host)
+		}
+		return nil
 	}
 	return &http.Transport{
 		Proxy:                 nil, // model traffic never goes through an outbound proxy
+		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 		DialContext:           d.DialContext,
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          16,
@@ -85,14 +132,48 @@ func transport(allowRemote bool) *http.Transport {
 	}
 }
 
-// PrivateAddr reports whether an address is loopback, private (RFC 1918, ULA), link-local or in
-// the CGNAT range Tailscale uses (100.64.0.0/10).
+// PrivateAddr reports whether a local model server may live at an address: loopback, private
+// (RFC 1918, ULA) or the CGNAT range Tailscale uses (100.64.0.0/10). Link-local addresses are not
+// among them: nothing runs a model server there, and cloud metadata services do answer there.
 func PrivateAddr(ip netip.Addr) bool {
 	ip = ip.Unmap()
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || cgnat.Contains(ip)
+	return ip.IsLoopback() || ip.IsPrivate() || cgnat.Contains(ip)
 }
 
-var cgnat = netip.MustParsePrefix("100.64.0.0/10")
+// PublicAddr reports whether a cloud connection may dial an address: a global unicast address
+// outside every range that is private, shared, link-local, reserved or only for documentation, and
+// outside the prefixes that carry an IPv4 address inside an IPv6 one.
+func PublicAddr(ip netip.Addr) bool {
+	ip = ip.Unmap()
+	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+		return false
+	}
+	for _, p := range notPublic {
+		if p.Contains(ip) {
+			return false
+		}
+	}
+	return true
+}
+
+var (
+	cgnat     = netip.MustParsePrefix("100.64.0.0/10")
+	notPublic = []netip.Prefix{
+		cgnat,
+		netip.MustParsePrefix("0.0.0.0/8"),       // "this network"
+		netip.MustParsePrefix("192.0.0.0/24"),    // protocol assignments
+		netip.MustParsePrefix("192.0.2.0/24"),    // documentation
+		netip.MustParsePrefix("198.18.0.0/15"),   // benchmarking
+		netip.MustParsePrefix("198.51.100.0/24"), // documentation
+		netip.MustParsePrefix("203.0.113.0/24"),  // documentation
+		netip.MustParsePrefix("240.0.0.0/4"),     // reserved, and broadcast
+		netip.MustParsePrefix("64:ff9b::/96"),    // NAT64: an IPv4 address inside
+		netip.MustParsePrefix("64:ff9b:1::/48"),  // local NAT64
+		netip.MustParsePrefix("2002::/16"),       // 6to4: an IPv4 address inside
+		netip.MustParsePrefix("2001::/32"),       // Teredo
+		netip.MustParsePrefix("2001:db8::/32"),   // documentation
+	}
+)
 
 // CheckHost resolves a host and reports whether every address is private (PrivateAddr).
 func CheckHost(ctx context.Context, r *net.Resolver, host string) (bool, error) {

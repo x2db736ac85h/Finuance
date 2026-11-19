@@ -98,6 +98,7 @@ func TestStoredConnections(t *testing.T) {
 		"configuration file": {Name: "lmstudio", API: "openai", BaseURL: srv.URL},
 		"public address":     {Name: "x1", API: "openai", BaseURL: "http://public.example/v1"},
 		"must use https":     {Name: "x2", API: "openai", BaseURL: "http://api.example/v1", Cloud: true},
+		"not a public":       {Name: "x5", API: "openai", BaseURL: "https://10.0.0.5/v1", Cloud: true},
 		"not a valid":        {Name: "x3", API: "openai", BaseURL: srv.URL, Models: []string{"["}},
 		"taken":              {Name: "gpu-box", API: "openai", BaseURL: srv.URL},
 		"credentials":        {Name: "x4", API: "openai", BaseURL: "http://u:p@127.0.0.1/v1"},

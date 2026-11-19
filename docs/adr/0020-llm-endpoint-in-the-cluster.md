@@ -2,6 +2,7 @@
 
 - Status: accepted (the address is set in Phase 18); amended
 - Update (2026-11-18): the reference environment runs **Ollama on the cluster's host** instead of LM Studio on a separate desktop (`docs/RUNBOOK.md`, "Ollama (model server on the host)"); the decision below (one address and port, outside the cluster, reached through a single egress rule) is unchanged. The rule for cloud providers (`0.0.0.0/0:443`) is replaced in Phase 26 (PLAN §9); the transport guard for cloud connections is Phase 23 task 23.5.
+- Update (2026-11-19, task 23.5): the transport guard is built. A cloud connection dials public addresses only (no loopback, private, link-local, tailnet or reserved address, also when a name resolves to one), only over TLS 1.2 or newer, and no connection follows a redirect to another host. Link-local addresses no longer count as private for a local connection, so the list in the Context below is now loopback, RFC 1918, ULA and CGNAT.
 - Date: 2026-10-24
 
 ## Context

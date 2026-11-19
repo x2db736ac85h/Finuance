@@ -2,8 +2,6 @@ package assistant
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -573,8 +571,7 @@ func (run *Run) observe(span trace.Span, mode, result, errKind string, t *turn, 
 	m.Rounds.Observe(float64(rounds))
 	m.Tokens.Observe(float64(sent))
 	span.SetAttributes(attribute.String("assistant.mode", mode), attribute.String("assistant.result", result), attribute.Int("assistant.rounds", rounds))
-	h := sha256.Sum256(run.userID[:])
-	run.r.cfg.Logger.Info("assistant run", "user", hex.EncodeToString(h[:6]), "connection", run.conn.Name, "model", run.model.ID,
+	run.r.cfg.Logger.Info("assistant run", "user", platform.UserHash(run.userID), "connection", run.conn.Name, "model", run.model.ID,
 		"mode", mode, "result", result, "error_kind", errKind, "rounds", rounds, "tools", tools, "approx_tokens", sent,
 		"duration_ms", d.Milliseconds())
 }

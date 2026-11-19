@@ -9,13 +9,15 @@
 #   - no failed request under load while api and web pods are deleted and rolled (k6);
 #   - backup → restore into a scratch namespace → a temporary app on it → the smoke scripts,
 #     with the restored data checked and the RPO/RTO measured;
+#   - the limits at the ingress switched on: the smoke scripts and the stream still pass, and a
+#     burst of sign-ins from one address gets 429 from Traefik;
 #   - image signatures (Sigstore policy-controller with the homelab's policies): the released
 #     images are admitted in a labelled namespace, an image without the release workflow's
 #     signature and an image no policy names are refused (needs ghcr.io and Sigstore's services).
 # Timings go to $SUMMARY (and the GitHub job summary). Needs docker, kind, kubectl, helm, kubeseal,
 # mikefarah's yq ($YQ), curl, openssl and python3.
 #
-#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|netpol|sse|podkill|restore|signatures|summary|diagnostics|report|down]
+#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|netpol|sse|podkill|restore|limits|signatures|summary|diagnostics|report|down]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -329,6 +331,29 @@ EOF
   timing "RTO: restore started until the smoke scripts pass on it" $(($(date +%s) - t0))
 }
 
+limits() {
+  log "limits at the ingress (PLAN 23.6)"
+  local t0; t0=$(date +%s)
+  helm upgrade finuance deploy/helm/finuance -n finuance -f "$R/app-values.yaml" --set ingress.limits.enabled=true --wait --timeout 5m
+  wait_for 120 "the api through Traefik with the limits on" curl_ca -f -o /dev/null "$BASE/api/v1/meta"
+  sleep 5 # Traefik picks the new routers up on its own schedule
+  # normal use is not affected: the smoke scripts and a streamed answer
+  run_smoke "$BASE" finuance
+  sse
+  # a burst of sign-ins from one address meets the strict limit
+  local h=(-H "X-Finuance-Client: web" -H "Origin: $BASE" -H "Content-Type: application/json") codes
+  codes=$(for _ in $(seq 60); do
+    curl_ca -o /dev/null -w '%{http_code}\n' "${h[@]}" -d '{"email":"nobody@example.test","password":"not the password"}' "$BASE/api/v1/auth/login"
+  done | sort | uniq -c | tr -s ' ' | tr '\n' ';')
+  echo "   60 sign-ins: $codes"
+  grep -q ' 429' <<<"$codes" || { echo "no 429 at the ingress for 60 sign-ins in a row" >&2; return 1; }
+  grep -q ' 401' <<<"$codes" || { echo "no sign-in reached the api before the limit" >&2; return 1; }
+  # the limit is the auth path's own: the rest of the API still answers
+  curl_ca -f -o /dev/null "$BASE/api/v1/meta" || { echo "the API is limited outside /api/v1/auth/ after the sign-in burst" >&2; return 1; }
+  fact "Ingress limits" "smoke scripts and the streamed answer pass with the limits on; 60 sign-ins in a row:$codes the rest of the API still answers"
+  timing "ingress limits (upgrade, smoke, stream, burst)" $(($(date +%s) - t0))
+}
+
 # try_image <namespace> <image>: would a pod with this image be created? (a server-side dry run goes
 # through admission and creates nothing); prints the API server's answer
 try_image() { kubectl -n "$1" run signature-probe --image "$2" --restart=Never --dry-run=server -o name 2>&1; }
@@ -453,9 +478,9 @@ down() { kind delete cluster --name "$CLUSTER" || true; }
 case ${1:-all} in
   all)
     rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
-    images; cluster; platform; deploy; smoke; netpol; sse; podkill; restore; signatures; summary
+    images; cluster; platform; deploy; smoke; netpol; sse; podkill; restore; limits; signatures; summary
     ;;
-  images | cluster | platform | deploy | smoke | netpol | sse | podkill | restore | signatures)
+  images | cluster | platform | deploy | smoke | netpol | sse | podkill | restore | limits | signatures)
     mkdir -p "$WORK/logs"
     "$1" 2>&1 | tee "$WORK/logs/$1.log"
     ;;

@@ -2,8 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -89,8 +87,7 @@ func requireSession(svc *auth.Service, adm *admin.Service, prod bool, tokens *mw
 				return
 			}
 			ra.identity = id
-			sum := sha256.Sum256(id.User.ID[:])
-			mw.FromContext(ctx).UserHash = hex.EncodeToString(sum[:8])
+			mw.FromContext(ctx).UserHash = platform.UserHash(id.User.ID)
 			if err := gate(ctx, r.Pattern, id.User, adm); err != nil {
 				WriteProblem(w, r, err, prod)
 				return
@@ -127,8 +124,7 @@ func resolveBearer(ctx context.Context, svc *auth.Service, adm *admin.Service, p
 		}
 	}
 	ra.identity = id
-	sum := sha256.Sum256(id.User.ID[:])
-	mw.FromContext(ctx).UserHash = hex.EncodeToString(sum[:8])
+	mw.FromContext(ctx).UserHash = platform.UserHash(id.User.ID)
 	return gate(ctx, pattern, id.User, adm)
 }
 

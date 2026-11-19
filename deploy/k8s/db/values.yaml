@@ -22,6 +22,10 @@ cluster:
     shared_buffers: 128MB
     max_connections: "100"
     log_min_duration_statement: "1000"
+    # A slow or failing statement is logged without the values bound to it (amounts, payees,
+    # search text): the statement's text has placeholders only (PLAN 23.4).
+    log_parameter_max_length: "0"
+    log_parameter_max_length_on_error: "0"
   # Keep the instances on different nodes when there are several (a single-node cluster still works).
   podAntiAffinityType: preferred
   # A PodMonitor for the Prometheus operator (templates/podmonitor.yaml; the operator's own

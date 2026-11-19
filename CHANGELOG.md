@@ -15,6 +15,19 @@ notes of their version.
   policy-controller with a policy that admits Finuance's images only with the release workflow's
   signature (ADR 0039). It applies to namespaces that carry the label; the deployment rehearsal
   proves both directions.
+- Telemetry carries less: a trace id sent by a client is not continued (it becomes a link) and
+  baggage is not propagated; spans leave without the caller's address, the user agent, query
+  strings and the text of errors; a PostgreSQL error is logged as its SQLSTATE and the names of the
+  constraint and table, never its message or detail; the database logs statements without their
+  bound values; the web server's access log names the path without its query string, and one
+  request id covers the web server and the API.
+- The assistant's connections are held to their kind: a cloud connection reaches public addresses
+  only and only over https (TLS 1.2 or newer), a local one no longer reaches link-local addresses,
+  and neither follows a redirect to another host. **If you run a model server on a link-local
+  address (169.254.x.x, fe80::), move it to a private one.**
+- The Helm chart can limit requests per client address at the ingress (`ingress.limits`, off by
+  default): a strict limit for sign-in and sign-up, a generous one for the rest and a cap on
+  requests in flight, for instances the internet can reach.
 
 ## [0.4.2] - 2026-11-19
 

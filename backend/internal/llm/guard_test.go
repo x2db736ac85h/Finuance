@@ -1,0 +1,152 @@
+package llm
+
+import (
+	"context"
+	"crypto/tls"
+	"errors"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/netip"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+// TestPublicAddr: what a cloud connection may dial (PLAN 23.5).
+func TestPublicAddr(t *testing.T) {
+	for ip, want := range map[string]bool{
+		"8.8.8.8": true, "1.1.1.1": true, "2606:4700::1111": true, "100.128.0.1": true,
+		"127.0.0.1": false, "127.8.8.8": false, "::1": false, "0.0.0.0": false, "::": false,
+		"10.1.2.3": false, "172.20.0.5": false, "192.168.1.20": false, "fd7a:115c:a1e0::1": false,
+		"169.254.169.254": false, "fe80::1": false, "100.101.102.103": false,
+		"::ffff:10.0.0.1": false, "::ffff:169.254.169.254": false, "::ffff:8.8.8.8": true,
+		"64:ff9b::a00:1": false, "2002:a00:1::1": false, "2001:db8::1": false,
+		"224.0.0.1": false, "ff02::1": false, "255.255.255.255": false, "240.0.0.1": false, "198.18.0.1": false,
+	} {
+		if got := PublicAddr(netip.MustParseAddr(ip)); got != want {
+			t.Errorf("PublicAddr(%s) = %v, want %v", ip, got, want)
+		}
+		if a := netip.MustParseAddr(ip); PublicAddr(a) && PrivateAddr(a) {
+			t.Errorf("%s is both public and private", ip)
+		}
+	}
+}
+
+// dialTo returns a cloud transport whose names all resolve to addr (a resolver the test controls).
+func cloudClientResolvingTo(t *testing.T, addr string) *http.Client {
+	t.Helper()
+	tr := transport(true)
+	guard := tr.DialContext
+	tr.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+		return guard(ctx, network, addr) // as if DNS had answered with addr
+	}
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12} //nolint:gosec // a test server's certificate
+	return &http.Client{Transport: httpsOnly{tr}, Timeout: 5 * time.Second}
+}
+
+// TestCloudTransportGuard: a cloud connection can't be pointed at the instance's own network. Each
+// refusal happens at dial time, on the address the name resolved to, so a name that resolves to a
+// private address is refused like the literal (AI-3, AI-7).
+func TestCloudTransportGuard(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		_, _ = w.Write([]byte(`{"data":[]}`))
+	}))
+	defer srv.Close()
+	port := srv.Listener.Addr().(*net.TCPAddr).Port
+	for name, addr := range map[string]string{
+		"loopback": srv.Listener.Addr().String(), "private": "10.0.0.1:443", "link-local (metadata)": "169.254.169.254:80",
+		"tailnet": "100.101.102.103:443", "IPv6 loopback": "[::1]:443", "unique local": "[fd00::1]:443", "mapped private": "[::ffff:192.168.1.1]:443",
+		"unspecified": "0.0.0.0:" + strconv.Itoa(port),
+	} {
+		c := New(Config{API: OpenAI, BaseURL: "https://models.example.com/v1", AllowRemote: true, Timeout: 3 * time.Second,
+			HTTPClient: cloudClientResolvingTo(t, addr)})
+		_, err := c.Models(context.Background())
+		if KindOf(err) != KindUnreachable || !strings.Contains(err.Error(), "not a public address") {
+			t.Errorf("%s (%s): %v", name, addr, err)
+		}
+	}
+	if hits.Load() != 0 {
+		t.Errorf("%d requests reached the server on loopback", hits.Load())
+	}
+
+	// the default client of a cloud connection: a private literal in the URL, and plain http
+	c := New(Config{API: OpenAI, BaseURL: "https://192.168.1.20/v1", AllowRemote: true, Timeout: 2 * time.Second})
+	if _, err := c.Models(context.Background()); KindOf(err) != KindUnreachable || !strings.Contains(err.Error(), "not a public address") {
+		t.Errorf("private literal: %v", err)
+	}
+	c = New(Config{API: OpenAI, BaseURL: "http://models.example.com/v1", AllowRemote: true, Timeout: 2 * time.Second})
+	if _, err := c.Models(context.Background()); err == nil || !strings.Contains(err.Error(), "must use https") {
+		t.Errorf("plain http: %v", err)
+	}
+	// and a local connection still reaches loopback, but no longer a link-local address
+	local := New(Config{API: OpenAI, BaseURL: "http://169.254.169.254/v1", Timeout: 2 * time.Second})
+	if _, err := local.Models(context.Background()); KindOf(err) != KindUnreachable || !strings.Contains(err.Error(), "not a private address") {
+		t.Errorf("link-local for a local connection: %v", err)
+	}
+}
+
+// TestNoRedirectToAnotherHost: a model server's redirect to another host, port or scheme is not
+// followed, so neither the API key nor the prompt goes there; a redirect within the server is.
+func TestNoRedirectToAnotherHost(t *testing.T) {
+	var got atomic.Value
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got.Store(r.Header.Get("Authorization") + "|" + r.Header.Get("X-Api-Key"))
+		_, _ = w.Write([]byte(`{"data":[]}`))
+	}))
+	defer other.Close()
+	var target atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/moved/models" {
+			_, _ = w.Write([]byte(`{"data":[{"id":"m"}]}`))
+			return
+		}
+		http.Redirect(w, r, target.Load().(string), http.StatusTemporaryRedirect)
+	}))
+	defer srv.Close()
+
+	for _, api := range []API{OpenAI, Anthropic} {
+		target.Store(other.URL + "/v1/models")
+		c := New(Config{API: api, BaseURL: srv.URL + map[API]string{OpenAI: "/v1", Anthropic: ""}[api], APIKey: "secret-key", Timeout: 3 * time.Second})
+		_, err := c.Models(context.Background())
+		var le *Error
+		if !errors.As(err, &le) || le.Kind != KindBadResponse || !strings.Contains(le.Message, "redirected to another address") {
+			t.Errorf("%s: redirect to another host: %v", api, err)
+		}
+		if v := got.Load(); v != nil {
+			t.Errorf("%s: the other host was called with %q", api, v)
+		}
+	}
+	target.Store("/v1/moved/models")
+	c := New(Config{API: OpenAI, BaseURL: srv.URL + "/v1", APIKey: "secret-key", Timeout: 3 * time.Second})
+	if ms, err := c.Models(context.Background()); err != nil || len(ms) != 1 {
+		t.Errorf("redirect within the server: %v %v", ms, err)
+	}
+	// a client supplied by the caller gets the policy too, and stays unchanged itself
+	mine := &http.Client{}
+	_ = New(Config{API: OpenAI, BaseURL: srv.URL, HTTPClient: mine})
+	if mine.CheckRedirect != nil {
+		t.Error("New changed the caller's client")
+	}
+}
+
+// TestTLSMinimum: the transport refuses a server that offers only TLS 1.1.
+func TestTLSMinimum(t *testing.T) {
+	if v := transport(true).TLSClientConfig.MinVersion; v != tls.VersionTLS12 {
+		t.Errorf("cloud MinVersion = %x", v)
+	}
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	srv.TLS = &tls.Config{MaxVersion: tls.VersionTLS11, MinVersion: tls.VersionTLS10} //nolint:gosec // the old server under test
+	srv.StartTLS()
+	defer srv.Close()
+	tr := transport(false)
+	tr.TLSClientConfig.InsecureSkipVerify = true //nolint:gosec // only the protocol version is under test
+	_, err := (&http.Client{Transport: tr, Timeout: 3 * time.Second}).Get(srv.URL)
+	if err == nil || !strings.Contains(err.Error(), "protocol version") {
+		t.Errorf("TLS 1.1 server: %v", err)
+	}
+}

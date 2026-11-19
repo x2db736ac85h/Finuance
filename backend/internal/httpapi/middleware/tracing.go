@@ -9,7 +9,9 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 )
 
-// Tracing starts a server span per request and propagates traceparent. The span starts as the
+// Tracing starts a server span per request. The API is a public endpoint, so a traceparent sent
+// by the client decides neither the trace id nor sampling: every request starts a new trace, and
+// the client's context is kept only as a link on the span (PLAN 23.3). The span starts as the
 // method and ends as the route pattern ("POST /api/v1/transactions/query"): otelhttp renames it
 // with this formatter once the mux has set the request's pattern (and would undo any other rename).
 func Tracing(t *observability.Tracing) Middleware {
@@ -17,6 +19,7 @@ func Tracing(t *observability.Tracing) Middleware {
 		return otelhttp.NewHandler(next, "http.request",
 			otelhttp.WithTracerProvider(t.Provider),
 			otelhttp.WithPropagators(t.Propagator),
+			otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				if r.Pattern == "" {
 					return r.Method

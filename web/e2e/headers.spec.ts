@@ -38,3 +38,14 @@ test('redirects stay on the public address', async ({ request }) => {
     expect(res.headers()['location'], path).toBe(to);
   }
 });
+
+// One id per request over both hops (PLAN 23.4): the web server gives every API request its own
+// id and passes it on, so a client can't choose the id that the logs are joined on.
+test("the request id is the web server's own", async ({ request }) => {
+  const first = await request.get('/api/v1/meta', { headers: { 'X-Request-ID': 'chosen-by-the-client' } });
+  const second = await request.get('/api/v1/meta');
+  for (const res of [first, second]) {
+    expect(res.headers()['x-request-id']).toMatch(/^[0-9a-f]{32}$/);
+  }
+  expect(first.headers()['x-request-id']).not.toBe(second.headers()['x-request-id']);
+});

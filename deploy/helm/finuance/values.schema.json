@@ -131,6 +131,18 @@
           }
         },
         "hsts": { "type": "object" },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "forwardedDepth", "requests", "auth", "inFlight"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "forwardedDepth": { "type": "integer", "minimum": 0, "maximum": 10 },
+            "requests": { "$ref": "#/definitions/rateLimit" },
+            "auth": { "$ref": "#/definitions/rateLimit" },
+            "inFlight": { "type": "integer", "minimum": 1 }
+          }
+        },
         "annotations": { "type": "object" }
       }
     },
@@ -138,6 +150,16 @@
     "podMonitor": { "type": "object" }
   },
   "definitions": {
+    "rateLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["average", "period", "burst"],
+      "properties": {
+        "average": { "type": "integer", "minimum": 1 },
+        "period": { "type": "string", "pattern": "^[1-9][0-9]*(s|m|h)$" },
+        "burst": { "type": "integer", "minimum": 1 }
+      }
+    },
     "dbRole": {
       "type": "object",
       "required": ["user", "passwordSecret", "passwordKey"],

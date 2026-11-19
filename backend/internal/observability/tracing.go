@@ -27,7 +27,9 @@ func (t *Tracing) Shutdown(ctx context.Context) error { return t.shutdown(ctx) }
 // NewTracing exports spans over OTLP/HTTP to endpoint (e.g. http://alloy:4318), or returns a
 // no-op provider when endpoint is empty.
 func NewTracing(ctx context.Context, endpoint, service, version string) (*Tracing, error) {
-	prop := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
+	// Only the W3C trace context travels (to the jobs a request enqueues). Baggage is not
+	// propagated: nothing reads it, and it would carry whatever a client sent (PLAN 23.3).
+	var prop propagation.TextMapPropagator = propagation.TraceContext{}
 	if endpoint == "" {
 		return &Tracing{Provider: noop.NewTracerProvider(), Propagator: prop, shutdown: func(context.Context) error { return nil }}, nil
 	}
@@ -36,6 +38,6 @@ func NewTracing(ctx context.Context, endpoint, service, version string) (*Tracin
 		return nil, fmt.Errorf("otlp exporter: %w", err)
 	}
 	res := resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceName(service), semconv.ServiceVersion(version))
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exp), sdktrace.WithResource(res))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(Redact(exp)), sdktrace.WithResource(res))
 	return &Tracing{Provider: tp, Propagator: prop, shutdown: tp.Shutdown}, nil
 }

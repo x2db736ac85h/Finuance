@@ -2,6 +2,19 @@
 {{- $name := include "finuance.fullname" . -}}
 {{- $tls := .Values.ingress.tls -}}
 {{- $host := required "ingress.host is required when the ingress is enabled" .Values.ingress.host -}}
+{{- $limits := .Values.ingress.limits -}}
+{{- $hsts := and .Values.ingress.hsts.enabled (ne $tls.mode "none") -}}
+{{- /* Traefik names a Middleware of this namespace <namespace>-<name>@kubernetescrd */ -}}
+{{- $mw := printf "%s-%s" .Release.Namespace $name -}}
+{{- $common := list -}}
+{{- if $hsts }}{{ $common = append $common (printf "%s-headers@kubernetescrd" $mw) }}{{ end -}}
+{{- if $limits.enabled }}{{ $common = append $common (printf "%s-inflight@kubernetescrd" $mw) }}{{ end -}}
+{{- $main := $common -}}
+{{- $auth := $common -}}
+{{- if $limits.enabled -}}
+{{- $main = append $main (printf "%s-ratelimit@kubernetescrd" $mw) -}}
+{{- $auth = append $auth (printf "%s-ratelimit-auth@kubernetescrd" $mw) -}}
+{{- end -}}
 {{- if and (eq $tls.mode "certManager") (not $tls.clusterIssuer) }}
 {{- fail "ingress.tls.clusterIssuer is required with tls.mode certManager (or use tls.mode traefik / secret / none)" }}
 {{- end }}
@@ -21,8 +34,8 @@ metadata:
     {{- if eq $tls.mode "traefik" }}
     traefik.ingress.kubernetes.io/router.tls.certresolver: {{ $tls.certResolver | quote }}
     {{- end }}
-    {{- if and .Values.ingress.hsts.enabled (ne $tls.mode "none") }}
-    traefik.ingress.kubernetes.io/router.middlewares: {{ printf "%s-%s-headers@kubernetescrd" .Release.Namespace $name | quote }}
+    {{- with $main }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ join "," . | quote }}
     {{- end }}
     {{- if ne $tls.mode "none" }}
     traefik.ingress.kubernetes.io/router.tls: "true"
@@ -59,7 +72,96 @@ spec:
               service:
                 name: {{ $name }}-web
                 port: { name: http }
-{{- if and .Values.ingress.hsts.enabled (ne $tls.mode "none") }}
+{{- if $limits.enabled }}
+---
+# Sign-in, sign-up and the other /api/v1/auth/ routes get their own, stricter limit per client
+# address (PLAN 23.6). A second Ingress, because a router's middlewares apply to all of its paths;
+# Traefik prefers the longer path.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}-auth
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+  annotations:
+    {{- if eq $tls.mode "certManager" }}
+    cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
+    {{- end }}
+    {{- if eq $tls.mode "traefik" }}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ $tls.certResolver | quote }}
+    {{- end }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ join "," $auth | quote }}
+    {{- if ne $tls.mode "none" }}
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    {{- end }}
+    {{- with .Values.ingress.entryPoints }}
+    traefik.ingress.kubernetes.io/router.entrypoints: {{ join "," . | quote }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if ne $tls.mode "none" }}
+  tls:
+    - hosts: [{{ $host | quote }}]
+      {{- if ne $tls.mode "traefik" }}
+      secretName: {{ $tls.secretName }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - path: /api/v1/auth/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}-api
+                port: { name: http }
+{{- $source := dict "ipStrategy" (dict "depth" (int $limits.forwardedDepth)) }}
+---
+# Requests per client address: everything except /api/v1/auth/.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-ratelimit
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ int $limits.requests.average }}
+    period: {{ $limits.requests.period | quote }}
+    burst: {{ int $limits.requests.burst }}
+    sourceCriterion: {{- toYaml $source | nindent 6 }}
+---
+# Requests per client address to /api/v1/auth/ (password guesses, sign-ups).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-ratelimit-auth
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ int $limits.auth.average }}
+    period: {{ $limits.auth.period | quote }}
+    burst: {{ int $limits.auth.burst }}
+    sourceCriterion: {{- toYaml $source | nindent 6 }}
+---
+# Requests in flight per client address (uploads, exports and streamed answers each hold one).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-inflight
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  inFlightReq:
+    amount: {{ int $limits.inFlight }}
+    sourceCriterion: {{- toYaml $source | nindent 6 }}
+{{- end }}
+{{- if $hsts }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware

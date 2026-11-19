@@ -503,6 +503,8 @@ jobs:
         env:
           CI: "true"
         run: make test-e2e KEEP=1
+      - name: Logs carry no user text; one request id over both hops (23.4)
+        run: make check-access-log
       - name: Compose logs
         if: failure()
         run: docker compose --env-file .env -f deploy/compose/compose.yaml -f deploy/compose/compose.ci.yaml logs --tail=200

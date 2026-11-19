@@ -136,7 +136,7 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	logs := &syncBuffer{}
 	tr, _ := observability.NewTracing(context.Background(), "", "finuance", "test")
 	ai := assistant.New(assistant.Config{Store: st, Query: query.New(st), Clock: clk, MaxChats: max(cfg.AIMaxChats, 25),
-		MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, nil),
+		MaxConcurrent: max(cfg.AIMaxConcurrent, 2), Connections: assistant.NewConnections(cfg.AIConnections, time.Minute, 0, clk, testLLMClient),
 		Choice: testChoice(adm)})
 	stored, err := assistant.NewConnectionStore(st, cfg.InstanceKey, clk, ai.Connections, cfg.AIConnections, 8192, nil)
 	if err != nil {
@@ -693,4 +693,14 @@ func ingest4(t *testing.T, content []byte) ledger.NewImport {
 	}
 	return ledger.NewImport{Filename: "a.csv", Content: content, Encoding: "utf-8", Delimiter: ";", Headers: res.Table.Headers,
 		Mapping: []byte(`{}`), Options: []byte(`{}`), MappingSource: "detected", Rows: rows}
+}
+
+// testLLMClient is llm.New for the tests' connections. A "cloud" connection here is the mock model
+// server on loopback over plain http, which a cloud connection's own transport refuses (PLAN 23.5;
+// llm.TestCloudTransportGuard tests that), so it gets an ordinary client.
+func testLLMClient(c llm.Config) llm.Client {
+	if c.AllowRemote {
+		c.HTTPClient = &http.Client{}
+	}
+	return llm.New(c)
 }

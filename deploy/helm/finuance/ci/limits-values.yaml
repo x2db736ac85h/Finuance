@@ -1,0 +1,15 @@
+# Rendered by the CI helm job: an instance the internet can reach, with the limits at the ingress
+# switched on (PLAN 23.6) behind one trusted proxy.
+publicOrigin: https://finance.example.com
+ingress:
+  host: finance.example.com
+  entryPoints: [websecure]
+  tls:
+    mode: traefik
+    certResolver: letsencrypt
+  limits:
+    enabled: true
+    forwardedDepth: 1
+    requests: { average: 30, period: 1s, burst: 100 }
+    auth: { average: 10, period: 1m, burst: 10 }
+    inFlight: 20
