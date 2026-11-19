@@ -8,10 +8,15 @@ FROM --platform=$BUILDPLATFORM node:22.23.5-alpine@sha256:1314fb30ec37592d5845e5
 WORKDIR /web
 COPY web/ ./
 # A web/dist built on the host is used as is (offline builds, like backend/vendor); otherwise the
-# app is built here. CI checkouts have no dist/, so CI always builds from source.
+# app is built here. CI checkouts have no dist/, so CI always builds from source. npm has skipped a
+# native optional package without an error once (PLAN task 22.14): scripts/check-native.mjs names
+# it, the install runs once more, and the build stops with that name if it is still missing.
 RUN --mount=type=cache,target=/root/.npm \
     if [ -f dist/index.html ]; then echo "using the prebuilt web/dist"; \
-    else npm ci --no-audit --no-fund && npm run build; fi \
+    else npm ci --no-audit --no-fund \
+      && { node scripts/check-native.mjs \
+           || { echo "installing once more"; npm ci --no-audit --no-fund && node scripts/check-native.mjs; }; } \
+      && npm run build; fi \
     && find dist -name '*.map' -delete
 
 FROM nginxinc/nginx-unprivileged:1.30.6-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03

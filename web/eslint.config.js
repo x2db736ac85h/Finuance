@@ -11,7 +11,7 @@ export default defineConfig(
   {
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ['eslint.config.js'] },
+        projectService: { allowDefaultProject: ['eslint.config.js', 'scripts/*.mjs'] },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -32,6 +32,6 @@ export default defineConfig(
       ],
     },
   },
-  // The config file itself is plain JS: no type-aware rules.
-  { files: ['eslint.config.js'], ...tseslint.configs.disableTypeChecked },
+  // The config file and the build scripts are plain JS: no type-aware rules.
+  { files: ['eslint.config.js', 'scripts/*.mjs'], ...tseslint.configs.disableTypeChecked },
 );

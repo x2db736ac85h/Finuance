@@ -112,7 +112,7 @@ typecheck: web/node_modules ## tsc --noEmit
 .PHONY: test
 test: web/node_modules ## Go unit tests (-short) + Vitest
 	cd backend && go vet ./... && go test -short ./...
-	cd web && npm run --silent test
+	cd web && npm run --silent test && node scripts/check-native.mjs --self-test && node scripts/check-native.mjs
 
 .PHONY: test-integration
 test-integration: ## All Go tests incl. testcontainers (Docker required)
