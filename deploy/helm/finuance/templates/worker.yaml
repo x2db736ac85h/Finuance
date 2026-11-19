@@ -33,7 +33,7 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
       containers:
         - name: worker
-          image: {{ include "finuance.image" (dict "root" . "name" .Values.image.api) }}
+          image: {{ include "finuance.image" (dict "root" . "component" "api") }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["worker"]
           ports:

@@ -21,6 +21,8 @@ cd "$(dirname "$0")/.."
 H=deploy/environments/homelab
 BASE=${BASE_URL:-https://$(tailscale status --json | jq -r '.Self.DNSName' | sed 's/\.$//')}
 TAG=$(yq '.image.tag' "$H/values.yaml")
+API_DIGEST=$(yq '.image.digests.api' "$H/values.yaml") # the restored app runs the same images, by digest
+WEB_DIGEST=$(yq '.image.digests.web' "$H/values.yaml")
 K6_IMAGE=grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
 RNS=finuance-restore
 RAPI=http://localhost:18081       # port-forward to the restored api
@@ -148,7 +150,8 @@ EOF
   result "restored data" "both markers (before the backup, and only in the WAL after it); textlike LEAKPROOF"
 
   helm upgrade --install finuance deploy/helm/finuance -n "$RNS" -f "$H/restore-app-values.yaml" \
-    --set image.tag="$TAG" --wait --timeout 10m >/dev/null
+    --set image.tag="$TAG" --set image.digests.api="$API_DIGEST" --set image.digests.web="$WEB_DIGEST" \
+    --wait --timeout 10m >/dev/null
   kubectl -n "$RNS" port-forward svc/finuance-api 18081:8080 >/dev/null 2>&1 &
   pids+=($!)
   wait_for 60 "the restored api" curl -fsS "$RAPI/readyz"

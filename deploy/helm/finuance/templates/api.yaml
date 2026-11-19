@@ -48,7 +48,7 @@ spec:
               {{- include "finuance.selector" (dict "root" . "component" "api") | nindent 14 }}
       containers:
         - name: api
-          image: {{ include "finuance.image" (dict "root" . "name" .Values.image.api) }}
+          image: {{ include "finuance.image" (dict "root" . "component" "api") }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["serve"]
           ports:

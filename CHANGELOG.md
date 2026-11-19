@@ -6,6 +6,12 @@ notes of their version.
 
 ## [Unreleased]
 
+### Security
+
+- The Helm chart can deploy by digest: with `image.digests.api` and `image.digests.web` set, the
+  images are `name@sha256:…` and the tag only labels the release. A release writes both digests
+  into the reference environment's values, and that environment must have them.
+
 ## [0.4.2] - 2026-11-19
 
 ### Security

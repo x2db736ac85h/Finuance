@@ -40,7 +40,7 @@ spec:
         {{- include "finuance.podSecurity" (dict "uid" 65532) | nindent 8 }}
       containers:
         - name: migrate
-          image: {{ include "finuance.image" (dict "root" . "name" .Values.image.api) }}
+          image: {{ include "finuance.image" (dict "root" . "component" "api") }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["migrate", "up"]
           env:

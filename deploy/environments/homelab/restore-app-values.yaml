@@ -1,6 +1,7 @@
 # The temporary app on the restored database (tools/homelab-drill.sh restore): no ingress (only the
-# host's own name has a certificate), reached through port-forwards; the image tag comes from
-# values.yaml (--set image.tag=…). Sign-up stays off: the drill makes its users with the admin CLI.
+# host's own name has a certificate), reached through port-forwards; the image tag and digests come
+# from values.yaml (--set image.tag=… and image.digests.…). Sign-up stays off: the drill makes its
+# users with the admin CLI.
 publicOrigin: http://localhost:18080
 ingress:
   enabled: false

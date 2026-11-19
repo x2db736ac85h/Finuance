@@ -6,7 +6,7 @@ set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/.github/workflows" "$tmp/deploy/docker" "$tmp/tools"
+mkdir -p "$tmp/.github/workflows" "$tmp/deploy/docker" "$tmp/tools" "$tmp/deploy/environments/lab"
 fails=0
 sha=3d3c42e5aac5ba805825da76410c181273ba90b1
 digest=sha256:$(printf 'a%.0s' $(seq 64))
@@ -38,7 +38,31 @@ refused "an IMAGE := by tag" tools/a.sh "K6_IMAGE := grafana/k6:1.8.2"
 refused "a defaulted IMAGE by tag" tools/a.sh "NODE_IMAGE=\${NODE_IMAGE:-kindest/node:v1.33.1}"
 refused "a workflow env image by tag" .github/workflows/a.yml "  TRIVY_IMAGE: aquasec/trivy:0.76.2"
 refused "a docker run by tag" tools/a.sh "docker run --rm -v \"\$PWD:/repo:ro\" aquasec/trivy:0.76.2 fs ."
+refused "an environment by tag only" deploy/environments/lab/values.yaml "image:
+  tag: \"0.4.2\""
+refused "an environment with one digest" deploy/environments/lab/values.yaml "image:
+  tag: \"0.4.2\"
+  digests:
+    api: \"$digest\""
+refused "an environment with a short digest" deploy/environments/lab/values.yaml "image:
+  digests:
+    api: \"$digest\"
+    web: \"sha256:abc\""
+refused "digests outside the image block" deploy/environments/lab/values.yaml "image:
+  tag: \"0.4.2\"
+other:
+  digests:
+    api: \"$digest\"
+    web: \"$digest\""
 
+passes "an environment by digest" deploy/environments/lab/values.yaml "# comment
+image:
+  # bumped by the release
+  tag: \"0.4.2\"
+  digests:
+    api: \"$digest\"
+    web: $digest
+publicOrigin: https://f.example.com"
 passes "an action by SHA" .github/workflows/b.yml "      - uses: actions/checkout@$sha # v7.0.1"
 passes "a local action" .github/workflows/b.yml "      - uses: ./.github/actions/setup"
 passes "an image by digest" deploy/b.yaml "    image: postgres:18.7-bookworm@$digest"

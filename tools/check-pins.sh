@@ -5,9 +5,12 @@
 #      and `docker://…@sha256:` excepted); the version goes into a comment: `@<sha> # v7.0.1`;
 #   2. an image without `@sha256:` in an `image:` value, a Dockerfile `FROM`, a `…IMAGE=`,
 #      `…IMAGE :=` or `…IMAGE:` (workflow `env:`) setting, or a `docker run` line.
-# Allowed without a digest: the images this repository builds itself (`finuance-*:dev`,
-# `finuance-*:rehearsal`, `ghcr.io/x2db736ac85h/finuance-*`, which Phase 23 deploys by digest),
-# Dockerfile stages (`FROM build`), template expressions (`{{ … }}`) and shell variables (`$X`).
+#   3. an environment's values (`deploy/environments/<name>/values.yaml`) that does not deploy
+#      Finuance's own images by digest: `image.digests.api` and `image.digests.web`, each
+#      `sha256:` and 64 hex characters (PLAN task 23.1; release.yml's bump writes them).
+# Allowed without a digest: the images this repository builds itself where they are built or
+# named (`finuance-*:dev`, `finuance-*:rehearsal`, `ghcr.io/x2db736ac85h/finuance-*`), Dockerfile
+# stages (`FROM build`), template expressions (`{{ … }}`) and shell variables (`$X`).
 #
 # Usage: tools/check-pins.sh            # scan the repository
 #        tools/check-pins.sh FILE...    # scan only the given files
@@ -34,6 +37,23 @@ else
 fi
 
 [ "${#files[@]}" -gt 0 ] || { echo "check-pins: ok (no files)"; exit 0; }
+
+# rule 3: environments deploy by digest
+env_bad=0
+for f in "${files[@]}"; do
+  case "$f" in */environments/*/values.yaml | environments/*/values.yaml) ;; *) continue ;; esac
+  missing=$(awk '
+    /^[^ #]/ { in_image = ($0 ~ /^image:/); in_digests = 0 }
+    in_image && /^  [^ #]/ { in_digests = ($0 ~ /^  digests:/) }
+    in_digests && /^    api: *"?sha256:[0-9a-f]{64}"? *(#.*)?$/ { a = 1 }
+    in_digests && /^    web: *"?sha256:[0-9a-f]{64}"? *(#.*)?$/ { w = 1 }
+    END { if (!a) printf "image.digests.api "; if (!w) printf "image.digests.web" }
+  ' "$f")
+  if [ -n "$missing" ]; then
+    echo "check-pins: $f: no sha256 digest in $missing" >&2
+    env_bad=1
+  fi
+done
 
 if ! perl -ne '
     BEGIN { $bad = 0 }
@@ -68,6 +88,10 @@ if ! perl -ne '
     END { exit $bad }
   ' "${files[@]}"; then
   echo "check-pins: FAILED. Pin actions by commit SHA (\`uses: owner/repo@<sha> # vX.Y.Z\`) and images by digest (\`name:tag@sha256:…\`)." >&2
+  exit 1
+fi
+if [ "$env_bad" -ne 0 ]; then
+  echo "check-pins: FAILED. An environment deploys Finuance's images by digest: set image.digests.api and image.digests.web (tools/bump-homelab-tag.sh)." >&2
   exit 1
 fi
 echo "check-pins: ok (${#files[@]} files scanned)"

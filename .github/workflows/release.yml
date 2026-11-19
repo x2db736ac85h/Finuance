@@ -60,6 +60,8 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
       prerelease: ${{ steps.v.outputs.prerelease }}
+      api_digest: ${{ steps.build.outputs.api_digest }} # what gitops-bump writes (PLAN 23.1)
+      web_digest: ${{ steps.build.outputs.web_digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -105,6 +107,7 @@ jobs:
         run: docker buildx create --name release --driver docker-container --use
 
       - name: Build and push (linux/amd64, linux/arm64)
+        id: build
         run: |
           set -euo pipefail
           latest=()
@@ -120,6 +123,7 @@ jobs:
             --tag "$REGISTRY/finuance-web:$VERSION" "${latest[@]}" --metadata-file web.json --push .
           api="$(jq -r '."containerimage.digest"' api.json)" web="$(jq -r '."containerimage.digest"' web.json)"
           { echo "API_DIGEST=$api"; echo "WEB_DIGEST=$web"; echo "API=$REGISTRY/finuance-api@$api"; echo "WEB=$REGISTRY/finuance-web@$web"; } >> "$GITHUB_ENV"
+          { echo "api_digest=$api"; echo "web_digest=$web"; } >> "$GITHUB_OUTPUT"
 
       # The images are public; Trivy reads them from the registry, without the Docker socket.
       - name: Trivy (HIGH/CRITICAL fail the release)
@@ -265,16 +269,18 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - name: Pull request bumping the homelab image tag
+      - name: Pull request bumping the homelab image tag and digests
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           V: ${{ needs.release.outputs.version }}
+          API_DIGEST: ${{ needs.release.outputs.api_digest }}
+          WEB_DIGEST: ${{ needs.release.outputs.web_digest }}
         run: |
           set -euo pipefail
           go install "github.com/mikefarah/yq/v4@${YQ_VERSION}"
           YQ="$(go env GOPATH)/bin/yq"
           export YQ
-          tools/bump-homelab-tag.sh "$V"
+          tools/bump-homelab-tag.sh "$V" "$API_DIGEST" "$WEB_DIGEST"
           if git diff --quiet; then echo "homelab already runs $V"; exit 0; fi
           branch="deploy/homelab-v$V"
           git config user.name "github-actions[bot]"
@@ -283,7 +289,10 @@ jobs:
           git commit -am "chore(deploy): homelab to v$V"
           git push -u origin "$branch"
           {
-            echo "Deploys **v$V** to the homelab: Argo CD syncs \`main\` once this is merged (migrations run first)."
+            echo "Deploys **v$V** to the homelab by digest: Argo CD syncs \`main\` once this is merged (migrations run first)."
+            echo
+            echo "- api: \`$API_DIGEST\`"
+            echo "- web: \`$WEB_DIGEST\`"
             echo
             echo "- Release: https://github.com/${GITHUB_REPOSITORY}/releases/tag/v$V"
             echo "- Rollback: revert this pull request (docs/RUNBOOK.md \"Rollback\"; a migration is not rolled back)."

@@ -8,6 +8,12 @@ image:
   web: finuance-web
   # Empty: the chart's appVersion.
   tag: ""
+  # Deploy by digest: set both (sha256:…, the multi-platform index the release signed). The images
+  # are then registry/name@digest, and the tag only labels the release. release.yml writes them
+  # into an environment's values together with the tag (tools/bump-homelab-tag.sh).
+  digests:
+    api: ""
+    web: ""
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 

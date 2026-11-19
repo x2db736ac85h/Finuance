@@ -82,6 +82,16 @@ echo "== assistant connections file is mounted where it is read"
   | .name' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a container reads the developer links without mounting them"; exit 1; }
 "$YQ" -e 'select(.kind == "Deployment" and .metadata.name != "finuance-api") | .spec.template.spec.containers[].env[]? | select(.name == "FINUANCE_DEVELOPER_LINKS_FILE")' \
   "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a component other than the api reads the developer links"; exit 1; }
+# Deploy by digest (PLAN 23.1): with image.digests set every container runs registry/name@sha256:…
+# and no tag; without them, the tag. The homelab's values carry digests.
+d1="sha256:$(printf '1%.0s' $(seq 64))" d2="sha256:$(printf '2%.0s' $(seq 64))"
+by_digest=$(helm template t "$app" --kube-version "$K8S" -f "$app/ci/homelab-like-values.yaml" --set image.digests.api="$d1" --set image.digests.web="$d2" | grep -E '^ +image: ' | sort | uniq -c | tr -s ' ')
+want=" 3 image: ghcr.io/x2db736ac85h/finuance-api@$d1
+ 1 image: ghcr.io/x2db736ac85h/finuance-web@$d2"
+[ "$by_digest" = "$want" ] || { echo "check-helm: with image.digests the images are:"; echo "$by_digest"; exit 1; }
+grep -E '^ +image: ' "$out/app-homelab-like-values.yaml" | grep -q '@sha256:' && { echo "check-helm: an image has a digest without image.digests"; exit 1; }
+[ "$(grep -E '^ +image: ' "$out/app-homelab.yaml" | grep -cE 'finuance-(api|web)@sha256:[0-9a-f]{64}$')" -eq 4 ] ||
+  { echo "check-helm: the homelab's values don't deploy every image by digest"; exit 1; }
 echo "ok"
 
 echo "== Argo CD applications"
@@ -119,6 +129,9 @@ must_fail "a developer link carries a password" "developer" "$app" "${o[@]}" --s
   --set developer.enabled=true --set 'developer.links[0].name=Grafana' --set 'developer.links[0].url=https://admin:pw@grafana.example.com'
 must_fail "a developer link isn't http(s)" "developer" "$app" "${o[@]}" --set ingress.tls.mode=none \
   --set developer.enabled=true --set 'developer.links[0].name=X' --set 'developer.links[0].url=javascript:alert(1)'
+must_fail "an image digest is malformed" "/image/digests/api" "$app" "${o[@]}" --set ingress.tls.mode=none --set image.digests.api=sha256:abc --set image.digests.web="$d2"
+must_fail "an image digest carries a tag" "/image/digests/web" "$app" "${o[@]}" --set ingress.tls.mode=none --set image.digests.api="$d1" --set image.digests.web="0.4.2@$d2"
+must_fail "only one image digest is set" "image.digests needs both" "$app" "${o[@]}" --set ingress.tls.mode=none --set image.digests.api="$d1"
 must_fail "extraEnv sets a non-FINUANCE variable" "^FINUANCE_[A-Z0-9_]+$" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.PATH=/tmp
 must_fail "the backup has no bucket" "objectStore.destinationPath is required" "$db"
 must_fail "the backup schedule has 5 fields" "/backup/schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"

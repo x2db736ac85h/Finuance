@@ -27,8 +27,21 @@ app.kubernetes.io/component: {{ .component }}
 {{- .Values.image.tag | default .Chart.AppVersion -}}
 {{- end -}}
 
+{{/*
+The image of one component ("api" or "web"). With image.digests set it is registry/name@sha256:…
+and the tag only labels the release (PLAN 23.1); both digests or neither.
+*/}}
 {{- define "finuance.image" -}}
-{{- printf "%s/%s:%s" .root.Values.image.registry .name (include "finuance.tag" .root) -}}
+{{- $digests := .root.Values.image.digests | default dict -}}
+{{- if ne (empty $digests.api) (empty $digests.web) -}}
+{{- fail "image.digests needs both api and web (or neither, to deploy by tag)" -}}
+{{- end -}}
+{{- $digest := get $digests .component | default "" -}}
+{{- if $digest -}}
+{{- printf "%s/%s@%s" .root.Values.image.registry (get .root.Values.image .component) $digest -}}
+{{- else -}}
+{{- printf "%s/%s:%s" .root.Values.image.registry (get .root.Values.image .component) (include "finuance.tag" .root) -}}
+{{- end -}}
 {{- end -}}
 
 {{/* A password-less database URL; the password comes from PGPASSWORD (finuance.dbPassword). */}}

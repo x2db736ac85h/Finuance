@@ -35,7 +35,7 @@ spec:
         {{- include "finuance.podSecurity" (dict "uid" 10101) | nindent 8 }}
       containers:
         - name: web
-          image: {{ include "finuance.image" (dict "root" . "name" .Values.image.web) }}
+          image: {{ include "finuance.image" (dict "root" . "component" "web") }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - { name: http, containerPort: 8080 }
