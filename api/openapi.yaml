@@ -7281,6 +7281,8 @@ components:
         - contrast_failed
         - display_name_required
         - changed_since
+        - account_busy
+        - timeout
         - internal
     FieldError:
       type: object

@@ -44,7 +44,7 @@ func Admin(ctx context.Context, cfg config.Config, in AdminInput, out func(forma
 			return err
 		}
 	}
-	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider())
+	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider(), store.Timeouts{})
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ type SeedInput struct {
 // (finuance seed-demo -email …). It refuses when the user already has a demo account. With
 // Users it seeds a whole set of load-test users.
 func SeedDemo(ctx context.Context, cfg config.Config, in SeedInput, out func(format string, args ...any)) error {
-	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider())
+	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider(), store.Timeouts{})
 	if err != nil {
 		return err
 	}

@@ -32,12 +32,15 @@ type Sort struct {
 	Desc   bool
 }
 
-// Limits of the read endpoints (PLAN §6.2).
+// Limits of the read endpoints (PLAN §6.2). MaxOffset and MaxSearchWords bound the cost one
+// request can choose (DB-4): every search word is one more LIKE over the user's rows.
 const (
 	MaxPageRows     = 500
 	MaxDistinct     = 600
 	MaxIDs          = 5000
 	DefaultDistinct = 600
+	MaxOffset       = 1_000_000
+	MaxSearchWords  = 16
 )
 
 // from is the full row source: transactions with their account, category and group.
@@ -310,8 +313,8 @@ func (e *Engine) Page(ctx context.Context, userID uuid.UUID, req PageRequest) (P
 	if req.Limit < 1 || req.Limit > MaxPageRows {
 		ve.Add("limit", "must be 1–"+strconv.Itoa(MaxPageRows))
 	}
-	if req.Offset < 0 {
-		ve.Add("offset", "must not be negative")
+	if req.Offset < 0 || req.Offset > MaxOffset {
+		ve.Add("offset", "must be 0–"+strconv.Itoa(MaxOffset))
 	}
 	stat := req.StatColumn
 	switch stat {
@@ -483,8 +486,8 @@ func (e *Engine) IDs(ctx context.Context, userID uuid.UUID, c Context, s *Sort, 
 	if limit < 1 || limit > MaxIDs {
 		ve.Add("limit", "must be 1–"+strconv.Itoa(MaxIDs))
 	}
-	if offset < 0 {
-		ve.Add("offset", "must not be negative")
+	if offset < 0 || offset > MaxOffset {
+		ve.Add("offset", "must be 0–"+strconv.Itoa(MaxOffset))
 	}
 	if err := ve.Err(); err != nil {
 		return nil, err

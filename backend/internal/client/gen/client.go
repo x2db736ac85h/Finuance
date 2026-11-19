@@ -1597,6 +1597,7 @@ func (e PeriodPreset) Valid() bool {
 
 // Defines values for ProblemCode.
 const (
+	AccountBusy            ProblemCode = "account_busy"
 	AccountDisabled        ProblemCode = "account_disabled"
 	AssistantBusy          ProblemCode = "assistant_busy"
 	AssistantUnavailable   ProblemCode = "assistant_unavailable"
@@ -1619,6 +1620,7 @@ const (
 	RateLimited            ProblemCode = "rate_limited"
 	RunInProgress          ProblemCode = "run_in_progress"
 	StaleVersion           ProblemCode = "stale_version"
+	Timeout                ProblemCode = "timeout"
 	Unauthenticated        ProblemCode = "unauthenticated"
 	UnsupportedFile        ProblemCode = "unsupported_file"
 	ValidationFailed       ProblemCode = "validation_failed"
@@ -1627,6 +1629,8 @@ const (
 // Valid indicates whether the value is a known member of the ProblemCode enum.
 func (e ProblemCode) Valid() bool {
 	switch e {
+	case AccountBusy:
+		return true
 	case AccountDisabled:
 		return true
 	case AssistantBusy:
@@ -1670,6 +1674,8 @@ func (e ProblemCode) Valid() bool {
 	case RunInProgress:
 		return true
 	case StaleVersion:
+		return true
+	case Timeout:
 		return true
 	case Unauthenticated:
 		return true

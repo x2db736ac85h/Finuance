@@ -305,6 +305,8 @@ func TestProblemMapping(t *testing.T) {
 		{ledger.ErrState, "conflict", 409},
 		{fmt.Errorf("name too long: %w", ledger.ErrInvalid), "validation_failed", 422},
 		{fmt.Errorf("get user: %w", &pgconn.PgError{Code: "22021"}), "validation_failed", 422},
+		{fmt.Errorf("delete import: %w", &pgconn.PgError{Code: "55P03"}), "account_busy", 409},
+		{fmt.Errorf("page: %w", &pgconn.PgError{Code: "57014"}), "timeout", 503},
 		{&pgconn.PgError{Code: "42P01"}, "internal", 500},
 		{errors.New("pq: relation x does not exist"), "internal", 500},
 	} {
@@ -322,6 +324,27 @@ func TestProblemMapping(t *testing.T) {
 	}
 	if p := ProblemFor(platform.ErrNotFound, r, true); p.Detail == nil {
 		t.Error("prod should keep details of non-internal problems")
+	}
+}
+
+// TestTimeoutProblems: a lock or statement timeout (store.RequestTimeouts) answers with its own
+// wording, never PostgreSQL's message, and a statement timeout tells the client when to retry.
+func TestTimeoutProblems(t *testing.T) {
+	ctx := observability.WithLogger(context.Background(), slog.New(slog.DiscardHandler))
+	for _, tc := range []struct {
+		code, msg  string
+		status     int
+		retryAfter string
+	}{
+		{"55P03", "canceling statement due to lock timeout", http.StatusConflict, ""},
+		{"57014", "canceling statement due to statement timeout", http.StatusServiceUnavailable, "5"},
+	} {
+		w := httptest.NewRecorder()
+		err := fmt.Errorf("query: %w", &pgconn.PgError{Code: tc.code, Message: tc.msg})
+		WriteProblem(w, httptest.NewRequest("GET", "/api/v1/transactions", nil).WithContext(ctx), err, true)
+		if w.Code != tc.status || w.Header().Get("Retry-After") != tc.retryAfter || strings.Contains(w.Body.String(), "canceling") {
+			t.Errorf("%s: %d, Retry-After %q, body %s", tc.code, w.Code, w.Header().Get("Retry-After"), w.Body)
+		}
 	}
 }
 
