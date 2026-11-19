@@ -85,7 +85,7 @@ audit's table of 2026-11-16, row by row, with the newest release on the day:
 | Grafana 13.3.0 (kube-prometheus-stack 92.16.1) | six CVEs fixed in 13.3.1 | chart 93.4.1 (Grafana 13.3.1, Prometheus Operator 0.95.2); the last 92.x still ships 13.3.0 | Phase 22: update to the next major of the chart |
 | Tempo 2.9.0 | GHSA-p4r4-xvrq-gvmc, GHSA-ffqx-q65f-36jf | 2.9.5 (2.10.10, 3.1.1) | Phase 22: 2.9.5, a patch release |
 | Helm CLI 3.18.4 (CI, rehearsal) | three moderate advisories | 3.22.1 (4.3.2) | Phase 22: 3.22.1, the v3 line |
-| Node build image 22.22.0 | five security releases since | 22.23.5 | Phase 22: update |
+| Node build image 22.22.0 | five security releases since | 22.23.5 | **Fixed** 2026-11-19: `node:22.23.5-alpine` by digest; the web image builds from source on it |
 | `minimatch` 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 (MEDIUM) | ESLint 10.15.0, typescript-eslint 8.73.0 | **Fixed** 2026-11-19: both updated, `minimatch` 11.0.9, `npm audit` 0 at every severity; `minimatch` 5.1.9 under openapi-typescript is outside the advisory's range (≥ 7.0.0) |
 | `picomatch` 4.0.7 (development tools) | GHSA-fc5q-39xc-vjpf | 4.0.7 | **Gone:** the advisory was withdrawn (above) |
 | Trivy 0.76.0 (CI, release) | none | 0.76.2 | Phase 22: update with the move to a checked binary (22.5) |
