@@ -2,7 +2,7 @@
 
 Every finding of every scan, and what happened to it: fixed, or not exploitable and why. HIGH and
 CRITICAL findings fail the build. A finding is fixed, not ignored; `.trivyignore` holds only what
-cannot be fixed yet, each entry with a reason and an expiry (one entry since 2026-11-18, below). The scans and
+cannot be fixed yet, each entry with a reason and an expiry (empty since 2026-11-19, below). The scans and
 when they run are listed in [THREAT-MODEL.md](THREAT-MODEL.md) §7. Phase 18 adds the OpenVAS /
 Nessus scan of the deployed instance, and the Phase 23 gate repeats everything right before the
 demo goes public.
@@ -68,7 +68,34 @@ release), the package is used by development tools only with patterns from the r
 configuration, and nothing of it is in the web image (`npm audit --omit=dev`: 0). `npm audit` has
 no way to accept one advisory, so `tools/npm-audit.mjs` now applies the same file, with the same
 expiry, to the audit of every dependency. The rule from here on: a finding is fixed, not ignored;
-the entry is removed as soon as a fixed version exists (PLAN task 22.15).
+the entry is removed as soon as a fixed version exists (PLAN task 22.15). **Withdrawn** by the
+advisory itself on 2026-11-18 (GitHub shows `withdrawn_at`); neither Trivy's database nor `npm audit`
+reports it any more, and the entry was removed on 2026-11-19, which left `.trivyignore` empty.
+
+**Scan at the start of Phase 22: 2026-11-19** (PLAN task 22.0), on `main` at `76b7d7a`; both images
+built from it (`make images`), Trivy 0.76.2 with that day's database at every severity, govulncheck,
+`npm audit` in `web/` and `tools/legacy-oracle/`, gitleaks 8.30.1 over the history (297 commits). The
+audit's table of 2026-11-16, row by row, with the newest release on the day:
+
+| Component @ pin on `main` | Finding | Newest on 2026-11-19 | Decision |
+|---|---|---|---|
+| Go 1.27.4 | GO-2026-6859 and GO-2026-6848 … 6858 (1.27.3) | 1.27.4 | **Fixed** 2026-11-17 (pull request 34); govulncheck 0 reachable |
+| `golang.org/x/crypto` 0.58.0 | GO-2026-5932 (`openpgp`, not imported) | 0.59.0 | Phase 22: update; the only finding in the api image and in `backend/go.mod` |
+| PostgreSQL 18.6 | the 18.7 fixes (policies and `ON CONFLICT`, `DROP OWNED BY` and policies, leaky quals, index corruption) | 18.7 (`postgres:18.7-bookworm`, `ghcr.io/cloudnative-pg/postgresql:18.7-standard-trixie`) | Phase 22: update, then reindex (RUNBOOK) |
+| Grafana 13.3.0 (kube-prometheus-stack 92.16.1) | six CVEs fixed in 13.3.1 | chart 93.4.1 (Grafana 13.3.1, Prometheus Operator 0.95.2); the last 92.x still ships 13.3.0 | Phase 22: update to the next major of the chart |
+| Tempo 2.9.0 | GHSA-p4r4-xvrq-gvmc, GHSA-ffqx-q65f-36jf | 2.9.5 (2.10.10, 3.1.1) | Phase 22: 2.9.5, a patch release |
+| Helm CLI 3.18.4 (CI, rehearsal) | three moderate advisories | 3.22.1 (4.3.2) | Phase 22: 3.22.1, the v3 line |
+| Node build image 22.22.0 | five security releases since | 22.23.5 | Phase 22: update |
+| `minimatch` 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 (MEDIUM) | ESLint 10.15.0, typescript-eslint 8.73.0 | Phase 22: update; `minimatch` 5.1.9 under openapi-typescript is outside the advisory's range (≥ 7.0.0) |
+| `picomatch` 4.0.7 (development tools) | GHSA-fc5q-39xc-vjpf | 4.0.7 | **Gone:** the advisory was withdrawn (above) |
+| Trivy 0.76.0 (CI, release) | none | 0.76.2 | Phase 22: update with the move to a checked binary (22.5) |
+
+Nothing new: web image 0 findings; api image only GO-2026-5932; repository only `minimatch` and
+GO-2026-5932, and the misconfigurations documented below (the same files and checks); `npm audit
+--omit=dev` 0; `tools/legacy-oracle` 0; govulncheck 0 reachable; gitleaks no leaks. The cluster's
+CloudNativePG (1.30.1, its Barman Cloud plugin 0.15.1), Sealed Secrets (0.40.0), cert-manager,
+Traefik and Argo CD have no advisory on OSV for the versions running; their updates are routine and
+belong with the machine's maintenance.
 
 ## Summary
 
