@@ -325,7 +325,7 @@ jobs:
       # renovate: datasource=go depName=github.com/bitnami/sealed-secrets
       KUBESEAL_VERSION: v0.40.0
       # renovate: datasource=go depName=github.com/mikefarah/yq/v4
-      YQ_VERSION: v4.54.1
+      YQ_VERSION: v4.54.3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

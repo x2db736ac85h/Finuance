@@ -34,7 +34,7 @@ env:
   # renovate: datasource=go depName=github.com/bitnami/sealed-secrets
   KUBESEAL_VERSION: v0.40.0
   # renovate: datasource=go depName=github.com/mikefarah/yq/v4
-  YQ_VERSION: v4.54.1
+  YQ_VERSION: v4.54.3
 
 jobs:
   rehearsal:
