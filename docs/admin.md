@@ -23,6 +23,13 @@ finuance admin grant-admin -email=you@example.com
 finuance admin revoke-admin -email=you@example.com
 ```
 
+An administrator who is locked out of two-step sign-in (no phone, no recovery codes, nobody else to
+ask) gets back in with:
+
+```bash
+finuance admin remove-second-factor -email=you@example.com
+```
+
 On Kubernetes run them in the api pod (`kubectl -n finuance exec -i deploy/finuance-api -- /finuance admin …`),
 with Compose `docker compose exec -T api /finuance admin …`. The last active administrator can't be
 demoted, disabled or deleted.
@@ -43,6 +50,9 @@ account menu (the initial in the top-right corner) has only Profile and Sign out
   **Enable account** undoes it.
 - **Reset password**: a new one-time password, and the account is signed out everywhere.
 - **Sign out everywhere**.
+- **Remove two-step sign-in** (shown for an account that uses it): for someone who lost their phone
+  and their recovery codes. They sign in with the password alone until they set it up again. Not
+  for your own account: switch yours off in Settings → Security, with your password and a code.
 - **Limits**: per account; an empty field uses the instance default.
 - **Delete account**: everything the person has goes with it; type the e-mail address to confirm.
 
@@ -64,6 +74,10 @@ reload (`409`).
   `404`. Switching **Assistant digests** off (or the Assistant) stops every digest and hides the
   setting (ADR 0033). Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
   **Shared groups** off hides the Shared tab, *Share…* and their routes ([sharing.md](sharing.md)).
+- **Signing in**: *Administrators must use two-step sign-in* (ADR 0040). An administrator who
+  hasn't set it up can still sign in and use their own data, but Administration stays closed and the
+  app sends them to Settings → Security. You can switch this on once you use two-step sign-in
+  yourself.
 - **Default limits** for every account without its own.
 
 ### Limits

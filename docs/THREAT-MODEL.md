@@ -137,7 +137,7 @@ flowchart LR
 
 - **Rate limits are per replica** (ADR 0012). With N api replicas an attacker gets N× the budget. Accepted for N ≤ 4, the HPA's maximum in the chart (Phase 16). Revisit if the deployment scales further.
 - **Signup reveals whether an email is registered.** Accepted for a self-hosted instance. `FINUANCE_ALLOW_SIGNUP=false` closes it.
-- **There is no MFA and no email verification** in v1. Personal instances run with signup disabled and admin-created accounts. OIDC is in the backlog.
+- **Two-step sign-in is optional** (TOTP, ADR 0040, since Phase 23); an instance can require it of administrators. An account without it is protected by its password, the login limiters and the activity log. **There is no email verification**: personal instances run with signup disabled and admin-created accounts. Passkeys and OIDC are in the backlog.
 - **TLS terminates at the ingress or nginx.** The api trusts `X-Forwarded-For` only from `FINUANCE_TRUSTED_PROXIES`.
 - **`LIKE` is marked LEAKPROOF** (`bootstrap.sql`, Phase 7) so search can use its trigram index under RLS. A leakproof function may run on other users' rows before the policy filters them. `textlike` only errors on a malformed pattern (the user's own input), never because of a row's value, so it reveals nothing. Any other function given this flag needs the same review.
 - **Prompt injection can still mislead an answer** (a payee named "ignore previous instructions"). It can't write, reach the network or another user; the user sees every lookup behind an answer. A cloud model sees the looked-up rows of a user who agreed to that connection.

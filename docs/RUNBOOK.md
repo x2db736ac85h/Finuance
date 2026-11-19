@@ -679,7 +679,7 @@ All secrets are SealedSecrets in the private environment repository (ADR 0023): 
 | `monitoring/finuance-alert-smtp` | `tools/seal-secrets.sh homelab smtp` (the sending account's app password on stdin), in `homelab/monitoring/` | new app password, revoke the old one, re-seal, push the environment repository |
 | `monitoring/grafana-admin` | `tools/seal-secrets.sh homelab grafana` (random), in `homelab/monitoring/` | re-seal, push the environment repository, then `kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana` |
 | `finuance-assistant` (optional) | `tools/seal-secrets.sh homelab assistant keys.env` (`KEY=value` lines, the connections file's `apiKeyEnv` names) | re-seal, push the environment repository, then `kubectl -n finuance rollout restart deploy/finuance-api` |
-| `finuance-instance-key` (optional) | `tools/seal-secrets.sh homelab instance-key` (random), `assistant.instanceKeySecret: finuance-instance-key` | a new key makes the API keys entered in Administration → Assistant unreadable: enter them again after the rollout (ADR 0035) |
+| `finuance-instance-key` (optional) | `tools/seal-secrets.sh homelab instance-key` (random), `assistant.instanceKeySecret: finuance-instance-key` | a new key makes the API keys entered in Administration → Assistant unreadable: enter them again after the rollout (ADR 0035) The same key seals the secrets of two-step sign-in (ADR 0040): with a new key those accounts can't finish signing in until `finuance admin remove-second-factor -email=…` is run for each, so keep the key's backup with the controller key's. |
 
 ### Back up the controller key
 

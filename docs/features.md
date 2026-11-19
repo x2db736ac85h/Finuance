@@ -31,6 +31,7 @@ What Finuance does, in detail. The short list is in the [README](../README.md); 
 - **Get a digest**: a short daily or weekly summary written in the background (budgets and goals that need attention, payments due, changes worth making), behind the bell, with its proposals waiting for you.
 - **Read the advice library**: short articles your admin publishes; the assistant uses them for general money questions and names them in its answer.
 - **Script it**: personal access tokens (read only, or read and write) and `fin`, a command line for accounts, transactions, imports, the overview and the assistant, with table, CSV or JSON output ([docs/cli.md](cli.md)).
+- **Two-step sign-in.** Settings → Security adds a second step after the password: a six-digit code from any authenticator app (set up by scanning a QR code), with ten recovery codes for a lost phone. An instance can require it of its administrators.
 - **See what happened in your account.** Settings → Activity lists sign-ins (failed ones too), password changes, revoked sessions, imports, deletions, exports and applied assistant proposals, with the address and browser of each, for a year.
 
 ## Key concepts
