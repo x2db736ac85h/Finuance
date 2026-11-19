@@ -43,7 +43,7 @@ env:
   # renovate: datasource=go depName=github.com/anchore/syft
   SYFT_VERSION: v1.54.1
   # renovate: datasource=go depName=github.com/mikefarah/yq/v4
-  YQ_VERSION: v4.54.1
+  YQ_VERSION: v4.54.3
   # the identity that signs releases: this workflow, run for a version tag
   SIGNER: ^https://github\.com/x2db736ac85h/Finuance/\.github/workflows/release\.yml@refs/tags/v[0-9]
 
