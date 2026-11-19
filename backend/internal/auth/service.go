@@ -67,6 +67,9 @@ type User struct {
 	MustChangePassword bool
 	Limits             instance.Limits
 	Disabled           bool // an administrator disabled the account (background work skips it)
+	// SecondFactor: two-step sign-in is on for the account (set when a session is resolved or the
+	// second step completes).
+	SecondFactor bool
 }
 
 func userOf(u db.User) User {

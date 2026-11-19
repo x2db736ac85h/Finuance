@@ -304,3 +304,28 @@ func (q *Queries) UseRecoveryCode(ctx context.Context, arg UseRecoveryCodeParams
 	}
 	return result.RowsAffected(), nil
 }
+
+const usersWithSecondFactor = `-- name: UsersWithSecondFactor :many
+SELECT user_id FROM user_second_factors WHERE confirmed_at IS NOT NULL AND user_id = ANY($1::uuid[])
+`
+
+// Which of the given users have two-step sign-in on (the administration's user list).
+func (q *Queries) UsersWithSecondFactor(ctx context.Context, userIds []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, usersWithSecondFactor, userIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var user_id uuid.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

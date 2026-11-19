@@ -45,6 +45,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
+	"github.com/x2db736ac85h/finuance/backend/internal/secret"
 	"github.com/x2db736ac85h/finuance/backend/internal/sharing"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
@@ -106,8 +107,12 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	}
 	st := store.New(tdb.App)
 	clk := &fakeClock{t: time.Now().UTC()}
+	var box *secret.Box // two-step sign-in needs the instance key (ADR 0040)
+	if len(cfg.InstanceKey) > 0 {
+		box, _ = secret.New(cfg.InstanceKey)
+	}
 	svc := auth.New(st, clk, auth.Config{Params: auth.Params{MemoryKiB: 8 * 1024, Time: 1, Threads: 1},
-		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: cfg.AllowSignup})
+		SessionTTL: cfg.SessionTTL, SessionIdleTTL: cfg.SessionIdleTTL, AllowSignup: cfg.AllowSignup, Box: box, Issuer: "Finuance test"})
 	led := ledger.New(st, platform.SystemClock{})
 	adm := admin.New(st, svc, clk, instance.Bounds{MaxUploadBytes: cfg.MaxUploadBytes, AssistantPerHour: int64(cfg.AIRatePerHour),
 		AssistantTokensPerDay: cfg.AITokensPerDay})
@@ -650,6 +655,20 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		t.Fatal(err)
 	}
 	if err := notify.New(st, platform.SystemClock{}).Send(ctx, u, notify.FriendAdded, map[string]string{"name": "Bo"}); err != nil {
+		t.Fatal(err)
+	}
+	// two-step sign-in: the factor, a recovery code and a pending challenge (ADR 0040)
+	if err := st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		hash := func(tag string) []byte { h := sha256.Sum256(append([]byte(tag), u[:]...)); return h[:] }
+		now := time.Now()
+		if err := q.StartSecondFactor(ctx, db.StartSecondFactorParams{UserID: u, SecretSealed: bytes.Repeat([]byte{1}, 64), Now: now}); err != nil {
+			return err
+		}
+		if err := q.CreateRecoveryCode(ctx, db.CreateRecoveryCodeParams{CodeHash: hash("recovery"), UserID: u, Now: now}); err != nil {
+			return err
+		}
+		return q.CreateLoginChallenge(ctx, db.CreateLoginChallengeParams{TokenHash: hash("challenge"), UserID: u, Now: now, ExpiresAt: now.Add(time.Minute)})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	// a personal access token (access_tokens, ADR 0036)

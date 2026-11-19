@@ -68,7 +68,9 @@ paths:
       summary: Sign in
       description: |
         A wrong password and an unknown email give the same `401` in the same time. Every login starts
-        a new session; a session cookie sent with the request is revoked (rotation).
+        a new session; a session cookie sent with the request is revoked (rotation). An account with
+        two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+        answers it (ADR 0040).
       tags: [auth]
       security: []
       requestBody:
@@ -77,6 +79,42 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Signed in; the session cookie is set.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetSessionCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "202":
+          description: The password was right and the account uses two-step sign-in; no session yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecondStepChallenge"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/login/second-step:
+    post:
+      operationId: loginSecondStep
+      summary: Finish signing in with a code
+      description: |
+        Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+        unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+        with a wrong code, the answer is `401` and signing in starts again with the password.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecondStepRequest"
       responses:
         "200":
           description: Signed in; the session cookie is set.
@@ -204,6 +242,106 @@ paths:
           headers:
             Set-Cookie:
               $ref: "#/components/headers/SetSessionCookie"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/second-factor:
+    get:
+      operationId: getSecondFactor
+      summary: Two-step sign-in of this account
+      tags: [me]
+      responses:
+        "200":
+          description: Whether it is on, and how many recovery codes are left.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecondFactor"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: startSecondFactor
+      summary: Start setting up two-step sign-in
+      description: |
+        Returns a new secret for an authenticator app. Nothing changes for signing in until a code
+        from the app confirms it (`/me/second-factor/confirm`); starting again replaces a secret that
+        was never confirmed. Session only, never with an access token; not for demo accounts.
+      tags: [me]
+      responses:
+        "200":
+          description: The secret, shown this once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecondFactorEnrolment"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/second-factor/confirm:
+    post:
+      operationId: confirmSecondFactor
+      summary: Switch two-step sign-in on
+      description: |
+        Needs the current code from the authenticator app. From then on signing in asks for a code.
+        The answer holds ten recovery codes, shown this once. The account's other sessions end.
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecondFactorCode"
+      responses:
+        "200":
+          description: On; the recovery codes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryCodes"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/second-factor/recovery-codes:
+    post:
+      operationId: newRecoveryCodes
+      summary: Replace the recovery codes
+      description: Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecondFactorCode"
+      responses:
+        "200":
+          description: Ten new codes, shown this once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryCodes"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/second-factor/disable:
+    post:
+      operationId: disableSecondFactor
+      summary: Switch two-step sign-in off
+      description: Needs the password and a code (from the app, or a recovery code).
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisableSecondFactorRequest"
+      responses:
+        "204":
+          description: Off; signing in needs the password only.
         "429":
           $ref: "#/components/responses/TooManyRequests"
         default:
@@ -2754,6 +2892,22 @@ paths:
                 $ref: "#/components/schemas/RevokedSessions"
         default:
           $ref: "#/components/responses/Problem"
+  /admin/users/{id}/second-factor:
+    parameters:
+      - $ref: "#/components/parameters/AdminUserId"
+    delete:
+      operationId: adminRemoveSecondFactor
+      summary: Remove an account's two-step sign-in
+      description: |
+        For someone who lost their authenticator app and their recovery codes. The account signs in
+        with its password alone until its owner sets two-step sign-in up again. Both activity logs
+        record it. Not for the administrator's own account (use Settings → Security).
+      tags: [admin]
+      responses:
+        "204":
+          description: Removed.
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/settings:
     get:
       operationId: adminGetSettings
@@ -3456,13 +3610,19 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, email, displayName, isDemo, createdAt, isAdmin, mustChangePassword, limits]
+      required: [id, email, displayName, isDemo, createdAt, isAdmin, mustChangePassword, secondFactor, secondFactorRequired, limits]
       properties:
         isAdmin:
           type: boolean
         mustChangePassword:
           type: boolean
           description: Signed in with a one-time password; every route but `/me`, `/me/password` and sign-out answers `403 password_change_required` until it is changed.
+        secondFactor:
+          type: boolean
+          description: Two-step sign-in is on for this account.
+        secondFactorRequired:
+          type: boolean
+          description: An administrator on an instance that requires two-step sign-in for administrators, without having set it up; the `/admin` routes answer `403 second_factor_required` until they do.
         limits:
           $ref: "#/components/schemas/EffectiveLimits"
         id:
@@ -3479,6 +3639,93 @@ components:
         createdAt:
           type: string
           format: date-time
+    SecondStepChallenge:
+      type: object
+      additionalProperties: false
+      required: [challenge, expiresAt]
+      properties:
+        challenge:
+          type: string
+          description: A random token for this browser; send it back with the code. It is not a session.
+        expiresAt:
+          type: string
+          format: date-time
+    SecondStepRequest:
+      type: object
+      additionalProperties: false
+      required: [challenge, code]
+      properties:
+        challenge:
+          type: string
+          minLength: 1
+          maxLength: 100
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: Six digits from the authenticator app, or a recovery code (`abcde-fghij`); spaces and hyphens are ignored.
+    SecondFactor:
+      type: object
+      additionalProperties: false
+      required: [enabled, available, recoveryCodes, requiredForAdmins]
+      properties:
+        enabled:
+          type: boolean
+        available:
+          type: boolean
+          description: False on an instance without an instance key and for demo accounts; two-step sign-in can't be set up then.
+        confirmedAt:
+          type: string
+          format: date-time
+        recoveryCodes:
+          type: integer
+          format: int32
+          description: Unused recovery codes.
+        requiredForAdmins:
+          type: boolean
+          description: The instance requires two-step sign-in for administrators.
+    SecondFactorEnrolment:
+      type: object
+      additionalProperties: false
+      required: [secret, uri]
+      properties:
+        secret:
+          type: string
+          description: The secret in base32, to type into an authenticator app.
+        uri:
+          type: string
+          description: The same as an `otpauth://` address, for a QR code.
+    SecondFactorCode:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+    RecoveryCodes:
+      type: object
+      additionalProperties: false
+      required: [recoveryCodes]
+      properties:
+        recoveryCodes:
+          type: array
+          items:
+            type: string
+    DisableSecondFactorRequest:
+      type: object
+      additionalProperties: false
+      required: [password, code]
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
     SignupRequest:
       type: object
       additionalProperties: false
@@ -3559,6 +3806,11 @@ components:
             - auth.session_revoked
             - auth.token_created
             - auth.token_revoked
+            - auth.second_factor_enabled
+            - auth.second_factor_disabled
+            - auth.second_step_failed
+            - auth.recovery_code_used
+            - auth.recovery_codes_replaced
             - import.committed
             - import.deleted
             - account.deleted
@@ -3584,6 +3836,7 @@ components:
             - admin.advice_changed
             - admin.advice_deleted
             - admin.assistant_changed
+            - admin.second_factor_removed
             - transaction.added
             - transaction.edited
             - transaction.deleted
@@ -7299,6 +7552,7 @@ components:
         - migration_running
         - limit_reached
         - password_change_required
+        - second_factor_required
         - account_disabled
         - last_admin
         - contrast_failed
@@ -7496,6 +7750,8 @@ components:
           $ref: "#/components/schemas/LimitOverrides"
         assistant:
           $ref: "#/components/schemas/InstanceAssistant"
+        security:
+          $ref: "#/components/schemas/InstanceSecurity"
         updatedAt:
           type: string
           format: date-time
@@ -7815,6 +8071,17 @@ components:
           type: string
           format: date-time
           description: When the server unloads it if nothing uses it (Ollama).
+    InstanceSecurity:
+      type: object
+      additionalProperties: false
+      description: The instance's sign-in rules; left out of a PUT, the stored ones stay.
+      properties:
+        adminsNeedSecondFactor:
+          type: boolean
+          description: |
+            Administrators must use two-step sign-in: one who has not set it up can sign in and use
+            their own data, but the `/admin` routes answer `403 second_factor_required`. Only an
+            administrator who has set it up can switch this on.
     InstanceAssistant:
       type: object
       additionalProperties: false
@@ -7961,7 +8228,7 @@ components:
     AdminUser:
       type: object
       additionalProperties: false
-      required: [id, email, displayName, isDemo, isAdmin, disabled, mustChangePassword, createdAt, limits, usage]
+      required: [id, email, displayName, isDemo, isAdmin, disabled, mustChangePassword, secondFactor, createdAt, limits, usage]
       properties:
         id:
           type: string
@@ -7978,6 +8245,9 @@ components:
           type: boolean
         mustChangePassword:
           type: boolean
+        secondFactor:
+          type: boolean
+          description: Two-step sign-in is on.
         createdAt:
           type: string
           format: date-time

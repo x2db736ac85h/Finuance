@@ -367,7 +367,9 @@ func (s *Service) CompleteLogin(ctx context.Context, challenge, code, previousTo
 	if !good {
 		return User{}, "", false, &FailedSecondStepError{UserID: userID}
 	}
-	return userOf(dbu), token, usedRecovery, nil
+	u = userOf(dbu)
+	u.SecondFactor = true
+	return u, token, usedRecovery, nil
 }
 
 // ChallengeUser names the user a live challenge belongs to without counting an attempt, for the

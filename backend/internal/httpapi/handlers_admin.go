@@ -45,7 +45,7 @@ func limitsIn(l gen.LimitOverrides) instance.Limits {
 
 func adminUserDTO(u admin.User) gen.AdminUser {
 	return gen.AdminUser{Id: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, IsAdmin: u.IsAdmin,
-		Disabled: u.Disabled, MustChangePassword: u.MustChangePassword, CreatedAt: u.CreatedAt, LastLoginAt: u.LastLoginAt,
+		Disabled: u.Disabled, MustChangePassword: u.MustChangePassword, SecondFactor: u.SecondFactor, CreatedAt: u.CreatedAt, LastLoginAt: u.LastLoginAt,
 		Limits: limitsDTO(u.Limits), Usage: gen.UserUsage{Accounts: u.Usage.Accounts, Transactions: u.Usage.Transactions,
 			Imports: u.Usage.Imports, StoredBytes: u.Usage.StoredBytes, Chats: u.Usage.Chats, LastActivity: u.Usage.LastActivity,
 			AssistantRuns: u.Usage.AssistantRuns, AssistantTokens: u.Usage.AssistantTokens}}
@@ -207,7 +207,8 @@ func (a *api) AdminPutSettings(ctx context.Context, req gen.AdminPutSettingsRequ
 		Features  any                    `json:"features"`
 		Limits    gen.LimitOverrides     `json:"limits"`
 		Assistant *gen.InstanceAssistant `json:"assistant,omitempty"` // left out: the stored one stays
-	}{body.Defaults, body.Features, body.Limits, body.Assistant})
+		Security  *gen.InstanceSecurity  `json:"security,omitempty"`  // the same
+	}{body.Defaults, body.Features, body.Limits, body.Assistant, body.Security})
 	s, v, err := a.admin.PutSettings(ctx, identity(ctx).User.ID, raw, version)
 	if err != nil {
 		return nil, err

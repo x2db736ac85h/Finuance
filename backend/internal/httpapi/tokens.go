@@ -25,7 +25,7 @@ const (
 )
 
 // tokenNeverPrefixes are paths no token reaches, whatever its scope.
-var tokenNeverPrefixes = []string{"/api/v1/auth/", "/api/v1/admin/", "/api/v1/me/password", "/api/v1/me/sessions", "/api/v1/me/tokens"}
+var tokenNeverPrefixes = []string{"/api/v1/auth/", "/api/v1/admin/", "/api/v1/me/password", "/api/v1/me/sessions", "/api/v1/me/tokens", "/api/v1/me/second-factor"}
 
 // tokenReadPosts are the POST routes that only read (they take a query in the body).
 var tokenReadPosts = map[string]bool{

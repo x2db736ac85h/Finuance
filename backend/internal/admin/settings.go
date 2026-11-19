@@ -98,13 +98,26 @@ func (s *Service) PutSettings(ctx context.Context, actor uuid.UUID, raw json.Raw
 		if err := q.EnsureInstanceSettings(ctx); err != nil {
 			return err
 		}
-		if set.Assistant == nil { // saved without the assistant part (Defaults and features): keep it
-			row, err := q.GetInstanceSettings(ctx)
+		row, err := q.GetInstanceSettings(ctx)
+		if err != nil {
+			return err
+		}
+		cur, _ := instance.ParseSettings(row.Doc) // a stored document that no longer parses counts as empty
+		if set.Assistant == nil {                 // saved without the assistant part (Defaults and features): keep it
+			set.Assistant = cur.Assistant
+		}
+		if set.Security == nil { // the same for the sign-in rules
+			set.Security = cur.Security
+		}
+		// Only an administrator who uses two-step sign-in can require it of administrators: nobody
+		// switches it on and finds every administrator, themselves included, locked out (ADR 0040).
+		if set.AdminsNeedSecondFactor() && !cur.AdminsNeedSecondFactor() {
+			on, err := q.HasConfirmedSecondFactor(ctx, actor)
 			if err != nil {
 				return err
 			}
-			if cur, err := instance.ParseSettings(row.Doc); err == nil {
-				set.Assistant = cur.Assistant
+			if !on {
+				return invalid("security.adminsNeedSecondFactor", "set up two-step sign-in for your own account first (Settings → Security)")
 			}
 		}
 		doc, _ := json.Marshal(set) // plain data; it can't fail

@@ -20,6 +20,7 @@ func (a *api) UpdateMe(ctx context.Context, req gen.UpdateMeRequestObject) (gen.
 	if err != nil {
 		return nil, err
 	}
+	u.SecondFactor = identity(ctx).User.SecondFactor // the service returns the account's row only
 	return gen.UpdateMe200JSONResponse(a.userDTO(ctx, u)), nil
 }
 

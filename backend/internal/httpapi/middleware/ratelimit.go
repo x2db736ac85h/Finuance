@@ -17,12 +17,13 @@ type Policy struct {
 
 // Rate limits from docs/PLAN.md §6.1.
 var (
-	LoginPerIP         = Policy{Events: 30, Per: time.Minute} // login and signup, per client IP
-	LoginPerIPEmail    = Policy{Events: 10, Per: time.Minute} // login and signup, per (IP, email)
-	PasswordPerUser    = Policy{Events: 10, Per: time.Minute} // password checks of a signed-in user
-	UploadPerUser      = Policy{Events: 30, Per: time.Minute} // uploads (Phase 6)
-	DemoPerIP          = Policy{Events: 5, Per: time.Hour}    // new demo users, per client IP (PLAN 19.1)
-	FriendCodesPerHour = Policy{Events: 10, Per: time.Hour}   // friend codes entered, per user and per IP (ADR 0027)
+	LoginPerIP         = Policy{Events: 30, Per: time.Minute}      // login and signup, per client IP
+	LoginPerIPEmail    = Policy{Events: 10, Per: time.Minute}      // login and signup, per (IP, email)
+	PasswordPerUser    = Policy{Events: 10, Per: time.Minute}      // password checks of a signed-in user
+	SecondStepPerUser  = Policy{Events: 10, Per: 10 * time.Minute} // codes at the second step of signing in (ADR 0040)
+	UploadPerUser      = Policy{Events: 30, Per: time.Minute}      // uploads (Phase 6)
+	DemoPerIP          = Policy{Events: 5, Per: time.Hour}         // new demo users, per client IP (PLAN 19.1)
+	FriendCodesPerHour = Policy{Events: 10, Per: time.Hour}        // friend codes entered, per user and per IP (ADR 0027)
 )
 
 // DefaultMaxKeys caps the buckets one Limiter keeps, so a flood of distinct IPs or emails can't

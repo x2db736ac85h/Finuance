@@ -41,6 +41,7 @@ const adminUser = (over: Partial<Schemas['AdminUser']> = {}): Schemas['AdminUser
   isAdmin: false,
   disabled: false,
   mustChangePassword: false,
+  secondFactor: false,
   createdAt: '2026-11-01T10:00:00Z',
   limits: {},
   usage,

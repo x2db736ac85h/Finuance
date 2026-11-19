@@ -25,8 +25,10 @@ var publicRoutes = map[string]bool{
 	"GET /api/v1/meta":         true,
 	"POST /api/v1/auth/signup": true,
 	"POST /api/v1/auth/login":  true,
-	"POST /api/v1/auth/logout": true,
-	"POST /api/v1/auth/demo":   true, // answers 404 outside demo mode
+	// the second step of signing in: the challenge it carries stands in for the session (ADR 0040)
+	"POST /api/v1/auth/login/second-step": true,
+	"POST /api/v1/auth/logout":            true,
+	"POST /api/v1/auth/demo":              true, // answers 404 outside demo mode
 }
 
 // requestAuth is what the session layer knows about a request: the raw cookie (login rotates it,
@@ -187,6 +189,17 @@ func gate(ctx context.Context, pattern string, u auth.User, adm *admin.Service) 
 	}
 	if adm == nil {
 		return nil
+	}
+	// An instance may require two-step sign-in of its administrators: one who hasn't set it up
+	// keeps their own data and Settings → Security, but administers nothing until they do (ADR 0040).
+	if strings.HasPrefix(path, "/api/v1/admin/") && !u.SecondFactor {
+		s, _, err := adm.Settings(ctx)
+		if err != nil {
+			return err
+		}
+		if s.AdminsNeedSecondFactor() {
+			return fmt.Errorf("set up two-step sign-in first (Settings → Security): %w", platform.ErrSecondFactorRequired)
+		}
 	}
 	for _, fr := range featureRoutes {
 		if strings.HasPrefix(path, fr.prefix) {

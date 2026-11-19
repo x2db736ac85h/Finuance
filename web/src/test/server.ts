@@ -91,6 +91,8 @@ export const freshDb = (): Db => ({
     createdAt: '2026-10-01T10:00:00Z',
     isAdmin: false,
     mustChangePassword: false,
+    secondFactor: false,
+    secondFactorRequired: false,
     limits: {
       maxUploadBytes: 20 << 20,
       importsPerDay: 0,

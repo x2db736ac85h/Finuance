@@ -22,6 +22,20 @@ type Settings struct {
 	Limits   Limits   `json:"limits"`
 	// Assistant is nil in a document saved without it (the stored one stays).
 	Assistant *Assistant `json:"assistant,omitempty"`
+	// Security is nil in a document saved without it (the stored one stays).
+	Security *Security `json:"security,omitempty"`
+}
+
+// Security holds the instance's sign-in rules.
+type Security struct {
+	// AdminsNeedSecondFactor: administrators must use two-step sign-in; one who hasn't set it up
+	// can sign in, but the administration routes refuse them until they do (ADR 0040).
+	AdminsNeedSecondFactor bool `json:"adminsNeedSecondFactor,omitempty"`
+}
+
+// AdminsNeedSecondFactor reports whether administrators must use two-step sign-in.
+func (s Settings) AdminsNeedSecondFactor() bool {
+	return s.Security != nil && s.Security.AdminsNeedSecondFactor
 }
 
 // MaxInstructions is the longest addition to the assistant's system prompt (ADR 0034).

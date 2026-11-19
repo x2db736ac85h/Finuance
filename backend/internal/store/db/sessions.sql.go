@@ -109,7 +109,8 @@ func (q *Queries) DeleteUserSessions(ctx context.Context, arg DeleteUserSessions
 const getSession = `-- name: GetSession :one
 SELECT s.token_hash, s.user_id, s.created_at, s.last_seen_at, s.expires_at,
        u.email, u.display_name, u.is_demo, u.created_at AS user_created_at,
-       u.is_admin, u.must_change_password, u.limits
+       u.is_admin, u.must_change_password, u.limits,
+       EXISTS (SELECT 1 FROM user_second_factors f WHERE f.user_id = u.id AND f.confirmed_at IS NOT NULL) AS second_factor
 FROM sessions s
 JOIN users u ON u.id = s.user_id
 WHERE s.token_hash = $1 AND s.expires_at > $2 AND s.last_seen_at > $3
@@ -135,6 +136,7 @@ type GetSessionRow struct {
 	IsAdmin            bool
 	MustChangePassword bool
 	Limits             []byte
+	SecondFactor       bool
 }
 
 // A live session and its user: not past the absolute expiry, seen after idle_cutoff, and the
@@ -155,6 +157,7 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (GetSess
 		&i.IsAdmin,
 		&i.MustChangePassword,
 		&i.Limits,
+		&i.SecondFactor,
 	)
 	return i, err
 }

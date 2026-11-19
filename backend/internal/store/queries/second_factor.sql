@@ -63,6 +63,10 @@ RETURNING user_id, attempts;
 -- name: DeleteExpiredLoginChallenges :execrows
 DELETE FROM login_challenges WHERE expires_at <= @now;
 
+-- name: UsersWithSecondFactor :many
+-- Which of the given users have two-step sign-in on (the administration's user list).
+SELECT user_id FROM user_second_factors WHERE confirmed_at IS NOT NULL AND user_id = ANY(@user_ids::uuid[]);
+
 -- name: ListAdminsWithoutSecondFactor :many
 -- Administrators (not disabled) without a confirmed second factor; for the settings page's warning.
 SELECT u.id, u.email FROM users u

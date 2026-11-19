@@ -599,6 +599,8 @@ type Querier interface {
 	UserActivityByDay(ctx context.Context, arg UserActivityByDayParams) ([]UserActivityByDayRow, error)
 	// Run under the user's own RLS context: counts only.
 	UserUsage(ctx context.Context, arg UserUsageParams) (UserUsageRow, error)
+	// Which of the given users have two-step sign-in on (the administration's user list).
+	UsersWithSecondFactor(ctx context.Context, userIds []uuid.UUID) ([]uuid.UUID, error)
 }
 
 var _ Querier = (*Queries)(nil)
