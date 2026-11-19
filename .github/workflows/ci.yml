@@ -82,6 +82,26 @@ jobs:
           backend/bin/actionlint
           backend/bin/zizmor --format github .github/workflows
 
+  dependency-review:
+    name: dependency review (vulnerabilities, licences)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # What a pull request adds or updates: a known vulnerability of moderate or higher, or a
+      # licence outside this list, fails (PLAN task 22.6). The list is the plan's plus the licences
+      # already in use that the maintainer accepted on 2026-11-19; extend it only with their OK.
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: moderate
+          allow-licenses: >-
+            MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, 0BSD, Unlicense, CC0-1.0, PostgreSQL,
+            BlueOak-1.0.0, MIT-0, Python-2.0, BSD-2-Clause-Views, CC-BY-4.0, CC-BY-SA-4.0,
+            LicenseRef-scancode-dco-1.1, LicenseRef-scancode-google-patent-license-golang
+
   db:
     name: db bootstrap (Compose)
     runs-on: ubuntu-24.04

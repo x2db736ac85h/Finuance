@@ -1,0 +1,64 @@
+# CodeQL (PLAN task 22.6): Go, JavaScript/TypeScript, the workflows themselves and the Python
+# helpers, on pull requests, on pushes to main and weekly. Every alert is triaged: fixed, or
+# dismissed with a reason that docs/security-scan.md repeats. Generated code, the legacy single-file
+# app and test data are left out.
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 5 * * 2" # Tuesdays 05:23 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: codeql (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # the results in code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { language: go, build-mode: manual }
+          - { language: javascript-typescript, build-mode: none }
+          - { language: actions, build-mode: none }
+          - { language: python, build-mode: none }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config: |
+            paths-ignore:
+              - legacy
+              - testdata
+              - backend/internal/httpapi/gen
+              - backend/internal/client/gen
+              - backend/internal/store/db
+              - web/src/api/schema.d.ts
+      # The Go module is in backend/, where CodeQL's autobuild does not look.
+      - if: matrix.language == 'go'
+        working-directory: backend
+        run: go build ./...
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
