@@ -103,7 +103,7 @@ The Phase 18 reference environment (ADR 0022): single-node k3s on a personal mac
 
 | Tool | Version | Installed with |
 |---|---|---|
-| helm | v3.18.4 | `go install helm.sh/helm/v3/cmd/helm@v3.18.4` |
+| helm | v3.22.1 | `go install helm.sh/helm/v3/cmd/helm@v3.22.1` |
 | kubeseal | v0.40.0 | `go install github.com/bitnami/sealed-secrets/cmd/kubeseal@v0.40.0` |
 | yq (mikefarah) | v4.54.1 | `go install github.com/mikefarah/yq/v4@v4.54.1` |
 | kubeconform | v0.7.0 | `go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0` |
@@ -121,7 +121,7 @@ The commands use `pacman` (Arch); other distributions have the same packages und
 The same versions as CI (`.github/workflows/ci.yml`), so `make helm-lint` behaves the same locally. Distribution packages may ship Helm 4 or a different `yq`, so they are not used.
 
 ```sh
-go install helm.sh/helm/v3/cmd/helm@v3.18.4
+go install helm.sh/helm/v3/cmd/helm@v3.22.1
 go install github.com/bitnami/sealed-secrets/cmd/kubeseal@v0.40.0
 go install github.com/mikefarah/yq/v4@v4.54.1
 go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
@@ -362,7 +362,7 @@ Three Argo CD apps in the namespace `monitoring`, none of them exposed (port-for
 
 | App | Wave | What |
 |---|---|---|
-| `tempo` | −6 | Tempo 2.9.0 from `deploy/k8s/tempo` (the Helm chart is deprecated): OTLP/HTTP on 4318 only, traces kept 72 h on a 5 Gi volume, read-only as uid 10001; its NetworkPolicy admits 4318 from Finuance's api and worker and 3200 from Grafana |
+| `tempo` | −6 | Tempo 2.9.5 from `deploy/k8s/tempo` (the Helm chart is deprecated): OTLP/HTTP on 4318 only, traces kept 72 h on a 5 Gi volume, read-only as uid 10001; its NetworkPolicy admits 4318 from Finuance's api and worker and 3200 from Grafana |
 | `kube-prometheus-stack` | −4 | chart 92.16.1 with `homelab/monitoring-values.yaml`: Prometheus (7 days or 8 GB on a 10 Gi volume), Alertmanager, Grafana (dashboard sidecar, Tempo data source), kube-state-metrics, node-exporter; k3s's built-in etcd/scheduler/controller-manager/proxy aren't scraped (nothing separate to scrape). After Sealed Secrets, because it also syncs Grafana's sealed admin login |
 | `finuance-observability` | 1 | `deploy/k8s/observability` (the six dashboards, SLO and alert rules, the e-mail receiver) with `homelab/observability-values.yaml` and the overlay's addresses (`$env/homelab/observability-values.yaml`, template `observability-values.example.yaml`), plus the sealed SMTP password |
 
@@ -781,6 +781,50 @@ Symptoms: api pods not ready (`/readyz` 503), the app shows errors, `finuance-db
 
 The worker runs commits: `kubectl -n finuance logs deploy/finuance-worker`, and the `finuance_jobs_total` / `finuance_imports_total` metrics on its port 9090. A failed job is retried, then the import is marked failed and can be retried from the UI (*Try again*).
 
+## Upgrading PostgreSQL (minor release)
+
+A minor release (18.6 → 18.7) replaces the binaries only: no dump and no `pg_upgrade`. The version is
+written in five places that move together: `deploy/compose/compose.yaml` and `compose.prod.yaml`
+(by digest), `backend/testutil/postgres.go` (the same reference, for the tests), and
+`cluster.imageName` in `deploy/k8s/db/values.yaml` with `appVersion` in its `Chart.yaml`.
+`make test-integration` (the RLS suite included) runs on the new version before the merge.
+
+1. **Read the release notes' "Migration" section.** Some minors ask for a `REINDEX` of certain kinds
+   of index, or for a new full backup. Steps 4 and 5 are those.
+2. **Take an [on-demand backup](#on-demand-backup).**
+3. **Merge, then sync `finuance-db` by hand** (it never syncs by itself). CloudNativePG replaces the
+   replica first, then switches the primary over (`primaryUpdateStrategy: unsupervised`): writes
+   pause for a few seconds and the api reconnects. Wait until `kubectl cnpg status finuance-db -n
+   finuance` shows both instances healthy, and check the version:
+
+   ```sh
+   kubectl cnpg psql finuance-db -n finuance -- -d finuance -XAtc 'SELECT version()'
+   ```
+
+4. **Reindex**, when the notes ask for it. At this database's size the whole database is quickest
+   to get right, and `CONCURRENTLY` keeps it writable (system catalogs are skipped, which the notes
+   so far never needed):
+
+   ```sh
+   kubectl cnpg psql finuance-db -n finuance -- -d finuance -c 'REINDEX DATABASE CONCURRENTLY finuance'
+   ```
+
+5. **Take a new base backup** (on-demand, as in step 2) so that the next recovery starts from the
+   new version and the rebuilt indexes.
+
+Compose (`compose.prod.yaml`): set the new image (a release of Finuance carries it), then
+`docker compose --env-file .env -f compose.prod.yaml up -d db` recreates the database container
+on the same volume; the reindex is the same statement through
+`docker compose --env-file .env -f compose.prod.yaml exec db psql -U postgres -d finuance -c '…'`.
+
+**18.7 (2026-11-12) asks for a reindex.** Its fixes for index corruption cover GIN indexes (the
+three search indexes are GIN: `tx_user_search_trgm_idx`, `tx_search_trgm_idx`,
+`advice_articles_search_idx`), B-tree indexes on `char(n)` columns (the currency columns are
+`char(3)`) and indexes that a `VACUUM` with several index passes could leave inconsistent. Run step
+4 after the upgrade. Its note on incremental backups does not apply: the Barman Cloud plugin takes
+full base backups. 18.7 also tightens row-level security (`ON CONFLICT` target rows, `DROP OWNED BY`,
+leaky quals), which the RLS suite checks on it.
+
 ## PostgreSQL major upgrade
 
 CloudNativePG (≥ 1.26) upgrades in place when `cluster.imageName` moves to a newer major (for example `…/postgresql:19.x-standard-trixie`). It runs `pg_upgrade` offline: **the database is down for the duration** (minutes at this size).
@@ -796,3 +840,5 @@ If the in-place upgrade fails, CNPG keeps the old data directory and the cluster
 ## Upgrading the operators
 
 The CloudNativePG, Barman Cloud plugin and Sealed Secrets charts are pinned in `deploy/k8s/argocd/apps/`. Renovate proposes bumps. Read the release notes, and for CloudNativePG check that the plugin version supports the operator version. Merging a bump upgrades them through Argo CD. The database pods restart with the new instance manager, one at a time (`primaryUpdateStrategy: unsupervised`), with a switchover for the primary.
+
+kube-prometheus-stack (`deploy/k8s/argocd/apps/kube-prometheus-stack.yaml`) moves a major version with each Prometheus Operator release. Read the chart's `UPGRADE.md` for the target. Its commands for the CRDs are not needed here: Argo CD applies the CRDs that come with the chart, server-side. Before the merge, render the old and the new version with `deploy/environments/homelab/monitoring-values.yaml` (`helm template … --kube-version <the cluster's> --include-crds`), compare the two, and check that every image is still under a prefix that the admission policy allows for `monitoring` (`deploy/k8s/admission/image-policy.yaml`). Bump `PROM_IMAGE` in `tools/check-observability.sh` to the Prometheus the chart deploys, so that the rule tests run on the same version. After the sync, every pod in `monitoring` is `Running` and the test alert of [13. Monitoring](#13-monitoring-phase-186) still arrives.

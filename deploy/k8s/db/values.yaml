@@ -8,8 +8,8 @@ cluster:
   name: finuance-db
   instances: 2
   # A pinned PostgreSQL image (the `standard` flavour works with backup plugins). Same major and
-  # minor as Compose (postgres:18.6).
-  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  # minor as Compose (postgres:18.7).
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.7-standard-trixie
   storage:
     size: 10Gi
     # Empty: the cluster's default storage class.

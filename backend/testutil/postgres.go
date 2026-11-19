@@ -21,7 +21,7 @@ import (
 )
 
 // PostgresImage must match deploy/compose/compose.yaml.
-const PostgresImage = "postgres:18.6-bookworm"
+const PostgresImage = "postgres:18.7-bookworm@sha256:1757c628698dd1ca67ff7a5fc386bfd91040afc62a45484c346c788b0cbe5402"
 
 const (
 	superPassword = "test-super"

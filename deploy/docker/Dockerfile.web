@@ -4,17 +4,23 @@
 # Build context: deploy/docker/Dockerfile.web.dockerignore (web/ only, without node_modules).
 
 # The app is built once on the build machine's platform; only nginx is per platform.
-FROM --platform=$BUILDPLATFORM node:22.22.0-alpine@sha256:e4bf2a82ad0a4037d28035ae71529873c069b13eb0455466ae0bc13363826e34 AS build
+FROM --platform=$BUILDPLATFORM node:22.23.5-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS build
 WORKDIR /web
 COPY web/ ./
 # A web/dist built on the host is used as is (offline builds, like backend/vendor); otherwise the
-# app is built here. CI checkouts have no dist/, so CI always builds from source.
+# app is built here. CI checkouts have no dist/, so CI always builds from source. npm has skipped a
+# native optional package without an error once (PLAN task 22.14): scripts/check-native.mjs names
+# it, the install runs once more, and the build stops with that name if it is still missing.
 RUN --mount=type=cache,target=/root/.npm \
     if [ -f dist/index.html ]; then echo "using the prebuilt web/dist"; \
-    else npm ci --no-audit --no-fund && npm run build; fi \
+    else npm ci --no-audit --no-fund \
+      && { node scripts/check-native.mjs \
+           || { echo "installing once more"; npm ci --no-audit --no-fund && node scripts/check-native.mjs; }; } \
+      && npm run build; fi \
     && find dist -name '*.map' -delete
 
-FROM nginxinc/nginx-unprivileged:1.30.6-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+# NGINX publishes this image to Docker Hub (nginxinc/), GHCR and ECR; GHCR had 1.30.7 first.
+FROM ghcr.io/nginx/nginx-unprivileged:1.30.7-alpine@sha256:0c53a1f2890c3526bfd201440f0fd3970e5b78f80630f58284aad0d34b5ec7bd
 LABEL org.opencontainers.image.source="https://github.com/x2db736ac85h/Finuance" \
       org.opencontainers.image.title="finuance-web" \
       org.opencontainers.image.licenses="MIT"

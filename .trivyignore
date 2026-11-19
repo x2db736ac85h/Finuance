@@ -1,12 +1,7 @@
-# Accepted vulnerabilities, read by every Trivy scan (CI image job, release). Each entry needs a
-# reason and an expiry (exp:YYYY-MM-DD); after it the scan fails again. This file must be empty at
-# the security gates before the public demo (Phases 17–19; docs/PROGRESS.md, Follow-ups).
-
-# picomatch 4.0.7 (web/package-lock.json, development tools only: vite, vitest, tinyglobby):
-# a denial of service by a crafted glob pattern. No fixed version exists (4.0.7 is the newest
-# release, 2026-11-18). Patterns come from the repository's own configuration, never from a user,
-# and nothing of it ships in the web image (`npm audit --omit=dev` is clean). Accepted by the
-# maintainer on 2026-11-18 until a fix is released; fix it then, do not extend this by default.
-# The second id is the same advisory as npm names it (read by tools/npm-audit.mjs).
-CVE-2026-112366 exp:2026-12-02
-GHSA-fc5q-39xc-vjpf exp:2026-12-02
+# Accepted vulnerabilities, read by every Trivy scan (CI, release) and by tools/npm-audit.mjs for
+# `npm audit`. Each entry needs a reason and an expiry (exp:YYYY-MM-DD); after it the scan fails
+# again. Only a finding without any fix may be listed, and it is fixed as soon as a fix exists
+# (docs/security-scan.md; PLAN task 22.15). The Phase 23 gate requires this file to be empty.
+#
+# Empty since 2026-11-19: its only entry, picomatch 4.0.7 (CVE-2026-112366 / GHSA-fc5q-39xc-vjpf,
+# accepted on 2026-11-18), was withdrawn by the advisory itself on 2026-11-18.

@@ -2,7 +2,7 @@
 
 Every finding of every scan, and what happened to it: fixed, or not exploitable and why. HIGH and
 CRITICAL findings fail the build. A finding is fixed, not ignored; `.trivyignore` holds only what
-cannot be fixed yet, each entry with a reason and an expiry (one entry since 2026-11-18, below). The scans and
+cannot be fixed yet, each entry with a reason and an expiry (empty since 2026-11-19, below). The scans and
 when they run are listed in [THREAT-MODEL.md](THREAT-MODEL.md) §7. Phase 18 adds the OpenVAS /
 Nessus scan of the deployed instance, and the Phase 23 gate repeats everything right before the
 demo goes public.
@@ -68,7 +68,35 @@ release), the package is used by development tools only with patterns from the r
 configuration, and nothing of it is in the web image (`npm audit --omit=dev`: 0). `npm audit` has
 no way to accept one advisory, so `tools/npm-audit.mjs` now applies the same file, with the same
 expiry, to the audit of every dependency. The rule from here on: a finding is fixed, not ignored;
-the entry is removed as soon as a fixed version exists (PLAN task 22.15).
+the entry is removed as soon as a fixed version exists (PLAN task 22.15). **Withdrawn** by the
+advisory itself on 2026-11-18 (GitHub shows `withdrawn_at`); neither Trivy's database nor `npm audit`
+reports it any more, and the entry was removed on 2026-11-19, which left `.trivyignore` empty.
+
+**Scan at the start of Phase 22: 2026-11-19** (PLAN task 22.0), on `main` at `76b7d7a`; both images
+built from it (`make images`), Trivy 0.76.2 with that day's database at every severity, govulncheck,
+`npm audit` in `web/` and `tools/legacy-oracle/`, gitleaks 8.30.1 over the history (297 commits). The
+audit's table of 2026-11-16, row by row, with the newest release on the day:
+
+| Component @ pin on `main` | Finding | Newest on 2026-11-19 | Decision |
+|---|---|---|---|
+| Go 1.27.4 | GO-2026-6859 and GO-2026-6848 … 6858 (1.27.3) | 1.27.4 | **Fixed** 2026-11-17 (pull request 34); govulncheck 0 reachable |
+| `golang.org/x/crypto` 0.58.0 | GO-2026-5932 (`openpgp`, not imported) | 0.59.0 | **Fixed** 2026-11-19: updated; govulncheck reports nothing, not even in required modules |
+| PostgreSQL 18.6 | the 18.7 fixes (policies and `ON CONFLICT`, `DROP OWNED BY` and policies, leaky quals, index corruption) | 18.7 (`postgres:18.7-bookworm`, `ghcr.io/cloudnative-pg/postgresql:18.7-standard-trixie`) | **Fixed** in the tree 2026-11-19 (Compose and the tests by digest; the Go suite with RLS and the de-duplication property test passes on it); the homelab after its manual sync and the reindex (RUNBOOK "Upgrading PostgreSQL (minor release)") |
+| Grafana 13.3.0 (kube-prometheus-stack 92.16.1) | six CVEs fixed in 13.3.1 | chart 93.4.1 (Grafana 13.3.1, Prometheus Operator 0.95.2); the last 92.x still ships 13.3.0 | **Fixed** 2026-11-19: chart 93.4.1. Rendered with the homelab values against 92.16.1: the same resources; besides the versions, the operator's role loses `delete` on pods, node-exporter runs with a stricter security context, the CRDs change (server-side apply); every image is still under a registry prefix the admission policy allows. The rule tests run on promtool 3.16.0, the Prometheus it deploys |
+| Tempo 2.9.0 | GHSA-p4r4-xvrq-gvmc, GHSA-ffqx-q65f-36jf | 2.9.5 (2.10.10, 3.1.1) | **Fixed** 2026-11-19: 2.9.5 by digest, a patch release (dependency fixes; it drops the OpenCensus receiver, which the config does not use) |
+| Helm CLI 3.18.4 (CI, rehearsal) | three moderate advisories | 3.22.1 (4.3.2) | **Fixed** 2026-11-19: 3.22.1, the v3 line, in CI, the rehearsal and the RUNBOOK; `tools/check-helm.sh` matches its new wording of schema errors |
+| Node build image 22.22.0 | five security releases since | 22.23.5 | **Fixed** 2026-11-19: `node:22.23.5-alpine` by digest; the web image builds from source on it |
+| `minimatch` 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 (MEDIUM) | ESLint 10.15.0, typescript-eslint 8.73.0 | **Fixed** 2026-11-19: both updated, `minimatch` 11.0.9, `npm audit` 0 at every severity; `minimatch` 5.1.9 under openapi-typescript is outside the advisory's range (≥ 7.0.0) |
+| `picomatch` 4.0.7 (development tools) | GHSA-fc5q-39xc-vjpf | 4.0.7 | **Gone:** the advisory was withdrawn (above) |
+| nginx 1.30.6 (web image base) | CVE-2026-113425, CVE-2026-121810, CVE-2026-123007, CVE-2026-123633, CVE-2026-123634 (HIGH; nginx 1.30.7 of 2026-11-18), found by CI's image scan on this phase's first pull request at 03:03 UTC, after the scan above | 1.30.7 (`ghcr.io/nginx/nginx-unprivileged:1.30.7-alpine`; Docker Hub did not have it yet) | **Fixed** 2026-11-19: the base from NGINX's GHCR by digest (the same digest as on their ECR); the web image scans with 0 findings at every severity |
+| Trivy 0.76.0 (CI, release) | none | 0.76.2 | **Updated** 2026-11-19 to 0.76.2 (CI, release); a binary checked by checksum instead of the image in task 22.5 |
+
+Nothing new: web image 0 findings; api image only GO-2026-5932; repository only `minimatch` and
+GO-2026-5932, and the misconfigurations documented below (the same files and checks); `npm audit
+--omit=dev` 0; `tools/legacy-oracle` 0; govulncheck 0 reachable; gitleaks no leaks. The cluster's
+CloudNativePG (1.30.1, its Barman Cloud plugin 0.15.1), Sealed Secrets (0.40.0), cert-manager,
+Traefik and Argo CD have no advisory on OSV for the versions running; their updates are routine and
+belong with the machine's maintenance.
 
 ## Summary
 
@@ -76,7 +104,7 @@ the entry is removed as soon as a fixed version exists (PLAN task 22.15).
 |---|---|---|
 | Trivy, api image | 2 findings; 1 fixed by a base image bump | 1 (UNKNOWN, not reachable) |
 | Trivy, web image | 3 findings (MEDIUM / UNKNOWN), no fixed base yet; fixed 2026-10-30 by upgrading zlib and musl in the Dockerfile | 0 |
-| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` (MEDIUM, development tools, 2026-11-02) | deliberate; `minimatch` not reachable, re-checked at every pull request until fixed, required by the Phase 23 gate |
+| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` (MEDIUM, development tools, 2026-11-02) | deliberate; `minimatch` **fixed** 2026-11-19 (ESLint 10.15.0, typescript-eslint 8.73.0) |
 | Trivy config, rendered charts (all severities) | 2 LOW fixed (web uid); 4 kinds LOW/MEDIUM left | all deliberate |
 | `npm audit` (production and all) | 0 | – |
 | govulncheck | 0 reachable (CI; 2026-10-30 locally: 2 new `x/net` module findings, fixed by 0.62.0) | – |
@@ -111,7 +139,7 @@ the entry is removed as soon as a fixed version exists (PLAN task 22.15).
 | `deploy/k8s/tempo/tempo.yaml` (Phase 18.6): KSV-0011 (CPU not limited) | LOW | **Deliberate:** as for the app's pods and RustFS: CPU request set, memory limited; non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicy (OTLP only from the app, queries only from Grafana). |
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** `grafana/tempo` pinned by digest; the admission policy (18.8) requires its digest in `monitoring`. |
 | `deploy/environments/homelab/host/traefik-config.yaml` (Phase 18): KSV-0037 (resource in `kube-system`) | MEDIUM | **Deliberate:** a k3s `HelmChartConfig` for its bundled Traefik; k3s reads it only in `kube-system`. It holds chart values, no workload. |
-| `web/package-lock.json`: CVE-2026-118764 / GHSA-g3hv-75wg-m249 in `minimatch` 10.2.6 and 5.1.9 (new 2026-11-02) | MEDIUM | **Not reachable; re-checked at every pull request until fixed, required by the Phase 23 gate:** development tools only (ESLint, and openapi-typescript's `@redocly/openapi-core`), nothing in the built app (`npm audit --omit=dev`: 0); the denial of service needs crafted glob patterns, and only our own lint and codegen configuration supplies them. The fix (11.0.1) is a major version that ESLint 10 and openapi-typescript 7 don't accept yet; re-check when they release, before the gate's "nothing above LOW". Re-checked 2026-11-03 (Phase 19 PR 1): ESLint 10.14.0 still asks for `minimatch ^10.2.6`, openapi-typescript 7.13.0 is the latest; no upgrade possible yet. |
+| `web/package-lock.json`: CVE-2026-118764 / GHSA-g3hv-75wg-m249 in `minimatch` 10.2.6 and 5.1.9 (new 2026-11-02) | MEDIUM | **Fixed 2026-11-19** (Phase 22): ESLint 10.15.0 and typescript-eslint 8.73.0 require `minimatch` 11, now 11.0.9 throughout; `npm audit` reports 0 at every severity. The 5.1.9 copy under openapi-typescript's `@redocly/openapi-core` stays: the advisory covers ≥ 7.0.0 only. Before that, **not reachable:** development tools only (ESLint, and openapi-typescript's `@redocly/openapi-core`), nothing in the built app (`npm audit --omit=dev`: 0); the denial of service needs crafted glob patterns, and only our own lint and codegen configuration supplies them. The fix (11.0.1) is a major version that ESLint 10 and openapi-typescript 7 don't accept yet; re-check when they release, before the gate's "nothing above LOW". Re-checked 2026-11-03 (Phase 19 PR 1): ESLint 10.14.0 still asks for `minimatch ^10.2.6`, openapi-typescript 7.13.0 is the latest; no upgrade possible yet. |
 
 A local checkout may hold `backend/vendor/` (gitignored, for offline image builds). Trivy finds
 dozens of npm and Python advisories in it: testcontainers' documentation `Pipfile.lock` and
