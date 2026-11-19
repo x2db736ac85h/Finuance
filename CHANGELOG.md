@@ -15,6 +15,12 @@ notes of their version.
   policy-controller with a policy that admits Finuance's images only with the release workflow's
   signature (ADR 0039). It applies to namespaces that carry the label; the deployment rehearsal
   proves both directions.
+- Telemetry carries less: a trace id sent by a client is not continued (it becomes a link) and
+  baggage is not propagated; spans leave without the caller's address, the user agent, query
+  strings and the text of errors; a PostgreSQL error is logged as its SQLSTATE and the names of the
+  constraint and table, never its message or detail; the database logs statements without their
+  bound values; the web server's access log names the path without its query string, and one
+  request id covers the web server and the API.
 
 ## [0.4.2] - 2026-11-19
 

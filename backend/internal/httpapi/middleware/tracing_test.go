@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -89,6 +90,49 @@ func TestClientTraceContextIsNotTrusted(t *testing.T) {
 	for _, kv := range s.Attributes() {
 		if v := kv.Value.String(); strings.Contains(v, "someone@example.com") || strings.Contains(v, "secret-state") {
 			t.Errorf("span attribute %s carries what the client sent: %q", kv.Key, v)
+		}
+	}
+}
+
+// TestRequestSpanCarriesNoUserText: what otelhttp records for a request with a search in its query
+// string, a browser's user agent and a forwarded client address. After the exporter's redaction
+// (observability.Redact, as the real setup exports) the span names the route, the method and the
+// status, and nothing of the query, the user agent or the caller's address (PLAN 23.4).
+func TestRequestSpanCarriesNoUserText(t *testing.T) {
+	mem := tracetest.NewInMemoryExporter()
+	tr := &observability.Tracing{Provider: sdktrace.NewTracerProvider(sdktrace.WithSyncer(observability.Redact(mem))), Propagator: propagation.TraceContext{}}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/duplicates", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) })
+	h := Chain(mux, AssignRequestID, Tracing(tr), Route)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/duplicates?q=MARKERQUERY&limit=5", nil)
+	req.Header.Set("User-Agent", "MARKERAGENT/1.0")
+	req.Header.Set("X-Forwarded-For", "203.0.113.77")
+	req.Header.Set("Referer", "https://f.example.com/?q=MARKERREFERER")
+	req.RemoteAddr = "198.51.100.23:4711"
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	spans := mem.GetSpans()
+	if len(spans) != 1 {
+		t.Fatalf("%d spans", len(spans))
+	}
+	s := spans[0]
+	if s.Name != "GET /api/v1/duplicates" {
+		t.Errorf("span name %q", s.Name)
+	}
+	allowed := map[string]bool{
+		"http.request.method": true, "http.response.status_code": true, "http.route": true, "url.path": true, "url.scheme": true,
+		"server.address": true, "server.port": true, "network.protocol.version": true, "network.protocol.name": true,
+		"http.request.body.size": true, "http.response.body.size": true, "error.type": true,
+	}
+	for _, kv := range s.Attributes {
+		if !allowed[string(kv.Key)] {
+			t.Errorf("unexpected span attribute %s = %s (decide: allow it here or drop it in observability.Redact)", kv.Key, kv.Value.String())
+		}
+	}
+	all := fmt.Sprintf("%+v", s)
+	for _, marker := range []string{"MARKERQUERY", "MARKERAGENT", "MARKERREFERER", "203.0.113.77", "198.51.100.23"} {
+		if strings.Contains(all, marker) {
+			t.Errorf("the exported span carries %s", marker)
 		}
 	}
 }

@@ -142,6 +142,10 @@ test-e2e: $(ENV_FILE) web-dist ## Playwright against a fresh compose.ci.yaml sta
 	status=0; (cd web && E2E_BASE_URL=http://localhost:8000 npx playwright test) || status=$$?; \
 	  $(if $(KEEP),,$(COMPOSE_CI) down -v;) exit $$status
 
+.PHONY: check-access-log
+check-access-log: $(ENV_FILE) ## On the running compose.ci.yaml stack (test-e2e KEEP=1): no user text in the web and api logs, one request id over both hops
+	@COMPOSE="$(COMPOSE_CI)" tools/check-access-log.sh
+
 .PHONY: test-e2e-demo
 test-e2e-demo: $(ENV_FILE) web-dist ## Playwright's demo-mode specs against compose.ci.yaml + compose.demo.yaml (KEEP=1 leaves it running)
 	VERSION=$(VERSION) $(COMPOSE_CI) -f deploy/compose/compose.demo.yaml up -d --build --wait

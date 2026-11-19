@@ -152,7 +152,7 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, err error, prod bool) 
 	}
 	p := ProblemFor(err, r, prod)
 	if p.Status >= 500 {
-		observability.Logger(r.Context()).LogAttrs(r.Context(), slog.LevelError, "request failed", slog.String("error", err.Error()))
+		observability.Logger(r.Context()).LogAttrs(r.Context(), slog.LevelError, "request failed", slog.String("error", platform.SafeError(err)))
 	}
 	var ra *platform.RetryAfterError
 	switch {

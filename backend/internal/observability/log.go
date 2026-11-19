@@ -9,9 +9,10 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 )
 
-// NewLogger returns a JSON logger in prod and a human-readable text logger elsewhere.
+// NewLogger returns a JSON logger in prod and a human-readable text logger elsewhere. Errors logged
+// as values go through platform.SafeError (PLAN 23.4).
 func NewLogger(w io.Writer, env config.Env, level slog.Level) *slog.Logger {
-	opts := &slog.HandlerOptions{Level: level}
+	opts := &slog.HandlerOptions{Level: level, ReplaceAttr: safeErrors}
 	if env == config.EnvProd {
 		return slog.New(slog.NewJSONHandler(w, opts))
 	}

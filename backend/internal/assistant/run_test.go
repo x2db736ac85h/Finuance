@@ -27,6 +27,7 @@ type runEnv struct {
 	clock  *fakeClock
 	chats  *Chats
 	runner *Runner
+	conns  *Connections
 	user   uuid.UUID
 }
 
@@ -49,7 +50,7 @@ func newRunEnv(t *testing.T, maxConcurrent int) *runEnv {
 	// each test gets its own user with the demo data (copy of the shared demo user's file)
 	user := e.user()
 	e.importFile(user, "Demo", fixture(t, "fixtures/demo/demo-legacy.csv"))
-	return &runEnv{env: e, mock: mock, clock: clock, chats: chats, runner: runner, user: user}
+	return &runEnv{env: e, mock: mock, clock: clock, chats: chats, runner: runner, conns: conns, user: user}
 }
 
 // ask runs one question to the end and returns its events.

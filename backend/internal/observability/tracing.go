@@ -38,6 +38,6 @@ func NewTracing(ctx context.Context, endpoint, service, version string) (*Tracin
 		return nil, fmt.Errorf("otlp exporter: %w", err)
 	}
 	res := resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceName(service), semconv.ServiceVersion(version))
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exp), sdktrace.WithResource(res))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(Redact(exp)), sdktrace.WithResource(res))
 	return &Tracing{Provider: tp, Propagator: prop, shutdown: tp.Shutdown}, nil
 }
