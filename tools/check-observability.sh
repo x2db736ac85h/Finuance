@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 K8S=1.33.0
 YQ=${YQ:-yq}
 CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-PROM_IMAGE=prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
+PROM_IMAGE=prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
 chart=deploy/k8s/observability
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
