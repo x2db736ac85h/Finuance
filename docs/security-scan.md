@@ -80,13 +80,13 @@ audit's table of 2026-11-16, row by row, with the newest release on the day:
 | Component @ pin on `main` | Finding | Newest on 2026-11-19 | Decision |
 |---|---|---|---|
 | Go 1.27.4 | GO-2026-6859 and GO-2026-6848 … 6858 (1.27.3) | 1.27.4 | **Fixed** 2026-11-17 (pull request 34); govulncheck 0 reachable |
-| `golang.org/x/crypto` 0.58.0 | GO-2026-5932 (`openpgp`, not imported) | 0.59.0 | Phase 22: update; the only finding in the api image and in `backend/go.mod` |
-| PostgreSQL 18.6 | the 18.7 fixes (policies and `ON CONFLICT`, `DROP OWNED BY` and policies, leaky quals, index corruption) | 18.7 (`postgres:18.7-bookworm`, `ghcr.io/cloudnative-pg/postgresql:18.7-standard-trixie`) | Phase 22: update, then reindex (RUNBOOK) |
+| `golang.org/x/crypto` 0.58.0 | GO-2026-5932 (`openpgp`, not imported) | 0.59.0 | **Fixed** 2026-11-19: updated; govulncheck reports nothing, not even in required modules |
+| PostgreSQL 18.6 | the 18.7 fixes (policies and `ON CONFLICT`, `DROP OWNED BY` and policies, leaky quals, index corruption) | 18.7 (`postgres:18.7-bookworm`, `ghcr.io/cloudnative-pg/postgresql:18.7-standard-trixie`) | **Fixed** in the tree 2026-11-19 (Compose and the tests by digest; the Go suite with RLS and the de-duplication property test passes on it); the homelab after its manual sync and the reindex (RUNBOOK "Upgrading PostgreSQL (minor release)") |
 | Grafana 13.3.0 (kube-prometheus-stack 92.16.1) | six CVEs fixed in 13.3.1 | chart 93.4.1 (Grafana 13.3.1, Prometheus Operator 0.95.2); the last 92.x still ships 13.3.0 | Phase 22: update to the next major of the chart |
 | Tempo 2.9.0 | GHSA-p4r4-xvrq-gvmc, GHSA-ffqx-q65f-36jf | 2.9.5 (2.10.10, 3.1.1) | Phase 22: 2.9.5, a patch release |
 | Helm CLI 3.18.4 (CI, rehearsal) | three moderate advisories | 3.22.1 (4.3.2) | Phase 22: 3.22.1, the v3 line |
 | Node build image 22.22.0 | five security releases since | 22.23.5 | Phase 22: update |
-| `minimatch` 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 (MEDIUM) | ESLint 10.15.0, typescript-eslint 8.73.0 | Phase 22: update; `minimatch` 5.1.9 under openapi-typescript is outside the advisory's range (≥ 7.0.0) |
+| `minimatch` 10.2.6 (development tools) | GHSA-g3hv-75wg-m249 (MEDIUM) | ESLint 10.15.0, typescript-eslint 8.73.0 | **Fixed** 2026-11-19: both updated, `minimatch` 11.0.9, `npm audit` 0 at every severity; `minimatch` 5.1.9 under openapi-typescript is outside the advisory's range (≥ 7.0.0) |
 | `picomatch` 4.0.7 (development tools) | GHSA-fc5q-39xc-vjpf | 4.0.7 | **Gone:** the advisory was withdrawn (above) |
 | Trivy 0.76.0 (CI, release) | none | 0.76.2 | Phase 22: update with the move to a checked binary (22.5) |
 
@@ -103,7 +103,7 @@ belong with the machine's maintenance.
 |---|---|---|
 | Trivy, api image | 2 findings; 1 fixed by a base image bump | 1 (UNKNOWN, not reachable) |
 | Trivy, web image | 3 findings (MEDIUM / UNKNOWN), no fixed base yet; fixed 2026-10-30 by upgrading zlib and musl in the Dockerfile | 0 |
-| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` (MEDIUM, development tools, 2026-11-02) | deliberate; `minimatch` not reachable, re-checked at every pull request until fixed, required by the Phase 23 gate |
+| Trivy, repository (vuln, secret, misconfig) | the api image's Go finding again; LOW/MEDIUM in the rehearsal stand-ins, RustFS, Tempo and the k3s Traefik config; `minimatch` (MEDIUM, development tools, 2026-11-02) | deliberate; `minimatch` **fixed** 2026-11-19 (ESLint 10.15.0, typescript-eslint 8.73.0) |
 | Trivy config, rendered charts (all severities) | 2 LOW fixed (web uid); 4 kinds LOW/MEDIUM left | all deliberate |
 | `npm audit` (production and all) | 0 | – |
 | govulncheck | 0 reachable (CI; 2026-10-30 locally: 2 new `x/net` module findings, fixed by 0.62.0) | – |
@@ -138,7 +138,7 @@ belong with the machine's maintenance.
 | `deploy/k8s/tempo/tempo.yaml` (Phase 18.6): KSV-0011 (CPU not limited) | LOW | **Deliberate:** as for the app's pods and RustFS: CPU request set, memory limited; non-root, read-only root, no capabilities, RuntimeDefault seccomp, default-deny NetworkPolicy (OTLP only from the app, queries only from Grafana). |
 | same file: KSV-0125 (image not from an allow-listed registry) | MEDIUM | **Deliberate:** `grafana/tempo` pinned by digest; the admission policy (18.8) requires its digest in `monitoring`. |
 | `deploy/environments/homelab/host/traefik-config.yaml` (Phase 18): KSV-0037 (resource in `kube-system`) | MEDIUM | **Deliberate:** a k3s `HelmChartConfig` for its bundled Traefik; k3s reads it only in `kube-system`. It holds chart values, no workload. |
-| `web/package-lock.json`: CVE-2026-118764 / GHSA-g3hv-75wg-m249 in `minimatch` 10.2.6 and 5.1.9 (new 2026-11-02) | MEDIUM | **Not reachable; re-checked at every pull request until fixed, required by the Phase 23 gate:** development tools only (ESLint, and openapi-typescript's `@redocly/openapi-core`), nothing in the built app (`npm audit --omit=dev`: 0); the denial of service needs crafted glob patterns, and only our own lint and codegen configuration supplies them. The fix (11.0.1) is a major version that ESLint 10 and openapi-typescript 7 don't accept yet; re-check when they release, before the gate's "nothing above LOW". Re-checked 2026-11-03 (Phase 19 PR 1): ESLint 10.14.0 still asks for `minimatch ^10.2.6`, openapi-typescript 7.13.0 is the latest; no upgrade possible yet. |
+| `web/package-lock.json`: CVE-2026-118764 / GHSA-g3hv-75wg-m249 in `minimatch` 10.2.6 and 5.1.9 (new 2026-11-02) | MEDIUM | **Fixed 2026-11-19** (Phase 22): ESLint 10.15.0 and typescript-eslint 8.73.0 require `minimatch` 11, now 11.0.9 throughout; `npm audit` reports 0 at every severity. The 5.1.9 copy under openapi-typescript's `@redocly/openapi-core` stays: the advisory covers ≥ 7.0.0 only. Before that, **not reachable:** development tools only (ESLint, and openapi-typescript's `@redocly/openapi-core`), nothing in the built app (`npm audit --omit=dev`: 0); the denial of service needs crafted glob patterns, and only our own lint and codegen configuration supplies them. The fix (11.0.1) is a major version that ESLint 10 and openapi-typescript 7 don't accept yet; re-check when they release, before the gate's "nothing above LOW". Re-checked 2026-11-03 (Phase 19 PR 1): ESLint 10.14.0 still asks for `minimatch ^10.2.6`, openapi-typescript 7.13.0 is the latest; no upgrade possible yet. |
 
 A local checkout may hold `backend/vendor/` (gitignored, for offline image builds). Trivy finds
 dozens of npm and Python advisories in it: testcontainers' documentation `Pipfile.lock` and
