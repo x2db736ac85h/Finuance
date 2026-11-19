@@ -40,3 +40,5 @@ One file per decision, numbered in the order they were taken. A record is not re
 | [0034](0034-advice-library.md) | Advice library: admin-written articles searched with PostgreSQL full-text search | accepted | 2026-11-06 |
 | [0035](0035-assistant-administration.md) | Administration → Assistant: connections in the database, sealed API keys, per-model tuning | accepted | 2026-11-06 |
 | [0036](0036-personal-access-tokens.md) | Personal access tokens: bearer tokens with a read or write scope, never for the sensitive routes | accepted | 2026-11-06 |
+| [0037](0037-supply-chain.md) | Supply chain: pinned references, checked tools, scans on a schedule, approved and attested releases | accepted | 2026-11-19 |
+| [0038](0038-request-path-database-limits.md) | Time limits for the request path's database work: one place, different for the api and the worker | accepted | 2026-11-19 |
