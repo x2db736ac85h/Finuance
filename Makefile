@@ -61,9 +61,10 @@ check-pins: ## Every action by commit SHA and every image the repository doesn't
 	@tools/check-pins-test.sh
 
 .PHONY: check-workflows
-check-workflows: ## actionlint and zizmor (offline) over the workflows, when tools/bin-tools.sh installed them; CI always runs them
+check-workflows: ## actionlint and zizmor (offline) over the workflows, when tools/bin-tools.sh installed them; CI always runs them, actionlint with shellcheck (have shellcheck on PATH to match)
 	@if [ -x backend/bin/actionlint ] && [ -x backend/bin/zizmor ]; then \
-	  backend/bin/actionlint && backend/bin/zizmor --offline --quiet .github/workflows && echo "check-workflows: ok"; \
+	  sc=""; if shellcheck --version >/dev/null 2>&1; then sc=shellcheck; fi; \
+	  backend/bin/actionlint -shellcheck="$$sc" && backend/bin/zizmor --offline --quiet .github/workflows && echo "check-workflows: ok"; \
 	else echo "check-workflows: skipped (tools/bin-tools.sh actionlint and zizmor install them)"; fi
 
 .PHONY: check-toolchain

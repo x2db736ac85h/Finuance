@@ -242,7 +242,7 @@ jobs:
           test "$(docker image inspect finuance-web:dev --format '{{.Config.User}}')" = "101"
           docker image ls finuance-web:dev
           docker run -d --name web-smoke -p 127.0.0.1:8001:8080 -e FINUANCE_API_UPSTREAM=127.0.0.1:9 finuance-web:dev
-          for i in $(seq 20); do curl -fsS http://127.0.0.1:8001/healthz && break; sleep 0.5; done
+          for _ in $(seq 20); do curl -fsS http://127.0.0.1:8001/healthz && break; sleep 0.5; done
           curl -fsS -D headers.txt -o index.html http://127.0.0.1:8001/t/all
           grep -qi "^content-security-policy: default-src 'self'" headers.txt
           grep -q '<div id="root">' index.html
@@ -279,7 +279,7 @@ jobs:
       - name: Accepted findings (.trivyignore) in the summary
         run: |
           {
-            echo '### Accepted findings (`.trivyignore`)'; echo
+            echo "### Accepted findings (\`.trivyignore\`)"; echo
             entries="$(grep -vE '^[[:space:]]*(#|$)' .trivyignore || true)"
             if [ -z "$entries" ]; then echo 'None.'; else echo '| Id | Expires |'; echo '|---|---|'; echo "$entries" | sed -E 's/^([^ ]+).*exp:([0-9-]+).*$/| \1 | \2 |/'; fi
           } >> "$GITHUB_STEP_SUMMARY"
@@ -467,9 +467,9 @@ jobs:
             done
           } >> "$GITHUB_STEP_SUMMARY"
           initial=0
-          for f in $(grep -o 'assets/[^"]*\.js' dist/index.html); do
+          while read -r f; do
             initial=$((initial + $(gzip -9c "dist/$f" | wc -c)))
-          done
+          done < <(grep -o 'assets/[^"]*\.js' dist/index.html)
           echo "initial JS: $initial bytes gzip" | tee -a "$GITHUB_STEP_SUMMARY"
           test "$initial" -le 256000 || { echo "::error::initial JS exceeds 250 KB gzip"; exit 1; }
 
