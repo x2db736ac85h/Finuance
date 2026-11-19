@@ -43,6 +43,21 @@ jobs:
       - name: Private-data check
         run: tools/check-private.sh && tools/check-private-test.sh
 
+      # The patterns of the private environment (tools/check-env-details.sh) can't be in this
+      # repository, so they come from a repository secret (PLAN task 22.9). Pull requests from
+      # forks get no secrets: the check says so and passes.
+      - name: Environment-details check
+        env:
+          PATTERNS: ${{ secrets.FINUANCE_ENV_PATTERNS }}
+        run: |
+          if [ -z "$PATTERNS" ]; then
+            echo "::notice title=check-env-details::skipped: no FINUANCE_ENV_PATTERNS secret (a pull request from a fork, or the secret is not set)"
+            exit 0
+          fi
+          d="$RUNNER_TEMP/env"; mkdir -p "$d"
+          printf '%s\n' "$PATTERNS" >"$d/private-patterns.txt"
+          FINUANCE_ENV_DIR="$d" tools/check-env-details.sh
+
       # renovate.json is read by the hosted Renovate app, which reports errors only on its
       # dashboard; check it here (PLAN task 22.3).
       - name: Renovate configuration

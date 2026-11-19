@@ -1,0 +1,8 @@
+# Who reviews changes to these paths (PLAN task 22.9). The ruleset on main doesn't require a code
+# owner's review, since the maintainer can't approve their own pull requests; this file records
+# ownership and asks for the review on everyone else's.
+/.github/                              @x2db736ac85h
+/deploy/                               @x2db736ac85h
+/tools/                                @x2db736ac85h
+/api/                                  @x2db736ac85h
+/backend/internal/store/migrations/    @x2db736ac85h
