@@ -170,6 +170,29 @@ func TestNULIsAValidationError(t *testing.T) {
 	}
 }
 
+// TestQueryCostLimits: at most MaxSearchWords words in a search or the assistant's lookup, and an
+// offset of at most MaxOffset (DB-4). Both are refused before anything reaches the database.
+func TestQueryCostLimits(t *testing.T) {
+	words := func(n int) string { return strings.TrimSpace(strings.Repeat("kawa ", n)) }
+	if _, err := Compile(testUser, Context{Search: words(MaxSearchWords), ToolFilter: &ToolFilter{Query: words(MaxSearchWords)}}); err != nil {
+		t.Errorf("%d words: %v", MaxSearchWords, err)
+	}
+	for _, c := range []Context{{Search: words(MaxSearchWords + 1)}, {ToolFilter: &ToolFilter{Query: words(MaxSearchWords + 1)}}} {
+		var ve *platform.ValidationError
+		if _, err := Compile(testUser, c); !asValidation(err, &ve) {
+			t.Errorf("%d words: %v, want a validation error", MaxSearchWords+1, err)
+		}
+	}
+	e := New(nil) // validation comes first, so no store is needed
+	var ve *platform.ValidationError
+	if _, err := e.Page(t.Context(), testUser, PageRequest{Limit: 10, Offset: MaxOffset + 1}); !asValidation(err, &ve) {
+		t.Errorf("page offset: %v", err)
+	}
+	if _, err := e.IDs(t.Context(), testUser, Context{}, nil, MaxOffset+1, 10); !asValidation(err, &ve) {
+		t.Errorf("ids offset: %v", err)
+	}
+}
+
 func FuzzCompile(f *testing.F) {
 	for _, h := range hostile {
 		f.Add("payee", h, h)

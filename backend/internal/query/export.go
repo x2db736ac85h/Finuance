@@ -13,6 +13,9 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
 
+// exportStatementTimeout bounds one streamed export.
+const exportStatementTimeout = "15min"
+
 // Export streams the ordered, period-scoped rows of c as display text, one call of row per
 // transaction, in the order of cols (PLAN task 7.9, ADR 0014). It runs one query whose rows pgx
 // reads from the server as they arrive, so memory stays flat however many rows there are; the
@@ -39,6 +42,11 @@ func (e *Engine) Export(ctx context.Context, userID uuid.UUID, c Context, s *Sor
 		return err
 	}
 	return e.st.WithUserReadOnly(ctx, userID, func(_ *db.Queries, tx pgx.Tx) error {
+		// The rows stream to the client at the client's pace, which may take longer than the
+		// request path's statement limit (store.RequestTimeouts); a download still ends.
+		if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '"+exportStatementTimeout+"'"); err != nil {
+			return err
+		}
 		r, err := resolve(ctx, tx, userID, c)
 		if err != nil {
 			return err

@@ -697,23 +697,19 @@ func (e AssistantRunSettingsToolset) Valid() bool {
 
 // Defines values for AssistantSettingsAutoApply.
 const (
-	AssistantSettingsAutoApplyAddExpense       AssistantSettingsAutoApply = "add_expense"
-	AssistantSettingsAutoApplyAddToSharedGroup AssistantSettingsAutoApply = "add_to_shared_group"
-	AssistantSettingsAutoApplyCreateGoal       AssistantSettingsAutoApply = "create_goal"
-	AssistantSettingsAutoApplyCreateRule       AssistantSettingsAutoApply = "create_rule"
-	AssistantSettingsAutoApplySetBudget        AssistantSettingsAutoApply = "set_budget"
-	AssistantSettingsAutoApplySetCategory      AssistantSettingsAutoApply = "set_category"
-	AssistantSettingsAutoApplySetGroup         AssistantSettingsAutoApply = "set_group"
-	AssistantSettingsAutoApplySplitExpense     AssistantSettingsAutoApply = "split_expense"
-	AssistantSettingsAutoApplyUpdateGoal       AssistantSettingsAutoApply = "update_goal"
+	AssistantSettingsAutoApplyAddExpense  AssistantSettingsAutoApply = "add_expense"
+	AssistantSettingsAutoApplyCreateGoal  AssistantSettingsAutoApply = "create_goal"
+	AssistantSettingsAutoApplyCreateRule  AssistantSettingsAutoApply = "create_rule"
+	AssistantSettingsAutoApplySetBudget   AssistantSettingsAutoApply = "set_budget"
+	AssistantSettingsAutoApplySetCategory AssistantSettingsAutoApply = "set_category"
+	AssistantSettingsAutoApplySetGroup    AssistantSettingsAutoApply = "set_group"
+	AssistantSettingsAutoApplyUpdateGoal  AssistantSettingsAutoApply = "update_goal"
 )
 
 // Valid indicates whether the value is a known member of the AssistantSettingsAutoApply enum.
 func (e AssistantSettingsAutoApply) Valid() bool {
 	switch e {
 	case AssistantSettingsAutoApplyAddExpense:
-		return true
-	case AssistantSettingsAutoApplyAddToSharedGroup:
 		return true
 	case AssistantSettingsAutoApplyCreateGoal:
 		return true
@@ -724,8 +720,6 @@ func (e AssistantSettingsAutoApply) Valid() bool {
 	case AssistantSettingsAutoApplySetCategory:
 		return true
 	case AssistantSettingsAutoApplySetGroup:
-		return true
-	case AssistantSettingsAutoApplySplitExpense:
 		return true
 	case AssistantSettingsAutoApplyUpdateGoal:
 		return true
@@ -1597,6 +1591,7 @@ func (e PeriodPreset) Valid() bool {
 
 // Defines values for ProblemCode.
 const (
+	AccountBusy            ProblemCode = "account_busy"
 	AccountDisabled        ProblemCode = "account_disabled"
 	AssistantBusy          ProblemCode = "assistant_busy"
 	AssistantUnavailable   ProblemCode = "assistant_unavailable"
@@ -1619,6 +1614,7 @@ const (
 	RateLimited            ProblemCode = "rate_limited"
 	RunInProgress          ProblemCode = "run_in_progress"
 	StaleVersion           ProblemCode = "stale_version"
+	Timeout                ProblemCode = "timeout"
 	Unauthenticated        ProblemCode = "unauthenticated"
 	UnsupportedFile        ProblemCode = "unsupported_file"
 	ValidationFailed       ProblemCode = "validation_failed"
@@ -1627,6 +1623,8 @@ const (
 // Valid indicates whether the value is a known member of the ProblemCode enum.
 func (e ProblemCode) Valid() bool {
 	switch e {
+	case AccountBusy:
+		return true
 	case AccountDisabled:
 		return true
 	case AssistantBusy:
@@ -1670,6 +1668,8 @@ func (e ProblemCode) Valid() bool {
 	case RunInProgress:
 		return true
 	case StaleVersion:
+		return true
+	case Timeout:
 		return true
 	case Unauthenticated:
 		return true
@@ -3026,7 +3026,7 @@ type AssistantRunSettingsToolset string
 
 // AssistantSettings defines model for AssistantSettings.
 type AssistantSettings struct {
-	// AutoApply Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Left out of a PUT, the stored list stays.
+	// AutoApply Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Sharing with a shared group and changing a shared split always wait for a click. Left out of a PUT, the stored list stays.
 	AutoApply *[]AssistantSettingsAutoApply `json:"autoApply,omitempty"`
 
 	// CloudConsent Names of the cloud connections the user agreed to send their data to.

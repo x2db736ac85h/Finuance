@@ -784,7 +784,9 @@ describe('ChatSettings', () => {
       expect(st.settingsPuts).toEqual([{ retentionDays: null, cloudConsent: [] }]);
     });
     expect(await within(p).findByText(/Chats are kept until you delete them/)).toBeTruthy();
-    // the kinds of proposals applied by themselves (ADR 0030)
+    // the kinds of proposals applied by themselves (ADR 0030); the shared ones always wait for a click
+    expect(within(p).queryByRole('checkbox', { name: 'Share with a shared group' })).toBeNull();
+    expect(within(p).queryByRole('checkbox', { name: 'Change how a shared expense is split' })).toBeNull();
     fireEvent.click(within(p).getByRole('checkbox', { name: 'Set or remove a budget' }));
     await waitFor(() => {
       expect(st.settingsPuts.at(-1)?.autoApply).toEqual(['set_budget']);

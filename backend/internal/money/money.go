@@ -12,6 +12,14 @@ var exponents = map[string]int{
 // DefaultExponent applies to currencies not in the table; callers should warn about them.
 const DefaultExponent = 2
 
+// MaxAbsMinor bounds every amount Finuance accepts, in minor units: 10^12, ten billion in a
+// currency with two decimals. Sums of millions of such amounts stay far from int64's limit (API-4);
+// the API's schema and the tables' checks use the same bound.
+const MaxAbsMinor = 1_000_000_000_000
+
+// InRange reports whether |x| ≤ MaxAbsMinor.
+func InRange(x int64) bool { return x >= -MaxAbsMinor && x <= MaxAbsMinor }
+
 // Exponent returns the number of minor-unit digits of currency and whether the currency is known.
 func Exponent(currency string) (int, bool) {
 	if e, ok := exponents[strings.ToUpper(currency)]; ok {

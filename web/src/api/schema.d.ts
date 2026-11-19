@@ -4190,8 +4190,8 @@ export interface components {
             retentionDays: number | null;
             /** @description Names of the cloud connections the user agreed to send their data to. */
             cloudConsent: string[];
-            /** @description Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Left out of a PUT, the stored list stays. */
-            autoApply?: ("set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal")[];
+            /** @description Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Sharing with a shared group and changing a shared split always wait for a click. Left out of a PUT, the stored list stays. */
+            autoApply?: ("set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "create_goal" | "update_goal")[];
             digest?: components["schemas"]["AssistantDigest"];
             /**
              * Format: date-time
@@ -4556,7 +4556,7 @@ export interface components {
          * @description Stable machine-readable error code.
          * @enum {string}
          */
-        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "display_name_required" | "changed_since" | "internal";
+        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "display_name_required" | "changed_since" | "account_busy" | "timeout" | "internal";
         FieldError: {
             /** @description Dotted path of the offending field, e.g. `mapping.amount`. */
             field: string;

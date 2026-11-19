@@ -117,3 +117,12 @@ func TestOverflowAndCanonical(t *testing.T) {
 		t.Error("unknown currency")
 	}
 }
+
+func TestInRange(t *testing.T) {
+	for x, want := range map[int64]bool{0: true, MaxAbsMinor: true, -MaxAbsMinor: true, MaxAbsMinor + 1: false, -MaxAbsMinor - 1: false,
+		math.MaxInt64: false, math.MinInt64: false} {
+		if InRange(x) != want {
+			t.Errorf("InRange(%d) = %v", x, !want)
+		}
+	}
+}

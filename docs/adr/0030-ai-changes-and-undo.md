@@ -42,6 +42,12 @@ that a proposal was applied, not what it replaced.
   transactions and never a background digest's (those run on the server and only wait for Apply).
   The card says *Applied automatically* and offers Undo like any other.
 
+  *Note (2026-11-19, Phase 22):* sharing with a shared group (`add_to_shared_group`) and changing a
+  shared split (`split_expense`) are no longer kinds a user can tick: other people read the result,
+  and Undo cannot take back what they have seen. They always wait for a click. Migration 00025
+  removes them from stored choices and the table's check refuses them. The panel also refuses any
+  proposal that lacks the id it acts on, before it sends a request.
+
 ## Consequences (positive, negative, follow-ups)
 
 - Each new write path (Phase 20's new proposal kinds) adds one `RecordAIChange` call and the

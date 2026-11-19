@@ -79,6 +79,19 @@ func ProblemFor(err error, r *http.Request, prod bool) gen.Problem {
 		// the weekly ZAP scan, 2026-11-09).
 		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
 		err = errors.New("text must not contain NUL characters")
+	case errors.As(err, &pgErr) && pgErr.Code == "22003":
+		// numeric_value_out_of_range: a total beyond bigint, on any path (API-4; the inputs are bounded)
+		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
+		err = errors.New("an amount or a total is out of range")
+	case errors.As(err, &pgErr) && pgErr.Code == "55P03":
+		// lock_not_available: the request path's lock_timeout (store.RequestTimeouts, IMP-2), most
+		// often the account lock of an import being committed.
+		p.Code, p.Status, p.Title = gen.AccountBusy, http.StatusConflict, "Account busy"
+		err = errors.New("another change to this account is still running, such as an import; try again in a moment")
+	case errors.As(err, &pgErr) && pgErr.Code == "57014":
+		// query_canceled: the request path's statement_timeout (DB-4). The log keeps the original.
+		p.Code, p.Status, p.Title = gen.Timeout, http.StatusServiceUnavailable, "Timeout"
+		err = errors.New("the database took too long to answer; try again, or narrow the search or the period")
 	case errors.As(err, &ve):
 		p.Code, p.Status, p.Title = gen.ValidationFailed, http.StatusUnprocessableEntity, "Validation failed"
 		fields := make([]gen.FieldError, 0, len(ve.Fields))
@@ -123,6 +136,9 @@ func ProblemFor(err error, r *http.Request, prod bool) gen.Problem {
 	return p
 }
 
+// timeoutRetryAfter is the Retry-After, in seconds, of a statement timeout's 503.
+const timeoutRetryAfter = 5
+
 // StatusClientClosed is nginx's "client closed request": the client went away before the answer.
 // It is not a server error, so the request log, the 5xx metrics and the availability SLO leave it
 // out.
@@ -139,8 +155,11 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, err error, prod bool) 
 		observability.Logger(r.Context()).LogAttrs(r.Context(), slog.LevelError, "request failed", slog.String("error", err.Error()))
 	}
 	var ra *platform.RetryAfterError
-	if errors.As(err, &ra) {
+	switch {
+	case errors.As(err, &ra):
 		w.Header().Set("Retry-After", strconv.Itoa(ra.Seconds()))
+	case p.Code == gen.Timeout:
+		w.Header().Set("Retry-After", strconv.Itoa(timeoutRetryAfter))
 	}
 	writeProblem(w, p)
 }

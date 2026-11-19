@@ -15,26 +15,43 @@ import "strings"
 //
 // Blank lines become records with one empty field; Shape drops them later.
 func Tokenize(text string, delim rune) [][]string {
-	return tokenizeEach(text, delim, nil)
+	return tokenizeEach(text, delim, 0, 0, nil)
 }
 
 // tokenizeEach is Tokenize with a callback after each completed record; returning false stops.
 // ASCII delimiters (every candidate and every manual option) take the byte-level path; it is
 // equivalent because UTF-8 never uses bytes below 0x80 inside multi-byte characters.
-func tokenizeEach(text string, delim rune, each func([]string) bool) [][]string {
+//
+// The limits (0 = none) keep the work proportional to what the caller accepts: maxRows caps the
+// pre-sizing (the callback enforces the limit itself), and a record that reaches maxCols+1 fields
+// goes to the callback at once and ends tokenizing (IMP-1).
+func tokenizeEach(text string, delim rune, maxRows, maxCols int, each func([]string) bool) [][]string {
 	if delim < 0x80 && delim != '"' && delim != '\n' && delim != '\r' {
-		return tokenizeBytes(text, byte(delim), each) //nolint:gosec // delim < 0x80 checked above
+		return tokenizeBytes(text, byte(delim), maxRows, maxCols, each) //nolint:gosec // delim < 0x80 checked above
 	}
-	return tokenizeRunes(text, delim, each)
+	return tokenizeRunes(text, delim, maxCols, each)
+}
+
+// tooWide hands a record that already has more fields than allowed to each and ends tokenizing.
+func tooWide(records [][]string, record []string, each func([]string) bool) [][]string {
+	records = append(records, record)
+	if each != nil {
+		each(record)
+	}
+	return records
 }
 
 // tokenizeBytes is the state machine of tokenizeRunes over bytes. A field that does not start
 // with a quote is a plain substring of text (no copy); quoted fields are assembled in a buffer.
-func tokenizeBytes(text string, d byte, each func([]string) bool) [][]string {
+func tokenizeBytes(text string, d byte, maxRows, maxCols int, each func([]string) bool) [][]string {
+	// Pre-size from the line count (at most the row limit) and the previous record's width: growing
+	// these slices was the main cost of tokenizing a large file.
+	lines := strings.Count(text, "\n") + 1
+	if maxRows > 0 {
+		lines = min(lines, maxRows+1)
+	}
 	var (
-		// Pre-size from the line count and the previous record's width: growing these slices was
-		// the main cost of tokenizing a large file.
-		records = make([][]string, 0, strings.Count(text, "\n")+1)
+		records = make([][]string, 0, lines)
 		width   = 8
 		record  []string
 		buf     []byte
@@ -94,6 +111,9 @@ func tokenizeBytes(text string, d byte, each func([]string) bool) [][]string {
 			record = make([]string, 0, width)
 		}
 		record = append(record, field)
+		if maxCols > 0 && len(record) > maxCols {
+			return tooWide(records, record, each)
+		}
 		if i >= n {
 			// The legacy keeps a trailing record only if it has content: a file that is just `"`
 			// or `""` yields no record at all.
@@ -134,7 +154,7 @@ func tokenizeBytes(text string, d byte, each func([]string) bool) [][]string {
 }
 
 // tokenizeRunes is the direct port of the legacy parseCSV, used for non-ASCII delimiters.
-func tokenizeRunes(text string, delim rune, each func([]string) bool) [][]string {
+func tokenizeRunes(text string, delim rune, maxCols int, each func([]string) bool) [][]string {
 	var (
 		records [][]string
 		record  []string
@@ -163,6 +183,9 @@ func tokenizeRunes(text string, delim rune, each func([]string) bool) [][]string
 		case c == delim:
 			record = append(record, field.String())
 			field.Reset()
+			if maxCols > 0 && len(record) > maxCols {
+				return tooWide(records, record, each)
+			}
 		case c == '\n' || c == '\r':
 			if c == '\r' && i+1 < len(rs) && rs[i+1] == '\n' {
 				i++
