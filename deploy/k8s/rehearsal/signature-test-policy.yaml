@@ -17,3 +17,7 @@ spec:
             subjectRegExp: '^https://github\.com/x2db736ac85h/Finuance/\.github/workflows/release\.yml@refs/tags/v[0-9].*$'
       ctlog:
         url: https://rekor.sigstore.dev
+      signatureFormat: bundle
+      attestations:
+        - name: build-provenance
+          predicateType: https://slsa.dev/provenance/v1

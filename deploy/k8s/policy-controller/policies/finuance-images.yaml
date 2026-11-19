@@ -2,8 +2,11 @@
 # ADR 0039). The registry list of deploy/k8s/admission/image-policy.yaml stays the first check;
 # these policies add the signature.
 #
-# Finuance's own images: a keyless cosign signature made by this repository's release workflow on
-# a version tag, the identity release.yml verifies before it publishes and SECURITY.md documents.
+# Finuance's own images: the build provenance attestation (SLSA v1) that this repository's release
+# workflow signs on a version tag, the identity release.yml verifies before it publishes and
+# SECURITY.md documents. The release signs in Sigstore's bundle format (cosign 3), and the
+# controller reads that format for attestations only, so the policy asks for the attestation: it
+# carries the same signer and also says which commit and workflow built the image.
 # A copy of an image pushed by anyone else, an image built by another workflow or branch, and an
 # unsigned image are refused. The controller resolves a tag to its digest before checking it.
 apiVersion: policy.sigstore.dev/v1beta1
@@ -23,6 +26,10 @@ spec:
             subjectRegExp: '^https://github\.com/x2db736ac85h/Finuance/\.github/workflows/release\.yml@refs/tags/v[0-9].*$'
       ctlog:
         url: https://rekor.sigstore.dev
+      signatureFormat: bundle
+      attestations:
+        - name: build-provenance
+          predicateType: https://slsa.dev/provenance/v1
 ---
 # CloudNativePG's images (the operator's instance manager, PostgreSQL, the backup sidecar) run in
 # the same namespaces. They are admitted on the registry list alone: checking their publisher's

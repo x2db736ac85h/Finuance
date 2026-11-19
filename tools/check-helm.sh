@@ -117,7 +117,18 @@ echo "== image admission policy"
 validate deploy/k8s/admission/
 
 echo "== image signature policies (Sigstore policy-controller)"
-validate deploy/k8s/policy-controller/policies/ deploy/k8s/rehearsal/signature-test-policy.yaml
+# checked against the CRD of the pinned chart itself (the catalog's copy is older than the chart)
+pc_version=$("$YQ" '.spec.sources[0].targetRevision' deploy/k8s/argocd/apps/policy-controller.yaml)
+helm template policy-controller policy-controller --repo https://sigstore.github.io/helm-charts --version "$pc_version" \
+  --show-only templates/crds/clusterimagepolicy.yaml |
+  "$YQ" -o json '.spec.versions[] | select(.name == "v1beta1") | .schema.openAPIV3Schema' >"$out/clusterimagepolicy_v1beta1.json"
+[ -s "$out/clusterimagepolicy_v1beta1.json" ] || { echo "check-helm: no ClusterImagePolicy schema in chart $pc_version"; exit 1; }
+kubeconform -summary -schema-location "$out/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" \
+  deploy/k8s/policy-controller/policies/ deploy/k8s/rehearsal/signature-test-policy.yaml
+# the chart renders with this repository's values
+helm template policy-controller policy-controller --repo https://sigstore.github.io/helm-charts --version "$pc_version" \
+  -n cosign-system --kube-version "$K8S" -f deploy/k8s/policy-controller/values.yaml | grep -E '^ +image: ' | grep -v '@sha256:' &&
+  { echo "check-helm: policy-controller renders an image without a digest"; exit 1; }
 # the rehearsal's test policy must hold its image to the same signer as Finuance's own images
 [ "$("$YQ" 'select(.metadata.name == "finuance-images") | .spec.authorities[0].keyless.identities[0]' deploy/k8s/policy-controller/policies/finuance-images.yaml)" = \
   "$("$YQ" '.spec.authorities[0].keyless.identities[0]' deploy/k8s/rehearsal/signature-test-policy.yaml)" ] ||

@@ -25,8 +25,11 @@ bundle format only for attestations.
   environment's values together with the version, and `tools/check-pins.sh` requires them there.
 - **Signatures:** Sigstore policy-controller, installed by the Argo CD application
   `policy-controller` (manual sync), with two `ClusterImagePolicy` objects:
-  - `ghcr.io/x2db736ac85h/**` needs a keyless signature whose identity is `release.yml` on a
-    version tag (issuer GitHub Actions), checked against the public transparency log;
+  - `ghcr.io/x2db736ac85h/**` needs the build provenance attestation (SLSA v1) signed keyless by
+    `release.yml` on a version tag (issuer GitHub Actions), checked against the public
+    transparency log. The release signs in Sigstore's bundle format (cosign 3), which the
+    controller reads for attestations only (the rehearsal's first run found "no signatures found"
+    for the plain signature), and the attestation says more: the commit and the workflow;
   - `ghcr.io/cloudnative-pg/**` passes without a signature check (a static authority), because the
     database's images run in the same namespaces and the controller would refuse them otherwise.
 - **Order of checks:** the registry list of ADR 0024 stays the first check and also covers the
@@ -50,8 +53,9 @@ bundle format only for attestations.
 - CloudNativePG's images are trusted by registry, not by signature. Checking their signatures
   would tie the database to the layout of their release workflow; revisit if they publish a
   stable identity to pin.
-- The provenance attestation is not required at admission yet: the signature already names the
-  workflow and the tag. Worth adding when the controller verifies bundle-format signatures too.
+- Admission depends on the provenance attestation that `actions/attest-build-provenance` pushes
+  to the registry; a release without it would not start. `release.yml` verifies it before it
+  publishes. Images released before `v0.4.2-rc.1` carry no provenance and are not admitted.
 - Follow-ups: the label and the namespaces in git, with the application moved before the
   admission policy's wave; the demo host (Phase 29) installs the same.
 

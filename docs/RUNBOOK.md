@@ -479,8 +479,8 @@ Application once by hand (`kubectl apply -f deploy/k8s/argocd/apps/<app>.yaml`);
 
 The second admission check (ADR 0039): Sigstore policy-controller lets a pod start in a labelled
 namespace only when its image matches a `ClusterImagePolicy`
-(`deploy/k8s/policy-controller/policies/`). Finuance's own images need the release workflow's
-keyless signature; CloudNativePG's pass on the registry list; any other image is refused. The
+(`deploy/k8s/policy-controller/policies/`). Finuance's own images need the build provenance that the release
+workflow signed; CloudNativePG's pass on the registry list; any other image is refused. The
 webhook looks only at namespaces labelled `policy.sigstore.dev/include: "true"`, so installing it
 changes nothing until a namespace is labelled. The label is the switch, and removing it is the way
 back.
