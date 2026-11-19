@@ -98,6 +98,10 @@ CloudNativePG (1.30.1, its Barman Cloud plugin 0.15.1), Sealed Secrets (0.40.0),
 Traefik and Argo CD have no advisory on OSV for the versions running; their updates are routine and
 belong with the machine's maintenance.
 
+**trufflehog over the whole history: 2026-11-19** (PLAN task 22.6, once; gitleaks stays the gate
+on every push): trufflehog 3.99.9 (checked against its release's checksums), `git file://.`,
+8,535 chunks (17.6 MB): **0 verified and 0 unverified secrets**.
+
 ## Summary
 
 | Scan | Result | Open |

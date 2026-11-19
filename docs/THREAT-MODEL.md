@@ -162,8 +162,16 @@ flowchart LR
 
 | Scan | What | When | Gate |
 |---|---|---|---|
-| Trivy image | both images, OS and Go/npm packages | every push and release | HIGH/CRITICAL fail |
-| Trivy fs | repository: Go and npm dependencies (dev included), secrets, Dockerfiles and manifests | every push (`security` job) | HIGH/CRITICAL fail |
+| Trivy image | both images, OS and Go/npm packages (a checksum-verified binary reading `docker save` tarballs; results at every severity in code scanning) | every push and release | HIGH/CRITICAL fail |
+| Trivy fs | repository: Go and npm dependencies (dev included), secrets, Dockerfiles and manifests (results in code scanning) | every push (`security` job) | HIGH/CRITICAL fail |
+| osv-scanner | `backend/go.mod` and both npm lockfiles against OSV | every push (`security` job) and daily | any fails; no ignore list |
+| Daily scan | govulncheck, `npm audit`, osv-scanner, and Trivy against the **released** images' digests; acceptances that expire within a week | daily (`daily-scan.yml`) | a finding opens or updates the `security-scan` issue; a clean run closes it |
+| CodeQL | Go, JavaScript/TypeScript, the workflows, the Python helpers | pull requests, pushes to `main`, weekly | alerts triaged: fixed, or dismissed with the reason in security-scan.md |
+| Dependency review | what a pull request adds or updates: advisories and licences | every pull request | moderate or higher fails; a licence outside the allowlist fails |
+| OpenSSF Scorecard | the repository's supply-chain practices | weekly and pushes to `main` | reviewed; the score in security-scan.md |
+| actionlint, zizmor | the workflows (permissions, injection, credentials, pinned actions) | every push (`workflows` job), `make check` when installed | any fails |
+| Pins | every action by commit SHA, every image the repository doesn't build by digest (`tools/check-pins.sh`) | `make check` | any fails |
+| trufflehog | the whole git history, verified secrets | once (Phase 22), gitleaks stays the gate | any is rotated and recorded |
 | Trivy config | the rendered Helm charts | every push (`helm` job) | HIGH/CRITICAL fail; all severities reviewed in Phase 17 |
 | `npm audit` | web dependencies, production and all | every push | HIGH fails |
 | govulncheck | reachable Go vulnerabilities | every push | any fails |
