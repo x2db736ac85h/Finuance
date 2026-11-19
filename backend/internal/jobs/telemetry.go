@@ -16,7 +16,7 @@ import (
 )
 
 // Telemetry is River middleware for traces and job metrics (PLAN task 17.2, §8.2). When a job is
-// inserted it stores the caller's trace context (W3C traceparent, tracestate, baggage) in the
+// inserted it stores the caller's trace context (W3C traceparent; no baggage, PLAN 23.3) in the
 // job's metadata; when the job is worked it starts the span "job <kind>" as a child of that
 // context. A request, the job it enqueued and the job's SQL (otelpgx) then share one trace. It
 // also counts jobs by kind and result and times them. Spans carry ids and kinds only, never
