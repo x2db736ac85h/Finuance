@@ -3545,7 +3545,9 @@ components:
       in: cookie
       name: finuance_session
       description: |
-        HttpOnly session cookie set by signup and login. Unsafe methods also need the header
+        HttpOnly session cookie set by signup and login. Over https its name is
+        `__Host-finuance_session` (the browser then accepts it only with `Secure`, `Path=/` and no
+        `Domain`); `finuance_session` is the name over plain http in development. Unsafe methods also need the header
         `X-Finuance-Client: web` and, when sent, an `Origin` equal to the instance origin (CSRF, §6.1).
     accessToken:
       type: http
@@ -3556,7 +3558,7 @@ components:
         the admin, sign-in, password, session or token routes (403).
   headers:
     SetSessionCookie:
-      description: "`finuance_session=…; Path=/; HttpOnly; SameSite=Lax` (+ `Secure` outside dev). Max-Age=0 clears it."
+      description: "`__Host-finuance_session=…; Path=/; HttpOnly; SameSite=Lax; Secure` (`finuance_session=…` without `Secure` over plain http in development). Max-Age=0 clears it."
       schema:
         type: string
     RetryAfter:
@@ -3583,7 +3585,7 @@ components:
     Meta:
       type: object
       additionalProperties: false
-      required: [version, signupEnabled, demoMode, assistantEnabled, features, defaults, themes]
+      required: [version, signupEnabled, demoMode, assistantEnabled, confirmPassword, features, defaults, themes]
       properties:
         features:
           $ref: "#/components/schemas/Features"
@@ -3607,6 +3609,9 @@ components:
         demoMode:
           type: boolean
           description: Whether this is the public demo instance (`FINUANCE_DEMO_MODE`).
+        confirmPassword:
+          type: boolean
+          description: Whether creating an access token and changing an administrator's role ask for the current password (`FINUANCE_CONFIRM_PASSWORD`, on by default).
     User:
       type: object
       additionalProperties: false
@@ -4820,7 +4825,7 @@ components:
           description: Case, spaces and dashes don't matter.
     NotificationKind:
       type: string
-      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled, assistant.digest]
+      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled, shared.settlement_removed, assistant.digest]
     SharedGroupKind:
       type: string
       enum: [trip, household, event, other]
@@ -7945,6 +7950,10 @@ components:
       additionalProperties: false
       required: [name, scope, expiresInDays]
       properties:
+        password:
+          type: string
+          maxLength: 1024
+          description: The account's current password; required when the instance asks for it (`confirmPassword` in `/meta`).
         name:
           type: string
           minLength: 1
@@ -8327,6 +8336,10 @@ components:
       type: object
       additionalProperties: false
       properties:
+        password:
+          type: string
+          maxLength: 1024
+          description: The administrator's own current password; required with `admin` when the instance asks for it (`confirmPassword` in `/meta`).
         admin:
           type: boolean
         disabled:

@@ -36,10 +36,14 @@ type Config struct {
 	SessionTTL         time.Duration
 	SessionIdleTTL     time.Duration
 	CookieSecure       bool
-	AllowSignup        bool
-	Profiling          bool // /debug/pprof on the admin port (FINUANCE_PPROF)
-	DemoMode           bool
-	DemoAssistant      bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
+	// ConfirmPassword: creating an access token and changing an administrator's role need the
+	// current password again, so an open session alone can't mint a long-lived credential or
+	// promote an account (FINUANCE_CONFIRM_PASSWORD, on unless set to false).
+	ConfirmPassword bool
+	AllowSignup     bool
+	Profiling       bool // /debug/pprof on the admin port (FINUANCE_PPROF)
+	DemoMode        bool
+	DemoAssistant   bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
 	// Developer is the administrators' Developer section; nil unless FINUANCE_DEVELOPER_MODE=true.
 	Developer            *Developer
 	MaxUploadBytes       int64
@@ -120,6 +124,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		SessionTTL:           p.duration("FINUANCE_SESSION_TTL", 720*time.Hour),
 		SessionIdleTTL:       p.duration("FINUANCE_SESSION_IDLE_TTL", 168*time.Hour),
 		AllowSignup:          p.bool("FINUANCE_ALLOW_SIGNUP", false),
+		ConfirmPassword:      p.bool("FINUANCE_CONFIRM_PASSWORD", true),
 		Profiling:            p.bool("FINUANCE_PPROF", false),
 		DemoMode:             p.bool("FINUANCE_DEMO_MODE", false),
 		DemoAssistant:        p.bool("FINUANCE_DEMO_ASSISTANT", false),
@@ -191,6 +196,12 @@ func (c *Config) demoLimits(p *parser) {
 	c.MaxUploadBytes = min(c.MaxUploadBytes, DemoMaxUploadBytes)
 	if !c.DemoAssistant {
 		c.AIConnections = nil
+	}
+	// anonymous visitors never talk to a provider that bills per request or sees their questions
+	for i := range c.AIConnections {
+		if c.AIConnections[i].Cloud {
+			p.fail("FINUANCE_DEMO_ASSISTANT", fmt.Sprintf("the demo's assistant can't use a cloud connection (%q); give it a local model server", c.AIConnections[i].Name))
+		}
 	}
 }
 

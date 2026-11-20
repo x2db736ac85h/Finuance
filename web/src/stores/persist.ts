@@ -4,6 +4,11 @@
 import { create } from 'zustand';
 
 import { putPrefs, type Preferences } from '../api/hooks/prefs';
+import { useChat } from '../assistant/chatStore';
+import { useCashDialogs } from '../cash/store';
+import { useDupDialog } from '../duplicates/store';
+import { resetQueue } from '../import/queue';
+import { useSelection } from './selectionStore';
 import type { ParsedPrefs, PrefsDoc } from './prefs';
 import { PrefsSync } from './prefsSync';
 import { collectUi, NARROW_PX, uiDefaults, useUi } from './uiStore';
@@ -24,7 +29,25 @@ export function resetStores(): void {
   useViews.getState().reset();
 }
 
+/**
+ * Forgets everything the app holds in memory about the person who was signed in: the chat on
+ * screen (questions, answers, the rows a tool returned), the selection, queued uploads and open
+ * dialogs, besides the settings. For sign-out and for another account signing in in the same tab,
+ * so the next person never sees the previous one's data (WEB-1).
+ */
+export function resetSession(): void {
+  useChat.getState().ctrl?.abort(); // an answer still streaming belongs to the session that ends
+  useChat.setState(useChat.getInitialState(), true);
+  useSelection.setState(useSelection.getInitialState(), true);
+  useCashDialogs.setState(useCashDialogs.getInitialState(), true);
+  useDupDialog.setState(useDupDialog.getInitialState(), true);
+  resetQueue();
+  resetStores();
+}
+
 let current: PrefsSync | null = null;
+/** Whose data the in-memory stores hold (null: nobody's). */
+let sessionUser: string | null = null;
 
 /** The user whose preferences are loaded into the stores (null before and after a session). */
 export const usePrefsReady = create<{ userId: string | null }>()(() => ({ userId: null }));
@@ -40,7 +63,10 @@ export function startPrefsSync(
   defaults?: Record<string, unknown>,
 ): () => void {
   current?.stop();
-  resetStores();
+  // the same person again (their preferences were reloaded): only the settings start over
+  if (sessionUser !== userId) resetSession();
+  else resetStores();
+  sessionUser = userId;
   const sync = new PrefsSync({
     put: putPrefs,
     collect: collectPrefs,

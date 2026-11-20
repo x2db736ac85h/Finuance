@@ -244,7 +244,7 @@ async function undo(d: QueueDeps, id: string, name: string): Promise<void> {
   }
 }
 
-/** Test hook: forget queued files and state. */
+/** Forgets queued files and state (sign-out, another account signing in; tests). */
 export function resetQueue(): void {
   files.clear();
   uploaded.clear();

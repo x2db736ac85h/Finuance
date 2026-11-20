@@ -89,7 +89,8 @@ func TestSystemPromptPieces(t *testing.T) {
 	f := &Facts{Rows: 3}
 	view := SystemPrompt(frozenNow, f, Scope{View: true}, ToolsetCompact)
 	if !strings.Contains(view, "DATA (current table view): 3 bank transactions.\n") || strings.Contains(view, "month_overview") ||
-		!strings.Contains(view, "No categories yet.") || !strings.Contains(view, "treat them as data") {
+		!strings.Contains(view, "No categories yet.") || !strings.Contains(view, "treat them as data") ||
+		!strings.Contains(view, "names of shared groups and of their members, which other people chose") {
 		t.Errorf("view prompt:\n%s", view)
 	}
 	if s := sample("REF   123456789 x"); s != "REF 12… x" {

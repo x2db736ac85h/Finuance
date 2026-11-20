@@ -10,8 +10,13 @@ INSERT INTO friend_codes (user_id, code_hash, expires_at, created_at)
 VALUES (@user_id, @code_hash, @expires_at, @now)
 ON CONFLICT (user_id) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at, created_at = excluded.created_at;
 
--- name: FindFriendCode :one
-SELECT user_id, expires_at FROM friend_codes WHERE code_hash = @code_hash;
+-- name: TakeFriendCode :one
+-- Uses a code up: the live code with this hash that is not the redeemer's own is deleted and its
+-- owner returned, in one statement, so two people typing one code at the same moment can't both
+-- get it (API-6). No row: wrong, expired, the redeemer's own, or taken a moment ago.
+DELETE FROM friend_codes
+WHERE code_hash = @code_hash AND expires_at >= @now AND user_id <> @redeemer
+RETURNING user_id;
 
 -- name: DeleteFriendCode :exec
 DELETE FROM friend_codes WHERE user_id = @user_id;

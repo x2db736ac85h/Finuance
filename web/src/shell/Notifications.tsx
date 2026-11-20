@@ -31,6 +31,8 @@ const SAY: Record<Notification['kind'], (d: Record<string, string>) => string> =
   'shared.left': (d) => `${d['name'] || 'A member'} left ${d['group'] || 'your shared group'}`,
   'shared.expense_added': (d) => `${d['name'] || 'A member'} added an expense to ${d['group'] || 'a shared group'}`,
   'shared.settled': (d) => `${d['name'] || 'A member'} recorded a payment in ${d['group'] || 'a shared group'}`,
+  'shared.settlement_removed': (d) =>
+    `${d['name'] || 'A member'} removed a payment between you in ${d['group'] || 'a shared group'}`,
   'assistant.digest': sayDigest,
 };
 
@@ -43,6 +45,7 @@ const LINK: Record<Notification['kind'], string> = {
   'shared.left': '/s',
   'shared.expense_added': '/s',
   'shared.settled': '/s',
+  'shared.settlement_removed': '/s',
   'assistant.digest': '',
 };
 

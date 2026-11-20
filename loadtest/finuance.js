@@ -63,7 +63,7 @@ const headers = (session) => ({
   'Content-Type': 'application/json',
   'X-Finuance-Client': 'web',
   Origin: ORIGIN,
-  Cookie: `finuance_session=${session}`,
+  Cookie: session, // a ready name=value pair, see setup()
 });
 
 // setup signs in every load-test user once (paced under the sign-in limit of 30 per minute and
@@ -79,9 +79,11 @@ export function setup() {
       headers: { 'Content-Type': 'application/json', 'X-Finuance-Client': 'web', Origin: ORIGIN },
       jar: new http.CookieJar(),
     });
-    const cookie = res.cookies.finuance_session;
+    // the cookie is __Host-finuance_session over https and finuance_session over plain http
+    const name = res.cookies['__Host-finuance_session'] ? '__Host-finuance_session' : 'finuance_session';
+    const cookie = res.cookies[name];
     if (res.status !== 200 || !cookie) fail(`sign-in of ${email}: ${res.status} ${res.body}`);
-    const session = cookie[0].value;
+    const session = `${name}=${cookie[0].value}`;
     const accounts = http.get(`${BASE}/accounts`, { headers: headers(session) }).json();
     if (!accounts.length) fail(`${email} has no account; run make loadtest-seed`);
     users.push({ session, accountId: accounts[0].id, lastOn: accounts[0].lastOn });
@@ -183,7 +185,7 @@ export function importFile(data) {
   const u = data.users[exec.scenario.iterationInTest % data.users.length];
   const body = csv(5000, `${exec.vu.idInTest}-${exec.scenario.iterationInTest}-${Date.now()}`);
   const up = http.post(`${BASE}/imports`, { file: http.file(body, 'load.csv', 'text/csv'), accountId: u.accountId }, {
-    headers: { 'X-Finuance-Client': 'web', Origin: ORIGIN, Cookie: `finuance_session=${u.session}` },
+    headers: { 'X-Finuance-Client': 'web', Origin: ORIGIN, Cookie: u.session },
     tags: { name: '/imports', kind: 'import' },
   });
   if (!check(up, { 'upload 201': (r) => r.status === 201 })) return;

@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 
+import { useMeta } from '../api/hooks/me';
 import { useAccessTokens, useCreateAccessToken, useRevokeAccessToken, type AccessToken } from '../api/hooks/tokens';
 import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
@@ -35,6 +36,9 @@ export function TokensSettings() {
   const [scope, setScope] = useState<'read' | 'write'>('read');
   const [days, setDays] = useState('90');
   const [secret, setSecret] = useState<string | null>(null);
+  // the instance asks for the password again before it makes a token (FINUANCE_CONFIRM_PASSWORD)
+  const confirm = useMeta().data?.confirmPassword === true;
+  const [password, setPassword] = useState('');
   const [now] = useState(() => Date.now()); // for which tokens are still live (read once)
   const fail = (e: unknown) => {
     toast(errorMessage(e), { kind: 'error' });
@@ -47,11 +51,12 @@ export function TokensSettings() {
         onSubmit={(e) => {
           e.preventDefault();
           create.mutate(
-            { name: name.trim(), scope, expiresInDays: Number(days) },
+            { name: name.trim(), scope, expiresInDays: Number(days), ...(confirm ? { password } : {}) },
             {
               onSuccess: (r) => {
                 setSecret(r.secret);
                 setName('');
+                setPassword('');
               },
               onError: fail,
             },
@@ -84,10 +89,30 @@ export function TokensSettings() {
             Valid for
             <Select value={days} options={LIFETIMES} onChange={setDays} />
           </label>
-          <Button type="submit" variant="primary" disabled={!name.trim() || create.isPending}>
-            Make a token
-          </Button>
+          {!confirm && (
+            <Button type="submit" variant="primary" disabled={!name.trim() || create.isPending}>
+              Make a token
+            </Button>
+          )}
         </div>
+        {confirm && (
+          <div className="form-row">
+            <label className="st-col">
+              Your password
+              <TextInput
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                }}
+              />
+            </label>
+            <Button type="submit" variant="primary" disabled={!name.trim() || !password || create.isPending}>
+              Make a token
+            </Button>
+          </div>
+        )}
         {secret && (
           <div className="conn-err" role="status">
             Copy it now; it isn't shown again:{' '}

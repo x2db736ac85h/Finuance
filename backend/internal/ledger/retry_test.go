@@ -50,3 +50,25 @@ func TestCommitAgainAfterFailure(t *testing.T) {
 		t.Fatalf("start when committed: %v", err)
 	}
 }
+
+// TestFileNamesAreCleaned: a file's name is stored without control characters and without the
+// characters that reorder text on screen, so it reads the same wherever it is shown (IMP-7); a
+// name made only of such characters becomes the default one.
+func TestFileNamesAreCleaned(t *testing.T) {
+	e := newEnv(t)
+	for in, want := range map[string]string{
+		"wyci\u0105g\u202egsc.exe\n": "wyciąggsc.exe",
+		"\u202e\u2066\x1b":           "upload.csv",
+		"zwykły plik.csv":            "zwykły plik.csv",
+	} {
+		u := e.user() // the same file again would be a duplicate for one user
+		a := e.account(u, "Pekao")
+		p, err := e.l.CreatePreview(e.ctx, u, ledger.Upload{Filename: in, Content: fixture(t, fileA), AccountID: &a.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p.Import.Filename != want {
+			t.Errorf("file name %q stored as %q, want %q", in, p.Import.Filename, want)
+		}
+	}
+}

@@ -69,22 +69,6 @@ func (q *Queries) DeleteFriendship(ctx context.Context, arg DeleteFriendshipPara
 	return result.RowsAffected(), nil
 }
 
-const findFriendCode = `-- name: FindFriendCode :one
-SELECT user_id, expires_at FROM friend_codes WHERE code_hash = $1
-`
-
-type FindFriendCodeRow struct {
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-}
-
-func (q *Queries) FindFriendCode(ctx context.Context, codeHash []byte) (FindFriendCodeRow, error) {
-	row := q.db.QueryRow(ctx, findFriendCode, codeHash)
-	var i FindFriendCodeRow
-	err := row.Scan(&i.UserID, &i.ExpiresAt)
-	return i, err
-}
-
 const friendDisplayName = `-- name: FriendDisplayName :one
 SELECT display_name FROM users WHERE id = $1 AND disabled_at IS NULL
 `
@@ -160,4 +144,26 @@ func (q *Queries) SetFriendCode(ctx context.Context, arg SetFriendCodeParams) er
 		arg.Now,
 	)
 	return err
+}
+
+const takeFriendCode = `-- name: TakeFriendCode :one
+DELETE FROM friend_codes
+WHERE code_hash = $1 AND expires_at >= $2 AND user_id <> $3
+RETURNING user_id
+`
+
+type TakeFriendCodeParams struct {
+	CodeHash []byte
+	Now      time.Time
+	Redeemer uuid.UUID
+}
+
+// Uses a code up: the live code with this hash that is not the redeemer's own is deleted and its
+// owner returned, in one statement, so two people typing one code at the same moment can't both
+// get it (API-6). No row: wrong, expired, the redeemer's own, or taken a moment ago.
+func (q *Queries) TakeFriendCode(ctx context.Context, arg TakeFriendCodeParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, takeFriendCode, arg.CodeHash, arg.Now, arg.Redeemer)
+	var user_id uuid.UUID
+	err := row.Scan(&user_id)
+	return user_id, err
 }

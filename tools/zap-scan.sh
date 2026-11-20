@@ -22,7 +22,9 @@ trap 'rm -f "$jar"' EXIT
 code=$(curl -s -o /dev/null -w '%{http_code}' -c "$jar" -H 'Content-Type: application/json' -H 'X-Finuance-Client: web' \
   -H "Origin: $BASE_URL" -d "{\"email\":\"$email\",\"password\":\"zap scan password $RANDOM\"}" "$BASE_URL/api/v1/auth/signup")
 [ "$code" = 201 ] || { echo "zap-scan: sign-up answered $code (the stack needs FINUANCE_ALLOW_SIGNUP)"; exit 1; }
-session=$(awk '$6 == "finuance_session" {print $7}' "$jar")
+# the cookie as name=value (__Host-finuance_session over https, finuance_session over plain http)
+session=$(awk '$6 ~ /^(__Host-)?finuance_session$/ {print $6 "=" $7}' "$jar")
+[ -n "$session" ] || { echo "zap-scan: no session cookie after sign-up"; exit 1; }
 curl -sf -o /dev/null -b "$jar" -H 'X-Finuance-Client: web' -H "Origin: $BASE_URL" -X POST "$BASE_URL/api/v1/demo-data"
 
 zap() {

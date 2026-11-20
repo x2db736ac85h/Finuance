@@ -83,7 +83,7 @@ type Expense struct {
 	Origin        string // transaction | typed
 	SplitMode     string // equal | shares | exact
 	Shares        []splits.Share
-	Mine          bool // the caller added it (and may change it)
+	Mine          bool // the caller may change it: they added it, or own the group and its author is gone
 	SourceMissing bool // the caller's own copy whose transaction is gone (only they see it)
 }
 
@@ -94,7 +94,7 @@ type Settlement struct {
 	AmountMinor int64
 	SettledOn   platform.Date
 	Note        string
-	Mine        bool
+	Mine        bool // the caller may remove it: they recorded it, or are one of its two sides
 }
 
 // Detail is everything the group page shows.
@@ -354,12 +354,19 @@ func (s *Service) fill(ctx context.Context, q *db.Queries, userID, groupID uuid.
 			missing[c.ExpenseID] = true
 		}
 	}
+	var me Member // the caller's own membership
+	for _, m := range out.Members {
+		if m.IsMe {
+			me = m
+		}
+	}
+	owner := me.Role == "owner" && me.State == "active"
 	var calc []splits.Expense
 	for i := range exps {
 		e := &exps[i]
 		x := Expense{ID: e.ID, AddedBy: e.AddedMember, PaidBy: e.PaidBy, BookedOn: e.BookedOn, AmountMinor: e.AmountMinor,
 			Payee: e.Payee, Category: e.CategoryName, Note: e.Note, Origin: e.Origin, SplitMode: e.SplitMode,
-			Shares: byExpense[e.ID], Mine: e.AddedBy != nil && *e.AddedBy == userID, SourceMissing: missing[e.ID]}
+			Shares: byExpense[e.ID], Mine: (e.AddedBy != nil && *e.AddedBy == userID) || (e.AddedBy == nil && owner), SourceMissing: missing[e.ID]}
 		out.Expenses = append(out.Expenses, x)
 		calc = append(calc, splits.Expense{PaidBy: e.PaidBy, Amount: e.AmountMinor, Shares: x.Shares})
 	}
@@ -371,7 +378,8 @@ func (s *Service) fill(ctx context.Context, q *db.Queries, userID, groupID uuid.
 	for i := range sets {
 		st := &sets[i]
 		out.Settlements = append(out.Settlements, Settlement{ID: st.ID, From: st.FromMember, To: st.ToMember, AmountMinor: st.AmountMinor,
-			SettledOn: st.SettledOn, Note: st.Note, Mine: st.CreatedBy != nil && *st.CreatedBy == userID})
+			SettledOn: st.SettledOn, Note: st.Note,
+			Mine: (st.CreatedBy != nil && *st.CreatedBy == userID) || st.FromMember == me.ID || st.ToMember == me.ID})
 		calcS = append(calcS, splits.Settlement{From: st.FromMember, To: st.ToMember, Amount: st.AmountMinor})
 	}
 	out.Balances = splits.Balances(calc, calcS)

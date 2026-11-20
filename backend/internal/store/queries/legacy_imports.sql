@@ -5,6 +5,10 @@ INSERT INTO legacy_imports (id, user_id, manifest, progress, created_at)
 VALUES (@id, @user_id, @manifest, @progress, @now)
 RETURNING id, user_id, status, progress, report, error, created_at, finished_at;
 
+-- name: HasActiveLegacyImport :one
+-- A run of the user is queued or running (legacy_imports_one_active allows one).
+SELECT EXISTS (SELECT 1 FROM legacy_imports WHERE user_id = @user_id AND status IN ('queued', 'running'));
+
 -- name: AddLegacyImportFile :exec
 INSERT INTO legacy_import_files (legacy_import_id, position, user_id, content)
 VALUES (@legacy_import_id, @position, @user_id, @content);

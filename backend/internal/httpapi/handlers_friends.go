@@ -66,7 +66,7 @@ func (a *api) AddFriend(ctx context.Context, req gen.AddFriendRequestObject) (ge
 	if err := a.limits.friendUser.Allow(u.String()); err != nil {
 		return nil, err
 	}
-	if err := a.limits.friendIP.Allow(mw.FromContext(ctx).ClientIP); err != nil {
+	if err := a.limits.friendIP.Allow(mw.ClientKey(mw.FromContext(ctx).ClientIP)); err != nil {
 		return nil, err
 	}
 	f, err := a.friends.Redeem(ctx, u, req.Body.Code)
@@ -77,7 +77,7 @@ func (a *api) AddFriend(ctx context.Context, req gen.AddFriendRequestObject) (ge
 		return nil, err
 	}
 	a.audit(ctx, u, ledger.AuditFriendAdded, f.ID.String(), map[string]any{"name": f.DisplayName})
-	a.audit(ctx, f.ID, ledger.AuditFriendAdded, u.String(), map[string]any{"by": "friend", "name": identity(ctx).User.DisplayName})
+	a.auditOther(ctx, f.ID, ledger.AuditFriendAdded, u.String(), map[string]any{"by": "friend", "name": identity(ctx).User.DisplayName})
 	return gen.AddFriend201JSONResponse(friendDTO(f)), nil
 }
 
@@ -91,7 +91,7 @@ func (a *api) RemoveFriend(ctx context.Context, req gen.RemoveFriendRequestObjec
 		return nil, err
 	}
 	a.audit(ctx, u, ledger.AuditFriendRemoved, req.Id.String(), nil)
-	a.audit(ctx, req.Id, ledger.AuditFriendRemoved, u.String(), map[string]any{"by": "friend"})
+	a.auditOther(ctx, req.Id, ledger.AuditFriendRemoved, u.String(), map[string]any{"by": "friend"})
 	return gen.RemoveFriend204Response{}, nil
 }
 

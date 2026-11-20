@@ -68,6 +68,33 @@ var (
 	notFound  = regexp.MustCompile(`(?i)model .*(not found|not loaded|does not exist)|no (such )?model|model_not_found`)
 )
 
+// Public is what a user who is not an administrator is told about the error: one fixed sentence
+// per kind. Message can quote the model server's own words, its address, a resolved IP or part of
+// a rejected key, which are the administrator's to see (Administration → Assistant), not every
+// signed-in user's (AI-4).
+func (e *Error) Public() string {
+	switch e.Kind {
+	case KindUnreachable:
+		return "The model server can't be reached. An administrator can see why under Administration → Assistant."
+	case KindAuth:
+		return "The model server refused the connection's key. An administrator needs to check it."
+	case KindToolsRejected:
+		return "This model can't look things up with tools."
+	case KindContextTooLong:
+		return "The conversation is too long for this model. Start a new chat, or pick a model with more room."
+	case KindRateLimited:
+		return "The model provider is limiting requests right now. Try again in a moment."
+	case KindNotFound:
+		return "The model isn't available on the model server."
+	case KindTimeout:
+		return "The model didn't answer in time."
+	case KindBadResponse:
+		return "The model server's answer couldn't be read."
+	default:
+		return "The model server reported an error."
+	}
+}
+
 // statusError classifies a non-2xx answer from its status and body.
 func statusError(status int, body []byte) *Error {
 	msg := errorText(body)

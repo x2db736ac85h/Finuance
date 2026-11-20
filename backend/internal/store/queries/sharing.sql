@@ -100,8 +100,19 @@ RETURNING *;
 -- name: ListSharedSettlements :many
 SELECT * FROM shared_settlements WHERE group_id = @group_id ORDER BY settled_on DESC, created_at DESC, id;
 
--- name: DeleteSharedSettlement :execrows
-DELETE FROM shared_settlements WHERE group_id = @group_id AND id = @id;
+-- name: DeleteSharedSettlement :one
+-- The policy lets whoever recorded it and either of its two sides delete it (migration 00028).
+DELETE FROM shared_settlements WHERE group_id = @group_id AND id = @id
+RETURNING from_member, to_member;
+
+-- name: LockSharedGroup :exec
+-- One writer at a time per group for what moves balances (an expense, a settlement, a member
+-- leaving): a transaction-scoped advisory lock, because SELECT … FOR UPDATE on the group's row
+-- needs the UPDATE policy, which only the owner passes (API-8).
+SELECT pg_advisory_xact_lock(hashtextextended((@group_id::uuid)::text, 23108));
+
+-- name: CountSharedExpenses :one
+SELECT count(*) FROM shared_expenses WHERE group_id = @group_id;
 
 -- name: LinkGroupToShared :execrows
 UPDATE groups SET shared_group_id = sqlc.narg(shared_group_id) WHERE user_id = @user_id AND id = @id;

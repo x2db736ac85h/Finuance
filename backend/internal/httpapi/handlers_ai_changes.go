@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/aichanges"
+	"github.com/x2db736ac85h/finuance/backend/internal/assistant"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
@@ -18,11 +19,21 @@ func (a *api) aiOrigin(ctx context.Context, chat *gen.AssistantChatHeader, propo
 	if chat == nil || proposal == nil || a.ai == nil {
 		return ctx, nil
 	}
-	p, err := a.ai.Chats.FindProposal(ctx, identity(ctx).User.ID, *chat, *proposal)
+	p, kind, err := a.ai.Chats.FindProposal(ctx, identity(ctx).User.ID, *chat, *proposal)
 	if errors.Is(err, platform.ErrNotFound) {
 		return ctx, validation("X-Assistant-Proposal", "is not a proposal of this chat")
 	} else if err != nil {
 		return ctx, err
+	}
+	// "applied automatically" is the server's decision, not the request's claim (AI-1)
+	if deref(auto) {
+		set, err := a.ai.Chats.Settings(ctx, identity(ctx).User.ID)
+		if err != nil {
+			return ctx, err
+		}
+		if err := assistant.MayAutoApply(p, kind, set.AutoApply); err != nil {
+			return ctx, err
+		}
 	}
 	return ledger.WithAIOrigin(ctx, ledger.AIOrigin{ChatID: *chat, ProposalKey: *proposal, Action: p.Action, Auto: deref(auto)}), nil
 }

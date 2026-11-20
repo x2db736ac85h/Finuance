@@ -84,6 +84,9 @@ func (a *api) ListAccessTokens(ctx context.Context, _ gen.ListAccessTokensReques
 // CreateAccessToken makes a token and returns it once.
 func (a *api) CreateAccessToken(ctx context.Context, req gen.CreateAccessTokenRequestObject) (gen.CreateAccessTokenResponseObject, error) {
 	b := req.Body
+	if err := a.confirmPassword(ctx, b.Password); err != nil {
+		return nil, err
+	}
 	t, secret, err := a.auth.CreateToken(ctx, identity(ctx).User.ID, b.Name, string(b.Scope), b.ExpiresInDays)
 	if err != nil {
 		return nil, err

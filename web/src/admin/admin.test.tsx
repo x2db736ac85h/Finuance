@@ -249,6 +249,66 @@ describe('administration', () => {
     });
   });
 
+  // an account that uses two-step sign-in, with the calls the panel makes for it
+  function roleServer() {
+    const patches: Schemas['AdminUpdateUserRequest'][] = [];
+    const removed: string[] = [];
+    let sam = adminUser({ secondFactor: true });
+    server.use(
+      http.get(`${API}/admin/users`, () => HttpResponse.json({ users: [sam], totals })),
+      http.get(`${API}/admin/users/:id`, () => HttpResponse.json(sam)),
+      http.patch(`${API}/admin/users/:id`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AdminUpdateUserRequest'];
+        patches.push(body);
+        sam = { ...sam, ...(body.admin !== undefined ? { isAdmin: body.admin } : {}) };
+        return HttpResponse.json(sam);
+      }),
+      http.delete(`${API}/admin/users/:id/second-factor`, ({ params }) => {
+        removed.push(String(params['id']));
+        sam = { ...sam, secondFactor: false };
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    return { patches, removed };
+  }
+
+  it("changes a role in one click and removes an account's two-step sign-in", async () => {
+    const { patches, removed } = roleServer();
+    renderApp('/admin/users');
+    expect(await screen.findByText('active · two-step', {}, { timeout: 5000 })).toBeTruthy(); // who uses it
+    await userEvent.click(screen.getByRole('button', { name: 'sam@example.com' }));
+    const card = await screen.findByLabelText('Account sam@example.com');
+    await userEvent.click(within(card).getByRole('button', { name: 'Make administrator' }));
+    await waitFor(() => {
+      expect(patches).toEqual([{ admin: true }]);
+    });
+    await userEvent.click(within(card).getByRole('button', { name: 'Remove two-step sign-in' }));
+    await waitFor(() => {
+      expect(removed).toEqual(['00000000-0000-4000-8000-0000000000a1']);
+    });
+  });
+
+  it('asks for the password before a role change where the instance wants it confirmed', async () => {
+    db.confirmPassword = true;
+    const { patches } = roleServer();
+    renderApp('/admin/users');
+    await userEvent.click(await screen.findByRole('button', { name: 'sam@example.com' }, { timeout: 5000 }));
+    const card = await screen.findByLabelText('Account sam@example.com');
+    await userEvent.click(within(card).getByRole('button', { name: 'Make administrator' }));
+    const form = await within(card).findByRole('form', { name: 'Confirm the role change' });
+    expect(within(form).getByRole<HTMLButtonElement>('button', { name: 'Confirm' }).disabled).toBe(true);
+    expect(patches).toHaveLength(0); // nothing is sent until the password is typed
+    await userEvent.type(
+      within(form).getByLabelText(/Your password, to make this account an administrator/),
+      'my password',
+    );
+    await userEvent.click(within(form).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => {
+      expect(patches).toEqual([{ admin: true, password: 'my password' }]);
+    });
+    expect(within(card).queryByRole('form', { name: 'Confirm the role change' })).toBeNull();
+  });
+
   it('saves the instance defaults and switches', async () => {
     let put: Schemas['InstanceSettingsDoc'] | undefined;
     let stored: Schemas['InstanceSettingsDoc'] = { version: 3, defaults: {}, features: {}, limits: {} };

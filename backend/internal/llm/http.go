@@ -227,19 +227,33 @@ func (c *Config) call(ctx context.Context, method, url string, header http.Heade
 		return nil, nil, transportError(ctx, err)
 	}
 	idle.Reset(c.IdleTimeout)
-	res.Body = &idleBody{ReadCloser: res.Body, reset: func() { idle.Reset(c.IdleTimeout) }, ctx: ctx}
+	res.Body = &idleBody{ReadCloser: res.Body, reset: func() { idle.Reset(c.IdleTimeout) }, ctx: ctx, left: MaxResponseBytes}
 	return res, done, nil
 }
 
-// idleBody restarts the idle timer on every read that returns data.
+// MaxResponseBytes is the most one answer of a model server may be, streamed or not. An answer is
+// kilobytes; a server that keeps sending (broken, or hostile) is cut off here instead of filling
+// the process's memory for as long as the timeout lasts (AI-6). A variable so a test can lower it.
+var MaxResponseBytes int64 = 8 << 20
+
+// idleBody restarts the idle timer on every read that returns data and ends the response at
+// MaxResponseBytes.
 type idleBody struct {
 	io.ReadCloser
 	reset func()
 	ctx   context.Context
+	left  int64
 }
 
 func (b *idleBody) Read(p []byte) (int, error) {
+	if b.left <= 0 {
+		return 0, &Error{Kind: KindBadResponse, Message: "the model server's answer was too long and was cut off"}
+	}
+	if int64(len(p)) > b.left {
+		p = p[:b.left]
+	}
 	n, err := b.ReadCloser.Read(p)
+	b.left -= int64(n)
 	if n > 0 {
 		b.reset()
 	}

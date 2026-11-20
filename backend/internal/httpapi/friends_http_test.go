@@ -100,6 +100,8 @@ func TestFriendsHTTP(t *testing.T) {
 	if !strings.Contains(act.raw, "friend.added") || !strings.Contains(act.raw, "friend.removed") || !strings.Contains(act.raw, "friend.code_failed") {
 		t.Errorf("activity = %s", act.raw)
 	}
+	// what Bo did is in Alex's log without Bo's address or browser (API-2)
+	noActorDetails(t, e, mustUUID(t, alex.do("GET", "/me", nil).body["id"].(string)), "friend", 2)
 }
 
 // TestFriendCodeTries: 10 codes an hour per user, then 429.

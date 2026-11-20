@@ -406,20 +406,40 @@ func messageOf(m *db.AssistantMessage) (Message, error) {
 }
 
 // FindProposal returns the proposal with this key in one of the chat's steps (an Apply names it, ADR
-// 0030), or platform.ErrNotFound.
-func (c *Chats) FindProposal(ctx context.Context, userID, chatID uuid.UUID, key string) (*Proposal, error) {
-	_, msgs, err := c.Get(ctx, userID, chatID)
+// 0030) and the kind of its chat, or platform.ErrNotFound.
+func (c *Chats) FindProposal(ctx context.Context, userID, chatID uuid.UUID, key string) (*Proposal, string, error) {
+	chat, msgs, err := c.Get(ctx, userID, chatID)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	for i := range msgs {
 		for _, st := range msgs[i].Steps {
 			if st.Proposal != nil && st.Proposal.Key() == key {
-				return st.Proposal, nil
+				return st.Proposal, chat.Kind, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("proposal %s in chat %s: %w", key, chatID, platform.ErrNotFound)
+	return nil, "", fmt.Errorf("proposal %s in chat %s: %w", key, chatID, platform.ErrNotFound)
+}
+
+// AutoApplyMaxRows is the most transactions a proposal may touch and still be applied by the
+// panel itself; a larger one waits for a click (the panel has the same number).
+const AutoApplyMaxRows = 50
+
+// MayAutoApply decides on the server whether a proposal may be applied without a click: its kind
+// must be one the user switched on, it must stay within AutoApplyMaxRows, and it must not come
+// from a digest, which nobody asked for in that moment. Until Phase 23 only the panel checked
+// (AI-1); a request can claim "automatic" for anything, so the server decides.
+func MayAutoApply(p *Proposal, chatKind string, allowed []string) error {
+	switch {
+	case !slices.Contains(AutoApplyActions, p.Action) || !slices.Contains(allowed, p.Action):
+		return fmt.Errorf("%s is not a kind of change you let the assistant apply by itself: %w", p.Action, platform.ErrForbidden)
+	case p.Matched > AutoApplyMaxRows || len(p.IDs) > AutoApplyMaxRows:
+		return fmt.Errorf("this change touches more than %d transactions, so it waits for your click: %w", AutoApplyMaxRows, platform.ErrForbidden)
+	case chatKind == KindDigest:
+		return fmt.Errorf("a digest's suggestions wait for your click: %w", platform.ErrForbidden)
+	}
+	return nil
 }
 
 // Delete removes a chat.

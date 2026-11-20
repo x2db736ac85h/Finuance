@@ -204,6 +204,26 @@ func TestImportFlowHTTP(t *testing.T) {
 	opts["invertSign"] = false
 	expect(t, b.do("PATCH", "/imports/"+id, map[string]any{"options": opts}), 200, "")
 
+	// Changing a preview, listing its lines and reprocessing each parse the stored file again, so
+	// one user gets sixty of them a minute together (IMP-4); the next one waits, reading the
+	// import itself does not.
+	limited := false
+	for range 70 {
+		if r := b.do("PATCH", "/imports/"+id, map[string]any{"options": opts}); r.code == 429 {
+			limited = true
+			break
+		} else if r.code != 200 {
+			t.Fatalf("PATCH: %d %s", r.code, r.raw)
+		}
+	}
+	if !limited {
+		t.Error("seventy changes of a preview in a row were all accepted")
+	}
+	expect(t, b.do("GET", "/imports/"+id+"/lines", nil), 429, "rate_limited")
+	expect(t, b.do("GET", "/imports/"+id, nil), 200, "")
+	e.clock.Add(time.Minute)
+	expect(t, b.do("PATCH", "/imports/"+id, map[string]any{"options": opts}), 200, "")
+
 	// The same bytes again: 409 with the existing import's id.
 	dup := b.upload("", "again.csv", pekao, "")
 	expect(t, dup, 409, "duplicate_file")

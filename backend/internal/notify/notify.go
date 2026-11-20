@@ -31,13 +31,15 @@ const (
 	SharedLeft         = "shared.left"
 	SharedExpenseAdded = "shared.expense_added"
 	SharedSettled      = "shared.settled"
+	// the other side of a payment removed it (either side may; API-3)
+	SharedSettlementRemoved = "shared.settlement_removed"
 	// AssistantDigest: a digest is ready (ADR 0033); data holds the chat's id, the schedule, the
 	// number of proposals waiting, and failed when it couldn't be written.
 	AssistantDigest = "assistant.digest"
 )
 
 // Kinds lists every kind above.
-var Kinds = []string{FriendAdded, FriendRemoved, SharedInvited, SharedJoined, SharedLeft, SharedExpenseAdded, SharedSettled,
+var Kinds = []string{FriendAdded, FriendRemoved, SharedInvited, SharedJoined, SharedLeft, SharedExpenseAdded, SharedSettled, SharedSettlementRemoved,
 	AssistantDigest}
 
 // Retention is how long a notification is kept.

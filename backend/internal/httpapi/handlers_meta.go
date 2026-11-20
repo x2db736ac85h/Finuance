@@ -62,6 +62,7 @@ var _ gen.StrictServerInterface = (*api)(nil)
 func (a *api) GetMeta(ctx context.Context, _ gen.GetMetaRequestObject) (gen.GetMetaResponseObject, error) {
 	f := a.features(ctx)
 	out := gen.GetMeta200JSONResponse{Version: a.version, SignupEnabled: a.cfg.AllowSignup, DemoMode: a.cfg.DemoMode,
+		ConfirmPassword:  a.cfg.ConfirmPassword,
 		AssistantEnabled: a.conns().Enabled() && f.Assistant, Themes: []gen.PublicTheme{},
 		Features: gen.Features{Overview: f.Overview, Assistant: f.Assistant, AssistantDigests: f.AssistantDigests && !a.cfg.DemoMode,
 			Friends: f.Friends, SharedGroups: f.SharedGroups}}

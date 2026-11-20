@@ -199,8 +199,8 @@ func (t *Tools) search(ctx context.Context, userID uuid.UUID, sc Scope, a args) 
 		for i := range rows {
 			r := &rows[i]
 			row := toolRow{ID: i, Date: r.BookedOn.String(), Amount: amount(r.AmountMinor, r.Currency),
-				Payee: sc.mask(ingest.Collapse(r.Payee)), Category: r.Category, Title: sc.mask(clip(ingest.Collapse(r.Description), 80)),
-				Kind: sc.mask(r.TxType), Group: r.Group}
+				Payee: sc.mask(ingest.Collapse(r.Payee)), Category: sc.mask(r.Category), Title: sc.mask(clip(ingest.Collapse(r.Description), 80)),
+				Kind: sc.mask(r.TxType), Group: sc.mask(r.Group)}
 			if sc.MultiAccount {
 				row.Account = r.Account
 			}
@@ -525,20 +525,13 @@ func (t *Tools) recurring(ctx context.Context, userID uuid.UUID, sc Scope, a arg
 	return outcome(r, fmt.Sprintf("recurring payments → %d", r.Count)), nil
 }
 
-var longDigits = regexp.MustCompile(`\d{6,}`)
-
-// mask shortens digit runs of six or more to their first two digits (account and card numbers,
-// references) when the scope says so (legacy sample masking, applied to cloud tool results).
+// mask cuts numbers and addresses down (MaskDigits, mask.go) when the scope says so: the results
+// of a tool that go to a cloud model.
 func (sc Scope) mask(s string) string {
 	if !sc.Mask {
 		return s
 	}
 	return MaskDigits(s)
-}
-
-// MaskDigits is the legacy sample masking: "12345678" → "12…".
-func MaskDigits(s string) string {
-	return longDigits.ReplaceAllStringFunc(s, func(m string) string { return m[:2] + "…" })
 }
 
 // clip cuts s to n characters (legacy .slice(0, n)).

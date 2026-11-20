@@ -12,6 +12,7 @@ const SETTINGS = [
   'general',
   'appearance',
   'profile',
+  'security',
   'sessions',
   'tokens',
   'activity',

@@ -26,7 +26,7 @@ func (a *api) adminAudit(ctx context.Context, action string, target *admin.User,
 		a.auditMe(ctx, action, entity, meta)
 		if target.ID != identity(ctx).User.ID {
 			// the user learns that an administrator acted, not which one
-			a.audit(ctx, target.ID, action, entity, map[string]any{"by": "administrator"})
+			a.auditOther(ctx, target.ID, action, entity, map[string]any{"by": "administrator"})
 		}
 		return
 	}
@@ -113,6 +113,11 @@ func (a *api) AdminUpdateUser(ctx context.Context, req gen.AdminUpdateUserReques
 	before, err := a.admin.GetUser(ctx, req.Id)
 	if err != nil {
 		return nil, err
+	}
+	if b.Admin != nil && *b.Admin != before.IsAdmin { // a role change, not a repeat of the current role
+		if err := a.confirmPassword(ctx, b.Password); err != nil {
+			return nil, err
+		}
 	}
 	in := admin.UpdateInput{Admin: b.Admin, Disabled: b.Disabled, DisplayName: b.DisplayName}
 	if b.Limits != nil {

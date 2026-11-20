@@ -66,6 +66,7 @@ type Querier interface {
 	CountLiveAccessTokens(ctx context.Context, arg CountLiveAccessTokensParams) (int64, error)
 	CountOwnedSharedGroups(ctx context.Context, ownerID *uuid.UUID) (int64, error)
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountSharedExpenses(ctx context.Context, groupID uuid.UUID) (int64, error)
 	CountUnreadNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUnsentAssistantAttachments(ctx context.Context, arg CountUnsentAssistantAttachmentsParams) (int64, error)
 	CountUnusedRecoveryCodes(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -153,7 +154,8 @@ type Querier interface {
 	DeleteSharedExpense(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteSharedGroup(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteSharedMember(ctx context.Context, arg DeleteSharedMemberParams) (int64, error)
-	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (int64, error)
+	// The policy lets whoever recorded it and either of its two sides delete it (migration 00028).
+	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (DeleteSharedSettlementRow, error)
 	DeleteSharedSplits(ctx context.Context, expenseID uuid.UUID) error
 	DeleteStoredConnection(ctx context.Context, name string) (int64, error)
 	DeleteTransactionsByID(ctx context.Context, arg DeleteTransactionsByIDParams) (int64, error)
@@ -191,7 +193,6 @@ type Querier interface {
 	ExportImportIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	// Account suggestion (PLAN §4.4): last four digits of the own-account column.
 	FindAccountsByNumberHint(ctx context.Context, arg FindAccountsByNumberHintParams) ([]Account, error)
-	FindFriendCode(ctx context.Context, codeHash []byte) (FindFriendCodeRow, error)
 	// Exact duplicate file check (PLAN §4.4): an earlier non-failed import with the same bytes.
 	FindImportBySHA(ctx context.Context, arg FindImportBySHAParams) (uuid.UUID, error)
 	// The non-errored staged rows of one fingerprint in the account's committed imports, earliest
@@ -276,6 +277,8 @@ type Querier interface {
 	// count, money out and in (minor units, transfers included as in the legacy), first and last day.
 	// The currency is the most common one among the group's transactions.
 	GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStatsRow, error)
+	// A run of the user is queued or running (legacy_imports_one_active allows one).
+	HasActiveLegacyImport(ctx context.Context, userID uuid.UUID) (bool, error)
 	HasConfirmedSecondFactor(ctx context.Context, userID uuid.UUID) (bool, error)
 	// Distinct bank categories of an import's valid rows (the commit upserts them as categories).
 	ImportBankCategories(ctx context.Context, arg ImportBankCategoriesParams) ([]*string, error)
@@ -391,6 +394,10 @@ type Querier interface {
 	LockAccount(ctx context.Context, arg LockAccountParams) (uuid.UUID, error)
 	// The row locked for the check of a code, so two requests can't both use one code.
 	LockSecondFactor(ctx context.Context, userID uuid.UUID) (UserSecondFactor, error)
+	// One writer at a time per group for what moves balances (an expense, a settlement, a member
+	// leaving): a transaction-scoped advisory lock, because SELECT … FOR UPDATE on the group's row
+	// needs the UPDATE policy, which only the owner passes (API-8).
+	LockSharedGroup(ctx context.Context, groupID uuid.UUID) error
 	// Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
 	// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
 	LockUserAccounts(ctx context.Context, userID uuid.UUID) error
@@ -513,6 +520,10 @@ type Querier interface {
 	// Starts (or restarts) enrolment. A confirmed factor is never replaced this way: it has to be
 	// switched off first, with the password and a code.
 	StartSecondFactor(ctx context.Context, arg StartSecondFactorParams) error
+	// Uses a code up: the live code with this hash that is not the redeemer's own is deleted and its
+	// owner returned, in one statement, so two people typing one code at the same moment can't both
+	// get it (API-6). No row: wrong, expired, the redeemer's own, or taken a moment ago.
+	TakeFriendCode(ctx context.Context, arg TakeFriendCodeParams) (uuid.UUID, error)
 	// Records use; the caller throttles it to once a minute.
 	TouchAccessToken(ctx context.Context, arg TouchAccessTokenParams) error
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.

@@ -181,7 +181,7 @@ func (a *api) readUpload(req gen.UploadImportRequestObject) (ledger.Upload, erro
 
 // cleanFilename keeps the base name of an uploaded file, at most 255 characters.
 func cleanFilename(name string) string {
-	name = strings.TrimSpace(name[strings.LastIndexAny(name, `/\`)+1:])
+	name = strings.TrimSpace(platform.StripControls(name[strings.LastIndexAny(name, `/\`)+1:]))
 	if name == "" {
 		name = "upload.csv"
 	}
@@ -229,6 +229,9 @@ func (a *api) GetImport(ctx context.Context, req gen.GetImportRequestObject) (ge
 // UpdateImport applies account, mapping and option changes to a previewed import.
 func (a *api) UpdateImport(ctx context.Context, req gen.UpdateImportRequestObject) (gen.UpdateImportResponseObject, error) {
 	u := identity(ctx).User.ID
+	if err := a.limits.reparse.Allow(identity(ctx).User.ID.String()); err != nil { // a full parse of the stored file (IMP-4)
+		return nil, err
+	}
 	p, err := a.ledger.UpdatePreview(ctx, u, req.Id, ledger.Changes{AccountID: req.Body.AccountId, Mapping: req.Body.Mapping, Options: req.Body.Options})
 	if err != nil {
 		return nil, err
@@ -287,6 +290,9 @@ func (a *api) ListImportRows(ctx context.Context, req gen.ListImportRowsRequestO
 
 // ListImportLines returns the first decoded records with their status.
 func (a *api) ListImportLines(ctx context.Context, req gen.ListImportLinesRequestObject) (gen.ListImportLinesResponseObject, error) {
+	if err := a.limits.reparse.Allow(identity(ctx).User.ID.String()); err != nil { // a full parse of the stored file (IMP-4)
+		return nil, err
+	}
 	limit := ledger.LinesLimit
 	if req.Params.Limit != nil {
 		limit = *req.Params.Limit
@@ -326,6 +332,9 @@ func (a *api) CommitImport(ctx context.Context, req gen.CommitImportRequestObjec
 // ReprocessImport re-reads a committed import with a new mapping or options and commits it again.
 func (a *api) ReprocessImport(ctx context.Context, req gen.ReprocessImportRequestObject) (gen.ReprocessImportResponseObject, error) {
 	u := identity(ctx).User.ID
+	if err := a.limits.reparse.Allow(identity(ctx).User.ID.String()); err != nil { // a full parse of the stored file (IMP-4)
+		return nil, err
+	}
 	imp, err := a.ledger.Reprocess(ctx, u, req.Id, ledger.Changes{Mapping: req.Body.Mapping, Options: req.Body.Options},
 		a.enqueueCommit(u, req.Id, false))
 	if err != nil {

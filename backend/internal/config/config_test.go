@@ -198,6 +198,18 @@ func TestDemoMode(t *testing.T) {
 	if v := vars(err); len(v) != 1 || v[0] != "FINUANCE_ALLOW_SIGNUP" {
 		t.Errorf("demo with sign-up: %v", err)
 	}
+	// anonymous visitors never reach a cloud model (AI-10); without the demo's assistant the
+	// connection is simply dropped, like any other
+	cloud := map[string]string{"FINUANCE_AI_BASE_URL": "https://api.example.com/v1", "FINUANCE_AI_ALLOW_REMOTE": "true"}
+	cloud["FINUANCE_DEMO_ASSISTANT"] = "true"
+	_, err = Load(env(base(cloud)), ForHealthcheck)
+	if v := vars(err); len(v) != 1 || v[0] != "FINUANCE_DEMO_ASSISTANT" || !strings.Contains(err.Error(), "cloud connection") {
+		t.Errorf("demo with a cloud connection: %v", err)
+	}
+	delete(cloud, "FINUANCE_DEMO_ASSISTANT")
+	if c, err = Load(env(base(cloud)), ForHealthcheck); err != nil || len(c.AIConnections) != 0 {
+		t.Errorf("demo without the assistant and a cloud connection configured: %v, %d connections", err, len(c.AIConnections))
+	}
 	c, err = Load(env(map[string]string{"FINUANCE_AI_BASE_URL": "http://localhost:1234/v1", "FINUANCE_ALLOW_SIGNUP": "true"}), ForHealthcheck)
 	if err != nil || !c.AllowSignup || c.MaxUploadBytes != 20<<20 || len(c.AIConnections) != 1 {
 		t.Errorf("not a demo: %+v, %v", c, err)

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -27,8 +28,38 @@ const (
 	legacyFilesFactor = 4
 )
 
-func legacyBodyLimit(maxUpload int64) int64 {
-	return legacyFilesFactor*maxUpload + maxManifestBytes + multipartOverhead
+// legacyBodyLimit is the largest body of a migration: four files and the manifest, and never more
+// than FINUANCE_MAX_LEGACY_IMPORT_BYTES when that is set (it was read and never applied; IMP-3).
+func legacyBodyLimit(maxUpload, maxLegacy int64) int64 {
+	limit := legacyFilesFactor*maxUpload + maxManifestBytes + multipartOverhead
+	if maxLegacy > 0 {
+		limit = min(limit, maxLegacy)
+	}
+	return limit
+}
+
+// beforeBody runs after the session is known and before the request validator, which reads the
+// whole body to check it. A migration's body can be close to a hundred megabytes, so what can
+// refuse it is asked first: the upload limit per user, and that no run of the user is queued or
+// running (IMP-3). Create refuses a second run too, but only once everything was read and decoded.
+func (a *api) beforeBody(prod bool) gen.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Pattern == "POST /api/v1/legacy-imports" && a.legacy != nil && !a.cfg.DemoMode {
+				ctx := r.Context()
+				u := identity(ctx).User.ID
+				err := a.limits.upload.Allow(u.String())
+				if err == nil {
+					err = a.legacy.Busy(ctx, u)
+				}
+				if err != nil {
+					WriteProblem(w, r, err, prod)
+					return
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // CreateLegacyImport stores the manifest and files and enqueues the run.
@@ -37,7 +68,7 @@ func (a *api) CreateLegacyImport(ctx context.Context, req gen.CreateLegacyImport
 		return nil, fmt.Errorf("the migration from the single-file app isn't available in the demo: %w", platform.ErrForbidden)
 	}
 	u := identity(ctx).User.ID
-	man, files, err := a.readLegacyUpload(req)
+	man, files, err := a.readLegacyUpload(req) // beforeBody has checked the limit and that no run is active
 	if err != nil {
 		return nil, err
 	}

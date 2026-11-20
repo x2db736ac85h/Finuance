@@ -18,6 +18,7 @@ import {
 } from '../api/hooks/admin';
 import { MIN_PASSWORD } from '../auth/Signup';
 import { fmtDateTime } from '../lib/dates';
+import { useMeta } from '../api/hooks/me';
 import { errorMessage } from '../lib/errors';
 import { fmtBytes, fmtInt } from '../lib/format';
 import { Button } from '../ui/Button';
@@ -361,6 +362,11 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
   const [oneTime, setOneTime] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [confirm, setConfirm] = useState('');
+  // the instance asks for the administrator's own password before a role changes
+  // (FINUANCE_CONFIRM_PASSWORD)
+  const confirmPassword = useMeta().data?.confirmPassword === true;
+  const [roleAsk, setRoleAsk] = useState(false);
+  const [rolePassword, setRolePassword] = useState('');
   const u = user.data;
   if (!u) return <div className="set-card">{user.isError ? errorMessage(user.error) : 'Loading…'}</div>;
   const text = limits ?? limitText(u.limits);
@@ -392,6 +398,10 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
         {!u.isDemo && (
           <Button
             onClick={() => {
+              if (confirmPassword) {
+                setRoleAsk(true);
+                return;
+              }
               patch(
                 { admin: !u.isAdmin },
                 u.isAdmin ? `${u.email} is no longer an administrator` : `${u.email} is now an administrator`,
@@ -458,6 +468,46 @@ function UserDetail({ id, onGone }: { id: string; onGone: () => void }) {
           Delete account
         </Button>
       </div>
+      {roleAsk && (
+        <form
+          className="form-row"
+          aria-label="Confirm the role change"
+          onSubmit={(e) => {
+            e.preventDefault();
+            patch(
+              { admin: !u.isAdmin, password: rolePassword },
+              u.isAdmin ? `${u.email} is no longer an administrator` : `${u.email} is now an administrator`,
+            );
+            setRoleAsk(false);
+            setRolePassword('');
+          }}
+        >
+          <label className="st-col">
+            Your password, to {u.isAdmin ? 'remove this administrator' : 'make this account an administrator'}
+            <TextInput
+              type="password"
+              autoComplete="current-password"
+              autoFocus
+              value={rolePassword}
+              onChange={(e) => {
+                setRolePassword(e.target.value);
+              }}
+            />
+          </label>
+          <Button type="submit" variant="primary" disabled={!rolePassword || update.isPending}>
+            Confirm
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              setRoleAsk(false);
+              setRolePassword('');
+            }}
+          >
+            Cancel
+          </Button>
+        </form>
+      )}
       {oneTime && <OneTime password={oneTime} />}
       <div className="lbl sub">Limits</div>
       <p className="hint">Empty fields use the instance default (Defaults and features).</p>

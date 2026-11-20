@@ -7,7 +7,7 @@ import os
 def zap_started(zap, target):
     base = os.environ["ZAP_BASE_URL"]
     headers = {
-        "Cookie": "finuance_session=" + os.environ["ZAP_SESSION"],
+        "Cookie": os.environ["ZAP_SESSION"],  # name=value, from tools/zap-scan.sh
         "X-Finuance-Client": "web",
         "Origin": base,
     }

@@ -143,10 +143,12 @@ func NewHandler(d Deps) (http.Handler, error) {
 	gen.HandlerWithOptions(strict, gen.StdHTTPServerOptions{
 		BaseURL:    "/api/v1",
 		BaseRouter: mux,
-		// Per matched route; the last one runs first: CSRF → session → request validation → handler.
+		// Per matched route; the last one runs first: CSRF → session → checks that must come before
+		// a large body is read → request validation (which reads the body) → handler.
 		Middlewares: []gen.MiddlewareFunc{
 			validator,
-			requireSession(d.Auth, d.Admin, prod, mw.NewLimiter(TokenRate, clock, 0)),
+			impl.beforeBody(prod),
+			requireSession(d.Auth, d.Admin, prod, mw.NewLimiter(TokenRate, clock, 0), sessionCookieName(newCookies(d.Config).secure)),
 			gen.MiddlewareFunc(mw.CSRF(d.Config.PublicOrigin, func(w http.ResponseWriter, r *http.Request, err error) {
 				WriteProblem(w, r, fmt.Errorf("%w: %w", platform.ErrForbidden, err), prod)
 			})),
@@ -175,7 +177,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 		mw.Tracing(d.Tracing),
 		mw.SecurityHeaders,
 		mw.MaxBytes(MaxJSONBody, map[string]int64{"POST /api/v1/imports": d.Config.MaxUploadBytes + multipartOverhead,
-			"POST /api/v1/legacy-imports":                legacyBodyLimit(d.Config.MaxUploadBytes),
+			"POST /api/v1/legacy-imports":                legacyBodyLimit(d.Config.MaxUploadBytes, d.Config.MaxLegacyImportBytes),
 			"POST /api/v1/assistant/chats/*/attachments": images.MaxBytes}),
 		mw.Route,
 	), nil

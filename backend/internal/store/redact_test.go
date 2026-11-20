@@ -39,7 +39,9 @@ func TestFailingQueryLeavesNoValuesInSpans(t *testing.T) {
 		if qerr == nil {
 			t.Fatal("the statement did not fail")
 		}
-		_, uerr := pool.Exec(ctx, "CREATE TEMP TABLE redact_probe (v text PRIMARY KEY); INSERT INTO redact_probe VALUES ('"+marker+"'), ('"+marker+"')")
+		// a unique violation: two accounts with one address in a single statement (nothing is kept)
+		_, uerr := pool.Exec(ctx, `INSERT INTO users (id, email, password_hash, display_name) VALUES ($1, $3, 'x', 'a'), ($2, $3, 'x', 'b')`,
+			platform.NewID(), platform.NewID(), marker+"@example.test")
 		if uerr == nil {
 			t.Fatal("the duplicate key was accepted")
 		}

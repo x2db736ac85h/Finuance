@@ -21,6 +21,17 @@ func (a *api) audit(ctx context.Context, userID uuid.UUID, action, entityID stri
 	}
 }
 
+// auditOther records, in another person's log, something the signed-in user did that concerns
+// them (a friend added or removed them, an administrator acted on their account). It carries no
+// address and no browser: those are the actor's, and the other person must not learn where a
+// friend or an administrator signs in from (API-2, ADR 0025).
+func (a *api) auditOther(ctx context.Context, userID uuid.UUID, action, entityID string, meta map[string]any) {
+	ev := ledger.AuditEvent{Action: action, EntityID: entityID, Meta: meta}
+	if err := a.ledger.RecordAudit(ctx, userID, ev); err != nil {
+		observability.Logger(ctx).WarnContext(ctx, "audit event not recorded", "action", action, "error", err)
+	}
+}
+
 // auditMe records an action of the signed-in user.
 func (a *api) auditMe(ctx context.Context, action, entityID string, meta map[string]any) {
 	a.audit(ctx, identity(ctx).User.ID, action, entityID, meta)

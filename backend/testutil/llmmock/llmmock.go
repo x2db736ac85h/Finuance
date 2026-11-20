@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -53,9 +54,14 @@ type Server struct {
 	queue    []Reply
 	requests []json.RawMessage
 	loaded   []string // models "in memory" (Ollama's /api/ps and /api/generate)
+	// modelLists counts GET /models: how often a connection's status was really checked
+	modelLists atomic.Int64
 	// Models lists the ids GET /models answers.
 	Models []string
 }
+
+// ModelLists is how many times the model list was asked for.
+func (s *Server) ModelLists() int { return int(s.modelLists.Load()) }
 
 // New returns a mock with the default models.
 func New() *Server {
@@ -92,6 +98,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p := strings.TrimPrefix(r.URL.Path, "/v1")
 	switch {
 	case r.Method == http.MethodGet && p == "/models":
+		s.modelLists.Add(1)
 		data := make([]map[string]string, 0, len(s.Models))
 		for _, m := range s.Models {
 			data = append(data, map[string]string{"id": m, "object": "model"})

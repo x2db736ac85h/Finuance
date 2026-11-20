@@ -79,6 +79,14 @@ func TestUsageIsCountsOnly(t *testing.T) {
 	if len(page.Users) != 2 || page.Totals.Users != 2 || page.Totals.Admins != 1 {
 		t.Fatalf("page = %+v", page)
 	}
+	// the search is text, not a pattern: a percent sign or an underscore matches itself only, and a
+	// trailing backslash is not an error (API-9)
+	for _, s := range []string{"%", "_", `\`, `alex\`, "%@%"} {
+		got, err := e.adm.ListUsers(ctx, s, "", 50)
+		if err != nil || len(got.Users) != 0 {
+			t.Errorf("search %q: %d accounts, %v; want none and no error", s, len(got.Users), err)
+		}
+	}
 	found, err := e.adm.ListUsers(ctx, "ALEX", "", 50)
 	if err != nil || len(found.Users) != 1 || found.Users[0].ID != alex.ID {
 		t.Fatalf("search = %+v, %v", found, err)
