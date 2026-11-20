@@ -3,6 +3,8 @@ package friends_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -185,5 +187,54 @@ func TestFriendshipRLS(t *testing.T) {
 	}
 	if list, _ := e.f.List(e.ctx, a); len(list) != 0 {
 		t.Errorf("friendship outlived the user: %v", list)
+	}
+}
+
+// TestCodeWorksOnceUnderARace: many people typing one code at the same moment make one friend
+// (API-6). The code is used up in the statement that finds it, so the others get the answer for a
+// wrong code, and the owner's own code stays when they type it themselves.
+func TestCodeWorksOnceUnderARace(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user(t, "Owner")
+	code, err := e.f.NewCode(e.ctx, owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.f.Redeem(e.ctx, owner, code.Code); !errors.Is(err, friends.ErrInvalid) {
+		t.Fatalf("own code: %v", err)
+	}
+	const n = 12
+	users := make([]uuid.UUID, n)
+	for i := range users {
+		users[i] = e.user(t, fmt.Sprintf("Racer %d", i))
+	}
+	var wg sync.WaitGroup
+	results := make([]error, n)
+	start := make(chan struct{})
+	for i := range users {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, results[i] = e.f.Redeem(e.ctx, users[i], code.Code)
+		}()
+	}
+	close(start)
+	wg.Wait()
+	won := 0
+	for i, err := range results {
+		switch {
+		case err == nil:
+			won++
+		case !errors.Is(err, friends.ErrInvalid):
+			t.Errorf("racer %d: %v", i, err)
+		}
+	}
+	if won != 1 {
+		t.Errorf("%d of %d people became friends with one code, want 1", won, n)
+	}
+	list, err := e.f.List(e.ctx, owner)
+	if err != nil || len(list) != 1 {
+		t.Errorf("the owner has %d friends, want 1 (%v)", len(list), err)
 	}
 }

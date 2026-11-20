@@ -26,7 +26,7 @@ func (a *api) adminAudit(ctx context.Context, action string, target *admin.User,
 		a.auditMe(ctx, action, entity, meta)
 		if target.ID != identity(ctx).User.ID {
 			// the user learns that an administrator acted, not which one
-			a.audit(ctx, target.ID, action, entity, map[string]any{"by": "administrator"})
+			a.auditOther(ctx, target.ID, action, entity, map[string]any{"by": "administrator"})
 		}
 		return
 	}

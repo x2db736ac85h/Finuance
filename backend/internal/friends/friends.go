@@ -162,14 +162,16 @@ func (s *Service) Redeem(ctx context.Context, userID uuid.UUID, typed string) (F
 	var owner uuid.UUID
 	var ownerName, myName string
 	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		c, err := q.FindFriendCode(ctx, hash(code))
-		if errors.Is(err, pgx.ErrNoRows) || (err == nil && (now.After(c.ExpiresAt) || c.UserID == userID)) {
+		// the code is used up here, before anything else: one code, one friend, also when two
+		// people type it at the same moment
+		taken, err := q.TakeFriendCode(ctx, db.TakeFriendCodeParams{CodeHash: hash(code), Now: now, Redeemer: userID})
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("this code is wrong or has expired; ask for a new one: %w", ErrInvalid)
 		}
 		if err != nil {
 			return err
 		}
-		owner = c.UserID
+		owner = taken
 		if myName, err = displayName(ctx, q, userID); err != nil {
 			return err
 		}
@@ -193,10 +195,6 @@ func (s *Service) Redeem(ctx context.Context, userID uuid.UUID, typed string) (F
 		return nil
 	})
 	if err != nil {
-		return Friend{}, err
-	}
-	// a used code is gone, so a leaked one can't add a stranger
-	if err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error { return q.DeleteFriendCode(ctx, owner) }); err != nil {
 		return Friend{}, err
 	}
 	if err := s.notify.Send(ctx, owner, notify.FriendAdded, map[string]string{"friendId": userID.String(), "name": myName}); err != nil {

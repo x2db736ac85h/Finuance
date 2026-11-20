@@ -153,6 +153,7 @@ func TestAdminManagesUsers(t *testing.T) {
 			t.Errorf("the user's Activity lacks %s (has %v)", a, actions)
 		}
 	}
+	noActorDetails(t, e, mustUUID(t, id), "administrator", 5)
 
 	// delete needs the e-mail; an admin can't delete or disable themselves here
 	expect(t, boss.do("DELETE", "/admin/users/"+id, map[string]any{"confirmEmail": "x@example.test"}), 422, "validation_failed")
@@ -246,4 +247,32 @@ func mustUUID(t *testing.T, s string) uuid.UUID {
 		t.Fatal(err)
 	}
 	return id
+}
+
+// noActorDetails checks a person's activity log: events that someone else caused (meta "by") carry
+// neither an address nor a browser, which would be the other person's (API-2), while the person's
+// own events still do (the control: the log does record where its owner signed in from).
+func noActorDetails(t *testing.T, e *authEnv, user uuid.UUID, by string, atLeast int) {
+	t.Helper()
+	ents, err := e.ledgerFor().AuditPage(context.Background(), user, 0, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreign, own := 0, 0
+	for _, en := range ents {
+		if en.Meta["by"] == by {
+			foreign++
+			if en.IP.IsValid() || en.Browser != "" {
+				t.Errorf("%s in the log of %s carries the %s's address %q or browser %q", en.Action, user, by, en.IP, en.Browser)
+			}
+		} else if en.IP.IsValid() {
+			own++
+		}
+	}
+	if foreign < atLeast {
+		t.Errorf("%d events by the %s in the log, want at least %d", foreign, by, atLeast)
+	}
+	if own == 0 {
+		t.Error("none of the person's own events has an address: the check proves nothing")
+	}
 }

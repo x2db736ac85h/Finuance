@@ -191,7 +191,6 @@ type Querier interface {
 	ExportImportIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	// Account suggestion (PLAN §4.4): last four digits of the own-account column.
 	FindAccountsByNumberHint(ctx context.Context, arg FindAccountsByNumberHintParams) ([]Account, error)
-	FindFriendCode(ctx context.Context, codeHash []byte) (FindFriendCodeRow, error)
 	// Exact duplicate file check (PLAN §4.4): an earlier non-failed import with the same bytes.
 	FindImportBySHA(ctx context.Context, arg FindImportBySHAParams) (uuid.UUID, error)
 	// The non-errored staged rows of one fingerprint in the account's committed imports, earliest
@@ -513,6 +512,10 @@ type Querier interface {
 	// Starts (or restarts) enrolment. A confirmed factor is never replaced this way: it has to be
 	// switched off first, with the password and a code.
 	StartSecondFactor(ctx context.Context, arg StartSecondFactorParams) error
+	// Uses a code up: the live code with this hash that is not the redeemer's own is deleted and its
+	// owner returned, in one statement, so two people typing one code at the same moment can't both
+	// get it (API-6). No row: wrong, expired, the redeemer's own, or taken a moment ago.
+	TakeFriendCode(ctx context.Context, arg TakeFriendCodeParams) (uuid.UUID, error)
 	// Records use; the caller throttles it to once a minute.
 	TouchAccessToken(ctx context.Context, arg TouchAccessTokenParams) error
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.
