@@ -89,7 +89,14 @@ export function TokensSettings() {
             Valid for
             <Select value={days} options={LIFETIMES} onChange={setDays} />
           </label>
-          {confirm && (
+          {!confirm && (
+            <Button type="submit" variant="primary" disabled={!name.trim() || create.isPending}>
+              Make a token
+            </Button>
+          )}
+        </div>
+        {confirm && (
+          <div className="form-row">
             <label className="st-col">
               Your password
               <TextInput
@@ -101,11 +108,11 @@ export function TokensSettings() {
                 }}
               />
             </label>
-          )}
-          <Button type="submit" variant="primary" disabled={!name.trim() || (confirm && !password) || create.isPending}>
-            Make a token
-          </Button>
-        </div>
+            <Button type="submit" variant="primary" disabled={!name.trim() || !password || create.isPending}>
+              Make a token
+            </Button>
+          </div>
+        )}
         {secret && (
           <div className="conn-err" role="status">
             Copy it now; it isn't shown again:{' '}
