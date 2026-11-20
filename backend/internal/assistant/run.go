@@ -47,6 +47,7 @@ const (
 // Limits of one run (legacy runTools and PLAN §4.8).
 const (
 	maxRounds    = 6
+	maxToolCalls = 8 // tool calls run from one step of the model; the rest of that step is dropped
 	maxPlanCalls = 6
 	MaxQuestion  = 4000
 	persistGrace = 10 * time.Second
@@ -394,6 +395,9 @@ func (run *Run) Execute(ctx context.Context, emit func(Event)) {
 	}
 	// the photos go with this question only; later questions read the answer, not the image again
 	history := append(append([]llm.Message{}, run.history...), llm.Message{Role: llm.RoleUser, Content: req.Text, Images: run.images})
+	if run.conn.Cloud {
+		history = maskForCloud(history) // also what earlier turns stored while a local model answered
+	}
 
 	sc := Scope{Context: query.Context{}, View: req.View, MaxRows: req.MaxRows, Mask: run.conn.Cloud}
 	if req.View {
@@ -681,6 +685,11 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 		}
 		if len(res.ToolCalls) == 0 {
 			return Message{Role: llm.RoleAssistant, Content: res.Content, Reasoning: res.Reasoning}, nil
+		}
+		// A step has a handful of lookups. A model server that sends a hundred (broken, or hostile)
+		// would otherwise run them all against the database; the rest of such a step is dropped (AI-6).
+		if len(res.ToolCalls) > maxToolCalls {
+			res.ToolCalls = res.ToolCalls[:maxToolCalls]
 		}
 		am := Message{Role: llm.RoleAssistant, Content: res.Content, Reasoning: res.Reasoning, ToolCalls: res.ToolCalls, Replay: res.Replay}
 		t.msgs = append(t.msgs, am)

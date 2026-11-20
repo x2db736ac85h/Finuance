@@ -183,3 +183,43 @@ func TestPublicErrorTextCarriesNothingOfTheServer(t *testing.T) {
 		seen[e.Kind] = pub
 	}
 }
+
+// TestAnswerSizeIsBounded: a model server that never stops sending is cut off at MaxResponseBytes
+// instead of being read for as long as the timeout lasts (AI-6); for both wire formats, streamed.
+func TestAnswerSizeIsBounded(t *testing.T) {
+	was := MaxResponseBytes
+	MaxResponseBytes = 64 << 10
+	t.Cleanup(func() { MaxResponseBytes = was })
+	var sent atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		chunk := `data: {"choices":[{"delta":{"content":"` + strings.Repeat("x", 1000) + `"}}]}` + "\n\n"
+		if strings.HasSuffix(r.URL.Path, "/messages") {
+			chunk = "event: content_block_delta\n" + `data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"` + strings.Repeat("x", 1000) + `"}}` + "\n\n"
+		}
+		for i := 0; i < 5000; i++ { // about 5 MB if nobody stops reading
+			if _, err := w.Write([]byte(chunk)); err != nil {
+				return
+			}
+			sent.Add(int64(len(chunk)))
+		}
+	}))
+	defer srv.Close()
+	for _, api := range []API{OpenAI, Anthropic} {
+		sent.Store(0)
+		c := New(Config{API: api, BaseURL: srv.URL + map[API]string{OpenAI: "/v1", Anthropic: ""}[api], Timeout: 10 * time.Second})
+		var got int
+		_, err := c.Chat(context.Background(), Request{Model: "m"}, func(d Delta) { got += len(d.Content) })
+		if KindOf(err) != KindBadResponse || !strings.Contains(err.Error(), "too long") {
+			t.Errorf("%s: an endless answer: %v", api, err)
+		}
+		// what arrived before the cut was passed on (the Anthropic reader wants a block start first,
+		// which this endless stream never sends), and never more than the limit
+		if (api == OpenAI && got == 0) || got > int(MaxResponseBytes) {
+			t.Errorf("%s: %d bytes of content were passed on, want at most %d", api, got, MaxResponseBytes)
+		}
+		if n := sent.Load(); n > 4*MaxResponseBytes+(1<<20) {
+			t.Errorf("%s: the server got to send %d bytes before the connection ended", api, n)
+		}
+	}
+}
