@@ -1429,14 +1429,15 @@ func (e ModelTuningToolset) Valid() bool {
 
 // Defines values for NotificationKind.
 const (
-	NotificationKindAssistantDigest    NotificationKind = "assistant.digest"
-	NotificationKindFriendAdded        NotificationKind = "friend.added"
-	NotificationKindFriendRemoved      NotificationKind = "friend.removed"
-	NotificationKindSharedExpenseAdded NotificationKind = "shared.expense_added"
-	NotificationKindSharedInvited      NotificationKind = "shared.invited"
-	NotificationKindSharedJoined       NotificationKind = "shared.joined"
-	NotificationKindSharedLeft         NotificationKind = "shared.left"
-	NotificationKindSharedSettled      NotificationKind = "shared.settled"
+	NotificationKindAssistantDigest         NotificationKind = "assistant.digest"
+	NotificationKindFriendAdded             NotificationKind = "friend.added"
+	NotificationKindFriendRemoved           NotificationKind = "friend.removed"
+	NotificationKindSharedExpenseAdded      NotificationKind = "shared.expense_added"
+	NotificationKindSharedInvited           NotificationKind = "shared.invited"
+	NotificationKindSharedJoined            NotificationKind = "shared.joined"
+	NotificationKindSharedLeft              NotificationKind = "shared.left"
+	NotificationKindSharedSettled           NotificationKind = "shared.settled"
+	NotificationKindSharedSettlementRemoved NotificationKind = "shared.settlement_removed"
 )
 
 // Valid indicates whether the value is a known member of the NotificationKind enum.
@@ -1457,6 +1458,8 @@ func (e NotificationKind) Valid() bool {
 	case NotificationKindSharedLeft:
 		return true
 	case NotificationKindSharedSettled:
+		return true
+	case NotificationKindSharedSettlementRemoved:
 		return true
 	default:
 		return false

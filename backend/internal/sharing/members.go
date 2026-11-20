@@ -82,6 +82,9 @@ func (s *Service) Accept(ctx context.Context, userID, groupID uuid.UUID) (Group,
 		if me.State != "invited" {
 			return statef("you are in this group already")
 		}
+		if g.ArchivedAt != nil {
+			return statef("%s is archived: nobody can join it any more", g.Name)
+		}
 		name, err := displayName(ctx, q, userID)
 		if err != nil {
 			return err
@@ -256,6 +259,10 @@ func (s *Service) Leave(ctx context.Context, userID, groupID uuid.UUID) error {
 		if me.Role == "owner" {
 			return statef("the owner can't leave: archive the group instead")
 		}
+		// no expense or payment is added between the balance check and the leaving
+		if err := q.LockSharedGroup(ctx, groupID); err != nil {
+			return err
+		}
 		bal, err := balanceOf(ctx, q, groupID, me.ID)
 		if err != nil {
 			return err
@@ -304,6 +311,9 @@ func (s *Service) RemoveMember(ctx context.Context, userID, groupID, memberID uu
 			return err
 		case m.State == "left":
 			return nil
+		}
+		if err := q.LockSharedGroup(ctx, groupID); err != nil {
+			return err
 		}
 		bal, err := balanceOf(ctx, q, groupID, memberID)
 		if err != nil {

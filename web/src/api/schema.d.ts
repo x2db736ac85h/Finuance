@@ -3208,7 +3208,7 @@ export interface components {
             code: string;
         };
         /** @enum {string} */
-        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled" | "assistant.digest";
+        NotificationKind: "friend.added" | "friend.removed" | "shared.invited" | "shared.joined" | "shared.left" | "shared.expense_added" | "shared.settled" | "shared.settlement_removed" | "assistant.digest";
         /** @enum {string} */
         SharedGroupKind: "trip" | "household" | "event" | "other";
         /** @description Someone in a group as the others see them; never an e-mail address. */

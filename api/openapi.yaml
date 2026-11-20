@@ -4825,7 +4825,7 @@ components:
           description: Case, spaces and dashes don't matter.
     NotificationKind:
       type: string
-      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled, assistant.digest]
+      enum: [friend.added, friend.removed, shared.invited, shared.joined, shared.left, shared.expense_added, shared.settled, shared.settlement_removed, assistant.digest]
     SharedGroupKind:
       type: string
       enum: [trip, household, event, other]

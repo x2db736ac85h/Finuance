@@ -188,6 +188,12 @@ func (a *api) InviteToSharedGroup(ctx context.Context, req gen.InviteToSharedGro
 	if err := a.sharingOn(); err != nil {
 		return nil, err
 	}
+	if err := a.sharedWrite(ctx); err != nil {
+		return nil, err
+	}
+	if err := a.limits.sharedInvite.Allow(identity(ctx).User.ID.String()); err != nil {
+		return nil, err
+	}
 	u := identity(ctx).User.ID
 	m, err := a.sharing.Invite(ctx, u, req.Id, req.Body.FriendId)
 	if err != nil {
@@ -200,6 +206,14 @@ func (a *api) InviteToSharedGroup(ctx context.Context, req gen.InviteToSharedGro
 // AcceptSharedGroup joins a group the user was invited to.
 func (a *api) AcceptSharedGroup(ctx context.Context, req gen.AcceptSharedGroupRequestObject) (gen.AcceptSharedGroupResponseObject, error) {
 	if err := a.sharingOn(); err != nil {
+		return nil, err
+	}
+	if err := a.sharedWrite(ctx); err != nil {
+		return nil, err
+	}
+	// joining makes a personal group linked to the shared one: the account's groups limit applies,
+	// as it does to a group made by hand (API-8)
+	if err := a.checkCount(ctx, admin.LimitGroups); err != nil {
 		return nil, err
 	}
 	u := identity(ctx).User.ID
@@ -246,6 +260,9 @@ func (a *api) RemoveSharedMember(ctx context.Context, req gen.RemoveSharedMember
 	if err := a.sharingOn(); err != nil {
 		return nil, err
 	}
+	if err := a.sharedWrite(ctx); err != nil {
+		return nil, err
+	}
 	u := identity(ctx).User.ID
 	if err := a.sharing.RemoveMember(ctx, u, req.Id, req.MemberId); err != nil {
 		return nil, err
@@ -259,6 +276,9 @@ func (a *api) AddSharedExpense(ctx context.Context, req gen.AddSharedExpenseRequ
 	if err := a.sharingOn(); err != nil {
 		return nil, err
 	}
+	if err := a.sharedWrite(ctx); err != nil {
+		return nil, err
+	}
 	id, err := a.sharing.AddExpense(ctx, identity(ctx).User.ID, req.Id, sharedExpenseIn(*req.Body))
 	if err != nil {
 		return nil, err
@@ -269,6 +289,9 @@ func (a *api) AddSharedExpense(ctx context.Context, req gen.AddSharedExpenseRequ
 // UpdateSharedExpense changes the caller's own expense.
 func (a *api) UpdateSharedExpense(ctx context.Context, req gen.UpdateSharedExpenseRequestObject) (gen.UpdateSharedExpenseResponseObject, error) {
 	if err := a.sharingOn(); err != nil {
+		return nil, err
+	}
+	if err := a.sharedWrite(ctx); err != nil {
 		return nil, err
 	}
 	ctx, err := a.aiOrigin(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, req.Params.XAssistantAuto)
@@ -286,6 +309,9 @@ func (a *api) DeleteSharedExpense(ctx context.Context, req gen.DeleteSharedExpen
 	if err := a.sharingOn(); err != nil {
 		return nil, err
 	}
+	if err := a.sharedWrite(ctx); err != nil {
+		return nil, err
+	}
 	if err := a.sharing.DeleteExpense(ctx, identity(ctx).User.ID, req.Id, req.ExpenseId); err != nil {
 		return nil, err
 	}
@@ -295,6 +321,9 @@ func (a *api) DeleteSharedExpense(ctx context.Context, req gen.DeleteSharedExpen
 // AddSharedSettlement records a payment between two members.
 func (a *api) AddSharedSettlement(ctx context.Context, req gen.AddSharedSettlementRequestObject) (gen.AddSharedSettlementResponseObject, error) {
 	if err := a.sharingOn(); err != nil {
+		return nil, err
+	}
+	if err := a.sharedWrite(ctx); err != nil {
 		return nil, err
 	}
 	u, b := identity(ctx).User.ID, req.Body
@@ -311,6 +340,9 @@ func (a *api) AddSharedSettlement(ctx context.Context, req gen.AddSharedSettleme
 // DeleteSharedSettlement deletes a payment the caller recorded.
 func (a *api) DeleteSharedSettlement(ctx context.Context, req gen.DeleteSharedSettlementRequestObject) (gen.DeleteSharedSettlementResponseObject, error) {
 	if err := a.sharingOn(); err != nil {
+		return nil, err
+	}
+	if err := a.sharedWrite(ctx); err != nil {
 		return nil, err
 	}
 	if err := a.sharing.DeleteSettlement(ctx, identity(ctx).User.ID, req.Id, req.SettlementId); err != nil {
@@ -456,4 +488,9 @@ func (a *api) GroupsTimeline(ctx context.Context, _ gen.GroupsTimelineRequestObj
 		out.Hints = append(out.Hints, x)
 	}
 	return gen.GroupsTimeline200JSONResponse(out), nil
+}
+
+// sharedWrite limits what one member writes into shared groups per minute.
+func (a *api) sharedWrite(ctx context.Context) error {
+	return a.limits.sharedWrite.Allow(identity(ctx).User.ID.String())
 }

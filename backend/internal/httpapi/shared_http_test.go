@@ -251,3 +251,27 @@ func (e *authEnv) userID(t *testing.T, b *browser) string {
 	expect(t, me, 200, "")
 	return me.body["id"].(string)
 }
+
+// TestSharedWritesAreLimited: one member's writes into shared groups are limited per minute, so a
+// script can't fill a group (and every member's notifications) at will (API-5). Reading is not.
+func TestSharedWritesAreLimited(t *testing.T) {
+	e := newTestEnv(t, nil, false)
+	alex := named(t, e, "alex", "Alex")
+	g := alex.do("POST", "/shared-groups", map[string]any{"name": "Dom", "kind": "household"})
+	expect(t, g, 201, "")
+	gid := g.body["id"].(string)
+	body := map[string]any{"bookedOn": "2026-06-02", "amountMinor": 100, "payee": "x"}
+	for i := range 120 {
+		if r := alex.do("POST", "/shared-groups/"+gid+"/expenses", body); r.code != 201 {
+			t.Fatalf("expense %d: %d %s", i+1, r.code, r.raw)
+		}
+	}
+	r := alex.do("POST", "/shared-groups/"+gid+"/expenses", body)
+	expect(t, r, 429, "rate_limited")
+	if r.header.Get("Retry-After") == "" {
+		t.Error("no Retry-After")
+	}
+	expect(t, alex.do("GET", "/shared-groups/"+gid, nil), 200, "")
+	e.clock.Add(time.Minute)
+	expect(t, alex.do("POST", "/shared-groups/"+gid+"/expenses", body), 201, "")
+}

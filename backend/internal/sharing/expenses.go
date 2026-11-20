@@ -149,8 +149,35 @@ func activeGroup(ctx context.Context, q *db.Queries, userID, groupID uuid.UUID) 
 	if g.ArchivedAt != nil {
 		return g, me, nil, statef("%s is archived", g.Name)
 	}
+	// One writer at a time per group: an expense or a payment added while a member leaves could
+	// otherwise slip in after their balance was found to be zero (API-8).
+	if err := q.LockSharedGroup(ctx, groupID); err != nil {
+		return g, me, nil, err
+	}
 	members, err := q.ListSharedMembers(ctx, groupID)
 	return g, me, members, err
+}
+
+// roomForExpense refuses a new expense in a full group.
+func roomForExpense(ctx context.Context, q *db.Queries, groupID uuid.UUID) error {
+	n, err := q.CountSharedExpenses(ctx, groupID)
+	if err != nil {
+		return err
+	}
+	if n >= ledger.MaxSharedExpenses {
+		return fmt.Errorf("this group has %d expenses, the most a shared group holds; start a new group: %w", n, platform.ErrLimitReached)
+	}
+	return nil
+}
+
+// mayChange reports whether the caller may change or delete an expense: whoever added it, or the
+// group's owner once that account is gone (before, such an expense could never be corrected and
+// its group never be settled or deleted; DB-6).
+func mayChange(e db.SharedExpense, me db.SharedGroupMember, userID uuid.UUID) bool {
+	if e.AddedBy != nil {
+		return *e.AddedBy == userID
+	}
+	return me.Role == "owner" && me.State == "active"
 }
 
 // AddExpense adds an expense typed in the group (cash, or paid by someone else). The other active
@@ -174,6 +201,9 @@ func (s *Service) AddExpense(ctx context.Context, userID, groupID uuid.UUID, in 
 		}
 		if !slices.ContainsFunc(members, func(m db.SharedGroupMember) bool { return m.ID == paidBy && m.State == "active" }) {
 			return invalidf("the payer must be an active member")
+		}
+		if err := roomForExpense(ctx, q, groupID); err != nil {
+			return err
 		}
 		parts, mode, err := shares(in.Split, in.AmountMinor, members)
 		if err != nil {
@@ -220,7 +250,7 @@ func (s *Service) UpdateExpense(ctx context.Context, userID, groupID, expenseID 
 		if err != nil {
 			return err
 		}
-		if e.AddedBy == nil || *e.AddedBy != userID {
+		if !mayChange(e, me, userID) {
 			return fmt.Errorf("only the member who added an expense can change it: %w", platform.ErrForbidden)
 		}
 		if e.Origin == "transaction" {
@@ -234,8 +264,9 @@ func (s *Service) UpdateExpense(ctx context.Context, userID, groupID, expenseID 
 		if in.PaidBy != nil {
 			paidBy = *in.PaidBy
 		}
-		if !slices.ContainsFunc(members, func(m db.SharedGroupMember) bool { return m.ID == paidBy }) {
-			return invalidf("the payer must be a member")
+		// the payer stays whoever it was, also someone who has left since; a new payer is active
+		if paidBy != e.PaidBy && !slices.ContainsFunc(members, func(m db.SharedGroupMember) bool { return m.ID == paidBy && m.State == "active" }) {
+			return invalidf("the payer must be an active member")
 		}
 		parts, mode, err := shares(in.Split, in.AmountMinor, members)
 		if err != nil {
@@ -327,7 +358,11 @@ func RestoreSplitTx(ctx context.Context, q *db.Queries, now time.Time, userID, e
 	if err != nil {
 		return err
 	}
-	if e.AddedBy == nil || *e.AddedBy != userID {
+	me, err := q.GetMyMembership(ctx, db.GetMyMembershipParams{GroupID: e.GroupID, UserID: &userID})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	if !mayChange(e, me, userID) {
 		return fmt.Errorf("only the member who added an expense can change it: %w", platform.ErrForbidden)
 	}
 	if _, err := q.UpdateSharedExpense(ctx, db.UpdateSharedExpenseParams{ID: expenseID, GroupID: e.GroupID, BookedOn: e.BookedOn,
@@ -350,7 +385,8 @@ func RestoreSplitTx(ctx context.Context, q *db.Queries, now time.Time, userID, e
 // transaction leaves the group (or the typed cash row is deleted).
 func (s *Service) DeleteExpense(ctx context.Context, userID, groupID, expenseID uuid.UUID) error {
 	err := s.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		if _, _, _, err := activeGroup(ctx, q, userID, groupID); err != nil {
+		_, me, _, err := activeGroup(ctx, q, userID, groupID)
+		if err != nil {
 			return err
 		}
 		e, err := q.GetSharedExpense(ctx, expenseID)
@@ -360,10 +396,11 @@ func (s *Service) DeleteExpense(ctx context.Context, userID, groupID, expenseID 
 		if err != nil {
 			return err
 		}
-		if e.AddedBy == nil || *e.AddedBy != userID {
+		if !mayChange(e, me, userID) {
 			return fmt.Errorf("only the member who added an expense can delete it: %w", platform.ErrForbidden)
 		}
-		if e.Origin == "transaction" {
+		// a copy follows its owner's transaction; once that account is gone, the copy is all there is
+		if e.Origin == "transaction" && e.AddedBy != nil {
 			return statef("this expense is one of your transactions: take it out of the group in the table instead")
 		}
 		_, err = q.DeleteSharedExpense(ctx, expenseID)
@@ -404,8 +441,8 @@ func (s *Service) Settle(ctx context.Context, userID, groupID uuid.UUID, in Sett
 		}
 		for _, id := range []uuid.UUID{in.From, in.To} {
 			i := slices.IndexFunc(members, func(m db.SharedGroupMember) bool { return m.ID == id })
-			if i < 0 {
-				return invalidf("both sides must be members")
+			if i < 0 || members[i].State != "active" {
+				return invalidf("both sides must be active members")
 			}
 			if id != me.ID {
 				other = members[i].UserID
@@ -429,17 +466,37 @@ func (s *Service) Settle(ctx context.Context, userID, groupID uuid.UUID, in Sett
 	return out, nil
 }
 
-// DeleteSettlement removes a payment the caller recorded.
+// DeleteSettlement removes a payment the caller recorded, made or received: either side may take
+// back an entry they don't agree with (API-3), and the other side is told.
 func (s *Service) DeleteSettlement(ctx context.Context, userID, groupID, settlementID uuid.UUID) error {
+	var other *uuid.UUID
+	var group, who string
 	err := s.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		if _, _, _, err := activeGroup(ctx, q, userID, groupID); err != nil {
+		g, me, members, err := activeGroup(ctx, q, userID, groupID)
+		if err != nil {
 			return err
 		}
-		n, err := q.DeleteSharedSettlement(ctx, db.DeleteSharedSettlementParams{GroupID: groupID, ID: settlementID})
-		if err == nil && n == 0 {
+		// the database's policy decides who may: no row comes back for anyone else
+		st, err := q.DeleteSharedSettlement(ctx, db.DeleteSharedSettlementParams{GroupID: groupID, ID: settlementID})
+		if errors.Is(err, pgx.ErrNoRows) {
 			return notFound("payment")
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		for _, id := range []uuid.UUID{st.FromMember, st.ToMember} {
+			if i := slices.IndexFunc(members, func(m db.SharedGroupMember) bool { return m.ID == id }); i >= 0 && id != me.ID {
+				other = members[i].UserID
+			}
+		}
+		group, who = g.Name, me.DisplayName
+		return nil
 	})
-	return ledger.DBError("delete settlement", err)
+	if err != nil {
+		return ledger.DBError("delete settlement", err)
+	}
+	if other != nil && *other != userID {
+		return s.notify.Send(ctx, *other, notify.SharedSettlementRemoved, map[string]string{"groupId": groupID.String(), "group": group, "name": who})
+	}
+	return nil
 }

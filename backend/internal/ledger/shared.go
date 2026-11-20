@@ -40,6 +40,11 @@ const (
 	maxSharedNote  = 2000
 )
 
+// MaxSharedExpenses is how many expenses one shared group holds. Every member's page of the group
+// reads all of them, so the number is bounded (API-5); a household's years fit many times over.
+// A variable so that a test can lower it.
+var MaxSharedExpenses int64 = 20000
+
 func cut(s string, n int) string {
 	s = strings.TrimSpace(s)
 	if utf8.RuneCountInString(s) <= n {
@@ -102,6 +107,14 @@ func syncShared(ctx context.Context, q *db.Queries, userID uuid.UUID, ids []uuid
 				return err
 			}
 		}
+		if tg.count >= MaxSharedExpenses {
+			full := fmt.Errorf("%s has %d expenses, the most a shared group holds: %w", tg.group.Name, tg.count, ErrInvalid)
+			if strict {
+				return full
+			}
+			continue
+		}
+		tg.count++
 		id := platform.NewID()
 		if err := q.InsertSharedExpense(ctx, db.InsertSharedExpenseParams{ID: id, GroupID: tg.group.ID, AddedBy: &userID,
 			AddedMember: tg.me.ID, PaidBy: tg.me.ID, BookedOn: fields.bookedOn, AmountMinor: amount, Payee: fields.payee,
@@ -128,6 +141,7 @@ type sharedTarget struct {
 	me     db.SharedGroupMember
 	active []uuid.UUID
 	err    error // why nothing can be shared into this group, or nil
+	count  int64 // expenses in the group now (MaxSharedExpenses)
 }
 
 func loadTarget(ctx context.Context, q *db.Queries, userID, groupID uuid.UUID) (*sharedTarget, error) {
@@ -152,7 +166,14 @@ func loadTarget(ctx context.Context, q *db.Queries, userID, groupID uuid.UUID) (
 		tg.err = fmt.Errorf("%s is archived: %w", g.Name, ErrInvalid)
 		return tg, nil
 	}
+	// one writer at a time per group, as for expenses typed in the group (sharing.activeGroup)
+	if err := q.LockSharedGroup(ctx, groupID); err != nil {
+		return nil, err
+	}
 	if tg.active, err = q.ActiveSharedMemberIDs(ctx, groupID); err != nil {
+		return nil, err
+	}
+	if tg.count, err = q.CountSharedExpenses(ctx, groupID); err != nil {
 		return nil, err
 	}
 	return tg, nil

@@ -29,7 +29,10 @@ var (
 	SecondStepPerUser     = Policy{Events: 10, Per: 10 * time.Minute} // codes at the second step of signing in (ADR 0040)
 	UploadPerUser         = Policy{Events: 30, Per: time.Minute}      // uploads (Phase 6)
 	DemoPerIP             = Policy{Events: 5, Per: time.Hour}         // new demo users, per client IP (PLAN 19.1)
-	FriendCodesPerHour    = Policy{Events: 10, Per: time.Hour}        // friend codes entered, per user and per IP (ADR 0027)
+	// what one member writes into shared groups: every write is read by, and told to, the others (API-5)
+	SharedWritesPerUser  = Policy{Events: 120, Per: time.Minute}
+	SharedInvitesPerUser = Policy{Events: 30, Per: time.Hour}
+	FriendCodesPerHour   = Policy{Events: 10, Per: time.Hour} // friend codes entered, per user and per IP (ADR 0027)
 )
 
 // DefaultMaxKeys caps the buckets one Limiter keeps, so a flood of distinct IPs or emails can't

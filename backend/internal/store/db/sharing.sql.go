@@ -49,6 +49,17 @@ func (q *Queries) CountOwnedSharedGroups(ctx context.Context, ownerID *uuid.UUID
 	return count, err
 }
 
+const countSharedExpenses = `-- name: CountSharedExpenses :one
+SELECT count(*) FROM shared_expenses WHERE group_id = $1
+`
+
+func (q *Queries) CountSharedExpenses(ctx context.Context, groupID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSharedExpenses, groupID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSharedGroup = `-- name: CreateSharedGroup :one
 
 INSERT INTO shared_groups (id, owner_id, name, color, currency, kind, starts_on, ends_on, budget_minor, created_at)
@@ -143,8 +154,9 @@ func (q *Queries) DeleteSharedMember(ctx context.Context, arg DeleteSharedMember
 	return result.RowsAffected(), nil
 }
 
-const deleteSharedSettlement = `-- name: DeleteSharedSettlement :execrows
+const deleteSharedSettlement = `-- name: DeleteSharedSettlement :one
 DELETE FROM shared_settlements WHERE group_id = $1 AND id = $2
+RETURNING from_member, to_member
 `
 
 type DeleteSharedSettlementParams struct {
@@ -152,12 +164,17 @@ type DeleteSharedSettlementParams struct {
 	ID      uuid.UUID
 }
 
-func (q *Queries) DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteSharedSettlement, arg.GroupID, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+type DeleteSharedSettlementRow struct {
+	FromMember uuid.UUID
+	ToMember   uuid.UUID
+}
+
+// The policy lets whoever recorded it and either of its two sides delete it (migration 00028).
+func (q *Queries) DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (DeleteSharedSettlementRow, error) {
+	row := q.db.QueryRow(ctx, deleteSharedSettlement, arg.GroupID, arg.ID)
+	var i DeleteSharedSettlementRow
+	err := row.Scan(&i.FromMember, &i.ToMember)
+	return i, err
 }
 
 const deleteSharedSplits = `-- name: DeleteSharedSplits :exec
@@ -705,6 +722,18 @@ func (q *Queries) ListSharedSplits(ctx context.Context, groupID uuid.UUID) ([]Sh
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockSharedGroup = `-- name: LockSharedGroup :exec
+SELECT pg_advisory_xact_lock(hashtextextended(($1::uuid)::text, 23108))
+`
+
+// One writer at a time per group for what moves balances (an expense, a settlement, a member
+// leaving): a transaction-scoped advisory lock, because SELECT … FOR UPDATE on the group's row
+// needs the UPDATE policy, which only the owner passes (API-8).
+func (q *Queries) LockSharedGroup(ctx context.Context, groupID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, lockSharedGroup, groupID)
+	return err
 }
 
 const refreshSharedCategories = `-- name: RefreshSharedCategories :execrows

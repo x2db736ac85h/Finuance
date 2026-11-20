@@ -66,6 +66,7 @@ type Querier interface {
 	CountLiveAccessTokens(ctx context.Context, arg CountLiveAccessTokensParams) (int64, error)
 	CountOwnedSharedGroups(ctx context.Context, ownerID *uuid.UUID) (int64, error)
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountSharedExpenses(ctx context.Context, groupID uuid.UUID) (int64, error)
 	CountUnreadNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUnsentAssistantAttachments(ctx context.Context, arg CountUnsentAssistantAttachmentsParams) (int64, error)
 	CountUnusedRecoveryCodes(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -153,7 +154,8 @@ type Querier interface {
 	DeleteSharedExpense(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteSharedGroup(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteSharedMember(ctx context.Context, arg DeleteSharedMemberParams) (int64, error)
-	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (int64, error)
+	// The policy lets whoever recorded it and either of its two sides delete it (migration 00028).
+	DeleteSharedSettlement(ctx context.Context, arg DeleteSharedSettlementParams) (DeleteSharedSettlementRow, error)
 	DeleteSharedSplits(ctx context.Context, expenseID uuid.UUID) error
 	DeleteStoredConnection(ctx context.Context, name string) (int64, error)
 	DeleteTransactionsByID(ctx context.Context, arg DeleteTransactionsByIDParams) (int64, error)
@@ -390,6 +392,10 @@ type Querier interface {
 	LockAccount(ctx context.Context, arg LockAccountParams) (uuid.UUID, error)
 	// The row locked for the check of a code, so two requests can't both use one code.
 	LockSecondFactor(ctx context.Context, userID uuid.UUID) (UserSecondFactor, error)
+	// One writer at a time per group for what moves balances (an expense, a settlement, a member
+	// leaving): a transaction-scoped advisory lock, because SELECT … FOR UPDATE on the group's row
+	// needs the UPDATE policy, which only the owner passes (API-8).
+	LockSharedGroup(ctx context.Context, groupID uuid.UUID) error
 	// Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
 	// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
 	LockUserAccounts(ctx context.Context, userID uuid.UUID) error
