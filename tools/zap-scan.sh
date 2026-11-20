@@ -12,15 +12,17 @@ cd "$(dirname "$0")/.."
 BASE_URL=${BASE_URL:-http://localhost:8000}
 ZAP_OUT=${ZAP_OUT:-zap-reports}
 ZAP_IMAGE=zaproxy/zap-stable:2.17.0@sha256:030d3df57735dacbb83464854758e674dd9ad01d79d12a129a8e58b1fd384238
-mkdir -p "$ZAP_OUT" && chmod 777 "$ZAP_OUT" # ZAP runs as uid 1000
-out=$(cd "$ZAP_OUT" && pwd)
+# ZAP runs as uid 1000 and must write its reports, so the folder it gets is open to everyone. It
+# sits inside the reports folder, which is this user's alone; the reports move up at the end.
+mkdir -p "$ZAP_OUT/wrk" && chmod 700 "$ZAP_OUT" && chmod 777 "$ZAP_OUT/wrk"
+out=$(cd "$ZAP_OUT/wrk" && pwd)
 
 # The API scan's user: a new account, so a scan never touches anyone's data.
 email="zap-$(date +%s)-$RANDOM@example.test"
 jar=$(mktemp)
 trap 'rm -f "$jar"' EXIT
 code=$(curl -s -o /dev/null -w '%{http_code}' -c "$jar" -H 'Content-Type: application/json' -H 'X-Finuance-Client: web' \
-  -H "Origin: $BASE_URL" -d "{\"email\":\"$email\",\"password\":\"zap scan password $RANDOM\"}" "$BASE_URL/api/v1/auth/signup")
+  -H "Origin: $BASE_URL" --data @- "$BASE_URL/api/v1/auth/signup" <<<"{\"email\":\"$email\",\"password\":\"zap-$(openssl rand -hex 16)\"}")
 [ "$code" = 201 ] || { echo "zap-scan: sign-up answered $code (the stack needs FINUANCE_ALLOW_SIGNUP)"; exit 1; }
 # the cookie as name=value (__Host-finuance_session over https, finuance_session over plain http)
 session=$(awk '$6 ~ /^(__Host-)?finuance_session$/ {print $6 "=" $7}' "$jar")
@@ -48,6 +50,7 @@ zap zap-baseline.py -t "$BASE_URL" -c /zap/config/rules.tsv -J baseline.json -r 
 echo "== API scan from api/openapi.yaml"
 zap zap-api-scan.py -t /zap/wrk/openapi-scan.yaml -f openapi -O "$BASE_URL" -c /zap/config/rules.tsv \
   --hook /zap/config/hooks.py -J api.json || status=$((status | $?))
+find "$out" -mindepth 1 -maxdepth 1 -exec mv -f {} "$ZAP_OUT"/ \;
 # exit codes: 1 = a FAIL, 2 = a WARN, 3 = the scan itself failed
 [ "$status" -eq 0 ] && echo "zap-scan: ok" || echo "zap-scan: findings (exit $status); see $ZAP_OUT/*.html"
 exit "$status"

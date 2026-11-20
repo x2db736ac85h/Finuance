@@ -17,17 +17,18 @@ ns=${NAMESPACE:-finuance}
 # The import smoke reads the worker's metrics.
 kubectl -n "$ns" port-forward deploy/finuance-worker "${METRICS_PORT:-19091}":9090 >/dev/null 2>&1 &
 pf=$!
-email="" pass=""
+email="" pass="" pass2=""
 cleanup() {
   kill "$pf" 2>/dev/null || true
   # A script that failed half-way leaves its user: remove it (auth-smoke may have changed the password).
   [ -n "$email" ] || return 0
-  for p in "$pass" "smoke password two"; do
+  for p in "$pass" "$pass2"; do
     c=$(mktemp)
-    if curl -sS -o /dev/null -c "$c" -H "X-Finuance-Client: web" -H "Origin: $ORIGIN" -H "Content-Type: application/json" \
-         --data "$(printf '{"email":"%s","password":"%s"}' "$email" "$p")" -w '%{http_code}' "$BASE_URL/api/v1/auth/login" | grep -q 200; then
-      curl -sS -o /dev/null -b "$c" -X DELETE -H "X-Finuance-Client: web" -H "Origin: $ORIGIN" -H "Content-Type: application/json" \
-        --data "$(printf '{"password":"%s"}' "$p")" "$BASE_URL/api/v1/me" && echo "smoke-k8s: removed the leftover user $email"
+    # bodies on standard input: a command line is visible to every user of the machine
+    if printf '{"email":"%s","password":"%s"}' "$email" "$p" | curl -sS -o /dev/null -c "$c" -H "X-Finuance-Client: web" -H "Origin: $ORIGIN" \
+         -H "Content-Type: application/json" --data @- -w '%{http_code}' "$BASE_URL/api/v1/auth/login" | grep -q 200; then
+      printf '{"password":"%s"}' "$p" | curl -sS -o /dev/null -b "$c" -X DELETE -H "X-Finuance-Client: web" -H "Origin: $ORIGIN" \
+        -H "Content-Type: application/json" --data @- "$BASE_URL/api/v1/me" && echo "smoke-k8s: removed the leftover user $email"
       rm -f "$c"; break
     fi
     rm -f "$c"
@@ -39,9 +40,10 @@ for _ in $(seq 30); do curl -fsS http://localhost:${METRICS_PORT:-19091}/metrics
 for s in auth-smoke import-smoke query-smoke; do
   email="$s-$(date +%s)-$RANDOM@example.test"
   pass=$(openssl rand -base64 24)
+  pass2=$(openssl rand -base64 24) # what auth-smoke changes the password to
   printf '%s' "$pass" | kubectl -n "$ns" exec -i deploy/finuance-api -- \
     /finuance admin create-user -email="$email" -display-name=Smoke -password-stdin >/dev/null
-  SMOKE_EMAIL=$email SMOKE_PASSWORD=$pass BASE_URL=$BASE_URL ORIGIN=$ORIGIN \
+  SMOKE_EMAIL=$email SMOKE_PASSWORD=$pass SMOKE_PASSWORD_NEW=$pass2 BASE_URL=$BASE_URL ORIGIN=$ORIGIN \
     METRICS_URL=http://localhost:${METRICS_PORT:-19091}/metrics "scripts/$s.sh"
   email=""   # the script deleted its user
 done

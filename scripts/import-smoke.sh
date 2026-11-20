@@ -15,7 +15,8 @@ ORIGIN="${ORIGIN:-http://localhost:8000}"
 METRICS_URL="${METRICS_URL:-http://localhost:9091/metrics}"
 API="$BASE_URL/api/v1"
 EMAIL="import-smoke-$(date +%s)-$RANDOM@example.test"
-PASS="import smoke password"
+# a new password per run: a run that stops half-way leaves no account with a known one
+PASS="smoke-$(openssl rand -hex 16)"
 # An existing user instead of a sign-up, for instances with sign-up off (scripts/smoke-k8s.sh makes
 # a throwaway user per script); the password comes from the environment only.
 if [[ -n ${SMOKE_EMAIL:-} ]]; then EMAIL=$SMOKE_EMAIL; PASS=${SMOKE_PASSWORD:?set SMOKE_PASSWORD with SMOKE_EMAIL}; fi
@@ -47,8 +48,9 @@ curl_api() { curl -sS -o "$work/body" -w '%{http_code}' -b "$jar" -c "$jar" -H "
 # call METHOD PATH EXPECTED_STATUS [JSON]
 call() {
   local args=(-X "$1")
-  [[ -n ${4:-} ]] && args+=(-H "Content-Type: application/json" --data "$4")
-  check "$(curl_api "${args[@]}" "$API$2")" "$3" "$1 $2"
+  # the body on standard input, not the command line (it can hold the password)
+  [[ -n ${4:-} ]] && args+=(-H "Content-Type: application/json" --data @-)
+  check "$(curl_api "${args[@]}" "$API$2" <<<"${4:-}")" "$3" "$1 $2"
 }
 # upload FILE EXPECTED_STATUS [QUERY]
 upload() {
