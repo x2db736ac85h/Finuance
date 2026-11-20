@@ -257,7 +257,12 @@ func TestSeedDemo(t *testing.T) {
 	if err := Admin(ctx, cfg, AdminInput{Command: "create-user", Email: email, Password: strings.NewReader("seed password 123\n")}, log); err != nil {
 		t.Fatal(err)
 	}
-	if err := SeedDemo(ctx, cfg, SeedInput{Email: email}, log); err != nil {
+	// A fixed clock a few minutes after midnight in a zone ahead of UTC: the local day and the UTC
+	// day differ there, which is where this test used to fail with the system's clock (between
+	// 00:00 and 01:00 in Warsaw). The data ends the day before the clock's own day.
+	now := time.Date(2026, 11, 20, 0, 3, 0, 0, time.FixedZone("ahead", 3600))
+	clock := platform.FixedClock{T: now}
+	if err := SeedDemo(ctx, cfg, SeedInput{Email: email, Clock: clock}, log); err != nil {
 		t.Fatal(err)
 	}
 	st := store.New(tdb.App)
@@ -270,13 +275,13 @@ func TestSeedDemo(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Every demo row is distinct (unique DEMO references), so each one becomes a transaction.
-	rows := strings.Count(demo.Recent(time.Now()), "\n")
-	yesterday := platform.DateOf(time.Now().UTC().AddDate(0, 0, -1), time.UTC)
+	rows := strings.Count(demo.Recent(now), "\n")
+	yesterday := platform.DateOf(now.AddDate(0, 0, -1), now.Location())
 	if len(accounts) != 1 || !accounts[0].IsDemo || accounts[0].Name != ledger.DemoAccountName || int(accounts[0].TxCount) != rows ||
 		accounts[0].LastOn == nil || *accounts[0].LastOn != yesterday {
 		t.Fatalf("accounts = %+v, want one demo account with %d transactions up to %s", accounts, rows, yesterday)
 	}
-	if err := SeedDemo(ctx, cfg, SeedInput{Email: email}, log); !errors.Is(err, ledger.ErrConflict) {
+	if err := SeedDemo(ctx, cfg, SeedInput{Email: email, Clock: clock}, log); !errors.Is(err, ledger.ErrConflict) {
 		t.Errorf("second seed: %v, want a conflict", err)
 	}
 	if err := SeedDemo(ctx, cfg, SeedInput{Email: "nobody@example.test"}, log); !errors.Is(err, platform.ErrNotFound) {
