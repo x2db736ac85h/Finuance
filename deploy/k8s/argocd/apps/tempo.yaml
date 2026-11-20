@@ -8,7 +8,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-6"
 spec:
-  project: platform
+  project: platform-manifests
   source:
     repoURL: git@github.com:x2db736ac85h/Finuance.git
     targetRevision: main

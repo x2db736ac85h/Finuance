@@ -206,5 +206,26 @@ must_fail "the backup has no bucket" "objectStore.destinationPath is required" "
 must_fail "the backup schedule has 5 fields" "/backup/schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"
 must_fail "a restore archives into its origin's folder" "must archive to another folder" "$db" \
   --set objectStore.destinationPath=s3://b/ --set recovery.enabled=true
+# Argo CD projects (register OPS-4): the project for this repository's plain manifests lists
+# exactly the kinds those manifests use, nothing with a wildcard, and its applications use it.
+echo "== the platform-manifests project lists the kinds of its manifests"
+projects=deploy/k8s/argocd/apps/projects.yaml
+pm='select(.kind == "AppProject" and .metadata.name == "platform-manifests") | .spec'
+"$YQ" -N "$pm | (.clusterResourceWhitelist + .namespaceResourceWhitelist + .destinations)[] | .[]" "$projects" | grep -qx '\*' &&
+  { echo "check-helm: the platform-manifests project has a wildcard"; failures=$((failures + 1)); }
+[ "$("$YQ" -N "$pm | .sourceRepos | length" "$projects")" = 1 ] || { echo "check-helm: the platform-manifests project reads more than this repository"; failures=$((failures + 1)); }
+allowed=$("$YQ" -N "$pm | (.clusterResourceWhitelist + .namespaceResourceWhitelist)[] | .group + \"/\" + .kind" "$projects" | grep -v '/Namespace$' | sort)
+used=$("$YQ" -N '(.apiVersion | sub("/?[^/]+$", "")) + "/" + .kind' deploy/k8s/admission/*.yaml deploy/k8s/tempo/*.yaml | sort -u)
+[ "$allowed" = "$used" ] || { echo "check-helm: the platform-manifests project and its manifests differ:"; diff <(echo "$allowed") <(echo "$used") || true; failures=$((failures + 1)); }
+for a in admission-policy tempo; do
+  [ "$("$YQ" -N '.spec.project' "deploy/k8s/argocd/apps/$a.yaml")" = platform-manifests ] || { echo "check-helm: application $a is not in the platform-manifests project"; failures=$((failures + 1)); }
+done
+for a in deploy/k8s/argocd/apps/*.yaml; do
+  [ "$("$YQ" -N 'select(.kind == "Application") | select(.spec.project == "platform") | [.spec.source, .spec.sources[]] | map(select(. != null and has("path"))) | map(.path) | map(select(test("policy-controller/policies$|^homelab/monitoring$") | not)) | length' "$a")" = 0 ] 2>/dev/null ||
+    [ -z "$("$YQ" -N 'select(.kind == "Application") | select(.spec.project == "platform") | .metadata.name' "$a")" ] ||
+    { echo "check-helm: $a (project platform) syncs a folder of manifests; it belongs in platform-manifests"; failures=$((failures + 1)); }
+done
+echo ok
+
 [ $failures -eq 0 ] || exit 1
 echo "check-helm: ok (rendered manifests in $out)"

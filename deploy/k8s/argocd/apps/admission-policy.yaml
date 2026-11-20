@@ -8,14 +8,15 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-8"
 spec:
-  project: platform
+  project: platform-manifests
   source:
     repoURL: git@github.com:x2db736ac85h/Finuance.git
     targetRevision: main
     path: deploy/k8s/admission
   destination:
     server: https://kubernetes.default.svc
-    namespace: kube-system   # the policy is cluster-scoped; the project needs a namespace it allows
+    # the policy is cluster-scoped; an application needs a namespace its project allows
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true
