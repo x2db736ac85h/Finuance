@@ -38,6 +38,8 @@ var (
 	SharedWritesPerUser  = Policy{Events: 120, Per: time.Minute}
 	SharedInvitesPerUser = Policy{Events: 30, Per: time.Hour}
 	FriendCodesPerHour   = Policy{Events: 10, Per: time.Hour} // friend codes entered, per user and per IP (ADR 0027)
+	// errors the web app reports, per client address: a page that fails in a loop can't flood the log (PLAN 24.8)
+	ClientEventsPerIP = Policy{Events: 30, Per: time.Minute}
 )
 
 // DefaultMaxKeys caps the buckets one Limiter keeps, so a flood of distinct IPs or emails can't

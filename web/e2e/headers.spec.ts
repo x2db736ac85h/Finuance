@@ -70,6 +70,34 @@ test('the content security policy closes plugins, frames and DOM script sinks', 
   expect((await request.get('/t/all')).headers()['permissions-policy']).not.toContain('interest-cohort');
 });
 
+// The browser's errors reach the server (PLAN 24.8): the policy names where violations are reported,
+// that route takes a browser's report (no client header, the browser's own content type) through
+// the web server, and the web app's own reports are accepted without a session.
+test('policy violations and the app’s errors have somewhere to go', async ({ request }) => {
+  const page = await request.get('/t/all');
+  const csp = page.headers()['content-security-policy'] ?? '';
+  expect(csp).toContain('report-uri /api/v1/csp-reports');
+  expect(csp).toContain('report-to csp');
+  expect(page.headers()['reporting-endpoints']).toBe('csp="/api/v1/csp-reports"');
+
+  const report = await request.post('/api/v1/csp-reports', {
+    headers: { 'Content-Type': 'application/csp-report' },
+    data: JSON.stringify({ 'csp-report': { 'violated-directive': 'script-src', 'blocked-uri': 'inline' } }),
+  });
+  expect(report.status()).toBe(204);
+
+  const event = await request.post('/api/v1/client-events', {
+    headers: { 'X-Finuance-Client': 'web' },
+    data: { kind: 'error', name: 'TypeError', route: '/t/:id' },
+  });
+  expect(event.status()).toBe(204);
+  const withText = await request.post('/api/v1/client-events', {
+    headers: { 'X-Finuance-Client': 'web' },
+    data: { kind: 'error', name: 'what the person typed', route: '/t/all?q=private' },
+  });
+  expect(withText.status(), 'free text is refused').toBeGreaterThanOrEqual(400);
+});
+
 // Body sizes at the web server (register OPS-7): the migration from the single-file app may be
 // larger than one upload; every other route keeps the upload limit. Nobody is signed in, so a
 // body the web server lets through is answered by the api (401), not stored.

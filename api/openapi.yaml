@@ -153,6 +153,31 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Problem"
+  /client-events:
+    post:
+      operationId: reportClientEvent
+      summary: Report an error of the web app
+      description: |
+        The web app reports an error that happened in the browser, so that it is counted
+        (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+        the error's class name, the route pattern and the app's version: never a message, a stack
+        or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+        most 1 KiB; at most 30 a minute per client address.
+      tags: [meta]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientEvent"
+      responses:
+        "204":
+          description: Counted
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Problem"
   /auth/logout:
     post:
       operationId: logout
@@ -3582,6 +3607,30 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
   schemas:
+    ClientEvent:
+      type: object
+      additionalProperties: false
+      required: [kind, route]
+      properties:
+        kind:
+          type: string
+          enum: [error, unhandled_rejection, render]
+          description: "`error`: an uncaught error; `unhandled_rejection`: a promise nobody handled; `render`: a screen that failed to draw"
+        name:
+          type: string
+          maxLength: 64
+          pattern: "^[A-Za-z][A-Za-z0-9_]*$"
+          description: The error's class name (`TypeError`), never its message
+        route:
+          type: string
+          maxLength: 128
+          pattern: "^/[A-Za-z0-9/_:*.-]*$"
+          description: The route pattern of the screen (`/accounts/:id`), never a path with its values or a query
+        version:
+          type: string
+          maxLength: 64
+          pattern: "^[A-Za-z0-9._+-]*$"
+          description: The web app's version
     Meta:
       type: object
       additionalProperties: false

@@ -167,6 +167,8 @@ func NewHandler(d Deps) (http.Handler, error) {
 	notFound := func(w http.ResponseWriter, r *http.Request) {
 		WriteProblem(w, r, fmt.Errorf("%s: %w", r.URL.Path, platform.ErrNotFound), prod)
 	}
+	// outside the generated router and its CSRF check: the browser sends these itself (handlers_client_events.go)
+	mux.HandleFunc("POST "+cspReportPath, impl.cspReport)
 	mux.HandleFunc("/api/v1/", notFound)
 	mux.HandleFunc("/", notFound)
 	if d.Extra != nil {
@@ -185,7 +187,8 @@ func NewHandler(d Deps) (http.Handler, error) {
 		mw.SecurityHeaders,
 		mw.MaxBytes(MaxJSONBody, map[string]int64{"POST /api/v1/imports": d.Config.MaxUploadBytes + multipartOverhead,
 			"POST /api/v1/legacy-imports":                legacyBodyLimit(d.Config.MaxUploadBytes, d.Config.MaxLegacyImportBytes),
-			"POST /api/v1/assistant/chats/*/attachments": images.MaxBytes}),
+			"POST /api/v1/assistant/chats/*/attachments": images.MaxBytes,
+			"POST /api/v1/client-events":                 maxClientEvent, "POST " + cspReportPath: maxCSPReport}),
 		mw.Route,
 	), nil
 }

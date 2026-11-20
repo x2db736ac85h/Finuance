@@ -7,6 +7,7 @@ finuance_assistant_tokens_sent_approx
 finuance_assistant_tool_calls_total
 finuance_auth_failures_total
 finuance_build_info
+finuance_client_errors_total
 finuance_import_commit_duration_seconds
 finuance_import_rows_total
 finuance_imports_total

@@ -40,6 +40,7 @@ type limits struct {
 	sharedWrite    *mw.Limiter // expenses, payments and member changes in shared groups, per user (API-5)
 	sharedInvite   *mw.Limiter // invitations sent, per user
 	statusRefresh  *mw.Limiter // forced re-checks of the model servers, per user (AI-5)
+	clientEvents   *mw.Limiter // errors reported by the web app and the browser, per client address
 	named          func(string, *mw.Limiter) *mw.Limiter
 }
 
@@ -75,6 +76,7 @@ func newLimits(clock platform.Clock, aiPerHour int, limited func(limiter string)
 		sharedWrite:    named("shared_write", mw.NewLimiter(mw.SharedWritesPerUser, clock, 0)),
 		sharedInvite:   named("shared_invite", mw.NewLimiter(mw.SharedInvitesPerUser, clock, 0)),
 		statusRefresh:  named("status_refresh", mw.NewLimiter(mw.StatusRefreshPerUser, clock, 0)),
+		clientEvents:   named("client_events", mw.NewLimiter(mw.ClientEventsPerIP, clock, 0)),
 		// A full bucket and one token back per lifetime + 1 h: exactly DemoAssistantMessages
 		// before the user is deleted.
 		demoAsk: named("demo_assistant", mw.NewLimiter(mw.Policy{Events: config.DemoAssistantMessages,

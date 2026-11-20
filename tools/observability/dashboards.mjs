@@ -120,6 +120,8 @@ const dashboards = {
       desc: 'The api\'s own limiters (per address, per account, per user). Limits at the ingress are counted by Traefik.' }),
     ts('Failed sign-ins by reason', [[`sum by (reason) (rate(finuance_auth_failures_total{${API}}[5m]))`, '{{reason}}']], { unit: 'reqps',
       desc: 'password: a wrong e-mail address or password. second_step: a wrong code. A steady rise is someone guessing.' }),
+    ts('Errors in the browser by kind', [[`sum by (kind) (rate(finuance_client_errors_total{${API}}[15m]))`, '{{kind}}']], { unit: 'ops', w: 24,
+      desc: 'error and unhandled_rejection: the web app\'s own code failed. render: a screen could not be drawn. csp: the content security policy blocked something.' }),
     row('Duration'),
     ts('p95 by route', [[q95('http_server_request_duration_seconds', API, ['route']), '{{route}}']], { unit: 's', exemplars: true,
       desc: 'The dots are single requests: one opens its trace in Tempo.' }),

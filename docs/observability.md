@@ -111,3 +111,25 @@ digests, so their dashboard and the alert `FinuanceAssistantModelErrors` read bo
 trace id of one request that fell into it. With `exemplar-storage` switched on in Prometheus and the
 Tempo link on Grafana's Prometheus data source (both set in the reference environment's monitoring
 values), the dots on "p95 by route" open that request's trace.
+
+## Errors in the browser
+
+A person who meets a failure on the server's side sees its request id with the message
+("… (Reference: cf0ff0a8…)"), which is the `request_id` to search the logs for.
+
+Errors that happen in the browser itself are counted in `finuance_client_errors_total{kind}` and
+written as one `client error` line each:
+
+| `kind` | Sent by | When |
+|---|---|---|
+| `error` | the web app, `POST /api/v1/client-events` | an uncaught error |
+| `unhandled_rejection` | the web app | a promise nobody handled |
+| `render` | the web app | a screen failed to draw; the person sees "This screen couldn't be shown" |
+| `csp` | the browser, `POST /api/v1/csp-reports` | the content security policy blocked something |
+
+The web app sends the kind, the error's class name (`TypeError`) and the screen's route pattern
+(`/imports/:id`), and the API's contract refuses anything else: no message, no stack, no address
+with its values or query. At most five reports per page load, and thirty a minute per client
+address at the server. A browser's policy report is counted and thrown away unread, because it
+quotes addresses. Both routes work without a session; the report route is the one route that takes
+a request without the client header, since the browser sends it by itself, and it changes nothing.

@@ -10,6 +10,7 @@ import { RequireAuth } from './auth/RequireAuth';
 import { Signup } from './auth/Signup';
 import { SettingsPage } from './settings/SettingsPage';
 import { AppShell } from './shell/AppShell';
+import { ScreenError } from './shell/ScreenError';
 import { OverviewView, TableView } from './shell/Views';
 import { useUi } from './stores/uiStore';
 
@@ -18,27 +19,33 @@ function Start() {
 }
 
 export const routes: RouteObject[] = [
-  { path: '/login', element: <Login /> },
-  { path: '/signup', element: <Signup /> },
-  ...(import.meta.env.DEV
-    ? [{ path: '/__ui', lazy: async () => ({ Component: (await import('./ui/Gallery')).Gallery }) }]
-    : []),
   {
-    element: <RequireAuth>{(user) => <AppShell user={user} />}</RequireAuth>,
+    // a screen that fails to draw is reported and replaced by a way back (PLAN 24.8)
+    errorElement: <ScreenError />,
     children: [
-      { index: true, element: <Start /> },
-      { path: '/t/:viewId', element: <TableView /> },
-      { path: '/o/:viewId', element: <OverviewView /> },
-      { path: '/imports/:importId', element: <ImportRoute /> },
-      // the Shared tab is its own chunk (Phase 19, ADR 0028)
-      { path: '/s', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
-      { path: '/s/:groupId', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
-      { path: '/settings', element: <Navigate to="/settings/general" replace /> },
-      { path: '/settings/:section', element: <SettingsPage /> },
-      { path: '/admin', element: <Navigate to="/admin/users" replace /> },
-      // the admin panel is its own chunk (Phase 19)
-      { path: '/admin/:section', lazy: async () => ({ Component: (await import('./admin/AdminPage')).AdminPage }) },
-      { path: '*', element: <Navigate to="/" replace /> },
+      { path: '/login', element: <Login /> },
+      { path: '/signup', element: <Signup /> },
+      ...(import.meta.env.DEV
+        ? [{ path: '/__ui', lazy: async () => ({ Component: (await import('./ui/Gallery')).Gallery }) }]
+        : []),
+      {
+        element: <RequireAuth>{(user) => <AppShell user={user} />}</RequireAuth>,
+        children: [
+          { index: true, element: <Start /> },
+          { path: '/t/:viewId', element: <TableView /> },
+          { path: '/o/:viewId', element: <OverviewView /> },
+          { path: '/imports/:importId', element: <ImportRoute /> },
+          // the Shared tab is its own chunk (Phase 19, ADR 0028)
+          { path: '/s', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
+          { path: '/s/:groupId', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
+          { path: '/settings', element: <Navigate to="/settings/general" replace /> },
+          { path: '/settings/:section', element: <SettingsPage /> },
+          { path: '/admin', element: <Navigate to="/admin/users" replace /> },
+          // the admin panel is its own chunk (Phase 19)
+          { path: '/admin/:section', lazy: async () => ({ Component: (await import('./admin/AdminPage')).AdminPage }) },
+          { path: '*', element: <Navigate to="/" replace /> },
+        ],
+      },
     ],
   },
 ];

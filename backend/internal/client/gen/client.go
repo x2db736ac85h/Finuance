@@ -827,6 +827,27 @@ func (e BulkUpdateTransfer) Valid() bool {
 	}
 }
 
+// Defines values for ClientEventKind.
+const (
+	Error              ClientEventKind = "error"
+	Render             ClientEventKind = "render"
+	UnhandledRejection ClientEventKind = "unhandled_rejection"
+)
+
+// Valid indicates whether the value is a known member of the ClientEventKind enum.
+func (e ClientEventKind) Valid() bool {
+	switch e {
+	case Error:
+		return true
+	case Render:
+		return true
+	case UnhandledRejection:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ColumnStatsColumn.
 const (
 	ColumnStatsColumnAmount       ColumnStatsColumn = "amount"
@@ -3278,6 +3299,24 @@ type ChangePasswordRequest struct {
 	CurrentPassword string `json:"currentPassword"`
 	NewPassword     string `json:"newPassword"`
 }
+
+// ClientEvent defines model for ClientEvent.
+type ClientEvent struct {
+	// Kind `error`: an uncaught error; `unhandled_rejection`: a promise nobody handled; `render`: a screen that failed to draw
+	Kind ClientEventKind `json:"kind"`
+
+	// Name The error's class name (`TypeError`), never its message
+	Name *string `json:"name,omitempty"`
+
+	// Route The route pattern of the screen (`/accounts/:id`), never a path with its values or a query
+	Route string `json:"route"`
+
+	// Version The web app's version
+	Version *string `json:"version,omitempty"`
+}
+
+// ClientEventKind `error`: an uncaught error; `unhandled_rejection`: a promise nobody handled; `render`: a screen that failed to draw
+type ClientEventKind string
 
 // ColRef defines model for ColRef.
 type ColRef struct {
@@ -5901,6 +5940,9 @@ type RenameCategoryJSONRequestBody = CategoryInput
 // MergeCategoryJSONRequestBody defines body for MergeCategory for application/json ContentType.
 type MergeCategoryJSONRequestBody MergeCategoryJSONBody
 
+// ReportClientEventJSONRequestBody defines body for ReportClientEvent for application/json ContentType.
+type ReportClientEventJSONRequestBody = ClientEvent
+
 // DecideDuplicateJSONRequestBody defines body for DecideDuplicate for application/json ContentType.
 type DecideDuplicateJSONRequestBody = DuplicateDecision
 
@@ -6840,6 +6882,32 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /categories/{id}/merge (the `MergeCategory` operationId).
 	MergeCategory(ctx context.Context, id Id, body MergeCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReportClientEventWithBody Report an error of the web app
+	//
+	// The web app reports an error that happened in the browser, so that it is counted
+	// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+	// the error's class name, the route pattern and the app's version: never a message, a stack
+	// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+	// most 1 KiB; at most 30 a minute per client address.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+	ReportClientEventWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReportClientEvent Report an error of the web app
+	//
+	// The web app reports an error that happened in the browser, so that it is counted
+	// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+	// the error's class name, the route pattern and the app's version: never a message, a stack
+	// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+	// most 1 KiB; at most 30 a minute per client address.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+	ReportClientEvent(ctx context.Context, body ReportClientEventJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// LoadDemoData Create a demo account with the generated demo year
 	//
@@ -9599,6 +9667,52 @@ func (c *Client) MergeCategoryWithBody(ctx context.Context, id Id, contentType s
 // Corresponds with POST /categories/{id}/merge (the `MergeCategory` operationId).
 func (c *Client) MergeCategory(ctx context.Context, id Id, body MergeCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewMergeCategoryRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ReportClientEventWithBody Report an error of the web app
+//
+// The web app reports an error that happened in the browser, so that it is counted
+// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+// the error's class name, the route pattern and the app's version: never a message, a stack
+// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+// most 1 KiB; at most 30 a minute per client address.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+func (c *Client) ReportClientEventWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReportClientEventRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ReportClientEvent Report an error of the web app
+//
+// The web app reports an error that happened in the browser, so that it is counted
+// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+// the error's class name, the route pattern and the app's version: never a message, a stack
+// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+// most 1 KiB; at most 30 a minute per client address.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+func (c *Client) ReportClientEvent(ctx context.Context, body ReportClientEventJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReportClientEventRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -14773,6 +14887,46 @@ func NewMergeCategoryRequestWithBody(server string, id Id, contentType string, b
 	return req, nil
 }
 
+// NewReportClientEventRequest calls the generic ReportClientEvent builder with application/json body
+func NewReportClientEventRequest(server string, body ReportClientEventJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewReportClientEventRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewReportClientEventRequestWithBody constructs an http.Request for the ReportClientEvent method, with any body, and a specified content type
+func NewReportClientEventRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/client-events")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewLoadDemoDataRequest constructs an http.Request for the LoadDemoData method
 func NewLoadDemoDataRequest(server string) (*http.Request, error) {
 	var err error
@@ -19695,6 +19849,32 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /categories/{id}/merge (the `MergeCategory` operationId).
 	MergeCategoryWithResponse(ctx context.Context, id Id, body MergeCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*MergeCategoryResponse, error)
 
+	// ReportClientEventWithBodyWithResponse Report an error of the web app
+	//
+	// The web app reports an error that happened in the browser, so that it is counted
+	// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+	// the error's class name, the route pattern and the app's version: never a message, a stack
+	// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+	// most 1 KiB; at most 30 a minute per client address.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+	ReportClientEventWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReportClientEventResponse, error)
+
+	// ReportClientEventWithResponse Report an error of the web app
+	//
+	// The web app reports an error that happened in the browser, so that it is counted
+	// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+	// the error's class name, the route pattern and the app's version: never a message, a stack
+	// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+	// most 1 KiB; at most 30 a minute per client address.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+	ReportClientEventWithResponse(ctx context.Context, body ReportClientEventJSONRequestBody, reqEditors ...RequestEditorFn) (*ReportClientEventResponse, error)
+
 	// LoadDemoDataWithResponse Create a demo account with the generated demo year
 	//
 	// Creates "Demo account" (isDemo) and commits the fictional demo year (the legacy demo generator, dates shifted so the last day is yesterday) before answering. `409 conflict` when the user already has a demo account; it can be deleted like any other account.
@@ -24063,6 +24243,61 @@ func (r MergeCategoryResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r MergeCategoryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ReportClientEventResponse429Headers the declared response headers of an HTTP 429 response for ReportClientEvent
+type ReportClientEventResponse429Headers struct {
+	RetryAfter *int
+}
+
+type ReportClientEventResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSON429 the response for an HTTP 429 `application/problem+json` response
+	ApplicationproblemJSON429 *TooManyRequests
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReportClientEventResponse429Headers
+}
+
+// GetApplicationproblemJSON429 returns the response for an HTTP 429 `application/problem+json` response
+func (r ReportClientEventResponse) GetApplicationproblemJSON429() *TooManyRequests {
+	return r.ApplicationproblemJSON429
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r ReportClientEventResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r ReportClientEventResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ReportClientEventResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReportClientEventResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ReportClientEventResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -30072,6 +30307,44 @@ func (c *ClientWithResponses) MergeCategoryWithResponse(ctx context.Context, id 
 	return ParseMergeCategoryResponse(rsp)
 }
 
+// ReportClientEventWithBodyWithResponse Report an error of the web app
+//
+// The web app reports an error that happened in the browser, so that it is counted
+// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+// the error's class name, the route pattern and the app's version: never a message, a stack
+// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+// most 1 KiB; at most 30 a minute per client address.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+func (c *ClientWithResponses) ReportClientEventWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReportClientEventResponse, error) {
+	rsp, err := c.ReportClientEventWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReportClientEventResponse(rsp)
+}
+
+// ReportClientEventWithResponse Report an error of the web app
+//
+// The web app reports an error that happened in the browser, so that it is counted
+// (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+// the error's class name, the route pattern and the app's version: never a message, a stack
+// or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+// most 1 KiB; at most 30 a minute per client address.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /client-events (the `ReportClientEvent` operationId).
+func (c *ClientWithResponses) ReportClientEventWithResponse(ctx context.Context, body ReportClientEventJSONRequestBody, reqEditors ...RequestEditorFn) (*ReportClientEventResponse, error) {
+	rsp, err := c.ReportClientEvent(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReportClientEventResponse(rsp)
+}
+
 // LoadDemoDataWithResponse Create a demo account with the generated demo year
 //
 // Creates "Demo account" (isDemo) and commits the fictional demo year (the legacy demo generator, dates shifted so the last day is yesterday) before answering. `409 conflict` when the user already has a demo account; it can be deleted like any other account.
@@ -34391,6 +34664,55 @@ func ParseMergeCategoryResponse(rsp *http.Response) (*MergeCategoryResponse, err
 		}
 		response.ApplicationproblemJSONDefault = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseReportClientEventResponse parses an HTTP response from a ReportClientEventWithResponse call
+func ParseReportClientEventResponse(rsp *http.Response) (*ReportClientEventResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReportClientEventResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ReportClientEventResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
 	}
 
 	return response, nil

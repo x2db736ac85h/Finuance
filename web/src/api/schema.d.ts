@@ -112,6 +112,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/client-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report an error of the web app
+         * @description The web app reports an error that happened in the browser, so that it is counted
+         *     (`finuance_client_errors_total`) and one log line is written. It carries the kind of error,
+         *     the error's class name, the route pattern and the app's version: never a message, a stack
+         *     or a URL. Works without a session (an error can happen on the sign-in page). The body is at
+         *     most 1 KiB; at most 30 a minute per client address.
+         */
+        post: operations["reportClientEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -2561,6 +2585,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ClientEvent: {
+            /**
+             * @description `error`: an uncaught error; `unhandled_rejection`: a promise nobody handled; `render`: a screen that failed to draw
+             * @enum {string}
+             */
+            kind: "error" | "unhandled_rejection" | "render";
+            /** @description The error's class name (`TypeError`), never its message */
+            name?: string;
+            /** @description The route pattern of the screen (`/accounts/:id`), never a path with its values or a query */
+            route: string;
+            /** @description The web app's version */
+            version?: string;
+        };
         Meta: {
             features: components["schemas"]["Features"];
             defaults: components["schemas"]["ViewDefaults"];
@@ -5560,6 +5597,30 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    reportClientEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientEvent"];
+            };
+        };
+        responses: {
+            /** @description Counted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Problem"];

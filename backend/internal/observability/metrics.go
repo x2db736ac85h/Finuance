@@ -15,6 +15,7 @@ type Metrics struct {
 	Panics       prometheus.Counter
 	RateLimited  *prometheus.CounterVec // finuance_rate_limited_total{limiter}
 	AuthFailures *prometheus.CounterVec // finuance_auth_failures_total{reason}
+	ClientErrors *prometheus.CounterVec // finuance_client_errors_total{kind}
 	BuildInfo    *prometheus.GaugeVec
 	collectors   []prometheus.Collector
 }
@@ -50,13 +51,17 @@ func NewMetrics() *Metrics {
 			Name: "finuance_auth_failures_total",
 			Help: "Failed sign-ins by reason: password (a wrong e-mail address or password) or second_step (a wrong code).",
 		}, []string{"reason"}),
+		ClientErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "finuance_client_errors_total",
+			Help: "Errors in the browser, by kind: error, unhandled_rejection, render (reported by the web app) or csp (a content security policy violation reported by the browser).",
+		}, []string{"kind"}),
 		BuildInfo: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "finuance_build_info",
 			Help: "Always 1; labels carry the build version and commit.",
 		}, []string{"version", "commit"}),
 	}
 	m.collectors = []prometheus.Collector{collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.HTTPRequests, m.HTTPDuration, m.HTTPInFlight, m.Panics, m.RateLimited, m.AuthFailures, m.BuildInfo}
+		m.HTTPRequests, m.HTTPDuration, m.HTTPInFlight, m.Panics, m.RateLimited, m.AuthFailures, m.ClientErrors, m.BuildInfo}
 	reg.MustRegister(m.collectors...)
 	return m
 }
