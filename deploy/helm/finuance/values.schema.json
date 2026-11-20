@@ -115,6 +115,13 @@
           "description": "The full OTLP/HTTP traces URL, path included (…:4318/v1/traces); empty turns tracing off",
           "pattern": "^$|^https?://[^/]+/[^/].*$"
         },
+        "sampleRatio": { "type": "number", "minimum": 0, "maximum": 1, "description": "The share of requests that are traced" },
+        "resourceAttributes": {
+          "type": "object",
+          "description": "More OpenTelemetry resource attributes for every span",
+          "propertyNames": { "pattern": "^[a-z][a-z0-9_.]*$" },
+          "additionalProperties": { "type": "string", "pattern": "^[A-Za-z0-9_.:/-]+$" }
+        },
         "egress": { "$ref": "#/definitions/egress" }
       }
     },

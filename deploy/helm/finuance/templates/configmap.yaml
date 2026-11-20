@@ -17,6 +17,7 @@ data:
   FINUANCE_DATABASE_URL: {{ include "finuance.dbURL" (dict "root" . "user" .Values.database.app.user) | quote }}
   {{- with .Values.otel.endpoint }}
   FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: {{ . | quote }}
+  FINUANCE_OTEL_SAMPLE_RATIO: {{ $.Values.otel.sampleRatio | quote }}
   {{- end }}
   {{- range $k, $v := .Values.extraEnv }}
   {{ $k }}: {{ $v | quote }}

@@ -499,6 +499,7 @@ httpapi                      : maps HTTP ⇄ domain; no SQL strings
 | `FINUANCE_MAX_UPLOAD_BYTES` | `20971520` | 20 MiB per file |
 | `FINUANCE_MAX_LEGACY_IMPORT_BYTES` | `209715200` | 200 MiB per legacy import upload (all files + manifest) |
 | `FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT` | empty | Tracing disabled when empty |
+| `FINUANCE_OTEL_SAMPLE_RATIO` | `1` | The share of requests that are traced, 0 to 1 (Phase 24); a job follows the request that queued it |
 | `FINUANCE_LOG_LEVEL` | `info` | |
 | `FINUANCE_TRUSTED_PROXIES` | empty | CIDRs allowed to set `X-Forwarded-For` |
 | `FINUANCE_AI_BASE_URL` | empty | OpenAI-compatible base URL, e.g. `http://ollama.ollama.svc:11434/v1`. Empty = assistant disabled |

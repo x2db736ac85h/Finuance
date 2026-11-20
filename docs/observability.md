@@ -56,3 +56,29 @@ The kubelet's probes (`/healthz`, `/readyz`) are not traced, and their access li
 debug level only; a failing probe is an error line like any other failing request. A handler that
 panics is one access line with status 500, one `panic` line with the stack, one 5xx in
 `http_server_requests_total`, one in `finuance_panics_total`, and the alert `FinuancePanic`.
+
+## Traces
+
+A request is one trace: the server span named after the route pattern, its database statements
+(without their text), and below it whatever the request started.
+
+| Span | Kind | What it covers | Its own attributes |
+|---|---|---|---|
+| the route pattern, e.g. `POST /api/v1/imports/{id}/commit` | server | one request; always a new trace, a client's `traceparent` is only kept as a link | the HTTP method, route and status |
+| `job <kind>` | consumer | one attempt of a job, as a child of the request that queued it | `river.kind`, `river.job_id`, `river.attempt`, `river.queue` |
+| `assistant.run` | internal | one question to the assistant | `assistant.mode`, `assistant.result`, `assistant.rounds` |
+| `llm.request` | client | one request to a model server | `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.response.time_to_first_chunk`, `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` when the server reports them, `error.type`, `assistant.connection`, `assistant.round` |
+| `assistant.tool` | internal | one tool call | `assistant.tool` (the tool's name, or `unknown`) |
+
+The `gen_ai.*` names follow the OpenTelemetry GenAI conventions, which were still in development
+when they were last checked (2026-11-20); they may be renamed. No span carries a prompt, an answer,
+a tool's arguments or its result, and no trace context is sent to a model server.
+
+Every span's resource names the service (`service.name`: `finuance-api` or `finuance-worker`), its
+version, the environment (`deployment.environment.name`) and the instance (`service.instance.id`).
+On Kubernetes the chart adds `k8s.pod.name` and `k8s.namespace.name` from the pod's own fields, and
+`otel.resourceAttributes` in the values adds more.
+
+`FINUANCE_OTEL_SAMPLE_RATIO` (the chart's `otel.sampleRatio`; default 1) is the share of requests
+that are traced. The decision is made once, at the request: a trace is kept whole or not at all,
+and a job follows the request that queued it.

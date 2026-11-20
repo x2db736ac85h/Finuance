@@ -68,6 +68,9 @@ spec:
             {{- end }}
           env:
             {{- include "finuance.dbPassword" .Values.database.app | nindent 12 }}
+            {{- with (include "finuance.otelEnv" .) }}
+            {{- . | nindent 12 }}
+            {{- end }}
             {{- if and .Values.assistant.enabled .Values.assistant.connectionsFile }}
             # The api and the worker (digests) mount the connections file; a container that reads
             # it without the mount would fail its config check (check-helm checks).

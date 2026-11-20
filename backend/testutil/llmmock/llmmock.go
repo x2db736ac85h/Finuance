@@ -53,7 +53,8 @@ type Server struct {
 	mu       sync.Mutex
 	queue    []Reply
 	requests []json.RawMessage
-	loaded   []string // models "in memory" (Ollama's /api/ps and /api/generate)
+	headers  []http.Header // of the same chat requests
+	loaded   []string      // models "in memory" (Ollama's /api/ps and /api/generate)
 	// modelLists counts GET /models: how often a connection's status was really checked
 	modelLists atomic.Int64
 	// Models lists the ids GET /models answers.
@@ -80,6 +81,13 @@ func (s *Server) Requests() []json.RawMessage {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]json.RawMessage(nil), s.requests...)
+}
+
+// Headers returns the headers of the chat requests received so far.
+func (s *Server) Headers() []http.Header {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]http.Header(nil), s.headers...)
 }
 
 func (s *Server) next() (Reply, bool) {
@@ -169,6 +177,7 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request, anthropic bool) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, 8<<20))
 	s.mu.Lock()
 	s.requests = append(s.requests, body)
+	s.headers = append(s.headers, r.Header.Clone())
 	s.mu.Unlock()
 	var req request
 	if err := json.Unmarshal(body, &req); err != nil {

@@ -98,6 +98,12 @@ otel:
   # the app sends to exactly this URL (a bare host:4318 gets 404 from the collector; the schema
   # refuses it). Empty: off.
   endpoint: ""
+  # The share of requests that are traced, 0 to 1. A request is traced whole or not at all, and a
+  # job follows the request that queued it. 1 (everything) suits a small instance.
+  sampleRatio: 1
+  # More resource attributes for every span, as a map (e.g. region: home). The chart already adds
+  # the pod, the namespace and service.instance.id from the pod's own fields.
+  resourceAttributes: {}
   # NetworkPolicy egress to the collector: entries with ports and `to` (peers, e.g. a
   # namespaceSelector) or a `cidr` outside the cluster.
   egress: []

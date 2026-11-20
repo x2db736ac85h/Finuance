@@ -58,7 +58,8 @@ type common struct {
 func setup(ctx context.Context, cfg config.Config, b Build, log *slog.Logger, service string, timeouts store.Timeouts) (*common, error) {
 	m := observability.NewMetrics()
 	m.BuildInfo.WithLabelValues(b.Version, b.Commit).Set(1)
-	tr, err := observability.NewTracing(ctx, cfg.OTLPEndpoint, service, b.Version)
+	tr, err := observability.NewTracingWith(ctx, observability.TracingConfig{Endpoint: cfg.OTLPEndpoint, Service: service, Version: b.Version,
+		Environment: string(cfg.Env), SampleRatio: cfg.OTLPSampleRatio})
 	if err != nil {
 		return nil, err
 	}
