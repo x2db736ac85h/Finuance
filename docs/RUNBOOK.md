@@ -909,6 +909,22 @@ three search indexes are GIN: `tx_user_search_trgm_idx`, `tx_search_trgm_idx`,
 full base backups. 18.7 also tightens row-level security (`ON CONFLICT` target rows, `DROP OWNED BY`,
 leaky quals), which the RLS suite checks on it.
 
+## Taking back the TEMPORARY grant (installs from before 0.5)
+
+New databases no longer give the application's role the right to make temporary tables: nothing
+uses it (register row `DB-7`). An existing database keeps the grant from its first bootstrap. Take it
+back once, as a superuser; it changes nothing that runs (the owner role owns the database and
+keeps its rights):
+
+```sh
+P=$(kubectl -n finuance get cluster finuance-db -o jsonpath='{.status.currentPrimary}')
+kubectl -n finuance exec "$P" -c postgres -- psql -U postgres -d finuance -c \
+  'REVOKE TEMPORARY ON DATABASE finuance FROM finuance_app'
+```
+
+With Compose: `docker compose exec db psql -U postgres -d finuance -c 'REVOKE TEMPORARY ON DATABASE finuance FROM finuance_app'`.
+Check: `SELECT has_database_privilege('finuance_app', 'finuance', 'TEMPORARY')` answers `f`.
+
 ## Validating the amount checks
 
 Migration 00026 (`v0.4.2`) bounds every amount a user enters or imports to ±10¹² minor units

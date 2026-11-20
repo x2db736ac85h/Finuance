@@ -93,7 +93,8 @@ func (s *Service) ListUsers(ctx context.Context, search, cursor string, limit in
 	var page UsersPage
 	now := s.clock.Now()
 	err = s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		rows, err := q.AdminListUsers(ctx, db.AdminListUsersParams{Search: search, BeforeCreated: before, BeforeID: beforeID, PageSize: limit + 1})
+		// the search is part of an address, not a pattern (API-9)
+		rows, err := q.AdminListUsers(ctx, db.AdminListUsersParams{Search: platform.LikeEscape(search), BeforeCreated: before, BeforeID: beforeID, PageSize: limit + 1})
 		if err != nil {
 			return err
 		}

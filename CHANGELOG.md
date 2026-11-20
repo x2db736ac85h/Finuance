@@ -15,6 +15,23 @@ notes of their version.
 - Failed sign-ins are also counted per e-mail address whatever client they come from (twenty an
   hour), IPv6 clients are counted per /64, and signing out clears what the app held in memory.
 
+### Fixed
+
+- Shared groups: only active members can pay or be part of a payment, either side of a payment can
+  remove it, a group whose owner deletes their account passes to the member who joined first, and
+  its owner can correct an expense whose author is gone. The database enforces the same rules
+  (migration 00028). A group holds at most 20,000 expenses.
+- The assistant: applying a change without a click is decided by the server (the kinds you switched
+  on, at most 50 transactions, never from a digest); a cloud model gets numbers written in groups
+  and e-mail addresses masked too, also in earlier answers of the same chat; a failing model
+  server is described in one fixed sentence to everyone but administrators.
+- Imports: a second migration from the single-file app is refused before its upload is read; file
+  names lose control characters and characters that reorder text.
+- A friend code works once even when two people type it at the same moment, and what a friend or
+  an administrator did appears in your activity without their address or browser.
+- New databases no longer grant the application's role temporary tables; for an existing one see
+  RUNBOOK, "Taking back the TEMPORARY grant".
+
 ### Added
 
 - **Two-step sign-in.** Settings → Security sets up a second step after the password: a six-digit

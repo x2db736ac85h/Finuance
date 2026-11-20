@@ -5,6 +5,13 @@ import (
 	"unicode"
 )
 
+// LikeEscape escapes what LIKE and ILIKE read as a pattern (%, _ and the escape character itself),
+// so text a person typed is searched for as it stands. A lone trailing backslash would otherwise
+// be an error from PostgreSQL, and a percent sign would match everything.
+func LikeEscape(s string) string { return likeEscaper.Replace(s) }
+
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
 // StripControls removes what has no business in a name that is shown to people: control
 // characters (C0 and C1, among them newlines and escape sequences) and the characters that
 // reorder text on screen (the bidirectional embeddings, overrides and isolates, U+202A–202E and

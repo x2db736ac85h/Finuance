@@ -20,3 +20,13 @@ func TestStripControls(t *testing.T) {
 		}
 	}
 }
+
+func TestLikeEscape(t *testing.T) {
+	for in, want := range map[string]string{
+		"alex@example.com": "alex@example.com", "100%": `100\%`, "a_b": `a\_b`, `back\slash`: `back\\slash`, `end\`: `end\\`, "": "",
+	} {
+		if got := LikeEscape(in); got != want {
+			t.Errorf("LikeEscape(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

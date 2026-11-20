@@ -2,8 +2,12 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/x2db736ac85h/finuance/backend/testutil"
 )
@@ -142,5 +146,96 @@ func TestEveryForeignKeyIsIndexed(t *testing.T) {
 	}
 	if !slices.Equal(missing, unindexedForeignKeys) {
 		t.Errorf("foreign keys without an index:\n got  %v\n want %v", missing, unindexedForeignKeys)
+	}
+}
+
+// outsideRLS are the tables of the public schema without row-level security, each with the reason.
+// Every other table must have it enabled and forced (or be in notForced). The first test above
+// only sees tables with a user_id column, so a table scoped another way (by membership, like the
+// shared ones) would pass it without any policy at all (DB-3).
+var outsideRLS = map[string]string{
+	"users":                         "accounts; read before a user's scope exists (sign-in), written by auth and admin only (TestAuthTablesAreWrittenByTheirOwnersOnly)",
+	"sessions":                      "resolved before the user is known",
+	"access_tokens":                 "resolved before the user is known (ADR 0036)",
+	"friend_codes":                  "looked up by the hash of a secret (ADR 0027)",
+	"user_second_factors":           "read at sign-in, before a session exists (ADR 0040)",
+	"recovery_codes":                "read at sign-in, before a session exists (ADR 0040)",
+	"login_challenges":              "the state between the password and the code (ADR 0040)",
+	"instance_settings":             "one row for the whole instance (ADR 0025)",
+	"themes":                        "the instance's colour themes, the same for everyone (ADR 0026)",
+	"advice_articles":               "the instance's advice library, written by administrators (ADR 0034)",
+	"assistant_connections":         "the instance's model servers, with sealed keys, managed by administrators (ADR 0035)",
+	"assistant_connection_controls": "the instance's switches per model server (ADR 0035)",
+	"assistant_model_settings":      "the instance's tuning per model (ADR 0035)",
+	"goose_db_version":              "the migration tool's own table",
+}
+
+// TestEveryTableHasRLSOrAReason reads every table of the public schema from the catalog.
+func TestEveryTableHasRLSOrAReason(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	rows, err := tdb.Owner.Query(context.Background(), `
+		SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity,
+		       (SELECT count(*) FROM pg_policy p WHERE p.polrelid = c.oid)
+		FROM pg_class c
+		JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+		WHERE c.relkind IN ('r', 'p')
+		ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	seen := map[string]bool{}
+	for rows.Next() {
+		var (
+			name            string
+			enabled, forced bool
+			policies        int
+		)
+		if err := rows.Scan(&name, &enabled, &forced, &policies); err != nil {
+			t.Fatal(err)
+		}
+		seen[name] = true
+		_, listed := outsideRLS[name]
+		switch {
+		case strings.HasPrefix(name, "river_"): // the job queue's tables: ids and arguments, never read through a user's scope
+			if enabled {
+				t.Errorf("%s: row-level security on a job queue table", name)
+			}
+		case listed:
+			if enabled {
+				t.Errorf("%s is listed as outside row-level security, but has it enabled: take it off the list", name)
+			}
+		case !enabled || policies == 0:
+			t.Errorf("%s: row-level security enabled=%v with %d policies; a table has it, or is in outsideRLS with a reason", name, enabled, policies)
+		case !forced && notForced[name] == "":
+			t.Errorf("%s: row-level security is not forced, and notForced gives no reason", name)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	for name := range outsideRLS {
+		if !seen[name] {
+			t.Errorf("%s is listed in outsideRLS but is not a table any more", name)
+		}
+	}
+	// the shared tables are scoped by membership and have no user_id: named here so the test
+	// can't pass by not seeing them
+	for _, name := range []string{"shared_groups", "shared_expenses", "shared_expense_splits", "shared_settlements", "friendships"} {
+		if !seen[name] {
+			t.Errorf("%s was not checked", name)
+		}
+	}
+}
+
+// TestAppRoleMakesNoTemporaryTables: the application's role has no right it doesn't use; a
+// temporary table is refused (DB-7; deploy/db/bootstrap.sql). The owner role owns the database
+// and keeps every right on it; it runs migrations only.
+func TestAppRoleMakesNoTemporaryTables(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	_, err := tdb.App.Exec(context.Background(), `CREATE TEMPORARY TABLE not_allowed (v int)`)
+	var pg *pgconn.PgError
+	if !errors.As(err, &pg) || pg.Code != "42501" {
+		t.Errorf("the app role made a temporary table: %v", err)
 	}
 }
