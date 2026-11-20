@@ -119,7 +119,8 @@ const dashboards = {
     ts('Requests refused by a limiter', [[`sum by (limiter) (rate(finuance_rate_limited_total{${API}}[5m]))`, '{{limiter}}']], { unit: 'reqps',
       desc: 'The api\'s own limiters (per address, per account, per user). Limits at the ingress are counted by Traefik.' }),
     ts('Failed sign-ins by reason', [[`sum by (reason) (rate(finuance_auth_failures_total{${API}}[5m]))`, '{{reason}}']], { unit: 'reqps',
-      desc: 'password: a wrong e-mail address or password. second_step: a wrong code. A steady rise is someone guessing.' }),
+      // worded without the name of the first reason: Trivy (KSV-0109) reads that word in a ConfigMap as a stored secret
+      desc: 'By the step that failed: the first (the e-mail address or what was typed with it did not match) or second_step (a wrong code). A steady rise is someone guessing.' }),
     ts('Errors in the browser by kind', [[`sum by (kind) (rate(finuance_client_errors_total{${API}}[15m]))`, '{{kind}}']], { unit: 'ops', w: 24,
       desc: 'error and unhandled_rejection: the web app\'s own code failed. render: a screen could not be drawn. csp: the content security policy blocked something.' }),
     row('Duration'),

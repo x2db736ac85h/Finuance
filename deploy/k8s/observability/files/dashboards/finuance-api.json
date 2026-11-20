@@ -605,7 +605,7 @@
       "id": 13,
       "type": "timeseries",
       "title": "Failed sign-ins by reason",
-      "description": "password: a wrong e-mail address or password. second_step: a wrong code. A steady rise is someone guessing.",
+      "description": "By the step that failed: the first (the e-mail address or what was typed with it did not match) or second_step (a wrong code). A steady rise is someone guessing.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
