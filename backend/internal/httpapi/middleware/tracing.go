@@ -47,7 +47,7 @@ func Route(next http.Handler) http.Handler {
 		r, info := withInfo(r)
 		span := trace.SpanFromContext(r.Context())
 		if sc := span.SpanContext(); sc.HasTraceID() {
-			info.TraceID = sc.TraceID().String()
+			info.TraceID, info.SpanID = sc.TraceID().String(), sc.SpanID().String()
 		}
 		panicked := true
 		defer func() {

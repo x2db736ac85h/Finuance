@@ -1,0 +1,58 @@
+# Observability
+
+What the api and the worker tell an operator, and how the three signals are joined: **logs** (one
+JSON object per line on standard error), **metrics** (Prometheus, on the admin port) and **traces**
+(OpenTelemetry, sent over OTLP when an endpoint is configured). The service-level objectives and
+their alerts are in [SLO.md](SLO.md); the dashboards, rules and how to reach Grafana are in
+[RUNBOOK.md](RUNBOOK.md).
+
+No signal carries what a person typed, what a model wrote or what a tool returned: no bodies, no
+query strings, no statement parameters, no prompt or answer text. A user appears as a hash
+([THREAT-MODEL.md](THREAT-MODEL.md), boundary B9 and row I20).
+
+## Log fields
+
+In production every line is one JSON object. The fields below mean the same on every line; the
+list is `observability.LogFields` in the code, and a test keeps this table and that list in step.
+A line may add fields of its own (`count`, `import`, `error`, `connection`, …) but never uses one
+of these names for something else.
+
+| Field | On which lines | Meaning |
+|---|---|---|
+| `time` | all | when the line was written (RFC 3339, with nanoseconds) |
+| `level` | all | `DEBUG`, `INFO`, `WARN` or `ERROR` |
+| `msg` | all | a fixed sentence per call site, never built from data; `request` is the access line |
+| `request_id` | everything written while a request is served | the id the response carries in `X-Request-ID` and a problem response in `requestId` |
+| `trace_id` | everything written inside a span: a request, a job, an assistant run | the OpenTelemetry trace id; the same id finds the trace in Tempo |
+| `span_id` | as `trace_id` | the span that was current when the line was written |
+| `user` | the access line of a signed-in request, the assistant's run line | the first 8 bytes of SHA-256 of the user id, in hex; never the id or the e-mail address |
+| `route` | the access line | the route pattern (`GET /api/v1/imports/{id}`), never the path with its values; `unmatched` for a 404 |
+| `method` | the access line | the HTTP method |
+| `status` | the access line | the status sent; 500 when the handler panicked before sending anything |
+| `bytes` | the access line | the size of the response body |
+| `duration_ms` | the access line, the assistant's run line | how long it took |
+| `client_ip` | the access line | the client's address as the trusted proxies report it |
+| `job_id` | every line a job writes | River's id of the job |
+| `kind` | every line a job writes | the job's kind (`commit_import`, `reclassify`, …) |
+| `attempt` | every line a job writes | which attempt this is, from 1 |
+
+A line gets `trace_id` and `span_id` from the context it is logged with, so code logs with its
+context (`InfoContext` and friends; the linter requires it where a context is in scope). Errors
+logged as values are written as their class only: for a database error the SQLSTATE, constraint,
+table and column, never its message.
+
+## Following one request
+
+1. **From what the user saw.** The response header `X-Request-ID` (and `requestId` in a problem
+   response) is the `request_id` of every line the request wrote.
+2. **To its lines.** The access line (`msg` = `request`) has the route, status and duration; a
+   `request failed` or `panic` line with the same `request_id` says what went wrong.
+3. **To its trace.** Any of those lines has the `trace_id`. The trace shows the request, its
+   database statements and, when the request queued a job, the job as a child span.
+4. **To the job's lines.** The job's lines carry the same `trace_id` and their own `job_id`,
+   `kind` and `attempt`.
+
+The kubelet's probes (`/healthz`, `/readyz`) are not traced, and their access lines are written at
+debug level only; a failing probe is an error line like any other failing request. A handler that
+panics is one access line with status 500, one `panic` line with the stack, one 5xx in
+`http_server_requests_total`, one in `finuance_panics_total`, and the alert `FinuancePanic`.

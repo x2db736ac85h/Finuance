@@ -75,7 +75,7 @@ func (c *common) close(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	if err := c.tracing.Shutdown(ctx); err != nil {
-		c.log.Warn("trace flush", "error", err)
+		c.log.WarnContext(ctx, "trace flush", "error", err)
 	}
 }
 
@@ -102,7 +102,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 		return err
 	}
 	for _, w := range warnings {
-		log.Warn(w)
+		log.WarnContext(ctx, w)
 	}
 	stored, err := loadStored(ctx, c, cfg, conns, log)
 	if err != nil {
@@ -125,7 +125,7 @@ func Serve(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) er
 	}
 	api := httpapi.NewServer(cfg.HTTPAddr, h, log)
 	admin := observability.NewAdminServer(cfg.AdminAddr, c.metrics, cfg.Profiling, nil)
-	log.Info("finuance api starting", "version", b.Version, "http", cfg.HTTPAddr, "admin", cfg.AdminAddr, "env", cfg.Env)
+	log.InfoContext(ctx, "finuance api starting", "version", b.Version, "http", cfg.HTTPAddr, "admin", cfg.AdminAddr, "env", cfg.Env)
 	return serveAll(ctx, log, api, admin)
 }
 
@@ -181,7 +181,7 @@ func Worker(ctx context.Context, cfg config.Config, b Build, log *slog.Logger) e
 		mux.Handle("GET /healthz", httpapi.HealthzHandler())
 		mux.Handle("GET /readyz", httpapi.ReadyzHandler(checks))
 	})
-	log.Info("finuance worker starting", "version", b.Version, "admin", cfg.AdminAddr)
+	log.InfoContext(ctx, "finuance worker starting", "version", b.Version, "admin", cfg.AdminAddr)
 	err = serveAll(ctx, log, admin)
 	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), httpapi.ShutdownGrace)
 	defer cancel()
@@ -199,7 +199,7 @@ func loadStored(ctx context.Context, c *common, cfg config.Config, conns *assist
 		return nil, err
 	}
 	if err := stored.Load(ctx); err != nil {
-		log.Warn("assistant connections from the panel not loaded yet", "error", err)
+		log.WarnContext(ctx, "assistant connections from the panel not loaded yet", "error", err)
 	}
 	go stored.Run(ctx)
 	return stored, nil
@@ -214,7 +214,7 @@ func newDigests(ctx context.Context, c *common, cfg config.Config, authSvc *auth
 		return nil, err
 	}
 	for _, w := range warnings {
-		log.Warn(w)
+		log.WarnContext(ctx, w)
 	}
 	if _, err := loadStored(ctx, c, cfg, conns, log); err != nil {
 		return nil, err
@@ -282,12 +282,14 @@ func serveAll(ctx context.Context, log *slog.Logger, servers ...*http.Server) er
 		g.Go(func() error { return httpapi.Serve(gctx, s, ln, httpapi.ShutdownGrace) })
 	}
 	err := g.Wait()
-	log.Info("finuance stopped")
+	log.InfoContext(ctx, "finuance stopped")
 	return err
 }
 
-// Migrate runs `finuance migrate up|down|status|version` as the owner role.
-func Migrate(ctx context.Context, cfg config.Config, cmd string, out func(format string, args ...any)) error {
+// Migrate runs `finuance migrate up|down|status|version` as the owner role. What up and down did
+// goes to log, like everything else the migration job's pod writes (PLAN 24.2); status and version
+// answer a person and print through out.
+func Migrate(ctx context.Context, cfg config.Config, cmd string, log *slog.Logger, out func(format string, args ...any)) error {
 	pool, err := pgxpool.New(ctx, cfg.MigrateDatabaseURL)
 	if err != nil {
 		return fmt.Errorf("connect: invalid FINUANCE_MIGRATE_DATABASE_URL")
@@ -305,19 +307,19 @@ func Migrate(ctx context.Context, cfg config.Config, cmd string, out func(format
 	case "up":
 		res, err := m.Up(ctx)
 		for _, r := range res {
-			out("applied %s (%s)", r.Source.Path, r.Duration.Round(time.Millisecond))
+			log.InfoContext(ctx, "migration applied", "file", r.Source.Path, "duration_ms", r.Duration.Milliseconds())
 		}
 		if err == nil {
 			v, _ := m.Version(ctx)
-			out("schema at version %d; River migrations applied", v)
+			log.InfoContext(ctx, "schema up to date; River migrations applied", "version", v)
 		}
 		return err
 	case "down":
 		r, err := m.Down(ctx)
 		if r != nil {
-			out("rolled back %s", r.Source.Path)
+			log.InfoContext(ctx, "migration rolled back", "file", r.Source.Path)
 		} else if err == nil {
-			out("nothing to roll back")
+			log.InfoContext(ctx, "nothing to roll back")
 		}
 		return err
 	case "status":

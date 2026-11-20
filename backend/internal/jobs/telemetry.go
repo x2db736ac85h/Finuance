@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -13,6 +14,8 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 )
 
 // Telemetry is River middleware for traces and job metrics (PLAN task 17.2, §8.2). When a job is
@@ -96,6 +99,9 @@ func (t *Telemetry) Work(ctx context.Context, job *rivertype.JobRow, doInner fun
 		trace.WithAttributes(attribute.String("river.kind", job.Kind), attribute.Int64("river.job_id", job.ID),
 			attribute.Int("river.attempt", job.Attempt), attribute.String("river.queue", job.Queue)))
 	defer span.End()
+	// every line the job writes names the job; with the span in ctx it gets trace_id and span_id too
+	ctx = observability.WithLogger(ctx, observability.Logger(ctx).With(
+		slog.Int64("job_id", job.ID), slog.String("kind", job.Kind), slog.Int("attempt", job.Attempt)))
 	start := time.Now()
 	err := doInner(ctx)
 	result := "ok"

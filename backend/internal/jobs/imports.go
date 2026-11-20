@@ -92,7 +92,7 @@ func (w *CommitImportWorker) Work(ctx context.Context, job *river.Job[CommitImpo
 		}
 		if job.Attempt >= job.MaxAttempts {
 			w.Metrics.Imports.WithLabelValues("failed").Inc()
-			log.ErrorContext(ctx, "commit_import failed", "import", a.ImportID, "attempt", job.Attempt, "error", err)
+			log.ErrorContext(ctx, "commit_import failed", "import", a.ImportID, "error", err)
 			if ferr := w.Ledger.FailImport(context.WithoutCancel(ctx), a.UserID, a.ImportID, failedMessage); ferr != nil {
 				return errors.Join(err, ferr)
 			}

@@ -30,8 +30,12 @@ func Recover(base *slog.Logger, count func(), onPanic func(http.ResponseWriter, 
 				if count != nil {
 					count()
 				}
-				base.LogAttrs(r.Context(), slog.LevelError, "panic", slog.String("request_id", info.RequestID),
-					slog.String("panic", fmt.Sprint(v)), slog.String("stack", string(debug.Stack())))
+				attrs := []slog.Attr{slog.String("request_id", info.RequestID), slog.String("panic", fmt.Sprint(v)),
+					slog.String("stack", string(debug.Stack()))}
+				if info.TraceID != "" {
+					attrs = append(attrs, slog.String("trace_id", info.TraceID), slog.String("span_id", info.SpanID))
+				}
+				base.LogAttrs(r.Context(), slog.LevelError, "panic", attrs...)
 				if rec.status == 0 {
 					onPanic(rec, r, fmt.Errorf("panic: %v", v))
 				}

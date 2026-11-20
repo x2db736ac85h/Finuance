@@ -23,6 +23,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/demo"
 	"github.com/x2db736ac85h/finuance/backend/internal/jobs"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
@@ -188,13 +189,19 @@ func TestMigrateCommands(t *testing.T) {
 	tdb := testutil.Require(t, testDB)
 	cfg := testConfig(t, tdb)
 	var out []string
-	log := func(f string, a ...any) { out = append(out, f) }
+	var logs bytes.Buffer
+	log := observability.NewLogger(&logs, config.EnvProd, slog.LevelInfo)
+	print := func(f string, a ...any) { out = append(out, f) }
 	for _, cmd := range []string{"version", "status", "up"} {
-		if err := Migrate(context.Background(), cfg, cmd, log); err != nil {
+		if err := Migrate(context.Background(), cfg, cmd, log, print); err != nil {
 			t.Errorf("migrate %s: %v", cmd, err)
 		}
 	}
-	if err := Migrate(context.Background(), cfg, "sideways", log); err == nil {
+	// what `up` did is a JSON log line like the rest of the pod's output; the answers to a person are printed
+	if !strings.Contains(logs.String(), `"msg":"schema up to date; River migrations applied"`) || len(out) == 0 {
+		t.Errorf("log = %q, printed = %v", logs.String(), out)
+	}
+	if err := Migrate(context.Background(), cfg, "sideways", log, print); err == nil {
 		t.Error("unknown command accepted")
 	}
 }

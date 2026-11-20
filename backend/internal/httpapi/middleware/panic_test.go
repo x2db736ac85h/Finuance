@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -77,8 +78,17 @@ func TestPanicIsCounted(t *testing.T) {
 	if a := access[0]; a["status"] != float64(500) || a["route"] != "GET /api/v1/boom" || a["level"] != "ERROR" || a["trace_id"] == "" {
 		t.Errorf("access line = %v", a)
 	}
-	if p := logLines(t, logs, "panic"); len(p) != 1 || p[0]["request_id"] != access[0]["request_id"] {
-		t.Errorf("panic lines = %v, want one with the access line's request id", p)
+	p := logLines(t, logs, "panic")
+	if len(p) != 1 || p[0]["request_id"] != access[0]["request_id"] || p[0]["trace_id"] != access[0]["trace_id"] {
+		t.Errorf("panic lines = %v, want one with the access line's request id and trace id", p)
+	}
+	if access[0]["span_id"] == nil || access[0]["span_id"] == "" {
+		t.Errorf("the access line has no span_id: %v", access[0])
+	}
+	for k := range access[0] { // the access line uses the contract's fields only (docs/observability.md)
+		if !slices.Contains(observability.LogFields, k) {
+			t.Errorf("access-line field %q is not in the contract", k)
+		}
 	}
 	if got := testutil.ToFloat64(m.HTTPRequests.WithLabelValues("GET /api/v1/boom", "GET", "5xx")); got != 1 {
 		t.Errorf("5xx count = %v, want 1", got)
