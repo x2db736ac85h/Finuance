@@ -2444,9 +2444,12 @@ type AccessTokenCreated struct {
 
 // AccessTokenRequest defines model for AccessTokenRequest.
 type AccessTokenRequest struct {
-	ExpiresInDays int                     `json:"expiresInDays"`
-	Name          string                  `json:"name"`
-	Scope         AccessTokenRequestScope `json:"scope"`
+	ExpiresInDays int    `json:"expiresInDays"`
+	Name          string `json:"name"`
+
+	// Password The account's current password; required when the instance asks for it (`confirmPassword` in `/meta`).
+	Password *string                 `json:"password,omitempty"`
+	Scope    AccessTokenRequestScope `json:"scope"`
 }
 
 // AccessTokenRequestScope defines model for AccessTokenRequest.Scope.
@@ -2750,6 +2753,9 @@ type AdminUpdateUserRequest struct {
 
 	// Limits Limits; a missing value means the next level decides (user → instance → the server's bound or none).
 	Limits *LimitOverrides `json:"limits,omitempty"`
+
+	// Password The administrator's own current password; required with `admin` when the instance asks for it (`confirmPassword` in `/meta`).
+	Password *string `json:"password,omitempty"`
 }
 
 // AdminUser defines model for AdminUser.
@@ -4283,6 +4289,9 @@ type MergeSuggestionList struct {
 type Meta struct {
 	// AssistantEnabled Whether at least one assistant connection is configured.
 	AssistantEnabled bool `json:"assistantEnabled"`
+
+	// ConfirmPassword Whether creating an access token and changing an administrator's role ask for the current password (`FINUANCE_CONFIRM_PASSWORD`, on by default).
+	ConfirmPassword bool `json:"confirmPassword"`
 
 	// Defaults The preferences a view starts from; the web app applies them under the user's own saved
 	// preferences, so only keys the user never saved take them (names as in `Preferences.prefs`).

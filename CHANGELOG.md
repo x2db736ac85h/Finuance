@@ -6,6 +6,15 @@ notes of their version.
 
 ## [Unreleased]
 
+### Changed
+
+- **Everyone is signed out once by this release:** over https the session cookie is now named
+  `__Host-finuance_session`, which a browser accepts only from the exact host, with `Secure`.
+- Making an access token and changing an administrator's role ask for the current password again
+  (`FINUANCE_CONFIRM_PASSWORD=false` switches that off). A demoted administrator is signed out.
+- Failed sign-ins are also counted per e-mail address whatever client they come from (twenty an
+  hour), IPv6 clients are counted per /64, and signing out clears what the app held in memory.
+
 ### Added
 
 - **Two-step sign-in.** Settings → Security sets up a second step after the password: a six-digit

@@ -16,8 +16,22 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
-// SessionCookie is the name of the HttpOnly session cookie (docs/PLAN.md §6.1).
-const SessionCookie = "finuance_session"
+// SessionCookie is the name of the HttpOnly session cookie (docs/PLAN.md §6.1) where cookies are
+// not Secure (development and tests over http). Over https it is SecureSessionCookie: the __Host-
+// prefix makes the browser accept the cookie only with Secure, Path=/ and no Domain, so another
+// host of the same site (or a page over http) can't set or overwrite it (SYS-4).
+const (
+	SessionCookie       = "finuance_session"
+	SecureSessionCookie = "__Host-finuance_session"
+)
+
+// sessionCookieName is the cookie's name for an instance.
+func sessionCookieName(secure bool) string {
+	if secure {
+		return SecureSessionCookie
+	}
+	return SessionCookie
+}
 
 // publicRoutes are the API routes that work without a session. Every other /api/v1 route requires
 // one (RequireSession). Keys are ServeMux patterns, as the generated router registers them.
@@ -55,7 +69,7 @@ func identity(ctx context.Context) auth.Identity { return authFrom(ctx).identity
 // Bearer fin_…" (ADR 0036; cookies are then ignored). It runs per matched API route (r.Pattern is
 // set), so unknown paths still answer 404. Public routes pass without a session; protected ones
 // answer 401.
-func requireSession(svc *auth.Service, adm *admin.Service, prod bool, tokens *mw.Limiter) func(http.Handler) http.Handler {
+func requireSession(svc *auth.Service, adm *admin.Service, prod bool, tokens *mw.Limiter, cookie string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ra := &requestAuth{client: auth.Client{UserAgent: r.UserAgent()}}
@@ -72,7 +86,7 @@ func requireSession(svc *auth.Service, adm *admin.Service, prod bool, tokens *mw
 				next.ServeHTTP(w, r)
 				return
 			}
-			if c, err := r.Cookie(SessionCookie); err == nil {
+			if c, err := r.Cookie(cookie); err == nil {
 				ra.token = c.Value
 			}
 			if publicRoutes[r.Pattern] {
@@ -150,7 +164,7 @@ func (c cookies) clear() *string { return c.cookie("", -1) }
 
 func (c cookies) cookie(value string, maxAge int) *string {
 	// Secure is off only when FINUANCE_COOKIE_SECURE=false, which config allows in dev and test.
-	ck := http.Cookie{Name: SessionCookie, Value: value, Path: "/", MaxAge: maxAge, HttpOnly: true, SameSite: http.SameSiteLaxMode} //nolint:gosec // G124: see above
+	ck := http.Cookie{Name: sessionCookieName(c.secure), Value: value, Path: "/", MaxAge: maxAge, HttpOnly: true, SameSite: http.SameSiteLaxMode} //nolint:gosec // G124: see above
 	ck.Secure = c.secure
 	s := ck.String()
 	return &s

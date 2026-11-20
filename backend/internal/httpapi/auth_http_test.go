@@ -362,10 +362,19 @@ func TestCookieAttributes(t *testing.T) {
 		r := e.browser().do("POST", "/auth/signup", map[string]any{"email": fmt.Sprintf("%s-%s-%v", c.env, testEmail(t), c.secure), "password": password})
 		expect(t, r, 201, "")
 		sc := r.header.Get("Set-Cookie")
-		for _, part := range []string{SessionCookie + "=", "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=2592000"} {
+		for _, part := range []string{"Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=2592000"} {
 			if !strings.Contains(sc, part) {
 				t.Errorf("%s: cookie %q lacks %s", c.env, sc, part)
 			}
+		}
+		// over https the name carries the __Host- prefix, which needs Secure, Path=/ and no Domain
+		// (SYS-4); over plain http it is the bare name, or no browser would keep it
+		name := SessionCookie
+		if c.want {
+			name = SecureSessionCookie
+		}
+		if !strings.HasPrefix(sc, name+"=") || strings.Contains(sc, "Domain=") {
+			t.Errorf("env %s, secure %v: cookie %q, want the name %s and no Domain", c.env, c.secure, sc, name)
 		}
 		if strings.Contains(sc, "Secure") != c.want {
 			t.Errorf("env %s, FINUANCE_COOKIE_SECURE=%v: cookie %q, Secure want %v", c.env, c.secure, sc, c.want)
@@ -420,6 +429,45 @@ func TestLoginRateLimit(t *testing.T) {
 	// Tokens come back with time.
 	e.clock.Add(time.Minute)
 	expect(t, b.do("POST", "/auth/login", body), 401, "unauthenticated")
+}
+
+// TestLoginFailuresPerAccount: failed sign-ins for one e-mail address are counted whatever client
+// they come from (API-1). Slow enough to stay under the limits per client, twenty wrong passwords
+// in an hour close the address for a while: the next guess isn't checked, and neither is the right
+// password. An address without an account behaves the same, so the limit tells nothing about who
+// exists. Another account is not affected.
+func TestLoginFailuresPerAccount(t *testing.T) {
+	e := newAuthEnv(t, config.EnvTest, false)
+	mail := testEmail(t)
+	signupBrowser(t, e, mail)
+	other := "other-" + mail
+	signupBrowser(t, e, other)
+	for _, target := range []string{mail, "nobody-" + mail} {
+		b := e.browser()
+		for i := range 20 {
+			e.clock.Add(7 * time.Second) // under ten a minute per client and address
+			if r := b.do("POST", "/auth/login", map[string]any{"email": target, "password": "a wrong password"}); r.code != 401 {
+				t.Fatalf("%s, attempt %d: %d %s", target, i+1, r.code, r.raw)
+			}
+		}
+		e.clock.Add(7 * time.Second)
+		expect(t, b.do("POST", "/auth/login", map[string]any{"email": target, "password": "a wrong password"}), 429, "rate_limited")
+		// from another client too, and with the right password
+		fresh := e.browser()
+		r := fresh.do("POST", "/auth/login", map[string]any{"email": strings.ToUpper(target), "password": password})
+		expect(t, r, 429, "rate_limited")
+		if ra, _ := strconv.Atoi(r.header.Get("Retry-After")); ra < 1 || ra > 3600 {
+			t.Errorf("Retry-After = %q", r.header.Get("Retry-After"))
+		}
+	}
+	expect(t, e.browser().do("POST", "/auth/login", map[string]any{"email": other, "password": password}), 200, "")
+	// it opens again with time; a successful sign-in is not a failure and costs nothing
+	e.clock.Add(time.Hour)
+	b := e.browser()
+	for range 5 {
+		e.clock.Add(7 * time.Second)
+		expect(t, b.do("POST", "/auth/login", map[string]any{"email": mail, "password": password}), 200, "")
+	}
 }
 
 // TestDeleteMeRemovesEverything fills every user-owned table, deletes the account over HTTP and

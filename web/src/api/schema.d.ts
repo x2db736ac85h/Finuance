@@ -2577,6 +2577,8 @@ export interface components {
             signupEnabled: boolean;
             /** @description Whether this is the public demo instance (`FINUANCE_DEMO_MODE`). */
             demoMode: boolean;
+            /** @description Whether creating an access token and changing an administrator's role ask for the current password (`FINUANCE_CONFIRM_PASSWORD`, on by default). */
+            confirmPassword: boolean;
         };
         User: {
             isAdmin: boolean;
@@ -4933,6 +4935,8 @@ export interface components {
             revokedAt?: string;
         };
         AccessTokenRequest: {
+            /** @description The account's current password; required when the instance asks for it (`confirmPassword` in `/meta`). */
+            password?: string;
             name: string;
             /** @enum {string} */
             scope: "read" | "write";
@@ -5142,6 +5146,8 @@ export interface components {
             oneTimePassword?: string;
         };
         AdminUpdateUserRequest: {
+            /** @description The administrator's own current password; required with `admin` when the instance asks for it (`confirmPassword` in `/meta`). */
+            password?: string;
             admin?: boolean;
             disabled?: boolean;
             displayName?: string;
@@ -5416,7 +5422,7 @@ export interface components {
     };
     requestBodies: never;
     headers: {
-        /** @description `finuance_session=…; Path=/; HttpOnly; SameSite=Lax` (+ `Secure` outside dev). Max-Age=0 clears it. */
+        /** @description `__Host-finuance_session=…; Path=/; HttpOnly; SameSite=Lax; Secure` (`finuance_session=…` without `Secure` over plain http in development). Max-Age=0 clears it. */
         SetSessionCookie: string;
         /** @description Seconds until the request may be retried. */
         RetryAfter: number;

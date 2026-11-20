@@ -114,6 +114,11 @@ func (a *api) AdminUpdateUser(ctx context.Context, req gen.AdminUpdateUserReques
 	if err != nil {
 		return nil, err
 	}
+	if b.Admin != nil && *b.Admin != before.IsAdmin { // a role change, not a repeat of the current role
+		if err := a.confirmPassword(ctx, b.Password); err != nil {
+			return nil, err
+		}
+	}
 	in := admin.UpdateInput{Admin: b.Admin, Disabled: b.Disabled, DisplayName: b.DisplayName}
 	if b.Limits != nil {
 		l := limitsIn(*b.Limits)

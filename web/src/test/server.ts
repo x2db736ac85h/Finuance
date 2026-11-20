@@ -11,6 +11,7 @@ export const API = `${window.location.origin}/api/v1`;
 export type Db = {
   signedIn: boolean;
   signupEnabled: boolean;
+  confirmPassword: boolean;
   demoMode: boolean;
   /** GET /meta: switches, view defaults and approved themes (Phase 19). */
   features: Schemas['Features'];
@@ -75,6 +76,7 @@ const emptyInsights: Insights = {
 export const freshDb = (): Db => ({
   signedIn: true,
   signupEnabled: true,
+  confirmPassword: false,
   demoMode: false,
   features: { overview: true, assistant: true, assistantDigests: true, friends: true, sharedGroups: true },
   friends: [],
@@ -166,6 +168,7 @@ export const server = setupServer(
     HttpResponse.json({
       version: 'test',
       signupEnabled: db.signupEnabled,
+      confirmPassword: db.confirmPassword,
       demoMode: db.demoMode,
       assistantEnabled: false,
       features: db.features,

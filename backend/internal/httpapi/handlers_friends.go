@@ -66,7 +66,7 @@ func (a *api) AddFriend(ctx context.Context, req gen.AddFriendRequestObject) (ge
 	if err := a.limits.friendUser.Allow(u.String()); err != nil {
 		return nil, err
 	}
-	if err := a.limits.friendIP.Allow(mw.FromContext(ctx).ClientIP); err != nil {
+	if err := a.limits.friendIP.Allow(mw.ClientKey(mw.FromContext(ctx).ClientIP)); err != nil {
 		return nil, err
 	}
 	f, err := a.friends.Redeem(ctx, u, req.Body.Code)

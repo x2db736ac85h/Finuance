@@ -45,7 +45,9 @@ account menu (the initial in the top-right corner) has only Profile and Sign out
 - **Create account**: e-mail, display name and either a password you set or none, in which case a
   **one-time password** is generated and shown once. At the first sign-in with it the person must
   choose their own password before anything else works.
-- **Make administrator / Remove administrator**.
+- **Make administrator / Remove administrator**: asks for your own password first (so does making an
+  access token in Settings); `FINUANCE_CONFIRM_PASSWORD=false` switches both questions off. An
+  administrator who is demoted by someone else is signed out everywhere.
 - **Disable account**: signs it out everywhere; signing in shows "This account is disabled".
   **Enable account** undoes it.
 - **Reset password**: a new one-time password, and the account is signed out everywhere.

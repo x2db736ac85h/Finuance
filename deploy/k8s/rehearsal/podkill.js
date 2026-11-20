@@ -39,16 +39,18 @@ export function setup() {
     });
     if (r.status !== 201) throw new Error(`signup answered ${r.status}`);
   }
-  const cookie = r.cookies.finuance_session[0].value;
+  // the cookie is __Host-finuance_session over https and finuance_session over plain http
+  const name = r.cookies['__Host-finuance_session'] ? '__Host-finuance_session' : 'finuance_session';
+  const cookie = `${name}=${r.cookies[name][0].value}`;
   const demo = http.post(`${BASE}/api/v1/demo-data`, null, {
-    headers: { ...JSON_HEADERS, Cookie: `finuance_session=${cookie}` },
+    headers: { ...JSON_HEADERS, Cookie: cookie },
   });
   if (demo.status !== 201) throw new Error(`demo data answered ${demo.status}`);
   return { cookie };
 }
 
 export default function (data) {
-  const params = { headers: { ...JSON_HEADERS, Cookie: `finuance_session=${data.cookie}` } };
+  const params = { headers: { ...JSON_HEADERS, Cookie: data.cookie } };
   const [page, me, query] = http.batch([
     ['GET', `${BASE}/t/all`, null, {}],
     ['GET', `${BASE}/api/v1/me`, null, params],

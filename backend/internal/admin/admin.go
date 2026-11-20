@@ -238,6 +238,13 @@ func (s *Service) UpdateUser(ctx context.Context, actor, id uuid.UUID, in Update
 				return err
 			}
 		}
+		// a demoted administrator signs in again: their open sessions were administrators' (SYS-4).
+		// Not when they demote themselves, which would end the request's own session.
+		if demote && id != actor {
+			if _, err := q.DeleteUserSessions(ctx, db.DeleteUserSessionsParams{UserID: id, KeepTokenHash: []byte{}}); err != nil {
+				return err
+			}
+		}
 		if in.Disabled != nil {
 			var at *time.Time
 			if *in.Disabled {

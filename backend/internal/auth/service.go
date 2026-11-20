@@ -317,6 +317,12 @@ func (s *Service) checkCurrentPassword(ctx context.Context, userID uuid.UUID, fi
 	return nil
 }
 
+// CheckPassword verifies the signed-in user's password for an action that asks for it again; a
+// wrong one is a validation error on field.
+func (s *Service) CheckPassword(ctx context.Context, userID uuid.UUID, field, password string) error {
+	return s.checkCurrentPassword(ctx, userID, field, password)
+}
+
 // ChangePassword sets a new password after checking the current one, revokes every session —
 // including the current one — and returns a fresh session for this browser (rotation).
 func (s *Service) ChangePassword(ctx context.Context, id Identity, current, next string, c Client) (string, error) {

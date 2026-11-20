@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import type { Schemas } from '../api/client';
 import { renderApp } from '../test/render';
-import { API, resetDb, server } from '../test/server';
+import { API, db, problem, resetDb, server } from '../test/server';
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
@@ -20,6 +20,46 @@ beforeEach(() => {
 });
 
 describe('access tokens (ADR 0036)', () => {
+  it('asks for the password when the instance wants it confirmed, and sends it', async () => {
+    db.confirmPassword = true;
+    const made: Schemas['AccessTokenRequest'][] = [];
+    server.use(
+      http.get(`${API}/me/tokens`, () => HttpResponse.json([])),
+      http.post(`${API}/me/tokens`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AccessTokenRequest'];
+        made.push(body);
+        if (body.password !== 'my password')
+          return problem(422, 'validation_failed', 'password: is not your current password');
+        const token: Schemas['AccessToken'] = {
+          id: '0b000000-0000-4000-8000-000000000002',
+          name: body.name,
+          prefix: 'fin_ZzZz9999',
+          scope: body.scope,
+          createdAt: '2026-11-20T10:00:00Z',
+          expiresAt: '2099-01-01T10:00:00Z',
+        };
+        return HttpResponse.json({ token, secret: 'fin_ZzZz9999secret' }, { status: 201 });
+      }),
+    );
+    renderApp('/settings/tokens');
+    const form = await screen.findByRole('form', { name: 'New access token' });
+    const submit = within(form).getByRole<HTMLButtonElement>('button', { name: 'Make a token' });
+    fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'cli' } });
+    const password = await within(form).findByLabelText('Your password');
+    expect(submit.disabled).toBe(true); // a name alone is not enough
+    fireEvent.change(password, { target: { value: 'wrong' } });
+    fireEvent.click(submit);
+    expect(await screen.findByText(/is not your current password/)).toBeTruthy();
+    fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'cli' } });
+    fireEvent.change(password, { target: { value: 'my password' } });
+    fireEvent.click(submit);
+    expect((await screen.findByLabelText('The new token')).textContent).toBe('fin_ZzZz9999secret');
+    expect(made.map((m) => m.password)).toEqual(['wrong', 'my password']);
+    await waitFor(() => {
+      expect(password).toHaveProperty('value', ''); // not kept after it worked
+    });
+  });
+
   it('makes a token shown once, lists it by its prefix and revokes it', async () => {
     let tokens: Schemas['AccessToken'][] = [];
     const made: Schemas['AccessTokenRequest'][] = [];

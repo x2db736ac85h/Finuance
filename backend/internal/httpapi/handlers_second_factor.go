@@ -6,6 +6,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/httpapi/gen"
+	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 )
 
@@ -24,7 +25,7 @@ func (a *api) adminsNeedSecondFactor(ctx context.Context) bool {
 // LoginSecondStep answers the challenge of a sign-in with a code and starts the session.
 func (a *api) LoginSecondStep(ctx context.Context, req gen.LoginSecondStepRequestObject) (gen.LoginSecondStepResponseObject, error) {
 	ra := authFrom(ctx)
-	if err := a.limits.loginIP.Allow(ra.client.IP.String()); err != nil {
+	if err := a.limits.loginIP.Allow(mw.ClientKey(ra.client.IP.String())); err != nil {
 		return nil, err
 	}
 	// per user as well: a challenge takes five codes, and new challenges cost only the password
