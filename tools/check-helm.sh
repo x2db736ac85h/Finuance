@@ -82,6 +82,14 @@ echo "== assistant connections file is mounted where it is read"
   | .name' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a container reads the developer links without mounting them"; exit 1; }
 "$YQ" -e 'select(.kind == "Deployment" and .metadata.name != "finuance-api") | .spec.template.spec.containers[].env[]? | select(.name == "FINUANCE_DEVELOPER_LINKS_FILE")' \
   "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a component other than the api reads the developer links"; exit 1; }
+# The database's certificate (register OPS-6): with verify-full every process that connects gets
+# the authority's file and a URL that names it.
+[ "$("$YQ" -N 'select(.kind == "Deployment" or .kind == "Job") | select(.metadata.name != "finuance-web") | .spec.template.spec.containers[0].volumeMounts[] | select(.name == "db-ca") | .mountPath' "$out/app-homelab-like-values.yaml" | grep -c /etc/finuance-db-ca)" -eq 3 ] ||
+  { echo "check-helm: the api, the worker and the migration job don't all mount the database's certificate authority"; exit 1; }
+[ "$("$YQ" -N 'select(.kind == "Deployment" or .kind == "Job") | .spec.template.spec.volumes[]? | select(.name == "db-ca") | .secret.items[].key' "$out/app-homelab-like-values.yaml" | sort | uniq -c | tr -s ' ')" = ' 3 ca.crt' ] ||
+  { echo "check-helm: the mounted authority secret carries more than the certificate (its key must stay out of the pods)"; exit 1; }
+grep -c 'sslmode=verify-full&sslrootcert=/etc/finuance-db-ca/ca.crt' "$out/app-homelab-like-values.yaml" | grep -qx 2 ||
+  { echo "check-helm: the two database URLs don't name the certificate authority"; exit 1; }
 # NetworkPolicies (register OPS-1, OPS-9, SYS-1): the default deny selects every pod of the
 # namespace; names are resolved in kube-system only; the database is a pod of the release's own
 # namespace; the metrics port is for Prometheus's pods; the database admits the api, the worker
@@ -185,6 +193,8 @@ echo "ok"
 # Wrong settings must stop the render with a message that says what to set.
 o=(--set publicOrigin=https://f.example.com --set ingress.host=f.example.com)
 must_fail "publicOrigin is empty" "publicOrigin" "$app" --set ingress.host=f.example.com
+must_fail "verify-full has no certificate authority" "needs database.caSecret.name" "$app" "${o[@]}" --set database.sslmode=verify-full
+must_fail "a certificate authority is set but not checked" "checks no certificate" "$app" "${o[@]}" --set database.caSecret.name=finuance-db-ca
 must_fail "a range of trusted proxies without network policies" "trustedProxies names a range" "$app" -f "$app/ci/minimal-values.yaml" --set trustedProxies=10.42.0.0/16
 must_fail "publicOrigin has a path" "publicOrigin" "$app" --set publicOrigin=https://f.example.com/app --set ingress.host=f.example.com
 must_fail "the ingress host is empty" "ingress.host is required" "$app" --set publicOrigin=https://f.example.com

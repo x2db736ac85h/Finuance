@@ -36,7 +36,13 @@ database:
   host: finuance-db-rw
   port: 5432
   name: finuance
+  # require encrypts without checking who answers. verify-full also checks the server's certificate
+  # and name against the authority in caSecret; use it wherever the database offers one
+  # (CloudNativePG keeps its authority in the secret <cluster>-ca, key ca.crt).
   sslmode: require
+  caSecret:
+    name: ""
+    key: ca.crt
   maxConns: 10
   # Passwords come from basic-auth secrets (keys username/password), the same ones the CNPG managed
   # roles use. They reach the processes as PGPASSWORD, so the URLs never hold a password.

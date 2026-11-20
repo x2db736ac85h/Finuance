@@ -44,10 +44,19 @@ and the tag only labels the release (PLAN 23.1); both digests or neither.
 {{- end -}}
 {{- end -}}
 
-{{/* A password-less database URL; the password comes from PGPASSWORD (finuance.dbPassword). */}}
+{{/* A password-less database URL; the password comes from PGPASSWORD (finuance.dbPassword). With
+verify-ca or verify-full the certificate authority is the file mounted from database.caSecret. */}}
 {{- define "finuance.dbURL" -}}
 {{- $db := .root.Values.database -}}
+{{- $verify := has $db.sslmode (list "verify-ca" "verify-full") -}}
+{{- if and $verify (not $db.caSecret.name) -}}
+{{- fail (printf "database.sslmode %s needs database.caSecret.name: the secret with the certificate authority that signed the database's certificate" $db.sslmode) -}}
+{{- end -}}
+{{- if and $db.caSecret.name (not $verify) -}}
+{{- fail (printf "database.caSecret is set but database.sslmode is %s, which checks no certificate: use verify-full" $db.sslmode) -}}
+{{- end -}}
 {{- printf "postgres://%s@%s:%v/%s?sslmode=%s" .user $db.host $db.port $db.name $db.sslmode -}}
+{{- if $verify }}{{ printf "&sslrootcert=/etc/finuance-db-ca/%s" $db.caSecret.key }}{{ end -}}
 {{- end -}}
 
 {{- define "finuance.dbPassword" -}}

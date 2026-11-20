@@ -46,6 +46,15 @@
         "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "name": { "type": "string", "minLength": 1 },
         "sslmode": { "enum": ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] },
+        "caSecret": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "key"],
+          "properties": {
+            "name": { "type": "string" },
+            "key": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+          }
+        },
         "maxConns": { "type": "integer", "minimum": 1, "maximum": 1000 },
         "app": { "$ref": "#/definitions/dbRole" },
         "owner": { "$ref": "#/definitions/dbRole" }

@@ -171,7 +171,9 @@ func NewHandler(d Deps) (http.Handler, error) {
 	return mw.Chain(mux,
 		mw.Recover(d.Logger, func(w http.ResponseWriter, r *http.Request, err error) { WriteProblem(w, r, err, prod) }),
 		mw.AssignRequestID,
-		mw.RealIP(d.Config.TrustedProxies),
+		mw.RealIP(d.Config.TrustedProxies, func() {
+			d.Logger.Warn("requests arrive with a trusted proxy as their only forwarded address: the proxy in front passes no client address, so limits per address and the activity log see every visitor as one (docs/deploying.md)")
+		}),
 		mw.Logging(d.Logger),
 		mw.Metrics(d.Metrics),
 		mw.Tracing(d.Tracing),
