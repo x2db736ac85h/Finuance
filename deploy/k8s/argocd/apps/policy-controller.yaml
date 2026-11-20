@@ -40,3 +40,24 @@ spec:
       - ServerSideApply=true
       # the policies' kind arrives with the chart in the same sync
       - SkipDryRunOnMissingResource=true
+      # a sync leaves the fields below as the controller wrote them
+      - RespectIgnoreDifferences=true
+  # The controller completes its own two webhook configurations after it starts: the CA of the
+  # certificate it made, the kinds it checks, and one more namespace rule. Without this the
+  # application is out of sync for ever, and a sync would take the fields away until the controller
+  # writes them again.
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      name: policy.sigstore.dev
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+        - .webhooks[]?.rules
+        - .webhooks[]?.namespaceSelector.matchExpressions
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: policy.sigstore.dev
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+        - .webhooks[]?.rules
+        - .webhooks[]?.namespaceSelector.matchExpressions
