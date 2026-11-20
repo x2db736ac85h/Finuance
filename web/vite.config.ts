@@ -10,7 +10,9 @@ export default defineConfig(({ mode }) => ({
     // Parity tests read legacy/finuance.html (?raw); only test runs may read outside web/.
     ...(mode === 'test' ? { fs: { allow: ['..'] } } : {}),
   },
-  build: { sourcemap: true },
+  // Maps are written for whoever builds locally, but the files don't point at them: the image
+  // deletes the maps, and a comment naming a missing file is a 404 on every page load.
+  build: { sourcemap: 'hidden' },
   test: {
     environment: 'jsdom',
     setupFiles: ['src/test/setup.ts'],

@@ -31,9 +31,17 @@ trustedProxies: "10.42.0.0/16"
 
 database:
   host: finuance-db-rw
+  # the server's certificate and name are checked against CloudNativePG's authority (register OPS-6)
+  sslmode: verify-full
+  caSecret:
+    name: finuance-db-ca
 
 networkPolicy:
   enabled: true
+  # false until the database chart's policy with its egress rule is synced (finuance-db is a manual
+  # sync): with true before that, the database pods would lose their way to the Kubernetes API and
+  # the backup bucket. Then this line goes (docs/RUNBOOK.md, "The namespace-wide default deny").
+  namespaceWide: false
   # k3s's bundled Traefik (checked on the cluster: kube-system, app.kubernetes.io/name=traefik).
   ingressController:
     namespaceSelector:

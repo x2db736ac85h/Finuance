@@ -56,15 +56,15 @@ mkuser() { # mkuser <namespace> <email> <password>
     /finuance admin create-user -email="$2" -password-stdin >/dev/null
 }
 signin() { # signin <base> <origin> <email> <password> <cookie jar>: prints the status
-  curl -sS -o /dev/null -w '%{http_code}' -c "$5" -H "X-Finuance-Client: web" -H "Origin: $2" \
-    -H "Content-Type: application/json" --data "$(jq -cn --arg e "$3" --arg p "$4" '{email: $e, password: $p}')" \
-    "$1/api/v1/auth/login"
+  # the body on standard input: a command line is visible to every user of the machine
+  E=$3 P=$4 jq -cn '{email: env.E, password: env.P}' | curl -sS -o /dev/null -w '%{http_code}' -c "$5" -H "X-Finuance-Client: web" \
+    -H "Origin: $2" -H "Content-Type: application/json" --data @- "$1/api/v1/auth/login"
 }
 deluser() { # deluser <email> <password> <origin> <base>
   local jar="$work/del-jar"
   [ "$(signin "$4" "$3" "$1" "$2" "$jar")" = 200 ] || { echo "   could not sign in as $1 to delete it" >&2; return 1; }
-  curl -sS -o /dev/null -b "$jar" -X DELETE -H "X-Finuance-Client: web" -H "Origin: $3" \
-    -H "Content-Type: application/json" --data "$(jq -cn --arg p "$2" '{password: $p}')" "$4/api/v1/me"
+  P=$2 jq -cn '{password: env.P}' | curl -sS -o /dev/null -b "$jar" -X DELETE -H "X-Finuance-Client: web" -H "Origin: $3" \
+    -H "Content-Type: application/json" --data @- "$4/api/v1/me"
   echo "   deleted $1"
 }
 cleanup() {
@@ -170,9 +170,9 @@ podkill() {
   local email pass
   email="drill-k6-$(date +%s)@example.test" pass=$(password)
   mkuser finuance "$email" "$pass"; users+=("$email $pass $BASE $BASE")
-  mkdir -p "$work/k6" && chmod 777 "$work/k6"
+  mkdir -p "$work/k6" # k6 runs as this user (--user), so the folder stays private
   # the password reaches k6 through the environment (-e NAME without a value), not the command line
-  K6_EMAIL=$email K6_PASSWORD=$pass docker run --rm --network host \
+  K6_EMAIL=$email K6_PASSWORD=$pass docker run --rm --network host --user "$(id -u):$(id -g)" \
     -v "$PWD/deploy/k8s/rehearsal:/scripts:ro" -v "$work/k6:/out" \
     -e BASE_URL="$BASE" -e DURATION=90s -e K6_EMAIL -e K6_PASSWORD \
     "$K6_IMAGE" run --quiet --summary-export=/out/summary.json /scripts/podkill.js >"$work/k6/out.txt" 2>&1 &

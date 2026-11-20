@@ -54,4 +54,17 @@ spec:
             limits: { memory: 256Mi }
           securityContext:
             {{- include "finuance.containerSecurity" . | nindent 12 }}
+          {{- with .Values.database.caSecret.name }}
+          volumeMounts:
+            - name: db-ca
+              mountPath: /etc/finuance-db-ca
+              readOnly: true
+      volumes:
+        - name: db-ca
+          secret:
+            secretName: {{ . }}
+            # the certificate only: CloudNativePG's secret also holds the authority's key
+            items:
+              - { key: {{ $.Values.database.caSecret.key }}, path: {{ $.Values.database.caSecret.key }} }
+          {{- end }}
 {{- end }}

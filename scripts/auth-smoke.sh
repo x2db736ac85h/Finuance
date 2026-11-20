@@ -12,8 +12,9 @@ BASE_URL="${BASE_URL:-http://localhost:8080}"
 ORIGIN="${ORIGIN:-http://localhost:8000}"
 API="$BASE_URL/api/v1"
 EMAIL="smoke-$(date +%s)-$RANDOM@example.test"
-PASS1="smoke password one"
-PASS2="smoke password two"
+# a new password per run: a run that stops half-way leaves no account with a known one
+PASS1="smoke-$(openssl rand -hex 16)"
+PASS2=${SMOKE_PASSWORD_NEW:-"smoke-$(openssl rand -hex 16)"}
 # An existing user instead of a sign-up, for instances with sign-up off (scripts/smoke-k8s.sh makes
 # a throwaway user per script); the password comes from the environment only.
 if [[ -n ${SMOKE_EMAIL:-} ]]; then EMAIL=$SMOKE_EMAIL; PASS1=${SMOKE_PASSWORD:?set SMOKE_PASSWORD with SMOKE_EMAIL}; fi
@@ -29,9 +30,9 @@ call() {
   local method=$1 path=$2 want=$3 body=${4:-} cj=${5:-$jar}
   local args=(-sS -o "$work/body" -w '%{http_code}' -X "$method" -b "$cj" -c "$cj"
     -H "X-Finuance-Client: web" -H "Origin: $ORIGIN")
-  [[ -n $body ]] && args+=(-H "Content-Type: application/json" --data "$body")
+  [[ -n $body ]] && args+=(-H "Content-Type: application/json" --data @-)
   local got
-  got="$(curl "${args[@]}" "$API$path")"
+  got="$(curl "${args[@]}" "$API$path" <<<"$body")" # the body on standard input, not the command line
   step=$((step + 1))
   if [[ $got != "$want" ]]; then
     echo "FAIL step $step: $method $path → $got, want $want" >&2

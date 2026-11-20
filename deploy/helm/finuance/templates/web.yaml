@@ -45,6 +45,9 @@ spec:
             # nginx's client_max_body_size: the upload limit plus room for the multipart framing.
             - name: FINUANCE_MAX_BODY
               value: {{ printf "%dk" (add (div (int64 .Values.maxUploadBytes) 1024) 1024) | quote }}
+            # the migration from the single-file app: four files, a 16 MiB manifest and the framing
+            - name: FINUANCE_MAX_LEGACY_BODY
+              value: {{ printf "%dk" (add (mul 4 (div (int64 .Values.maxUploadBytes) 1024)) 16384 1024) | quote }}
           readinessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 5

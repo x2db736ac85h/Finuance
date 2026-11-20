@@ -17,3 +17,8 @@ api:
     enabled: false
 web:
   replicas: 1
+# the database's certificate is checked against CloudNativePG's own authority (register OPS-6)
+database:
+  sslmode: verify-full
+  caSecret:
+    name: finuance-db-ca

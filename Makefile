@@ -317,9 +317,12 @@ helm-lint: ## Lint, render and validate the Helm charts, Argo CD manifests, dash
 
 .PHONY: loadtest
 loadtest: ## k6 load test against the running stack (PROFILE=load|smoke|ramp, LOADTEST_BASE_URL, LOADTEST_USERS); needs make loadtest-seed
-	mkdir -p loadtest/results && chmod 777 loadtest/results
-	docker run --rm --network host -v "$(CURDIR)/loadtest:/scripts:ro" -v "$(CURDIR)/loadtest/results:/out" \
-	  -e BASE_URL=$(LOADTEST_BASE_URL) -e USERS=$(LOADTEST_USERS) -e PASSWORD="$(LOADTEST_PASSWORD)" -e PROFILE=$(PROFILE) \
+	mkdir -p loadtest/results
+	@# k6 runs as this user, so the results folder needs no wider rights; the password is inherited
+	@# from the environment (-e PASSWORD without a value), not written on the command line
+	PASSWORD="$(LOADTEST_PASSWORD)" docker run --rm --network host --user "$$(id -u):$$(id -g)" \
+	  -v "$(CURDIR)/loadtest:/scripts:ro" -v "$(CURDIR)/loadtest/results:/out" \
+	  -e BASE_URL=$(LOADTEST_BASE_URL) -e USERS=$(LOADTEST_USERS) -e PASSWORD -e PROFILE=$(PROFILE) \
 	  $(K6_IMAGE) run --quiet --summary-export=/out/summary-$(PROFILE).json /scripts/finuance.js
 
 .PHONY: zap

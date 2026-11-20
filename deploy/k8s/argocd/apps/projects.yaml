@@ -1,5 +1,11 @@
-# Two projects: "platform" for the operators (they need cluster-wide resources: CRDs, cluster
-# roles, webhooks) and "finuance" for the app, its database and its secrets (namespaced only).
+# Three projects: "platform" for the operators' Helm charts (they need cluster-wide resources:
+# CRDs, cluster roles, webhooks), "platform-manifests" for the plain manifests kept in this
+# repository (exactly the kinds they use), and "finuance" for the app, its database and its
+# secrets (namespaced only).
+#
+# What the projects don't do: this file and the applications next to it come from the same
+# repository, so whoever can change `main` can change them too. The projects bound a mistake in
+# one folder; the repository's rules guard the rest (docs/THREAT-MODEL.md).
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
@@ -14,7 +20,8 @@ spec:
     - https://bitnami.github.io/sealed-secrets
     - https://prometheus-community.github.io/helm-charts
     - https://sigstore.github.io/helm-charts
-    # the monitoring stack's values and Tempo's manifests (deploy/environments/homelab, deploy/k8s/tempo)
+    # values files for the charts (deploy/environments/homelab) and the image policies next to the
+    # policy-controller; the plain manifests are in the project "platform-manifests"
     - git@github.com:x2db736ac85h/Finuance.git
     # Grafana's sealed admin login in the private environment repository (ADR 0023)
     - git@github.com:x2db736ac85h/finuance-env.git
@@ -31,6 +38,42 @@ spec:
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-manifests
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Plain manifests from this repository (the admission policy, Tempo). Only the kinds they use; nothing that grants rights.
+  sourceRepos:
+    - git@github.com:x2db736ac85h/Finuance.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+  # tools/check-helm.sh compares both lists with the manifests under deploy/k8s/admission and
+  # deploy/k8s/tempo: a new kind there has to be added here on purpose.
+  clusterResourceWhitelist:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingAdmissionPolicy
+    - group: admissionregistration.k8s.io
+      kind: ValidatingAdmissionPolicyBinding
+    # Tempo's application creates its namespace when it is missing
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: PersistentVolumeClaim
+    - group: ""
+      kind: Service
+    - group: apps
+      kind: Deployment
+    - group: networking.k8s.io
+      kind: NetworkPolicy
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject

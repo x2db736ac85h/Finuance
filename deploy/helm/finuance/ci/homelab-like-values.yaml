@@ -38,3 +38,8 @@ developer:
         - kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d
     - name: Actions
       url: https://github.com/example/finuance/actions
+# the database's certificate is checked against CloudNativePG's own authority (register OPS-6)
+database:
+  sslmode: verify-full
+  caSecret:
+    name: finuance-db-ca

@@ -11,7 +11,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 K8S=1.33.0
 YQ=${YQ:-yq}
-CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+# The catalog at one commit (2026-11-20), not its moving main: what the checks validate against
+# changes only when this line does. Bump it by hand when a chart brings a newer CRD version.
+CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/784ec895547a36e548e6810b41f27baade3a0890/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 PROM_IMAGE=prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
 chart=deploy/k8s/observability
 work=$(mktemp -d)

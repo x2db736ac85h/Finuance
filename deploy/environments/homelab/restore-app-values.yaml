@@ -9,6 +9,9 @@ allowSignup: false
 trustedProxies: "10.42.0.0/16"
 database:
   host: finuance-db-rw
+  sslmode: verify-full
+  caSecret:
+    name: finuance-db-ca
 api:
   replicas: 1
   autoscaling:

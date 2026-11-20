@@ -1,5 +1,6 @@
 {{- $name := include "finuance.fullname" . -}}
 {{- $assistantFile := and .Values.assistant.enabled .Values.assistant.connectionsFile -}}
+{{- $dbCA := .Values.database.caSecret.name -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -73,15 +74,32 @@ spec:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           securityContext:
             {{- include "finuance.containerSecurity" . | nindent 12 }}
-          {{- if $assistantFile }}
+          {{- if or $assistantFile $dbCA }}
           volumeMounts:
+            {{- if $assistantFile }}
             - name: assistant
               mountPath: /etc/finuance
               readOnly: true
+            {{- end }}
+            {{- if $dbCA }}
+            - name: db-ca
+              mountPath: /etc/finuance-db-ca
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- if $assistantFile }}
+      {{- if or $assistantFile $dbCA }}
       volumes:
+        {{- if $assistantFile }}
         - name: assistant
           configMap:
             name: {{ $name }}-assistant
+        {{- end }}
+        {{- if $dbCA }}
+        - name: db-ca
+          secret:
+            secretName: {{ $dbCA }}
+            # the certificate only: CloudNativePG's secret also holds the authority's key
+            items:
+              - { key: {{ .Values.database.caSecret.key }}, path: {{ .Values.database.caSecret.key }} }
+        {{- end }}
       {{- end }}
