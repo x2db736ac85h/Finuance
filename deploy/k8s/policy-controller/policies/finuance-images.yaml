@@ -13,6 +13,9 @@ apiVersion: policy.sigstore.dev/v1beta1
 kind: ClusterImagePolicy
 metadata:
   name: finuance-images
+  annotations:
+    # after the chart's Deployment is ready: the kind's conversion webhook is served by its pod
+    argocd.argoproj.io/sync-wave: "1"
   labels: { app.kubernetes.io/part-of: finuance }
 spec:
   images:
@@ -39,6 +42,9 @@ apiVersion: policy.sigstore.dev/v1beta1
 kind: ClusterImagePolicy
 metadata:
   name: cloudnative-pg-images
+  annotations:
+    # after the chart's Deployment is ready: the kind's conversion webhook is served by its pod
+    argocd.argoproj.io/sync-wave: "1"
   labels: { app.kubernetes.io/part-of: finuance }
 spec:
   images:
