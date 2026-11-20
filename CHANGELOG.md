@@ -29,6 +29,18 @@ notes of their version.
   names lose control characters and characters that reorder text.
 - A friend code works once even when two people type it at the same moment, and what a friend or
   an administrator did appears in your activity without their address or browser.
+- Helm chart: the default deny covers every pod of the namespace (`networkPolicy.namespaceWide`),
+  the metrics ports are open to Prometheus's pods only, names are resolved in kube-system only,
+  and the database chart admits just the api, the worker and the migration job. **Upgrading:**
+  sync the database chart before the app chart (RUNBOOK, "The namespace-wide default deny").
+  The chart refuses a range in `trustedProxies` while the policies are off.
+- Helm chart: `database.sslmode: verify-full` with `database.caSecret` checks the database's
+  certificate and name.
+- The web server's content security policy closes plugins and frames and requires Trusted Types;
+  the migration from the single-file app has its own upload size at the web server, so a large
+  backup is no longer refused there under Compose.
+- The API warns once in its log when the proxy in front passes no client address
+  (docs/deploying.md says what that proxy must do).
 - New databases no longer grant the application's role temporary tables; for an existing one see
   RUNBOOK, "Taking back the TEMPORARY grant".
 
