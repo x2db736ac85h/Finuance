@@ -10,6 +10,10 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 30_000,
   retries: process.env['CI'] ? 1 : 0,
+  // Every browser of a run has one client address, and sign-ups and sign-ins are limited per
+  // address (30 a minute with a burst of 30). Two workers stay under that; four did not on a fast
+  // machine (the tests then fail at a sign-in answered with 429).
+  workers: 2,
   // github: failures become annotations on the CI run (readable without the log)
   reporter: process.env['CI'] ? [['html', { open: 'never' }], ['list'], ['github']] : 'list',
   use: {

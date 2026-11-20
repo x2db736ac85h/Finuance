@@ -40,7 +40,8 @@ USER 101
 # Only FINUANCE_* variables are substituted into the template, so nginx's own $variables stay.
 ENV NGINX_ENVSUBST_FILTER=FINUANCE_ \
     FINUANCE_API_UPSTREAM=api:8080 \
-    FINUANCE_MAX_BODY=21m
+    FINUANCE_MAX_BODY=21m \
+    FINUANCE_MAX_LEGACY_BODY=97m
 COPY deploy/docker/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /web/dist /usr/share/nginx/html
 EXPOSE 8080

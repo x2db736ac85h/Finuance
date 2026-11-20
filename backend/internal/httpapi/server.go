@@ -172,7 +172,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 		mw.Recover(d.Logger, func(w http.ResponseWriter, r *http.Request, err error) { WriteProblem(w, r, err, prod) }),
 		mw.AssignRequestID,
 		mw.RealIP(d.Config.TrustedProxies, func() {
-			d.Logger.Warn("requests arrive with a trusted proxy as their only forwarded address: the proxy in front passes no client address, so limits per address and the activity log see every visitor as one (docs/deploying.md)")
+			d.Logger.Warn("forwarded requests name only trusted proxies, no client: either the proxy in front passes no client address, or clients reach the published port through the container network's gateway (a browser on the same machine). Limits per address and the activity log then see those visitors as one (docs/deploying.md)")
 		}),
 		mw.Logging(d.Logger),
 		mw.Metrics(d.Metrics),

@@ -49,3 +49,35 @@ test("the request id is the web server's own", async ({ request }) => {
   }
   expect(first.headers()['x-request-id']).not.toBe(second.headers()['x-request-id']);
 });
+
+// The policy names what the app needs and closes the rest (register WEB-3): no plugins, no
+// frames, workers from here only, and Trusted Types for anything that turns text into script.
+test('the content security policy closes plugins, frames and DOM script sinks', async ({ request }) => {
+  const csp = (await request.get('/t/all')).headers()['content-security-policy'] ?? '';
+  const directives = csp.split(';').map((d) => d.trim());
+  for (const d of [
+    "default-src 'self'",
+    "script-src 'self'",
+    "object-src 'none'",
+    "worker-src 'self'",
+    "frame-src 'none'",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    "require-trusted-types-for 'script'",
+  ]) {
+    expect(directives, d).toContain(d);
+  }
+  expect((await request.get('/t/all')).headers()['permissions-policy']).not.toContain('interest-cohort');
+});
+
+// Body sizes at the web server (register OPS-7): the migration from the single-file app may be
+// larger than one upload; every other route keeps the upload limit. Nobody is signed in, so a
+// body the web server lets through is answered by the api (401), not stored.
+test('the web server lets a large migration through and nothing else', async ({ request }) => {
+  const big = Buffer.alloc(30 * 1024 * 1024, 'a');
+  const headers = { 'Content-Type': 'application/octet-stream', 'X-Finuance-Client': 'web' };
+  const migration = await request.post('/api/v1/legacy-imports', { data: big, headers });
+  expect(migration.status(), 'a 30 MiB migration').not.toBe(413);
+  const upload = await request.post('/api/v1/imports', { data: big, headers });
+  expect(upload.status(), 'a 30 MiB upload').toBe(413);
+});

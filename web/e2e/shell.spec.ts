@@ -67,7 +67,7 @@ test('keyboard shortcuts window opens with ? and closes with Esc', async ({ page
 test('no CSP violations on the main screens', async ({ page }) => {
   const violations: string[] = [];
   page.on('console', (m) => {
-    if (/Content Security Policy/i.test(m.text())) violations.push(m.text());
+    if (/Content Security Policy|Trusted(HTML|Script|ScriptURL)|TrustedType/i.test(m.text())) violations.push(m.text());
   });
   await signUp(page);
   await page.getByRole('button', { name: 'Settings' }).click();
