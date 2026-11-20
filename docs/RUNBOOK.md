@@ -497,6 +497,8 @@ Roll it out in this order:
 2. **Sync the app `policy-controller`** in Argo CD after reading the diff (manual sync, like
    `finuance-db`). One pod in `cosign-system` (50m CPU and 128 MiB requested), two CRDs, four
    webhook configurations, the two policies. Nothing is checked yet.
+   The policies are applied after the pod is ready (their sync wave). `kubectl get clusterimagepolicy`
+   must list both before the next step: without a policy every image in a labelled namespace is refused.
 3. **Try it in a scratch namespace** (server-side dry runs; nothing is created):
 
    ```sh
