@@ -10,7 +10,9 @@ K8S=1.33.0
 YQ=${YQ:-yq} # mikefarah's yq v4
 out=${RENDER_DIR:-$(mktemp -d)}
 mkdir -p "$out"
-CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+# The catalog at one commit (2026-11-20), not its moving main: what the checks validate against
+# changes only when this line does. Bump it by hand when a chart brings a newer CRD version.
+CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/784ec895547a36e548e6810b41f27baade3a0890/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 
 validate() {
   kubeconform -strict -summary -kubernetes-version "$K8S" -schema-location default -schema-location "$CRDS" "$@"
