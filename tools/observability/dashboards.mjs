@@ -13,6 +13,8 @@ const out =
 const NS = 'namespace="$namespace"';
 const API = `job="finuance-api",${NS}`;
 const WORKER = `job="finuance-worker",${NS}`;
+// the assistant runs in both: the api answers chats, the worker writes the digests (PLAN 24.5)
+const BOTH = `job=~"finuance-(api|worker)",${NS}`;
 const DB = `job="finuance-db",${NS}`;
 const ds = { type: 'prometheus', uid: '${datasource}' };
 
@@ -21,9 +23,11 @@ const target = (expr, legend = '', i = 0) => ({ datasource: ds, expr, legendForm
 const targets = (qs) => qs.map(([expr, legend], i) => target(expr, legend, i));
 
 /** A time series panel; qs = [[expr, legend], …]. */
-function ts(title, qs, { unit = 'short', w = 12, h = 8, stack = false, desc = '', min, softMax } = {}) {
+function ts(title, qs, { unit = 'short', w = 12, h = 8, stack = false, desc = '', min, softMax, exemplars = false } = {}) {
   return {
-    id: nextId++, type: 'timeseries', title, description: desc, datasource: ds, targets: targets(qs),
+    id: nextId++, type: 'timeseries', title, description: desc, datasource: ds,
+    // exemplars: the dots that carry a request's trace id and open it in Tempo (PLAN 24.5)
+    targets: targets(qs).map((q) => (exemplars ? { ...q, exemplar: true } : q)),
     gridPos: { w, h },
     fieldConfig: {
       defaults: { unit, ...(min === undefined ? {} : { min }), custom: { fillOpacity: stack ? 30 : 8, lineWidth: 1, stacking: { mode: stack ? 'normal' : 'none' }, ...(softMax === undefined ? {} : { axisSoftMax: softMax }) } },
@@ -111,8 +115,14 @@ const dashboards = {
     ts('5xx by route', [[`sum by (route) (rate(http_server_requests_total{${API},status_class="5xx"}[5m]))`, '{{route}}']], { unit: 'reqps' }),
     ts('4xx by route', [[`sum by (route) (rate(http_server_requests_total{${API},status_class="4xx"}[5m]))`, '{{route}}']], { unit: 'reqps',
       desc: '401, 404, 409, 422 and 429 are normal client answers; a sudden rise can still mean a broken web build.' }),
+    row('Refusals'),
+    ts('Requests refused by a limiter', [[`sum by (limiter) (rate(finuance_rate_limited_total{${API}}[5m]))`, '{{limiter}}']], { unit: 'reqps',
+      desc: 'The api\'s own limiters (per address, per account, per user). Limits at the ingress are counted by Traefik.' }),
+    ts('Failed sign-ins by reason', [[`sum by (reason) (rate(finuance_auth_failures_total{${API}}[5m]))`, '{{reason}}']], { unit: 'reqps',
+      desc: 'password: a wrong e-mail address or password. second_step: a wrong code. A steady rise is someone guessing.' }),
     row('Duration'),
-    ts('p95 by route', [[q95('http_server_request_duration_seconds', API, ['route']), '{{route}}']], { unit: 's' }),
+    ts('p95 by route', [[q95('http_server_request_duration_seconds', API, ['route']), '{{route}}']], { unit: 's', exemplars: true,
+      desc: 'The dots are single requests: one opens its trace in Tempo.' }),
     ts('p50 by route', [[q50('http_server_request_duration_seconds', API, ['route']), '{{route}}']], { unit: 's' }),
     table('Slowest routes (p95, last hour)', `topk(15, histogram_quantile(0.95, sum by (le, route) (rate(http_server_request_duration_seconds_bucket{${API}}[1h]))))`, { unit: 's' }),
   ], { tags: ['api'] }),
@@ -135,28 +145,39 @@ const dashboards = {
   ], { tags: ['worker'] }),
 
   'finuance-assistant': dashboard('finuance-assistant', 'Finuance · Assistant', 'Assistant runs, plan-mode fallbacks, tools, rounds, latency, tokens and model errors. No prompt or answer text is ever recorded.', () => [
-    stat('Runs (24 h)', `sum(increase(finuance_assistant_runs_total{${API}}[24h]))`, { decimals: 0 }),
-    stat('Plan-mode fallbacks (24 h)', `sum(increase(finuance_assistant_runs_total{${API},result="fallback_plan"}[24h]))`, { decimals: 0 }),
-    stat('Model error share (1 h)', ratio(`sum(rate(finuance_assistant_model_requests_total{${API},result!="ok"}[1h]))`, `sum(rate(finuance_assistant_model_requests_total{${API}}[1h]))`),
+    stat('Runs (24 h)', `sum(increase(finuance_assistant_runs_total{${BOTH}}[24h]))`, { decimals: 0 }),
+    stat('Plan-mode fallbacks (24 h)', `sum(increase(finuance_assistant_runs_total{${BOTH},result="fallback_plan"}[24h]))`, { decimals: 0 }),
+    stat('Model error share (1 h)', ratio(`sum(rate(finuance_assistant_model_requests_total{${BOTH},result!="ok"}[1h]))`, `sum(rate(finuance_assistant_model_requests_total{${BOTH}}[1h]))`),
       { unit: 'percentunit', thresholds: [[null, 'green'], [0.1, 'orange'], [0.5, 'red']] }),
-    stat('p95 run duration', q95('finuance_assistant_run_duration_seconds', API, []), { unit: 's' }),
+    stat('p95 run duration', q95('finuance_assistant_run_duration_seconds', BOTH, []), { unit: 's' }),
     row('Runs'),
-    ts('Runs by mode and result', [[`sum by (mode, result) (rate(finuance_assistant_runs_total{${API}}[15m]))`, '{{mode}} {{result}}']], { unit: 'ops', stack: true }),
+    ts('Runs by mode and result', [[`sum by (mode, result) (rate(finuance_assistant_runs_total{${BOTH}}[15m]))`, '{{mode}} {{result}}']], { unit: 'ops', stack: true }),
     ts('Run duration', [
-      [q50('finuance_assistant_run_duration_seconds', API, ['mode']), 'p50 {{mode}}'],
-      [q95('finuance_assistant_run_duration_seconds', API, ['mode']), 'p95 {{mode}}'],
+      [q50('finuance_assistant_run_duration_seconds', BOTH, ['mode']), 'p50 {{mode}}'],
+      [q95('finuance_assistant_run_duration_seconds', BOTH, ['mode']), 'p95 {{mode}}'],
     ], { unit: 's' }),
     row('Tools and model'),
-    ts('Tool calls by tool and result', [[`sum by (tool, result) (rate(finuance_assistant_tool_calls_total{${API}}[15m]))`, '{{tool}} {{result}}']], { unit: 'ops', stack: true }),
-    ts('Model requests by connection and result', [[`sum by (connection, result) (rate(finuance_assistant_model_requests_total{${API}}[15m]))`, '{{connection}} {{result}}']], { unit: 'ops', stack: true }),
+    ts('Tool calls by tool and result', [[`sum by (tool, result) (rate(finuance_assistant_tool_calls_total{${BOTH}}[15m]))`, '{{tool}} {{result}}']], { unit: 'ops', stack: true }),
+    ts('Model requests by connection and result', [[`sum by (connection, result) (rate(finuance_assistant_model_requests_total{${BOTH}}[15m]))`, '{{connection}} {{result}}']], { unit: 'ops', stack: true }),
     ts('Rounds per run', [
-      [`sum(rate(finuance_assistant_rounds_sum{${API}}[1h])) / sum(rate(finuance_assistant_rounds_count{${API}}[1h]))`, 'mean'],
-      [`histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_rounds_bucket{${API}}[1h])))`, 'p95'],
+      [`sum(rate(finuance_assistant_rounds_sum{${BOTH}}[1h])) / sum(rate(finuance_assistant_rounds_count{${BOTH}}[1h]))`, 'mean'],
+      [`histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_rounds_bucket{${BOTH}}[1h])))`, 'p95'],
     ]),
     ts('Tokens sent per run (approx.)', [
-      [`histogram_quantile(0.5, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{${API}}[1h])))`, 'p50'],
-      [`histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{${API}}[1h])))`, 'p95'],
+      [`histogram_quantile(0.5, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{${BOTH}}[1h])))`, 'p50'],
+      [`histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{${BOTH}}[1h])))`, 'p95'],
     ]),
+    row('Model servers'),
+    ts('Model request duration by connection', [
+      [q50('finuance_llm_request_duration_seconds', BOTH, ['connection']), 'p50 {{connection}}'],
+      [q95('finuance_llm_request_duration_seconds', BOTH, ['connection']), 'p95 {{connection}}'],
+    ], { unit: 's', desc: 'One request to a model server, to the end of its answer.' }),
+    ts('Time to the first token by connection', [
+      [q50('finuance_llm_time_to_first_token_seconds', BOTH, ['connection']), 'p50 {{connection}}'],
+      [q95('finuance_llm_time_to_first_token_seconds', BOTH, ['connection']), 'p95 {{connection}}'],
+    ], { unit: 's' }),
+    ts('Tokens reported by the model servers', [[`sum by (connection, direction) (rate(finuance_llm_tokens_total{${BOTH}}[15m]))`, '{{connection}} {{direction}}']],
+      { unit: 'short', w: 24, desc: 'Only what a server reports; a server that reports nothing shows nothing here.' }),
   ], { tags: ['assistant'] }),
 
   'finuance-postgres': dashboard('finuance-postgres', 'Finuance · PostgreSQL', 'The CloudNativePG cluster: instances, replication, WAL archiving, backups (Barman Cloud plugin) and load.', () => [

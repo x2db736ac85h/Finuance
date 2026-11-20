@@ -211,6 +211,9 @@ tests:
         values: '0+3x60'
       - series: 'finuance_assistant_model_requests_total{job="finuance-api",namespace="finuance",connection="cloud",result="ok"}'
         values: '0+5x60'
+      # a connection only the worker uses (the digests): its failures are watched too (PLAN 24.5)
+      - series: 'finuance_assistant_model_requests_total{job="finuance-worker",namespace="finuance",connection="digests",result="timeout"}'
+        values: '0+1x60'
     alert_rule_test:
       - eval_time: 45m
         alertname: FinuanceAssistantModelErrors
@@ -219,6 +222,10 @@ tests:
             exp_annotations:
               summary: The model server of the assistant connection lmstudio fails
               description: 75% of model requests failed over 15 minutes (outside the SLO; the rest of the app is unaffected).
+          - exp_labels: { severity: ticket, connection: digests }
+            exp_annotations:
+              summary: The model server of the assistant connection digests fails
+              description: 100% of model requests failed over 15 minutes (outside the SLO; the rest of the app is unaffected).
 
   # The database: one instance down, a lagging replica, WAL archiving failing.
   - interval: 1m

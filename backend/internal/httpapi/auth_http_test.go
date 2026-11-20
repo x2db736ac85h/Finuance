@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	promtest "github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
@@ -75,6 +77,8 @@ type authEnv struct {
 	logs  *syncBuffer
 	auth  *auth.Service
 	adm   *admin.Service
+	// the handler's metrics, for tests of the counters
+	metrics *observability.Metrics
 }
 
 type syncBuffer struct {
@@ -147,15 +151,16 @@ func newTestEnv(t *testing.T, mut func(*config.Config), withWorkers bool) *authE
 	if err != nil {
 		t.Fatal(err)
 	}
+	metrics := observability.NewMetrics()
 	h, err := NewHandler(Deps{Config: cfg, Version: "test", Commit: "0123abcd", BuildDate: "2026-11-05T10:00:00Z", SchemaVersion: st.SchemaVersion, Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Metrics: observability.NewMetrics(), Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), AIChanges: aichanges.New(st, led, clk), Goals: goals.New(st, clk), Advice: advice.New(st, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
+		Metrics: metrics, Tracing: tr, Auth: svc, Admin: adm, Friends: friends.New(st, clk, notes), Notify: notes, Sharing: sharing.New(st, led, notes, clk), AIChanges: aichanges.New(st, led, clk), Goals: goals.New(st, clk), Advice: advice.New(st, clk), Clock: clk, Ledger: led, Query: query.New(st), Jobs: jc, Legacy: legacy, Rules: rs,
 		Assistant: ai, AssistantAdmin: stored})
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
-	return &authEnv{t: t, srv: srv, st: st, clock: clk, logs: logs, auth: svc, adm: adm}
+	return &authEnv{t: t, srv: srv, st: st, clock: clk, logs: logs, auth: svc, adm: adm, metrics: metrics}
 }
 
 // browser is an HTTP client with a cookie jar that sends the CSRF header like the web app does.
@@ -426,6 +431,14 @@ func TestLoginRateLimit(t *testing.T) {
 		expect(t, b.do("POST", "/auth/login", other(i)), 401, "unauthenticated")
 	}
 	expect(t, b.do("POST", "/auth/login", other(99)), 429, "rate_limited")
+	// The counters (PLAN 24.5): the 29 failed sign-ins by their reason, and each refusal under the
+	// limiter that made it. Neither says whose.
+	if got := promtest.ToFloat64(e.metrics.AuthFailures.WithLabelValues("password")); got != 29 {
+		t.Errorf("finuance_auth_failures_total{reason=password} = %v, want 29", got)
+	}
+	if a, b := promtest.ToFloat64(e.metrics.RateLimited.WithLabelValues("login_ip_email")), promtest.ToFloat64(e.metrics.RateLimited.WithLabelValues("login_ip")); a != 1 || b != 1 {
+		t.Errorf("finuance_rate_limited_total: login_ip_email = %v, login_ip = %v, want 1 and 1", a, b)
+	}
 	// Tokens come back with time.
 	e.clock.Add(time.Minute)
 	expect(t, b.do("POST", "/auth/login", body), 401, "unauthenticated")

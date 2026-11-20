@@ -40,6 +40,7 @@ func (a *api) LoginSecondStep(ctx context.Context, req gen.LoginSecondStepReques
 	var failed *auth.FailedSecondStepError
 	if errors.As(err, &failed) {
 		a.audit(ctx, failed.UserID, ledger.AuditSecondStepFailed, "", nil)
+		a.authFailed("second_step")
 	}
 	if err != nil {
 		return nil, err

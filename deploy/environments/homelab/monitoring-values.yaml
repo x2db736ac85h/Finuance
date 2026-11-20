@@ -21,6 +21,9 @@ defaultRules:
 
 prometheus:
   prometheusSpec:
+    # Exemplars: the api's latency histogram carries the trace id of a request in each bucket, so a
+    # slow bucket in Grafana links to a trace in Tempo (PLAN 24.5). Kept in memory only.
+    enableFeatures: [exemplar-storage]
     retention: 7d
     retentionSize: 8GB
     resources:
@@ -64,6 +67,11 @@ grafana:
     userKey: admin-user
     passwordKey: admin-password
   sidecar:
+    # the Prometheus data source the chart creates: an exemplar's trace_id opens the trace in Tempo
+    datasources:
+      exemplarTraceIdDestinations:
+        datasourceUid: tempo
+        traceIdLabelName: trace_id
     dashboards:
       enabled: true
       label: grafana_dashboard

@@ -14,7 +14,8 @@ import (
 // register more routes (the worker adds /healthz and /readyz, because it has no API port).
 func NewAdminServer(addr string, m *Metrics, profiling bool, extra func(*http.ServeMux)) *http.Server {
 	mux := http.NewServeMux()
-	mux.Handle("GET /metrics", promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{Registry: m.Registry}))
+	mux.Handle("GET /metrics", promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{Registry: m.Registry,
+		EnableOpenMetrics: true})) // exemplars travel in the OpenMetrics format only (PLAN 24.5)
 	if profiling {
 		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
 		mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)

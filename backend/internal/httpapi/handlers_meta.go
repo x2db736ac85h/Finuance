@@ -17,6 +17,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/legacyimport"
 	"github.com/x2db736ac85h/finuance/backend/internal/notify"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
 
@@ -29,6 +30,7 @@ import (
 
 // api implements gen.StrictServerInterface.
 type api struct {
+	metrics *observability.Metrics
 	cfg     config.Config
 	version string
 	// the build and the schema, for the administrators' Developer section
@@ -88,4 +90,12 @@ func requestID(ctx context.Context) *string {
 		return &id
 	}
 	return nil
+}
+
+// authFailed counts a failed sign-in by its reason (finuance_auth_failures_total): how many there
+// are and of which kind, never whose.
+func (a *api) authFailed(reason string) {
+	if a.metrics != nil {
+		a.metrics.AuthFailures.WithLabelValues(reason).Inc()
+	}
 }

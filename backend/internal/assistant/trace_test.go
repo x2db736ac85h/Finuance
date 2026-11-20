@@ -3,6 +3,8 @@ package assistant
 import (
 	"testing"
 
+	promtest "github.com/prometheus/client_golang/prometheus/testutil"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,8 +25,9 @@ import (
 func TestModelRequestSpan(t *testing.T) {
 	re := newRunEnv(t, 2)
 	rec := tracetest.NewSpanRecorder()
+	metrics := NewMetrics(nil)
 	re.runner = NewRunner(RunnerConfig{Connections: re.conns, Tools: NewTools(re.q), Chats: re.chats, Clock: re.clock, MaxConcurrent: 2,
-		Tracer: sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec))})
+		Tracer: sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec)), Metrics: metrics})
 
 	re.mock.Push(llmmock.Reply{Content: "Nothing to report."})
 	if evs := re.ask(re.newChat(), "anything new?", nil); last(evs).Name != "done" {
@@ -69,6 +72,11 @@ func TestModelRequestSpan(t *testing.T) {
 	}
 	if kind := attrs(failed[0])["error.type"].AsString(); kind == "" {
 		t.Errorf("the failed request has no error.type: %v", failed[0].Attributes())
+	}
+
+	// the same requests in the metrics (PLAN 24.5), under the connection's name only
+	if d, f := promtest.CollectAndCount(metrics.LLMDuration), promtest.CollectAndCount(metrics.LLMFirstToken); d != 1 || f != 1 {
+		t.Errorf("series: %d durations and %d first-token times, want one each (the connection)", d, f)
 	}
 
 	hs := re.mock.Headers()
