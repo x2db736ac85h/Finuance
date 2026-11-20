@@ -6,6 +6,8 @@ notes of their version.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-20
+
 ### Changed
 
 - **Everyone is signed out once by this release:** over https the session cookie is now named
