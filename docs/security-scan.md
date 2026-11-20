@@ -3,9 +3,9 @@
 Every finding of every scan, and what happened to it: fixed, or not exploitable and why. HIGH and
 CRITICAL findings fail the build. A finding is fixed, not ignored; `.trivyignore` holds only what
 cannot be fixed yet, each entry with a reason and an expiry (empty since 2026-11-19, below). The scans and
-when they run are listed in [THREAT-MODEL.md](THREAT-MODEL.md) §7. Phase 18 adds the OpenVAS /
-Nessus scan of the deployed instance, and the Phase 23 gate repeats everything right before the
-demo goes public.
+when they run are listed in [THREAT-MODEL.md](THREAT-MODEL.md) §7. Phase 18 added the OpenVAS /
+Nessus scan of the deployed instance, and Phase 23 repeated everything on `v0.5.0`'s release
+candidate ("The full scan of Phase 23", below).
 
 **Phase 17 run: 2026-10-26/27**, in the cloud sandbox, on the push 3 branch. The images were built
 from the checkout, and the stack was `compose.ci.yaml` (sign-ups on, mock model). Trivy 0.76.0 ran
@@ -130,6 +130,26 @@ artifacts. The rest, with what was decided:
 | CII-Best-Practices | 0 | Open: the OpenSSF best-practices badge is a registration, the maintainer's choice |
 
 Scorecard files the checks below 10 as code scanning alerts too; each is dismissed with the decision above.
+
+**The full scan of Phase 23: 2026-11-20** (PLAN task 23.9), on the release candidate `v0.5.0-rc.2`
+(built by the release workflow from `cc663f3`; `main` differs from it in documents and the reference
+environment's values only). Nothing is ignored: `.trivyignore` is empty, and every scan ran at
+every severity.
+
+| Scan | On what | Result |
+|---|---|---|
+| Trivy 0.76.2, image | the released `finuance-api` and `finuance-web`, by digest from the registry | **0 findings** at every severity in both |
+| Trivy 0.76.2, repository | the tree: Go and npm dependencies (development ones included), secrets, Dockerfiles and manifests | 0 vulnerabilities, 0 secrets; 16 misconfigurations (5 MEDIUM, 11 LOW), the same files and checks as documented under "Trivy: repository", each deliberate |
+| Trivy 0.76.2, config | every render `make helm-lint` makes of the app chart and the platform's manifests | KSV-0011, KSV-0110, KSV-0125 and KSV-01010 only, each decided under "Trivy config"; nothing HIGH or CRITICAL |
+| govulncheck | `backend/` | no vulnerabilities, reachable or in required modules |
+| `npm audit` | `web/` with and without development dependencies, `tools/legacy-oracle/` | 0 at every severity |
+| osv-scanner | `backend/go.mod` and both npm lockfiles | no issues |
+| gitleaks | the history, on every push | no leaks |
+| CodeQL | Go, JavaScript/TypeScript, the workflows, the Python helpers, on `main` | no open alert in code scanning (CodeQL, Trivy's uploads and Scorecard together) |
+| ZAP 2.17.0, baseline | the web app (weekly workflow, run 44772019473 on `main`) | 66 rules passed, 0 WARN, 0 FAIL; the two ignored rules are the documented ones. The stricter content security policy of this release (Trusted Types, no plugins, no frames) passes |
+| ZAP 2.17.0, active API scan | every operation of `api/openapi.yaml` but the four that end the scan's own session, 928 URLs | 117 rules passed, 0 WARN, 0 FAIL; two INFO rules (10096, 2) and one ignored (100001), each explained under "OWASP ZAP" |
+| The signature check | the cluster of the rehearsal and the reference environment | the released images admitted by digest, an image without the release workflow's provenance refused (PLAN task 23.2) |
+| OpenVAS and the outside port scan | the reference environment | **open: the maintainer's**, with `tools/openvas-scan.sh`; the last run is the one under "OpenVAS" (2026-10-31) |
 
 ## Summary
 
@@ -342,8 +362,8 @@ updates at once; `renovate-config-validator` checks the configuration in CI. A l
 - Every day: the daily scan (released images, dependencies, expiring acceptances), with the
   `security-scan` issue. Every pull request and push to `main`: CodeQL, Trivy's SARIF, osv-scanner,
   the dependency review. Weekly: Scorecard. Renovate proposes updates once its app is installed.
-- Phase 23: signature verification (cosign) for Finuance's images in the admission policy, and the
-  images deployed by digest. When the nginx base ships the fixed zlib, musl and OpenSSL itself, the
-  Dockerfile's upgrade step can go.
-- Phase 23 gate: repeat every scan above on the release candidate, with nothing open above LOW and
-  `.trivyignore` empty.
+- Done in Phase 23: Finuance's images are deployed by digest and admitted by their build provenance
+  (ADR 0039), and every scan above was repeated on the release candidate with `.trivyignore` empty.
+- When the nginx base ships the fixed zlib, musl and OpenSSL itself, the Dockerfile's upgrade step
+  can go.
+- The OpenVAS run and the outside port scan for 0.5 (the maintainer).

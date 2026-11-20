@@ -57,6 +57,10 @@ notes of their version.
 
 ### Security
 
+- The threat model is at version 3 (`docs/THREAT-MODEL.md`): the public repository and the release
+  path, the admission chain, telemetry as a way data can leave, and the risks accepted on purpose.
+  `SECURITY.md` names 0.5 as the supported line. The full scan of the release candidate found
+  nothing and ignores nothing (`docs/security-scan.md`).
 - The Helm chart can deploy by digest: with `image.digests.api` and `image.digests.web` set, the
   images are `name@sha256:…` and the tag only labels the release. A release writes both digests
   into the reference environment's values, and that environment must have them.

@@ -17,7 +17,14 @@ Include what you found, how to reproduce it, and what an attacker could do with 
 
 ## Supported versions
 
-Finuance is pre-1.0 software. Security fixes land on `main` and ship in the next release; **only the latest release is supported**, so please check that a problem still exists there. Release candidates (`-rc.N`) are not supported once their final release is out.
+Finuance is pre-1.0 software. Security fixes land on `main` and ship in the next release; **only the latest release is supported** (today the 0.5 line), so please check that a problem still exists there. Release candidates (`-rc.N`) are not supported once their final release is out.
+
+| Version | Supported |
+|---|---|
+| 0.5.x | yes |
+| 0.4.x and older | no: upgrade to 0.5 |
+
+Upgrading to 0.5 signs everyone out once and runs two migrations; the [changelog](CHANGELOG.md) names what an operator does around it (the database chart before the app chart on Kubernetes, one statement on an existing database).
 
 ## Verifying a release
 
@@ -41,6 +48,12 @@ cosign verify-blob --bundle fin_<version>_checksums.txt.sigstore.json \
   --certificate-identity-regexp '^https://github\.com/x2db736ac85h/Finuance/\.github/workflows/release\.yml@refs/tags/v[0-9]' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com fin_<version>_checksums.txt
 ```
+
+On Kubernetes the cluster can make the same check before a pod starts: deploy by digest (`image.digests`) and let [Sigstore policy-controller](https://docs.sigstore.dev/policy-controller/overview/) admit only images that carry this workflow's build provenance. The policy used by the reference environment is in [`deploy/k8s/policy-controller`](deploy/k8s/policy-controller), the rollout in [docs/RUNBOOK.md](docs/RUNBOOK.md) ("Image signatures"), the decision in [ADR 0039](docs/adr/0039-image-signatures.md).
+
+## Protecting your account
+
+Since 0.5 an account can ask for a second step at sign-in: a six-digit code from an authenticator app (Settings → Security), with recovery codes for a lost phone. An instance can require it of its administrators. [ADR 0040](docs/adr/0040-two-step-sign-in.md) says how it is stored and what an administrator can and cannot do about it.
 
 ## Scope and status
 
