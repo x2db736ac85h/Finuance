@@ -245,9 +245,11 @@ EOF
   kubectl -n finuance delete networkpolicy netpol-probe-open-egress >/dev/null
   if probe monitoring other app.kubernetes.io/name=grafana "nc -z -w 5 $api 9090"; then echo "a pod of monitoring that is not Prometheus reached the metrics port" >&2; return 1; fi
   # a pod in the app's namespace that no policy names: nothing in, nothing out (register OPS-1)
-  if probe finuance stray-db probe=stray "nc -z -w 5 $db 5432"; then echo "an unlabelled pod in the app's namespace reached PostgreSQL" >&2; return 1; fi
-  if probe finuance stray-out probe=stray "nc -z -w 5 $s3 9000"; then echo "an unlabelled pod in the app's namespace reached a service outside it" >&2; return 1; fi
-  if probe finuance stray-api probe=stray "nc -z -w 5 $api 8080"; then echo "an unlabelled pod in the app's namespace reached the api" >&2; return 1; fi
+  # A policy reaches a new pod a moment after it starts (Kubernetes promises no more), so a probe
+  # that tests the pod's own egress waits before it tries; the first run without the wait got out.
+  if probe finuance stray-db probe=stray "sleep 8; nc -z -w 5 $db 5432"; then echo "an unlabelled pod in the app's namespace reached PostgreSQL" >&2; return 1; fi
+  if probe finuance stray-out probe=stray "sleep 8; nc -z -w 5 $s3 9000"; then echo "an unlabelled pod in the app's namespace reached a service outside it" >&2; return 1; fi
+  if probe finuance stray-api probe=stray "sleep 8; nc -z -w 5 $api 8080"; then echo "an unlabelled pod in the app's namespace reached the api" >&2; return 1; fi
   kubectl delete namespace netpol-probe monitoring --wait=false >/dev/null
   fact "NetworkPolicies" "blocked: an outside pod from PostgreSQL 5432, api 8080 and metrics 9090; the api's labels in another namespace and the chart's name without a database component from 5432; a pod of monitoring that is not Prometheus from 9090; an unlabelled pod in the app's namespace from PostgreSQL, the api and a service outside. Controls: an outside pod reached RustFS, Prometheus's label reached 9090"
 }
