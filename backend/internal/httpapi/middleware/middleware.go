@@ -81,6 +81,22 @@ func (r *recorder) code() int {
 	return r.status
 }
 
+// outcome is the status to record when the handler has returned or, with panicked, is being
+// unwound by a panic: Recover (the outermost layer) answers 500 when nothing was written yet, after
+// the inner layers' deferred recording has run.
+func (r *recorder) outcome(panicked bool) int {
+	if panicked && r.status == 0 {
+		return http.StatusInternalServerError
+	}
+	return r.code()
+}
+
+// IsProbe reports whether r is one of the kubelet's probes: they arrive every few seconds, so they
+// are not traced and their access lines are written at debug level (PLAN 24.3).
+func IsProbe(r *http.Request) bool {
+	return r.Method == http.MethodGet && (r.URL.Path == "/healthz" || r.URL.Path == "/readyz")
+}
+
 func record(w http.ResponseWriter) *recorder {
 	if rec, ok := w.(*recorder); ok {
 		return rec

@@ -141,6 +141,25 @@ tests:
               summary: More than 10 % of commit_import jobs fail
               description: 50% of commit_import jobs returned an error over 15 minutes (River retries them).
 
+  # A panic in a request handler: any increase is a ticket (PLAN 24.1), summed over the pods.
+  - interval: 1m
+    input_series:
+      - series: 'finuance_panics_total{job="finuance-api",namespace="finuance",pod="api-1"}'
+        values: '0x30 1x60'
+      - series: 'finuance_panics_total{job="finuance-api",namespace="finuance",pod="api-2"}'
+        values: '0x90'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: FinuancePanic
+        exp_alerts: []
+      - eval_time: 45m
+        alertname: FinuancePanic
+        exp_alerts:
+          - exp_labels: { severity: ticket }
+            exp_annotations:
+              summary: A request handler panicked
+              description: '1 request(s) ended in a panic in the last hour: a bug. Each is a 500 for its user. Find the log line "panic" (it has the stack and the request id) and the access line with the same request_id.'
+
   # Targets and the connection pool.
   - interval: 1m
     input_series:

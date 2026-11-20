@@ -11,6 +11,7 @@ finuance_import_rows_total
 finuance_imports_total
 finuance_job_duration_seconds
 finuance_jobs_total
+finuance_panics_total
 http_server_request_duration_seconds
 http_server_requests_in_flight
 http_server_requests_total

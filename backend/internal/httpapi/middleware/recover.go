@@ -12,7 +12,9 @@ import (
 // with base: it is the outermost layer, so the request-scoped logger does not exist yet. It also
 // creates the request Info that the inner layers fill in, so the log line can carry the request id.
 // http.ErrAbortHandler is re-raised: it is the stdlib's way to abort a response on purpose.
-func Recover(base *slog.Logger, onPanic func(http.ResponseWriter, *http.Request, error)) Middleware {
+// count is called once per recovered panic (finuance_panics_total, PLAN 24.1); the inner layers
+// have already written the access line and counted the request as a 5xx in their defers.
+func Recover(base *slog.Logger, count func(), onPanic func(http.ResponseWriter, *http.Request, error)) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r, info := withInfo(r)
@@ -24,6 +26,9 @@ func Recover(base *slog.Logger, onPanic func(http.ResponseWriter, *http.Request,
 				}
 				if err, ok := v.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 					panic(v)
+				}
+				if count != nil {
+					count()
 				}
 				base.LogAttrs(r.Context(), slog.LevelError, "panic", slog.String("request_id", info.RequestID),
 					slog.String("panic", fmt.Sprint(v)), slog.String("stack", string(debug.Stack())))

@@ -12,6 +12,7 @@ type Metrics struct {
 	HTTPRequests *prometheus.CounterVec
 	HTTPDuration *prometheus.HistogramVec
 	HTTPInFlight prometheus.Gauge
+	Panics       prometheus.Counter
 	BuildInfo    *prometheus.GaugeVec
 	collectors   []prometheus.Collector
 }
@@ -35,13 +36,17 @@ func NewMetrics() *Metrics {
 			Name: "http_server_requests_in_flight",
 			Help: "HTTP requests currently being served.",
 		}),
+		Panics: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "finuance_panics_total",
+			Help: "Requests whose handler panicked (each is also a 5xx in http_server_requests_total).",
+		}),
 		BuildInfo: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "finuance_build_info",
 			Help: "Always 1; labels carry the build version and commit.",
 		}, []string{"version", "commit"}),
 	}
 	m.collectors = []prometheus.Collector{collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.HTTPRequests, m.HTTPDuration, m.HTTPInFlight, m.BuildInfo}
+		m.HTTPRequests, m.HTTPDuration, m.HTTPInFlight, m.Panics, m.BuildInfo}
 	reg.MustRegister(m.collectors...)
 	return m
 }

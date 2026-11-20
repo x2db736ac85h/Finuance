@@ -139,6 +139,14 @@ groups:
             No Finuance api pod is up
           description: >-
             No api target has answered for 10 minutes (or the PodMonitor is missing).
+      - alert: FinuancePanic
+        expr: sum(increase(finuance_panics_total{job="finuance-api",namespace="finuance"}[1h])) > 0
+        labels: {severity: ticket}
+        annotations:
+          summary: >-
+            A request handler panicked
+          description: >-
+            {{ $value | humanize }} request(s) ended in a panic in the last hour: a bug. Each is a 500 for its user. Find the log line "panic" (it has the stack and the request id) and the access line with the same request_id.
       - alert: FinuanceImportFailed
         expr: increase(finuance_imports_total{job="finuance-worker",namespace="finuance",result="failed"}[1h]) > 0
         labels: {severity: ticket}

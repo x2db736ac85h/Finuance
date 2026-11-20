@@ -8,7 +8,8 @@ import (
 )
 
 // Metrics records request counts and durations labelled by route pattern (never the raw path,
-// which would explode label cardinality).
+// which would explode label cardinality). It records in a defer: a request whose handler panics
+// counts as a 5xx and burns the availability budget like any other failure (PLAN 24.1).
 func Metrics(m *observability.Metrics) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -17,13 +18,17 @@ func Metrics(m *observability.Metrics) Middleware {
 			m.HTTPInFlight.Inc()
 			defer m.HTTPInFlight.Dec()
 			rec := record(w)
+			panicked := true
+			defer func() {
+				route := info.Route
+				if route == "" { // a panic before or inside the handler: Route has not recorded the pattern yet
+					route = routeName(r.Pattern)
+				}
+				m.HTTPRequests.WithLabelValues(route, r.Method, observability.StatusClass(rec.outcome(panicked))).Inc()
+				m.HTTPDuration.WithLabelValues(route).Observe(time.Since(start).Seconds())
+			}()
 			next.ServeHTTP(rec, r)
-			route := info.Route
-			if route == "" {
-				route = "unmatched"
-			}
-			m.HTTPRequests.WithLabelValues(route, r.Method, observability.StatusClass(rec.code())).Inc()
-			m.HTTPDuration.WithLabelValues(route).Observe(time.Since(start).Seconds())
+			panicked = false
 		})
 	}
 }
