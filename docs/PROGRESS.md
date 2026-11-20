@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 23 — Security II: runtime, cluster and privacy hardening · **Branch:** `phase/23-close` (pull request 6 of 6) · **Status:** every task done but the maintainer's part of 23.9 and the gate. `v0.5.0-rc.2` runs on the homelab by digest with the signature check on (2026-11-20). Open for the maintainer: OpenVAS and the outside port scan, the tag `v0.5.0` after this pull request, and the gate (a second factor with a real authenticator app, THREAT-MODEL v3).
+**Current phase:** 24 — Observability: correlated logs, complete traces, the synthetic marker · **Branch:** `phase/24-logs-traces` (pull request 1 of 6) · **Status:** started on 2026-11-20 (`/phase-start 24`, approved by the maintainer in advance). Phase 23 is finished but for its last steps: `v0.5.0` is tagged and waits for the maintainer's approval of the release, then its `gitops-bump` pull request and the private register's final statuses; the maintainer's gate items (a second factor with a real authenticator app, OpenVAS and the outside port scan) are open.
 
 **Released:** `v0.4.2` (2026-11-19). Phases 0–22 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
 
@@ -46,6 +46,33 @@ Deployment
 - `make check` before every commit; `make test-integration` and the E2E suite before a pull request.
 
 ## Current phase tasks
+
+Phase 24 — Observability: correlated logs, complete traces, the synthetic marker (PLAN §9). Confirmed with `/phase-start 24` on 2026-11-20.
+
+Pull requests, each merged on the maintainer's OK:
+- **1** `phase/24-logs-traces`: 24.1–24.4, the clock of `TestSeedDemo`.
+- **2** `phase/24-metrics-browser`: 24.5, 24.8.
+- **3** `phase/24-synthetic`: 24.7.
+- **4** `phase/24-loki-alloy`: 24.6, the `profiling` value of 24.9 (deploys Loki and Alloy).
+- **5** `phase/24-node26`: Node 26 (moved from 22.10), one day at most.
+- **A release** so that the phase's code reaches the homelab for the gate: the plan gives `v0.6.0` to Phase 25, so `v0.5.1` is proposed; asked when pull request 4 is merged.
+- **6** `phase/24-close`: 24.10, the phase close.
+
+Decisions at the phase start (the maintainer, 2026-11-20): no heartbeat outside the machine for now (24.9's second half stays in the Backlog); Loki and Alloy are switched on for the homelab with small limits, measured after a day, and one value switches them off; trace sampling stays at everything on the homelab. Approved: Grafana Loki and Grafana Alloy in the cluster (named in the plan; versions after 24.6's re-check). No new Go or npm dependency.
+
+- [x] 24.0 `.trivyignore` read (the standing first task) — 2026-11-20: empty, nothing to revisit
+- [ ] 24.1 panics are counted: the access line and the request counter record in a `defer`, the span's status is error, `finuance_panics_total` with an alert
+- [ ] 24.2 every log line carries `trace_id` and `span_id`; every call site logs with its context (`sloglint`); job lines carry `job_id`, `kind` and `attempt`; the field contract in `docs/observability.md` with a test
+- [ ] 24.3 probes are not traced and are logged at debug level
+- [ ] 24.4 complete traces: a client span around each model-server request (no `traceparent` sent, no text), error status on a failing tool, resource attributes from the downward API, `FINUANCE_OTEL_SAMPLE_RATIO`
+- [ ] 24.5 the missing metrics (model requests, time to first token, tokens, rate limits, sign-in failures), exemplars, the assistant alert that ignores the worker
+- [ ] 24.6 logs are collected: Loki and Alloy as Argo CD applications, traces through Alloy, Grafana's links both ways, the two accepted log fields dropped at the collector; a new ADR
+- [ ] 24.7 the synthetic marker: `users.kind`, the `traffic` label in logs, metrics, traces and jobs, the SLO rules, the guard rails; a new ADR
+- [ ] 24.8 the browser's errors: the request reference in error messages, `POST /api/v1/client-events`, the error boundary, the CSP's `report-to`
+- [ ] 24.9 a `profiling` chart value for `FINUANCE_PPROF` (the heartbeat is not built: the maintainer, 2026-11-20)
+- [ ] 24.10 documents: `docs/observability.md`, `docs/ARCHITECTURE.md` brought up to date, `docs/SLO.md`, `docs/RUNBOOK.md`
+- [ ] Node 26 (from 22.10): a test-only `fetch` shim for the two upload tests, one day at most
+- [ ] Gate (the maintainer): a Grafana walk-through, one failed import followed from the toast's reference to the job's trace
 
 Phase 23 — Security II: runtime, cluster and privacy hardening (PLAN §9). Confirmed with `/phase-start 23` on 2026-11-19.
 
@@ -211,6 +238,7 @@ Still ideas
 - 2026-11-20 — Pull request 3 (52) merged. Pull request 4 (53): the register's application rows after four decisions by the maintainer; its first CI run found the tokens form wrapping in the layout test, fixed; merged, and the private register's statuses updated and pushed. Pull request 5: the cluster, delivery, edge and web rows after one more decision (no commit-signature check for now). A local E2E run failed at the sign-in limit per address with four workers and, separately, while the machine was busy; with two workers on a quiet machine 75 of 75 pass, Trusted Types included. Next: the rehearsal on pull request 5 (the new network probes and `verify-full`), its merge, then `v0.5.0-rc.1`.
 - 2026-11-20 (later) — Pull request 5's first rehearsal failed at the new probes: a network policy reaches a new pod a moment after it starts, so a probe that connects at once gets out; the probes now wait (the start window goes into THREAT-MODEL v3). Merged as 54: the homelab's pods use `verify-full`, Prometheus scrapes them, the admission policy and Tempo sit in the new project. The maintainer then synced the database chart, took back the `TEMPORARY` grant, validated the 16 amount checks and rolled out the signature check (its first sync failed on the order of two objects; pull request 55). The changelog gets its `[0.5.0]` heading. Next: `v0.5.0-rc.1`.
 - 2026-11-20 (evening) — `v0.5.0-rc.1` was tagged before the changelog's pull request (56) was merged and stopped with nothing built; `v0.5.0-rc.2` released, verified and deployed (57) under the signature check. Pull request 6: the homelab's default deny covers the namespace, Argo CD leaves the controller's webhook fields, THREAT-MODEL v3, `SECURITY.md`, and the full scan on the candidate with nothing found and nothing ignored. Next: the maintainer's OpenVAS run, `v0.5.0`, the gate.
+- 2026-11-20 (night) — Pull request 58 merged: the default deny covers the homelab's namespace, `policy-controller` synced and in sync, `v0.5.0` tagged (waiting for the release's approval). The maintainer approved the start of Phase 24 in advance: `/phase-start 24`, the plan approved with three decisions and split into six pull requests; branch `phase/24-logs-traces`. Next: 24.1.
 - 2026-11-09 — Audit before going public (private data, security, first impression): no credentials and no serious flaw, but the history and a few files must not be published. Phase 21 regrouped to "going public" and 21.0–21.4 done: synthetic fixtures only, neutral wording, new guard rules, fail-closed defaults and the other security hotfixes. Then the README rewritten for readers new to the project (21.5) and the publish script with its tests (21.6). Next: the move (21.7), by the maintainer.
 - 2026-11-10 — The publish script learned `--history`; then a search of every branch showed one private value only (a commit author address), so the plan changed to the simple one: this repository becomes public as it is. RUNBOOK section rewritten. Next: the pull request into `main`, then the switch (21.7).
 - 2026-11-16 — Planning session, no code changed. An audit of the public repository: a scan of every pinned version, the logging and tracing code (good metrics and traces, weak logs, a panic that is not counted), the deployment and assistant layers (what a second kind of cluster and a cloud model need), the API surface for a simulator, and the backlog. With the maintainer's four decisions this became PLAN Rev 5: Phases 22–29, security first. `docs/COMPONENTS.md` added as the component map. Next: `/phase-start 22`.
