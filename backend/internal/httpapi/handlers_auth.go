@@ -38,6 +38,7 @@ type limits struct {
 	friendIP       *mw.Limiter // friend codes entered per client IP
 	sharedWrite    *mw.Limiter // expenses, payments and member changes in shared groups, per user (API-5)
 	sharedInvite   *mw.Limiter // invitations sent, per user
+	statusRefresh  *mw.Limiter // forced re-checks of the model servers, per user (AI-5)
 }
 
 func newLimits(clock platform.Clock, aiPerHour int) limits {
@@ -61,6 +62,7 @@ func newLimits(clock platform.Clock, aiPerHour int) limits {
 		friendIP:       mw.NewLimiter(mw.FriendCodesPerHour, clock, 0),
 		sharedWrite:    mw.NewLimiter(mw.SharedWritesPerUser, clock, 0),
 		sharedInvite:   mw.NewLimiter(mw.SharedInvitesPerUser, clock, 0),
+		statusRefresh:  mw.NewLimiter(mw.StatusRefreshPerUser, clock, 0),
 		// A full bucket and one token back per lifetime + 1 h: exactly DemoAssistantMessages
 		// before the user is deleted.
 		demoAsk: mw.NewLimiter(mw.Policy{Events: config.DemoAssistantMessages,

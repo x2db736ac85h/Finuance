@@ -29,6 +29,8 @@ var (
 	SecondStepPerUser     = Policy{Events: 10, Per: 10 * time.Minute} // codes at the second step of signing in (ADR 0040)
 	UploadPerUser         = Policy{Events: 30, Per: time.Minute}      // uploads (Phase 6)
 	DemoPerIP             = Policy{Events: 5, Per: time.Hour}         // new demo users, per client IP (PLAN 19.1)
+	// asking the model servers for their state again instead of using the cached answer (AI-5)
+	StatusRefreshPerUser = Policy{Events: 6, Per: time.Minute}
 	// what one member writes into shared groups: every write is read by, and told to, the others (API-5)
 	SharedWritesPerUser  = Policy{Events: 120, Per: time.Minute}
 	SharedInvitesPerUser = Policy{Events: 30, Per: time.Hour}

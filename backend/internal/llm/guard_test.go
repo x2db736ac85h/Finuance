@@ -150,3 +150,36 @@ func TestTLSMinimum(t *testing.T) {
 		t.Errorf("TLS 1.1 server: %v", err)
 	}
 }
+
+// TestPublicErrorTextCarriesNothingOfTheServer: what a user who is not an administrator is told
+// about a model server's failure names no address, no key and none of the server's words (AI-4).
+func TestPublicErrorTextCarriesNothingOfTheServer(t *testing.T) {
+	leaky := []*Error{
+		statusError(401, []byte(`{"error":{"message":"Incorrect API key provided: sk-proj-abcd****wxyz"}}`)),
+		statusError(500, []byte(`internal error at http://10.0.0.5:11434/api/chat: model runner crashed`)),
+		statusError(429, []byte(`{"error":"quota exceeded for org-12345"}`)),
+		statusError(404, []byte(`{"error":{"message":"model 'secret-internal-model' not found"}}`)),
+		{Kind: KindUnreachable, Message: "dial tcp 192.168.1.20:1234: connect: connection refused"},
+		{Kind: KindUnreachable, Message: "address not allowed: 169.254.169.254 is not a private address"},
+		{Kind: KindBadResponse, Message: `x509: certificate is valid for gpu-box.internal, not models.example.com`},
+		{Kind: KindTimeout, Message: "the model didn't answer in time"},
+		{Kind: KindContextTooLong, Message: "prompt is too long: 9000 tokens > n_ctx 8192"},
+		{Kind: KindToolsRejected, Message: "registry.internal/m does not support tools"},
+	}
+	seen := map[Kind]string{}
+	for _, e := range leaky {
+		pub := e.Public()
+		for _, secret := range []string{"sk-proj", "10.0.0.5", "192.168", "169.254", "org-12345", "secret-internal", "gpu-box", "registry.internal", "http://", "n_ctx"} {
+			if strings.Contains(pub, secret) {
+				t.Errorf("%s: the public text %q carries %q", e.Kind, pub, secret)
+			}
+		}
+		if pub == "" || pub == e.Message && e.Kind != KindTimeout {
+			t.Errorf("%s: public text %q", e.Kind, pub)
+		}
+		if prev, ok := seen[e.Kind]; ok && prev != pub {
+			t.Errorf("%s has two public texts", e.Kind)
+		}
+		seen[e.Kind] = pub
+	}
+}

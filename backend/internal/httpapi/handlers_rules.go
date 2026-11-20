@@ -164,7 +164,7 @@ func (a *api) CreateRule(ctx context.Context, req gen.CreateRuleRequestObject) (
 	if err != nil {
 		return nil, err
 	}
-	a.auditAppliedAction(ctx, req.Params.XAssistantChat, req.Params.XAssistantProposal, "create_rule", 1)
+	a.auditAppliedAction(ctx, "create_rule", 1)
 	return gen.CreateRule201JSONResponse(ruleDTO(&r)), nil
 }
 

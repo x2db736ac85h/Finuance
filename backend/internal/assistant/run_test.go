@@ -170,7 +170,9 @@ func TestRunAutoFallsBackToPlanMode(t *testing.T) {
 	if got := names(evs); got != "mode,step,content,done" {
 		t.Fatalf("events %s", got)
 	}
-	if m := evs[0].Data.(ModeEvent); m.Mode != ModePlan || !strings.Contains(m.Reason, "does not support tools") {
+	// the reason is the fixed sentence for this kind of failure, not the server's own text, which
+	// names its registry and model path (AI-4)
+	if m := evs[0].Data.(ModeEvent); m.Mode != ModePlan || m.Reason != "This model can't look things up with tools." || strings.Contains(m.Reason, "registry") {
 		t.Errorf("mode = %+v", m)
 	}
 	if !strings.HasPrefix(text(evs, "content"), "Found **10**") {
@@ -282,7 +284,8 @@ func TestRunErrorIsStoredAndLeftOutOfHistory(t *testing.T) {
 	if names(evs) != "mode,error" {
 		t.Fatalf("events %s", names(evs))
 	}
-	if e := last(evs).Data.(ErrorEvent); e.Code != "upstream" || !strings.Contains(e.Message, "mock failure") {
+	// the user is told what kind of failure it was, never the server's own words (AI-4)
+	if e := last(evs).Data.(ErrorEvent); e.Code != "upstream" || e.Message != "The model server reported an error." || strings.Contains(e.Message, "mock failure") {
 		t.Errorf("error = %+v", e)
 	}
 	c, msgs, _ := re.chats.Get(re.ctx, re.user, chat)

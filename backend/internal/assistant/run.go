@@ -466,7 +466,7 @@ func kindOf(err error) string {
 func errText(err error) string {
 	var le *llm.Error
 	if errors.As(err, &le) {
-		return le.Message
+		return le.Public() // never the server's own text: it is shown to, and stored for, the user
 	}
 	return "Something went wrong while answering. Try again."
 }

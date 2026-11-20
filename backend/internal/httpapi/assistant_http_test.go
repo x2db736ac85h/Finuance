@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
@@ -383,15 +384,16 @@ func TestAssistantProposalHTTP(t *testing.T) {
 	if m := obj(t, ev[0], "meta"); m["action"] != "set_category" || num(m["rows"]) != 14 || m["proposal"] != key || len(m) != 3 {
 		t.Errorf("meta = %v (no names or filters)", m)
 	}
-	// create_rule is recorded too (without a proposal key it stays out of appliedProposals);
-	// requests without the header are ordinary edits
+	// A chat header without a proposal names no proposal that could be checked, so the request is an
+	// ordinary edit: nothing is recorded as the assistant's (AI-8; a chat id alone used to be enough
+	// to label any edit). Requests without headers are ordinary edits too.
 	b.header["X-Assistant-Chat"] = id
 	expect(t, b.do("POST", "/rules", map[string]any{"name": "Internet", "match": map[string]any{"filters": []any{
 		map[string]any{"column": "payee", "cond": "OPERATOR INTERNETU"}}}, "setCategoryId": nc.body["id"]}), 201, "")
 	delete(b.header, "X-Assistant-Chat")
 	expect(t, b.do("POST", "/transactions/bulk", map[string]any{"ids": ids[:1], "category": map[string]any{"reset": true}}), 200, "")
-	if ev := events(); len(ev) != 2 || obj(t, ev[0], "meta")["action"] != "create_rule" || len(applied()) != 1 {
-		t.Errorf("activity after create_rule and a plain edit = %v", ev)
+	if ev := events(); len(ev) != 1 || obj(t, ev[0], "meta")["action"] != "set_category" || len(applied()) != 1 {
+		t.Errorf("activity after a rule made with a chat header alone and a plain edit = %v", ev)
 	}
 	if strings.Contains(e.logs.String(), "OPERATOR") {
 		t.Error("a payee reached the logs")
@@ -406,4 +408,37 @@ func TestAssistantProposalHTTP(t *testing.T) {
 		t.Errorf("bad header = %d", r.code)
 	}
 	delete(b.header, "X-Assistant-Chat")
+}
+
+// TestStatusRefreshIsLimited: asking for the model servers' state afresh really asks them a few
+// times a minute per user; after that the cached answer is served, with the same body (AI-5).
+func TestStatusRefreshIsLimited(t *testing.T) {
+	e, mock := mockEnv(t, nil)
+	b, _ := demoBrowser(t, e)
+	expect(t, b.do("GET", "/assistant/status", nil), 200, "")
+	base := mock.ModelLists()
+	var last resp
+	for range 6 {
+		last = b.do("GET", "/assistant/status?refresh=true", nil)
+		expect(t, last, 200, "")
+	}
+	asked := mock.ModelLists() - base
+	if asked < 6 {
+		t.Fatalf("six refreshes asked the server %d times", asked)
+	}
+	for range 20 {
+		r := b.do("GET", "/assistant/status?refresh=true", nil)
+		expect(t, r, 200, "")
+		if r.raw != last.raw {
+			t.Fatalf("the cached answer differs: %s", r.raw)
+		}
+	}
+	if more := mock.ModelLists() - base - asked; more != 0 {
+		t.Errorf("twenty more refreshes within the minute asked the server %d times, want 0", more)
+	}
+	e.clock.Add(time.Minute)
+	expect(t, b.do("GET", "/assistant/status?refresh=true", nil), 200, "")
+	if more := mock.ModelLists() - base - asked; more == 0 {
+		t.Error("a refresh a minute later did not ask the server")
+	}
 }

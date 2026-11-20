@@ -267,4 +267,31 @@ func TestAutoApplyHTTP(t *testing.T) {
 	if c := b.do("GET", "/ai-changes", nil).body["changes"].([]any)[0].(map[string]any); c["auto"] != true {
 		t.Errorf("change = %v (applied automatically)", c)
 	}
+	// The server decides what "automatic" may be (AI-1): once the kind is switched off, the same
+	// request is refused when it claims to be automatic and accepted as an ordinary click.
+	expect(t, b.do("PUT", "/assistant/settings", map[string]any{"retentionDays": 2, "cloudConsent": []any{}, "autoApply": []any{"set_group"}}), 200, "")
+	ask = b.do("POST", "/assistant/chats/"+chat+"/messages", map[string]any{"text": `put "OPERATOR INTERNETU" in Rachunki`, "settings": map[string]any{"mode": "auto", "think": "auto"}})
+	evs = parseSSE(t, ask.raw)
+	p = obj(t, evs[slicesIndexEv(evs, "step")].data, "proposal")
+	changes := len(b.do("GET", "/ai-changes", nil).body["changes"].([]any))
+	b.header["X-Assistant-Chat"], b.header["X-Assistant-Proposal"], b.header["X-Assistant-Auto"] = chat, p["key"].(string), "true"
+	body := map[string]any{"ids": p["ids"], "category": map[string]any{"id": p["categoryId"]}}
+	expect(t, b.do("POST", "/transactions/bulk", body), 403, "forbidden")
+	if n := len(b.do("GET", "/ai-changes", nil).body["changes"].([]any)); n != changes {
+		t.Errorf("a refused automatic apply was recorded: %d changes, had %d", n, changes)
+	}
+	delete(b.header, "X-Assistant-Auto")
+	expect(t, b.do("POST", "/transactions/bulk", body), 200, "")
+	delete(b.header, "X-Assistant-Chat")
+	delete(b.header, "X-Assistant-Proposal")
+	// still one automatic change: the one made while the kind was switched on
+	autos := 0
+	for _, c := range b.do("GET", "/ai-changes", nil).body["changes"].([]any) {
+		if c.(map[string]any)["auto"] == true {
+			autos++
+		}
+	}
+	if autos != 1 {
+		t.Errorf("%d changes recorded as automatic, want 1", autos)
+	}
 }

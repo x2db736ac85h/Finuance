@@ -197,6 +197,12 @@ func (c *Config) demoLimits(p *parser) {
 	if !c.DemoAssistant {
 		c.AIConnections = nil
 	}
+	// anonymous visitors never talk to a provider that bills per request or sees their questions
+	for i := range c.AIConnections {
+		if c.AIConnections[i].Cloud {
+			p.fail("FINUANCE_DEMO_ASSISTANT", fmt.Sprintf("the demo's assistant can't use a cloud connection (%q); give it a local model server", c.AIConnections[i].Name))
+		}
+	}
 }
 
 type parser struct {

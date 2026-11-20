@@ -49,7 +49,10 @@ func (a *api) maxRows() int {
 func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusRequestObject) (gen.AssistantStatusResponseObject, error) {
 	out := gen.AssistantStatus200JSONResponse{Enabled: a.conns().Enabled(), Connections: []gen.AssistantConnection{}, MaxRowsLimit: a.maxRows(),
 		Choice: gen.AssistantStatusChoicePeople}
-	refresh := req.Params.Refresh != nil && *req.Params.Refresh
+	// A refresh asks every model server again. One user gets a few a minute; beyond that the
+	// cached answer is served, so a loop can't keep a GPU host or a provider's quota busy (AI-5).
+	refresh := req.Params.Refresh != nil && *req.Params.Refresh &&
+		a.limits.statusRefresh.Allow(identity(ctx).User.ID.String()) == nil
 	var list []assistant.ConnectionStatus
 	if a.ai != nil && !a.ai.Runner.Choice(ctx).People {
 		out.Choice = gen.AssistantStatusChoiceAdmin
@@ -68,7 +71,7 @@ func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusReques
 	for i := range list {
 		st := &list[i]
 		c := gen.AssistantConnection{Name: st.Name, Label: st.Label, Api: gen.AssistantConnectionApi(st.API), Cloud: st.Cloud,
-			Reachable: st.Reachable, Models: make([]gen.AssistantModel, 0, len(st.Models)), Error: assistantError(st.Err)}
+			Reachable: st.Reachable, Models: make([]gen.AssistantModel, 0, len(st.Models)), Error: publicAssistantError(st.Err)}
 		if st.DefaultModel != "" {
 			c.DefaultModel = &st.DefaultModel
 		}
@@ -88,11 +91,21 @@ func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusReques
 	return out, nil
 }
 
+// assistantError is a connection's error with the model server's own text, for administrators.
 func assistantError(e *llm.Error) *gen.AssistantError {
 	if e == nil {
 		return nil
 	}
 	return &gen.AssistantError{Kind: gen.AssistantErrorKind(e.Kind), Message: e.Message}
+}
+
+// publicAssistantError is the same error as every signed-in user sees it: the kind and a fixed
+// sentence, without addresses or the server's words (AI-4).
+func publicAssistantError(e *llm.Error) *gen.AssistantError {
+	if e == nil {
+		return nil
+	}
+	return &gen.AssistantError{Kind: gen.AssistantErrorKind(e.Kind), Message: e.Public()}
 }
 
 // errAssistantOff answers the assistant routes of an instance without connections.
@@ -465,16 +478,16 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 
 // auditAppliedAction records an applied assistant proposal in the activity log (PLAN 15.7/17.6,
 // ADR 0019): which chat, which proposal, what kind of change and how many rows. Never names,
-// filters or any other content. A request without X-Assistant-Chat is an ordinary edit.
-func (a *api) auditAppliedAction(ctx context.Context, chat *gen.AssistantChatHeader, proposal *gen.AssistantProposalHeader, action string, rows int) {
-	if chat == nil {
+// filters or any other content. It is recorded only for a request whose chat and proposal headers
+// were checked (aiOrigin: the proposal is one of that chat's, the chat the caller's own); a chat
+// header alone used to be enough to label any edit as the assistant's (AI-8). Anything else is an
+// ordinary edit.
+func (a *api) auditAppliedAction(ctx context.Context, action string, rows int) {
+	o, ok := ledger.AIOriginFrom(ctx)
+	if !ok {
 		return
 	}
-	meta := map[string]any{"action": action, "rows": rows}
-	if proposal != nil {
-		meta["proposal"] = *proposal
-	}
-	a.auditMe(ctx, ledger.AuditAssistantApplied, chat.String(), meta)
+	a.auditMe(ctx, ledger.AuditAssistantApplied, o.ChatID.String(), map[string]any{"action": action, "rows": rows, "proposal": o.ProposalKey})
 }
 
 func metaDTO(m assistant.Meta) gen.AssistantMeta {
