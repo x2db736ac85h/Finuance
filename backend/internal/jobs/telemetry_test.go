@@ -1,9 +1,12 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"slices"
 	"testing"
 	"time"
 
@@ -17,6 +20,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	dbtest "github.com/x2db736ac85h/finuance/backend/testutil"
 )
@@ -188,5 +193,36 @@ func TestJobTraceEndToEnd(t *testing.T) {
 	}
 	if !sql {
 		t.Error("no SQL span under the job span")
+	}
+}
+
+// TestJobLinesNameTheJob: every line a job writes carries job_id, kind and attempt, and the job
+// span's trace_id and span_id, without the worker's code adding them (PLAN 24.2).
+func TestJobLinesNameTheJob(t *testing.T) {
+	rec, tp := recorder()
+	tel := NewTelemetry(tp, propagation.TraceContext{}, nil)
+	var b bytes.Buffer
+	ctx := observability.WithLogger(context.Background(), observability.NewLogger(&b, config.EnvProd, slog.LevelInfo))
+
+	job := &rivertype.JobRow{ID: 42, Kind: "commit_import", Attempt: 3, Queue: "default"}
+	if err := tel.Work(ctx, job, func(ctx context.Context) error {
+		observability.Logger(ctx).InfoContext(ctx, "import committed", "new", 5)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var line map[string]any
+	if err := json.Unmarshal(b.Bytes(), &line); err != nil {
+		t.Fatalf("%q: %v", b.String(), err)
+	}
+	span := spanNamed(t, rec, "job commit_import")
+	if line["job_id"] != float64(42) || line["kind"] != "commit_import" || line["attempt"] != float64(3) ||
+		line["trace_id"] != span.SpanContext().TraceID().String() || line["span_id"] != span.SpanContext().SpanID().String() {
+		t.Errorf("job line = %v", line)
+	}
+	for k := range line {
+		if k != "new" && !slices.Contains(observability.LogFields, k) {
+			t.Errorf("field %q is not in the contract", k)
+		}
 	}
 }

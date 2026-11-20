@@ -124,7 +124,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		if !ok {
 			return 1
 		}
-		return fail(app.Migrate(ctx, cfg, fs.Arg(0), func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
+		log := observability.NewLogger(stderr, cfg.Env, cfg.LogLevel)
+		return fail(app.Migrate(ctx, cfg, fs.Arg(0), log, func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
 	case "healthcheck":
 		cfg, ok := load(config.ForHealthcheck)
 		if !ok {

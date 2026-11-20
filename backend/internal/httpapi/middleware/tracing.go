@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
@@ -20,6 +22,7 @@ func Tracing(t *observability.Tracing) Middleware {
 			otelhttp.WithTracerProvider(t.Provider),
 			otelhttp.WithPropagators(t.Propagator),
 			otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }),
+			otelhttp.WithFilter(func(r *http.Request) bool { return !IsProbe(r) }), // PLAN 24.3
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				if r.Pattern == "" {
 					return r.Method
@@ -44,10 +47,18 @@ func Route(next http.Handler) http.Handler {
 		r, info := withInfo(r)
 		span := trace.SpanFromContext(r.Context())
 		if sc := span.SpanContext(); sc.HasTraceID() {
-			info.TraceID = sc.TraceID().String()
+			info.TraceID, info.SpanID = sc.TraceID().String(), sc.SpanID().String()
 		}
+		panicked := true
+		defer func() {
+			info.Route = routeName(r.Pattern)
+			span.SetName(info.Route) // otelhttp names it the same when it ends (Tracing)
+			if panicked {            // otelhttp sets the status from what was written, and nothing was (PLAN 24.1)
+				span.SetStatus(codes.Error, "panic")
+				span.SetAttributes(semconv.HTTPResponseStatusCode(http.StatusInternalServerError))
+			}
+		}()
 		next.ServeHTTP(w, r)
-		info.Route = routeName(r.Pattern)
-		span.SetName(info.Route) // otelhttp names it the same when it ends (Tracing)
+		panicked = false
 	})
 }

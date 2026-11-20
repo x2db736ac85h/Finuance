@@ -60,7 +60,7 @@ func (w *LegacyImportWorker) Work(ctx context.Context, job *river.Job[LegacyImpo
 		log.WarnContext(ctx, "legacy migration skipped", "run", a.ID, "error", err)
 		return nil
 	case job.Attempt >= job.MaxAttempts:
-		log.ErrorContext(ctx, "legacy migration failed", "run", a.ID, "attempt", job.Attempt, "error", err)
+		log.ErrorContext(ctx, "legacy migration failed", "run", a.ID, "error", err)
 		if ferr := w.Migrator.Fail(context.WithoutCancel(ctx), a.UserID, a.ID, legacyFailedMessage); ferr != nil {
 			return errors.Join(err, ferr)
 		}

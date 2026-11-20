@@ -122,6 +122,8 @@ type SeedInput struct {
 	// the password from Password; users that already have a demo account are skipped.
 	Users    int
 	Password io.Reader
+	// Clock decides which day the demo data ends on (nil: the system's clock).
+	Clock platform.Clock
 }
 
 // SeedDemo gives the user with this email the demo account and its committed demo data
@@ -135,7 +137,11 @@ func SeedDemo(ctx context.Context, cfg config.Config, in SeedInput, out func(for
 	defer pool.Close()
 	st := store.New(pool)
 	svc := NewAuth(st, cfg)
-	led := ledger.New(st, platform.SystemClock{})
+	var clock platform.Clock = platform.SystemClock{}
+	if in.Clock != nil {
+		clock = in.Clock
+	}
+	led := ledger.New(st, clock)
 	days := 0
 	if in.Rows > 0 {
 		days = int(math.Ceil(float64(in.Rows) / ledger.DemoRowsPerDay))

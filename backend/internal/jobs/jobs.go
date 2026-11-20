@@ -36,7 +36,7 @@ type NoopWorker struct {
 
 // Work logs and returns.
 func (w *NoopWorker) Work(ctx context.Context, job *river.Job[NoopArgs]) error {
-	observability.Logger(ctx).DebugContext(ctx, "noop job", "id", job.ID)
+	observability.Logger(ctx).DebugContext(ctx, "noop job")
 	return nil
 }
 

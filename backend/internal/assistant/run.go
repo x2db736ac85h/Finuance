@@ -20,6 +20,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 )
@@ -507,7 +508,7 @@ func (run *Run) finish(ctx context.Context, emit func(Event), span trace.Span, f
 	case fallback:
 		result = "fallback_plan"
 	}
-	run.observe(span, mode, result, "", t, t0)
+	run.observe(ctx, span, mode, result, "", t, t0)
 }
 
 func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, code string, err error, mode string, t0 time.Time, t *turn) {
@@ -529,9 +530,9 @@ func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, cod
 	emit(Event{"error", ErrorEvent{TurnError: te, MessageSeq: seq}})
 	span.SetStatus(codes.Error, code)
 	if code == "internal" {
-		run.r.cfg.Logger.ErrorContext(ctx, "assistant run failed", "error", err)
+		observability.LoggerOr(ctx, run.r.cfg.Logger).ErrorContext(ctx, "assistant run failed", "error", err)
 	}
-	run.observe(span, mode, "error", code, t, t0)
+	run.observe(ctx, span, mode, "error", code, t, t0)
 }
 
 func (run *Run) store(ctx context.Context, msgs []Message, use *RunUsage) (int, error) {
@@ -563,7 +564,7 @@ func (run *Run) usage(t *turn, final Message) *RunUsage {
 }
 
 // observe records the run's metrics and its one log line (no prompt, answer or tool data).
-func (run *Run) observe(span trace.Span, mode, result, errKind string, t *turn, t0 time.Time) {
+func (run *Run) observe(ctx context.Context, span trace.Span, mode, result, errKind string, t *turn, t0 time.Time) {
 	m := run.r.cfg.Metrics
 	d := run.r.cfg.Clock.Now().Sub(t0)
 	m.Runs.WithLabelValues(mode, result).Inc()
@@ -575,7 +576,7 @@ func (run *Run) observe(span trace.Span, mode, result, errKind string, t *turn, 
 	m.Rounds.Observe(float64(rounds))
 	m.Tokens.Observe(float64(sent))
 	span.SetAttributes(attribute.String("assistant.mode", mode), attribute.String("assistant.result", result), attribute.Int("assistant.rounds", rounds))
-	run.r.cfg.Logger.Info("assistant run", "user", platform.UserHash(run.userID), "connection", run.conn.Name, "model", run.model.ID,
+	observability.LoggerOr(ctx, run.r.cfg.Logger).InfoContext(ctx, "assistant run", "user", platform.UserHash(run.userID), "connection", run.conn.Name, "model", run.model.ID,
 		"mode", mode, "result", result, "error_kind", errKind, "rounds", rounds, "tools", tools, "approx_tokens", sent,
 		"duration_ms", d.Milliseconds())
 }
@@ -611,13 +612,27 @@ func (run *Run) temperature() *float64 {
 // complete sends one model request, streaming its text to emit. A server that rejects the
 // temperature or the reasoning setting (some reasoning models do) is asked again without it, once.
 func (run *Run) complete(ctx context.Context, emit func(Event), t *turn, req llm.Request, show bool) (llm.Result, error) {
-	ctx, span := run.r.tracer.Start(ctx, "assistant.model_request", trace.WithAttributes(attribute.Int("assistant.round", t.rounds+1)))
+	// The client span of one request to the model server (PLAN 24.4). Attribute names follow the
+	// OpenTelemetry GenAI conventions (in development; re-checked 2026-11-20). It never carries the
+	// prompt or the answer, and no trace context is sent to the model server: its client has no
+	// propagator, and a cloud provider has no use for our trace ids.
+	ctx, span := run.r.tracer.Start(ctx, "llm.request", trace.WithSpanKind(trace.SpanKindClient), trace.WithAttributes(
+		attribute.String("gen_ai.operation.name", "chat"),
+		attribute.String("gen_ai.provider.name", string(run.conn.Client.API())),
+		attribute.String("gen_ai.request.model", run.model.ID),
+		attribute.Bool("gen_ai.request.stream", true),
+		attribute.String("assistant.connection", run.conn.Name),
+		attribute.Int("assistant.round", t.rounds+1)))
 	defer span.End()
 	req.Model, req.Caps, req.Thinking = run.model.ID, run.model.Caps, run.req.Think
 	t.content.Reset()
 	t.reasoning.Reset()
 	streamed := false
+	sent, first := time.Now(), time.Duration(0)
 	onDelta := func(d llm.Delta) {
+		if first == 0 && (d.Reasoning != "" || d.Content != "") {
+			first = time.Since(sent)
+		}
 		if d.Reasoning != "" {
 			streamed = true
 			t.reasoning.WriteString(d.Reasoning)
@@ -639,6 +654,13 @@ func (run *Run) complete(ctx context.Context, emit func(Event), t *turn, req llm
 	if err != nil {
 		result = kindOf(err)
 		span.SetStatus(codes.Error, result)
+		span.SetAttributes(attribute.String("error.type", result))
+	}
+	if first > 0 {
+		span.SetAttributes(attribute.Float64("gen_ai.response.time_to_first_chunk", first.Seconds()))
+	}
+	if res.Usage.Input+res.Usage.Output > 0 { // only what the server reported, never the runner's estimate
+		span.SetAttributes(attribute.Int("gen_ai.usage.input_tokens", res.Usage.Input), attribute.Int("gen_ai.usage.output_tokens", res.Usage.Output))
 	}
 	run.r.cfg.Metrics.Upstream.WithLabelValues(run.conn.Name, result).Inc()
 	t.usage.Input += res.Usage.Input
@@ -731,6 +753,7 @@ func (run *Run) step(ctx context.Context, emit func(Event), sc Scope, t *turn, n
 		out, err = run.r.cfg.Tools.Run(ctx, run.userID, sc, name, rawArgs)
 		if err != nil {
 			run.r.cfg.Metrics.ToolCalls.WithLabelValues(knownTool(name), "error").Inc()
+			span.SetStatus(codes.Error, "tool failed") // a fixed text: the error can quote the arguments
 			return Outcome{}, err
 		}
 		t.cache[key] = out

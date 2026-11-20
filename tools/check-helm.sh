@@ -137,6 +137,16 @@ done
 # Deploy by digest (PLAN 23.1): with image.digests set every container runs registry/name@sha256:…
 # and no tag; without them, the tag. The homelab's values carry digests.
 d1="sha256:$(printf '1%.0s' $(seq 64))" d2="sha256:$(printf '2%.0s' $(seq 64))"
+# With tracing on, the api and the worker name their pod in every span (PLAN 24.4); without it
+# the chart sets nothing.
+traced=$(helm template t "$app" --kube-version "$K8S" -f "$app/ci/homelab-like-values.yaml" --set otel.resourceAttributes.region=home)
+n=$(grep -c 'value: "service.instance.id=$(POD_NAME),k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE),region=home"' <<<"$traced" || true)
+[[ $n == 2 ]] || { echo "check-helm: OTEL_RESOURCE_ATTRIBUTES is set in $n containers, want 2 (api, worker)" >&2; exit 1; }
+grep -q 'FINUANCE_OTEL_SAMPLE_RATIO: "1"' <<<"$traced" || { echo "check-helm: no FINUANCE_OTEL_SAMPLE_RATIO with tracing on" >&2; exit 1; }
+if helm template t "$app" --kube-version "$K8S" -f "$app/ci/minimal-values.yaml" | grep -q 'OTEL_'; then
+  echo "check-helm: the chart sets tracing variables although otel.endpoint is empty" >&2; exit 1
+fi
+
 by_digest=$(helm template t "$app" --kube-version "$K8S" -f "$app/ci/homelab-like-values.yaml" --set image.digests.api="$d1" --set image.digests.web="$d2" | grep -E '^ +image: ' | sort | uniq -c | tr -s ' ')
 want=" 3 image: ghcr.io/x2db736ac85h/finuance-api@$d1
  1 image: ghcr.io/x2db736ac85h/finuance-web@$d2"
@@ -204,6 +214,8 @@ must_fail "certManager has no issuer" "ingress.tls.clusterIssuer is required" "$
 must_fail "traefik TLS has no resolver" "ingress.tls.certResolver is required" "$app" "${o[@]}" --set ingress.tls.mode=traefik
 must_fail "an unknown TLS mode is set" "/ingress/tls/mode" "$app" "${o[@]}" --set ingress.tls.mode=acme
 must_fail "the OTLP endpoint has no path" "/otel/endpoint" "$app" "${o[@]}" --set ingress.tls.mode=none --set otel.endpoint=http://tempo.monitoring.svc:4318
+must_fail "the trace sample ratio is above 1" "/otel/sampleRatio" "$app" "${o[@]}" --set ingress.tls.mode=none --set otel.sampleRatio=2
+must_fail "a resource attribute carries a comma" "/otel/resourceAttributes" "$app" "${o[@]}" --set ingress.tls.mode=none --set 'otel.resourceAttributes.region=a\,b'
 must_fail "a developer link carries a password" "developer" "$app" "${o[@]}" --set ingress.tls.mode=none \
   --set developer.enabled=true --set 'developer.links[0].name=Grafana' --set 'developer.links[0].url=https://admin:pw@grafana.example.com'
 must_fail "a developer link isn't http(s)" "developer" "$app" "${o[@]}" --set ingress.tls.mode=none \

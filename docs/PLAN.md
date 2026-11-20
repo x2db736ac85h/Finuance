@@ -499,6 +499,7 @@ httpapi                      : maps HTTP ⇄ domain; no SQL strings
 | `FINUANCE_MAX_UPLOAD_BYTES` | `20971520` | 20 MiB per file |
 | `FINUANCE_MAX_LEGACY_IMPORT_BYTES` | `209715200` | 200 MiB per legacy import upload (all files + manifest) |
 | `FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT` | empty | Tracing disabled when empty |
+| `FINUANCE_OTEL_SAMPLE_RATIO` | `1` | The share of requests that are traced, 0 to 1 (Phase 24); a job follows the request that queued it |
 | `FINUANCE_LOG_LEVEL` | `info` | |
 | `FINUANCE_TRUSTED_PROXIES` | empty | CIDRs allowed to set `X-Forwarded-For` |
 | `FINUANCE_AI_BASE_URL` | empty | OpenAI-compatible base URL, e.g. `http://ollama.ollama.svc:11434/v1`. Empty = assistant disabled |
@@ -1998,15 +1999,15 @@ Write `docs/THREAT-MODEL.md` in Phase 5 and update it in Phase 16. Baseline cont
 
 ### 8.2 Observability
 
-* **Logs:** `slog` JSON with fields `time, level, msg, request_id, trace_id, user_id (hashed), route, status, duration_ms`. One access-log line per request. Never log bodies.
+* **Logs:** `slog` JSON with fields `time, level, msg, request_id, trace_id, span_id, user (hashed), route, method, status, bytes, duration_ms, client_ip`, and `job_id, kind, attempt` on a job's lines (the contract: `docs/observability.md`, Phase 24). One access-log line per request. Never log bodies.
 * **Metrics** (Prometheus, admin port):
 
   | Metric | Labels |
   |---|---|
   | `http_server_requests_total` | `route`, `method`, `status_class` |
   | `http_server_request_duration_seconds` (histogram) | `route` |
-  | `finuance_imports_total` | `result` = committed\|failed\|duplicate_file |
-  | `finuance_import_rows_total` | `outcome` = new\|duplicate\|error |
+  | `finuance_imports_total` | `result` = committed\|failed\|retried |
+  | `finuance_import_rows_total` | `kind` = new\|duplicate\|error |
   | `finuance_import_commit_duration_seconds` | |
   | `finuance_jobs_total` | `kind`, `result` |
   | `finuance_job_duration_seconds` | `kind` |

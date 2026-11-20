@@ -19,7 +19,12 @@ linters:
     - unparam
     - prealloc
     - gocritic
+    - sloglint
   settings:
+    sloglint:
+      # a log call with a context in scope passes it on: that is what puts trace_id and span_id on
+      # the line (observability.TraceHandler, PLAN 24.2)
+      context: scope
     revive:
       rules:
         - name: exported

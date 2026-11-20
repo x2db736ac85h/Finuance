@@ -83,3 +83,19 @@ readOnlyRootFilesystem: true
 capabilities:
   drop: [ALL]
 {{- end -}}
+
+{{/*
+The pod's identity for its spans (PLAN 24.4): the OpenTelemetry SDK reads OTEL_RESOURCE_ATTRIBUTES.
+The pod name and namespace come from the pod's own fields; otel.resourceAttributes adds to them.
+Only with tracing on.
+*/}}
+{{- define "finuance.otelEnv" -}}
+{{- if .Values.otel.endpoint }}
+- name: POD_NAME
+  valueFrom: { fieldRef: { fieldPath: metadata.name } }
+- name: POD_NAMESPACE
+  valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+- name: OTEL_RESOURCE_ATTRIBUTES
+  value: "service.instance.id=$(POD_NAME),k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE){{ range $k, $v := .Values.otel.resourceAttributes }},{{ $k }}={{ $v }}{{ end }}"
+{{- end }}
+{{- end -}}

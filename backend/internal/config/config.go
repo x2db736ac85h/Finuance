@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/netip"
 	"net/url"
@@ -49,6 +50,7 @@ type Config struct {
 	MaxUploadBytes       int64
 	MaxLegacyImportBytes int64
 	OTLPEndpoint         string
+	OTLPSampleRatio      float64 // share of requests traced, 0 to 1 (FINUANCE_OTEL_SAMPLE_RATIO; default 1)
 	LogLevel             slog.Level
 	TrustedProxies       []netip.Prefix
 	// AIConnections are the model servers the assistant may use; none = assistant disabled.
@@ -131,6 +133,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		MaxUploadBytes:       int64(p.int("FINUANCE_MAX_UPLOAD_BYTES", 20<<20, 1024, 1<<31)),
 		MaxLegacyImportBytes: int64(p.int("FINUANCE_MAX_LEGACY_IMPORT_BYTES", 200<<20, 1024, 1<<33)),
 		OTLPEndpoint:         p.str("FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+		OTLPSampleRatio:      p.ratio("FINUANCE_OTEL_SAMPLE_RATIO", 1),
 		LogLevel:             p.level("FINUANCE_LOG_LEVEL", slog.LevelInfo),
 		TrustedProxies:       p.prefixes("FINUANCE_TRUSTED_PROXIES"),
 		AITimeout:            p.duration("FINUANCE_AI_TIMEOUT", 120*time.Second),
@@ -243,6 +246,20 @@ func (p *parser) int(name string, def, lo, hi int) int {
 		return def
 	}
 	return n
+}
+
+// ratio is a share between 0 and 1.
+func (p *parser) ratio(name string, def float64) float64 {
+	v, ok := p.raw(name)
+	if !ok {
+		return def
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil || math.IsNaN(f) || f < 0 || f > 1 {
+		p.fail(name, fmt.Sprintf("must be a number between 0 and 1, got %q", v))
+		return def
+	}
+	return f
 }
 
 func (p *parser) bool(name string, def bool) bool {

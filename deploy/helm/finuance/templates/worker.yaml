@@ -52,6 +52,9 @@ spec:
             {{- end }}
           env:
             {{- include "finuance.dbPassword" .Values.database.app | nindent 12 }}
+            {{- with (include "finuance.otelEnv" .) }}
+            {{- . | nindent 12 }}
+            {{- end }}
             {{- if $assistantFile }}
             # The worker writes the assistant's digests (ADR 0033) with the same connections.
             - name: FINUANCE_AI_CONNECTIONS_FILE
