@@ -1,8 +1,22 @@
+{{- /* Without the policies any pod of the cluster reaches the api, so a range of trusted proxies
+would let each of them choose the client address the api believes (limits per address, the
+addresses in the activity log). */ -}}
+{{- if not .Values.networkPolicy.enabled }}
+{{- range (splitList "," (.Values.trustedProxies | default "")) }}
+{{- $p := trim . }}
+{{- if and (contains "/" $p) (not (or (hasSuffix "/32" $p) (hasSuffix "/128" $p))) (not $.Values.networkPolicy.allowWideTrustedProxies) }}
+{{- fail (printf "trustedProxies names a range (%s) while networkPolicy.enabled is false: every pod in that range could forge the client address. Name single addresses, switch the policies on, or set networkPolicy.allowWideTrustedProxies if something else keeps other pods away from the api" $p) }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- if .Values.networkPolicy.enabled }}
 {{- $np := .Values.networkPolicy -}}
 {{- $sel := dict "app.kubernetes.io/name" .Chart.Name "app.kubernetes.io/instance" .Release.Name -}}
-# Default deny for every Finuance pod, then one policy per component (PLAN 16.1). Kubelet probes
-# come from the node and are not subject to these policies.
+# Default deny, then one policy per component (PLAN 16.1). With networkPolicy.namespaceWide the
+# deny selects every pod of the namespace, whatever its labels: a pod that is not one of the
+# chart's components (or covered by another chart's policy, like the database's) reaches nothing
+# and is reached by nothing. Kubelet probes come from the node and are not subject to these
+# policies.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -10,9 +24,13 @@ metadata:
   labels:
     {{- include "finuance.labels" . | nindent 4 }}
 spec:
+  {{- if $np.namespaceWide }}
+  podSelector: {}
+  {{- else }}
   podSelector:
     matchLabels:
       {{- toYaml $sel | nindent 6 }}
+  {{- end }}
   policyTypes: [Ingress, Egress]
 ---
 apiVersion: networking.k8s.io/v1
@@ -112,10 +130,10 @@ spec:
 {{- end }}
 
 {{- define "finuance.dnsEgress" -}}
+{{- $dns := .Values.networkPolicy.dns -}}
 - to:
-    - namespaceSelector: {}
-      podSelector:
-        matchLabels: { k8s-app: kube-dns }
+    - namespaceSelector: {{- toYaml $dns.namespaceSelector | nindent 8 }}
+      podSelector: {{- toYaml $dns.podSelector | nindent 8 }}
   ports:
     - { port: 53, protocol: UDP }
     - { port: 53, protocol: TCP }
@@ -124,8 +142,11 @@ spec:
 {{- define "finuance.dbEgress" -}}
 {{- $db := .Values.networkPolicy.database -}}
 - to:
-    - namespaceSelector: {{- toYaml $db.namespaceSelector | nindent 8 }}
-      podSelector: {{- toYaml $db.podSelector | nindent 8 }}
+    {{- /* without a namespaceSelector the peer is a pod of the release's own namespace */}}
+    - podSelector: {{- toYaml $db.podSelector | nindent 8 }}
+      {{- with $db.namespaceSelector }}
+      namespaceSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
   ports: [{ port: {{ .Values.database.port }}, protocol: TCP }]
 {{- end -}}
 

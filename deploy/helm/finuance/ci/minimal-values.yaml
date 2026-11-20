@@ -10,3 +10,5 @@ api:
     enabled: false
 networkPolicy:
   enabled: false
+# no policies, so no range of trusted proxies (the chart refuses one): the ingress controller's address
+trustedProxies: "10.42.0.8/32"

@@ -82,12 +82,20 @@ recovery:
 
 networkPolicy:
   enabled: true
-  # Pods that may connect on 5432: the Finuance chart's pods (api, worker, migrate).
+  # Pods that may connect on 5432: the Finuance chart's api, worker and migration job, in this
+  # namespace. The web pods and anything else carrying the chart's name are not among them.
   clients:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: finuance
-  # The namespace of the CloudNativePG operator and the Barman Cloud plugin.
+        matchExpressions:
+          - { key: app.kubernetes.io/component, operator: In, values: [api, worker, migrate] }
+  # The namespace of the CloudNativePG operator and the Barman Cloud plugin (ports 8000 and 5432).
   operatorNamespace: cnpg-system
-  # The namespace allowed to scrape the exporter on 9187. Empty: none.
+  # The namespace allowed to scrape the exporter on 9187, and which of its pods. Empty: none.
   monitoringNamespace: ""
+  monitoringPodSelector:
+    matchLabels: { app.kubernetes.io/name: prometheus }
+  # What the database pods may reach. Empty: anywhere (see templates/networkpolicy.yaml); a list
+  # of NetworkPolicy egress rules replaces that.
+  egress: []

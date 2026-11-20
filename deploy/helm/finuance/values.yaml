@@ -23,7 +23,8 @@ logLevel: info
 # New accounts can sign up when true; otherwise an admin creates them (finuance admin create-user).
 allowSignup: false
 # Addresses whose X-Forwarded-For is trusted (the ingress controller's pods). k3s pods use
-# 10.42.0.0/16 by default.
+# 10.42.0.0/16 by default. A range is safe only because the network policies let nothing but the
+# ingress controller and the web pods reach the api; the chart refuses a range with them off.
 trustedProxies: "10.42.0.0/16"
 # Upload limit for one CSV file (bytes); the ingress must allow at least this much.
 maxUploadBytes: 20971520
@@ -175,22 +176,39 @@ ingress:
 
 networkPolicy:
   enabled: true
+  # The default deny selects every pod of the release's namespace, not only this chart's: a pod
+  # there that no policy names has no network at all. Anything else that runs in the namespace
+  # needs its own policy (the database chart in deploy/k8s/db brings one for its pods). Set it to
+  # false only while such a policy is missing.
+  namespaceWide: true
+  # Only with enabled: false: accept a range in trustedProxies although nothing keeps other pods
+  # of the cluster away from the api (the chart refuses that otherwise).
+  allowWideTrustedProxies: false
+  # Where names are resolved: the cluster's DNS pods, in its own namespace only.
+  dns:
+    namespaceSelector:
+      matchLabels: { kubernetes.io/metadata.name: kube-system }
+    podSelector:
+      matchLabels: { k8s-app: kube-dns }
   # Who may reach web and api: the ingress controller's pods.
   ingressController:
     namespaceSelector:
       matchLabels: { kubernetes.io/metadata.name: kube-system }
     podSelector:
       matchLabels: { app.kubernetes.io/name: traefik }
-  # The database pods (CloudNativePG labels its instances with cnpg.io/cluster).
+  # The database pods (CloudNativePG labels its instances with cnpg.io/cluster). An empty
+  # namespaceSelector means the release's own namespace; name another one with matchLabels.
   database:
     namespaceSelector: {}
     podSelector:
       matchLabels: { cnpg.io/cluster: finuance-db }
-  # Who may scrape the metrics ports (9090); empty: nobody.
+  # Who may scrape the metrics ports (9090): Prometheus's pods and nothing else in that namespace.
+  # The port has no sign-in and must never be exposed outside the cluster. Both empty: nobody.
   monitoring:
     namespaceSelector:
       matchLabels: { kubernetes.io/metadata.name: monitoring }
-    podSelector: {}
+    podSelector:
+      matchLabels: { app.kubernetes.io/name: prometheus }
 
 podMonitor:
   # Scrapes the api and the worker (job finuance-api / finuance-worker); needs the Prometheus

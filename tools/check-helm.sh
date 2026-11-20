@@ -82,6 +82,28 @@ echo "== assistant connections file is mounted where it is read"
   | .name' "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a container reads the developer links without mounting them"; exit 1; }
 "$YQ" -e 'select(.kind == "Deployment" and .metadata.name != "finuance-api") | .spec.template.spec.containers[].env[]? | select(.name == "FINUANCE_DEVELOPER_LINKS_FILE")' \
   "$out/app-homelab-like-values.yaml" >/dev/null 2>&1 && { echo "check-helm: a component other than the api reads the developer links"; exit 1; }
+# NetworkPolicies (register OPS-1, OPS-9, SYS-1): the default deny selects every pod of the
+# namespace; names are resolved in kube-system only; the database is a pod of the release's own
+# namespace; the metrics port is for Prometheus's pods; the database admits the api, the worker
+# and the migration job and says what its own pods may reach.
+np="$out/app-homelab-like-values.yaml"
+[ "$("$YQ" -N -o json -I0 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-default-deny") | .spec.podSelector' "$np")" = '{}' ] ||
+  { echo "check-helm: the default deny does not select every pod of the namespace"; exit 1; }
+[ "$("$YQ" -N 'select(.kind == "NetworkPolicy") | .spec.egress[]?.to[]? | select(.podSelector.matchLabels."k8s-app" == "kube-dns") | .namespaceSelector.matchLabels."kubernetes.io/metadata.name"' "$np" | sort -u)" = kube-system ] ||
+  { echo "check-helm: a DNS rule reaches beyond kube-system"; exit 1; }
+"$YQ" -N 'select(.kind == "NetworkPolicy") | .spec.egress[]?.to[]? | select(.podSelector.matchLabels."cnpg.io/cluster") | has("namespaceSelector")' "$np" | grep -q true &&
+  { echo "check-helm: the database rule reaches other namespaces"; exit 1; }
+[ "$("$YQ" -N 'select(.kind == "NetworkPolicy") | .spec.ingress[]? | select(.ports[0].port == 9090) | .from[0].podSelector.matchLabels."app.kubernetes.io/name"' "$np" | sort -u)" = prometheus ] ||
+  { echo "check-helm: the metrics port is open to more than Prometheus's pods"; exit 1; }
+"$YQ" -N -o json -I0 'select(.kind == "NetworkPolicy") | .spec | .. | select(tag == "!!map" and has("namespaceSelector")) | .namespaceSelector' "$np" "$out/db-backup-values.yaml" | grep -qx '{}' &&
+  { echo "check-helm: a NetworkPolicy rule selects every namespace"; exit 1; }
+dbnp="$out/db-homelab.yaml"
+[ "$("$YQ" -N -o json -I0 'select(.kind == "NetworkPolicy") | .spec.ingress[0].from[0].podSelector.matchExpressions[0].values' "$dbnp")" = '["api","worker","migrate"]' ] ||
+  { echo "check-helm: the database admits more than the api, the worker and the migration job"; exit 1; }
+[ "$("$YQ" -N -o json -I0 'select(.kind == "NetworkPolicy") | .spec.policyTypes' "$dbnp")" = '["Ingress","Egress"]' ] ||
+  { echo "check-helm: the database's policy has no egress rule (the namespace's default deny would cut its pods off)"; exit 1; }
+"$YQ" -N 'select(.kind == "NetworkPolicy") | .spec.ingress[] | select(.from[0].namespaceSelector) | has("ports")' "$dbnp" | grep -q false &&
+  { echo "check-helm: a namespace reaches every port of the database pods"; exit 1; }
 # Limits at the ingress (PLAN 23.6): off by default (no Middleware but the HSTS one, one Ingress);
 # on: /api/v1/auth/ has its own Ingress with the strict limit, the rest the general one, both the
 # in-flight cap, and every Middleware an Ingress names exists.
@@ -163,6 +185,7 @@ echo "ok"
 # Wrong settings must stop the render with a message that says what to set.
 o=(--set publicOrigin=https://f.example.com --set ingress.host=f.example.com)
 must_fail "publicOrigin is empty" "publicOrigin" "$app" --set ingress.host=f.example.com
+must_fail "a range of trusted proxies without network policies" "trustedProxies names a range" "$app" -f "$app/ci/minimal-values.yaml" --set trustedProxies=10.42.0.0/16
 must_fail "publicOrigin has a path" "publicOrigin" "$app" --set publicOrigin=https://f.example.com/app --set ingress.host=f.example.com
 must_fail "the ingress host is empty" "ingress.host is required" "$app" --set publicOrigin=https://f.example.com
 must_fail "certManager has no issuer" "ingress.tls.clusterIssuer is required" "$app" "${o[@]}"

@@ -909,6 +909,26 @@ three search indexes are GIN: `tx_user_search_trgm_idx`, `tx_search_trgm_idx`,
 full base backups. 18.7 also tightens row-level security (`ON CONFLICT` target rows, `DROP OWNED BY`,
 leaky quals), which the RLS suite checks on it.
 
+## The namespace-wide default deny
+
+Since 0.5 the app chart's default deny selects every pod of its namespace (`networkPolicy.namespaceWide`),
+not only the chart's own: a pod there that no policy names has no network. The database pods live in
+the same namespace, and their chart (`deploy/k8s/db`) allows their egress since the same release. On
+an install from before, the order matters, because the database chart is synced by hand:
+
+1. Sync the database chart first (`finuance-db`). Its policy now names the database pods' egress
+   (harmless on its own) and admits only the api, the worker and the migration job on 5432, the
+   operator's namespace on 8000 and 5432, and Prometheus's pods on 9187.
+   Check: `kubectl -n finuance get networkpolicy finuance-db -o jsonpath='{.spec.policyTypes}'` names `Egress`,
+   the cluster stays healthy (`kubectl -n finuance get cluster finuance-db`), and the next scheduled
+   backup completes.
+2. Then remove `networkPolicy.namespaceWide: false` from the environment's values and let the app sync.
+   Check: `kubectl -n finuance get networkpolicy finuance-default-deny -o jsonpath='{.spec.podSelector}'`
+   prints `{}`, `/readyz` answers, and the database's `ContinuousArchiving` condition stays `True`.
+
+The way back is the same line: `namespaceWide: false`. Anything else you run in the namespace (a debug
+pod, a job of your own) needs a policy of its own from then on.
+
 ## Taking back the TEMPORARY grant (installs from before 0.5)
 
 New databases no longer give the application's role the right to make temporary tables: nothing

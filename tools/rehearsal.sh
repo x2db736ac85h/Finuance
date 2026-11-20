@@ -201,18 +201,55 @@ smoke() {
 }
 
 netpol() {
-  log "NetworkPolicies: a pod outside the app"
-  kubectl create namespace netpol-probe --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-  probe() { # probe <name> <shell command>: exit status of the command in a throwaway pod
-    kubectl -n netpol-probe run "$1" --rm -i --restart=Never --quiet --image "$BUSYBOX_IMAGE" -- sh -c "$2" >/dev/null 2>&1
+  log "NetworkPolicies: pods outside the app, without its labels, and with labels that are not enough"
+  local ns
+  for ns in netpol-probe monitoring; do kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f - >/dev/null; done
+  # probe <namespace> <name> <labels> <shell command>: the command's exit status in a throwaway
+  # pod that passes the restricted Pod Security level
+  probe() {
+    kubectl -n "$1" run "$2" --rm -i --restart=Never --quiet --image "$BUSYBOX_IMAGE" --labels "$3" --override-type=strategic \
+      --overrides "{\"spec\":{\"securityContext\":{\"runAsNonRoot\":true,\"runAsUser\":65534,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"containers\":[{\"name\":\"$2\",\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]}}}]}}" \
+      -- sh -c "$4" >/dev/null 2>&1
   }
-  # the control: the probe pod reaches a service without a policy
-  probe control 'nc -z -w 5 rustfs.s3.svc.cluster.local 9000' || { echo "the probe can't reach RustFS: the probe itself is broken" >&2; return 1; }
-  if probe db 'nc -z -w 5 finuance-db-rw.finuance.svc.cluster.local 5432'; then echo "a pod outside the app reached PostgreSQL" >&2; return 1; fi
-  if probe api 'nc -z -w 5 finuance-api.finuance.svc.cluster.local 8080'; then echo "a pod outside the app reached the api" >&2; return 1; fi
-  if probe metrics 'nc -z -w 5 finuance-api.finuance.svc.cluster.local 9090'; then echo "a pod outside the monitoring namespace reached the metrics port" >&2; return 1; fi
-  kubectl delete namespace netpol-probe --wait=false >/dev/null
-  fact "NetworkPolicies" "outside pod blocked from PostgreSQL 5432, api 8080 and metrics 9090; control reached RustFS"
+  # addresses, not names: a pod without a policy of its own can't resolve anything
+  local db api s3 as_api='app.kubernetes.io/name=finuance,app.kubernetes.io/instance=finuance,app.kubernetes.io/component=api'
+  db=$(kubectl -n finuance get pod finuance-db-1 -o jsonpath='{.status.podIP}')
+  api=$(kubectl -n finuance get pod -l app.kubernetes.io/component=api -o jsonpath='{.items[0].status.podIP}')
+  s3=$(kubectl -n s3 get svc rustfs -o jsonpath='{.spec.clusterIP}')
+  [ -n "$db" ] && [ -n "$api" ] && [ -n "$s3" ] || { echo "no address for the database, the api or RustFS" >&2; return 1; }
+  # the controls: a pod elsewhere reaches a service without a policy, and Prometheus's label opens
+  # the metrics port
+  probe netpol-probe control probe=control "nc -z -w 5 $s3 9000" || { echo "the probe can't reach RustFS: the probe itself is broken" >&2; return 1; }
+  probe monitoring scrape app.kubernetes.io/name=prometheus "nc -z -w 5 $api 9090" || { echo "a pod with Prometheus's label in monitoring can't reach the metrics port" >&2; return 1; }
+  # a pod outside the app's namespace
+  if probe netpol-probe db probe=db "nc -z -w 5 $db 5432"; then echo "a pod outside the app reached PostgreSQL" >&2; return 1; fi
+  if probe netpol-probe api probe=api "nc -z -w 5 $api 8080"; then echo "a pod outside the app reached the api" >&2; return 1; fi
+  if probe netpol-probe metrics probe=metrics "nc -z -w 5 $api 9090"; then echo "a pod outside the monitoring namespace reached the metrics port" >&2; return 1; fi
+  # labels that are not enough: the api's labels in another namespace, any other pod of the
+  # monitoring namespace
+  if probe netpol-probe as-api "$as_api" "nc -z -w 5 $db 5432"; then echo "a pod with the api's labels in another namespace reached PostgreSQL" >&2; return 1; fi
+  # the chart's name without a component that uses the database: the probe gets a policy that
+  # opens its egress, so that only the database's own rule stands in its way
+  kubectl -n finuance apply -f - >/dev/null <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: netpol-probe-open-egress }
+spec:
+  podSelector: { matchLabels: { probe: open-egress } }
+  policyTypes: [Egress]
+  egress: [{}]
+EOF
+  local named='app.kubernetes.io/name=finuance,app.kubernetes.io/instance=finuance,probe=open-egress'
+  probe finuance named-out "$named" "nc -z -w 5 $s3 9000" || { echo "the probe with open egress can't reach RustFS: the probe itself is broken" >&2; return 1; }
+  if probe finuance named-db "$named" "nc -z -w 5 $db 5432"; then echo "a pod with the chart's name but not the api's, worker's or migration's component reached PostgreSQL" >&2; return 1; fi
+  kubectl -n finuance delete networkpolicy netpol-probe-open-egress >/dev/null
+  if probe monitoring other app.kubernetes.io/name=grafana "nc -z -w 5 $api 9090"; then echo "a pod of monitoring that is not Prometheus reached the metrics port" >&2; return 1; fi
+  # a pod in the app's namespace that no policy names: nothing in, nothing out (register OPS-1)
+  if probe finuance stray-db probe=stray "nc -z -w 5 $db 5432"; then echo "an unlabelled pod in the app's namespace reached PostgreSQL" >&2; return 1; fi
+  if probe finuance stray-out probe=stray "nc -z -w 5 $s3 9000"; then echo "an unlabelled pod in the app's namespace reached a service outside it" >&2; return 1; fi
+  if probe finuance stray-api probe=stray "nc -z -w 5 $api 8080"; then echo "an unlabelled pod in the app's namespace reached the api" >&2; return 1; fi
+  kubectl delete namespace netpol-probe monitoring --wait=false >/dev/null
+  fact "NetworkPolicies" "blocked: an outside pod from PostgreSQL 5432, api 8080 and metrics 9090; the api's labels in another namespace and the chart's name without a database component from 5432; a pod of monitoring that is not Prometheus from 9090; an unlabelled pod in the app's namespace from PostgreSQL, the api and a service outside. Controls: an outside pod reached RustFS, Prometheus's label reached 9090"
 }
 
 sse() {
