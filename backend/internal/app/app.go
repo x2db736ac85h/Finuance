@@ -36,6 +36,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/query"
 	"github.com/x2db736ac85h/finuance/backend/internal/rules"
+	"github.com/x2db736ac85h/finuance/backend/internal/secret"
 	"github.com/x2db736ac85h/finuance/backend/internal/sharing"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 )
@@ -370,7 +371,18 @@ func NewAdmin(st *store.Store, a *auth.Service, cfg config.Config) *admin.Servic
 
 // NewAuth builds the auth service from the configuration.
 func NewAuth(st *store.Store, cfg config.Config) *auth.Service {
+	// two-step sign-in seals its secrets with the instance key; without one it can't be set up
+	var box *secret.Box
+	if len(cfg.InstanceKey) > 0 {
+		box, _ = secret.New(cfg.InstanceKey) // the configuration has checked the key's length
+	}
+	issuer := "Finuance"
+	if cfg.PublicOrigin != nil && cfg.PublicOrigin.Hostname() != "" {
+		issuer += " (" + cfg.PublicOrigin.Hostname() + ")"
+	}
 	return auth.New(st, platform.SystemClock{}, auth.Config{
+		Box:            box,
+		Issuer:         issuer,
 		Params:         auth.Params{MemoryKiB: cfg.Argon2MemoryKiB, Time: cfg.Argon2Time, Threads: cfg.Argon2Threads},
 		SessionTTL:     cfg.SessionTTL,
 		SessionIdleTTL: cfg.SessionIdleTTL,

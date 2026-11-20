@@ -392,6 +392,14 @@ type LegacyImportFile struct {
 	Content        []byte
 }
 
+type LoginChallenge struct {
+	TokenHash []byte
+	UserID    uuid.UUID
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	Attempts  int32
+}
+
 type MergeDismissal struct {
 	UserID     uuid.UUID
 	TypedID    uuid.UUID
@@ -406,6 +414,13 @@ type Notification struct {
 	Data      []byte
 	CreatedAt time.Time
 	ReadAt    *time.Time
+}
+
+type RecoveryCode struct {
+	CodeHash  []byte
+	UserID    uuid.UUID
+	CreatedAt time.Time
+	UsedAt    *time.Time
 }
 
 type Rule struct {
@@ -594,4 +609,12 @@ type UserPreference struct {
 	Prefs     []byte
 	Version   int32
 	UpdatedAt time.Time
+}
+
+type UserSecondFactor struct {
+	UserID       uuid.UUID
+	SecretSealed []byte
+	CreatedAt    time.Time
+	ConfirmedAt  *time.Time
+	LastStep     int64
 }

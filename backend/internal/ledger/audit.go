@@ -19,41 +19,48 @@ import (
 
 // Audited actions. The web app words them; keep the two lists equal (TestAuditActionsAreKnown).
 const (
-	AuditLogin            = "auth.login"
-	AuditLoginFailed      = "auth.login_failed"
-	AuditLogout           = "auth.logout"
-	AuditPasswordChanged  = "auth.password_changed"
-	AuditSessionRevoked   = "auth.session_revoked"
-	AuditTokenCreated     = "auth.token_created" //nolint:gosec // an action name: a personal access token was made (ADR 0036)
-	AuditTokenRevoked     = "auth.token_revoked" //nolint:gosec // an action name
-	AuditImportCommitted  = "import.committed"
-	AuditImportDeleted    = "import.deleted"
-	AuditAccountDeleted   = "account.deleted"
-	AuditExportCSV        = "export.csv"
-	AuditExportData       = "export.data"
-	AuditRulesApplied     = "rules.applied"
-	AuditLegacyImport     = "legacy.import_started"
-	AuditDuplicateDecided = "duplicates.decided"
-	AuditDuplicateReset   = "duplicates.reset"
-	AuditAssistantApplied = "assistant.action_applied"
+	AuditLogin           = "auth.login"
+	AuditLoginFailed     = "auth.login_failed"
+	AuditLogout          = "auth.logout"
+	AuditPasswordChanged = "auth.password_changed"
+	AuditSessionRevoked  = "auth.session_revoked"
+	AuditTokenCreated    = "auth.token_created" //nolint:gosec // an action name: a personal access token was made (ADR 0036)
+	AuditTokenRevoked    = "auth.token_revoked" //nolint:gosec // an action name
+	// Two-step sign-in (ADR 0040). A failed second step means the password was right.
+	AuditSecondFactorEnabled   = "auth.second_factor_enabled"
+	AuditSecondFactorDisabled  = "auth.second_factor_disabled"
+	AuditSecondStepFailed      = "auth.second_step_failed"
+	AuditRecoveryCodeUsed      = "auth.recovery_code_used"
+	AuditRecoveryCodesReplaced = "auth.recovery_codes_replaced"
+	AuditImportCommitted       = "import.committed"
+	AuditImportDeleted         = "import.deleted"
+	AuditAccountDeleted        = "account.deleted"
+	AuditExportCSV             = "export.csv"
+	AuditExportData            = "export.data"
+	AuditRulesApplied          = "rules.applied"
+	AuditLegacyImport          = "legacy.import_started"
+	AuditDuplicateDecided      = "duplicates.decided"
+	AuditDuplicateReset        = "duplicates.reset"
+	AuditAssistantApplied      = "assistant.action_applied"
 	// AuditAssistantReverted: an AI change was undone (ADR 0030); the change is the entity.
 	AuditAssistantReverted = "assistant.change_reverted"
 	// Administrators' actions (ADR 0025): in the administrator's log with the account's e-mail,
 	// and in the affected account's log with {"by": "administrator"}.
-	AuditAdminUserCreated      = "admin.user_created"
-	AuditAdminRoleChanged      = "admin.role_changed"
-	AuditAdminUserDisabled     = "admin.user_disabled"
-	AuditAdminUserEnabled      = "admin.user_enabled"
-	AuditAdminPasswordReset    = "admin.password_reset"
-	AuditAdminSessionsRevoked  = "admin.sessions_revoked"
-	AuditAdminLimitsChanged    = "admin.limits_changed"
-	AuditAdminUserDeleted      = "admin.user_deleted"
-	AuditAdminSettingsChanged  = "admin.settings_changed"
-	AuditAdminThemeApproved    = "admin.theme_approved"
-	AuditAdminThemeRetired     = "admin.theme_retired"
-	AuditAdminAdviceChanged    = "admin.advice_changed" // an article written, changed, published or the starter ones added
-	AuditAdminAdviceDeleted    = "admin.advice_deleted"
-	AuditAdminAssistantChanged = "admin.assistant_changed" // a connection or a model's tuning (never a key)
+	AuditAdminUserCreated         = "admin.user_created"
+	AuditAdminRoleChanged         = "admin.role_changed"
+	AuditAdminUserDisabled        = "admin.user_disabled"
+	AuditAdminUserEnabled         = "admin.user_enabled"
+	AuditAdminPasswordReset       = "admin.password_reset"
+	AuditAdminSessionsRevoked     = "admin.sessions_revoked"
+	AuditAdminLimitsChanged       = "admin.limits_changed"
+	AuditAdminUserDeleted         = "admin.user_deleted"
+	AuditAdminSettingsChanged     = "admin.settings_changed"
+	AuditAdminThemeApproved       = "admin.theme_approved"
+	AuditAdminThemeRetired        = "admin.theme_retired"
+	AuditAdminAdviceChanged       = "admin.advice_changed" // an article written, changed, published or the starter ones added
+	AuditAdminAdviceDeleted       = "admin.advice_deleted"
+	AuditAdminAssistantChanged    = "admin.assistant_changed" // a connection or a model's tuning (never a key)
+	AuditAdminSecondFactorRemoved = "admin.second_factor_removed"
 	// Transactions added by hand to a cash account (ADR 0029): the entity is the transaction, the
 	// meta names the account; never amounts or payees.
 	AuditTransactionAdded   = "transaction.added"
@@ -79,12 +86,13 @@ const (
 
 // AuditActions lists every action above.
 var AuditActions = []string{AuditLogin, AuditLoginFailed, AuditLogout, AuditPasswordChanged, AuditSessionRevoked, AuditTokenCreated, AuditTokenRevoked,
+	AuditSecondFactorEnabled, AuditSecondFactorDisabled, AuditSecondStepFailed, AuditRecoveryCodeUsed, AuditRecoveryCodesReplaced,
 	AuditImportCommitted, AuditImportDeleted, AuditAccountDeleted, AuditExportCSV, AuditExportData,
 	AuditRulesApplied, AuditLegacyImport, AuditDuplicateDecided, AuditDuplicateReset, AuditAssistantApplied, AuditAssistantReverted,
 	AuditAdminUserCreated, AuditAdminRoleChanged, AuditAdminUserDisabled, AuditAdminUserEnabled, AuditAdminPasswordReset,
 	AuditAdminSessionsRevoked, AuditAdminLimitsChanged, AuditAdminUserDeleted, AuditAdminSettingsChanged,
 	AuditAdminThemeApproved, AuditAdminThemeRetired, AuditAdminAdviceChanged, AuditAdminAdviceDeleted,
-	AuditAdminAssistantChanged,
+	AuditAdminAssistantChanged, AuditAdminSecondFactorRemoved,
 	AuditTransactionAdded, AuditTransactionEdited, AuditTransactionDeleted, AuditTransactionMerged,
 	AuditFriendAdded, AuditFriendRemoved, AuditFriendCodeFailed,
 	AuditSharedCreated, AuditSharedDeleted, AuditSharedArchived, AuditSharedInvited, AuditSharedJoined, AuditSharedDeclined, AuditSharedLeft, AuditSharedMemberRemoved, AuditSharedSettled}

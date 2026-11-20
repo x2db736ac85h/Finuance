@@ -118,54 +118,60 @@ func (e ActionProposalAction) Valid() bool {
 
 // Defines values for ActivityEventAction.
 const (
-	ActivityEventActionAccountDeleted          ActivityEventAction = "account.deleted"
-	ActivityEventActionAdminAdviceChanged      ActivityEventAction = "admin.advice_changed"
-	ActivityEventActionAdminAdviceDeleted      ActivityEventAction = "admin.advice_deleted"
-	ActivityEventActionAdminAssistantChanged   ActivityEventAction = "admin.assistant_changed"
-	ActivityEventActionAdminLimitsChanged      ActivityEventAction = "admin.limits_changed"
-	ActivityEventActionAdminPasswordReset      ActivityEventAction = "admin.password_reset"
-	ActivityEventActionAdminRoleChanged        ActivityEventAction = "admin.role_changed"
-	ActivityEventActionAdminSessionsRevoked    ActivityEventAction = "admin.sessions_revoked"
-	ActivityEventActionAdminSettingsChanged    ActivityEventAction = "admin.settings_changed"
-	ActivityEventActionAdminThemeApproved      ActivityEventAction = "admin.theme_approved"
-	ActivityEventActionAdminThemeRetired       ActivityEventAction = "admin.theme_retired"
-	ActivityEventActionAdminUserCreated        ActivityEventAction = "admin.user_created"
-	ActivityEventActionAdminUserDeleted        ActivityEventAction = "admin.user_deleted"
-	ActivityEventActionAdminUserDisabled       ActivityEventAction = "admin.user_disabled"
-	ActivityEventActionAdminUserEnabled        ActivityEventAction = "admin.user_enabled"
-	ActivityEventActionAssistantActionApplied  ActivityEventAction = "assistant.action_applied"
-	ActivityEventActionAssistantChangeReverted ActivityEventAction = "assistant.change_reverted"
-	ActivityEventActionAuthLogin               ActivityEventAction = "auth.login"
-	ActivityEventActionAuthLoginFailed         ActivityEventAction = "auth.login_failed"
-	ActivityEventActionAuthLogout              ActivityEventAction = "auth.logout"
-	ActivityEventActionAuthPasswordChanged     ActivityEventAction = "auth.password_changed"
-	ActivityEventActionAuthSessionRevoked      ActivityEventAction = "auth.session_revoked"
-	ActivityEventActionAuthTokenCreated        ActivityEventAction = "auth.token_created"
-	ActivityEventActionAuthTokenRevoked        ActivityEventAction = "auth.token_revoked"
-	ActivityEventActionDuplicatesDecided       ActivityEventAction = "duplicates.decided"
-	ActivityEventActionDuplicatesReset         ActivityEventAction = "duplicates.reset"
-	ActivityEventActionExportCsv               ActivityEventAction = "export.csv"
-	ActivityEventActionExportData              ActivityEventAction = "export.data"
-	ActivityEventActionFriendAdded             ActivityEventAction = "friend.added"
-	ActivityEventActionFriendCodeFailed        ActivityEventAction = "friend.code_failed"
-	ActivityEventActionFriendRemoved           ActivityEventAction = "friend.removed"
-	ActivityEventActionImportCommitted         ActivityEventAction = "import.committed"
-	ActivityEventActionImportDeleted           ActivityEventAction = "import.deleted"
-	ActivityEventActionLegacyImportStarted     ActivityEventAction = "legacy.import_started"
-	ActivityEventActionRulesApplied            ActivityEventAction = "rules.applied"
-	ActivityEventActionSharedArchived          ActivityEventAction = "shared.archived"
-	ActivityEventActionSharedCreated           ActivityEventAction = "shared.created"
-	ActivityEventActionSharedDeclined          ActivityEventAction = "shared.declined"
-	ActivityEventActionSharedDeleted           ActivityEventAction = "shared.deleted"
-	ActivityEventActionSharedInvited           ActivityEventAction = "shared.invited"
-	ActivityEventActionSharedJoined            ActivityEventAction = "shared.joined"
-	ActivityEventActionSharedLeft              ActivityEventAction = "shared.left"
-	ActivityEventActionSharedMemberRemoved     ActivityEventAction = "shared.member_removed"
-	ActivityEventActionSharedSettled           ActivityEventAction = "shared.settled"
-	ActivityEventActionTransactionAdded        ActivityEventAction = "transaction.added"
-	ActivityEventActionTransactionDeleted      ActivityEventAction = "transaction.deleted"
-	ActivityEventActionTransactionEdited       ActivityEventAction = "transaction.edited"
-	ActivityEventActionTransactionMerged       ActivityEventAction = "transaction.merged"
+	ActivityEventActionAccountDeleted            ActivityEventAction = "account.deleted"
+	ActivityEventActionAdminAdviceChanged        ActivityEventAction = "admin.advice_changed"
+	ActivityEventActionAdminAdviceDeleted        ActivityEventAction = "admin.advice_deleted"
+	ActivityEventActionAdminAssistantChanged     ActivityEventAction = "admin.assistant_changed"
+	ActivityEventActionAdminLimitsChanged        ActivityEventAction = "admin.limits_changed"
+	ActivityEventActionAdminPasswordReset        ActivityEventAction = "admin.password_reset"
+	ActivityEventActionAdminRoleChanged          ActivityEventAction = "admin.role_changed"
+	ActivityEventActionAdminSecondFactorRemoved  ActivityEventAction = "admin.second_factor_removed"
+	ActivityEventActionAdminSessionsRevoked      ActivityEventAction = "admin.sessions_revoked"
+	ActivityEventActionAdminSettingsChanged      ActivityEventAction = "admin.settings_changed"
+	ActivityEventActionAdminThemeApproved        ActivityEventAction = "admin.theme_approved"
+	ActivityEventActionAdminThemeRetired         ActivityEventAction = "admin.theme_retired"
+	ActivityEventActionAdminUserCreated          ActivityEventAction = "admin.user_created"
+	ActivityEventActionAdminUserDeleted          ActivityEventAction = "admin.user_deleted"
+	ActivityEventActionAdminUserDisabled         ActivityEventAction = "admin.user_disabled"
+	ActivityEventActionAdminUserEnabled          ActivityEventAction = "admin.user_enabled"
+	ActivityEventActionAssistantActionApplied    ActivityEventAction = "assistant.action_applied"
+	ActivityEventActionAssistantChangeReverted   ActivityEventAction = "assistant.change_reverted"
+	ActivityEventActionAuthLogin                 ActivityEventAction = "auth.login"
+	ActivityEventActionAuthLoginFailed           ActivityEventAction = "auth.login_failed"
+	ActivityEventActionAuthLogout                ActivityEventAction = "auth.logout"
+	ActivityEventActionAuthPasswordChanged       ActivityEventAction = "auth.password_changed"
+	ActivityEventActionAuthRecoveryCodeUsed      ActivityEventAction = "auth.recovery_code_used"
+	ActivityEventActionAuthRecoveryCodesReplaced ActivityEventAction = "auth.recovery_codes_replaced"
+	ActivityEventActionAuthSecondFactorDisabled  ActivityEventAction = "auth.second_factor_disabled"
+	ActivityEventActionAuthSecondFactorEnabled   ActivityEventAction = "auth.second_factor_enabled"
+	ActivityEventActionAuthSecondStepFailed      ActivityEventAction = "auth.second_step_failed"
+	ActivityEventActionAuthSessionRevoked        ActivityEventAction = "auth.session_revoked"
+	ActivityEventActionAuthTokenCreated          ActivityEventAction = "auth.token_created"
+	ActivityEventActionAuthTokenRevoked          ActivityEventAction = "auth.token_revoked"
+	ActivityEventActionDuplicatesDecided         ActivityEventAction = "duplicates.decided"
+	ActivityEventActionDuplicatesReset           ActivityEventAction = "duplicates.reset"
+	ActivityEventActionExportCsv                 ActivityEventAction = "export.csv"
+	ActivityEventActionExportData                ActivityEventAction = "export.data"
+	ActivityEventActionFriendAdded               ActivityEventAction = "friend.added"
+	ActivityEventActionFriendCodeFailed          ActivityEventAction = "friend.code_failed"
+	ActivityEventActionFriendRemoved             ActivityEventAction = "friend.removed"
+	ActivityEventActionImportCommitted           ActivityEventAction = "import.committed"
+	ActivityEventActionImportDeleted             ActivityEventAction = "import.deleted"
+	ActivityEventActionLegacyImportStarted       ActivityEventAction = "legacy.import_started"
+	ActivityEventActionRulesApplied              ActivityEventAction = "rules.applied"
+	ActivityEventActionSharedArchived            ActivityEventAction = "shared.archived"
+	ActivityEventActionSharedCreated             ActivityEventAction = "shared.created"
+	ActivityEventActionSharedDeclined            ActivityEventAction = "shared.declined"
+	ActivityEventActionSharedDeleted             ActivityEventAction = "shared.deleted"
+	ActivityEventActionSharedInvited             ActivityEventAction = "shared.invited"
+	ActivityEventActionSharedJoined              ActivityEventAction = "shared.joined"
+	ActivityEventActionSharedLeft                ActivityEventAction = "shared.left"
+	ActivityEventActionSharedMemberRemoved       ActivityEventAction = "shared.member_removed"
+	ActivityEventActionSharedSettled             ActivityEventAction = "shared.settled"
+	ActivityEventActionTransactionAdded          ActivityEventAction = "transaction.added"
+	ActivityEventActionTransactionDeleted        ActivityEventAction = "transaction.deleted"
+	ActivityEventActionTransactionEdited         ActivityEventAction = "transaction.edited"
+	ActivityEventActionTransactionMerged         ActivityEventAction = "transaction.merged"
 )
 
 // Valid indicates whether the value is a known member of the ActivityEventAction enum.
@@ -184,6 +190,8 @@ func (e ActivityEventAction) Valid() bool {
 	case ActivityEventActionAdminPasswordReset:
 		return true
 	case ActivityEventActionAdminRoleChanged:
+		return true
+	case ActivityEventActionAdminSecondFactorRemoved:
 		return true
 	case ActivityEventActionAdminSessionsRevoked:
 		return true
@@ -212,6 +220,16 @@ func (e ActivityEventAction) Valid() bool {
 	case ActivityEventActionAuthLogout:
 		return true
 	case ActivityEventActionAuthPasswordChanged:
+		return true
+	case ActivityEventActionAuthRecoveryCodeUsed:
+		return true
+	case ActivityEventActionAuthRecoveryCodesReplaced:
+		return true
+	case ActivityEventActionAuthSecondFactorDisabled:
+		return true
+	case ActivityEventActionAuthSecondFactorEnabled:
+		return true
+	case ActivityEventActionAuthSecondStepFailed:
 		return true
 	case ActivityEventActionAuthSessionRevoked:
 		return true
@@ -1613,6 +1631,7 @@ const (
 	PayloadTooLarge        ProblemCode = "payload_too_large"
 	RateLimited            ProblemCode = "rate_limited"
 	RunInProgress          ProblemCode = "run_in_progress"
+	SecondFactorRequired   ProblemCode = "second_factor_required"
 	StaleVersion           ProblemCode = "stale_version"
 	Timeout                ProblemCode = "timeout"
 	Unauthenticated        ProblemCode = "unauthenticated"
@@ -1666,6 +1685,8 @@ func (e ProblemCode) Valid() bool {
 	case RateLimited:
 		return true
 	case RunInProgress:
+		return true
+	case SecondFactorRequired:
 		return true
 	case StaleVersion:
 		return true
@@ -2746,6 +2767,9 @@ type AdminUser struct {
 	Limits             LimitOverrides `json:"limits"`
 	MustChangePassword bool           `json:"mustChangePassword"`
 
+	// SecondFactor Two-step sign-in is on.
+	SecondFactor bool `json:"secondFactor"`
+
 	// Usage Counts of an account's data (never the data).
 	Usage UserUsage `json:"usage"`
 }
@@ -3392,6 +3416,12 @@ type DeveloperSource struct {
 	Url        string  `json:"url"`
 }
 
+// DisableSecondFactorRequest defines model for DisableSecondFactorRequest.
+type DisableSecondFactorRequest struct {
+	Code     string `json:"code"`
+	Password string `json:"password"`
+}
+
 // DistinctRequest defines model for DistinctRequest.
 type DistinctRequest struct {
 	// Column A filterable, sortable column (PLAN §4.5).
@@ -4022,6 +4052,14 @@ type InstanceAssistant struct {
 // InstanceAssistantModelChoice Who picks the connection and model; absent = admin (the administrator's defaults).
 type InstanceAssistantModelChoice string
 
+// InstanceSecurity The instance's sign-in rules; left out of a PUT, the stored ones stay.
+type InstanceSecurity struct {
+	// AdminsNeedSecondFactor Administrators must use two-step sign-in: one who has not set it up can sign in and use
+	// their own data, but the `/admin` routes answer `403 second_factor_required`. Only an
+	// administrator who has set it up can switch this on.
+	AdminsNeedSecondFactor *bool `json:"adminsNeedSecondFactor,omitempty"`
+}
+
 // InstanceSettingsDoc defines model for InstanceSettingsDoc.
 type InstanceSettingsDoc struct {
 	// Assistant The instance's settings for the assistant; left out of a PUT, the stored ones stay.
@@ -4041,9 +4079,12 @@ type InstanceSettingsDoc struct {
 	} `json:"features"`
 
 	// Limits Limits; a missing value means the next level decides (user → instance → the server's bound or none).
-	Limits    LimitOverrides `json:"limits"`
-	UpdatedAt *time.Time     `json:"updatedAt,omitempty"`
-	Version   int32          `json:"version"`
+	Limits LimitOverrides `json:"limits"`
+
+	// Security The instance's sign-in rules; left out of a PUT, the stored ones stay.
+	Security  *InstanceSecurity `json:"security,omitempty"`
+	UpdatedAt *time.Time        `json:"updatedAt,omitempty"`
+	Version   int32             `json:"version"`
 }
 
 // InstanceUsage defines model for InstanceUsage.
@@ -4653,6 +4694,11 @@ type RawField struct {
 	Value  string `json:"value"`
 }
 
+// RecoveryCodes defines model for RecoveryCodes.
+type RecoveryCodes struct {
+	RecoveryCodes []string `json:"recoveryCodes"`
+}
+
 // RecurringPayment defines model for RecurringPayment.
 type RecurringPayment struct {
 	Active bool `json:"active"`
@@ -4744,6 +4790,49 @@ type RuleSuggestion struct {
 
 	// TxCount Every transaction of the group.
 	TxCount int64 `json:"txCount"`
+}
+
+// SecondFactor defines model for SecondFactor.
+type SecondFactor struct {
+	// Available False on an instance without an instance key and for demo accounts; two-step sign-in can't be set up then.
+	Available   bool       `json:"available"`
+	ConfirmedAt *time.Time `json:"confirmedAt,omitempty"`
+	Enabled     bool       `json:"enabled"`
+
+	// RecoveryCodes Unused recovery codes.
+	RecoveryCodes int32 `json:"recoveryCodes"`
+
+	// RequiredForAdmins The instance requires two-step sign-in for administrators.
+	RequiredForAdmins bool `json:"requiredForAdmins"`
+}
+
+// SecondFactorCode defines model for SecondFactorCode.
+type SecondFactorCode struct {
+	Code string `json:"code"`
+}
+
+// SecondFactorEnrolment defines model for SecondFactorEnrolment.
+type SecondFactorEnrolment struct {
+	// Secret The secret in base32, to type into an authenticator app.
+	Secret string `json:"secret"`
+
+	// Uri The same as an `otpauth://` address, for a QR code.
+	Uri string `json:"uri"`
+}
+
+// SecondStepChallenge defines model for SecondStepChallenge.
+type SecondStepChallenge struct {
+	// Challenge A random token for this browser; send it back with the code. It is not a session.
+	Challenge string    `json:"challenge"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+// SecondStepRequest defines model for SecondStepRequest.
+type SecondStepRequest struct {
+	Challenge string `json:"challenge"`
+
+	// Code Six digits from the authenticator app, or a recovery code (`abcde-fghij`); spaces and hyphens are ignored.
+	Code string `json:"code"`
 }
 
 // Session defines model for Session.
@@ -5364,6 +5453,12 @@ type User struct {
 
 	// MustChangePassword Signed in with a one-time password; every route but `/me`, `/me/password` and sign-out answers `403 password_change_required` until it is changed.
 	MustChangePassword bool `json:"mustChangePassword"`
+
+	// SecondFactor Two-step sign-in is on for this account.
+	SecondFactor bool `json:"secondFactor"`
+
+	// SecondFactorRequired An administrator on an instance that requires two-step sign-in for administrators, without having set it up; the `/admin` routes answer `403 second_factor_required` until they do.
+	SecondFactorRequired bool `json:"secondFactorRequired"`
 }
 
 // UserTotals defines model for UserTotals.
@@ -5776,6 +5871,9 @@ type PutAssistantSettingsJSONRequestBody = AssistantSettings
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
+// LoginSecondStepJSONRequestBody defines body for LoginSecondStep for application/json ContentType.
+type LoginSecondStepJSONRequestBody = SecondStepRequest
+
 // SignupJSONRequestBody defines body for Signup for application/json ContentType.
 type SignupJSONRequestBody = SignupRequest
 
@@ -5853,6 +5951,15 @@ type UpdateMeJSONRequestBody = UpdateMeRequest
 
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody = ChangePasswordRequest
+
+// ConfirmSecondFactorJSONRequestBody defines body for ConfirmSecondFactor for application/json ContentType.
+type ConfirmSecondFactorJSONRequestBody = SecondFactorCode
+
+// DisableSecondFactorJSONRequestBody defines body for DisableSecondFactor for application/json ContentType.
+type DisableSecondFactorJSONRequestBody = DisableSecondFactorRequest
+
+// NewRecoveryCodesJSONRequestBody defines body for NewRecoveryCodes for application/json ContentType.
+type NewRecoveryCodesJSONRequestBody = SecondFactorCode
 
 // CreateAccessTokenJSONRequestBody defines body for CreateAccessToken for application/json ContentType.
 type CreateAccessTokenJSONRequestBody = AccessTokenRequest
@@ -6398,6 +6505,15 @@ type ClientInterface interface {
 	// Corresponds with POST /admin/users/{id}/revoke-sessions (the `AdminRevokeSessions` operationId).
 	AdminRevokeSessions(ctx context.Context, id AdminUserId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// AdminRemoveSecondFactor Remove an account's two-step sign-in
+	//
+	// For someone who lost their authenticator app and their recovery codes. The account signs in
+	// with its password alone until its owner sets two-step sign-in up again. Both activity logs
+	// record it. Not for the administrator's own account (use Settings → Security).
+	//
+	// Corresponds with DELETE /admin/users/{id}/second-factor (the `AdminRemoveSecondFactor` operationId).
+	AdminRemoveSecondFactor(ctx context.Context, id AdminUserId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetAdvice A published article of the advice library
 	//
 	// What the assistant's search_advice found, for reading in full (ADR 0034).
@@ -6543,7 +6659,9 @@ type ClientInterface interface {
 	// LoginWithBody Sign in
 	//
 	// A wrong password and an unknown email give the same `401` in the same time. Every login starts
-	// a new session; a session cookie sent with the request is revoked (rotation).
+	// a new session; a session cookie sent with the request is revoked (rotation). An account with
+	// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+	// answers it (ADR 0040).
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -6553,12 +6671,36 @@ type ClientInterface interface {
 	// Login Sign in
 	//
 	// A wrong password and an unknown email give the same `401` in the same time. Every login starts
-	// a new session; a session cookie sent with the request is revoked (rotation).
+	// a new session; a session cookie sent with the request is revoked (rotation). An account with
+	// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+	// answers it (ADR 0040).
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /auth/login (the `Login` operationId).
 	Login(ctx context.Context, body LoginJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LoginSecondStepWithBody Finish signing in with a code
+	//
+	// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+	// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+	// with a wrong code, the answer is `401` and signing in starts again with the password.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+	LoginSecondStepWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LoginSecondStep Finish signing in with a code
+	//
+	// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+	// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+	// with a wrong code, the answer is `401` and signing in starts again with the password.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+	LoginSecondStep(ctx context.Context, body LoginSecondStepJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// Logout Sign out
 	//
@@ -7202,6 +7344,76 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /me/password (the `ChangePassword` operationId).
 	ChangePassword(ctx context.Context, body ChangePasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSecondFactor Two-step sign-in of this account
+	//
+	// Corresponds with GET /me/second-factor (the `GetSecondFactor` operationId).
+	GetSecondFactor(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// StartSecondFactor Start setting up two-step sign-in
+	//
+	// Returns a new secret for an authenticator app. Nothing changes for signing in until a code
+	// from the app confirms it (`/me/second-factor/confirm`); starting again replaces a secret that
+	// was never confirmed. Session only, never with an access token; not for demo accounts.
+	//
+	// Corresponds with POST /me/second-factor (the `StartSecondFactor` operationId).
+	StartSecondFactor(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfirmSecondFactorWithBody Switch two-step sign-in on
+	//
+	// Needs the current code from the authenticator app. From then on signing in asks for a code.
+	// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+	ConfirmSecondFactorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfirmSecondFactor Switch two-step sign-in on
+	//
+	// Needs the current code from the authenticator app. From then on signing in asks for a code.
+	// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+	ConfirmSecondFactor(ctx context.Context, body ConfirmSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DisableSecondFactorWithBody Switch two-step sign-in off
+	//
+	// Needs the password and a code (from the app, or a recovery code).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+	DisableSecondFactorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DisableSecondFactor Switch two-step sign-in off
+	//
+	// Needs the password and a code (from the app, or a recovery code).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+	DisableSecondFactor(ctx context.Context, body DisableSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// NewRecoveryCodesWithBody Replace the recovery codes
+	//
+	// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+	NewRecoveryCodesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// NewRecoveryCodes Replace the recovery codes
+	//
+	// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+	NewRecoveryCodes(ctx context.Context, body NewRecoveryCodesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSessions The user's active sessions
 	//
@@ -8681,6 +8893,25 @@ func (c *Client) AdminRevokeSessions(ctx context.Context, id AdminUserId, reqEdi
 	return c.Client.Do(req)
 }
 
+// AdminRemoveSecondFactor Remove an account's two-step sign-in
+//
+// For someone who lost their authenticator app and their recovery codes. The account signs in
+// with its password alone until its owner sets two-step sign-in up again. Both activity logs
+// record it. Not for the administrator's own account (use Settings → Security).
+//
+// Corresponds with DELETE /admin/users/{id}/second-factor (the `AdminRemoveSecondFactor` operationId).
+func (c *Client) AdminRemoveSecondFactor(ctx context.Context, id AdminUserId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminRemoveSecondFactorRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetAdvice A published article of the advice library
 //
 // What the assistant's search_advice found, for reading in full (ADR 0034).
@@ -9006,7 +9237,9 @@ func (c *Client) StartDemo(ctx context.Context, reqEditors ...RequestEditorFn) (
 // LoginWithBody Sign in
 //
 // A wrong password and an unknown email give the same `401` in the same time. Every login starts
-// a new session; a session cookie sent with the request is revoked (rotation).
+// a new session; a session cookie sent with the request is revoked (rotation). An account with
+// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+// answers it (ADR 0040).
 //
 // Takes any type of body and a specified content type.
 //
@@ -9026,13 +9259,57 @@ func (c *Client) LoginWithBody(ctx context.Context, contentType string, body io.
 // Login Sign in
 //
 // A wrong password and an unknown email give the same `401` in the same time. Every login starts
-// a new session; a session cookie sent with the request is revoked (rotation).
+// a new session; a session cookie sent with the request is revoked (rotation). An account with
+// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+// answers it (ADR 0040).
 //
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /auth/login (the `Login` operationId).
 func (c *Client) Login(ctx context.Context, body LoginJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewLoginRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// LoginSecondStepWithBody Finish signing in with a code
+//
+// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+// with a wrong code, the answer is `401` and signing in starts again with the password.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+func (c *Client) LoginSecondStepWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLoginSecondStepRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// LoginSecondStep Finish signing in with a code
+//
+// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+// with a wrong code, the answer is `401` and signing in starts again with the password.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+func (c *Client) LoginSecondStep(ctx context.Context, body LoginSecondStepJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLoginSecondStepRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10466,6 +10743,156 @@ func (c *Client) ChangePasswordWithBody(ctx context.Context, contentType string,
 // Corresponds with POST /me/password (the `ChangePassword` operationId).
 func (c *Client) ChangePassword(ctx context.Context, body ChangePasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewChangePasswordRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSecondFactor Two-step sign-in of this account
+//
+// Corresponds with GET /me/second-factor (the `GetSecondFactor` operationId).
+func (c *Client) GetSecondFactor(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSecondFactorRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// StartSecondFactor Start setting up two-step sign-in
+//
+// Returns a new secret for an authenticator app. Nothing changes for signing in until a code
+// from the app confirms it (`/me/second-factor/confirm`); starting again replaces a secret that
+// was never confirmed. Session only, never with an access token; not for demo accounts.
+//
+// Corresponds with POST /me/second-factor (the `StartSecondFactor` operationId).
+func (c *Client) StartSecondFactor(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStartSecondFactorRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ConfirmSecondFactorWithBody Switch two-step sign-in on
+//
+// Needs the current code from the authenticator app. From then on signing in asks for a code.
+// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+func (c *Client) ConfirmSecondFactorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfirmSecondFactorRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ConfirmSecondFactor Switch two-step sign-in on
+//
+// Needs the current code from the authenticator app. From then on signing in asks for a code.
+// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+func (c *Client) ConfirmSecondFactor(ctx context.Context, body ConfirmSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfirmSecondFactorRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DisableSecondFactorWithBody Switch two-step sign-in off
+//
+// Needs the password and a code (from the app, or a recovery code).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+func (c *Client) DisableSecondFactorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDisableSecondFactorRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DisableSecondFactor Switch two-step sign-in off
+//
+// Needs the password and a code (from the app, or a recovery code).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+func (c *Client) DisableSecondFactor(ctx context.Context, body DisableSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDisableSecondFactorRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// NewRecoveryCodesWithBody Replace the recovery codes
+//
+// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+func (c *Client) NewRecoveryCodesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewNewRecoveryCodesRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// NewRecoveryCodes Replace the recovery codes
+//
+// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+func (c *Client) NewRecoveryCodes(ctx context.Context, body NewRecoveryCodesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewNewRecoveryCodesRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -13140,6 +13567,40 @@ func NewAdminRevokeSessionsRequest(server string, id AdminUserId) (*http.Request
 	return req, nil
 }
 
+// NewAdminRemoveSecondFactorRequest constructs an http.Request for the AdminRemoveSecondFactor method
+func NewAdminRemoveSecondFactorRequest(server string, id AdminUserId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/users/%s/second-factor", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetAdviceRequest constructs an http.Request for the GetAdvice method
 func NewGetAdviceRequest(server string, slug string, params *GetAdviceParams) (*http.Request, error) {
 	var err error
@@ -13777,6 +14238,46 @@ func NewLoginRequestWithBody(server string, contentType string, body io.Reader) 
 	}
 
 	operationPath := fmt.Sprintf("/auth/login")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewLoginSecondStepRequest calls the generic LoginSecondStep builder with application/json body
+func NewLoginSecondStepRequest(server string, body LoginSecondStepJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewLoginSecondStepRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewLoginSecondStepRequestWithBody constructs an http.Request for the LoginSecondStep method, with any body, and a specified content type
+func NewLoginSecondStepRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/login/second-step")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -16185,6 +16686,180 @@ func NewChangePasswordRequestWithBody(server string, contentType string, body io
 	}
 
 	operationPath := fmt.Sprintf("/me/password")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetSecondFactorRequest constructs an http.Request for the GetSecondFactor method
+func NewGetSecondFactorRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/me/second-factor")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewStartSecondFactorRequest constructs an http.Request for the StartSecondFactor method
+func NewStartSecondFactorRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/me/second-factor")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewConfirmSecondFactorRequest calls the generic ConfirmSecondFactor builder with application/json body
+func NewConfirmSecondFactorRequest(server string, body ConfirmSecondFactorJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfirmSecondFactorRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewConfirmSecondFactorRequestWithBody constructs an http.Request for the ConfirmSecondFactor method, with any body, and a specified content type
+func NewConfirmSecondFactorRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/me/second-factor/confirm")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDisableSecondFactorRequest calls the generic DisableSecondFactor builder with application/json body
+func NewDisableSecondFactorRequest(server string, body DisableSecondFactorJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewDisableSecondFactorRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewDisableSecondFactorRequestWithBody constructs an http.Request for the DisableSecondFactor method, with any body, and a specified content type
+func NewDisableSecondFactorRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/me/second-factor/disable")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewNewRecoveryCodesRequest calls the generic NewRecoveryCodes builder with application/json body
+func NewNewRecoveryCodesRequest(server string, body NewRecoveryCodesJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewNewRecoveryCodesRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewNewRecoveryCodesRequestWithBody constructs an http.Request for the NewRecoveryCodes method, with any body, and a specified content type
+func NewNewRecoveryCodesRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/me/second-factor/recovery-codes")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -18646,6 +19321,17 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /admin/users/{id}/revoke-sessions (the `AdminRevokeSessions` operationId).
 	AdminRevokeSessionsWithResponse(ctx context.Context, id AdminUserId, reqEditors ...RequestEditorFn) (*AdminRevokeSessionsResponse, error)
 
+	// AdminRemoveSecondFactorWithResponse Remove an account's two-step sign-in
+	//
+	// For someone who lost their authenticator app and their recovery codes. The account signs in
+	// with its password alone until its owner sets two-step sign-in up again. Both activity logs
+	// record it. Not for the administrator's own account (use Settings → Security).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /admin/users/{id}/second-factor (the `AdminRemoveSecondFactor` operationId).
+	AdminRemoveSecondFactorWithResponse(ctx context.Context, id AdminUserId, reqEditors ...RequestEditorFn) (*AdminRemoveSecondFactorResponse, error)
+
 	// GetAdviceWithResponse A published article of the advice library
 	//
 	// What the assistant's search_advice found, for reading in full (ADR 0034).
@@ -18817,7 +19503,9 @@ type ClientWithResponsesInterface interface {
 	// LoginWithBodyWithResponse Sign in
 	//
 	// A wrong password and an unknown email give the same `401` in the same time. Every login starts
-	// a new session; a session cookie sent with the request is revoked (rotation).
+	// a new session; a session cookie sent with the request is revoked (rotation). An account with
+	// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+	// answers it (ADR 0040).
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -18827,12 +19515,36 @@ type ClientWithResponsesInterface interface {
 	// LoginWithResponse Sign in
 	//
 	// A wrong password and an unknown email give the same `401` in the same time. Every login starts
-	// a new session; a session cookie sent with the request is revoked (rotation).
+	// a new session; a session cookie sent with the request is revoked (rotation). An account with
+	// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+	// answers it (ADR 0040).
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /auth/login (the `Login` operationId).
 	LoginWithResponse(ctx context.Context, body LoginJSONRequestBody, reqEditors ...RequestEditorFn) (*LoginResponse, error)
+
+	// LoginSecondStepWithBodyWithResponse Finish signing in with a code
+	//
+	// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+	// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+	// with a wrong code, the answer is `401` and signing in starts again with the password.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+	LoginSecondStepWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LoginSecondStepResponse, error)
+
+	// LoginSecondStepWithResponse Finish signing in with a code
+	//
+	// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+	// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+	// with a wrong code, the answer is `401` and signing in starts again with the password.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+	LoginSecondStepWithResponse(ctx context.Context, body LoginSecondStepJSONRequestBody, reqEditors ...RequestEditorFn) (*LoginSecondStepResponse, error)
 
 	// LogoutWithResponse Sign out
 	//
@@ -19534,6 +20246,80 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /me/password (the `ChangePassword` operationId).
 	ChangePasswordWithResponse(ctx context.Context, body ChangePasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ChangePasswordResponse, error)
+
+	// GetSecondFactorWithResponse Two-step sign-in of this account
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /me/second-factor (the `GetSecondFactor` operationId).
+	GetSecondFactorWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSecondFactorResponse, error)
+
+	// StartSecondFactorWithResponse Start setting up two-step sign-in
+	//
+	// Returns a new secret for an authenticator app. Nothing changes for signing in until a code
+	// from the app confirms it (`/me/second-factor/confirm`); starting again replaces a secret that
+	// was never confirmed. Session only, never with an access token; not for demo accounts.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/second-factor (the `StartSecondFactor` operationId).
+	StartSecondFactorWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*StartSecondFactorResponse, error)
+
+	// ConfirmSecondFactorWithBodyWithResponse Switch two-step sign-in on
+	//
+	// Needs the current code from the authenticator app. From then on signing in asks for a code.
+	// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+	ConfirmSecondFactorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfirmSecondFactorResponse, error)
+
+	// ConfirmSecondFactorWithResponse Switch two-step sign-in on
+	//
+	// Needs the current code from the authenticator app. From then on signing in asks for a code.
+	// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+	ConfirmSecondFactorWithResponse(ctx context.Context, body ConfirmSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfirmSecondFactorResponse, error)
+
+	// DisableSecondFactorWithBodyWithResponse Switch two-step sign-in off
+	//
+	// Needs the password and a code (from the app, or a recovery code).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+	DisableSecondFactorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DisableSecondFactorResponse, error)
+
+	// DisableSecondFactorWithResponse Switch two-step sign-in off
+	//
+	// Needs the password and a code (from the app, or a recovery code).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+	DisableSecondFactorWithResponse(ctx context.Context, body DisableSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*DisableSecondFactorResponse, error)
+
+	// NewRecoveryCodesWithBodyWithResponse Replace the recovery codes
+	//
+	// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+	NewRecoveryCodesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*NewRecoveryCodesResponse, error)
+
+	// NewRecoveryCodesWithResponse Replace the recovery codes
+	//
+	// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+	NewRecoveryCodesWithResponse(ctx context.Context, body NewRecoveryCodesJSONRequestBody, reqEditors ...RequestEditorFn) (*NewRecoveryCodesResponse, error)
 
 	// ListSessionsWithResponse The user's active sessions
 	//
@@ -21826,6 +22612,47 @@ func (r AdminRevokeSessionsResponse) ContentType() string {
 	return ""
 }
 
+type AdminRemoveSecondFactorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r AdminRemoveSecondFactorResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r AdminRemoveSecondFactorResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminRemoveSecondFactorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminRemoveSecondFactorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AdminRemoveSecondFactorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetAdviceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -22609,6 +23436,8 @@ type LoginResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *User
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *SecondStepChallenge
 	// ApplicationproblemJSON429 the response for an HTTP 429 `application/problem+json` response
 	ApplicationproblemJSON429 *TooManyRequests
 	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
@@ -22622,6 +23451,11 @@ type LoginResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r LoginResponse) GetJSON200() *User {
 	return r.JSON200
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r LoginResponse) GetJSON202() *SecondStepChallenge {
+	return r.JSON202
 }
 
 // GetApplicationproblemJSON429 returns the response for an HTTP 429 `application/problem+json` response
@@ -22657,6 +23491,75 @@ func (r LoginResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r LoginResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// LoginSecondStepResponse200Headers the declared response headers of an HTTP 200 response for LoginSecondStep
+type LoginSecondStepResponse200Headers struct {
+	SetCookie *string
+}
+
+// LoginSecondStepResponse429Headers the declared response headers of an HTTP 429 response for LoginSecondStep
+type LoginSecondStepResponse429Headers struct {
+	RetryAfter *int
+}
+
+type LoginSecondStepResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *User
+	// ApplicationproblemJSON429 the response for an HTTP 429 `application/problem+json` response
+	ApplicationproblemJSON429 *TooManyRequests
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *LoginSecondStepResponse200Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *LoginSecondStepResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r LoginSecondStepResponse) GetJSON200() *User {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON429 returns the response for an HTTP 429 `application/problem+json` response
+func (r LoginSecondStepResponse) GetApplicationproblemJSON429() *TooManyRequests {
+	return r.ApplicationproblemJSON429
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r LoginSecondStepResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r LoginSecondStepResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r LoginSecondStepResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r LoginSecondStepResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r LoginSecondStepResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -25343,6 +26246,295 @@ func (r ChangePasswordResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ChangePasswordResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSecondFactorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SecondFactor
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSecondFactorResponse) GetJSON200() *SecondFactor {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r GetSecondFactorResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSecondFactorResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSecondFactorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSecondFactorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSecondFactorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// StartSecondFactorResponse429Headers the declared response headers of an HTTP 429 response for StartSecondFactor
+type StartSecondFactorResponse429Headers struct {
+	RetryAfter *int
+}
+
+type StartSecondFactorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SecondFactorEnrolment
+	// ApplicationproblemJSON429 the response for an HTTP 429 `application/problem+json` response
+	ApplicationproblemJSON429 *TooManyRequests
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *StartSecondFactorResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r StartSecondFactorResponse) GetJSON200() *SecondFactorEnrolment {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON429 returns the response for an HTTP 429 `application/problem+json` response
+func (r StartSecondFactorResponse) GetApplicationproblemJSON429() *TooManyRequests {
+	return r.ApplicationproblemJSON429
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r StartSecondFactorResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r StartSecondFactorResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r StartSecondFactorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r StartSecondFactorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r StartSecondFactorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ConfirmSecondFactorResponse429Headers the declared response headers of an HTTP 429 response for ConfirmSecondFactor
+type ConfirmSecondFactorResponse429Headers struct {
+	RetryAfter *int
+}
+
+type ConfirmSecondFactorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *RecoveryCodes
+	// ApplicationproblemJSON429 the response for an HTTP 429 `application/problem+json` response
+	ApplicationproblemJSON429 *TooManyRequests
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ConfirmSecondFactorResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ConfirmSecondFactorResponse) GetJSON200() *RecoveryCodes {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON429 returns the response for an HTTP 429 `application/problem+json` response
+func (r ConfirmSecondFactorResponse) GetApplicationproblemJSON429() *TooManyRequests {
+	return r.ApplicationproblemJSON429
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r ConfirmSecondFactorResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r ConfirmSecondFactorResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfirmSecondFactorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfirmSecondFactorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfirmSecondFactorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DisableSecondFactorResponse429Headers the declared response headers of an HTTP 429 response for DisableSecondFactor
+type DisableSecondFactorResponse429Headers struct {
+	RetryAfter *int
+}
+
+type DisableSecondFactorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSON429 the response for an HTTP 429 `application/problem+json` response
+	ApplicationproblemJSON429 *TooManyRequests
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *DisableSecondFactorResponse429Headers
+}
+
+// GetApplicationproblemJSON429 returns the response for an HTTP 429 `application/problem+json` response
+func (r DisableSecondFactorResponse) GetApplicationproblemJSON429() *TooManyRequests {
+	return r.ApplicationproblemJSON429
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r DisableSecondFactorResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r DisableSecondFactorResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DisableSecondFactorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DisableSecondFactorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DisableSecondFactorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// NewRecoveryCodesResponse429Headers the declared response headers of an HTTP 429 response for NewRecoveryCodes
+type NewRecoveryCodesResponse429Headers struct {
+	RetryAfter *int
+}
+
+type NewRecoveryCodesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *RecoveryCodes
+	// ApplicationproblemJSON429 the response for an HTTP 429 `application/problem+json` response
+	ApplicationproblemJSON429 *TooManyRequests
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *NewRecoveryCodesResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r NewRecoveryCodesResponse) GetJSON200() *RecoveryCodes {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON429 returns the response for an HTTP 429 `application/problem+json` response
+func (r NewRecoveryCodesResponse) GetApplicationproblemJSON429() *TooManyRequests {
+	return r.ApplicationproblemJSON429
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r NewRecoveryCodesResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r NewRecoveryCodesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r NewRecoveryCodesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r NewRecoveryCodesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r NewRecoveryCodesResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -28278,6 +29470,23 @@ func (c *ClientWithResponses) AdminRevokeSessionsWithResponse(ctx context.Contex
 	return ParseAdminRevokeSessionsResponse(rsp)
 }
 
+// AdminRemoveSecondFactorWithResponse Remove an account's two-step sign-in
+//
+// For someone who lost their authenticator app and their recovery codes. The account signs in
+// with its password alone until its owner sets two-step sign-in up again. Both activity logs
+// record it. Not for the administrator's own account (use Settings → Security).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /admin/users/{id}/second-factor (the `AdminRemoveSecondFactor` operationId).
+func (c *ClientWithResponses) AdminRemoveSecondFactorWithResponse(ctx context.Context, id AdminUserId, reqEditors ...RequestEditorFn) (*AdminRemoveSecondFactorResponse, error) {
+	rsp, err := c.AdminRemoveSecondFactor(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminRemoveSecondFactorResponse(rsp)
+}
+
 // GetAdviceWithResponse A published article of the advice library
 //
 // What the assistant's search_advice found, for reading in full (ADR 0034).
@@ -28557,7 +29766,9 @@ func (c *ClientWithResponses) StartDemoWithResponse(ctx context.Context, reqEdit
 // LoginWithBodyWithResponse Sign in
 //
 // A wrong password and an unknown email give the same `401` in the same time. Every login starts
-// a new session; a session cookie sent with the request is revoked (rotation).
+// a new session; a session cookie sent with the request is revoked (rotation). An account with
+// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+// answers it (ADR 0040).
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -28573,7 +29784,9 @@ func (c *ClientWithResponses) LoginWithBodyWithResponse(ctx context.Context, con
 // LoginWithResponse Sign in
 //
 // A wrong password and an unknown email give the same `401` in the same time. Every login starts
-// a new session; a session cookie sent with the request is revoked (rotation).
+// a new session; a session cookie sent with the request is revoked (rotation). An account with
+// two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+// answers it (ADR 0040).
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -28584,6 +29797,40 @@ func (c *ClientWithResponses) LoginWithResponse(ctx context.Context, body LoginJ
 		return nil, err
 	}
 	return ParseLoginResponse(rsp)
+}
+
+// LoginSecondStepWithBodyWithResponse Finish signing in with a code
+//
+// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+// with a wrong code, the answer is `401` and signing in starts again with the password.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+func (c *ClientWithResponses) LoginSecondStepWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LoginSecondStepResponse, error) {
+	rsp, err := c.LoginSecondStepWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLoginSecondStepResponse(rsp)
+}
+
+// LoginSecondStepWithResponse Finish signing in with a code
+//
+// Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+// unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+// with a wrong code, the answer is `401` and signing in starts again with the password.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /auth/login/second-step (the `LoginSecondStep` operationId).
+func (c *ClientWithResponses) LoginSecondStepWithResponse(ctx context.Context, body LoginSecondStepJSONRequestBody, reqEditors ...RequestEditorFn) (*LoginSecondStepResponse, error) {
+	rsp, err := c.LoginSecondStep(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLoginSecondStepResponse(rsp)
 }
 
 // LogoutWithResponse Sign out
@@ -29759,6 +31006,128 @@ func (c *ClientWithResponses) ChangePasswordWithResponse(ctx context.Context, bo
 		return nil, err
 	}
 	return ParseChangePasswordResponse(rsp)
+}
+
+// GetSecondFactorWithResponse Two-step sign-in of this account
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /me/second-factor (the `GetSecondFactor` operationId).
+func (c *ClientWithResponses) GetSecondFactorWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSecondFactorResponse, error) {
+	rsp, err := c.GetSecondFactor(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSecondFactorResponse(rsp)
+}
+
+// StartSecondFactorWithResponse Start setting up two-step sign-in
+//
+// Returns a new secret for an authenticator app. Nothing changes for signing in until a code
+// from the app confirms it (`/me/second-factor/confirm`); starting again replaces a secret that
+// was never confirmed. Session only, never with an access token; not for demo accounts.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/second-factor (the `StartSecondFactor` operationId).
+func (c *ClientWithResponses) StartSecondFactorWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*StartSecondFactorResponse, error) {
+	rsp, err := c.StartSecondFactor(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStartSecondFactorResponse(rsp)
+}
+
+// ConfirmSecondFactorWithBodyWithResponse Switch two-step sign-in on
+//
+// Needs the current code from the authenticator app. From then on signing in asks for a code.
+// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+func (c *ClientWithResponses) ConfirmSecondFactorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfirmSecondFactorResponse, error) {
+	rsp, err := c.ConfirmSecondFactorWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfirmSecondFactorResponse(rsp)
+}
+
+// ConfirmSecondFactorWithResponse Switch two-step sign-in on
+//
+// Needs the current code from the authenticator app. From then on signing in asks for a code.
+// The answer holds ten recovery codes, shown this once. The account's other sessions end.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/second-factor/confirm (the `ConfirmSecondFactor` operationId).
+func (c *ClientWithResponses) ConfirmSecondFactorWithResponse(ctx context.Context, body ConfirmSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfirmSecondFactorResponse, error) {
+	rsp, err := c.ConfirmSecondFactor(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfirmSecondFactorResponse(rsp)
+}
+
+// DisableSecondFactorWithBodyWithResponse Switch two-step sign-in off
+//
+// Needs the password and a code (from the app, or a recovery code).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+func (c *ClientWithResponses) DisableSecondFactorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DisableSecondFactorResponse, error) {
+	rsp, err := c.DisableSecondFactorWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDisableSecondFactorResponse(rsp)
+}
+
+// DisableSecondFactorWithResponse Switch two-step sign-in off
+//
+// Needs the password and a code (from the app, or a recovery code).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/second-factor/disable (the `DisableSecondFactor` operationId).
+func (c *ClientWithResponses) DisableSecondFactorWithResponse(ctx context.Context, body DisableSecondFactorJSONRequestBody, reqEditors ...RequestEditorFn) (*DisableSecondFactorResponse, error) {
+	rsp, err := c.DisableSecondFactor(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDisableSecondFactorResponse(rsp)
+}
+
+// NewRecoveryCodesWithBodyWithResponse Replace the recovery codes
+//
+// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+func (c *ClientWithResponses) NewRecoveryCodesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*NewRecoveryCodesResponse, error) {
+	rsp, err := c.NewRecoveryCodesWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseNewRecoveryCodesResponse(rsp)
+}
+
+// NewRecoveryCodesWithResponse Replace the recovery codes
+//
+// Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/second-factor/recovery-codes (the `NewRecoveryCodes` operationId).
+func (c *ClientWithResponses) NewRecoveryCodesWithResponse(ctx context.Context, body NewRecoveryCodesJSONRequestBody, reqEditors ...RequestEditorFn) (*NewRecoveryCodesResponse, error) {
+	rsp, err := c.NewRecoveryCodes(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseNewRecoveryCodesResponse(rsp)
 }
 
 // ListSessionsWithResponse The user's active sessions
@@ -31938,6 +33307,35 @@ func ParseAdminRevokeSessionsResponse(rsp *http.Response) (*AdminRevokeSessionsR
 	return response, nil
 }
 
+// ParseAdminRemoveSecondFactorResponse parses an HTTP response from a AdminRemoveSecondFactorWithResponse call
+func ParseAdminRemoveSecondFactorResponse(rsp *http.Response) (*AdminRemoveSecondFactorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminRemoveSecondFactorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetAdviceResponse parses an HTTP response from a GetAdviceWithResponse call
 func ParseGetAdviceResponse(rsp *http.Response) (*GetAdviceResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -32511,6 +33909,13 @@ func ParseLoginResponse(rsp *http.Response) (*LoginResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest SecondStepChallenge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
 		var dest TooManyRequests
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -32540,6 +33945,69 @@ func ParseLoginResponse(rsp *http.Response) (*LoginResponse, error) {
 		response.Headers200 = &headers
 	case rsp.StatusCode == 429:
 		var headers LoginResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseLoginSecondStepResponse parses an HTTP response from a LoginSecondStepWithResponse call
+func ParseLoginSecondStepResponse(rsp *http.Response) (*LoginSecondStepResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &LoginSecondStepResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest User
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers LoginSecondStepResponse200Headers
+		if values := rsp.Header.Values("Set-Cookie"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Set-Cookie", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.SetCookie = &value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 429:
+		var headers LoginSecondStepResponse429Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
@@ -34477,6 +35945,247 @@ func ParseChangePasswordResponse(rsp *http.Response) (*ChangePasswordResponse, e
 		response.Headers204 = &headers
 	case rsp.StatusCode == 429:
 		var headers ChangePasswordResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseGetSecondFactorResponse parses an HTTP response from a GetSecondFactorWithResponse call
+func ParseGetSecondFactorResponse(rsp *http.Response) (*GetSecondFactorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSecondFactorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SecondFactor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseStartSecondFactorResponse parses an HTTP response from a StartSecondFactorWithResponse call
+func ParseStartSecondFactorResponse(rsp *http.Response) (*StartSecondFactorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &StartSecondFactorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SecondFactorEnrolment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers StartSecondFactorResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseConfirmSecondFactorResponse parses an HTTP response from a ConfirmSecondFactorWithResponse call
+func ParseConfirmSecondFactorResponse(rsp *http.Response) (*ConfirmSecondFactorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfirmSecondFactorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RecoveryCodes
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ConfirmSecondFactorResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDisableSecondFactorResponse parses an HTTP response from a DisableSecondFactorWithResponse call
+func ParseDisableSecondFactorResponse(rsp *http.Response) (*DisableSecondFactorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DisableSecondFactorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers DisableSecondFactorResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseNewRecoveryCodesResponse parses an HTTP response from a NewRecoveryCodesWithResponse call
+func ParseNewRecoveryCodesResponse(rsp *http.Response) (*NewRecoveryCodesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &NewRecoveryCodesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RecoveryCodes
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers NewRecoveryCodesResponse429Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {

@@ -1336,6 +1336,42 @@ textarea.inp.ins-note {
   overflow-wrap: anywhere;
   user-select: all;
 }
+/* Settings → Security: the QR code (always dark on white, for scanners) beside the key, and the
+   recovery codes shown once */
+.qr-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin: 0.5rem 0 0.75rem;
+}
+.qr {
+  flex: none;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-2);
+}
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.375rem 0.75rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+.recovery-codes code {
+  font: 0.875rem var(--mono);
+  user-select: all;
+}
+/* a button that reads as a link (sign-in: "start again with your password") */
+.linklike {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
 .adm-limits {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));

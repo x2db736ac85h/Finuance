@@ -53,6 +53,7 @@ function SettingsForm({ doc }: { doc: Doc }) {
   const meta = useMeta().data;
   const [d, setD] = useState(doc.defaults);
   const [f, setF] = useState(doc.features);
+  const [adminsNeedSecondFactor, setAdminsNeedSecondFactor] = useState(doc.security?.adminsNeedSecondFactor === true);
   const [limits, setLimits] = useState<Record<string, string>>(() => {
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(doc.limits))
@@ -72,14 +73,22 @@ function SettingsForm({ doc }: { doc: Doc }) {
       return;
     }
     // mutateAsync: the saved version remounts this form, and mutate()'s callbacks would be dropped
-    void put.mutateAsync({ version: doc.version, defaults: d, features: f, limits: parsed }).then(
-      () => {
-        toast('Saved the instance settings');
-      },
-      (e: unknown) => {
-        toast(errorMessage(e), { kind: 'error' });
-      },
-    );
+    void put
+      .mutateAsync({
+        version: doc.version,
+        defaults: d,
+        features: f,
+        limits: parsed,
+        security: { adminsNeedSecondFactor },
+      })
+      .then(
+        () => {
+          toast('Saved the instance settings');
+        },
+        (e: unknown) => {
+          toast(errorMessage(e), { kind: 'error' });
+        },
+      );
   };
   return (
     <>
@@ -158,6 +167,22 @@ function SettingsForm({ doc }: { doc: Doc }) {
             }}
           />
         ))}
+      </div>
+      <div className="set-card">
+        <div className="lbl">Signing in</div>
+        <Checkbox
+          label={
+            <>
+              Administrators must use two-step sign-in{' '}
+              <span className="hint">
+                — one who hasn't set it up can sign in, but Administration stays closed until they do. You can switch
+                this on once you use it yourself (Settings → Security).
+              </span>
+            </>
+          }
+          checked={adminsNeedSecondFactor}
+          onChange={setAdminsNeedSecondFactor}
+        />
       </div>
       <div className="set-card">
         <div className="lbl">Default limits</div>

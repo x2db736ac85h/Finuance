@@ -30,6 +30,9 @@ export function AdminPage() {
   const { section } = useParams();
   const developer = useDeveloperInfo(user.isAdmin);
   if (!user.isAdmin) return <Navigate to="/" replace />;
+  // the instance requires two-step sign-in of administrators, and this one hasn't set it up: every
+  // administration route answers 403 until they do (ADR 0040)
+  if (user.secondFactorRequired) return <Navigate to="/settings/security" replace />;
   const sections = SECTIONS.filter((s) => s.id !== 'developer' || developer.isSuccess);
   // a direct visit to the Developer section waits for the answer before deciding
   if (section === 'developer' && developer.isPending) return null;

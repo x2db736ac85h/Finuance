@@ -85,6 +85,13 @@ export function useRevokeUserSessions() {
   );
 }
 
+/** Removes another account's two-step sign-in (a lost phone and lost recovery codes; ADR 0040). */
+export function useRemoveSecondFactor() {
+  return useAdminMutation(async (id: string) => {
+    data(await api.DELETE('/admin/users/{id}/second-factor', { params: { path: { id } } }));
+  });
+}
+
 export function useInstanceSettings() {
   return useQuery({
     queryKey: [...keys.admin, 'settings'],

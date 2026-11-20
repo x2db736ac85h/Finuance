@@ -57,9 +57,33 @@ export interface paths {
         /**
          * Sign in
          * @description A wrong password and an unknown email give the same `401` in the same time. Every login starts
-         *     a new session; a session cookie sent with the request is revoked (rotation).
+         *     a new session; a session cookie sent with the request is revoked (rotation). An account with
+         *     two-step sign-in gets `202` and a challenge instead of a session; `/auth/login/second-step`
+         *     answers it (ADR 0040).
          */
         post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login/second-step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish signing in with a code
+         * @description Answers the challenge of `/auth/login` with the current code from the authenticator app or an
+         *     unused recovery code. A challenge lasts five minutes and takes five attempts; after that, or
+         *     with a wrong code, the answer is `401` and signing in starts again with the password.
+         */
+        post: operations["loginSecondStep"];
         delete?: never;
         options?: never;
         head?: never;
@@ -145,6 +169,90 @@ export interface paths {
          *     new session cookie is set for this browser.
          */
         post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/second-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Two-step sign-in of this account */
+        get: operations["getSecondFactor"];
+        put?: never;
+        /**
+         * Start setting up two-step sign-in
+         * @description Returns a new secret for an authenticator app. Nothing changes for signing in until a code
+         *     from the app confirms it (`/me/second-factor/confirm`); starting again replaces a secret that
+         *     was never confirmed. Session only, never with an access token; not for demo accounts.
+         */
+        post: operations["startSecondFactor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/second-factor/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch two-step sign-in on
+         * @description Needs the current code from the authenticator app. From then on signing in asks for a code.
+         *     The answer holds ten recovery codes, shown this once. The account's other sessions end.
+         */
+        post: operations["confirmSecondFactor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/second-factor/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the recovery codes
+         * @description Needs the current code from the authenticator app (not a recovery code). The earlier codes stop working.
+         */
+        post: operations["newRecoveryCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/second-factor/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch two-step sign-in off
+         * @description Needs the password and a code (from the app, or a recovery code).
+         */
+        post: operations["disableSecondFactor"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2015,6 +2123,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users/{id}/second-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove an account's two-step sign-in
+         * @description For someone who lost their authenticator app and their recovery codes. The account signs in
+         *     with its password alone until its owner sets two-step sign-in up again. Both activity logs
+         *     record it. Not for the administrator's own account (use Settings → Security).
+         */
+        delete: operations["adminRemoveSecondFactor"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/settings": {
         parameters: {
             query?: never;
@@ -2450,6 +2582,10 @@ export interface components {
             isAdmin: boolean;
             /** @description Signed in with a one-time password; every route but `/me`, `/me/password` and sign-out answers `403 password_change_required` until it is changed. */
             mustChangePassword: boolean;
+            /** @description Two-step sign-in is on for this account. */
+            secondFactor: boolean;
+            /** @description An administrator on an instance that requires two-step sign-in for administrators, without having set it up; the `/admin` routes answer `403 second_factor_required` until they do. */
+            secondFactorRequired: boolean;
             limits: components["schemas"]["EffectiveLimits"];
             /** Format: uuid */
             id: string;
@@ -2459,6 +2595,47 @@ export interface components {
             isDemo: boolean;
             /** Format: date-time */
             createdAt: string;
+        };
+        SecondStepChallenge: {
+            /** @description A random token for this browser; send it back with the code. It is not a session. */
+            challenge: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        SecondStepRequest: {
+            challenge: string;
+            /** @description Six digits from the authenticator app, or a recovery code (`abcde-fghij`); spaces and hyphens are ignored. */
+            code: string;
+        };
+        SecondFactor: {
+            enabled: boolean;
+            /** @description False on an instance without an instance key and for demo accounts; two-step sign-in can't be set up then. */
+            available: boolean;
+            /** Format: date-time */
+            confirmedAt?: string;
+            /**
+             * Format: int32
+             * @description Unused recovery codes.
+             */
+            recoveryCodes: number;
+            /** @description The instance requires two-step sign-in for administrators. */
+            requiredForAdmins: boolean;
+        };
+        SecondFactorEnrolment: {
+            /** @description The secret in base32, to type into an authenticator app. */
+            secret: string;
+            /** @description The same as an `otpauth://` address, for a QR code. */
+            uri: string;
+        };
+        SecondFactorCode: {
+            code: string;
+        };
+        RecoveryCodes: {
+            recoveryCodes: string[];
+        };
+        DisableSecondFactorRequest: {
+            password: string;
+            code: string;
         };
         SignupRequest: {
             email: string;
@@ -2494,7 +2671,7 @@ export interface components {
             /** Format: date-time */
             at: string;
             /** @enum {string} */
-            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "auth.token_created" | "auth.token_revoked" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "admin.assistant_changed" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
+            action: "auth.login" | "auth.login_failed" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "auth.token_created" | "auth.token_revoked" | "auth.second_factor_enabled" | "auth.second_factor_disabled" | "auth.second_step_failed" | "auth.recovery_code_used" | "auth.recovery_codes_replaced" | "import.committed" | "import.deleted" | "account.deleted" | "export.csv" | "export.data" | "rules.applied" | "legacy.import_started" | "duplicates.decided" | "duplicates.reset" | "assistant.action_applied" | "assistant.change_reverted" | "admin.user_created" | "admin.role_changed" | "admin.user_disabled" | "admin.user_enabled" | "admin.password_reset" | "admin.sessions_revoked" | "admin.limits_changed" | "admin.user_deleted" | "admin.settings_changed" | "admin.theme_approved" | "admin.theme_retired" | "admin.advice_changed" | "admin.advice_deleted" | "admin.assistant_changed" | "admin.second_factor_removed" | "transaction.added" | "transaction.edited" | "transaction.deleted" | "transaction.merged" | "friend.added" | "friend.removed" | "friend.code_failed" | "shared.created" | "shared.deleted" | "shared.archived" | "shared.invited" | "shared.joined" | "shared.declined" | "shared.left" | "shared.member_removed" | "shared.settled";
             /** @description The affected record (import, account, session, chat …), if any. */
             entityId?: string;
             /** @description The client address; absent for actions of a background job. */
@@ -4556,7 +4733,7 @@ export interface components {
          * @description Stable machine-readable error code.
          * @enum {string}
          */
-        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "account_disabled" | "last_admin" | "contrast_failed" | "display_name_required" | "changed_since" | "account_busy" | "timeout" | "internal";
+        ProblemCode: "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "duplicate_file" | "import_not_committable" | "stale_version" | "rate_limited" | "payload_too_large" | "unsupported_file" | "not_implemented" | "consent_required" | "run_in_progress" | "assistant_busy" | "assistant_unavailable" | "migration_running" | "limit_reached" | "password_change_required" | "second_factor_required" | "account_disabled" | "last_admin" | "contrast_failed" | "display_name_required" | "changed_since" | "account_busy" | "timeout" | "internal";
         FieldError: {
             /** @description Dotted path of the offending field, e.g. `mapping.amount`. */
             field: string;
@@ -4663,6 +4840,7 @@ export interface components {
             };
             limits: components["schemas"]["LimitOverrides"];
             assistant?: components["schemas"]["InstanceAssistant"];
+            security?: components["schemas"]["InstanceSecurity"];
             /** Format: date-time */
             updatedAt?: string;
         };
@@ -4824,6 +5002,15 @@ export interface components {
              */
             unloadsAt?: string;
         };
+        /** @description The instance's sign-in rules; left out of a PUT, the stored ones stay. */
+        InstanceSecurity: {
+            /**
+             * @description Administrators must use two-step sign-in: one who has not set it up can sign in and use
+             *     their own data, but the `/admin` routes answer `403 second_factor_required`. Only an
+             *     administrator who has set it up can switch this on.
+             */
+            adminsNeedSecondFactor?: boolean;
+        };
         /** @description The instance's settings for the assistant; left out of a PUT, the stored ones stay. */
         InstanceAssistant: {
             /** @description Added to every system prompt after the app's rules (ADR 0034). */
@@ -4910,6 +5097,8 @@ export interface components {
             isAdmin: boolean;
             disabled: boolean;
             mustChangePassword: boolean;
+            /** @description Two-step sign-in is on. */
+            secondFactor: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -5307,6 +5496,42 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            /** @description The password was right and the account uses two-step sign-in; no session yet. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecondStepChallenge"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    loginSecondStep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecondStepRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in; the session cookie is set. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetSessionCookie"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Problem"];
         };
@@ -5442,6 +5667,125 @@ export interface operations {
             204: {
                 headers: {
                     "Set-Cookie": components["headers"]["SetSessionCookie"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSecondFactor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether it is on, and how many recovery codes are left. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecondFactor"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    startSecondFactor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The secret, shown this once. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecondFactorEnrolment"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    confirmSecondFactor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecondFactorCode"];
+            };
+        };
+        responses: {
+            /** @description On; the recovery codes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    newRecoveryCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecondFactorCode"];
+            };
+        };
+        responses: {
+            /** @description Ten new codes, shown this once. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    disableSecondFactor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisableSecondFactorRequest"];
+            };
+        };
+        responses: {
+            /** @description Off; signing in needs the password only. */
+            204: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -8354,6 +8698,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RevokedSessions"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    adminRemoveSecondFactor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AdminUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -44,6 +44,7 @@ type Querier interface {
 	// by rules, and the bank names that map to it (its own name excluded).
 	CategoryStats(ctx context.Context, userID uuid.UUID) ([]CategoryStatsRow, error)
 	ClearDedupeOverride(ctx context.Context, arg ClearDedupeOverrideParams) (int64, error)
+	ConfirmSecondFactor(ctx context.Context, arg ConfirmSecondFactorParams) (int64, error)
 	CountAIChanges(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountAccounts(ctx context.Context, userID uuid.UUID) (int64, error)
 	// Locks the administrators' rows, so two requests can't demote the last two at the same time.
@@ -67,6 +68,7 @@ type Querier interface {
 	CountRules(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUnreadNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUnsentAssistantAttachments(ctx context.Context, arg CountUnsentAssistantAttachmentsParams) (int64, error)
+	CountUnusedRecoveryCodes(ctx context.Context, userID uuid.UUID) (int64, error)
 	// kind (bank | cash) is chosen here and never changes (ADR 0029).
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateAssistantChat(ctx context.Context, arg CreateAssistantChatParams) (AssistantChat, error)
@@ -77,6 +79,8 @@ type Querier interface {
 	CreateInvestmentPosition(ctx context.Context, arg CreateInvestmentPositionParams) (InvestmentPosition, error)
 	// Legacy migrations (PLAN §4.10; migration 00007).
 	CreateLegacyImport(ctx context.Context, arg CreateLegacyImportParams) (CreateLegacyImportRow, error)
+	CreateLoginChallenge(ctx context.Context, arg CreateLoginChallengeParams) error
+	CreateRecoveryCode(ctx context.Context, arg CreateRecoveryCodeParams) error
 	// A new rule goes last.
 	CreateRule(ctx context.Context, arg CreateRuleParams) error
 	// Sessions store only the SHA-256 of the cookie token (PLAN §5.2). expires_at is the absolute
@@ -116,6 +120,7 @@ type Querier interface {
 	// The daily cleanup; the delete policy allows only rows past the retention anyway.
 	DeleteExpiredAuditEvents(ctx context.Context, userID uuid.UUID) (int64, error)
 	DeleteExpiredFriendCodes(ctx context.Context, now time.Time) (int64, error)
+	DeleteExpiredLoginChallenges(ctx context.Context, now time.Time) (int64, error)
 	// Periodic cleanup: absolute expiry passed, or idle for longer than the idle timeout.
 	DeleteExpiredSessions(ctx context.Context, arg DeleteExpiredSessionsParams) (int64, error)
 	DeleteFriendCode(ctx context.Context, userID uuid.UUID) error
@@ -141,7 +146,9 @@ type Querier interface {
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
 	DeleteOrphanTransactions(ctx context.Context, arg DeleteOrphanTransactionsParams) (int64, error)
+	DeleteRecoveryCodes(ctx context.Context, userID uuid.UUID) error
 	DeleteRule(ctx context.Context, arg DeleteRuleParams) (int64, error)
+	DeleteSecondFactor(ctx context.Context, userID uuid.UUID) (int64, error)
 	DeleteSession(ctx context.Context, tokenHash []byte) error
 	DeleteSharedExpense(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteSharedGroup(ctx context.Context, id uuid.UUID) (int64, error)
@@ -153,6 +160,8 @@ type Querier interface {
 	DeleteUnsentAssistantAttachmentsBefore(ctx context.Context, arg DeleteUnsentAssistantAttachmentsBeforeParams) (int64, error)
 	// Cascades to every user-owned table.
 	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
+	// A new sign-in replaces the user's earlier challenges; a completed one removes them all.
+	DeleteUserLoginChallenges(ctx context.Context, userID uuid.UUID) error
 	// Revoke one session by its public id: the first 8 bytes of the token hash (PLAN §6.2).
 	DeleteUserSessionByPrefix(ctx context.Context, arg DeleteUserSessionByPrefixParams) (int64, error)
 	// Log out everywhere, optionally keeping one session (pass an empty keep_token_hash to keep none).
@@ -231,9 +240,14 @@ type Querier interface {
 	// Without the manifest (the job reads it with GetLegacyImportManifest).
 	GetLegacyImport(ctx context.Context, arg GetLegacyImportParams) (GetLegacyImportRow, error)
 	GetLegacyImportManifest(ctx context.Context, arg GetLegacyImportManifestParams) ([]byte, error)
+	// Whose live challenge this is, without counting an attempt.
+	GetLoginChallengeUser(ctx context.Context, arg GetLoginChallengeUserParams) (uuid.UUID, error)
 	GetMyMembership(ctx context.Context, arg GetMyMembershipParams) (SharedGroupMember, error)
 	GetPreferences(ctx context.Context, userID uuid.UUID) (UserPreference, error)
 	GetRule(ctx context.Context, arg GetRuleParams) (GetRuleRow, error)
+	// Two-step sign-in (migration 00027, ADR 0040). The tables are outside RLS like sessions; every
+	// statement names the user or the hash of a secret token only its holder has.
+	GetSecondFactor(ctx context.Context, userID uuid.UUID) (UserSecondFactor, error)
 	// A live session and its user: not past the absolute expiry, seen after idle_cutoff, and the
 	// account not disabled (disabling also deletes the sessions; this covers a race with a request).
 	GetSession(ctx context.Context, arg GetSessionParams) (GetSessionRow, error)
@@ -262,6 +276,7 @@ type Querier interface {
 	// count, money out and in (minor units, transfers included as in the legacy), first and last day.
 	// The currency is the most common one among the group's transactions.
 	GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStatsRow, error)
+	HasConfirmedSecondFactor(ctx context.Context, userID uuid.UUID) (bool, error)
 	// Distinct bank categories of an import's valid rows (the commit upserts them as categories).
 	ImportBankCategories(ctx context.Context, arg ImportBankCategoriesParams) ([]*string, error)
 	// Each distinct file layout (header signature) of the user's imports in first-seen order: the
@@ -312,6 +327,8 @@ type Querier interface {
 	ListAIChanges(ctx context.Context, arg ListAIChangesParams) ([]ListAIChangesRow, error)
 	ListAccessTokens(ctx context.Context, userID uuid.UUID) ([]AccessToken, error)
 	ListAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error)
+	// Administrators (not disabled) without a confirmed second factor; for the settings page's warning.
+	ListAdminsWithoutSecondFactor(ctx context.Context) ([]ListAdminsWithoutSecondFactorRow, error)
 	// The advice library (ADR 0034; migration 00021). An instance table: administrators write it,
 	// every signed-in user reads the published articles.
 	ListAdviceArticles(ctx context.Context) ([]ListAdviceArticlesRow, error)
@@ -372,6 +389,8 @@ type Querier interface {
 	// overrides): concurrent commits of overlapping files would otherwise insert the same identities in
 	// different orders and could deadlock. NO KEY UPDATE doesn't block the FK checks of inserts.
 	LockAccount(ctx context.Context, arg LockAccountParams) (uuid.UUID, error)
+	// The row locked for the check of a code, so two requests can't both use one code.
+	LockSecondFactor(ctx context.Context, userID uuid.UUID) (UserSecondFactor, error)
 	// Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
 	// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
 	LockUserAccounts(ctx context.Context, userID uuid.UUID) error
@@ -470,6 +489,7 @@ type Querier interface {
 	SetManualTransfer(ctx context.Context, arg SetManualTransferParams) ([]SetManualTransferRow, error)
 	// Reorder: ids in their new order (positions 0, 1, …).
 	SetRulePositions(ctx context.Context, arg SetRulePositionsParams) (int64, error)
+	SetSecondFactorStep(ctx context.Context, arg SetSecondFactorStepParams) error
 	SetSharedMemberState(ctx context.Context, arg SetSharedMemberStateParams) (int64, error)
 	SetThemeStatus(ctx context.Context, arg SetThemeStatusParams) (Theme, error)
 	SetUserAdmin(ctx context.Context, arg SetUserAdminParams) (int64, error)
@@ -490,6 +510,9 @@ type Querier interface {
 	SharedSplitsOf(ctx context.Context, expenseID uuid.UUID) ([]SharedExpenseSplit, error)
 	// Totals and spans of the groups the user can see (for the timeline).
 	SharedTimelineStats(ctx context.Context) ([]SharedTimelineStatsRow, error)
+	// Starts (or restarts) enrolment. A confirmed factor is never replaced this way: it has to be
+	// switched off first, with the password and a code.
+	StartSecondFactor(ctx context.Context, arg StartSecondFactorParams) error
 	// Records use; the caller throttles it to once a minute.
 	TouchAccessToken(ctx context.Context, arg TouchAccessTokenParams) error
 	// Records activity (idle expiry). The caller throttles it to once every few minutes.
@@ -512,6 +535,8 @@ type Querier interface {
 	TransferPeers(ctx context.Context, arg TransferPeersParams) ([]uuid.UUID, error)
 	// Keeps the newest @keep chats (FINUANCE_AI_MAX_CHATS).
 	TrimAssistantChats(ctx context.Context, arg TrimAssistantChatsParams) (int64, error)
+	// Counts one attempt against a live challenge and returns it; no row: unknown, expired or used up.
+	TryLoginChallenge(ctx context.Context, arg TryLoginChallengeParams) (TryLoginChallengeRow, error)
 	// Deleting a category: its transactions become uncategorised, however their category was set.
 	UncategoriseCategoryTransactions(ctx context.Context, arg UncategoriseCategoryTransactionsParams) (int64, error)
 	UnlinkGroupsFromShared(ctx context.Context, arg UnlinkGroupsFromSharedParams) (int64, error)
@@ -568,10 +593,14 @@ type Querier interface {
 	UpsertImportProfile(ctx context.Context, arg UpsertImportProfileParams) error
 	UpsertModelSettings(ctx context.Context, arg UpsertModelSettingsParams) (AssistantModelSetting, error)
 	UpsertSharedLink(ctx context.Context, arg UpsertSharedLinkParams) error
+	// Marks one of the user's unused codes as used; 0 rows: not theirs, unknown or used before.
+	UseRecoveryCode(ctx context.Context, arg UseRecoveryCodeParams) (int64, error)
 	// Imports, assistant questions and assistant tokens per day since a date, for the instance usage page.
 	UserActivityByDay(ctx context.Context, arg UserActivityByDayParams) ([]UserActivityByDayRow, error)
 	// Run under the user's own RLS context: counts only.
 	UserUsage(ctx context.Context, arg UserUsageParams) (UserUsageRow, error)
+	// Which of the given users have two-step sign-in on (the administration's user list).
+	UsersWithSecondFactor(ctx context.Context, userIds []uuid.UUID) ([]uuid.UUID, error)
 }
 
 var _ Querier = (*Queries)(nil)

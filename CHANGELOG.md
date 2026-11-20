@@ -6,6 +6,15 @@ notes of their version.
 
 ## [Unreleased]
 
+### Added
+
+- **Two-step sign-in.** Settings → Security sets up a second step after the password: a six-digit
+  code from an authenticator app (scan the QR code or type the key), with ten recovery codes.
+  Administrators can require it of administrators and remove it for someone who lost their phone;
+  `finuance admin remove-second-factor` does the same on the machine. It needs the instance key
+  (`FINUANCE_INSTANCE_KEY`), and losing that key locks those accounts until the command is run:
+  keep its backup (ADR 0040). Migration 00027.
+
 ### Security
 
 - The Helm chart can deploy by digest: with `image.digests.api` and `image.digests.web` set, the

@@ -39,6 +39,8 @@ commands:
                          create an account (works with signup disabled)
   admin set-password -email=… -password-stdin
                          reset a password and sign the user out everywhere
+  admin remove-second-factor -email=…
+                         remove an account's two-step sign-in (a locked-out administrator)
   admin llm-probe [-connection=…] [-model=…] [-out=dir]
                          list the assistant's models and test one with made-up data
   healthcheck            exit 0 if the local API answers /healthz (container healthcheck)
@@ -153,7 +155,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer,
 	load func(config.Requirement) (config.Config, bool), fail func(error) int) int {
 	const adminUsage = "usage: finuance admin create-user|set-password -email=… [-display-name=…] [-admin] -password-stdin\n" +
-		"       finuance admin grant-admin|revoke-admin -email=…\n" +
+		"       finuance admin grant-admin|revoke-admin|remove-second-factor -email=…\n" +
 		"       finuance admin llm-probe [-connection=…] [-model=…] [-out=dir]"
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, adminUsage)
@@ -186,7 +188,7 @@ func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}
-	role := args[0] == "grant-admin" || args[0] == "revoke-admin"
+	role := args[0] == "grant-admin" || args[0] == "revoke-admin" || args[0] == "remove-second-factor" // no password
 	if in.Email == "" || fs.NArg() != 0 || role == *fromStdin || (in.Admin && args[0] != "create-user") {
 		fmt.Fprintln(stderr, adminUsage)
 		return 2

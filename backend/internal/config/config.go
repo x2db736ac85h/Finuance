@@ -56,7 +56,8 @@ type Config struct {
 	AIMaxChats      int           // chats kept per user (the oldest go first)
 	AIRatePerHour   int           // messages per user per hour
 	AITokensPerDay  int64         // tokens per user per UTC day, the outer bound of assistantTokensPerDay (ADR 0033)
-	// InstanceKey seals secrets stored in the database (assistant connections' API keys, ADR 0035);
+	// InstanceKey seals secrets stored in the database (assistant connections' API keys, ADR 0035,
+	// and the secrets of two-step sign-in, ADR 0040);
 	// nil when FINUANCE_INSTANCE_KEY is unset.
 	InstanceKey []byte
 	// Argon2id parameters for new password hashes (ADR 0010). Existing hashes keep theirs until

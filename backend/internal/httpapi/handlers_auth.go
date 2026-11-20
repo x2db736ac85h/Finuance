@@ -23,6 +23,7 @@ type limits struct {
 	loginIP      *mw.Limiter // signup + login per client IP
 	loginIPEmail *mw.Limiter // signup + login per (IP, email)
 	password     *mw.Limiter // password checks per signed-in user
+	secondStep   *mw.Limiter // codes at the second step of signing in, per user (ADR 0040)
 	upload       *mw.Limiter // uploads per user
 	assistant    *mw.Limiter // assistant questions per user (FINUANCE_AI_RATE_PER_HOUR)
 	// per-user rates an administrator set below the server's: one limiter per rate
@@ -44,6 +45,7 @@ func newLimits(clock platform.Clock, aiPerHour int) limits {
 		loginIP:        mw.NewLimiter(mw.LoginPerIP, clock, 0),
 		loginIPEmail:   mw.NewLimiter(mw.LoginPerIPEmail, clock, 0),
 		password:       mw.NewLimiter(mw.PasswordPerUser, clock, 0),
+		secondStep:     mw.NewLimiter(mw.SecondStepPerUser, clock, 0),
 		upload:         mw.NewLimiter(mw.UploadPerUser, clock, 0),
 		assistant:      mw.NewLimiter(mw.Policy{Events: aiPerHour, Per: time.Hour}, clock, 0),
 		assistantMu:    &sync.Mutex{},
@@ -72,7 +74,8 @@ func (a *api) credentialAttempt(ctx context.Context, email string) error {
 func (a *api) userDTO(ctx context.Context, u auth.User) gen.User {
 	l := a.effectiveLimits(ctx, u)
 	return gen.User{Id: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, CreatedAt: u.CreatedAt,
-		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword,
+		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword, SecondFactor: u.SecondFactor,
+		SecondFactorRequired: u.IsAdmin && !u.SecondFactor && a.adminsNeedSecondFactor(ctx),
 		Limits: gen.EffectiveLimits{MaxUploadBytes: l.MaxUploadBytes, ImportsPerDay: l.ImportsPerDay, MaxAccounts: l.MaxAccounts,
 			MaxGroups: l.MaxGroups, MaxSharedGroups: l.MaxSharedGroups, AssistantPerHour: l.AssistantPerHour,
 			AssistantTokensPerDay: l.AssistantTokensPerDay}}
@@ -104,6 +107,10 @@ func (a *api) Login(ctx context.Context, req gen.LoginRequestObject) (gen.LoginR
 	var failed *auth.FailedLoginError
 	if errors.As(err, &failed) { // an existing account; an unknown email has no log to write to
 		a.audit(ctx, failed.UserID, ledger.AuditLoginFailed, "", nil)
+	}
+	var second *auth.SecondStepRequiredError
+	if errors.As(err, &second) { // the password was right; the session starts with the code
+		return gen.Login202JSONResponse{Challenge: second.Challenge, ExpiresAt: second.ExpiresAt}, nil
 	}
 	if err != nil {
 		return nil, err

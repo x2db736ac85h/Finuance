@@ -42,6 +42,7 @@ send without a browser, scope to what it needs, and lose without losing the acco
   change anything or take over the account.
 - A token is as strong as where it is kept: the CLI stores it in a file only its user can read.
 - The golden file adds a small review step to every new route.
+- Two-step sign-in (ADR 0040, Phase 23) does not change tokens: a token is made inside a session that has passed both steps, it is not asked for a code, and it reaches neither the sign-in nor the `/me/second-factor` routes.
 - Follow-ups: an MCP server on top of the CLI (`fin mcp`, Backlog).
 
 ## Alternatives considered

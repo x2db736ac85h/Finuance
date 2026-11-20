@@ -180,6 +180,11 @@ export const APP_ICONS = {
     ['path', { d: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9' }],
     ['path', { d: 'M10 20a2 2 0 0 0 4 0' }],
   ],
+  // Settings → Security (two-step sign-in)
+  shield: [
+    ['path', { d: 'M12 3 5 6v5c0 4.5 2.9 8.3 7 10 4.1-1.7 7-5.5 7-10V6l-7-3Z' }],
+    ['path', { d: 'm9 12 2 2 4-4' }],
+  ],
 } as const satisfies Record<string, readonly Shape[]>;
 
 export const ALL_ICONS = { ...ICONS, ...APP_ICONS };

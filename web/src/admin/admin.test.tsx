@@ -41,6 +41,7 @@ const adminUser = (over: Partial<Schemas['AdminUser']> = {}): Schemas['AdminUser
   isAdmin: false,
   disabled: false,
   mustChangePassword: false,
+  secondFactor: false,
   createdAt: '2026-11-01T10:00:00Z',
   limits: {},
   usage,
@@ -272,6 +273,7 @@ describe('administration', () => {
         defaults: { cards: ['sum', 'cat', 'flow', 'pace', 'payee'] },
         features: { overview: false, assistantDigests: false },
         limits: { maxAccounts: 3, assistantTokensPerDay: 50000 },
+        security: { adminsNeedSecondFactor: false },
       });
     });
     // the saved version remounts the form; the confirmation still comes

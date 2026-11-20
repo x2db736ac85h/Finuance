@@ -30,7 +30,8 @@ func TestTokenRoutePolicy(t *testing.T) {
 			lines = append(lines, string(class)+"\t"+pattern)
 			switch {
 			case strings.HasPrefix(path, "/admin/"), strings.HasPrefix(path, "/auth/"), strings.HasPrefix(path, "/me/tokens"),
-				strings.HasPrefix(path, "/me/sessions"), path == "/me/password", pattern == "DELETE /api/v1/me":
+				strings.HasPrefix(path, "/me/sessions"), strings.HasPrefix(path, "/me/second-factor"), path == "/me/password",
+				pattern == "DELETE /api/v1/me":
 				if class != tokenNever {
 					t.Errorf("%s is %s for tokens; it must be never", pattern, class)
 				}

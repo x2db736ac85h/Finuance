@@ -106,7 +106,7 @@ func (s *Service) Resolve(ctx context.Context, token string) (Identity, error) {
 		limits, _ := instance.ParseLimits(row.Limits)
 		id = Identity{TokenHash: hash, User: User{ID: row.UserID, Email: row.Email, DisplayName: row.DisplayName,
 			IsDemo: row.IsDemo, CreatedAt: row.UserCreatedAt, IsAdmin: row.IsAdmin,
-			MustChangePassword: row.MustChangePassword, Limits: limits}}
+			MustChangePassword: row.MustChangePassword, Limits: limits, SecondFactor: row.SecondFactor}}
 		if now.Sub(row.LastSeenAt) >= touchEvery {
 			return q.TouchSession(ctx, db.TouchSessionParams{TokenHash: hash[:], Now: now})
 		}
@@ -187,7 +187,10 @@ func (s *Service) CleanupExpiredSessions(ctx context.Context) (int64, error) {
 		if err != nil {
 			return err
 		}
-		_, err = q.DeleteOldAccessTokens(ctx, now.Add(-tokenKeepDays*24*time.Hour))
+		if _, err = q.DeleteOldAccessTokens(ctx, now.Add(-tokenKeepDays*24*time.Hour)); err != nil {
+			return err
+		}
+		_, err = q.DeleteExpiredLoginChallenges(ctx, now) // sign-ins that never got their code (ADR 0040)
 		return err
 	})
 	return n, err

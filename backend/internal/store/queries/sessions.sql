@@ -11,7 +11,8 @@ VALUES (@token_hash, @user_id, @now, @now, @expires_at, @user_agent, sqlc.narg(i
 -- account not disabled (disabling also deletes the sessions; this covers a race with a request).
 SELECT s.token_hash, s.user_id, s.created_at, s.last_seen_at, s.expires_at,
        u.email, u.display_name, u.is_demo, u.created_at AS user_created_at,
-       u.is_admin, u.must_change_password, u.limits
+       u.is_admin, u.must_change_password, u.limits,
+       EXISTS (SELECT 1 FROM user_second_factors f WHERE f.user_id = u.id AND f.confirmed_at IS NOT NULL) AS second_factor
 FROM sessions s
 JOIN users u ON u.id = s.user_id
 WHERE s.token_hash = @token_hash AND s.expires_at > @now AND s.last_seen_at > @idle_cutoff

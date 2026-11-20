@@ -20,7 +20,7 @@ import (
 
 // AdminInput is one `finuance admin` command.
 type AdminInput struct {
-	Command     string // create-user | set-password | grant-admin | revoke-admin
+	Command     string // create-user | set-password | grant-admin | revoke-admin | remove-second-factor
 	Email       string
 	DisplayName string
 	Admin       bool      // create-user -admin
@@ -32,6 +32,7 @@ type AdminInput struct {
 //	finuance admin create-user --email … [--display-name …] [--admin] --password-stdin
 //	finuance admin set-password --email … --password-stdin
 //	finuance admin grant-admin|revoke-admin --email …
+//	finuance admin remove-second-factor --email …
 //
 // create-user works even when FINUANCE_ALLOW_SIGNUP=false (personal instances). set-password is the
 // way to recover a forgotten password — there is no email sending — and signs the user out
@@ -80,8 +81,19 @@ func Admin(ctx context.Context, cfg config.Config, in AdminInput, out func(forma
 		}
 		out("password set for %s; all of their sessions were signed out", strings.TrimSpace(in.Email))
 		return nil
+	case "remove-second-factor":
+		// for the administrator who is locked out with nobody left to ask (ADR 0040)
+		u, err := svc.UserByEmail(ctx, in.Email)
+		if err != nil {
+			return err
+		}
+		if err := svc.RemoveSecondFactor(ctx, u.ID); err != nil {
+			return err
+		}
+		out("two-step sign-in removed for %s; they sign in with their password alone until they set it up again", u.Email)
+		return nil
 	}
-	return fmt.Errorf("unknown admin command %q (want create-user, set-password, grant-admin or revoke-admin)", in.Command)
+	return fmt.Errorf("unknown admin command %q (want create-user, set-password, grant-admin, revoke-admin or remove-second-factor)", in.Command)
 }
 
 // readPassword takes the first line of r, without the line ending.

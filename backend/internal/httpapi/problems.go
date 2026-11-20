@@ -46,6 +46,7 @@ var problemTable = []problemKind{
 	{platform.ErrLimitReached, gen.LimitReached, http.StatusUnprocessableEntity, "A limit of your account was reached"},
 	{platform.ErrPasswordChangeRequired, gen.PasswordChangeRequired, http.StatusForbidden, "Choose a new password first"},
 	{platform.ErrAccountDisabled, gen.AccountDisabled, http.StatusForbidden, "This account is disabled"},
+	{platform.ErrSecondFactorRequired, gen.SecondFactorRequired, http.StatusForbidden, "Set up two-step sign-in first"},
 	{platform.ErrLastAdmin, gen.LastAdmin, http.StatusConflict, "The instance needs an administrator"},
 	{platform.ErrContrast, gen.ContrastFailed, http.StatusUnprocessableEntity, "Some colours are too hard to read"},
 	{platform.ErrDisplayNameRequired, gen.DisplayNameRequired, http.StatusUnprocessableEntity, "Set a display name first"},

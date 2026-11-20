@@ -82,6 +82,18 @@ const DESCRIBE: Record<ActivityAction, (m: Meta) => string> = {
       : `Saved the advice article ${str(m, 'slug')} (${str(m, 'status')})`,
   'auth.token_created': (m) => `Made the access token ${str(m, 'name')} (${str(m, 'scope')})`,
   'auth.token_revoked': (m) => `Revoked the access token ${str(m, 'name')}`,
+  'auth.second_factor_enabled': () => 'Switched two-step sign-in on',
+  'auth.second_factor_disabled': () => 'Switched two-step sign-in off',
+  'auth.second_step_failed': () => 'Sign-in failed at the second step (the password was right, the code was not)',
+  'auth.recovery_code_used': (m) =>
+    typeof m['left'] === 'number'
+      ? `Signed in with a recovery code (${String(m['left'])} left)`
+      : 'Signed in with a recovery code',
+  'auth.recovery_codes_replaced': () => 'Made new recovery codes (the earlier ones stopped working)',
+  'admin.second_factor_removed': (m) =>
+    byAdmin(m)
+      ? 'An administrator removed your two-step sign-in'
+      : `Removed the two-step sign-in of ${str(m, 'email')}`,
   'admin.advice_deleted': (m) => `Deleted the advice article ${str(m, 'slug')}`,
   'admin.assistant_changed': (m) =>
     m['model'] !== undefined

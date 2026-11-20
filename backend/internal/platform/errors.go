@@ -26,9 +26,12 @@ var (
 	ErrLimitReached           = errors.New("limit reached")
 	ErrPasswordChangeRequired = errors.New("password change required")
 	ErrAccountDisabled        = errors.New("account disabled")
-	ErrLastAdmin              = errors.New("last administrator")
-	ErrContrast               = errors.New("contrast too low")
-	ErrDisplayNameRequired    = errors.New("display name required")
+	// ErrSecondFactorRequired: an administrator without two-step sign-in on an instance that
+	// requires it for administrators (ADR 0040).
+	ErrSecondFactorRequired = errors.New("second factor required")
+	ErrLastAdmin            = errors.New("last administrator")
+	ErrContrast             = errors.New("contrast too low")
+	ErrDisplayNameRequired  = errors.New("display name required")
 	// Phase 20: an AI change can't be undone because something changed since (ADR 0030).
 	ErrChangedSince = errors.New("changed since")
 )

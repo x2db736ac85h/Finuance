@@ -15,6 +15,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/internal/secret"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 )
@@ -46,6 +47,11 @@ type Config struct {
 	SessionTTL     time.Duration
 	SessionIdleTTL time.Duration
 	AllowSignup    bool
+	// Box seals the secrets of two-step sign-in with the instance key; nil: no key, and the
+	// feature can't be switched on (secondfactor.go).
+	Box *secret.Box
+	// Issuer names this instance in an authenticator app's list ("" = "Finuance").
+	Issuer string
 }
 
 // User is an account as the API shows it.
@@ -61,6 +67,9 @@ type User struct {
 	MustChangePassword bool
 	Limits             instance.Limits
 	Disabled           bool // an administrator disabled the account (background work skips it)
+	// SecondFactor: two-step sign-in is on for the account (set when a session is resolved or the
+	// second step completes).
+	SecondFactor bool
 }
 
 func userOf(u db.User) User {
@@ -207,7 +216,8 @@ func (s *Service) createUser(ctx context.Context, in SignupInput) (User, error) 
 	return out, err
 }
 
-// Login checks the credentials and starts a new session. previousToken, the cookie the browser
+// Login checks the credentials and starts a new session. For an account with two-step sign-in it
+// starts none and returns a *SecondStepRequiredError carrying the challenge for CompleteLogin. previousToken, the cookie the browser
 // sent (if any), is revoked: a login always rotates the session id, so a session fixed before login
 // is useless afterwards. Unknown emails still run a full argon2id verify against a dummy hash, so
 // the timing doesn't tell whether an account exists. Outdated hashes are upgraded (ADR 0010).
@@ -246,7 +256,20 @@ func (s *Service) Login(ctx context.Context, email, password, previousToken stri
 		}
 	}
 	var token string
+	var second *SecondStepRequiredError
 	err = s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		if rehash != "" {
+			if err := q.SetUserPassword(ctx, db.SetUserPasswordParams{ID: u.ID, PasswordHash: rehash}); err != nil {
+				return err
+			}
+			rehash = ""
+		}
+		if on, err := q.HasConfirmedSecondFactor(ctx, u.ID); err != nil {
+			return err
+		} else if on {
+			second, err = s.newChallenge(ctx, q, u.ID)
+			return err
+		}
 		if h, ok := hashToken(previousToken); ok {
 			if err := q.DeleteSession(ctx, h[:]); err != nil {
 				return err
@@ -265,6 +288,9 @@ func (s *Service) Login(ctx context.Context, email, password, previousToken stri
 		token, err = s.newSession(ctx, q, u.ID, c)
 		return err
 	})
+	if err == nil && second != nil {
+		return User{}, "", second
+	}
 	return userOf(u), token, err
 }
 

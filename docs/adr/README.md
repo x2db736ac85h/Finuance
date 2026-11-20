@@ -43,3 +43,4 @@ One file per decision, numbered in the order they were taken. A record is not re
 | [0037](0037-supply-chain.md) | Supply chain: pinned references, checked tools, scans on a schedule, approved and attested releases | accepted | 2026-11-19 |
 | [0038](0038-request-path-database-limits.md) | Time limits for the request path's database work: one place, different for the api and the worker | accepted | 2026-11-19 |
 | [0039](0039-image-signatures.md) | Image signatures at admission: Sigstore policy-controller, Finuance's images by digest | accepted | 2026-11-19 |
+| [0040](0040-two-step-sign-in.md) | Two-step sign-in with one-time codes (TOTP), recovery codes, the rule for administrators | accepted | 2026-11-20 |

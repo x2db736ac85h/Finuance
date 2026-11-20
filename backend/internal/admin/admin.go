@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -50,6 +51,7 @@ type User struct {
 	IsAdmin            bool
 	Disabled           bool
 	MustChangePassword bool
+	SecondFactor       bool // two-step sign-in is on
 	CreatedAt          time.Time
 	LastLoginAt        *time.Time
 	Limits             instance.Limits
@@ -105,10 +107,16 @@ func (s *Service) ListUsers(ctx context.Context, search, cursor string, limit in
 			last := rows[len(rows)-1]
 			page.Next = last.CreatedAt.UTC().Format(time.RFC3339Nano) + "_" + last.ID.String()
 		}
+		ids := make([]uuid.UUID, len(rows))
 		for i := range rows {
 			page.Users = append(page.Users, userOf(rows[i]))
+			ids[i] = rows[i].ID
 		}
-		return nil
+		with, err := q.UsersWithSecondFactor(ctx, ids)
+		for i := range page.Users {
+			page.Users[i].SecondFactor = slices.Contains(with, page.Users[i].ID)
+		}
+		return err
 	})
 	if err != nil {
 		return UsersPage{}, err
@@ -139,7 +147,11 @@ func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 	var u User
 	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		row, err := q.GetUser(ctx, id)
+		if err != nil {
+			return err
+		}
 		u = userOf(row)
+		u.SecondFactor, err = q.HasConfirmedSecondFactor(ctx, id)
 		return err
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -393,4 +405,13 @@ func invalid(field, msg string) error {
 	ve := &platform.ValidationError{}
 	ve.Add(field, msg)
 	return ve
+}
+
+// RemoveSecondFactor removes another account's two-step sign-in (a lost phone and lost recovery
+// codes). The administrator's own goes through Settings → Security, with their password and a code.
+func (s *Service) RemoveSecondFactor(ctx context.Context, actor, target uuid.UUID) error {
+	if actor == target {
+		return invalid("id", "is your own account; switch two-step sign-in off in Settings → Security")
+	}
+	return s.auth.RemoveSecondFactor(ctx, target)
 }

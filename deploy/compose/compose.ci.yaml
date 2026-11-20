@@ -19,12 +19,16 @@ services:
       # the Developer section, checked by e2e/admin (docs/admin.md)
       FINUANCE_DEVELOPER_MODE: "true"
       FINUANCE_DEVELOPER_LINKS_FILE: /etc/finuance/developer/links.example.json
+      # a throwaway instance key (32 bytes of "A"), so that two-step sign-in can be set up in the
+      # E2E run (e2e/two-step.spec.ts); a real instance generates its own
+      FINUANCE_INSTANCE_KEY: QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=
   ai-mock:
     profiles: !reset []
   worker:
     ports: !reset []
     environment:
       FINUANCE_ENV: test
+      FINUANCE_INSTANCE_KEY: QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE= # the same throwaway key as the api
       # digests (ADR 0033) are written by the worker with the same mock model
       FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
       FINUANCE_AI_DEFAULT_MODEL: mock-tools

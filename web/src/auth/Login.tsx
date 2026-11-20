@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
-import { useLogin, useMeta, useStartDemo } from '../api/hooks/me';
+import { useLogin, useLoginSecondStep, useMeta, useStartDemo } from '../api/hooks/me';
 import { errorMessage } from '../lib/errors';
 import { Button } from '../ui/Button';
 import { TextInput } from '../ui/inputs';
@@ -17,6 +17,29 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  // two-step sign-in (ADR 0040): the password was right, and the server waits for a code
+  const second = useLoginSecondStep();
+  const [challenge, setChallenge] = useState('');
+  const [code, setCode] = useState('');
+  const done = () => void navigate(safeNext(params.get('next')), { replace: true });
+
+  const submitCode = () => {
+    if (!code.trim()) {
+      setError('Enter the code from your authenticator app.');
+      return;
+    }
+    setError('');
+    second.mutate(
+      { challenge, code: code.trim() },
+      {
+        onSuccess: done,
+        onError: (e) => {
+          setCode('');
+          setError(errorMessage(e));
+        },
+      },
+    );
+  };
 
   const submit = () => {
     if (!email.trim() || !password) {
@@ -27,7 +50,14 @@ export function Login() {
     login.mutate(
       { email: email.trim(), password },
       {
-        onSuccess: () => void navigate(safeNext(params.get('next')), { replace: true }),
+        onSuccess: (r) => {
+          if ('challenge' in r) {
+            setChallenge(r.challenge);
+            setPassword('');
+            return;
+          }
+          done();
+        },
         onError: (e) => {
           setError(errorMessage(e));
         },
@@ -44,6 +74,48 @@ export function Login() {
       },
     });
   };
+
+  if (challenge)
+    return (
+      <AuthCard
+        title="Enter your code"
+        lead="Type the six-digit code from your authenticator app, or one of your recovery codes."
+        onSubmit={submitCode}
+      >
+        <TextInput
+          name="code"
+          inputMode="numeric"
+          placeholder="123456"
+          aria-label="Code"
+          autoComplete="one-time-code"
+          autoFocus
+          maxLength={32}
+          value={code}
+          onChange={(e) => {
+            setCode(e.target.value);
+          }}
+        />
+        <Button type="submit" variant="primary" disabled={second.isPending}>
+          {second.isPending ? 'Checking…' : 'Sign in'}
+        </Button>
+        <div className="lock-err" role="alert">
+          {error}
+        </div>
+        <p className="auth-alt">
+          <button
+            type="button"
+            className="linklike"
+            onClick={() => {
+              setChallenge('');
+              setCode('');
+              setError('');
+            }}
+          >
+            Start again with your password
+          </button>
+        </p>
+      </AuthCard>
+    );
 
   return (
     <AuthCard title="Sign in" lead="Sign in to see your accounts and transactions." onSubmit={submit}>

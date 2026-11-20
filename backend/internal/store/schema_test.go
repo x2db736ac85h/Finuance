@@ -10,8 +10,9 @@ import (
 
 // notTenantTables have a user_id column but are deliberately outside RLS (PLAN §5.3): sessions are
 // resolved before the user is known, and so are friend codes (looked up by their hash, ADR 0027)
-// and personal access tokens (ADR 0036).
-var notTenantTables = []string{"access_tokens", "friend_codes", "sessions"}
+// and personal access tokens (ADR 0036), and so is everything the second step of signing in reads
+// before a session exists (ADR 0040): the factor, its recovery codes and the pending challenge.
+var notTenantTables = []string{"access_tokens", "friend_codes", "login_challenges", "recovery_codes", "sessions", "user_second_factors"}
 
 // ownPolicies are tables whose policies differ from the single "<table>_tenant" policy: the audit
 // log has one per command, so it can be read and appended to but never updated, and only expired
