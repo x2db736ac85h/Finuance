@@ -26,6 +26,7 @@ type limits struct {
 	password     *mw.Limiter // password checks per signed-in user
 	secondStep   *mw.Limiter // codes at the second step of signing in, per user (ADR 0040)
 	upload       *mw.Limiter // uploads per user
+	reparse      *mw.Limiter // re-parsing a stored file, per user (IMP-4)
 	assistant    *mw.Limiter // assistant questions per user (FINUANCE_AI_RATE_PER_HOUR)
 	// per-user rates an administrator set below the server's: one limiter per rate
 	assistantMu    *sync.Mutex
@@ -52,6 +53,7 @@ func newLimits(clock platform.Clock, aiPerHour int) limits {
 		password:       mw.NewLimiter(mw.PasswordPerUser, clock, 0),
 		secondStep:     mw.NewLimiter(mw.SecondStepPerUser, clock, 0),
 		upload:         mw.NewLimiter(mw.UploadPerUser, clock, 0),
+		reparse:        mw.NewLimiter(mw.ReparsePerUser, clock, 0),
 		assistant:      mw.NewLimiter(mw.Policy{Events: aiPerHour, Per: time.Hour}, clock, 0),
 		assistantMu:    &sync.Mutex{},
 		assistantRates: map[int64]*mw.Limiter{},

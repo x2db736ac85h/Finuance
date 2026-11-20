@@ -28,7 +28,10 @@ var (
 	PasswordPerUser       = Policy{Events: 10, Per: time.Minute}      // password checks of a signed-in user
 	SecondStepPerUser     = Policy{Events: 10, Per: 10 * time.Minute} // codes at the second step of signing in (ADR 0040)
 	UploadPerUser         = Policy{Events: 30, Per: time.Minute}      // uploads (Phase 6)
-	DemoPerIP             = Policy{Events: 5, Per: time.Hour}         // new demo users, per client IP (PLAN 19.1)
+	// each of these reads and parses a whole stored file again: changing a preview, listing its lines,
+	// reprocessing an import (IMP-4). A person adjusting a preview by hand stays far below it.
+	ReparsePerUser = Policy{Events: 60, Per: time.Minute}
+	DemoPerIP      = Policy{Events: 5, Per: time.Hour} // new demo users, per client IP (PLAN 19.1)
 	// asking the model servers for their state again instead of using the cached answer (AI-5)
 	StatusRefreshPerUser = Policy{Events: 6, Per: time.Minute}
 	// what one member writes into shared groups: every write is read by, and told to, the others (API-5)

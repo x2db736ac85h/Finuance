@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -184,6 +185,11 @@ type Upload struct {
 // 8 KiB contain a NUL byte is not text (platform.ErrUnsupportedFile); identical bytes already
 // imported are ErrDuplicateFile.
 func (l *Ledger) CreatePreview(ctx context.Context, userID uuid.UUID, up Upload) (Preview, error) {
+	// the name is shown in the import list, the activity log and archives: no control characters,
+	// nothing that reorders text on screen (IMP-7), whichever way the file arrives
+	if up.Filename = strings.TrimSpace(platform.StripControls(up.Filename)); up.Filename == "" {
+		up.Filename = "upload.csv"
+	}
 	if bytes.IndexByte(up.Content[:min(len(up.Content), sniffBytes)], 0) >= 0 {
 		return Preview{}, fmt.Errorf("%s is not a text (CSV/TSV) file: %w", up.Filename, platform.ErrUnsupportedFile)
 	}

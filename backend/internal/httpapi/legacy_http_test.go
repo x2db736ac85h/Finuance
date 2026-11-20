@@ -177,6 +177,11 @@ func TestLegacyMigrationRequests(t *testing.T) {
 	expect(t, r, 202, "")
 	// no worker runs here, so the first run stays queued
 	expect(t, b.migrate(small, csv), 409, "migration_running")
+	// and the second request is refused before its body is looked at (IMP-3): a body that would be
+	// a validation error or too large on its own gets the same answer
+	expect(t, b.migrate(nil, nil), 409, "migration_running")
+	expect(t, b.migrate(map[string]any{"version": 1}, nil), 409, "migration_running")
+	expect(t, b.migrate(man, files), 409, "migration_running")
 	// without a session
 	anon := e.browser()
 	expect(t, anon.migrate(small, csv), 401, "unauthenticated")

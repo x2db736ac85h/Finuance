@@ -159,6 +159,21 @@ func New(st *store.Store, l *ledger.Ledger, chats *assistant.Chats, clock platfo
 // Enqueue inserts the run's job in the same database transaction (River's InsertTx).
 type Enqueue func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 
+// Busy reports ErrRunning when the user has a migration queued or running. The handler asks before
+// it reads a request's body, which can be close to a hundred megabytes: Create refuses a second
+// run too, but only after everything was read and decoded (IMP-3).
+func (m *Migrator) Busy(ctx context.Context, userID uuid.UUID) error {
+	var active bool
+	err := m.st.WithUserReadOnly(ctx, userID, func(q *db.Queries, _ pgx.Tx) (err error) {
+		active, err = q.HasActiveLegacyImport(ctx, userID)
+		return err
+	})
+	if err == nil && active {
+		return ErrRunning
+	}
+	return err
+}
+
 // Create stores a validated manifest and the files' bytes (in manifest order) and enqueues the
 // run, in one transaction. A second run while one is queued or running is ErrRunning.
 func (m *Migrator) Create(ctx context.Context, userID uuid.UUID, man Manifest, files [][]byte, enqueue Enqueue) (Run, error) {

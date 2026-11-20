@@ -179,6 +179,18 @@ func (q *Queries) GetLegacyImportManifest(ctx context.Context, arg GetLegacyImpo
 	return manifest, err
 }
 
+const hasActiveLegacyImport = `-- name: HasActiveLegacyImport :one
+SELECT EXISTS (SELECT 1 FROM legacy_imports WHERE user_id = $1 AND status IN ('queued', 'running'))
+`
+
+// A run of the user is queued or running (legacy_imports_one_active allows one).
+func (q *Queries) HasActiveLegacyImport(ctx context.Context, userID uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, hasActiveLegacyImport, userID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const legacyImportFile = `-- name: LegacyImportFile :one
 SELECT content FROM legacy_import_files
 WHERE user_id = $1 AND legacy_import_id = $2 AND position = $3

@@ -277,6 +277,8 @@ type Querier interface {
 	// count, money out and in (minor units, transfers included as in the legacy), first and last day.
 	// The currency is the most common one among the group's transactions.
 	GroupStats(ctx context.Context, userID uuid.UUID) ([]GroupStatsRow, error)
+	// A run of the user is queued or running (legacy_imports_one_active allows one).
+	HasActiveLegacyImport(ctx context.Context, userID uuid.UUID) (bool, error)
 	HasConfirmedSecondFactor(ctx context.Context, userID uuid.UUID) (bool, error)
 	// Distinct bank categories of an import's valid rows (the commit upserts them as categories).
 	ImportBankCategories(ctx context.Context, arg ImportBankCategoriesParams) ([]*string, error)
