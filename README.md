@@ -100,6 +100,7 @@ Finuance runs on a single-node k3s cluster at home, deployed by Argo CD from thi
 - **Backups:** continuous WAL archiving and daily base backups. The restore drill is scripted and measured: 71 s to a working instance, at most 96 s of data lost.
 - **Load:** the latency SLO holds up to about 77 table requests per second on that machine. The first load test failed 29 % of its requests; [docs/perf.md](docs/perf.md) explains the cause (a readiness cascade over an undersized database) and the fix.
 - **Security:** a [threat model](docs/THREAT-MODEL.md) tied to tests, images signed with cosign and shipped with SBOMs, scan results and accepted findings in [docs/security-scan.md](docs/security-scan.md).
+- **A lab with synthetic users:** `make sim-up` starts a separate lab instance and a traffic simulator whose ten animals (Otter the tidy one, Fox who asks the assistant, Sloth who uploads broken files, …) use every feature all day through the front door. The server labels their traffic synthetic, so dashboards, logs and traces always have something real-looking to show without touching the service-level numbers ([docs/simulator.md](docs/simulator.md)).
 - **Runbook:** bootstrap, deploy, rollback, restore and playbooks in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## Testing and CI
@@ -111,7 +112,8 @@ Finuance runs on a single-node k3s cluster at home, deployed by Argo CD from thi
 | Web | Component tests with Vitest and a mocked API |
 | End to end | Playwright against a fresh Compose stack, accessibility checks with axe |
 | Parity | The prototype and the new app on the same data, number by number ([report](docs/parity-report.md)) |
-| Cluster rehearsal | Weekly on a kind cluster: install the charts, kill pods under load, restore a backup |
+| Cluster rehearsal | Weekly on a kind cluster: install the charts, kill pods under load, restore a backup, run the simulator against a lab |
+| Simulator | Every one of its 57 actions against a real stack in one test; its page in Playwright against the Compose lab |
 | Security | gitleaks, Trivy (images, repository, charts), `npm audit`, govulncheck on every push; ZAP weekly |
 
 ```sh
@@ -124,7 +126,7 @@ All test data is synthetic.
 
 ## Roadmap
 
-Released: **0.4.1**. Next: security first (patches and more checks in CI in 0.4.2; signed images enforced and two-step sign-in in 0.5), then better observability, a traffic simulator, a cloud model option, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
+Released: **0.6.0** (signed images enforced, two-step sign-in, collected logs and complete traces, the traffic simulator). Next: a cloud model option, an on-demand cloud lab, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
 
 ## How it was built
 

@@ -243,3 +243,24 @@ sends can set or clear the label:
 
 Synthetic users exist only on an instance started with `FINUANCE_SIMULATION=true`; elsewhere they
 can't be made and can't sign in.
+
+### The simulator
+
+The traffic simulator (`finuance-sim`, [simulator.md](simulator.md), ADR 0043) is that traffic. Four
+things to know when reading it:
+
+- **Requests without a user count as real:** signing in, `GET /meta`, the probes, unknown paths
+  and a path parameter in the wrong format (the router refuses it before the session is known). So
+  a lab shows some real traffic even when only the animals use it. The rehearsal's `lab` stage
+  checks that nothing else of theirs is counted as real.
+- **Its own view:** `finuance_sim_actions_total{persona,action,result}`,
+  `finuance_sim_action_duration_seconds{action}`, `finuance_sim_active_personas`,
+  `finuance_sim_paused` and `finuance_sim_config_generation`, on the dashboard "Finuance ·
+  Simulator", next to the latency the lab itself measured.
+- **From an action to its trace:** the page's feed shows each action's request id, the id the
+  server answered. Search the logs for it, and a line's `trace_id` opens the trace. On Kubernetes
+  the ingress passes the simulator's own `sim-<animal>-…` id to the api; on Compose the web server
+  gives every request its own (23.4).
+- **On Compose, Loki has no `traffic` label:** the containers' logs reach it as text. The feed's
+  link therefore searches every service for the id (`{service_name=~".+"} |= "<id>"`), which works
+  in both places.

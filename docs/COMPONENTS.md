@@ -1,6 +1,6 @@
 # Component map
 
-Every part of Finuance as it is built at `v0.5.1` (written 2026-11-16, brought up to date 2026-11-21 at the end of Phase 24), where its code lives and what it talks to. Parts that are planned and not built yet are marked **planned** with their phase (`docs/PLAN.md` §9). [ARCHITECTURE.md](ARCHITECTURE.md) explains the request path, the deployment, the data model, tenant isolation and the query engine in depth; this page is the map.
+Every part of Finuance as it is built at `v0.6.0` (written 2026-11-16, brought up to date 2026-11-22 at the end of Phase 25), where its code lives and what it talks to. Parts that are planned and not built yet are marked **planned** with their phase (`docs/PLAN.md` §9). [ARCHITECTURE.md](ARCHITECTURE.md) explains the request path, the deployment, the data model, tenant isolation and the query engine in depth; this page is the map.
 
 ## 1. What runs
 
@@ -9,6 +9,7 @@ flowchart TB
     subgraph clients["Clients"]
         spa["Browser<br/>React app (web/)"]
         cli["fin CLI and scripts<br/>access token"]
+        sim["finuance-sim (a lab only)<br/>synthetic users, tuning page"]
     end
 
     subgraph edge["Edge"]
@@ -37,6 +38,7 @@ flowchart TB
 
     spa --> ingress
     cli --> ingress
+    sim -. "a lab's front door" .-> ingress
     ingress -- "/" --> web
     ingress -- "/api/" --> api
     api -- "app role, one user per transaction" --> pg
@@ -64,15 +66,15 @@ flowchart TB
 | **admin CLI** | `create-user`, `set-password`, `grant-admin`, `revoke-admin`, `remove-second-factor`, `llm-probe`, `synthetic-users` (a lab only, ADR 0043); `seed-demo` | `internal/app/admin.go` | Run by hand in a pod or locally | PostgreSQL |
 | **PostgreSQL** | All data and the job queue; forced row-level security; roles `finuance_owner` and `finuance_app` | `deploy/db/bootstrap.sql`, `deploy/k8s/db` | CloudNativePG cluster ×2, or one Compose container | The backup bucket |
 | **Model server** | Answers the assistant; optional | `internal/llm` (client side), `deploy/assistant/` | Outside the cluster (ADR 0020) | — |
-| **`llmmock`** | A scripted model server for tests, CI and the rehearsal; never in a release | `backend/testutil/llmmock`, `cmd/llmmock` | Compose profile, kind namespace | — |
+| **`finuance-sim`** | The traffic simulator: ten synthetic users with characters play 57 actions against a lab through its front door; the tuning page, its control API and its own metrics (ADR 0043, [simulator.md](simulator.md)) | `backend/cmd/finuance-sim`, `internal/sim`, `web/sim/`, `api/sim.openapi.yaml` | Its own image; Compose (`make sim-up`) or `deploy/helm/finuance-sim` in its own namespace; never on an instance with real data | A lab's web server or ingress, as a browser does |
+| **`llmmock`** | A scripted model server for tests, CI, the rehearsal and labs; its history is bounded | `backend/testutil/llmmock`, `cmd/llmmock` | Compose profile; the image `finuance-llmmock` in a lab's namespace | — |
 | **Monitoring** | Metrics with exemplars, SLO rules, alerts by e-mail, the daily digest, dashboards, traces, collected logs | `deploy/k8s/observability`, `deploy/k8s/tempo`, `deploy/k8s/telemetry` | kube-prometheus-stack, Tempo, Grafana Alloy, Loki | Scrapes api, worker, database, Traefik; Alloy reads the app's pod logs and passes its traces on (ADR 0042) |
-| **Admission** | Pods in Finuance's namespaces only with images from the listed registries; Finuance's own only with the release workflow's signed build provenance | `deploy/k8s/admission`, `deploy/k8s/policy-controller` | A `ValidatingAdmissionPolicy`; Sigstore policy-controller in `cosign-system` (ADRs 0024, 0039) | The Kubernetes API, the registry's signatures |
+| **Admission** | Pods in Finuance's namespaces only with the exact repositories that namespace may run (the lab's images only in the lab's namespaces); Finuance's own only with the release workflow's signed build provenance | `deploy/k8s/admission`, `deploy/k8s/policy-controller` | A `ValidatingAdmissionPolicy`; Sigstore policy-controller in `cosign-system` (ADRs 0024, 0039) | The Kubernetes API, the registry's signatures |
 
 Not there yet:
 
 | Planned component | Phase |
 |---|---|
-| `finuance-sim`: the traffic simulator with its tuning page; a lab instance; `llmmock` as a lab image | 25 |
 | A Vertex AI connection (token source in `internal/llm`) | 26 |
 | A lab on GKE Autopilot built by Terraform (`deploy/terraform/`), Gateway API in the chart | 27 |
 | The public demo host | 29 |
@@ -129,7 +131,8 @@ Rules that hold the shape (each is a test or a lint):
 - Only `store` and `query` run SQL (`store/guard_test.go`). All user data goes through `store.WithUser`, which sets `app.user_id` for one transaction; the assistant's tools use `WithUserReadOnly`.
 - `admin` can't import the financial packages; it reads user tables only for counts.
 - `ingest` and `money` have no database and no clock.
-- Generated code is never edited: `httpapi/gen`, `client/gen`, `store/db`, `web/src/api/schema.d.ts` (`make gen`).
+- Generated code is never edited: `httpapi/gen`, `client/gen`, `store/db`, `web/src/api/schema.d.ts`, and the simulator's `sim/control/gen` and `web/sim/src/api/schema.d.ts` (`make gen`).
+- The simulator is a second binary, `cmd/finuance-sim`, that talks to Finuance only through the generated client: `sim` (the engine, personas, ceilings, the data calendar), `sim/actions` (one file per feature area), `sim/statements` (bank statements made on demand), `sim/control` (its control API and page) and `sim/identity` (the animals' names and passwords, which `finuance admin synthetic-users` imports too).
 
 ### The request path
 
@@ -162,7 +165,9 @@ A job is inserted in the same transaction as the change that needs it, and carri
 | `shared/` | Shared groups and the Shared tab |
 | `legacy/` | Migrating a backup of the single-file app (decrypted in the browser) |
 
-Tests: Vitest beside the code; Playwright in `web/e2e/` (24 spec files, with axe checks, screenshots and the parity run against the legacy app).
+`web/sim/` is a second Vite entry (`npm run build:sim`): the simulator's tuning page, built with the app's tokens, styles and inputs and embedded in the `finuance-sim` image.
+
+Tests: Vitest beside the code; Playwright in `web/e2e/` (25 spec files, with axe checks, screenshots and the parity run against the legacy app; `web/e2e/sim/` runs against the Compose lab).
 
 ## 4. Data
 
@@ -186,7 +191,7 @@ flowchart LR
     ci --> main["main"]
     main --> tag["Tag vX.Y.Z(-rc.N)"]
     tag --> rel["release<br/>approved by the maintainer;<br/>multi-arch build, Trivy, SBOM,<br/>cosign keyless, build provenance"]
-    rel --> ghcr[("ghcr.io<br/>finuance-api, finuance-web")]
+    rel --> ghcr[("ghcr.io<br/>finuance-api, finuance-web;<br/>finuance-sim, finuance-llmmock for labs")]
     rel --> bump["gitops-bump<br/>pull request with the tag and digests"]
     bump --> main
     main --> argo["Argo CD<br/>app of apps"]
@@ -199,15 +204,15 @@ flowchart LR
 |---|---|---|
 | `ci.yml` | Pushes and pull requests | gitleaks and the private-data guards; pins, zizmor and actionlint; Go lint, tests, fuzz smoke, `govulncheck`; integration tests with PostgreSQL; both images built and scanned; Trivy on the tree; `npm audit`; Helm lint, kubeconform, rules tests, sealing round trip; the legacy oracle is fresh; web lint, types, Vitest, build; Playwright on Compose |
 | `nightly.yml` | Daily | Fuzzing, 60 s per target |
-| `weekly.yml` | Mondays | ZAP baseline and API scan, k6 smoke against the SLO thresholds, the demo-mode E2E |
-| `k8s-rehearsal.yml` | Mondays, deploy pushes | The whole deployment on kind: operators, secrets, database with backup, the app, NetworkPolicy probes, signatures at admission, ingress limits, streaming through the ingress, logs and traces through Alloy, pod kills under load, restore |
-| `release.yml` | Version tags, after the maintainer approves the `release` environment | Build, scan, SBOM, sign, build provenance, release notes from the changelog, the bump pull request (final releases) |
+| `weekly.yml` | Mondays | ZAP baseline and API scan, k6 smoke against the SLO thresholds (on a lab, with synthetic users), the demo-mode E2E |
+| `k8s-rehearsal.yml` | Mondays, deploy pushes | The whole deployment on kind: operators, secrets, database with backup, the app, NetworkPolicy probes, signatures at admission, ingress limits, streaming through the ingress, logs and traces through Alloy, pod kills under load, restore, the lab with the simulator for five minutes, admission per namespace |
+| `release.yml` | Version tags, after the maintainer approves the `release` environment | Four images built, scanned, signed, with an SBOM and build provenance; release notes from the changelog, the bump pull request (final releases) |
 | `codeql.yml`, `scorecard.yml` | Pull requests (CodeQL), pushes to `main`, weekly | Code scanning (Go, TypeScript, the workflows, Python); OpenSSF Scorecard |
-| `daily-scan.yml` | Daily | Trivy on the released images: opens an issue on a new finding and closes it when fixed |
+| `daily-scan.yml` | Daily | Trivy on the four released images: opens an issue on a new finding and closes it when fixed |
 
 Argo CD applications, in sync order: projects → admission policy → Tempo → CloudNativePG operator, Sealed Secrets → Barman Cloud plugin, kube-prometheus-stack → RustFS → the secrets → the database (synced by hand) → Finuance → its dashboards and rules, Alloy and Loki (`telemetry`) → policy-controller (synced by hand, ADR 0039).
 
-Namespaces on the reference cluster: `finuance` (web, api, worker, database), `finuance-restore` (restore drills), `s3` (RustFS), `monitoring`, `cnpg-system`, `kube-system` (Traefik, the admission policy), `cosign-system` (policy-controller), `argocd`. Pod Security `restricted`, default-deny NetworkPolicies for every pod of the namespace, images admitted by registry and, for Finuance's own, by signed provenance.
+Namespaces on the reference cluster: `finuance` (web, api, worker, database), `finuance-restore` (restore drills), `s3` (RustFS), `monitoring`, `cnpg-system`, `kube-system` (Traefik, the admission policy), `cosign-system` (policy-controller), `argocd`. A lab (the rehearsal, or a cluster of its own; never the reference cluster) adds `finuance-lab` (its own instance, database and mock model) and `finuance-sim` (the simulator). Pod Security `restricted`, default-deny NetworkPolicies for every pod of the namespace, images admitted by registry and, for Finuance's own, by signed provenance.
 
 ## 6. What the system tells you
 
@@ -221,7 +226,8 @@ Namespaces on the reference cluster: `finuance` (web, api, worker, database), `f
 | Activity log | Handlers, after a successful change | `audit_log`, shown in Settings → Activity | — |
 | Health | `/healthz`, `/readyz` | Probes; not traced, logged at debug level | — |
 | Browser errors | the web app, the browser's policy reports | `finuance_client_errors_total`, one log line each | — |
-| Synthetic traffic | the server, from the user's row (ADR 0041) | The `traffic` label in logs, metrics, traces and jobs | The simulator itself (25) |
+| Synthetic traffic | the server, from the user's row (ADR 0041) | The `traffic` label in logs, metrics, traces and jobs | — |
+| The simulator's view | `finuance-sim` | `finuance_sim_*` metrics, the dashboard "Finuance · Simulator", its live feed with each action's request id | — |
 
 ## 7. Guard scripts and tools
 
@@ -231,7 +237,8 @@ Namespaces on the reference cluster: `finuance` (web, api, worker, database), `f
 | `tools/check-toolchain.sh`, `check-no-float.sh`, `check-compose-prod.sh`, `check-db-bootstrap.sh`, `check-sealed.sh`, `check-port-forwards.sh`, `check-helm.sh`, `check-observability.sh` | One Go version; no floats for money; the copies of the bootstrap SQL agree; sealed secrets hold no plain values; ports, charts, dashboards and rules are consistent |
 | `tools/legacy-oracle/` | Drives the single-file app in a headless browser to produce expectations and the synthetic fixtures |
 | `tools/rehearsal.sh`, `homelab-drill.sh` | The deployment rehearsal on kind; backup and restore drills |
+| `make sim-up`, `tools/check-lab.sh` | The lab on one machine; a check of its actions, Prometheus and Loki from outside |
 | `tools/observe.sh` | The administration tools' port-forwards in one command |
 | `tools/zap-scan.sh`, `openvas-scan.sh` | Dynamic scans |
 | `tools/seal-secrets.sh`, `bump-homelab-tag.sh`, `publish-public.sh` | Secrets, the deploy bump, the alternative way to publish |
-| `loadtest/` (k6), `evals/assistant/` | Load tests against the SLO thresholds; assistant quality per model |
+| `loadtest/` (k6), `finuance-sim`, `evals/assistant/` | Load tests against the SLO thresholds; every feature all day on a lab (`loadtest/README.md` says which is for what); assistant quality per model |
