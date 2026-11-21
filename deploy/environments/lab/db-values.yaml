@@ -1,0 +1,19 @@
+# The lab's database (README.md): one small instance in finuance-lab, no backups (synthetic data
+# only; a lab is made again rather than restored). Its clients include the job that makes the
+# simulator's personas.
+cluster:
+  instances: 1
+  storage:
+    size: 5Gi
+  resources:
+    requests: { cpu: 100m, memory: 512Mi }
+    limits: { memory: 1Gi }
+backup:
+  enabled: false
+networkPolicy:
+  clients:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: finuance
+        matchExpressions:
+          - { key: app.kubernetes.io/component, operator: In, values: [api, worker, migrate, animals] }

@@ -1,0 +1,76 @@
+{{- $su := .Values.simulation.syntheticUsers -}}
+{{- if and $su.seedSecret.name (not .Values.simulation.enabled) }}
+{{- fail "simulation.syntheticUsers.seedSecret needs simulation.enabled: synthetic users exist on a lab only (ADR 0041)" }}
+{{- end }}
+{{- if and .Values.simulation.enabled $su.seedSecret.name }}
+{{- $name := include "finuance.fullname" . -}}
+{{- $dbCA := .Values.database.caSecret.name -}}
+# The traffic simulator's personas (PLAN 25.9, ADR 0043): made after every install and upgrade with
+# the passwords the simulator derives from the same seed. A second run changes nothing; a new seed
+# resets the passwords. A lab only: the command refuses an instance without FINUANCE_SIMULATION.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-animals
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+    app.kubernetes.io/component: animals
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 4
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "finuance.labels" . | nindent 8 }}
+        app.kubernetes.io/component: animals
+    spec:
+      # in the same pod, as the migration job retries: a new pod's first connection through a
+      # NetworkPolicy can be refused for a moment
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "finuance.podSecurity" (dict "uid" 65532) | nindent 8 }}
+      containers:
+        - name: animals
+          image: {{ include "finuance.image" (dict "root" . "component" "api") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["admin", "synthetic-users", "-count={{ int $su.count }}", "-seed-env=FINUANCE_SIM_SEED"]
+          envFrom:
+            - configMapRef:
+                name: {{ $name }}-env
+          env:
+            {{- include "finuance.dbPassword" .Values.database.app | nindent 12 }}
+            - name: FINUANCE_SIM_SEED
+              valueFrom:
+                secretKeyRef: { name: {{ $su.seedSecret.name }}, key: {{ $su.seedSecret.key }} }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            {{- include "finuance.containerSecurity" . | nindent 12 }}
+          {{- if $dbCA }}
+          volumeMounts:
+            - name: db-ca
+              mountPath: /etc/finuance-db-ca
+              readOnly: true
+          {{- end }}
+      {{- if $dbCA }}
+      volumes:
+        - name: db-ca
+          secret:
+            secretName: {{ $dbCA }}
+            items:
+              - { key: {{ .Values.database.caSecret.key }}, path: {{ .Values.database.caSecret.key }} }
+      {{- end }}
+{{- end }}

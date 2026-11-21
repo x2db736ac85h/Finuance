@@ -17,6 +17,8 @@
 #   - image signatures (Sigstore policy-controller with the homelab's policies): the released
 #     images are admitted in a labelled namespace, an image without the release workflow's
 #     signature and an image no policy names are refused (needs ghcr.io and Sigstore's services).
+#   - the lab (PLAN 25.9): a second instance, its mock model and the simulator in its own namespace,
+#     five minutes at 3x through Traefik with no 5xx and every persona's request counted synthetic;
 #   - image admission: each namespace admits only the image repositories it runs (the lab's
 #     simulator and mock model nowhere near the instance's namespace).
 # Timings go to $SUMMARY (and the GitHub job summary). Needs docker, kind, kubectl, helm, kubeseal,
@@ -42,6 +44,9 @@ PAUSE_IMAGE=registry.k8s.io/pause:3.10.1@sha256:278fb9dbcca9518083ad1e11276933a2
 API_IMAGE=ghcr.io/x2db736ac85h/finuance-api:rehearsal
 WEB_IMAGE=ghcr.io/x2db736ac85h/finuance-web:rehearsal
 MOCK_IMAGE=finuance-llmmock:rehearsal
+# the lab's two images (PLAN 25.9), named as the lab's charts name them
+SIM_IMAGE=ghcr.io/x2db736ac85h/finuance-sim:rehearsal
+LAB_MOCK_IMAGE=ghcr.io/x2db736ac85h/finuance-llmmock:rehearsal
 BASE=https://localhost:8443
 RESTORE_BASE=https://restore.localhost:8443
 export KUBECONFIG=${KUBECONFIG:-$WORK/kubeconfig}
@@ -89,6 +94,8 @@ images() {
   docker build -q -f deploy/docker/Dockerfile.backend --target llmmock -t "$MOCK_IMAGE" .
   docker tag finuance-backend:dev "$API_IMAGE"
   docker tag finuance-web:dev "$WEB_IMAGE"
+  docker tag finuance-sim:dev "$SIM_IMAGE"
+  docker tag finuance-llmmock:dev "$LAB_MOCK_IMAGE"
   # the build cache isn't needed again; the kind nodes need the disk
   docker builder prune -af >/dev/null
   df -h / | tail -1
@@ -98,7 +105,7 @@ cluster() {
   log "kind cluster $CLUSTER"
   local t0; t0=$(date +%s)
   kind create cluster --name "$CLUSTER" --image "$KIND_NODE_IMAGE" --config "$R/kind.yaml" --kubeconfig "$KUBECONFIG" --wait 180s
-  kind load docker-image --name "$CLUSTER" "$API_IMAGE" "$WEB_IMAGE" "$MOCK_IMAGE"
+  kind load docker-image --name "$CLUSTER" "$API_IMAGE" "$WEB_IMAGE" "$MOCK_IMAGE" "$SIM_IMAGE" "$LAB_MOCK_IMAGE"
   timing "kind cluster with the images loaded" $(($(date +%s) - t0))
 }
 
@@ -158,7 +165,7 @@ tls() {
   openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=Finuance rehearsal CA" \
     -keyout "$WORK/ca.key" -out "$WORK/ca.pem" -addext basicConstraints=critical,CA:TRUE -addext keyUsage=critical,keyCertSign 2>/dev/null
   openssl req -newkey rsa:2048 -nodes -subj "/CN=localhost" -keyout "$WORK/tls.key" -out "$WORK/tls.csr" 2>/dev/null
-  printf 'subjectAltName=DNS:localhost,DNS:restore.localhost\nextendedKeyUsage=serverAuth\n' >"$WORK/tls.ext"
+  printf 'subjectAltName=DNS:localhost,DNS:restore.localhost,DNS:lab.localhost\nextendedKeyUsage=serverAuth\n' >"$WORK/tls.ext"
   openssl x509 -req -in "$WORK/tls.csr" -CA "$WORK/ca.pem" -CAkey "$WORK/ca.key" -CAcreateserial -days 2 \
     -extfile "$WORK/tls.ext" -out "$WORK/tls.crt" 2>/dev/null
 }
@@ -574,6 +581,75 @@ report() {
   annotate warning "operator and plugin errors" "$WORK/report-operator.txt"
 }
 
+# The lab (deploy/environments/lab, PLAN 25.9): a second instance in finuance-lab with its own
+# database, the mock model next to it and the simulator in finuance-sim, reaching the lab through
+# Traefik at https://lab.localhost as a browser would. Five minutes at 3× intensity: no 5xx on the
+# lab, and every request a persona made as itself counted as synthetic, so the service-level rules
+# (which count traffic!="synthetic") leave the simulator out.
+lab() {
+  log "lab: the traffic simulator against a lab instance (PLAN 25.9)"
+  local t0; t0=$(date +%s)
+  tls
+  namespace finuance-lab
+  kubectl create namespace finuance-sim --dry-run=client -o yaml | kubectl apply -f -
+  kubectl label namespace finuance-sim --overwrite pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=latest
+  local seed token
+  seed=$(openssl rand -hex 32) token=$(openssl rand -hex 32)
+  for ns in finuance-lab finuance-sim; do
+    kubectl -n "$ns" create secret generic finuance-sim-seed --from-literal=seed="$seed" --dry-run=client -o yaml | kubectl apply -f -
+  done
+  kubectl -n finuance-sim create secret generic finuance-sim-control --from-literal=token="$token" --dry-run=client -o yaml | kubectl apply -f -
+  kubectl -n finuance-sim create secret generic lab-ca --from-file=ca.crt="$WORK/ca.pem" --dry-run=client -o yaml | kubectl apply -f -
+  helm upgrade --install finuance-db deploy/k8s/db -n finuance-lab -f "$R/db-values.yaml" -f deploy/environments/lab/db-values.yaml
+  kubectl -n finuance-lab wait cluster/finuance-db --for=condition=Ready --timeout=600s
+  helm upgrade --install finuance-lab-mock deploy/helm/finuance-sim -n finuance-lab -f deploy/environments/lab/mock-values.yaml \
+    --set image.tag=rehearsal --set image.pullPolicy=Never --wait --timeout 3m
+  helm upgrade --install finuance deploy/helm/finuance -n finuance-lab -f "$R/app-values.yaml" -f deploy/environments/lab/app-values.yaml \
+    --set publicOrigin=https://lab.localhost:8443 --set ingress.host=lab.localhost --set ingress.tls.secretName=finuance-tls \
+    --wait --timeout 10m
+  kubectl -n finuance-lab wait job/finuance-animals --for=condition=Complete --timeout=180s
+  local traefik
+  traefik=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterIP}')
+  helm upgrade --install finuance-sim deploy/helm/finuance-sim -n finuance-sim -f deploy/environments/lab/sim-values.yaml \
+    -f "$R/lab-sim-values.yaml" --set simulator.target=https://lab.localhost \
+    --set "simulator.hostAliases[0].ip=$traefik" --set "simulator.hostAliases[0].hostnames[0]=lab.localhost" --wait --timeout 3m
+  timing "lab installed (database, app, mock, simulator)" $(($(date +%s) - t0))
+
+  kubectl -n finuance-sim port-forward svc/finuance-sim 18090:8090 >/dev/null 2>&1 &
+  local pf=$!
+  kubectl -n finuance-lab port-forward deploy/finuance-api 19090:9090 >/dev/null 2>&1 &
+  local pf2=$!
+  # shellcheck disable=SC2064 # the PIDs are meant to be expanded now
+  trap "kill $pf $pf2 2>/dev/null || true" RETURN
+  control() { curl -fsS -H "Authorization: Bearer $token" -H "X-Finuance-Client: web" -H 'Content-Type: application/json' "$@"; }
+  wait_for 60 "the simulator's control API" control -o /dev/null http://localhost:18090/api/state
+  wait_for 120 "every persona signed in" bash -c "curl -fsS -H 'Authorization: Bearer $token' -H 'X-Finuance-Client: web' http://localhost:18090/api/state | jq -e '[.personas[] | select(.signedIn)] | length == 10' >/dev/null"
+  local doc
+  doc=$(control http://localhost:18090/api/config)
+  control -X PUT http://localhost:18090/api/config \
+    -d "$(jq -c '.config.intensity = 3000 | .config.activeHours = false | .config.personas = 10' <<<"$doc")" >/dev/null
+  echo "   five minutes at 3x, all day, ten animals"
+  sleep 300
+  local state metrics
+  state=$(control http://localhost:18090/api/state)
+  metrics=$(curl -fsS http://localhost:19090/metrics)
+  jq -c '.totals' <<<"$state"
+  fact "lab: the simulator's actions in 5 min at 3x" "$(jq -r '"\(.totals.ok) ok, \(.totals.error) errors, \(.totals.skipped) skipped"' <<<"$state")"
+  sum() { grep -E "^http_server_requests_total\{.*$1" <<<"$metrics" | awk '{s += $NF} END {print s + 0}'; }
+  local five synthetic real other
+  five=$(sum 'status_class="5xx"') synthetic=$(sum 'traffic="synthetic"') real=$(sum 'traffic="real"')
+  # requests without a user are real by definition (signing in, /meta, probes, unknown paths)
+  other=$(grep -E '^http_server_requests_total\{.*traffic="real"' <<<"$metrics" |
+    grep -vE 'route="(POST /api/v1/auth/login|GET /api/v1/meta|GET /(healthz|readyz)|unmatched)"' | awk '{s += $NF} END {print s + 0}')
+  fact "lab: the api counted" "$synthetic synthetic, $real real (sign-ins, probes and the like), $five 5xx"
+  local status=0
+  [ "$(jq '.totals.ok' <<<"$state")" -ge 100 ] || { echo "the animals did too little: $(jq -c .totals <<<"$state")" >&2; status=1; }
+  [ "$five" -eq 0 ] || { echo "the lab answered $five 5xx" >&2; grep -E 'status_class="5xx"' <<<"$metrics" >&2; status=1; }
+  [ "$other" -eq 0 ] || { echo "$other of the personas' requests were counted as real traffic" >&2; status=1; }
+  [ "$synthetic" -gt "$real" ] || { echo "synthetic $synthetic, real $real" >&2; status=1; }
+  return "$status"
+}
+
 # The image admission policy (deploy/k8s/admission, PLAN 25.7): each namespace admits only the
 # repositories it runs. Applied at the end, so the earlier stages' probes and stand-ins aren't held
 # to it, then tried with server-side dry runs (which create nothing) and removed again.
@@ -612,9 +688,9 @@ down() { kind delete cluster --name "$CLUSTER" || true; }
 case ${1:-all} in
   all)
     rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
-    images; cluster; platform; deploy; smoke; logs; netpol; sse; podkill; restore; limits; signatures; admission; summary
+    images; cluster; platform; deploy; smoke; logs; netpol; sse; podkill; restore; limits; signatures; lab; admission; summary
     ;;
-  images | cluster | platform | deploy | smoke | logs | netpol | sse | podkill | restore | limits | signatures | admission)
+  images | cluster | platform | deploy | smoke | logs | netpol | sse | podkill | restore | limits | signatures | lab | admission)
     mkdir -p "$WORK/logs"
     "$1" 2>&1 | tee "$WORK/logs/$1.log"
     ;;

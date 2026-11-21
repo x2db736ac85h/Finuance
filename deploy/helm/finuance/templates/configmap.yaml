@@ -11,6 +11,7 @@ data:
   FINUANCE_PUBLIC_ORIGIN: {{ required "publicOrigin is required (e.g. https://finance.example.com)" .Values.publicOrigin | quote }}
   FINUANCE_COOKIE_SECURE: "true"
   FINUANCE_ALLOW_SIGNUP: {{ .Values.allowSignup | quote }}
+  FINUANCE_SIMULATION: {{ .Values.simulation.enabled | quote }}
   FINUANCE_TRUSTED_PROXIES: {{ .Values.trustedProxies | quote }}
   FINUANCE_MAX_UPLOAD_BYTES: {{ .Values.maxUploadBytes | int64 | quote }}
   FINUANCE_DEVELOPER_MODE: {{ .Values.developer.enabled | quote }}

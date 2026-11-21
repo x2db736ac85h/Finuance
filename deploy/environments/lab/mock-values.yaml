@@ -1,0 +1,5 @@
+# The lab's mock model (README.md): the simulator's chart in finuance-lab with the mock only.
+simulator:
+  enabled: false
+mock:
+  enabled: true

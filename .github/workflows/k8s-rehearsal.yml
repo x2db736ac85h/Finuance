@@ -88,6 +88,8 @@ jobs:
         run: tools/rehearsal.sh limits
       - name: Image signatures (policy-controller admits the released images, refuses the rest)
         run: tools/rehearsal.sh signatures
+      - name: The lab (the simulator at 3x for five minutes, no 5xx, its traffic synthetic)
+        run: tools/rehearsal.sh lab
       - name: Image admission (each namespace runs only its own images)
         run: tools/rehearsal.sh admission
       - name: Summary (RPO/RTO and timings)

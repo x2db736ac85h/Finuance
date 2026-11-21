@@ -1,0 +1,13 @@
+apiVersion: v2
+name: finuance-sim
+description: >-
+  The traffic simulator for a Finuance lab (PLAN Phase 25, ADR 0043), in a namespace of its own,
+  and the lab's mock model server (installed a second time, into the lab's namespace).
+type: application
+version: 0.1.0
+# the image tag used when image.tag is empty
+appVersion: "0.1.0"
+home: https://github.com/x2db736ac85h/Finuance
+sources:
+  - https://github.com/x2db736ac85h/Finuance
+kubeVersion: ">=1.30.0-0"

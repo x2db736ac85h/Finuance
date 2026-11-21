@@ -1,0 +1,20 @@
+# The simulator in the rehearsal (tools/rehearsal.sh lab), on top of deploy/environments/lab/sim-values.yaml:
+# the lab at https://lab.localhost through Traefik (its address comes from --set hostAliases), with
+# the rehearsal's own authority, and the image built from this checkout.
+image:
+  tag: rehearsal
+  pullPolicy: Never
+simulator:
+  origin: https://lab.localhost:8443
+  caSecret: { name: lab-ca, key: ca.crt }
+  # the ingress controller's pods, on their HTTPS container port (a policy sees the port after the
+  # Service's translation)
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: traefik }
+      ports: [8443]
+podMonitor:
+  enabled: false
