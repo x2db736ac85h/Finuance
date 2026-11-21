@@ -19,9 +19,10 @@ import (
 )
 
 // Telemetry is River middleware for traces and job metrics (PLAN task 17.2, §8.2). When a job is
-// inserted it stores the caller's trace context (W3C traceparent; no baggage, PLAN 23.3) in the
-// job's metadata; when the job is worked it starts the span "job <kind>" as a child of that
-// context. A request, the job it enqueued and the job's SQL (otelpgx) then share one trace. It
+// inserted it stores the caller's trace context (W3C traceparent; no baggage, PLAN 23.3), the
+// request id and the synthetic mark in the job's metadata, all from the server's own context; when
+// the job is worked it starts the span "job <kind>" as a child of that context, and its log lines
+// carry the request id. A request, the job it enqueued and the job's SQL (otelpgx) then share one trace. It
 // also counts jobs by kind and result and times them. Spans carry ids and kinds only, never
 // arguments or error text (errors can name user data).
 type Telemetry struct {
@@ -71,20 +72,42 @@ func NewTelemetry(tp trace.TracerProvider, prop propagation.TextMapPropagator, m
 // syntheticKey is the metadata key that marks a job queued for a synthetic user (ADR 0041).
 const syntheticKey = "finuance_synthetic"
 
-// withSynthetic returns metadata (a JSON object, possibly empty) with the synthetic mark.
-func withSynthetic(metadata []byte) []byte {
+// requestKey is the metadata key holding the id of the request that queued the job.
+const requestKey = "finuance_request_id"
+
+// withMetadata returns metadata (a JSON object, possibly empty) with key set to the JSON value v,
+// keeping every other key. Metadata that isn't an object is replaced.
+func withMetadata(metadata []byte, key string, v any) []byte {
 	obj := map[string]json.RawMessage{}
 	if len(metadata) > 0 {
 		if err := json.Unmarshal(metadata, &obj); err != nil || obj == nil {
 			obj = map[string]json.RawMessage{}
 		}
 	}
-	obj[syntheticKey] = json.RawMessage("true")
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return metadata
+	}
+	obj[key] = raw
 	out, err := json.Marshal(obj)
 	if err != nil {
 		return metadata
 	}
 	return out
+}
+
+// withSynthetic returns metadata (a JSON object, possibly empty) with the synthetic mark.
+func withSynthetic(metadata []byte) []byte { return withMetadata(metadata, syntheticKey, true) }
+
+// requestID reads the id stored under requestKey; an id of the wrong form counts as none.
+func requestID(metadata []byte) string {
+	var obj struct {
+		RequestID string `json:"finuance_request_id"`
+	}
+	if len(metadata) == 0 || json.Unmarshal(metadata, &obj) != nil || !observability.ValidRequestID(obj.RequestID) {
+		return ""
+	}
+	return obj.RequestID
 }
 
 // isSynthetic reads the mark stored by withSynthetic.
@@ -98,12 +121,18 @@ func isSynthetic(metadata []byte) bool {
 // traceKey is the metadata key holding the trace context (a JSON object of carrier keys).
 const traceKey = "otel"
 
-// InsertMany adds the caller's trace context to every inserted job's metadata.
+// InsertMany adds the caller's trace context, request id and synthetic mark to every inserted
+// job's metadata.
 func (t *Telemetry) InsertMany(ctx context.Context, params []*rivertype.JobInsertParams,
 	doInner func(context.Context) ([]*rivertype.JobInsertResult, error)) ([]*rivertype.JobInsertResult, error) {
 	if observability.Synthetic(ctx) { // from the server's own context, never from a header (ADR 0041)
 		for _, p := range params {
 			p.Metadata = withSynthetic(p.Metadata)
+		}
+	}
+	if id := observability.RequestID(ctx); id != "" {
+		for _, p := range params {
+			p.Metadata = withMetadata(p.Metadata, requestKey, id)
 		}
 	}
 	if t.Propagator != nil {
@@ -138,8 +167,14 @@ func (t *Telemetry) Work(ctx context.Context, job *rivertype.JobRow, doInner fun
 		span.SetAttributes(attribute.Bool("finuance.synthetic", true))
 	}
 	// every line the job writes names the job; with the span in ctx it gets trace_id and span_id too
-	ctx = observability.WithLogger(ctx, observability.Logger(ctx).With(
-		slog.Int64("job_id", job.ID), slog.String("kind", job.Kind), slog.Int("attempt", job.Attempt), slog.String("traffic", traffic)))
+	attrs := []any{slog.Int64("job_id", job.ID), slog.String("kind", job.Kind), slog.Int("attempt", job.Attempt), slog.String("traffic", traffic)}
+	if id := requestID(job.Metadata); id != "" {
+		// the request that queued the job: its lines, a failed job's message and the jobs this one
+		// queues all name it
+		ctx = observability.WithRequestID(ctx, id)
+		attrs = append(attrs, slog.String("request_id", id))
+	}
+	ctx = observability.WithLogger(ctx, observability.Logger(ctx).With(attrs...))
 	start := time.Now()
 	err := doInner(ctx)
 	result := "ok"
@@ -157,22 +192,7 @@ func (t *Telemetry) Work(ctx context.Context, job *rivertype.JobRow, doInner fun
 // withTraceContext returns metadata (a JSON object, possibly empty) with the carrier under
 // traceKey, keeping every other key. Metadata that isn't an object is replaced.
 func withTraceContext(metadata []byte, carrier propagation.MapCarrier) []byte {
-	obj := map[string]json.RawMessage{}
-	if len(metadata) > 0 {
-		if err := json.Unmarshal(metadata, &obj); err != nil || obj == nil {
-			obj = map[string]json.RawMessage{}
-		}
-	}
-	tc, err := json.Marshal(map[string]string(carrier))
-	if err != nil {
-		return metadata
-	}
-	obj[traceKey] = tc
-	out, err := json.Marshal(obj)
-	if err != nil {
-		return metadata
-	}
-	return out
+	return withMetadata(metadata, traceKey, map[string]string(carrier))
 }
 
 // traceContext reads the carrier stored by withTraceContext (empty when there is none).

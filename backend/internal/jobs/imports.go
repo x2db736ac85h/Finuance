@@ -69,7 +69,8 @@ type CommitImportWorker struct {
 	Metrics *ImportMetrics
 }
 
-// failedMessage is what the user sees for a failed commit. Internal error text stays in the log.
+// failedMessage is what the user sees for a failed commit, with the reference of the request that
+// queued it (observability.WithReference). Internal error text stays in the log.
 const failedMessage = "The import could not be committed. Try again; if it keeps failing, check the server logs."
 
 // Work commits the import. The whole commit is one database transaction, so a failed attempt
@@ -93,7 +94,7 @@ func (w *CommitImportWorker) Work(ctx context.Context, job *river.Job[CommitImpo
 		if job.Attempt >= job.MaxAttempts {
 			w.Metrics.Imports.WithLabelValues("failed").Inc()
 			log.ErrorContext(ctx, "commit_import failed", "import", a.ImportID, "error", err)
-			if ferr := w.Ledger.FailImport(context.WithoutCancel(ctx), a.UserID, a.ImportID, failedMessage); ferr != nil {
+			if ferr := w.Ledger.FailImport(context.WithoutCancel(ctx), a.UserID, a.ImportID, observability.WithReference(ctx, failedMessage)); ferr != nil {
 				return errors.Join(err, ferr)
 			}
 			return err

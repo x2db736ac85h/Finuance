@@ -22,7 +22,7 @@ of these names for something else.
 | `time` | all | when the line was written (RFC 3339, with nanoseconds) |
 | `level` | all | `DEBUG`, `INFO`, `WARN` or `ERROR` |
 | `msg` | all | a fixed sentence per call site, never built from data; `request` is the access line |
-| `request_id` | everything written while a request is served | the id the response carries in `X-Request-ID` and a problem response in `requestId` |
+| `request_id` | everything written while a request is served, and every line of a job it queued (and of the jobs that job queued) | the id the response carries in `X-Request-ID` and a problem response in `requestId`; a failed import or migration shows it as its reference |
 | `trace_id` | everything written inside a span: a request, a job, an assistant run | the OpenTelemetry trace id; the same id finds the trace in Tempo |
 | `span_id` | as `trace_id` | the span that was current when the line was written |
 | `user` | the access line of a signed-in request, the assistant's run line | the first 8 bytes of SHA-256 of the user id, in hex; never the id or the e-mail address |
@@ -50,8 +50,18 @@ table and column, never its message.
    `request failed` or `panic` line with the same `request_id` says what went wrong.
 3. **To its trace.** Any of those lines has the `trace_id`. The trace shows the request, its
    database statements and, when the request queued a job, the job as a child span.
-4. **To the job's lines.** The job's lines carry the same `trace_id` and their own `job_id`,
-   `kind` and `attempt`.
+4. **To the job's lines.** The job's lines carry the same `request_id` and `trace_id`, and their
+   own `job_id`, `kind` and `attempt`.
+
+**A failed import.** When an import's commit fails for the last time, the toast and the import
+window say "The import could not be committed. … (Reference: <id>)". The reference is the
+`request_id` of the request that queued the commit (the upload, or *Commit* in the import
+window): `{namespace="finuance"} | request_id="<id>"` lists that request's access line and the
+worker's `commit_import failed` line after the last attempt, with the error's class; the
+`trace_id` on either opens the trace, where the request's span has the job's three attempts below
+it, each with an error status and its SQL. A failed migration from the single-file app works the same way. The
+reference names a request, not a user: anyone who can read the logs can follow it, nobody else
+learns anything from it.
 
 In Grafana: Explore → Loki, `{namespace="finuance"} | request_id="<id>"` finds the request's lines;
 a line's `trace_id` opens the trace in Tempo; in the trace, a span's "Logs for this span" goes back
@@ -82,7 +92,7 @@ container's own log on the machine keeps them (THREAT-MODEL §5).
 
 Queries that come up often:
 
-- a request: `{namespace="finuance"} | request_id="<id>"`
+- a request and the jobs it queued: `{namespace="finuance"} | request_id="<id>"`
 - a trace's lines, a job's included: `{namespace="finuance"} | trace_id="<id>"`
 - the api's warnings and errors: `{namespace="finuance", container="api"} | detected_level=~"warn|error"`
 - one job: `{namespace="finuance", container="worker"} | json | job_id="<id>"`

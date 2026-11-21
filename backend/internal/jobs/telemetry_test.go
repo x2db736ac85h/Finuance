@@ -135,7 +135,8 @@ type sqlWorker struct {
 func (w *sqlWorker) Work(ctx context.Context, _ *river.Job[sqlWorkerArgs]) error { return w.run(ctx) }
 
 // TestJobTraceEndToEnd: request span → River insert → worker in another client → job span →
-// SQL span, all in one trace, through a real database (PLAN 17.2's "API → job → SQL").
+// SQL span, all in one trace, through a real database (PLAN 17.2's "API → job → SQL"); the
+// request's id arrives in the job's context too (PLAN 24.10's walk-through).
 func TestJobTraceEndToEnd(t *testing.T) {
 	tdb := dbtest.Require(t, testDB)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -148,9 +149,11 @@ func TestJobTraceEndToEnd(t *testing.T) {
 	}
 	defer pool.Close()
 	done := make(chan struct{})
+	var gotRequestID string
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &sqlWorker{run: func(ctx context.Context) error {
 		defer close(done)
+		gotRequestID = observability.RequestID(ctx)
 		_, err := pool.Exec(ctx, "SELECT 1")
 		return err
 	}})
@@ -166,7 +169,7 @@ func TestJobTraceEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reqCtx, req := tp.Tracer("test").Start(ctx, "POST /test")
+	reqCtx, req := tp.Tracer("test").Start(observability.WithRequestID(ctx, "req-e2e"), "POST /test")
 	if _, err := inserter.Insert(reqCtx, sqlWorkerArgs{}, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -194,6 +197,9 @@ func TestJobTraceEndToEnd(t *testing.T) {
 	}
 	if !sql {
 		t.Error("no SQL span under the job span")
+	}
+	if gotRequestID != "req-e2e" {
+		t.Errorf("the job's request id = %q, want the inserting request's", gotRequestID)
 	}
 }
 
@@ -289,6 +295,57 @@ func TestSyntheticJobs(t *testing.T) {
 	for _, forged := range []string{`{"finuance_synthetic":"true"}`, `{"synthetic":true}`, `not json`} {
 		if isSynthetic([]byte(forged)) {
 			t.Errorf("metadata %s counts as synthetic", forged)
+		}
+	}
+}
+
+// TestJobsCarryTheRequestID: a job queued while serving a request carries the request's id in its
+// metadata (from the server's context, next to the trace context); when it is worked, its lines
+// carry that request_id and so do the jobs it queues in turn. A job queued outside a request (a
+// periodic one) carries none, and a malformed id in the metadata counts as none.
+func TestJobsCarryTheRequestID(t *testing.T) {
+	tel := NewTelemetry(nil, propagation.TraceContext{}, nil)
+	insert := func(ctx context.Context, metadata string) []byte {
+		p := &rivertype.JobInsertParams{Kind: "commit_import", Metadata: []byte(metadata)}
+		if _, err := tel.InsertMany(ctx, []*rivertype.JobInsertParams{p}, func(context.Context) ([]*rivertype.JobInsertResult, error) { return nil, nil }); err != nil {
+			t.Fatal(err)
+		}
+		return p.Metadata
+	}
+	queued := insert(observability.WithRequestID(context.Background(), "req-1"), `{"keep":1}`)
+	periodic := insert(context.Background(), "")
+	if requestID(queued) != "req-1" || !strings.Contains(string(queued), `"keep":1`) || requestID(periodic) != "" {
+		t.Fatalf("metadata: queued by a request %s, periodic %s", queued, periodic)
+	}
+
+	var b bytes.Buffer
+	base := observability.WithLogger(context.Background(), observability.NewLogger(&b, config.EnvProd, slog.LevelInfo))
+	var next []byte // what a job queued by this job carries
+	work := func(metadata []byte) map[string]any {
+		b.Reset()
+		job := &rivertype.JobRow{ID: 7, Kind: "commit_import", Attempt: 1, Metadata: metadata}
+		if err := tel.Work(base, job, func(ctx context.Context) error {
+			observability.Logger(ctx).InfoContext(ctx, "import committed")
+			next = insert(ctx, "")
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		var line map[string]any
+		if err := json.Unmarshal(b.Bytes(), &line); err != nil {
+			t.Fatalf("%q: %v", b.String(), err)
+		}
+		return line
+	}
+	if line := work(queued); line["request_id"] != "req-1" || requestID(next) != "req-1" {
+		t.Errorf("queued by a request: line %v, the next job's metadata %s", line, next)
+	}
+	if line := work(periodic); line["request_id"] != nil || requestID(next) != "" {
+		t.Errorf("periodic: line %v, the next job's metadata %s", line, next)
+	}
+	for _, forged := range []string{`{"finuance_request_id":"a b"}`, `{"finuance_request_id":1}`, `{"request_id":"x"}`, `not json`} {
+		if line := work([]byte(forged)); line["request_id"] != nil {
+			t.Errorf("metadata %s: line %v", forged, line)
 		}
 	}
 }

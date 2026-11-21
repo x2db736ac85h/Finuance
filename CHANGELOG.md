@@ -17,7 +17,8 @@ notes of their version.
   `logs.enabled: false` switches the logs off and keeps Alloy for the traces. The Compose profile
   `make up-observability` collects the containers' logs the same way.
 - Every log line carries `trace_id` and `span_id`, and a job's lines carry `job_id`, `kind` and
-  `attempt`; the fields are listed in `docs/observability.md`.
+  `attempt` and the `request_id` of the request that queued it; the fields are listed in
+  `docs/observability.md`. A failed import or migration shows that request id as its reference.
 - A panicking request is counted: one access line with status 500, one 5xx, and
   `finuance_panics_total` with the alert `FinuancePanic`.
 - Traces: a client span `llm.request` around each request to a model server (model, provider,
