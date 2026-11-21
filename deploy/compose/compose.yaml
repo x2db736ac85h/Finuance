@@ -54,6 +54,8 @@ services:
       FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
       FINUANCE_COOKIE_SECURE: ${FINUANCE_COOKIE_SECURE:-false}
       FINUANCE_ALLOW_SIGNUP: ${FINUANCE_ALLOW_SIGNUP:-true}
+      # a lab for the traffic simulator and the load test's synthetic users (ADR 0041, 0043); off here
+      FINUANCE_SIMULATION: ${FINUANCE_SIMULATION:-false}
       FINUANCE_CONFIRM_PASSWORD: ${FINUANCE_CONFIRM_PASSWORD:-true} # the password again for a new access token or a role change
       # on in this development stack (the admin port is on 127.0.0.1 only); the binary's own default
       # and the chart's `profiling` value are off. FINUANCE_PPROF=false switches it off here too.
@@ -101,6 +103,7 @@ services:
       FINUANCE_LOG_LEVEL: ${FINUANCE_LOG_LEVEL:-info}
       FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      FINUANCE_SIMULATION: ${FINUANCE_SIMULATION:-false}
       # The worker serves only the admin port; point the healthcheck subcommand at it.
       FINUANCE_HTTP_ADDR: ":9090"
       # The assistant's digests are written by the worker (ADR 0033): the same model server as the api.

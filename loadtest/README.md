@@ -2,12 +2,12 @@
 
 k6 scripts for the Finuance API (PLAN task 17.5), checked against the SLOs in
 [docs/SLO.md](../docs/SLO.md): 95 % of table and chart requests under 300 ms, under 0.5 % failed.
-k6 runs as its Docker image (`grafana/k6`, pinned in the Makefile), so nothing is installed.
+k6 runs as its Docker image (`grafana/k6` 2.x, pinned in the Makefile), so nothing is installed.
 
 ```sh
-make up                      # or make up-observability, to watch it in Grafana
-make loadtest-seed           # 50 users × ~20,000 demo rows (LOADTEST_USERS, LOADTEST_ROWS)
-make loadtest                # PROFILE=load (default), smoke or ramp
+FINUANCE_SIMULATION=true make up     # a lab: the load test's users are synthetic (or make sim-up)
+make loadtest-seed                   # 50 synthetic users × ~20,000 demo rows (LOADTEST_USERS, LOADTEST_ROWS)
+make loadtest                        # PROFILE=load (default), smoke or ramp
 ```
 
 | Profile | What | Used by |
@@ -22,5 +22,22 @@ per minute and address. Imports are deleted again after they commit, so repeated
 same data. Results: the k6 summary on the terminal and `results/summary-<profile>.json`
 (gitignored). The thresholds make `make loadtest` fail when an SLO is missed.
 
+**The users are synthetic** (PLAN 25.10, ADR 0041). The server labels their requests
+`traffic="synthetic"`, so a load test does not burn the error budget of the instance it runs
+against, and Grafana's Traffic variable shows or hides it. Synthetic users exist only on a lab
+(`FINUANCE_SIMULATION=true`); `make loadtest-seed LOADTEST_SYNTHETIC=` seeds ordinary users for an
+instance that is not one, and their traffic then counts as real.
+
 The sandbox numbers and the bottleneck found with these scripts are in
-[docs/perf.md](../docs/perf.md) "Phase 17"; the homelab run comes in Phase 18.
+[docs/perf.md](../docs/perf.md) "Phase 17"; the homelab run is in "Phase 18".
+
+## Which tool is for what
+
+| Tool | Question it answers | Where |
+|---|---|---|
+| **k6** (`loadtest/`, `make loadtest`) | How much load does the stack take, and where does it break? Short, scripted, many virtual users, thresholds that fail the run | before a release, the weekly smoke run, a breaking-point test |
+| **k6** (`deploy/k8s/rehearsal/podkill.js`) | Does a rollout or a lost pod fail a request? | the rehearsal, `tools/homelab-drill.sh podkill` (a person's account there: the homelab is not a lab) |
+| **The traffic simulator** (`finuance-sim`, [docs/simulator.md](../docs/simulator.md)) | Does every feature keep working, day after day, as people use it? Ten characters with habits and state, all day, tuned from a page; something to look at on every dashboard | a lab: `make sim-up`, the rehearsal's `lab` stage, a cluster's lab |
+
+k6 2.0 removed the externally controlled executor, which a page to tune a load would have needed;
+that is one reason the simulator is its own service (ADR 0043).

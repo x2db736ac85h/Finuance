@@ -11,11 +11,15 @@ ORACLE   := tools/legacy-oracle
 COMPOSE  := docker compose --env-file $(ENV_FILE) -f deploy/compose/compose.yaml
 COMPOSE_CI := $(COMPOSE) -f deploy/compose/compose.ci.yaml
 # Load test (PLAN 17.5): k6 pinned like the rehearsal's; the plan's size is 50 users × 20,000 rows.
-K6_IMAGE := grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
+K6_IMAGE := grafana/k6:2.4.0@sha256:d41bb79cd8de5a7ad619b53570e3712633e8bff0937010a5c6c57a4747e7a276
 LOADTEST_BASE_URL ?= http://localhost:8000
 LOADTEST_USERS ?= 50
 LOADTEST_ROWS ?= 20000
 LOADTEST_PASSWORD ?= load test password
+# the load test's users are synthetic (PLAN 25.10): its traffic stays out of the instance's
+# service-level numbers. That needs a lab (FINUANCE_SIMULATION=true make up, or make sim-up);
+# LOADTEST_SYNTHETIC= seeds ordinary users for an instance that is not one.
+LOADTEST_SYNTHETIC ?= 1
 PROFILE ?= load
 FUZZTIME ?= 30s
 BIN      := backend/bin
@@ -366,4 +370,4 @@ zap: ## OWASP ZAP baseline + API scan against the running stack (needs sign-ups;
 .PHONY: loadtest-seed
 loadtest-seed: $(ENV_FILE) ## Seed LOADTEST_USERS load-test users with LOADTEST_ROWS demo rows each (in the running api container)
 	echo "$(LOADTEST_PASSWORD)" | $(COMPOSE) exec -T api /finuance seed-demo -email=loadtest@example.test \
-	  -users=$(LOADTEST_USERS) -rows=$(LOADTEST_ROWS) -password-stdin
+	  -users=$(LOADTEST_USERS) -rows=$(LOADTEST_ROWS) -password-stdin $(if $(LOADTEST_SYNTHETIC),-synthetic,)

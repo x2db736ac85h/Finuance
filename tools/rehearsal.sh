@@ -36,7 +36,7 @@ SUMMARY=${SUMMARY:-$WORK/summary.md}
 YQ=${YQ:-yq}
 TRAEFIK_CHART=42.1.3
 CERT_MANAGER_CHART=v1.21.3
-K6_IMAGE=grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
+K6_IMAGE=grafana/k6:2.4.0@sha256:d41bb79cd8de5a7ad619b53570e3712633e8bff0937010a5c6c57a4747e7a276
 AWS_CLI_IMAGE=amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868ddee1f611b73be795a9cc2e706bfd
 BUSYBOX_IMAGE=busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
 # an image this repository's release workflow never signed (the signatures step)
