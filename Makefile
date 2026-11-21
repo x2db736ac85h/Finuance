@@ -181,14 +181,17 @@ $(SQLC) $(GOLANGCI): tools/bin-tools.sh
 gen: $(SQLC) web/node_modules ## oapi-codegen + sqlc + openapi-typescript
 	cd backend && go tool oapi-codegen -config oapi-codegen.yaml ../api/openapi.yaml
 	cd backend && go tool oapi-codegen -config oapi-codegen-client.yaml ../api/openapi.yaml
+	cd backend && go tool oapi-codegen -config oapi-codegen-sim.yaml ../api/sim.openapi.yaml
 	cd backend && bin/sqlc generate
 	cd web && npx openapi-typescript ../api/openapi.yaml -o src/api/schema.d.ts && npx prettier --log-level warn --write src/api/schema.d.ts
+	cd web && npx openapi-typescript ../api/sim.openapi.yaml -o sim/src/api/schema.d.ts && npx prettier --log-level warn --write sim/src/api/schema.d.ts
 
 web/node_modules: web/package-lock.json
 	cd web && npm ci --no-audit --no-fund
 	@touch web/node_modules
 
-GENERATED := backend/internal/httpapi/gen backend/internal/client/gen backend/internal/store/db web/src/api/schema.d.ts
+GENERATED := backend/internal/httpapi/gen backend/internal/client/gen backend/internal/store/db web/src/api/schema.d.ts \
+  backend/internal/sim/control/gen web/sim/src/api/schema.d.ts
 .PHONY: fin
 fin: ## Build the fin command line into backend/bin/fin (docs/cli.md)
 	cd backend && go build -trimpath -ldflags "-X main.version=$$(git describe --tags --always --dirty)" -o bin/fin ./cmd/fin

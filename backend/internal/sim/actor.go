@@ -36,19 +36,20 @@ type Actor struct {
 	engine   *Engine
 	password string
 
-	mu           sync.Mutex
-	token        string
-	accounts     map[int]uuid.UUID // statements.Current / Savings → the account's id
-	hasData      bool
-	serverErrors int // 5xx answers in a row
-	backoffs     int // back-offs in a row
-	lastAction   string
-	lastStart    time.Time
-	every        map[string]time.Time
-	cal          calendar
-	imported     map[int]platform.Date // the last imported day per bank account
-	cash         uuid.UUID
-	raw          *http.Client // API's client, for the paths the contract doesn't have
+	mu            sync.Mutex
+	token         string
+	accounts      map[int]uuid.UUID // statements.Current / Savings → the account's id
+	hasData       bool
+	serverErrors  int // 5xx answers in a row
+	backoffs      int // back-offs in a row
+	lastAction    string
+	lastStart     time.Time
+	every         map[string]time.Time
+	cal           calendar
+	imported      map[int]platform.Date // the last imported day per bank account
+	cash          uuid.UUID
+	raw           *http.Client // API's client, for the paths the contract doesn't have
+	lastRequestID string       // of the current action's last request (the feed shows it)
 }
 
 func newActor(e *Engine, p identity.Persona) (*Actor, error) {
@@ -292,7 +293,11 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
 	e := t.a.engine
 	r.Header.Set("User-Agent", fmt.Sprintf("finuance-sim/%s (%s)", e.o.Version, t.a.Persona.Slug))
-	r.Header.Set("X-Request-ID", newRequestID(t.a.Persona.Slug))
+	id := newRequestID(t.a.Persona.Slug)
+	r.Header.Set("X-Request-ID", id)
+	t.a.mu.Lock()
+	t.a.lastRequestID = id
+	t.a.mu.Unlock()
 	r.Header.Set("X-Finuance-Client", "web")
 	r.Header.Set("Origin", e.origin)
 	if t.auth {

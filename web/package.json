@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:sim": "vite build -c vite.sim.config.ts",
+    "dev:sim": "vite -c vite.sim.config.ts",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0 && prettier --check .",
     "format": "prettier --write .",

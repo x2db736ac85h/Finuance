@@ -34,8 +34,10 @@ type Options struct {
 	// Location is the instance's time zone, for the characters' active hours (nil: UTC).
 	Location *time.Location
 	Log      *slog.Logger
-	// OnEvent is told about every action that ran (the control API's feed and metrics).
+	// OnEvent is told about every action that ran.
 	OnEvent func(Event)
+	// Metrics, when given, count the actions and show the configuration.
+	Metrics *Metrics
 }
 
 // Event is one action that ran.
@@ -81,6 +83,9 @@ type Engine struct {
 	asked   int
 	board   map[string]string // what one persona leaves for another (a friend code)
 	every   map[string]time.Time
+	logs    map[string]*personaLog
+	recent  []Event
+	subs    map[chan Event]struct{}
 }
 
 // Every reports whether at least d has passed since it last said yes for this key, across every
@@ -146,7 +151,11 @@ func New(o Options) (*Engine, error) {
 		o.Log = slog.New(slog.DiscardHandler)
 	}
 	e := &Engine{o: o, target: u, origin: u.Scheme + "://" + u.Host, cfg: o.Config.Clamp(), actors: map[string]*Actor{},
-		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]string{}, every: map[string]time.Time{}}
+		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]string{}, every: map[string]time.Time{},
+		logs: map[string]*personaLog{}, subs: map[chan Event]struct{}{}}
+	if o.Metrics != nil {
+		o.Metrics.config(&e.cfg, 0)
+	}
 	e.meta, err = gen.NewClientWithResponses(e.origin+u.Path+"/api/v1", gen.WithHTTPClient(&http.Client{Transport: o.Transport, Timeout: 30 * time.Second}))
 	if err != nil {
 		return nil, err
@@ -180,10 +189,14 @@ func (e *Engine) Config() (Config, int64) {
 // A waiting persona sees the change within ConfigCheck.
 func (e *Engine) SetConfig(c Config) (Config, int64) {
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	e.cfg = c.Clamp()
 	e.gen++
-	return e.cfg, e.gen
+	cfg, gen := e.cfg, e.gen
+	e.mu.Unlock()
+	if e.o.Metrics != nil {
+		e.o.Metrics.config(&cfg, gen)
+	}
+	return cfg, gen
 }
 
 // Run checks the target, then plays every persona the configuration switches on until ctx ends.
@@ -379,8 +392,9 @@ func (e *Engine) Do(ctx context.Context, a *Actor, act Action) Event {
 		}
 	}
 	a.mu.Lock()
-	a.lastAction, a.lastStart = act.Name, ev.Time
+	a.lastAction, a.lastStart, a.lastRequestID = act.Name, ev.Time, ""
 	a.mu.Unlock()
+	e.started(a.Persona.Slug, act.Name)
 	err := act.Run(ctx, a)
 	ev.Duration = e.o.Clock.Now().Sub(ev.Time)
 	var se *StatusError
@@ -393,6 +407,11 @@ func (e *Engine) Do(ctx context.Context, a *Actor, act Action) Event {
 		ev.Result, ev.Status, ev.RequestID, ev.RetryAfter, ev.Error = ResultError, se.Status, se.RequestID, se.RetryAfter, err.Error()
 	default:
 		ev.Result, ev.Error = ResultError, err.Error()
+	}
+	if ev.RequestID == "" {
+		a.mu.Lock()
+		ev.RequestID = a.lastRequestID
+		a.mu.Unlock()
 	}
 	e.emit(ev)
 	return ev
@@ -451,6 +470,7 @@ func backoff(n int) time.Duration {
 }
 
 func (e *Engine) emit(ev Event) {
+	e.record(ev)
 	if e.o.OnEvent != nil {
 		e.o.OnEvent(ev)
 	}

@@ -10,14 +10,19 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+
 	"github.com/x2db736ac85h/finuance/backend/internal/sim"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/actions"
+	"github.com/x2db736ac85h/finuance/backend/internal/sim/control"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
 )
 
@@ -26,14 +31,16 @@ var version = "dev"
 const usage = `usage: finuance-sim <command> [flags]
 
 commands:
-  run -target=https://lab.example [-personas=N] [-intensity=‰] [-tz=Europe/Warsaw]
-                    play the personas against a lab (FINUANCE_SIM_SEED in the environment);
-                    refuses an instance whose /meta does not report simulation: true
+  run -target=https://lab.example [-listen=:8090] [-personas=N] [-intensity=‰] [-tz=Europe/Warsaw]
+                    play the personas against a lab, with the control API, the tuning page and
+                    /metrics on -listen; refuses an instance whose /meta does not report
+                    simulation: true
   password <animal> print one persona's password (to sign in as it and look at its screens)
   version           print the version
 
 The seed comes from FINUANCE_SIM_SEED (at least 32 bytes), the same one given to
-finuance admin synthetic-users on the lab. It is never printed.
+finuance admin synthetic-users on the lab, and the control API's token from
+FINUANCE_SIM_CONTROL_TOKEN (at least 32 bytes). Neither is ever printed.
 `
 
 func main() {
@@ -85,6 +92,8 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 	fs.IntVar(&cfg.Intensity, "intensity", cfg.Intensity, "the pace in per mille of the characters' own (0 … 3000)")
 	fs.BoolVar(&cfg.ActiveHours, "active-hours", cfg.ActiveHours, "follow the characters' daily curves")
 	tz := fs.String("tz", "Europe/Warsaw", "the instance's time zone, for the active hours")
+	listen := fs.String("listen", envOr(getenv, "FINUANCE_SIM_LISTEN", ":8090"), "the control API's, the page's and /metrics' address")
+	grafana := fs.String("grafana", getenv("FINUANCE_SIM_GRAFANA_URL"), "Grafana's address, for the feed's links")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
 		return 2
 	}
@@ -94,16 +103,42 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 		return 2
 	}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	e, err := sim.New(sim.Options{Target: *target, Seed: []byte(getenv("FINUANCE_SIM_SEED")), Version: version,
-		Actions: actions.All(), Config: cfg, Location: loc, Log: log})
+		Actions: actions.All(), Config: cfg, Location: loc, Log: log, Metrics: sim.NewMetrics(reg)})
 	if err != nil {
 		fmt.Fprintln(stderr, "finuance-sim:", err)
 		return 1
 	}
-	log.InfoContext(ctx, "starting", slog.String("target", *target), slog.Int("personas", cfg.Personas))
-	if err := e.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		fmt.Fprintln(stderr, "finuance-sim:", err)
+	h, err := control.Handler(control.Options{Engine: e, Token: getenv("FINUANCE_SIM_CONTROL_TOKEN"), Version: version,
+		Grafana: *grafana, Registry: reg, Log: log})
+	if err != nil {
+		fmt.Fprintln(stderr, "finuance-sim: FINUANCE_SIM_CONTROL_TOKEN:", err)
 		return 1
 	}
-	return 0
+	srv := &http.Server{Addr: *listen, Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: time.Minute, IdleTimeout: 2 * time.Minute}
+	served := make(chan error, 1)
+	go func() { served <- srv.ListenAndServe() }()
+	log.InfoContext(ctx, "starting", slog.String("target", *target), slog.String("listen", *listen), slog.Int("personas", cfg.Personas))
+	code := 0
+	if err := e.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		code = 1
+	}
+	shutdown, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(shutdown)
+	if err := <-served; err != nil && !errors.Is(err, http.ErrServerClosed) {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		code = 1
+	}
+	return code
+}
+
+func envOr(getenv func(string) string, name, def string) string {
+	if v := getenv(name); v != "" {
+		return v
+	}
+	return def
 }

@@ -1,0 +1,19 @@
+import '../../src/styles/tokens.css';
+import '../../src/styles/base.css';
+import '../../src/styles/app.css';
+import './sim.css';
+
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { App } from './App';
+import { followSystemTheme } from './theme';
+
+followSystemTheme();
+const root = document.getElementById('root');
+if (!root) throw new Error('#root is missing from index.html');
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

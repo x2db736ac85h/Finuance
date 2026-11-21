@@ -21,8 +21,9 @@ It is a rebuild of the single-file legacy app in `legacy/`.
 - Only work on the current phase. Out-of-scope ideas go to the Backlog in PROGRESS.md.
 - Every change ships with tests. Never skip, delete or weaken a failing test; ask instead.
 - Run `make check` before every commit; `make test-integration` before closing a phase.
-- Never edit generated code: `backend/internal/httpapi/gen/`, `backend/internal/client/gen/`, `backend/internal/store/db/`, `web/src/api/schema.d.ts`.
-  Change `api/openapi.yaml` or `backend/internal/store/queries/*.sql`, then run `make gen`.
+- Never edit generated code: `backend/internal/httpapi/gen/`, `backend/internal/client/gen/`, `backend/internal/store/db/`, `web/src/api/schema.d.ts`,
+  and the simulator's `backend/internal/sim/control/gen/` and `web/sim/src/api/schema.d.ts`.
+  Change `api/openapi.yaml`, `api/sim.openapi.yaml` or `backend/internal/store/queries/*.sql`, then run `make gen`.
 - No new dependencies without asking. No float64 for money. No `innerHTML`/`dangerouslySetInnerHTML`.
 - Assistant tools are read-only and run under `store.WithUserReadOnly`. Never log prompts, model output or tool results.
 - All user-data DB access goes through `store.WithUser`. Every query filters by `user_id` (for `friendships`, by either side; ADR 0027) or, for shared tables, by membership (`shared_member_role`; ADR 0028).

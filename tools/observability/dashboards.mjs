@@ -17,6 +17,8 @@ const WORKER = `job="finuance-worker",${NS}`;
 // the assistant runs in both: the api answers chats, the worker writes the digests (PLAN 24.5)
 const BOTH = `job=~"finuance-(api|worker)",${NS}`;
 const DB = `job="finuance-db",${NS}`;
+// the simulator runs in a namespace of its own (deploy/helm/finuance-sim); one per cluster
+const SIM = 'job="finuance-sim"';
 const ds = { type: 'prometheus', uid: '${datasource}' };
 const lokiDs = { type: 'loki', uid: '${loki}' };
 
@@ -278,6 +280,24 @@ const dashboards = {
     ], { unit: 'ops' }),
     table('Versions running', `finuance_build_info{job=~"finuance-(api|worker)",${NS}}`, { h: 6 }),
   ], { tags: ['runtime'] }),
+
+  'finuance-simulator': dashboard('finuance-simulator', 'Finuance · Simulator', 'The traffic simulator (PLAN Phase 25): what its personas do, how often it fails, and the latency it sees next to what the lab measured of the same traffic. The simulator runs in its own namespace; the Namespace variable picks the lab.', () => [
+    stat('Actions a minute', `sum(rate(finuance_sim_actions_total{${SIM}}[5m])) * 60`, { decimals: 0 }),
+    stat('Errors a minute', orZero(`sum(rate(finuance_sim_actions_total{${SIM},result="error"}[5m])) * 60`), { decimals: 1, thresholds: [[null, 'green'], [1, 'orange'], [10, 'red']] }),
+    stat('Personas on', `max(finuance_sim_active_personas{${SIM}})`, { decimals: 0 }),
+    stat('Paused', `max(finuance_sim_paused{${SIM}})`, { decimals: 0, thresholds: [[null, 'green'], [1, 'orange']], desc: '1 while the tuning page has paused every persona.' }),
+    row('What the personas do'),
+    ts('Actions a minute by persona', [[`sum by (persona) (rate(finuance_sim_actions_total{${SIM}}[5m])) * 60`, '{{persona}}']], { stack: true }),
+    ts('Actions a minute by area', [[`sum by (area) (label_replace(rate(finuance_sim_actions_total{${SIM}}[5m]), "area", "$1", "action", "([a-z]+)\\..*")) * 60`, '{{area}}']], { stack: true }),
+    ts('Errors by action', [[`sum by (action) (rate(finuance_sim_actions_total{${SIM},result="error"}[15m])) * 60`, '{{action}}']], { desc: 'An answer the action did not expect. Each one is in the simulator\'s feed with its request id, which finds its lines in Loki and from there its trace.' }),
+    ts('Skipped by action', [[`sum by (action) (rate(finuance_sim_actions_total{${SIM},result="skipped"}[15m])) * 60`, '{{action}}']], { desc: 'Nothing to act on (no group to report yet), a pace of the action\'s own, or a ceiling (one assistant run at a time, the daily cap on questions).' }),
+    row('Latency'),
+    ts('p95 as the simulator saw it, by action', [[q95('finuance_sim_action_duration_seconds', SIM, ['action']), '{{action}}']], { unit: 's', desc: 'All of an action\'s requests together, through the lab\'s front door.' }),
+    ts('p95 of the lab\'s synthetic requests', [
+      [q95('http_server_request_duration_seconds', API, []), 'api, the Traffic variable\'s requests'],
+    ], { unit: 's', desc: 'The same traffic as the api measured it. Set Traffic to synthetic to see the simulator\'s alone.' }),
+    ts('Configuration changes', [[`max(finuance_sim_config_generation{${SIM}})`, 'generation']], { w: 24, h: 5, desc: 'Every change on the tuning page raises the generation.' }),
+  ], { tags: ['simulator'] }),
 
   'finuance-slo': dashboard('finuance-slo', 'Finuance · SLOs', 'Availability (99.5 % non-5xx over 30 days) and latency (95 % of table and chart requests under 300 ms), their error budgets and burn rates (docs/SLO.md).', () => {
     const avail = `job="finuance-api",${NS},route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"`;

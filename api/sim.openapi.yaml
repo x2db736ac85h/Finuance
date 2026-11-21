@@ -1,0 +1,442 @@
+openapi: 3.0.3
+info:
+  title: Finuance traffic simulator — control API
+  version: 0.1.0
+  description: |
+    The simulator's own API (PLAN 25.5, ADR 0043): its state, its configuration, presets, pause and
+    resume, "act now", and a stream of the actions it runs. It is served by `finuance-sim` on one
+    port together with the tuning page and `/metrics`, and is not published through an ingress.
+
+    Every route under `/api/` needs the control token (`Authorization: Bearer …`, the
+    `FINUANCE_SIM_CONTROL_TOKEN` secret, compared in constant time) and `X-Finuance-Client: web`; an
+    `Origin`, when a browser sends one, must be the simulator's own. A page elsewhere in the same
+    browser can reach a port-forward (THREAT-MODEL D10) but can't pass these. Every value of a
+    configuration is held to the ceilings in the code, whatever is sent.
+servers:
+  - url: /api
+security:
+  - control: []
+paths:
+  /state:
+    get:
+      operationId: getState
+      summary: What runs now
+      responses:
+        "200":
+          description: The engine's state, persona by persona.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        default:
+          $ref: "#/components/responses/Problem"
+  /catalogue:
+    get:
+      operationId: getCatalogue
+      summary: What can be tuned
+      description: The feature areas, the actions, the characters' own weights, the presets and the ceilings.
+      responses:
+        "200":
+          description: The catalogue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Catalogue"
+        default:
+          $ref: "#/components/responses/Problem"
+  /config:
+    get:
+      operationId: getConfig
+      summary: The configuration in force
+      responses:
+        "200":
+          description: The configuration and its generation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: putConfig
+      summary: Replace the configuration
+      description: >-
+        `generation` must be the one read (`409 stale_generation` otherwise, with the current one). The
+        stored configuration is the one sent held to the ceilings; waiting personas see it within five
+        seconds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigDoc"
+      responses:
+        "200":
+          description: Stored, as held to the ceilings, with the new generation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDoc"
+        "409":
+          description: Another change came first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+  /config/reset:
+    post:
+      operationId: resetConfig
+      summary: Back to the defaults the simulator started with
+      responses:
+        "200":
+          description: The defaults, with the new generation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+  /presets/{name}:
+    post:
+      operationId: applyPreset
+      summary: Apply a preset to the current configuration
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [quiet-day, month-end, assistant-heavy, import-flood, error-storm]
+      responses:
+        "200":
+          description: The configuration with the preset applied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+  /pause:
+    post:
+      operationId: pause
+      summary: Stop every persona after its current action
+      responses:
+        "200":
+          description: Paused.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+  /resume:
+    post:
+      operationId: resume
+      summary: Let the personas go on
+      responses:
+        "200":
+          description: Running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDoc"
+        default:
+          $ref: "#/components/responses/Problem"
+  /act:
+    post:
+      operationId: actNow
+      summary: One persona does one action now
+      description: >-
+        Runs the action at once and answers when it is done, with the same ceilings as any other action
+        (one assistant run at a time, the daily cap on questions). It counts towards the persona's
+        pace. `404` for an unknown persona or action.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActRequest"
+      responses:
+        "200":
+          description: The action ran (its result may be an error the instance gave).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        default:
+          $ref: "#/components/responses/Problem"
+  /events:
+    get:
+      operationId: streamEvents
+      summary: The actions as they run
+      description: >-
+        `text/event-stream`: first the recent actions, then each new one, as `event: action` with an
+        `Event` in `data`; a comment line every 15 seconds keeps the connection open.
+      responses:
+        "200":
+          description: The stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    control:
+      type: http
+      scheme: bearer
+  responses:
+    Problem:
+      description: An error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [status, code, title]
+      properties:
+        status:
+          type: integer
+        code:
+          type: string
+          example: unauthorized
+        title:
+          type: string
+        detail:
+          type: string
+    Config:
+      type: object
+      additionalProperties: false
+      description: The tuning page's settings (`internal/sim` Config); see Catalogue for the ceilings.
+      required: [personas, paused, intensity, activeHours, clockRate, mistakes, assistantPerDay]
+      properties:
+        personas:
+          type: integer
+          description: How many personas play, the first N.
+        "off":
+          type: array
+          items:
+            type: string
+            maxLength: 32
+          maxItems: 50
+          description: Personas (by slug) that sit this out.
+        paused:
+          type: boolean
+        intensity:
+          type: integer
+          description: The pace in per mille of the characters' own (1000 is 1×).
+        areasOff:
+          type: array
+          items:
+            type: string
+            maxLength: 32
+          maxItems: 20
+        weights:
+          type: object
+          description: An action's weight for every persona (0 switches it off).
+          maxProperties: 200
+          additionalProperties:
+            type: integer
+        personaWeights:
+          type: object
+          description: An action's weight for one persona, by slug.
+          maxProperties: 50
+          additionalProperties:
+            type: object
+            maxProperties: 200
+            additionalProperties:
+              type: integer
+        activeHours:
+          type: boolean
+        clockRate:
+          type: integer
+          description: Data days per real day (1 is real time).
+        mistakes:
+          type: integer
+          description: The share of deliberate mistakes, in per mille.
+        assistantPerDay:
+          type: integer
+    ConfigDoc:
+      type: object
+      additionalProperties: false
+      required: [generation, config]
+      properties:
+        generation:
+          type: integer
+          format: int64
+        config:
+          $ref: "#/components/schemas/Config"
+    State:
+      type: object
+      additionalProperties: false
+      required: [target, version, paused, generation, personas, totals]
+      properties:
+        target:
+          type: string
+          description: The lab's address.
+        version:
+          type: string
+        paused:
+          type: boolean
+        generation:
+          type: integer
+          format: int64
+        grafana:
+          type: string
+          description: Grafana's address for the feed's links, when the simulator was given one.
+        personas:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonaState"
+        totals:
+          $ref: "#/components/schemas/Counts"
+    PersonaState:
+      type: object
+      additionalProperties: false
+      required: ["slug", "name", "animal", "says", "on", "signedIn", "counts"]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        animal:
+          type: string
+        says:
+          type: string
+        "on":
+          type: boolean
+        signedIn:
+          type: boolean
+        action:
+          type: string
+          description: The action it is doing now.
+        counts:
+          $ref: "#/components/schemas/Counts"
+        last:
+          $ref: "#/components/schemas/Event"
+    Counts:
+      type: object
+      additionalProperties: false
+      required: [ok, error, skipped]
+      properties:
+        ok:
+          type: integer
+          format: int64
+        error:
+          type: integer
+          format: int64
+        skipped:
+          type: integer
+          format: int64
+    Catalogue:
+      type: object
+      additionalProperties: false
+      required: [areas, actions, characters, presets, ceilings]
+      properties:
+        areas:
+          type: array
+          items:
+            type: string
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogueAction"
+        characters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Character"
+        presets:
+          type: array
+          items:
+            type: string
+        ceilings:
+          $ref: "#/components/schemas/Ceilings"
+    CatalogueAction:
+      type: object
+      additionalProperties: false
+      required: [name, area, cost, mistake]
+      properties:
+        name:
+          type: string
+        area:
+          type: string
+        cost:
+          type: string
+          enum: [light, heavy, model]
+        mistake:
+          type: boolean
+    Character:
+      type: object
+      additionalProperties: false
+      required: [animal, says, weights]
+      properties:
+        animal:
+          type: string
+        says:
+          type: string
+        weights:
+          type: object
+          additionalProperties:
+            type: integer
+    Ceilings:
+      type: object
+      additionalProperties: false
+      required: [personas, intensity, clockRate, assistantPerDay, actionsPerMinute]
+      properties:
+        personas:
+          type: integer
+        intensity:
+          type: integer
+        clockRate:
+          type: integer
+        assistantPerDay:
+          type: integer
+        actionsPerMinute:
+          type: integer
+    ActRequest:
+      type: object
+      additionalProperties: false
+      required: [persona, action]
+      properties:
+        persona:
+          type: string
+          maxLength: 32
+        action:
+          type: string
+          maxLength: 64
+    Event:
+      type: object
+      additionalProperties: false
+      required: [time, persona, action, area, result, durationMs]
+      properties:
+        time:
+          type: string
+          format: date-time
+        persona:
+          type: string
+        action:
+          type: string
+        area:
+          type: string
+        result:
+          type: string
+          enum: [ok, error, skipped]
+        status:
+          type: integer
+          description: The instance's answer when it was not the one expected.
+        requestId:
+          type: string
+          description: >-
+            The id of the action's last request, or of the answer it did not expect (`sim-<persona>-…`): it finds
+            the action's lines in the logs, and they lead to its trace.
+        durationMs:
+          type: integer
+          format: int64
+        error:
+          type: string
