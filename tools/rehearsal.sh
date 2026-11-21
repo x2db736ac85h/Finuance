@@ -635,15 +635,18 @@ lab() {
   metrics=$(curl -fsS http://localhost:19090/metrics)
   jq -c '.totals' <<<"$state"
   fact "lab: the simulator's actions in 5 min at 3x" "$(jq -r '"\(.totals.ok) ok, \(.totals.error) errors, \(.totals.skipped) skipped"' <<<"$state")"
-  sum() { grep -E "^http_server_requests_total\{.*$1" <<<"$metrics" | awk '{s += $NF} END {print s + 0}'; }
+  # (no matching series is a 0, not a failure: grep's status is ignored)
+  sum() { { grep -E "^http_server_requests_total\{.*$1" <<<"$metrics" || true; } | awk '{s += $NF} END {print s + 0}'; }
   local five synthetic real other
   five=$(sum 'status_class="5xx"') synthetic=$(sum 'traffic="synthetic"') real=$(sum 'traffic="real"')
   # requests without a user are real by definition (signing in, /meta, probes, unknown paths)
-  other=$(grep -E '^http_server_requests_total\{.*traffic="real"' <<<"$metrics" |
-    grep -vE 'route="(POST /api/v1/auth/login|GET /api/v1/meta|GET /(healthz|readyz)|unmatched)"' | awk '{s += $NF} END {print s + 0}')
+  other=$({ grep -E '^http_server_requests_total\{.*traffic="real"' <<<"$metrics" || true; } |
+    { grep -vE 'route="(POST /api/v1/auth/login|GET /api/v1/meta|GET /(healthz|readyz)|unmatched)"' || true; } | awk '{s += $NF} END {print s + 0}')
   fact "lab: the api counted" "$synthetic synthetic, $real real (sign-ins, probes and the like), $five 5xx"
   local status=0
-  [ "$(jq '.totals.ok' <<<"$state")" -ge 100 ] || { echo "the animals did too little: $(jq -c .totals <<<"$state")" >&2; status=1; }
+  # the characters think between actions (at 3x, about every half minute; the mole hardly ever):
+  # about 50 in five minutes
+  [ "$(jq '.totals.ok' <<<"$state")" -ge 30 ] || { echo "the animals did too little: $(jq -c .totals <<<"$state")" >&2; status=1; }
   [ "$five" -eq 0 ] || { echo "the lab answered $five 5xx" >&2; grep -E 'status_class="5xx"' <<<"$metrics" >&2; status=1; }
   [ "$other" -eq 0 ] || { echo "$other of the personas' requests were counted as real traffic" >&2; status=1; }
   [ "$synthetic" -gt "$real" ] || { echo "synthetic $synthetic, real $real" >&2; status=1; }
