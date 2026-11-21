@@ -41,7 +41,7 @@ gh attestation verify oci://ghcr.io/x2db736ac85h/finuance-api@sha256:<digest> \
   --repo x2db736ac85h/Finuance --signer-workflow x2db736ac85h/Finuance/.github/workflows/release.yml
 ```
 
-The same for `finuance-web`. The provenance bundles are attached to each release as well (`finuance-api.intoto.jsonl`, `finuance-web.intoto.jsonl`). The `fin` command line comes with a checksum file, signed the same way:
+The same for `finuance-web`, and for the lab's two images, `finuance-sim` (the traffic simulator) and `finuance-llmmock` (the mock model), released since 0.6.0. The provenance bundles are attached to each release as well (`finuance-<image>.intoto.jsonl`). The `fin` command line comes with a checksum file, signed the same way:
 
 ```sh
 cosign verify-blob --bundle fin_<version>_checksums.txt.sigstore.json \

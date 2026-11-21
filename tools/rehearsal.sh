@@ -17,6 +17,8 @@
 #   - image signatures (Sigstore policy-controller with the homelab's policies): the released
 #     images are admitted in a labelled namespace, an image without the release workflow's
 #     signature and an image no policy names are refused (needs ghcr.io and Sigstore's services).
+#   - image admission: each namespace admits only the image repositories it runs (the lab's
+#     simulator and mock model nowhere near the instance's namespace).
 # Timings go to $SUMMARY (and the GitHub job summary). Needs docker, kind, kubectl, helm, kubeseal,
 # mikefarah's yq ($YQ), curl, openssl and python3.
 #
@@ -572,14 +574,55 @@ report() {
   annotate warning "operator and plugin errors" "$WORK/report-operator.txt"
 }
 
+# The image admission policy (deploy/k8s/admission, PLAN 25.7): each namespace admits only the
+# repositories it runs. Applied at the end, so the earlier stages' probes and stand-ins aren't held
+# to it, then tried with server-side dry runs (which create nothing) and removed again.
+admission() {
+  log "image admission: each namespace runs only its own images (PLAN 25.7)"
+  for ns in finuance finuance-lab finuance-sim; do kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -; done
+  kubectl apply -f deploy/k8s/admission/image-policy.yaml
+  local repo=ghcr.io/x2db736ac85h status=0
+  # A probe pod that meets the namespaces' "restricted" Pod Security, so that only the image policy
+  # can refuse it (a bare pod is refused by Pod Security first, which says nothing of the image).
+  try_admitted() {
+    local o
+    o=$(jq -cn --arg img "$2" '{spec: {securityContext: {runAsNonRoot: true, runAsUser: 65532, seccompProfile: {type: "RuntimeDefault"}},
+      containers: [{name: "admission-probe", image: $img, securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}}]}}')
+    kubectl -n "$1" run admission-probe --image "$2" --restart=Never --overrides "$o" --dry-run=server -o name 2>&1
+  }
+  # admitted <namespace> <image> / refused <namespace> <image>
+  admitted() { wait_for 60 "$2 is admitted in $1" try_admitted "$1" "$2" >/dev/null || { try_admitted "$1" "$2" >&2; status=1; }; }
+  refused() {
+    local out
+    if out=$(try_admitted "$1" "$2"); then echo "$2 was admitted in $1" >&2; status=1
+    elif ! grep -q "image not allowed in namespace $1" <<<"$out"; then echo "$2 in $1: $out" >&2; status=1
+    else echo "   refused in $1: $2"; fi
+  }
+  # the API server takes a moment to load a new policy: wait until it refuses something
+  active() { ! out=$(try_admitted finuance "$repo/finuance-sim:rehearsal") && grep -q 'image not allowed in namespace finuance' <<<"$out"; }
+  wait_for 120 "the admission policy is in force" active || { try_admitted finuance "$repo/finuance-sim:rehearsal" >&2; return 1; }
+  admitted finuance "$repo/finuance-api:rehearsal"
+  admitted finuance "$repo/finuance-web:rehearsal"
+  refused finuance "$repo/finuance-sim:rehearsal"
+  refused finuance "$repo/finuance-llmmock:rehearsal"
+  refused finuance "$repo/finuance-api-copy:rehearsal"
+  admitted finuance-lab "$repo/finuance-api:rehearsal"
+  admitted finuance-lab "$repo/finuance-llmmock:rehearsal"
+  refused finuance-lab "$repo/finuance-sim:rehearsal"
+  admitted finuance-sim "$repo/finuance-sim:rehearsal"
+  refused finuance-sim "$repo/finuance-api:rehearsal"
+  kubectl delete -f deploy/k8s/admission/image-policy.yaml --wait=false
+  return "$status"
+}
+
 down() { kind delete cluster --name "$CLUSTER" || true; }
 
 case ${1:-all} in
   all)
     rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
-    images; cluster; platform; deploy; smoke; logs; netpol; sse; podkill; restore; limits; signatures; summary
+    images; cluster; platform; deploy; smoke; logs; netpol; sse; podkill; restore; limits; signatures; admission; summary
     ;;
-  images | cluster | platform | deploy | smoke | logs | netpol | sse | podkill | restore | limits | signatures)
+  images | cluster | platform | deploy | smoke | logs | netpol | sse | podkill | restore | limits | signatures | admission)
     mkdir -p "$WORK/logs"
     "$1" 2>&1 | tee "$WORK/logs/$1.log"
     ;;

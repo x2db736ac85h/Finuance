@@ -94,6 +94,7 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 	tz := fs.String("tz", "Europe/Warsaw", "the instance's time zone, for the active hours")
 	listen := fs.String("listen", envOr(getenv, "FINUANCE_SIM_LISTEN", ":8090"), "the control API's, the page's and /metrics' address")
 	grafana := fs.String("grafana", getenv("FINUANCE_SIM_GRAFANA_URL"), "Grafana's address, for the feed's links")
+	origin := fs.String("origin", getenv("FINUANCE_SIM_ORIGIN"), "the Origin to send, when the target is reached by another name than the lab's public one")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
 		return 2
 	}
@@ -105,7 +106,7 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	e, err := sim.New(sim.Options{Target: *target, Seed: []byte(getenv("FINUANCE_SIM_SEED")), Version: version,
+	e, err := sim.New(sim.Options{Target: *target, Origin: *origin, Seed: []byte(getenv("FINUANCE_SIM_SEED")), Version: version,
 		Actions: actions.All(), Config: cfg, Location: loc, Log: log, Metrics: sim.NewMetrics(reg)})
 	if err != nil {
 		fmt.Fprintln(stderr, "finuance-sim:", err)

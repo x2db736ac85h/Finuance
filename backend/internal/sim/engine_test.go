@@ -458,3 +458,27 @@ func TestRunPlaysThePersonasSwitchedOn(t *testing.T) {
 		t.Errorf("actions by persona: %v", ran)
 	}
 }
+
+// TestOrigin: where the simulator reaches the lab's front door by another name (Compose), it still
+// sends the lab's public origin, which the API's CSRF check compares with FINUANCE_PUBLIC_ORIGIN.
+func TestOrigin(t *testing.T) {
+	lab := &fakeLab{simulation: true, status: http.StatusOK}
+	srv := httptest.NewServer(lab)
+	defer srv.Close()
+	e, err := New(Options{Target: srv.URL, Origin: "http://localhost:8020/", Seed: testSeed, Version: "test", Config: Defaults(),
+		Clock: &fakeClock{now: time.Now()}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.CheckTarget(context.Background()); err != nil {
+		t.Fatalf("the target is read at its own address, not the origin's: %v", err)
+	}
+	if _, err := e.Actor(context.Background(), identity.Nth(0)); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range lab.requests {
+		if o := r.Header.Get("Origin"); r.URL.Path != "/api/v1/meta" && o != "http://localhost:8020" {
+			t.Errorf("%s: Origin %q", r.URL.Path, o)
+		}
+	}
+}

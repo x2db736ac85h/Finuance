@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1.7
+# The traffic simulator's image (PLAN 25.7, ADR 0043): finuance-sim with its tuning page embedded.
+# It is its own image, so the production api image never carries the simulator.
+# Build from the repository root:  make images   (or docker build -f deploy/docker/Dockerfile.sim .)
+# Build context: deploy/docker/Dockerfile.sim.dockerignore (backend/ and web/, without node_modules).
+
+# The page, built once on the build machine's platform. A web/dist-sim built on the host is used as
+# is (offline builds, as for the web image); CI checkouts have none and build it here.
+FROM --platform=$BUILDPLATFORM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS page
+WORKDIR /web
+COPY web/ ./
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f dist-sim/index.html ]; then echo "using the prebuilt web/dist-sim"; \
+    else npm ci --no-audit --no-fund \
+      && { node scripts/check-native.mjs \
+           || { echo "installing once more"; npm ci --no-audit --no-fund && node scripts/check-native.mjs; }; } \
+      && npm run build:sim; fi \
+    && find dist-sim -name '*.map' -delete
+
+FROM --platform=$BUILDPLATFORM golang:1.27.4-trixie@sha256:f18c3d73a184fb0582828510722e723b63a93f7188d11dd223d9be6f6880e65d AS build
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-trimpath
+WORKDIR /src
+COPY backend/go.mod backend/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=bind,source=backend,target=/ctx \
+    if [ ! -d /ctx/vendor ]; then go mod download; fi
+COPY backend/ ./
+# the page replaces the placeholder the repository embeds; the build stops if it didn't
+COPY --from=page /web/dist-sim/ ./internal/sim/control/ui/
+RUN ! grep -q sim-page-placeholder internal/sim/control/ui/index.html \
+    && grep -q '<script type="module"' internal/sim/control/ui/index.html
+ARG VERSION=dev
+ARG TARGETOS
+ARG TARGETARCH
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/finuance-sim ./cmd/finuance-sim
+
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99
+LABEL org.opencontainers.image.source="https://github.com/x2db736ac85h/Finuance" \
+      org.opencontainers.image.title="finuance-sim" \
+      org.opencontainers.image.licenses="MIT"
+COPY --from=build /out/finuance-sim /finuance-sim
+USER nonroot:nonroot
+EXPOSE 8090
+ENTRYPOINT ["/finuance-sim"]
+CMD ["run"]

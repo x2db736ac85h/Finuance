@@ -121,14 +121,28 @@ jobs:
           docker buildx build --platform linux/amd64,linux/arm64 --file deploy/docker/Dockerfile.web \
             --label org.opencontainers.image.version="$VERSION" --label org.opencontainers.image.revision="$GITHUB_SHA" \
             --tag "$REGISTRY/finuance-web:$VERSION" "${latest[@]}" --metadata-file web.json --push .
+          # the lab's two images (PLAN 25.7, ADR 0043): the traffic simulator and the mock model
+          latest=()
+          [[ "$PRERELEASE" == "false" ]] && latest=(--tag "$REGISTRY/finuance-sim:latest")
+          docker buildx build --platform linux/amd64,linux/arm64 --file deploy/docker/Dockerfile.sim --build-arg VERSION="$VERSION" \
+            --label org.opencontainers.image.version="$VERSION" --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            --tag "$REGISTRY/finuance-sim:$VERSION" "${latest[@]}" --metadata-file sim.json --push .
+          latest=()
+          [[ "$PRERELEASE" == "false" ]] && latest=(--tag "$REGISTRY/finuance-llmmock:latest")
+          docker buildx build --platform linux/amd64,linux/arm64 --file deploy/docker/Dockerfile.backend --target llmmock \
+            --label org.opencontainers.image.version="$VERSION" --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" --label org.opencontainers.image.title=finuance-llmmock \
+            --tag "$REGISTRY/finuance-llmmock:$VERSION" "${latest[@]}" --metadata-file mock.json --push .
           api="$(jq -r '."containerimage.digest"' api.json)" web="$(jq -r '."containerimage.digest"' web.json)"
+          sim="$(jq -r '."containerimage.digest"' sim.json)" mock="$(jq -r '."containerimage.digest"' mock.json)"
           { echo "API_DIGEST=$api"; echo "WEB_DIGEST=$web"; echo "API=$REGISTRY/finuance-api@$api"; echo "WEB=$REGISTRY/finuance-web@$web"; } >> "$GITHUB_ENV"
+          { echo "SIM_DIGEST=$sim"; echo "MOCK_DIGEST=$mock"; echo "SIM=$REGISTRY/finuance-sim@$sim"; echo "MOCK=$REGISTRY/finuance-llmmock@$mock"; } >> "$GITHUB_ENV"
           { echo "api_digest=$api"; echo "web_digest=$web"; } >> "$GITHUB_OUTPUT"
 
       # The images are public; Trivy reads them from the registry, without the Docker socket.
       - name: Trivy (HIGH/CRITICAL fail the release)
         run: |
-          for img in "$API" "$WEB"; do
+          for img in "$API" "$WEB" "$SIM" "$MOCK"; do
             for platform in linux/amd64 linux/arm64; do
               backend/bin/trivy image --ignorefile .trivyignore --platform "$platform" --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress "$img"
             done
@@ -137,12 +151,12 @@ jobs:
       - name: SBOM, attestation and signature
         run: |
           set -euo pipefail
-          syft scan "registry:$API" -o spdx-json=finuance-api.spdx.json
-          syft scan "registry:$WEB" -o spdx-json=finuance-web.spdx.json
-          cosign attest --yes --type spdxjson --predicate finuance-api.spdx.json "$API"
-          cosign attest --yes --type spdxjson --predicate finuance-web.spdx.json "$WEB"
-          cosign sign --yes "$API"
-          cosign sign --yes "$WEB"
+          for pair in "api:$API" "web:$WEB" "sim:$SIM" "llmmock:$MOCK"; do
+            name="${pair%%:*}" img="${pair#*:}"
+            syft scan "registry:$img" -o "spdx-json=finuance-$name.spdx.json"
+            cosign attest --yes --type spdxjson --predicate "finuance-$name.spdx.json" "$img"
+            cosign sign --yes "$img"
+          done
 
       - name: Build provenance (api)
         id: provenance-api
@@ -158,6 +172,20 @@ jobs:
           subject-name: ghcr.io/x2db736ac85h/finuance-web
           subject-digest: ${{ env.WEB_DIGEST }}
           push-to-registry: true
+      - name: Build provenance (sim)
+        id: provenance-sim
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/x2db736ac85h/finuance-sim
+          subject-digest: ${{ env.SIM_DIGEST }}
+          push-to-registry: true
+      - name: Build provenance (llmmock)
+        id: provenance-llmmock
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/x2db736ac85h/finuance-llmmock
+          subject-digest: ${{ env.MOCK_DIGEST }}
+          push-to-registry: true
 
       # What a user runs (SECURITY.md, docs/deploying.md): the signature by this workflow for a
       # version tag, and the provenance attestation.
@@ -166,7 +194,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          for img in "$API" "$WEB"; do
+          for img in "$API" "$WEB" "$SIM" "$MOCK"; do
             cosign verify "$img" --certificate-identity-regexp "$SIGNER" --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null
             gh attestation verify "oci://$img" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
           done
@@ -213,6 +241,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROVENANCE_API: ${{ steps.provenance-api.outputs.bundle-path }}
           PROVENANCE_WEB: ${{ steps.provenance-web.outputs.bundle-path }}
+          PROVENANCE_SIM: ${{ steps.provenance-sim.outputs.bundle-path }}
+          PROVENANCE_MOCK: ${{ steps.provenance-llmmock.outputs.bundle-path }}
         run: |
           pre=()
           [[ "$PRERELEASE" == "true" ]] && pre=(--prerelease)
@@ -223,6 +253,11 @@ jobs:
             echo
             echo "- \`$API\`"
             echo "- \`$WEB\`"
+            echo
+            echo "For a lab (the traffic simulator, never next to real data; docs/simulator.md):"
+            echo
+            echo "- \`$SIM\`"
+            echo "- \`$MOCK\`"
             echo
             echo "Signed with cosign (keyless) by this repository's release workflow, with an SBOM and SLSA build provenance attached. Verify with:"
             echo
@@ -241,7 +276,10 @@ jobs:
           # the provenance bundles travel with the release too, next to the SBOMs
           cp "$PROVENANCE_API" finuance-api.intoto.jsonl
           cp "$PROVENANCE_WEB" finuance-web.intoto.jsonl
+          cp "$PROVENANCE_SIM" finuance-sim.intoto.jsonl
+          cp "$PROVENANCE_MOCK" finuance-llmmock.intoto.jsonl
           files=(compose.prod.yaml finuance.env.example finuance-api.spdx.json finuance-web.spdx.json finuance-api.intoto.jsonl finuance-web.intoto.jsonl
+            finuance-sim.spdx.json finuance-llmmock.spdx.json finuance-sim.intoto.jsonl finuance-llmmock.intoto.jsonl
             dist/fin_*.tar.gz dist/fin_*.zip dist/fin_*_checksums.txt dist/fin_*_checksums.txt.sigstore.json)
           title="Finuance $VERSION"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then

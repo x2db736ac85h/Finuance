@@ -53,3 +53,9 @@ scrape_configs:
     static_configs:
       - targets: ["worker:9090"]
         labels: { namespace: finuance, pod: worker }
+  # the traffic simulator, in the lab only (compose.lab.yaml, make sim-up); elsewhere this target is down
+  - job_name: finuance-sim
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["sim:8090"]
+        labels: { namespace: finuance-sim, pod: sim }
