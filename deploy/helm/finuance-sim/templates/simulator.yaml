@@ -1,0 +1,130 @@
+{{- if .Values.simulator.enabled }}
+{{- $s := .Values.simulator -}}
+{{- $name := include "sim.fullname" . -}}
+{{- if not $s.target }}{{ fail "simulator.target is required: the lab's public address" }}{{ end }}
+{{- if not (and $s.seedSecret.name $s.controlTokenSecret.name) }}{{ fail "simulator.seedSecret.name and simulator.controlTokenSecret.name are required" }}{{ end }}
+# The traffic simulator (PLAN 25.9): one replica. It stores nothing; a new pod signs its personas
+# in again and finds their state on the lab.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sim
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels:
+      {{- include "sim.selector" (dict "root" . "component" "sim") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sim.labels" . | nindent 8 }}
+        app.kubernetes.io/component: sim
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $s.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "sim.podSecurity" . | nindent 8 }}
+      containers:
+        - name: sim
+          image: {{ include "sim.image" (dict "root" . "component" "sim") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - run
+            - -target={{ $s.target }}
+            {{- with $s.origin }}
+            - -origin={{ . }}
+            {{- end }}
+            - -tz={{ $s.timeZone }}
+            - -personas={{ int $s.personas }}
+            - -intensity={{ int $s.intensity }}
+            - -active-hours={{ $s.activeHours }}
+            {{- with $s.grafana }}
+            - -grafana={{ . }}
+            {{- end }}
+            {{- if $s.caSecret.name }}
+            - -ca-file=/etc/finuance-sim-ca/{{ $s.caSecret.key }}
+            {{- end }}
+          ports:
+            - { name: http, containerPort: 8090 }
+          env:
+            - name: FINUANCE_SIM_SEED
+              valueFrom:
+                secretKeyRef: { name: {{ $s.seedSecret.name }}, key: {{ $s.seedSecret.key }} }
+            - name: FINUANCE_SIM_CONTROL_TOKEN
+              valueFrom:
+                secretKeyRef: { name: {{ $s.controlTokenSecret.name }}, key: {{ $s.controlTokenSecret.key }} }
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          resources:
+            {{- toYaml $s.resources | nindent 12 }}
+          securityContext:
+            {{- include "sim.containerSecurity" . | nindent 12 }}
+          {{- if $s.caSecret.name }}
+          volumeMounts:
+            - name: ca
+              mountPath: /etc/finuance-sim-ca
+              readOnly: true
+          {{- end }}
+      {{- if $s.caSecret.name }}
+      volumes:
+        - name: ca
+          secret:
+            secretName: {{ $s.caSecret.name }}
+            items:
+              - { key: {{ $s.caSecret.key }}, path: {{ $s.caSecret.key }} }
+      {{- end }}
+---
+# The control API, the tuning page and /metrics: inside the cluster only (a port-forward reaches it;
+# the API needs the control token). Never published through an ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sim
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "sim.selector" (dict "root" . "component" "sim") | nindent 4 }}
+  ports:
+    - { name: http, port: 8090, targetPort: http }
+{{- if .Values.podMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+    {{- with .Values.podMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "sim.selector" (dict "root" . "component" "sim") | nindent 6 }}
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.podMonitor.interval }}
+      relabelings:
+        - { action: replace, targetLabel: job, replacement: finuance-sim }
+{{- end }}
+{{- end }}

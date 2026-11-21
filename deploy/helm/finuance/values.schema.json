@@ -32,11 +32,33 @@
     "logLevel": { "enum": ["debug", "info", "warn", "error"] },
     "profiling": { "type": "boolean" },
     "allowSignup": { "type": "boolean" },
+    "simulation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "syntheticUsers"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "syntheticUsers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "seedSecret"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "seedSecret": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "key"],
+              "properties": { "name": { "type": "string" }, "key": { "type": "string", "minLength": 1 } }
+            }
+          }
+        }
+      }
+    },
     "trustedProxies": { "type": "string" },
     "maxUploadBytes": { "type": "integer", "minimum": 1024 },
     "extraEnv": {
       "type": "object",
-      "propertyNames": { "pattern": "^FINUANCE_[A-Z0-9_]+$", "not": { "const": "FINUANCE_PPROF" } },
+      "propertyNames": { "pattern": "^FINUANCE_[A-Z0-9_]+$", "not": { "enum": ["FINUANCE_PPROF", "FINUANCE_SIMULATION"] } },
       "additionalProperties": { "type": "string" }
     },
     "database": {

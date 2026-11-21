@@ -60,6 +60,14 @@ if [ -f "$env_overlay" ]; then
 fi
 for f in "$db"/ci/*.yaml; do render "db-$(basename "$f" .yaml)" finuance-db "$db" finuance "$f"; done
 render db-homelab finuance-db "$db" finuance deploy/environments/homelab/db-values.yaml
+# the lab for the traffic simulator (deploy/environments/lab, PLAN 25.9): its instance and database
+# in finuance-lab, the mock there and the simulator in finuance-sim
+sim=deploy/helm/finuance-sim
+render app-lab finuance "$app" finuance-lab deploy/environments/lab/app-values.yaml
+render db-lab finuance-db "$db" finuance-lab deploy/environments/lab/db-values.yaml
+render sim-mock finuance-lab-mock "$sim" finuance-lab deploy/environments/lab/mock-values.yaml
+render sim-simulator finuance-sim "$sim" finuance-sim deploy/environments/lab/sim-values.yaml
+for f in "$sim"/ci/*.yaml; do render "sim-ci-$(basename "$f" .yaml)" finuance-sim "$sim" finuance-sim "$f"; done
 # the restore drill on the homelab (tools/homelab-drill.sh)
 render db-homelab-restore finuance-db "$db" finuance-restore deploy/environments/homelab/restore-db-values.yaml
 render app-homelab-restore finuance "$app" finuance-restore deploy/environments/homelab/restore-app-values.yaml
@@ -69,6 +77,42 @@ render app-homelab-restore finuance "$app" finuance-restore deploy/environments/
 echo "== profiling is off unless the value says so (PLAN 24.9)"
 pprof() { helm template t "$app" --kube-version "$K8S" -f "$app/ci/minimal-values.yaml" "$@" | "$YQ" -N 'select(.kind == "ConfigMap") | .data.FINUANCE_PPROF | select(. != null)'; }
 [ "$(pprof)" = false ] && [ "$(pprof --set profiling=true)" = true ] || { echo "check-helm: FINUANCE_PPROF does not follow the profiling value"; exit 1; }
+echo ok
+
+echo "== a lab only where the values say so (PLAN 25.9, ADR 0043)"
+lab() { helm template t "$app" --kube-version "$K8S" -f "$app/ci/minimal-values.yaml" "$@"; }
+[ "$(lab | "$YQ" -N 'select(.kind == "ConfigMap") | .data.FINUANCE_SIMULATION | select(. != null)')" = false ] ||
+  { echo "check-helm: FINUANCE_SIMULATION is not false by default"; exit 1; }
+[ -z "$(lab --set simulation.enabled=true | "$YQ" -N 'select(.kind == "Job" and .metadata.labels["app.kubernetes.io/component"] == "animals") | .metadata.name')" ] ||
+  { echo "check-helm: the personas' job runs without a seed secret"; exit 1; }
+out_lab=$(lab --set simulation.enabled=true --set simulation.syntheticUsers.seedSecret.name=sim-seed --set simulation.syntheticUsers.count=3 --set networkPolicy.enabled=true)
+[ "$("$YQ" -N 'select(.kind == "ConfigMap") | .data.FINUANCE_SIMULATION | select(. != null)' <<<"$out_lab")" = true ] ||
+  { echo "check-helm: FINUANCE_SIMULATION does not follow simulation.enabled"; exit 1; }
+# (yq's `and` binds less tightly than `|`: the tests after a select are in parentheses)
+"$YQ" -e 'select(.kind == "Job" and .metadata.name == "t-finuance-animals") | (.metadata.annotations["argocd.argoproj.io/hook"] == "PostSync" and
+  ((.spec.template.spec.containers[0].args | join(" ")) == "admin synthetic-users -count=3 -seed-env=FINUANCE_SIM_SEED") and
+  (.spec.template.spec.containers[0].env | any_c(.name == "FINUANCE_SIM_SEED" and .valueFrom.secretKeyRef.name == "sim-seed")))' <<<"$out_lab" >/dev/null ||
+  { echo "check-helm: the personas' job is not what it should be"; exit 1; }
+"$YQ" -e 'select(.kind == "NetworkPolicy" and .metadata.name == "t-finuance-animals") | ((.spec.ingress | length) == 0 and (.spec.egress | length) == 2)' <<<"$out_lab" >/dev/null ||
+  { echo "check-helm: the personas' job has no policy of its own (the database and DNS only)"; exit 1; }
+echo ok
+
+echo "== the simulator: restricted pods, its own namespace closed, egress to DNS and the lab only"
+[ "$("$YQ" -N 'select(.kind == "Deployment") | (.spec.template.spec.securityContext.runAsNonRoot and
+  ([.spec.template.spec.containers[] | (.securityContext.readOnlyRootFilesystem and .securityContext.allowPrivilegeEscalation == false and
+  (.securityContext.capabilities.drop | contains(["ALL"])))] | all))' "$out/sim-simulator.yaml" "$out/sim-mock.yaml" | sort -u)" = true ] ||
+  { echo "check-helm: a pod of the simulator's chart is not restricted"; exit 1; }
+"$YQ" -e 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-sim-default-deny") | (.spec.podSelector | length) == 0' "$out/sim-simulator.yaml" >/dev/null ||
+  { echo "check-helm: the simulator's namespace has no default deny"; exit 1; }
+# only DNS plus what simulator.egress names (the values name none: DNS alone)
+[ "$("$YQ" -N 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-sim") | .spec.egress | length' "$out/sim-simulator.yaml")" = 1 ] ||
+  { echo "check-helm: the simulator may reach more than DNS and the lab"; exit 1; }
+"$YQ" -e 'select(.kind == "Service") | .spec.type == "ClusterIP"' "$out/sim-simulator.yaml" >/dev/null ||
+  { echo "check-helm: the simulator's service is published beyond the cluster"; exit 1; }
+[ -z "$("$YQ" -N 'select(.kind == "Ingress") | .metadata.name' "$out/sim-simulator.yaml" "$out/sim-mock.yaml")" ] ||
+  { echo "check-helm: the simulator's chart renders an Ingress"; exit 1; }
+"$YQ" -e 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-lab-mock-finuance-sim-mock") | (.spec.egress | length) == 0' "$out/sim-mock.yaml" >/dev/null ||
+  { echo "check-helm: the mock may reach out"; exit 1; }
 echo ok
 
 echo "== assistant connections file is mounted where it is read"
@@ -260,6 +304,11 @@ must_fail "a restore archives into its origin's folder" "must archive to another
   --set objectStore.destinationPath=s3://b/ --set recovery.enabled=true
 must_fail "profiling is not a boolean" "/profiling" "$app" "${o[@]}" --set ingress.tls.mode=none --set-string profiling=yes
 must_fail "extraEnv sets FINUANCE_PPROF (the profiling value does)" "invalid propertyName 'FINUANCE_PPROF'" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.FINUANCE_PPROF=true
+must_fail "extraEnv sets FINUANCE_SIMULATION (the simulation value does)" "invalid propertyName 'FINUANCE_SIMULATION'" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.FINUANCE_SIMULATION=true
+must_fail "a seed for the personas on an instance that is not a lab" "synthetic users exist on a lab only" "$app" "${o[@]}" --set ingress.tls.mode=none --set simulation.syntheticUsers.seedSecret.name=sim-seed
+must_fail "more personas than the simulator plays" "/simulation/syntheticUsers/count" "$app" "${o[@]}" --set ingress.tls.mode=none --set simulation.syntheticUsers.count=51
+must_fail "the simulator without a target" "simulator.target is required" deploy/helm/finuance-sim
+must_fail "the simulator without its secrets" "simulator.seedSecret.name and simulator.controlTokenSecret.name are required" deploy/helm/finuance-sim --set simulator.target=https://lab.example
 must_fail "Loki's image has no digest" "/loki/image" "$tel" --set loki.image=grafana/loki:3.7.10
 must_fail "Tempo's endpoint carries the path" "/traces/endpoint" "$tel" --set traces.endpoint=http://tempo.monitoring.svc:4318/v1/traces
 must_fail "logs are read from no namespace" "/logs/namespaces" "$tel" --set 'logs.namespaces={}'

@@ -1,0 +1,81 @@
+# The traffic simulator (PLAN 25.9, ADR 0043). Two uses of this chart:
+#   - in the simulator's namespace (finuance-sim): simulator.enabled, mock.enabled false;
+#   - in the lab's namespace (finuance-lab), for its assistant: simulator.enabled false, mock.enabled.
+# The admission policy (deploy/k8s/admission) admits finuance-sim only in finuance-sim and
+# finuance-llmmock only in a lab's namespace. deploy/environments/lab/ has both values files.
+image:
+  registry: ghcr.io/x2db736ac85h
+  sim: finuance-sim
+  mock: finuance-llmmock
+  tag: ""
+  # deploy by digest (registry/name@sha256:…); empty: by tag
+  digests: { sim: "", mock: "" }
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+simulator:
+  enabled: true
+  # The lab's public address (its ingress), as a browser reaches it. The simulator refuses an
+  # instance whose /meta does not report simulation: true.
+  target: ""
+  # The Origin to send when target names the lab otherwise (empty: the target's own).
+  origin: ""
+  # The lab's time zone, for the characters' daily hours.
+  timeZone: Europe/Warsaw
+  # Where it starts; the tuning page changes it, held to the ceilings in the code.
+  personas: 10
+  intensity: 1000
+  activeHours: true
+  # Grafana's address for the feed's links (empty: no links).
+  grafana: ""
+  # Existing Secrets: the seed (the lab's synthetic-users job gets the same one) and the control
+  # API's token. Both at least 32 bytes.
+  seedSecret: { name: "", key: seed }
+  controlTokenSecret: { name: "", key: token }
+  # A Secret with the authority that signed the lab's certificate, when it is not a public one.
+  caSecret: { name: "", key: ca.crt }
+  # Names the lab's host resolves to inside the cluster (the pod's hostAliases), when the public
+  # name doesn't resolve there.
+  hostAliases: []
+  #  - ip: 10.96.0.10
+  #    hostnames: [lab.example]
+  # Where it may connect besides DNS (NetworkPolicy egress): the lab's front door, as a `cidr`
+  # outside the cluster or `to` peers inside it (the ingress controller's pods), with their ports.
+  egress: []
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+mock:
+  enabled: false
+  # The pods that may ask the mock model: the lab's api and worker.
+  clients:
+    - podSelector:
+        matchLabels: { app.kubernetes.io/name: finuance }
+        matchExpressions:
+          - { key: app.kubernetes.io/component, operator: In, values: [api, worker] }
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+networkPolicy:
+  enabled: true
+  # Where names are resolved: the cluster's DNS pods.
+  dns:
+    namespaceSelector:
+      matchLabels: { kubernetes.io/metadata.name: kube-system }
+    podSelector:
+      matchLabels: { k8s-app: kube-dns }
+  # Who may scrape the simulator's /metrics (port 8090, which also serves the control API behind
+  # its token): Prometheus's pods. Both empty: nobody. A port-forward is not held by a policy.
+  monitoring:
+    namespaceSelector:
+      matchLabels: { kubernetes.io/metadata.name: monitoring }
+    podSelector:
+      matchLabels: { app.kubernetes.io/name: prometheus }
+
+podMonitor:
+  # Scrapes the simulator (job finuance-sim); needs the Prometheus Operator CRDs.
+  enabled: false
+  interval: 30s
+  labels: {}

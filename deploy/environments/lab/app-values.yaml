@@ -1,0 +1,33 @@
+# The lab's instance (README.md): the app chart in finuance-lab. A cluster's overlay adds the host
+# name (publicOrigin, ingress.host), the certificate and the image digests.
+publicOrigin: https://lab.example
+ingress:
+  host: lab.example
+  # the lab's certificate, from the cluster's overlay (a public authority or the cluster's own)
+  tls:
+    mode: secret
+    secretName: finuance-lab-tls
+allowSignup: false
+simulation:
+  enabled: true
+  syntheticUsers:
+    count: 10
+    seedSecret: { name: finuance-sim-seed, key: seed }
+api:
+  replicas: 1
+web:
+  replicas: 1
+# the assistant talks to the mock model in the same namespace (mock-values.yaml)
+assistant:
+  enabled: true
+  connectionsFile: |
+    {"connections":[{"name":"mock","label":"Mock model","api":"openai","baseUrl":"http://finuance-llmmock:11434/v1","defaultModel":"mock-tools"}]}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: finuance-sim, app.kubernetes.io/component: mock }
+      ports: [11434]
+database:
+  sslmode: verify-full
+  caSecret:
+    name: finuance-db-ca

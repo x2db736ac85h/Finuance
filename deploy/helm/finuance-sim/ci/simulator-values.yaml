@@ -1,0 +1,15 @@
+# The simulator (README.md): the simulator's chart in finuance-sim. A cluster's overlay adds the
+# lab's address (target), the egress to its ingress controller and the image digests.
+simulator:
+  enabled: true
+  target: https://lab.example
+  timeZone: Europe/Warsaw
+  personas: 10
+  intensity: 1000
+  activeHours: true
+  seedSecret: { name: finuance-sim-seed, key: seed }
+  controlTokenSecret: { name: finuance-sim-control, key: token }
+mock:
+  enabled: false
+podMonitor:
+  enabled: true

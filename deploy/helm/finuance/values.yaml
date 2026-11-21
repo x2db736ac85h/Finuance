@@ -25,6 +25,16 @@ logLevel: info
 profiling: false
 # New accounts can sign up when true; otherwise an admin creates them (finuance admin create-user).
 allowSignup: false
+# A lab for the traffic simulator (PLAN 25.9, ADR 0043): synthetic users can exist and sign in, and
+# /meta says so. Never on an instance with real data. With a seed secret, a job makes the
+# simulator's personas after every install and upgrade (finuance admin synthetic-users; a second
+# run changes nothing). deploy/environments/lab/ sets both.
+simulation:
+  enabled: false
+  syntheticUsers:
+    count: 10
+    # the simulator's seed (FINUANCE_SIM_SEED), a key of an existing Secret; empty name: no job
+    seedSecret: { name: "", key: seed }
 # Addresses whose X-Forwarded-For is trusted (the ingress controller's pods). k3s pods use
 # 10.42.0.0/16 by default. A range is safe only because the network policies let nothing but the
 # ingress controller and the web pods reach the api; the chart refuses a range with them off.

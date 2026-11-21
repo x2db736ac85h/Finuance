@@ -1,0 +1,61 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $name := include "sim.fullname" . -}}
+{{- if .Values.simulator.enabled }}
+{{- /* the simulator's namespace holds the simulator alone: deny everything else in it */}}
+# Default deny in the simulator's namespace, then the simulator: DNS and the lab's front door out,
+# Prometheus in (PLAN 25.9).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}-default-deny
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "sim.selector" (dict "root" . "component" "sim") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    {{- $m := .Values.networkPolicy.monitoring }}
+    {{- if or $m.namespaceSelector $m.podSelector }}
+    - from:
+        - namespaceSelector: {{- toYaml $m.namespaceSelector | nindent 12 }}
+          podSelector: {{- toYaml $m.podSelector | nindent 12 }}
+      ports: [{ port: 8090, protocol: TCP }]
+    {{- end }}
+  egress:
+    {{- include "sim.dnsEgress" . | nindent 4 }}
+    {{- include "sim.egress" .Values.simulator.egress | nindent 4 }}
+{{- end }}
+{{- if .Values.mock.enabled }}
+---
+# The mock in the lab's namespace (whose own chart denies everything by default): the lab's api
+# and worker in, nothing out.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}-mock
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "sim.selector" (dict "root" . "component" "mock") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        {{- toYaml .Values.mock.clients | nindent 8 }}
+      ports: [{ port: 11434, protocol: TCP }]
+  egress: []
+{{- end }}
+{{- end }}

@@ -30,6 +30,8 @@ func TestCommands(t *testing.T) {
 		{[]string{"password"}, env, 2, "", "usage"},
 		{[]string{"run"}, env, 1, "", "the target must be"},
 		{[]string{"run", "-target=https://lab.example", "-tz=Mars/Base"}, env, 2, "", "-tz"},
+		{[]string{"run", "-target=https://lab.example", "-ca-file=/nonexistent/ca.pem"}, env, 2, "", "-ca-file"},
+		{[]string{"run", "-target=https://lab.example", "-ca-file=main.go"}, env, 2, "", "no PEM certificate"},
 		{[]string{"version"}, env, 0, "finuance-sim dev\n", ""},
 		{[]string{"fly"}, env, 2, "", "unknown command"},
 		{nil, env, 2, "", "usage"},

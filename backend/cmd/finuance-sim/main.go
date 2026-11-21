@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"flag"
 	"fmt"
@@ -95,6 +97,7 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 	listen := fs.String("listen", envOr(getenv, "FINUANCE_SIM_LISTEN", ":8090"), "the control API's, the page's and /metrics' address")
 	grafana := fs.String("grafana", getenv("FINUANCE_SIM_GRAFANA_URL"), "Grafana's address, for the feed's links")
 	origin := fs.String("origin", getenv("FINUANCE_SIM_ORIGIN"), "the Origin to send, when the target is reached by another name than the lab's public one")
+	caFile := fs.String("ca-file", getenv("FINUANCE_SIM_CA_FILE"), "a PEM file with the authority that signed the lab's certificate, besides the system's")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
 		return 2
 	}
@@ -103,10 +106,15 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 		fmt.Fprintln(stderr, "finuance-sim: -tz:", err)
 		return 2
 	}
+	transport, err := transportWith(*caFile)
+	if err != nil {
+		fmt.Fprintln(stderr, "finuance-sim: -ca-file:", err)
+		return 2
+	}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	e, err := sim.New(sim.Options{Target: *target, Origin: *origin, Seed: []byte(getenv("FINUANCE_SIM_SEED")), Version: version,
+	e, err := sim.New(sim.Options{Target: *target, Origin: *origin, Transport: transport, Seed: []byte(getenv("FINUANCE_SIM_SEED")), Version: version,
 		Actions: actions.All(), Config: cfg, Location: loc, Log: log, Metrics: sim.NewMetrics(reg)})
 	if err != nil {
 		fmt.Fprintln(stderr, "finuance-sim:", err)
@@ -135,6 +143,28 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 		code = 1
 	}
 	return code
+}
+
+// transportWith is the default transport, trusting also the authority in caFile ("" for none): a
+// lab with a certificate of its own (the rehearsal's, a private authority).
+func transportWith(caFile string) (http.RoundTripper, error) {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	if caFile == "" {
+		return t, nil
+	}
+	pem, err := os.ReadFile(caFile) //nolint:gosec // the operator's own file
+	if err != nil {
+		return nil, err
+	}
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		pool = x509.NewCertPool()
+	}
+	if !pool.AppendCertsFromPEM(pem) {
+		return nil, fmt.Errorf("%s holds no PEM certificate", caFile)
+	}
+	t.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
+	return t, nil
 }
 
 func envOr(getenv func(string) string, name, def string) string {

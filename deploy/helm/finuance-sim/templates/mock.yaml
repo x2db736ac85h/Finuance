@@ -1,0 +1,58 @@
+{{- if .Values.mock.enabled }}
+{{- /* one mock per namespace, under a fixed name the lab's connection names */}}
+{{- $name := "finuance-llmmock" -}}
+# The lab's mock model server (testutil/llmmock; PLAN Phase 25, decision 8): the lab's assistant
+# talks to it unless a real connection is configured. It keeps its newest 256 requests only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sim.selector" (dict "root" . "component" "mock") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sim.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mock
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "sim.podSecurity" . | nindent 8 }}
+      containers:
+        - name: mock
+          image: {{ include "sim.image" (dict "root" . "component" "mock") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - { name: http, containerPort: 11434 }
+          readinessProbe:
+            httpGet: { path: /v1/models, port: http }
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.mock.resources | nindent 12 }}
+          securityContext:
+            {{- include "sim.containerSecurity" . | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "sim.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mock
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "sim.selector" (dict "root" . "component" "mock") | nindent 4 }}
+  ports:
+    - { name: http, port: 11434, targetPort: http }
+{{- end }}
