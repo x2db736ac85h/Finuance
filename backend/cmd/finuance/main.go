@@ -34,9 +34,10 @@ commands:
   worker                 run background jobs (River)
   migrate up|down|status|version
                          apply / roll back one / list / show schema migrations (owner role)
-  seed-demo -email=… [-rows=N] [-users=N -password-stdin]
+  seed-demo -email=… [-rows=N] [-users=N -password-stdin [-synthetic]]
                          create demo data for a user (about N rows instead of the demo year), or
-                         for N load-test users email+001… (created with the password from stdin)
+                         for N load-test users email+001… (created with the password from stdin;
+                         -synthetic marks them synthetic, on a lab only)
   admin create-user -email=… [-display-name=…] -password-stdin
                          create an account (works with signup disabled)
   admin set-password -email=… -password-stdin
@@ -78,6 +79,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		fs.IntVar(&seed.Rows, "rows", 0, "about this many demo rows instead of the demo year")
 		fs.IntVar(&seed.Users, "users", 0, "seed this many load-test users")
 		fs.BoolVar(&seedPassword, "password-stdin", false, "with -users: the users' password, from the first line of stdin")
+		fs.BoolVar(&seed.Synthetic, "synthetic", false, "with -users: mark the users synthetic (a lab only, FINUANCE_SIMULATION)")
 	}
 	if err := fs.Parse(rest); err != nil {
 		return 2
@@ -138,8 +140,9 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		}
 		return fail(app.Healthcheck(ctx, cfg))
 	case "seed-demo":
-		if seed.Email == "" || fs.NArg() != 0 || seed.Rows < 0 || seed.Users < 0 || (seed.Users > 0) != seedPassword {
-			fmt.Fprintln(stderr, "usage: finuance seed-demo -email=… [-rows=N] [-users=N -password-stdin]")
+		if seed.Email == "" || fs.NArg() != 0 || seed.Rows < 0 || seed.Users < 0 || (seed.Users > 0) != seedPassword ||
+			(seed.Synthetic && seed.Users == 0) {
+			fmt.Fprintln(stderr, "usage: finuance seed-demo -email=… [-rows=N] [-users=N -password-stdin [-synthetic]]")
 			return 2
 		}
 		if seedPassword {

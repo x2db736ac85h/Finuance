@@ -90,7 +90,10 @@ jobs:
           node-version: 26
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - name: Start the stack and seed 5 users
+      # a lab, so the load test's users are synthetic (PLAN 25.10)
+      - name: Start the stack as a lab and seed 5 synthetic users
+        env:
+          FINUANCE_SIMULATION: "true"
         run: |
           (cd web && npm ci --no-audit --no-fund)
           make up

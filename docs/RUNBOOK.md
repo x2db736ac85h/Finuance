@@ -843,7 +843,7 @@ Record the times in the table below: **RTO** is from `helm install finuance-db` 
 
 ### Pod kills under load
 
-`tools/homelab-drill.sh podkill` runs k6 (`grafana/k6:1.8.2`, the rehearsal's `podkill.js` with a drill user made by the admin CLI and the certificate checked) through the ingress for 90 s while it deletes an api pod, rolls the api, deletes a web pod and rolls web and the worker. No request may fail (rollouts are `maxUnavailable: 0`, pods leave the endpoints before they stop, the api drains in-flight requests).
+`tools/homelab-drill.sh podkill` runs k6 (`grafana/k6:2.4.0`, the rehearsal's `podkill.js` with a drill user made by the admin CLI and the certificate checked) through the ingress for 90 s while it deletes an api pod, rolls the api, deletes a web pod and rolls web and the worker. No request may fail (rollouts are `maxUnavailable: 0`, pods leave the endpoints before they stop, the api drains in-flight requests).
 
 | Drill | Where | Result |
 |---|---|---|

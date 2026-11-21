@@ -118,7 +118,12 @@ Decisions at the phase start (the maintainer, 2026-11-21): the agent merges this
   - **`finuance-sim -ca-file`** trusts the authority that signed a lab's certificate.
   - **`check-helm.sh`:** renders all four and checks the lab switch, the personas' job and its policy, the restricted pods, the closed namespace, DNS-only egress by default, no Ingress, a mock that reaches nothing, and the refusals. Two of the new checks were found passing by luck: yq's `and` binds less tightly than `|`, and its array comparison doesn't work. They are rewritten and proven to fail on a broken render.
   - **The rehearsal's `lab` stage:** the lab in `finuance-lab` with its own database and mock, the simulator in `finuance-sim` reaching it through Traefik at `https://lab.localhost` with the rehearsal's authority, five minutes at 3× with every animal. It requires at least 100 successful actions, no `5xx` on the lab, and no request of a persona counted as real: the service-level rules, which count `traffic!="synthetic"`, leave the simulator out.
-- [ ] 25.10 k6: synthetic load-test users, k6 2.x, which tool is for what
+- [x] 25.10 k6: synthetic load-test users, k6 2.x, which tool is for what — 2026-11-21 (pull request 8):
+  - **Synthetic load-test users:** `finuance seed-demo -users=N -synthetic` marks them synthetic, on a lab only; on another instance it creates nobody (`TestSeedSyntheticLoadTestUsers`). `make loadtest-seed` seeds synthetic users unless `LOADTEST_SYNTHETIC=` is set.
+  - **A lab from `make up`:** Compose passes `FINUANCE_SIMULATION` through (off by default), so `FINUANCE_SIMULATION=true make up` is a lab. The weekly k6 smoke run uses it.
+  - **k6 2.4.0** in the Makefile, the rehearsal and the homelab drill, after a check against what 2.x removed: the scripts use only constant and arrival-rate executors, `k6/http`, `k6/execution` and `k6/metrics`. Against the Compose lab the smoke profile passed (171 of 171 checks, p95 41 ms, nothing failed), and the lab counted the run as synthetic.
+  - **The homelab drill's k6 user stays a person:** the homelab is not a lab.
+  - **`loadtest/README.md`** says which tool is for what (k6 for load and breaking points, its pod-kill script for rollouts, the simulator for every feature all day).
 - [ ] 25.11 documents (`docs/simulator.md` and the rest), `CHANGELOG.md`, `v0.6.0`
 - [ ] 25.12 a day in the lab: ten animals for 24 hours, every `5xx` and unexpected `4xx` a finding, the overview and the duplicates window measured
 - [ ] Gate (the maintainer): an evening with the page: switch presets, sign in as an animal, follow one action to its trace

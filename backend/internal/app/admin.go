@@ -200,8 +200,11 @@ type SeedInput struct {
 	// Users > 0 seeds that many users for the load test (PLAN 17.5), named after Email with a
 	// number (loadtest@example.test → loadtest+001@example.test …), creating the missing ones with
 	// the password from Password; users that already have a demo account are skipped.
-	Users    int
-	Password io.Reader
+	Users int
+	// Synthetic marks the load-test users synthetic (PLAN 25.10, ADR 0041): their traffic stays out
+	// of the instance's service-level numbers. A lab only (FINUANCE_SIMULATION).
+	Synthetic bool
+	Password  io.Reader
 	// Clock decides which day the demo data ends on (nil: the system's clock).
 	Clock platform.Clock
 }
@@ -241,6 +244,9 @@ func SeedDemo(ctx context.Context, cfg config.Config, in SeedInput, out func(for
 		}
 		return seed(u)
 	}
+	if in.Synthetic && !cfg.Simulation {
+		return fmt.Errorf("-synthetic needs an instance started with FINUANCE_SIMULATION=true (a lab): %w", platform.ErrForbidden)
+	}
 	password, err := readPassword(in.Password)
 	if err != nil {
 		return err
@@ -257,6 +263,11 @@ func SeedDemo(ctx context.Context, cfg config.Config, in SeedInput, out func(for
 		}
 		if err != nil {
 			return err
+		}
+		if in.Synthetic && !u.Synthetic {
+			if err := svc.MarkSynthetic(ctx, u.ID); err != nil {
+				return fmt.Errorf("%s: %w", email, err)
+			}
 		}
 		if err := seed(u); errors.Is(err, ledger.ErrConflict) {
 			out("%s already has demo data", email)
