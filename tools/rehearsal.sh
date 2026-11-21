@@ -658,17 +658,25 @@ admission() {
   for ns in finuance finuance-lab finuance-sim; do kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -; done
   kubectl apply -f deploy/k8s/admission/image-policy.yaml
   local repo=ghcr.io/x2db736ac85h status=0
+  # A probe pod that meets the namespaces' "restricted" Pod Security, so that only the image policy
+  # can refuse it (a bare pod is refused by Pod Security first, which says nothing of the image).
+  try_admitted() {
+    local o
+    o=$(jq -cn --arg img "$2" '{spec: {securityContext: {runAsNonRoot: true, runAsUser: 65532, seccompProfile: {type: "RuntimeDefault"}},
+      containers: [{name: "admission-probe", image: $img, securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}}]}}')
+    kubectl -n "$1" run admission-probe --image "$2" --restart=Never --overrides "$o" --dry-run=server -o name 2>&1
+  }
   # admitted <namespace> <image> / refused <namespace> <image>
-  admitted() { wait_for 60 "$2 is admitted in $1" try_image "$1" "$2" >/dev/null || { try_image "$1" "$2" >&2; status=1; }; }
+  admitted() { wait_for 60 "$2 is admitted in $1" try_admitted "$1" "$2" >/dev/null || { try_admitted "$1" "$2" >&2; status=1; }; }
   refused() {
     local out
-    if out=$(try_image "$1" "$2"); then echo "$2 was admitted in $1" >&2; status=1
+    if out=$(try_admitted "$1" "$2"); then echo "$2 was admitted in $1" >&2; status=1
     elif ! grep -q "image not allowed in namespace $1" <<<"$out"; then echo "$2 in $1: $out" >&2; status=1
     else echo "   refused in $1: $2"; fi
   }
   # the API server takes a moment to load a new policy: wait until it refuses something
-  active() { ! out=$(try_image finuance "$repo/finuance-sim:rehearsal") && grep -q 'image not allowed in namespace finuance' <<<"$out"; }
-  wait_for 120 "the admission policy is in force" active || { try_image finuance "$repo/finuance-sim:rehearsal" >&2; return 1; }
+  active() { ! out=$(try_admitted finuance "$repo/finuance-sim:rehearsal") && grep -q 'image not allowed in namespace finuance' <<<"$out"; }
+  wait_for 120 "the admission policy is in force" active || { try_admitted finuance "$repo/finuance-sim:rehearsal" >&2; return 1; }
   admitted finuance "$repo/finuance-api:rehearsal"
   admitted finuance "$repo/finuance-web:rehearsal"
   refused finuance "$repo/finuance-sim:rehearsal"
