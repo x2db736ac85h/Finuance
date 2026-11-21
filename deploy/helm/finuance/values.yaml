@@ -20,6 +20,9 @@ imagePullSecrets: []
 # The address users open, e.g. https://finance.example.com (cookies, CSRF origin check). Required.
 publicOrigin: ""
 logLevel: info
+# /debug/pprof on the admin port of the api and the worker (FINUANCE_PPROF). Off: whoever may scrape
+# the metrics could otherwise also pull heap dumps. Switch it on for a profiling session, then off.
+profiling: false
 # New accounts can sign up when true; otherwise an admin creates them (finuance admin create-user).
 allowSignup: false
 # Addresses whose X-Forwarded-For is trusted (the ingress controller's pods). k3s pods use

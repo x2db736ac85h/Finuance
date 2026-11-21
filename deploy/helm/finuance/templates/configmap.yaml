@@ -7,6 +7,7 @@ metadata:
 data:
   FINUANCE_ENV: prod
   FINUANCE_LOG_LEVEL: {{ .Values.logLevel | quote }}
+  FINUANCE_PPROF: {{ .Values.profiling | quote }}
   FINUANCE_PUBLIC_ORIGIN: {{ required "publicOrigin is required (e.g. https://finance.example.com)" .Values.publicOrigin | quote }}
   FINUANCE_COOKIE_SECURE: "true"
   FINUANCE_ALLOW_SIGNUP: {{ .Values.allowSignup | quote }}

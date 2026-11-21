@@ -37,6 +37,14 @@
         "hide": 0
       },
       {
+        "name": "loki",
+        "label": "Logs",
+        "type": "datasource",
+        "query": "loki",
+        "current": {},
+        "hide": 0
+      },
+      {
         "name": "namespace",
         "label": "Namespace",
         "type": "query",
@@ -617,6 +625,89 @@
           "mode": "multi",
           "sort": "desc"
         }
+      }
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Logs",
+      "collapsed": false,
+      "gridPos": {
+        "w": 24,
+        "h": 1,
+        "x": 0,
+        "y": 30
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "logs",
+      "title": "Warnings and errors of the worker",
+      "description": "From Loki. Job lines carry job_id, kind and attempt; a line's trace_id opens the job's trace.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{namespace=\"$namespace\", container=\"worker\"} | detected_level=~\"warn|error\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "w": 24,
+        "h": 10,
+        "x": 0,
+        "y": 31
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      }
+    },
+    {
+      "id": 14,
+      "type": "logs",
+      "title": "Database errors",
+      "description": "PostgreSQL's errors with their SQLSTATE and message. The detail and the statement are cut before the line reaches Loki.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{namespace=\"$namespace\", container=~\"postgres|db\"} |~ `\"error_severity\":\"(ERROR|FATAL|PANIC)\"| (ERROR|FATAL|PANIC): `",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "w": 24,
+        "h": 6,
+        "x": 0,
+        "y": 41
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
       }
     }
   ]

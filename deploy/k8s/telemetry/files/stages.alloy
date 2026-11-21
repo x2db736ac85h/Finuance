@@ -1,0 +1,81 @@
+// The log stages (PLAN 24.6, ADR 0042): what Alloy changes in a line before it reaches Loki. Used by
+// logs.alloy on the cluster and by tests/stages_test.alloy in tools/check-observability.sh, which
+// compares the result with tests/stages.expected.
+declare "finuance_logs" {
+	argument "forward_to" {
+		comment = "Where the cleaned lines go."
+	}
+
+	loki.process "default" {
+		forward_to = argument.forward_to.value
+
+		// The api, the worker and the migration write JSON lines (docs/observability.md). The trace id
+		// and the request id become structured metadata, so Grafana links a line to its trace and Loki
+		// finds a request without reading every line; the traffic mark (ADR 0041) becomes a label.
+		stage.match {
+			selector = "{container=~\"api|worker|migrate\"}"
+
+			stage.json {
+				expressions = {trace_id = "", request_id = "", traffic = ""}
+			}
+
+			stage.structured_metadata {
+				values = {trace_id = "", request_id = ""}
+			}
+
+			stage.labels {
+				values = {traffic = ""}
+			}
+		}
+
+		// nginx's access log is JSON with its request id (the api's lines carry the same one).
+		stage.match {
+			selector = "{container=\"web\"} |= \"\\\"request_id\\\":\""
+
+			stage.json {
+				expressions = {request_id = ""}
+			}
+
+			stage.structured_metadata {
+				values = {request_id = ""}
+			}
+		}
+
+		// nginx's error log names the request line with its query string, the upstream address with
+		// the same path and query, and the referrer (THREAT-MODEL §5): all three are cut.
+		stage.match {
+			selector = "{container=\"web\"} |~ \"^[0-9]{4}/[0-9]{2}/[0-9]{2} \""
+
+			stage.replace {
+				expression = "(, (?:request|upstream|referrer): \"(?:[^\"\\\\]|\\\\.)*\")"
+				replace    = ""
+			}
+		}
+
+		// PostgreSQL (CloudNativePG's JSON lines): the detail of an error and the statement with its
+		// context can quote a value (THREAT-MODEL §5). The message, the SQLSTATE and the severity stay;
+		// the pod's own log on the machine keeps the whole line for an operator.
+		stage.match {
+			selector = "{container=\"postgres\"}"
+
+			stage.replace {
+				expression = "(,\\s*\"(?:detail|query|internal_query|context)\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")"
+				replace    = ""
+			}
+		}
+
+		// PostgreSQL in Compose writes plain text: an error's detail, its statement, its context and
+		// an internal query are lines of their own, and are dropped.
+		stage.match {
+			selector = "{container=\"db\"}"
+
+			stage.drop {
+				expression = "^\\S+ \\S+ \\S+ \\[[0-9]+\\] (?:DETAIL|STATEMENT|CONTEXT|QUERY):"
+			}
+		}
+	}
+
+	export "receiver" {
+		value = loki.process.default.receiver
+	}
+}

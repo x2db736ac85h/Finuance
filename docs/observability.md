@@ -1,8 +1,8 @@
 # Observability
 
 What the api and the worker tell an operator, and how the three signals are joined: **logs** (one
-JSON object per line on standard error), **metrics** (Prometheus, on the admin port) and **traces**
-(OpenTelemetry, sent over OTLP when an endpoint is configured). The service-level objectives and
+JSON object per line on standard error, collected into Loki), **metrics** (Prometheus, on the admin
+port) and **traces** (OpenTelemetry, sent over OTLP when an endpoint is configured). The service-level objectives and
 their alerts are in [SLO.md](SLO.md); the dashboards, rules and how to reach Grafana are in
 [RUNBOOK.md](RUNBOOK.md).
 
@@ -53,10 +53,44 @@ table and column, never its message.
 4. **To the job's lines.** The job's lines carry the same `trace_id` and their own `job_id`,
    `kind` and `attempt`.
 
+In Grafana: Explore → Loki, `{namespace="finuance"} | request_id="<id>"` finds the request's lines;
+a line's `trace_id` opens the trace in Tempo; in the trace, a span's "Logs for this span" goes back
+to Loki with `| trace_id="<id>"`, which also finds the job's lines.
+
 The kubelet's probes (`/healthz`, `/readyz`) are not traced, and their access lines are written at
 debug level only; a failing probe is an error line like any other failing request. A handler that
 panics is one access line with status 500, one `panic` line with the stack, one 5xx in
 `http_server_requests_total`, one in `finuance_panics_total`, and the alert `FinuancePanic`.
+
+## Collected logs
+
+On Kubernetes, Grafana Alloy reads the logs of every pod in the app's namespace through the
+Kubernetes API and writes them to Loki, which keeps them 14 days ([ADR 0042](adr/0042-log-and-trace-pipeline.md);
+the chart is `deploy/k8s/telemetry`). The Compose profile `make up-observability` does the same
+for the project's containers, into the Loki inside its `otel-lgtm` container.
+
+| In Loki | What |
+|---|---|
+| labels | `namespace`, `pod`, `container` (`api`, `worker`, `migrate`, `web`, `postgres`; `db` in Compose) and, on the lines that carry it, `traffic` |
+| structured metadata | `trace_id` and `request_id` from the app's lines, `request_id` from nginx's access log; Loki adds `detected_level` |
+| the line | as written, except what the stages cut |
+
+What the stages cut before a line reaches Loki (`deploy/k8s/telemetry/files/stages.alloy`; a test
+runs them on sample lines): from nginx's error log the request line, the upstream address and the
+referrer; from PostgreSQL an error's detail, its statement, its context and an internal query. The
+container's own log on the machine keeps them (THREAT-MODEL §5).
+
+Queries that come up often:
+
+- a request: `{namespace="finuance"} | request_id="<id>"`
+- a trace's lines, a job's included: `{namespace="finuance"} | trace_id="<id>"`
+- the api's warnings and errors: `{namespace="finuance", container="api"} | detected_level=~"warn|error"`
+- one job: `{namespace="finuance", container="worker"} | json | job_id="<id>"`
+- synthetic users' requests only: `{namespace="finuance", traffic="synthetic"}`
+
+The API and jobs dashboards end with log panels (their **Logs** variable picks the Loki data
+source). `logs.enabled: false` in the chart's values switches the logs off; Alloy then still
+carries the traces.
 
 ## Traces
 
@@ -79,6 +113,9 @@ Every span's resource names the service (`service.name`: `finuance-api` or `finu
 version, the environment (`deployment.environment.name`) and the instance (`service.instance.id`).
 On Kubernetes the chart adds `k8s.pod.name` and `k8s.namespace.name` from the pod's own fields, and
 `otel.resourceAttributes` in the values adds more.
+
+On Kubernetes the traces go to Alloy, which deletes the same attributes as the app (a second line
+of defence) and sends them on to Tempo (ADR 0042).
 
 `FINUANCE_OTEL_SAMPLE_RATIO` (the chart's `otel.sampleRatio`; default 1) is the share of requests
 that are traced. The decision is made once, at the request: a trace is kept whole or not at all,

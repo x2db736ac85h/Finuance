@@ -1,0 +1,19 @@
+// The test of files/stages.alloy (tools/check-observability.sh): the sample lines next to this file
+// pass through the stages, and loki.echo writes what would reach Loki; the check compares that with
+// stages.expected (UPDATE=1 rewrites it).
+loki.source.file "in" {
+	targets = [
+		{"__path__" = "/tests/api.log", "container" = "api", "namespace" = "finuance"},
+		{"__path__" = "/tests/web.log", "container" = "web", "namespace" = "finuance"},
+		{"__path__" = "/tests/postgres.log", "container" = "postgres", "namespace" = "finuance"},
+		{"__path__" = "/tests/db.log", "container" = "db", "namespace" = "finuance"},
+	]
+	forward_to    = [finuance_logs.test.receiver]
+	tail_from_end = false
+}
+
+finuance_logs "test" {
+	forward_to = [loki.echo.out.receiver]
+}
+
+loki.echo "out" { }

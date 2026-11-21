@@ -66,6 +66,11 @@ render app-homelab-restore finuance "$app" finuance-restore deploy/environments/
 
 # The assistant's connections file: every container told to read it must mount it (the rehearsal
 # found the worker crash-looping on a path only the api had).
+echo "== profiling is off unless the value says so (PLAN 24.9)"
+pprof() { helm template t "$app" --kube-version "$K8S" -f "$app/ci/minimal-values.yaml" "$@" | "$YQ" -N 'select(.kind == "ConfigMap") | .data.FINUANCE_PPROF | select(. != null)'; }
+[ "$(pprof)" = false ] && [ "$(pprof --set profiling=true)" = true ] || { echo "check-helm: FINUANCE_PPROF does not follow the profiling value"; exit 1; }
+echo ok
+
 echo "== assistant connections file is mounted where it is read"
 "$YQ" -e 'select(.kind == "Deployment" or .kind == "Job") | .spec.template.spec.containers[]
   | select(.env[]? | .name == "FINUANCE_AI_CONNECTIONS_FILE") | select([.volumeMounts[]? | .mountPath] | contains(["/etc/finuance"]) | not)
@@ -175,6 +180,29 @@ validate deploy/k8s/rustfs/
 echo "== Tempo (traces)"
 validate deploy/k8s/tempo/
 
+# Alloy and Loki (PLAN 24.6, ADR 0042): with the homelab's values and with logs off. Their own
+# configurations are checked by tools/check-observability.sh (Loki's -verify-config, Alloy's
+# validate and the log stages' test).
+tel=deploy/k8s/telemetry
+render telemetry-homelab telemetry "$tel" monitoring deploy/environments/homelab/telemetry-values.yaml
+render telemetry-logs-off telemetry "$tel" monitoring "$tel/ci/logs-off-values.yaml"
+echo "== telemetry: the only grant is reading pod logs, and only the grant goes into the app's namespace"
+grants=$("$YQ" -N 'select(.kind == "Role") | .rules[] | (.apiGroups | join(",")) + " " + (.resources | join(",")) + " " + (.verbs | join(","))' "$out/telemetry-homelab.yaml" | sort -u)
+want_grants=' pods get,list,watch
+ pods/log get'
+[ "$grants" = "$want_grants" ] || { echo "check-helm: the telemetry chart's Roles grant more than reading pod logs:"; echo "$grants"; failures=$((failures + 1)); }
+"$YQ" -N 'select(.kind == "ClusterRole" or .kind == "ClusterRoleBinding") | .kind' "$out/telemetry-homelab.yaml" | grep -q . &&
+  { echo "check-helm: the telemetry chart renders a cluster-wide grant"; failures=$((failures + 1)); }
+[ "$("$YQ" -N 'select(.kind == "RoleBinding") | .subjects[] | .kind + "/" + .namespace + "/" + .name' "$out/telemetry-homelab.yaml" | sort -u)" = ServiceAccount/monitoring/alloy ] ||
+  { echo "check-helm: a telemetry RoleBinding names someone other than Alloy's service account"; failures=$((failures + 1)); }
+elsewhere=$("$YQ" -N 'select(.metadata.namespace != null and .metadata.namespace != "monitoring") | .kind' "$out/telemetry-homelab.yaml" | sort -u | tr '\n' ' ')
+[ "$elsewhere" = "Role RoleBinding " ] || { echo "check-helm: the telemetry chart puts more than its Role and RoleBinding outside monitoring: $elsewhere"; failures=$((failures + 1)); }
+"$YQ" -N 'select(.kind == "Role" or .kind == "RoleBinding") | .kind' "$out/telemetry-logs-off.yaml" | grep -q . &&
+  { echo "check-helm: with logs off the telemetry chart still grants Alloy access to pod logs"; failures=$((failures + 1)); }
+[ "$("$YQ" -N 'select(.kind == "ServiceAccount") | .automountServiceAccountToken' "$out/telemetry-logs-off.yaml")" = false ] ||
+  { echo "check-helm: with logs off Alloy still mounts a token"; failures=$((failures + 1)); }
+echo ok
+
 echo "== image admission policy"
 validate deploy/k8s/admission/
 
@@ -230,8 +258,14 @@ must_fail "the backup has no bucket" "objectStore.destinationPath is required" "
 must_fail "the backup schedule has 5 fields" "/backup/schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"
 must_fail "a restore archives into its origin's folder" "must archive to another folder" "$db" \
   --set objectStore.destinationPath=s3://b/ --set recovery.enabled=true
-# Argo CD projects (register OPS-4): the project for this repository's plain manifests lists
-# exactly the kinds those manifests use, nothing with a wildcard, and its applications use it.
+must_fail "profiling is not a boolean" "/profiling" "$app" "${o[@]}" --set ingress.tls.mode=none --set-string profiling=yes
+must_fail "extraEnv sets FINUANCE_PPROF (the profiling value does)" "invalid propertyName 'FINUANCE_PPROF'" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.FINUANCE_PPROF=true
+must_fail "Loki's image has no digest" "/loki/image" "$tel" --set loki.image=grafana/loki:3.7.10
+must_fail "Tempo's endpoint carries the path" "/traces/endpoint" "$tel" --set traces.endpoint=http://tempo.monitoring.svc:4318/v1/traces
+must_fail "logs are read from no namespace" "/logs/namespaces" "$tel" --set 'logs.namespaces={}'
+# Argo CD projects (register OPS-4): the project for this repository's manifests lists exactly the
+# kinds those manifests and the telemetry chart use, nothing with a wildcard, and its applications
+# use it.
 echo "== the platform-manifests project lists the kinds of its manifests"
 projects=deploy/k8s/argocd/apps/projects.yaml
 pm='select(.kind == "AppProject" and .metadata.name == "platform-manifests") | .spec'
@@ -239,9 +273,9 @@ pm='select(.kind == "AppProject" and .metadata.name == "platform-manifests") | .
   { echo "check-helm: the platform-manifests project has a wildcard"; failures=$((failures + 1)); }
 [ "$("$YQ" -N "$pm | .sourceRepos | length" "$projects")" = 1 ] || { echo "check-helm: the platform-manifests project reads more than this repository"; failures=$((failures + 1)); }
 allowed=$("$YQ" -N "$pm | (.clusterResourceWhitelist + .namespaceResourceWhitelist)[] | .group + \"/\" + .kind" "$projects" | grep -v '/Namespace$' | sort)
-used=$("$YQ" -N '(.apiVersion | sub("/?[^/]+$", "")) + "/" + .kind' deploy/k8s/admission/*.yaml deploy/k8s/tempo/*.yaml | sort -u)
+used=$("$YQ" -N '(.apiVersion | sub("/?[^/]+$", "")) + "/" + .kind' deploy/k8s/admission/*.yaml deploy/k8s/tempo/*.yaml "$out/telemetry-homelab.yaml" | sort -u)
 [ "$allowed" = "$used" ] || { echo "check-helm: the platform-manifests project and its manifests differ:"; diff <(echo "$allowed") <(echo "$used") || true; failures=$((failures + 1)); }
-for a in admission-policy tempo; do
+for a in admission-policy tempo telemetry; do
   [ "$("$YQ" -N '.spec.project' "deploy/k8s/argocd/apps/$a.yaml")" = platform-manifests ] || { echo "check-helm: application $a is not in the platform-manifests project"; failures=$((failures + 1)); }
 done
 for a in deploy/k8s/argocd/apps/*.yaml; do

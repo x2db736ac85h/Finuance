@@ -1,0 +1,107 @@
+{{- if .Values.logs.enabled }}
+{{- $l := .Values.logs }}
+# Loki as a single binary with its index and chunks on a local volume, 14 days of retention by the
+# compactor. One tenant (no auth inside the cluster: only Alloy may push and only Grafana may query,
+# by the NetworkPolicy below).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki
+  labels:
+    {{- include "telemetry.labels" . | nindent 4 }}
+data:
+  loki.yaml: |
+    {{- include "telemetry.lokiConfig" . | nindent 4 }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data
+  labels:
+    {{- include "telemetry.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ $l.storage.storageClassName }}
+  resources:
+    requests:
+      storage: {{ $l.storage.size }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  labels:
+    {{- include "telemetry.labels" . | nindent 4 }}
+    app.kubernetes.io/name: loki
+spec:
+  replicas: 1
+  strategy: { type: Recreate } # one pod owns the ReadWriteOnce volume
+  selector:
+    matchLabels: { app.kubernetes.io/name: loki }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: loki }
+      annotations:
+        checksum/config: {{ include "telemetry.lokiConfig" . | sha256sum | trunc 16 }}
+    spec:
+      automountServiceAccountToken: false
+      # the image's loki user
+      securityContext:
+        {{- include "telemetry.podSecurity" (dict "uid" 10001) | nindent 8 }}
+      containers:
+        - name: loki
+          image: {{ .Values.loki.image }}
+          args: ["-config.file=/conf/loki.yaml"]
+          ports:
+            - { name: http, containerPort: 3100 }
+          readinessProbe:
+            httpGet: { path: /ready, port: http }
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.loki.resources | nindent 12 }}
+          securityContext:
+            {{- include "telemetry.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - { name: config, mountPath: /conf, readOnly: true }
+            - { name: data, mountPath: /var/loki }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: config
+          configMap: { name: loki }
+        - name: data
+          persistentVolumeClaim: { claimName: loki-data }
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  labels:
+    {{- include "telemetry.labels" . | nindent 4 }}
+spec:
+  selector: { app.kubernetes.io/name: loki }
+  ports:
+    - { name: http, port: 3100, targetPort: http }
+---
+# Pushes only from Alloy, queries only from Grafana; Loki connects nowhere (its parts talk over
+# 127.0.0.1 inside the one process).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: loki
+  labels:
+    {{- include "telemetry.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: loki }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: alloy }
+        - podSelector: {{- toYaml .Values.grafana.podSelector | nindent 12 }}
+      ports:
+        - { port: 3100, protocol: TCP }
+  egress: []
+{{- end }}

@@ -30,12 +30,13 @@
       "anyOf": [{ "const": "" }, { "pattern": "^https?://[^/]+$" }]
     },
     "logLevel": { "enum": ["debug", "info", "warn", "error"] },
+    "profiling": { "type": "boolean" },
     "allowSignup": { "type": "boolean" },
     "trustedProxies": { "type": "string" },
     "maxUploadBytes": { "type": "integer", "minimum": 1024 },
     "extraEnv": {
       "type": "object",
-      "propertyNames": { "pattern": "^FINUANCE_[A-Z0-9_]+$" },
+      "propertyNames": { "pattern": "^FINUANCE_[A-Z0-9_]+$", "not": { "const": "FINUANCE_PPROF" } },
       "additionalProperties": { "type": "string" }
     },
     "database": {

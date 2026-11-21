@@ -79,12 +79,28 @@ grafana:
       folderAnnotation: grafana_folder
       provider:
         foldersFromFilesStructure: true
+  # Loki's data source comes with Loki (deploy/k8s/telemetry, a ConfigMap for the datasource
+  # sidecar), so switching logs off takes it away too.
   additionalDataSources:
     - name: Tempo
       type: tempo
       uid: tempo
       url: http://tempo.monitoring.svc:3200
       access: proxy
+      jsonData:
+        # a span's "Logs for this span": the lines of its namespace with its trace id (structured
+        # metadata, deploy/k8s/telemetry/files/stages.alloy), a minute either side
+        tracesToLogsV2:
+          datasourceUid: loki
+          customQuery: true
+          query: '{$${__tags}} | trace_id="$${__trace.traceId}"'
+          tags:
+            - key: k8s.namespace.name
+              value: namespace
+          spanStartTimeShift: -1m
+          spanEndTimeShift: 1m
+        lokiSearch:
+          datasourceUid: loki
 
 kube-state-metrics:
   resources:

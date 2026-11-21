@@ -287,7 +287,7 @@ jobs:
         run: |
           set -euo pipefail
           tools/bin-tools.sh trivy
-          skip=(--skip-dirs deploy/helm/finuance --skip-dirs deploy/k8s/db --skip-dirs backend/bin)
+          skip=(--skip-dirs deploy/helm/finuance --skip-dirs deploy/k8s/db --skip-dirs deploy/k8s/telemetry --skip-dirs backend/bin)
           backend/bin/trivy fs --scanners vuln,secret,misconfig --include-dev-deps "${skip[@]}" --format sarif --output trivy-repo.sarif --no-progress .
           backend/bin/trivy fs --ignorefile .trivyignore --scanners vuln,secret,misconfig --include-dev-deps "${skip[@]}" \
             --severity HIGH,CRITICAL --exit-code 1 --no-progress .

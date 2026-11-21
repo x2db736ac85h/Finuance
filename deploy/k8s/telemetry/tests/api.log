@@ -1,0 +1,2 @@
+{"time":"2026-11-21T10:00:00Z","level":"INFO","msg":"request","request_id":"r-1","trace_id":"0af7651916cd43dd8448eb211c80319c","span_id":"b7ad6b7169203331","route":"/api/v1/me","status":200,"traffic":"real"}
+{"time":"2026-11-21T10:00:01Z","level":"INFO","msg":"job done","job_id":7,"kind":"import","trace_id":"1af7651916cd43dd8448eb211c80319c","traffic":"synthetic"}

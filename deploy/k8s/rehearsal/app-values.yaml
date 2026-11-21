@@ -23,6 +23,16 @@ assistant:
         - namespaceSelector:
             matchLabels: { kubernetes.io/metadata.name: llm }
       ports: [11434]
+# traces to Alloy, as on the homelab (tools/rehearsal.sh logs)
+otel:
+  endpoint: http://alloy.monitoring.svc:4318/v1/traces
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: alloy }
+      ports: [4318]
 # the database's certificate is checked against CloudNativePG's own authority (register OPS-6)
 database:
   sslmode: verify-full

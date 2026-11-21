@@ -186,7 +186,8 @@ every severity.
 ## Trivy: repository
 
 `trivy fs --scanners vuln,secret,misconfig --include-dev-deps` (the CI `security` job). It skips
-`deploy/helm/finuance` and `deploy/k8s/db`, which the `helm` job renders and scans instead.
+`deploy/helm/finuance`, `deploy/k8s/db` and `deploy/k8s/telemetry`, which the `helm` job renders
+with their real values and scans instead.
 
 | Finding | Severity | Decision |
 |---|---|---|
@@ -213,12 +214,12 @@ Rendered with every values file by `tools/check-helm.sh` and `tools/check-observ
 | Check | Severity | Where | Decision |
 |---|---|---|---|
 | KSV-0020 / KSV-0021: runs with UID / GID ≤ 10000 | LOW | web | **Fixed:** the web pod runs nginx as 10101:10101 (the image's own user, 101, stays for Compose). Checked: nginx starts with a read-only root filesystem and serves the app and its assets. |
-| KSV-0011: CPU not limited | LOW | api, worker, web, migrations | **Deliberate:** CPU limits throttle the Go runtime and the imports; the pods have CPU requests, and the HPA scales the api. Memory is limited. |
+| KSV-0011: CPU not limited | LOW | api, worker, web, migrations; Loki, Alloy | **Deliberate:** CPU limits throttle the Go runtime and the imports; the pods have CPU requests, and the HPA scales the api. Memory is limited. Loki and Alloy (Phase 24) likewise: a CPU request, a memory limit, their cost measured on the reference machine (RUNBOOK "Logs"). |
 | KSV-0110: workloads in the default namespace | LOW | all | **False positive:** the templates carry no `namespace:` and Helm/Argo CD install them into `finuance`. |
-| KSV-0125: images from an untrusted registry | MEDIUM | all | **Handled in the cluster:** the images are `ghcr.io/x2db736ac85h/*`, signed with cosign. Since 18.8 a `ValidatingAdmissionPolicy` (`deploy/k8s/admission`) admits in `finuance` only that registry and CloudNativePG's; signature verification and deployment by digest follow in Phase 23, ADR 0024 (Trivy reports the rule from the manifest alone, so it stays listed). |
-| KSV-01010: ConfigMap with sensitive content | MEDIUM | `finuance-env` | **False positive:** the flagged key is `FINUANCE_MAX_UPLOAD_BYTES`; the ConfigMap holds no secret (passwords come from the CloudNativePG secrets as `PGPASSWORD`). |
+| KSV-0125: images from an untrusted registry | MEDIUM | all | **Handled in the cluster:** Loki and Alloy are Docker Hub images pinned by digest, which the admission policy admits in `monitoring` only by digest (Phase 24). The app's images are `ghcr.io/x2db736ac85h/*`, signed with cosign. Since 18.8 a `ValidatingAdmissionPolicy` (`deploy/k8s/admission`) admits in `finuance` only that registry and CloudNativePG's; signature verification and deployment by digest follow in Phase 23, ADR 0024 (Trivy reports the rule from the manifest alone, so it stays listed). |
+| KSV-01010: ConfigMap with sensitive content | MEDIUM | `finuance-env`; `alloy` | **False positive:** in `finuance-env` the flagged key is `FINUANCE_MAX_UPLOAD_BYTES`; the ConfigMap holds no secret (passwords come from the CloudNativePG secrets as `PGPASSWORD`). In `alloy` it is the word `key` in the lines that name the span attributes Alloy deletes (`key = "client.address"`); Alloy's configuration holds no credential. |
 
-The observability and database charts have no findings at any severity.
+The observability and database charts have no findings at any severity. The telemetry chart (Phase 24) has the four kinds above; Alloy runs as 10473:10473, so KSV-0020 and KSV-0021 do not apply.
 
 ## OWASP ZAP
 

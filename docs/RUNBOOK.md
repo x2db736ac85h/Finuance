@@ -358,20 +358,21 @@ The order that worked, with what to look at between the steps:
 
 ### 13. Monitoring (Phase 18.6)
 
-Three Argo CD apps in the namespace `monitoring`, none of them exposed (port-forward only, like Argo CD):
+Four Argo CD apps in the namespace `monitoring`, none of them exposed (port-forward only, like Argo CD):
 
 | App | Wave | What |
 |---|---|---|
-| `tempo` | −6 | Tempo 2.9.5 from `deploy/k8s/tempo` (the Helm chart is deprecated): OTLP/HTTP on 4318 only, traces kept 72 h on a 5 Gi volume, read-only as uid 10001; its NetworkPolicy admits 4318 from Finuance's api and worker and 3200 from Grafana |
+| `tempo` | −6 | Tempo 2.9.5 from `deploy/k8s/tempo` (the Helm chart is deprecated): OTLP/HTTP on 4318 only, traces kept 72 h on a 5 Gi volume, read-only as uid 10001; its NetworkPolicy admits 4318 from Alloy and 3200 from Grafana |
 | `kube-prometheus-stack` | −4 | chart 92.16.1 with `homelab/monitoring-values.yaml`: Prometheus (7 days or 8 GB on a 10 Gi volume), Alertmanager, Grafana (dashboard sidecar, Tempo data source), kube-state-metrics, node-exporter; k3s's built-in etcd/scheduler/controller-manager/proxy aren't scraped (nothing separate to scrape). After Sealed Secrets, because it also syncs Grafana's sealed admin login |
 | `finuance-observability` | 1 | `deploy/k8s/observability` (the six dashboards, SLO and alert rules, the e-mail receiver) with `homelab/observability-values.yaml` and the overlay's addresses (`$env/homelab/observability-values.yaml`, template `observability-values.example.yaml`), plus the sealed SMTP password |
+| `telemetry` | 1 | `deploy/k8s/telemetry` with `homelab/telemetry-values.yaml` (Phase 24.6, ADR 0042): Alloy v1.22.0 (the app's traces on to Tempo; the logs of the `finuance` namespace through the Kubernetes API, with a read-only Role there) and Loki 3.7.10 (single binary, 14 days on a 5 Gi volume, uid 10001), Grafana's Loki data source. See [Logs](#logs) |
 
 Before pushing the apps:
 
 1. **A sending account for the alerts:** a separate mailbox only for sending (e.g. a new Gmail account with 2-step verification and an *app password*), so a leaked password can only send mail, and can be revoked without touching a personal account. Seal its app password: `tools/seal-secrets.sh homelab smtp` (asked without echo; spaces removed).
 2. **Grafana's admin login:** `tools/seal-secrets.sh homelab grafana` (user `admin`, 32 random characters). The chart's default password is public.
 3. **Addresses** (sender, recipient, `smtp.gmail.com:587`) in the overlay, committed to the private repository first: Argo CD can't render `finuance-observability` without it.
-4. The app's values point traces at Tempo with the **full URL** `http://tempo.monitoring.svc:4318/v1/traces` (the app sends to exactly that URL; the chart refuses one without a path) and turn the PodMonitors on; `db-values.yaml` turns on the database's PodMonitor and admits Prometheus in its NetworkPolicy.
+4. The app's values point traces at Alloy with the **full URL** `http://alloy.monitoring.svc:4318/v1/traces` (the app sends to exactly that URL; the chart refuses one without a path; Alloy sends them on to Tempo) and turn the PodMonitors on; `db-values.yaml` turns on the database's PodMonitor and admits Prometheus in its NetworkPolicy.
 
 **Database metrics on a cluster created before Phase 18.6:** the bootstrap SQL revokes `CONNECT` from `PUBLIC`, and CloudNativePG's metrics role (`cnpg_metrics_exporter`, a `pg_monitor` member) runs its queries inside the `finuance` database, so connections, transactions, cache hit ratio, database size, replication lag and archiver panels stay empty (the instance logs `permission denied for database "finuance"`). New clusters get `GRANT CONNECT ON DATABASE finuance TO pg_monitor` from the bootstrap SQL; an existing one needs it once, on the primary:
 
@@ -394,6 +395,39 @@ kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9
 ```
 
 Prometheus is on local port 19090 and Argo CD on 18443, not their usual ports: see [Local ports](#local-ports).
+
+#### Logs
+
+Grafana → Explore → **Loki**: `{namespace="finuance"}` and the queries in
+[observability.md](observability.md#collected-logs). A line's `trace_id` opens its trace; a span's
+"Logs for this span" comes back. Loki and Alloy themselves:
+
+```sh
+kubectl -n monitoring get pods -l 'app.kubernetes.io/name in (loki,alloy)'
+kubectl -n monitoring logs deploy/alloy --tail=50       # a push refused by Loki, a pod's log it can't read
+kubectl -n monitoring port-forward svc/loki 13100:3100 & curl -s localhost:13100/ready
+```
+
+**Switching logs off** (if they cost too much, or while something is investigated): `logs.enabled:
+false` in `deploy/environments/homelab/telemetry-values.yaml`, through a pull request. Argo CD then
+removes Loki, its volume claim, the Role in `finuance` and the data source; Alloy keeps carrying the
+traces. Loki's volume is deleted with it (local-path), so the collected lines are gone.
+
+**What they cost** (decided by the maintainer, 2026-11-21: on while Loki and Alloy together use less
+than 1 GiB of memory and a fifth of a CPU). In Prometheus, over the last day:
+
+```promql
+max_over_time(sum(container_memory_working_set_bytes{namespace="monitoring", container=~"loki|alloy"})[1d:5m])
+max_over_time(sum(rate(container_cpu_usage_seconds_total{namespace="monitoring", container=~"loki|alloy"}[5m]))[1d:5m])
+```
+
+and the volume on the node (Loki's image has no shell; k3s's local-path keeps a claim in a folder
+named after it): `sudo du -sh /var/lib/rancher/k3s/storage/*_monitoring_loki-data`. The first
+day's numbers are recorded below.
+
+| Measured | Memory (max) | CPU (max) | Volume | Decision |
+|---|---|---|---|---|
+| (after the first day) | | | | |
 
 **Test alert** (an e-mail now and a *resolved* one after about 5 minutes; Alertmanager's `alertmanager_notifications_total{integration="email"}` counts the sent ones, `…_failed_total` the failures by reason):
 
