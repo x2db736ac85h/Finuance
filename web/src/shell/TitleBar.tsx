@@ -43,7 +43,8 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inSha
   const signOut = useSignOut();
   const navigate = useNavigate();
   // parts of the app an administrator switched off (Phase 19) have no button
-  const features = useMeta().data?.features;
+  const meta = useMeta().data;
+  const features = meta?.features;
 
   return (
     <header className="titlebar">
@@ -88,6 +89,12 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inSha
       <div className="brand">
         <Logo />
         <span className="name">Finuance</span>
+        {/* a lab for the traffic simulator (Phase 25): most of its users are synthetic */}
+        {meta?.simulation && (
+          <span className="tag lab" title="A lab instance: the traffic simulator's synthetic users work here">
+            Lab
+          </span>
+        )}
       </div>
       <SearchBox key={viewId} viewId={viewId} disabled={!hasData} inputRef={searchRef} />
       {features?.assistant !== false && (

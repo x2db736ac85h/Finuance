@@ -4351,6 +4351,11 @@ type Meta struct {
 	// SignupEnabled Whether new accounts can be created (`FINUANCE_ALLOW_SIGNUP`).
 	SignupEnabled bool `json:"signupEnabled"`
 
+	// Simulation Whether this instance is a lab for the traffic simulator (`FINUANCE_SIMULATION`, ADR 0041 and 0043): only here can
+	// synthetic users exist and sign in. The simulator refuses to start against an instance that does not report it, and the
+	// web app shows a "Lab" chip.
+	Simulation bool `json:"simulation"`
+
 	// Themes Themes an administrator approved, offered next to the built-in ones.
 	Themes []PublicTheme `json:"themes"`
 

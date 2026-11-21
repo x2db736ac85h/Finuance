@@ -84,9 +84,15 @@ func TestSyntheticUsersNeedASimulationInstance(t *testing.T) {
 	}
 	expect(t, robot.do("GET", "/me", nil), 200, "")
 	expect(t, lab.browser().do("POST", "/auth/login", map[string]any{"email": mail, "password": password}), 200, "")
+	if r := lab.browser().do("GET", "/meta", nil); r.body["simulation"] != true {
+		t.Errorf("a lab's /meta does not say so: %s", r.raw)
+	}
 
 	// the same database behind an instance that is not a simulation
 	plain := newTestEnv(t, nil, false)
+	if r := plain.browser().do("GET", "/meta", nil); r.body["simulation"] != false {
+		t.Errorf("/meta of an instance that is not a lab: %s", r.raw)
+	}
 	expect(t, plain.browser().do("POST", "/auth/login", map[string]any{"email": mail, "password": password}), 403, "account_disabled")
 	other := "person-" + mail
 	signupBrowser(t, plain, other)

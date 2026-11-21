@@ -1954,6 +1954,12 @@ table.mt {
   padding: 0 0.25rem;
   line-height: 0.875rem;
 }
+/* the title bar's "Lab" chip on a simulation instance (Phase 25) */
+.brand .tag.lab {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
 .ob {
   display: inline-flex;
   align-items: center;
