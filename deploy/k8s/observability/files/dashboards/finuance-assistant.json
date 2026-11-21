@@ -74,7 +74,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(finuance_assistant_runs_total{job=\"finuance-api\",namespace=\"$namespace\"}[24h]))",
+          "expr": "sum(increase(finuance_assistant_runs_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[24h]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -129,7 +129,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(finuance_assistant_runs_total{job=\"finuance-api\",namespace=\"$namespace\",result=\"fallback_plan\"}[24h]))",
+          "expr": "sum(increase(finuance_assistant_runs_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\",result=\"fallback_plan\"}[24h]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -184,7 +184,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(sum(rate(finuance_assistant_model_requests_total{job=\"finuance-api\",namespace=\"$namespace\",result!=\"ok\"}[1h])) or vector(0)) / (sum(rate(finuance_assistant_model_requests_total{job=\"finuance-api\",namespace=\"$namespace\"}[1h])))",
+          "expr": "(sum(rate(finuance_assistant_model_requests_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\",result!=\"ok\"}[1h])) or vector(0)) / (sum(rate(finuance_assistant_model_requests_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h])))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -246,7 +246,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_run_duration_seconds_bucket{job=\"finuance-api\",namespace=\"$namespace\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_run_duration_seconds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[5m])))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -313,7 +313,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (mode, result) (rate(finuance_assistant_runs_total{job=\"finuance-api\",namespace=\"$namespace\"}[15m]))",
+          "expr": "sum by (mode, result) (rate(finuance_assistant_runs_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
           "legendFormat": "{{mode}} {{result}}",
           "refId": "A"
         }
@@ -367,7 +367,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.5, sum by (le, mode) (rate(finuance_assistant_run_duration_seconds_bucket{job=\"finuance-api\",namespace=\"$namespace\"}[5m])))",
+          "expr": "histogram_quantile(0.5, sum by (le, mode) (rate(finuance_assistant_run_duration_seconds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[5m])))",
           "legendFormat": "p50 {{mode}}",
           "refId": "A"
         },
@@ -376,7 +376,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, mode) (rate(finuance_assistant_run_duration_seconds_bucket{job=\"finuance-api\",namespace=\"$namespace\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, mode) (rate(finuance_assistant_run_duration_seconds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[5m])))",
           "legendFormat": "p95 {{mode}}",
           "refId": "B"
         }
@@ -443,7 +443,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (tool, result) (rate(finuance_assistant_tool_calls_total{job=\"finuance-api\",namespace=\"$namespace\"}[15m]))",
+          "expr": "sum by (tool, result) (rate(finuance_assistant_tool_calls_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
           "legendFormat": "{{tool}} {{result}}",
           "refId": "A"
         }
@@ -497,7 +497,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (connection, result) (rate(finuance_assistant_model_requests_total{job=\"finuance-api\",namespace=\"$namespace\"}[15m]))",
+          "expr": "sum by (connection, result) (rate(finuance_assistant_model_requests_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
           "legendFormat": "{{connection}} {{result}}",
           "refId": "A"
         }
@@ -551,7 +551,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(finuance_assistant_rounds_sum{job=\"finuance-api\",namespace=\"$namespace\"}[1h])) / sum(rate(finuance_assistant_rounds_count{job=\"finuance-api\",namespace=\"$namespace\"}[1h]))",
+          "expr": "sum(rate(finuance_assistant_rounds_sum{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h])) / sum(rate(finuance_assistant_rounds_count{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h]))",
           "legendFormat": "mean",
           "refId": "A"
         },
@@ -560,7 +560,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_rounds_bucket{job=\"finuance-api\",namespace=\"$namespace\"}[1h])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_rounds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h])))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -614,7 +614,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{job=\"finuance-api\",namespace=\"$namespace\"}[1h])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h])))",
           "legendFormat": "p50",
           "refId": "A"
         },
@@ -623,7 +623,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{job=\"finuance-api\",namespace=\"$namespace\"}[1h])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(finuance_assistant_tokens_sent_approx_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h])))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -633,6 +633,199 @@
         "h": 8,
         "x": 12,
         "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 8,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Model servers",
+      "collapsed": false,
+      "gridPos": {
+        "w": 24,
+        "h": 1,
+        "x": 0,
+        "y": 30
+      },
+      "panels": []
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Model request duration by connection",
+      "description": "One request to a model server, to the end of its answer.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, connection) (rate(finuance_llm_request_duration_seconds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50 {{connection}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, connection) (rate(finuance_llm_request_duration_seconds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95 {{connection}}",
+          "refId": "B"
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 8,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Time to the first token by connection",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, connection) (rate(finuance_llm_time_to_first_token_seconds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50 {{connection}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, connection) (rate(finuance_llm_time_to_first_token_seconds_bucket{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95 {{connection}}",
+          "refId": "B"
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 12,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 8,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Tokens reported by the model servers",
+      "description": "Only what a server reports; a server that reports nothing shows nothing here.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (connection, direction) (rate(finuance_llm_tokens_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
+          "legendFormat": "{{connection}} {{direction}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "w": 24,
+        "h": 8,
+        "x": 0,
+        "y": 39
       },
       "fieldConfig": {
         "defaults": {

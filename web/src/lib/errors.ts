@@ -19,7 +19,11 @@ export function errorMessage(e: unknown): string {
     if (limit && text) return `Your account allows ${text(limit.value)}. Ask an administrator if you need more.`;
     const field = e.problem.errors?.[0];
     if (field) return field.message;
-    return e.problem.detail ?? e.problem.title;
+    const message = e.problem.detail ?? e.problem.title;
+    // A failure on the server's side: its request id is what an administrator can look up in the
+    // logs and traces, so the person has something to quote (PLAN 24.8).
+    if (e.status >= 500 && e.problem.requestId) return `${message} (Reference: ${e.problem.requestId})`;
+    return message;
   }
   return "Can't reach the Finuance server. Check your connection and try again.";
 }

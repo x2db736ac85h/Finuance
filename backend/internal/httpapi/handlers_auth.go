@@ -40,35 +40,47 @@ type limits struct {
 	sharedWrite    *mw.Limiter // expenses, payments and member changes in shared groups, per user (API-5)
 	sharedInvite   *mw.Limiter // invitations sent, per user
 	statusRefresh  *mw.Limiter // forced re-checks of the model servers, per user (AI-5)
+	clientEvents   *mw.Limiter // errors reported by the web app and the browser, per client address
+	named          func(string, *mw.Limiter) *mw.Limiter
 }
 
-func newLimits(clock platform.Clock, aiPerHour int) limits {
+// limited is told the name of a limiter each time it refuses a request (finuance_rate_limited_total;
+// the names are this fixed list). nil in tests that don't look at it.
+func newLimits(clock platform.Clock, aiPerHour int, limited func(limiter string)) limits {
+	named := func(name string, l *mw.Limiter) *mw.Limiter {
+		if limited == nil {
+			return l
+		}
+		return l.OnLimited(func() { limited(name) })
+	}
 	if aiPerHour < 1 {
 		aiPerHour = 30
 	}
 	return limits{
-		loginIP:        mw.NewLimiter(mw.LoginPerIP, clock, 0),
-		loginIPEmail:   mw.NewLimiter(mw.LoginPerIPEmail, clock, 0),
-		loginFailed:    mw.NewLimiter(mw.LoginFailuresPerEmail, clock, 0),
-		password:       mw.NewLimiter(mw.PasswordPerUser, clock, 0),
-		secondStep:     mw.NewLimiter(mw.SecondStepPerUser, clock, 0),
-		upload:         mw.NewLimiter(mw.UploadPerUser, clock, 0),
-		reparse:        mw.NewLimiter(mw.ReparsePerUser, clock, 0),
-		assistant:      mw.NewLimiter(mw.Policy{Events: aiPerHour, Per: time.Hour}, clock, 0),
+		loginIP:        named("login_ip", mw.NewLimiter(mw.LoginPerIP, clock, 0)),
+		loginIPEmail:   named("login_ip_email", mw.NewLimiter(mw.LoginPerIPEmail, clock, 0)),
+		loginFailed:    named("login_failed", mw.NewLimiter(mw.LoginFailuresPerEmail, clock, 0)),
+		password:       named("password", mw.NewLimiter(mw.PasswordPerUser, clock, 0)),
+		secondStep:     named("second_step", mw.NewLimiter(mw.SecondStepPerUser, clock, 0)),
+		upload:         named("upload", mw.NewLimiter(mw.UploadPerUser, clock, 0)),
+		reparse:        named("reparse", mw.NewLimiter(mw.ReparsePerUser, clock, 0)),
+		assistant:      named("assistant", mw.NewLimiter(mw.Policy{Events: aiPerHour, Per: time.Hour}, clock, 0)),
 		assistantMu:    &sync.Mutex{},
 		assistantRates: map[int64]*mw.Limiter{},
 		clock:          clock,
+		named:          named,
 		aiPerHour:      int64(aiPerHour),
-		demo:           mw.NewLimiter(mw.DemoPerIP, clock, 0),
-		friendUser:     mw.NewLimiter(mw.FriendCodesPerHour, clock, 0),
-		friendIP:       mw.NewLimiter(mw.FriendCodesPerHour, clock, 0),
-		sharedWrite:    mw.NewLimiter(mw.SharedWritesPerUser, clock, 0),
-		sharedInvite:   mw.NewLimiter(mw.SharedInvitesPerUser, clock, 0),
-		statusRefresh:  mw.NewLimiter(mw.StatusRefreshPerUser, clock, 0),
+		demo:           named("demo", mw.NewLimiter(mw.DemoPerIP, clock, 0)),
+		friendUser:     named("friend_code_user", mw.NewLimiter(mw.FriendCodesPerHour, clock, 0)),
+		friendIP:       named("friend_code_ip", mw.NewLimiter(mw.FriendCodesPerHour, clock, 0)),
+		sharedWrite:    named("shared_write", mw.NewLimiter(mw.SharedWritesPerUser, clock, 0)),
+		sharedInvite:   named("shared_invite", mw.NewLimiter(mw.SharedInvitesPerUser, clock, 0)),
+		statusRefresh:  named("status_refresh", mw.NewLimiter(mw.StatusRefreshPerUser, clock, 0)),
+		clientEvents:   named("client_events", mw.NewLimiter(mw.ClientEventsPerIP, clock, 0)),
 		// A full bucket and one token back per lifetime + 1 h: exactly DemoAssistantMessages
 		// before the user is deleted.
-		demoAsk: mw.NewLimiter(mw.Policy{Events: config.DemoAssistantMessages,
-			Per: config.DemoAssistantMessages * (auth.DemoLifetime + time.Hour)}, clock, 0),
+		demoAsk: named("demo_assistant", mw.NewLimiter(mw.Policy{Events: config.DemoAssistantMessages,
+			Per: config.DemoAssistantMessages * (auth.DemoLifetime + time.Hour)}, clock, 0)),
 	}
 }
 
@@ -125,6 +137,7 @@ func (a *api) Login(ctx context.Context, req gen.LoginRequestObject) (gen.LoginR
 	if errors.Is(err, auth.ErrInvalidCredentials) {
 		// counted for unknown addresses too, so the limit doesn't tell which accounts exist
 		_ = a.limits.loginFailed.Allow(emailKey(req.Body.Email))
+		a.authFailed("password")
 	}
 	var failed *auth.FailedLoginError
 	if errors.As(err, &failed) { // an existing account; an unknown email has no log to write to
@@ -190,7 +203,7 @@ func (l limits) assistantFor(perHour int64) *mw.Limiter {
 	defer l.assistantMu.Unlock()
 	lim, ok := l.assistantRates[perHour]
 	if !ok {
-		lim = mw.NewLimiter(mw.Policy{Events: int(perHour), Per: time.Hour}, l.clock, 0)
+		lim = l.named("assistant", mw.NewLimiter(mw.Policy{Events: int(perHour), Per: time.Hour}, l.clock, 0))
 		l.assistantRates[perHour] = lim
 	}
 	return lim

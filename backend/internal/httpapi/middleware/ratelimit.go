@@ -38,6 +38,8 @@ var (
 	SharedWritesPerUser  = Policy{Events: 120, Per: time.Minute}
 	SharedInvitesPerUser = Policy{Events: 30, Per: time.Hour}
 	FriendCodesPerHour   = Policy{Events: 10, Per: time.Hour} // friend codes entered, per user and per IP (ADR 0027)
+	// errors the web app reports, per client address: a page that fails in a loop can't flood the log (PLAN 24.8)
+	ClientEventsPerIP = Policy{Events: 30, Per: time.Minute}
 )
 
 // DefaultMaxKeys caps the buckets one Limiter keeps, so a flood of distinct IPs or emails can't
@@ -53,6 +55,7 @@ type Limiter struct {
 
 	mu      sync.Mutex
 	buckets map[string]*bucket
+	limited func() // called for every refusal (finuance_rate_limited_total); nil: nothing
 }
 
 type bucket struct {
@@ -66,6 +69,19 @@ func NewLimiter(p Policy, clock platform.Clock, maxKeys int) *Limiter {
 		maxKeys = DefaultMaxKeys
 	}
 	return &Limiter{policy: p, clock: clock, maxKeys: maxKeys, buckets: map[string]*bucket{}}
+}
+
+// OnLimited makes the limiter call f for every request it refuses, and returns the limiter.
+func (l *Limiter) OnLimited(f func()) *Limiter {
+	l.limited = f
+	return l
+}
+
+func (l *Limiter) refuse(d time.Duration) error {
+	if l.limited != nil {
+		l.limited()
+	}
+	return &platform.RetryAfterError{After: d}
 }
 
 // Allow takes one token for key. When the bucket is empty it returns a *platform.RetryAfterError
@@ -86,7 +102,7 @@ func (l *Limiter) Allow(key string) error {
 	r := b.lim.ReserveN(now, 1)
 	if d := r.DelayFrom(now); d > 0 {
 		r.CancelAt(now) // don't consume a future token for a rejected request
-		return &platform.RetryAfterError{After: d}
+		return l.refuse(d)
 	}
 	return nil
 }
@@ -104,7 +120,7 @@ func (l *Limiter) Check(key string) error {
 	r := b.lim.ReserveN(now, 1)
 	d := r.DelayFrom(now)
 	r.CancelAt(now)
-	return &platform.RetryAfterError{After: d}
+	return l.refuse(d)
 }
 
 // evict drops buckets that have been idle long enough to be full again (forgetting them changes

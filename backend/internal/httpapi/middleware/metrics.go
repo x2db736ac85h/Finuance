@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 )
 
@@ -25,7 +27,14 @@ func Metrics(m *observability.Metrics) Middleware {
 					route = routeName(r.Pattern)
 				}
 				m.HTTPRequests.WithLabelValues(route, r.Method, observability.StatusClass(rec.outcome(panicked))).Inc()
-				m.HTTPDuration.WithLabelValues(route).Observe(time.Since(start).Seconds())
+				// An exemplar: the trace id of this request on the bucket it falls into, so a slow bucket
+				// leads to a trace (PLAN 24.5). Only scrapers that ask for OpenMetrics receive it.
+				d := time.Since(start).Seconds()
+				if eo, ok := m.HTTPDuration.WithLabelValues(route).(prometheus.ExemplarObserver); ok && info.TraceID != "" {
+					eo.ObserveWithExemplar(d, prometheus.Labels{"trace_id": info.TraceID})
+				} else {
+					m.HTTPDuration.WithLabelValues(route).Observe(d)
+				}
 			}()
 			next.ServeHTTP(rec, r)
 			panicked = false

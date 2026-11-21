@@ -131,7 +131,12 @@ func NewHandler(d Deps) (http.Handler, error) {
 	if d.Query != nil {
 		ins = insights.New(d.Query)
 	}
-	impl := &api{aiChanges: d.AIChanges, goals: d.Goals, advice: d.Advice, aiAdmin: d.AssistantAdmin, admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, commit: d.Commit, buildDate: d.BuildDate, schemaVersion: d.SchemaVersion, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), limits: newLimits(clock, d.Config.AIRatePerHour)}
+	limited := func(limiter string) { // finuance_rate_limited_total: one count per refusal, by limiter
+		if d.Metrics != nil {
+			d.Metrics.RateLimited.WithLabelValues(limiter).Inc()
+		}
+	}
+	impl := &api{aiChanges: d.AIChanges, goals: d.Goals, advice: d.Advice, aiAdmin: d.AssistantAdmin, admin: d.Admin, friends: d.Friends, notify: d.Notify, sharing: d.Sharing, insights: ins, ai: d.Assistant, cfg: d.Config, version: d.Version, commit: d.Commit, buildDate: d.BuildDate, schemaVersion: d.SchemaVersion, prod: prod, auth: d.Auth, ledger: d.Ledger, legacy: d.Legacy, rules: d.Rules, query: d.Query, jobs: d.Jobs, cookies: newCookies(d.Config), metrics: d.Metrics, limits: newLimits(clock, d.Config.AIRatePerHour, limited)}
 	strict := gen.NewStrictHandlerWithOptions(impl, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			ve := &platform.ValidationError{}
@@ -148,7 +153,7 @@ func NewHandler(d Deps) (http.Handler, error) {
 		Middlewares: []gen.MiddlewareFunc{
 			validator,
 			impl.beforeBody(prod),
-			requireSession(d.Auth, d.Admin, prod, mw.NewLimiter(TokenRate, clock, 0), sessionCookieName(newCookies(d.Config).secure)),
+			requireSession(d.Auth, d.Admin, prod, mw.NewLimiter(TokenRate, clock, 0).OnLimited(func() { limited("access_token") }), sessionCookieName(newCookies(d.Config).secure)),
 			gen.MiddlewareFunc(mw.CSRF(d.Config.PublicOrigin, func(w http.ResponseWriter, r *http.Request, err error) {
 				WriteProblem(w, r, fmt.Errorf("%w: %w", platform.ErrForbidden, err), prod)
 			})),
@@ -162,6 +167,8 @@ func NewHandler(d Deps) (http.Handler, error) {
 	notFound := func(w http.ResponseWriter, r *http.Request) {
 		WriteProblem(w, r, fmt.Errorf("%s: %w", r.URL.Path, platform.ErrNotFound), prod)
 	}
+	// outside the generated router and its CSRF check: the browser sends these itself (handlers_client_events.go)
+	mux.HandleFunc("POST "+cspReportPath, impl.cspReport)
 	mux.HandleFunc("/api/v1/", notFound)
 	mux.HandleFunc("/", notFound)
 	if d.Extra != nil {
@@ -180,7 +187,8 @@ func NewHandler(d Deps) (http.Handler, error) {
 		mw.SecurityHeaders,
 		mw.MaxBytes(MaxJSONBody, map[string]int64{"POST /api/v1/imports": d.Config.MaxUploadBytes + multipartOverhead,
 			"POST /api/v1/legacy-imports":                legacyBodyLimit(d.Config.MaxUploadBytes, d.Config.MaxLegacyImportBytes),
-			"POST /api/v1/assistant/chats/*/attachments": images.MaxBytes}),
+			"POST /api/v1/assistant/chats/*/attachments": images.MaxBytes,
+			"POST /api/v1/client-events":                 maxClientEvent, "POST " + cspReportPath: maxCSPReport}),
 		mw.Route,
 	), nil
 }

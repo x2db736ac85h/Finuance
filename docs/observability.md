@@ -82,3 +82,54 @@ On Kubernetes the chart adds `k8s.pod.name` and `k8s.namespace.name` from the po
 `FINUANCE_OTEL_SAMPLE_RATIO` (the chart's `otel.sampleRatio`; default 1) is the share of requests
 that are traced. The decision is made once, at the request: a trace is kept whole or not at all,
 and a job follows the request that queued it.
+
+## Metrics
+
+The api and the worker serve Prometheus metrics on their admin port (`/metrics`, never through the
+ingress). The full list is `deploy/k8s/observability/metrics.txt`, kept in step with the code by a
+test. Labels are bounded: a route is its pattern, a job its kind, and no label carries a user.
+
+| Metric | Labels | What it says |
+|---|---|---|
+| `http_server_requests_total` | `route`, `method`, `status_class` | every request, a panicking one included |
+| `http_server_request_duration_seconds` | `route` | how long requests take; each bucket carries one request's trace id as an exemplar |
+| `finuance_panics_total` | | handlers that panicked; any increase raises `FinuancePanic` |
+| `finuance_rate_limited_total` | `limiter` | requests the api's own limiters refused, by limiter (`login_ip`, `login_failed`, `upload`, `assistant`, …) |
+| `finuance_auth_failures_total` | `reason` | failed sign-ins: `password` or `second_step` |
+| `finuance_jobs_total`, `finuance_job_duration_seconds` | `kind`, `result` | the worker's jobs |
+| `finuance_imports_total`, `finuance_import_rows_total` | `result`; `kind` | committed imports and their rows |
+| `finuance_assistant_runs_total`, `…_run_duration_seconds` | `mode`, `result` | questions to the assistant |
+| `finuance_assistant_model_requests_total` | `connection`, `result` | requests to model servers and how they ended |
+| `finuance_llm_request_duration_seconds` | `connection` | one request to a model server, to the end of its answer |
+| `finuance_llm_time_to_first_token_seconds` | `connection` | until the first piece of the answer arrives |
+| `finuance_llm_tokens_total` | `connection`, `direction` | tokens as the model servers report them (`input`, `output`) |
+
+The assistant's metrics come from both processes: the api answers chats and the worker writes the
+digests, so their dashboard and the alert `FinuanceAssistantModelErrors` read both jobs.
+
+**Exemplars.** A scraper that asks for the OpenMetrics format gets, with each latency bucket, the
+trace id of one request that fell into it. With `exemplar-storage` switched on in Prometheus and the
+Tempo link on Grafana's Prometheus data source (both set in the reference environment's monitoring
+values), the dots on "p95 by route" open that request's trace.
+
+## Errors in the browser
+
+A person who meets a failure on the server's side sees its request id with the message
+("… (Reference: cf0ff0a8…)"), which is the `request_id` to search the logs for.
+
+Errors that happen in the browser itself are counted in `finuance_client_errors_total{kind}` and
+written as one `client error` line each:
+
+| `kind` | Sent by | When |
+|---|---|---|
+| `error` | the web app, `POST /api/v1/client-events` | an uncaught error |
+| `unhandled_rejection` | the web app | a promise nobody handled |
+| `render` | the web app | a screen failed to draw; the person sees "This screen couldn't be shown" |
+| `csp` | the browser, `POST /api/v1/csp-reports` | the content security policy blocked something |
+
+The web app sends the kind, the error's class name (`TypeError`) and the screen's route pattern
+(`/imports/:id`), and the API's contract refuses anything else: no message, no stack, no address
+with its values or query. At most five reports per page load, and thirty a minute per client
+address at the server. A browser's policy report is counted and thrown away unread, because it
+quotes addresses. Both routes work without a session; the report route is the one route that takes
+a request without the client header, since the browser sends it by itself, and it changes nothing.

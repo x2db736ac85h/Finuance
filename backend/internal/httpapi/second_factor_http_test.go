@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	promtest "github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 )
 
@@ -95,6 +97,10 @@ func TestSecondFactorHTTP(t *testing.T) {
 	// a wrong code, an unknown challenge, then the right code
 	expect(t, c.do("POST", "/auth/login/second-step", map[string]any{"challenge": challenge, "code": "000000"}), 401, "unauthenticated")
 	expect(t, c.do("POST", "/auth/login/second-step", map[string]any{"challenge": "nope", "code": "000000"}), 401, "unauthenticated")
+	// a wrong code for a real challenge is a failed sign-in of its own kind; an unknown challenge is nobody's
+	if got := promtest.ToFloat64(e.metrics.AuthFailures.WithLabelValues("second_step")); got != 1 {
+		t.Errorf("finuance_auth_failures_total{reason=second_step} = %v, want 1", got)
+	}
 	code := appCode(t, secret, e.clock.Now())
 	r = c.do("POST", "/auth/login/second-step", map[string]any{"challenge": challenge, "code": code[:3] + " " + code[3:]})
 	expect(t, r, 200, "")

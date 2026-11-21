@@ -656,11 +656,16 @@ func (run *Run) complete(ctx context.Context, emit func(Event), t *turn, req llm
 		span.SetStatus(codes.Error, result)
 		span.SetAttributes(attribute.String("error.type", result))
 	}
+	m := run.r.cfg.Metrics
+	m.LLMDuration.WithLabelValues(run.conn.Name).Observe(time.Since(sent).Seconds())
 	if first > 0 {
 		span.SetAttributes(attribute.Float64("gen_ai.response.time_to_first_chunk", first.Seconds()))
+		m.LLMFirstToken.WithLabelValues(run.conn.Name).Observe(first.Seconds())
 	}
 	if res.Usage.Input+res.Usage.Output > 0 { // only what the server reported, never the runner's estimate
 		span.SetAttributes(attribute.Int("gen_ai.usage.input_tokens", res.Usage.Input), attribute.Int("gen_ai.usage.output_tokens", res.Usage.Output))
+		m.LLMTokens.WithLabelValues(run.conn.Name, "input").Add(float64(res.Usage.Input))
+		m.LLMTokens.WithLabelValues(run.conn.Name, "output").Add(float64(res.Usage.Output))
 	}
 	run.r.cfg.Metrics.Upstream.WithLabelValues(run.conn.Name, result).Inc()
 	t.usage.Input += res.Usage.Input

@@ -178,11 +178,12 @@ groups:
             {{ $labels.pod }} uses over 90 % of its database connections
           description: >-
             Requests wait for connections; raise FINUANCE_DB_MAX_CONNS or find the slow queries.
+      # both jobs: the api answers chats, the worker writes the digests (PLAN 24.5)
       - alert: FinuanceAssistantModelErrors
         expr: |
-          sum by (connection) (rate(finuance_assistant_model_requests_total{job="finuance-api",namespace="finuance",result!="ok"}[15m]))
+          sum by (connection) (rate(finuance_assistant_model_requests_total{job=~"finuance-(api|worker)",namespace="finuance",result!="ok"}[15m]))
           /
-          sum by (connection) (rate(finuance_assistant_model_requests_total{job="finuance-api",namespace="finuance"}[15m]))
+          sum by (connection) (rate(finuance_assistant_model_requests_total{job=~"finuance-(api|worker)",namespace="finuance"}[15m]))
           > 0.5
         for: 15m
         labels: {severity: ticket}

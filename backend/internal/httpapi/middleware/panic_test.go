@@ -187,3 +187,42 @@ func TestProbesAreQuiet(t *testing.T) {
 		t.Errorf("at debug level: access lines = %v, want the probe's", access)
 	}
 }
+
+// TestDurationCarriesAnExemplar: a traced request leaves its trace id on the latency bucket it
+// falls into, and the admin port serves it to a scraper that asks for OpenMetrics (PLAN 24.5).
+func TestDurationCarriesAnExemplar(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/meta", func(http.ResponseWriter, *http.Request) {})
+	h, logs, m, _ := chain(t, mux, slog.LevelInfo)
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/v1/meta", nil))
+	traceID, _ := logLines(t, logs, "request")[0]["trace_id"].(string)
+	if traceID == "" {
+		t.Fatal("the request was not traced")
+	}
+
+	admin := observability.NewAdminServer("", m, false, nil)
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	req.Header.Set("Accept", "application/openmetrics-text; version=1.0.0")
+	res := httptest.NewRecorder()
+	admin.Handler.ServeHTTP(res, req)
+	body := res.Body.String()
+	if !strings.Contains(body, `# {trace_id="`+traceID+`"}`) {
+		t.Errorf("no exemplar with trace id %s in the OpenMetrics output:\n%s", traceID, grepLines(body, "http_server_request_duration_seconds_bucket"))
+	}
+	// the plain text format, which Prometheus asks for without the feature, stays valid without them
+	res = httptest.NewRecorder()
+	admin.Handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	if strings.Contains(res.Body.String(), "trace_id") {
+		t.Error("the text format carries an exemplar")
+	}
+}
+
+func grepLines(s, sub string) string {
+	var out []string
+	for _, l := range strings.Split(s, "\n") {
+		if strings.Contains(l, sub) {
+			out = append(out, l)
+		}
+	}
+	return strings.Join(out, "\n")
+}

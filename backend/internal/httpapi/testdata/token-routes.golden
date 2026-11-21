@@ -35,6 +35,7 @@ never	POST /api/v1/auth/login
 never	POST /api/v1/auth/login/second-step
 never	POST /api/v1/auth/logout
 never	POST /api/v1/auth/signup
+never	POST /api/v1/client-events
 never	POST /api/v1/me/password
 never	POST /api/v1/me/second-factor
 never	POST /api/v1/me/second-factor/confirm
