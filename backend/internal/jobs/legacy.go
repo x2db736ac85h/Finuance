@@ -61,7 +61,7 @@ func (w *LegacyImportWorker) Work(ctx context.Context, job *river.Job[LegacyImpo
 		return nil
 	case job.Attempt >= job.MaxAttempts:
 		log.ErrorContext(ctx, "legacy migration failed", "run", a.ID, "error", err)
-		if ferr := w.Migrator.Fail(context.WithoutCancel(ctx), a.UserID, a.ID, legacyFailedMessage); ferr != nil {
+		if ferr := w.Migrator.Fail(context.WithoutCancel(ctx), a.UserID, a.ID, observability.WithReference(ctx, legacyFailedMessage)); ferr != nil {
 			return errors.Join(err, ferr)
 		}
 		return err

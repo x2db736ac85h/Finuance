@@ -4,26 +4,26 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
-	"regexp"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 )
 
 // HeaderRequestID is accepted from clients and echoed in every response.
 const HeaderRequestID = "X-Request-ID"
 
-var validRequestID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
-
 // AssignRequestID accepts a well-formed X-Request-ID (≤ 64 chars of [A-Za-z0-9_-]) from any client and
-// generates one otherwise. The id is echoed in the response and stored in the request Info.
+// generates one otherwise. The id is echoed in the response and stored in the request Info and in
+// the context (observability.RequestID), from where a job queued by the request takes it along.
 func AssignRequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r, info := withInfo(r)
 		id := r.Header.Get(HeaderRequestID)
-		if !validRequestID.MatchString(id) {
+		if !observability.ValidRequestID(id) {
 			id = newID()
 		}
 		info.RequestID = id
 		w.Header().Set(HeaderRequestID, id)
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(observability.WithRequestID(r.Context(), id)))
 	})
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 )
 
 type fakeCleaner struct {
@@ -115,5 +116,11 @@ func TestCommitImportWorker(t *testing.T) {
 	if testutil.ToFloat64(m.Imports.WithLabelValues("committed")) != 1 || testutil.ToFloat64(m.Imports.WithLabelValues("failed")) != 1 ||
 		testutil.ToFloat64(m.Rows.WithLabelValues("new")) != 2 {
 		t.Error("metrics not recorded")
+	}
+	// A job queued by a request names it, so the person has a reference to quote (PLAN 24.8).
+	ctx := observability.WithRequestID(context.Background(), "cf0ff0a8")
+	w.Ledger = flaky
+	if err := w.Work(ctx, commitJob(CommitAttempts, false)); err == nil || flaky.failed != failedMessage+" (Reference: cf0ff0a8)" {
+		t.Errorf("last attempt of a request's job: %v, failed %q", err, flaky.failed)
 	}
 }
