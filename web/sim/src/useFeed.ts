@@ -72,7 +72,9 @@ export function logsLink(grafana: string, requestId: string): string {
   const pane = {
     datasource: 'loki',
     queries: [
-      { refId: 'A', expr: `{traffic=~".+"} | request_id="${requestId}"`, datasource: { type: 'loki', uid: 'loki' } },
+      // a line filter finds the id in JSON lines (Kubernetes) and in text lines (Compose); Loki derives
+      // service_name from the container in both
+      { refId: 'A', expr: `{service_name=~".+"} |= "${requestId}"`, datasource: { type: 'loki', uid: 'loki' } },
     ],
     range: { from: 'now-6h', to: 'now' },
   };

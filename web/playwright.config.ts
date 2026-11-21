@@ -4,6 +4,7 @@ const chrome = { ...devices['Desktop Chrome'] };
 
 // E2E runs against a running stack (make up locally, compose.ci.yaml in CI).
 // - e2e/demo needs a demo-mode stack (compose.demo.yaml, make test-e2e-demo); the rest needs sign-ups.
+// - e2e/sim needs the lab and its simulator (make sim-up, make test-e2e-sim).
 // - e2e/admin changes instance-wide settings (defaults, switches, themes), so it runs on its own
 //   after every other spec has finished (project dependency), and puts the settings back.
 export default defineConfig({
@@ -20,10 +21,20 @@ export default defineConfig({
     baseURL: process.env['E2E_BASE_URL'] ?? 'http://localhost:8000',
     trace: 'retain-on-failure',
   },
-  projects: process.env['E2E_DEMO']
-    ? [{ name: 'demo', use: chrome, testMatch: 'demo/**/*.spec.ts' }]
-    : [
-        { name: 'chromium', use: chrome, testIgnore: ['demo/**', 'admin/**'] },
-        { name: 'instance', use: chrome, testMatch: 'admin/**/*.spec.ts', dependencies: ['chromium'], workers: 1 },
-      ],
+  projects: process.env['E2E_SIM']
+    ? // the simulator's tuning page against a running lab (make sim-up; e2e/sim)
+      [
+        {
+          name: 'sim',
+          use: { ...chrome, baseURL: process.env['E2E_SIM_URL'] ?? 'http://localhost:8090' },
+          testMatch: 'sim/**/*.spec.ts',
+          workers: 1,
+        },
+      ]
+    : process.env['E2E_DEMO']
+      ? [{ name: 'demo', use: chrome, testMatch: 'demo/**/*.spec.ts' }]
+      : [
+          { name: 'chromium', use: chrome, testIgnore: ['demo/**', 'admin/**', 'sim/**'] },
+          { name: 'instance', use: chrome, testMatch: 'admin/**/*.spec.ts', dependencies: ['chromium'], workers: 1 },
+        ],
 });

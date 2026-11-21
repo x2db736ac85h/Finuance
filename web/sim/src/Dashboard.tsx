@@ -157,6 +157,7 @@ function PersonaCard({
       </p>
       <div
         className="sim-bar"
+        role="img"
         aria-label={`${String(p.counts.ok)} ok, ${String(p.counts.error)} errors, ${String(p.counts.skipped)} skipped`}
       >
         <span className="ok" style={{ width: share(p.counts.ok) }} />

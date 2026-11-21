@@ -2,7 +2,9 @@
 # Kubernetes' built-in ValidatingAdmissionPolicy (no extra component). Every pod in Finuance's
 # namespaces may only run images from the registries listed for its namespace, and the images we pin
 # by digest ourselves must keep their digest. Finuance's own images come only from
-# ghcr.io/x2db736ac85h. This is the first check; the second is the signature (Sigstore
+# ghcr.io/x2db736ac85h, and each namespace admits only the repositories it runs (PLAN 25.7): the
+# instance's namespaces the api and web images, a lab's also the mock model, the simulator's
+# namespace the simulator alone, so neither lab image can run next to real data. This is the first check; the second is the signature (Sigstore
 # policy-controller, deploy/k8s/policy-controller, ADR 0039), and Finuance's images are deployed by
 # digest. A refused pod shows up as a FailedCreate event on its ReplicaSet, Job or Cluster.
 #
@@ -30,8 +32,14 @@ spec:
     - name: allowed
       expression: >-
         {
-          'finuance': ['ghcr.io/x2db736ac85h/', 'ghcr.io/cloudnative-pg/'],
-          'finuance-restore': ['ghcr.io/x2db736ac85h/', 'ghcr.io/cloudnative-pg/'],
+          'finuance': ['ghcr.io/x2db736ac85h/finuance-api:', 'ghcr.io/x2db736ac85h/finuance-api@',
+                       'ghcr.io/x2db736ac85h/finuance-web:', 'ghcr.io/x2db736ac85h/finuance-web@', 'ghcr.io/cloudnative-pg/'],
+          'finuance-restore': ['ghcr.io/x2db736ac85h/finuance-api:', 'ghcr.io/x2db736ac85h/finuance-api@',
+                               'ghcr.io/x2db736ac85h/finuance-web:', 'ghcr.io/x2db736ac85h/finuance-web@', 'ghcr.io/cloudnative-pg/'],
+          'finuance-lab': ['ghcr.io/x2db736ac85h/finuance-api:', 'ghcr.io/x2db736ac85h/finuance-api@',
+                           'ghcr.io/x2db736ac85h/finuance-web:', 'ghcr.io/x2db736ac85h/finuance-web@',
+                           'ghcr.io/x2db736ac85h/finuance-llmmock:', 'ghcr.io/x2db736ac85h/finuance-llmmock@', 'ghcr.io/cloudnative-pg/'],
+          'finuance-sim': ['ghcr.io/x2db736ac85h/finuance-sim:', 'ghcr.io/x2db736ac85h/finuance-sim@'],
           'cosign-system': ['ghcr.io/sigstore/policy-controller/', 'cgr.dev/chainguard/kubectl@'],
           's3': ['rustfs/rustfs:', 'docker.io/rustfs/rustfs:', 'amazon/aws-cli:', 'docker.io/amazon/aws-cli:'],
           'monitoring': ['quay.io/prometheus/', 'quay.io/prometheus-operator/', 'quay.io/kiwigrid/k8s-sidecar:',
@@ -71,4 +79,4 @@ spec:
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: In
-          values: [finuance, finuance-restore, s3, monitoring, cosign-system]
+          values: [finuance, finuance-restore, finuance-lab, finuance-sim, s3, monitoring, cosign-system]

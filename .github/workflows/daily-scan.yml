@@ -79,8 +79,10 @@ jobs:
           # the latest release lists the digests it signed (release.yml, "Images")
           tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
           mapfile -t images < <(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
-            | grep -oE 'ghcr\.io/x2db736ac85h/finuance-(api|web)@sha256:[0-9a-f]{64}' | sort -u)
-          [ "${#images[@]}" -eq 2 ] || { echo "::error::release $tag lists ${#images[@]} image digests, expected 2"; exit 1; }
+            | grep -oE 'ghcr\.io/x2db736ac85h/finuance-(api|web|sim|llmmock)@sha256:[0-9a-f]{64}' | sort -u)
+          # the api and the web image always; the lab's two (finuance-sim, finuance-llmmock) since 0.6.0
+          printf '%s\n' "${images[@]}" | grep -q '/finuance-api@' && printf '%s\n' "${images[@]}" | grep -q '/finuance-web@' \
+            || { echo "::error::release $tag does not list the api's and the web's image digests"; exit 1; }
           echo "release $tag"
           for img in "${images[@]}"; do
             for platform in linux/amd64 linux/arm64; do

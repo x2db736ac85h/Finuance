@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/app"
@@ -44,7 +45,7 @@ commands:
                          remove an account's two-step sign-in (a locked-out administrator)
   admin llm-probe [-connection=…] [-model=…] [-out=dir]
                          list the assistant's models and test one with made-up data
-  admin synthetic-users [-count=N] -seed-stdin
+  admin synthetic-users [-count=N] -seed-stdin|-seed-env=NAME
                          make the traffic simulator's users on a lab (FINUANCE_SIMULATION),
                          with passwords derived from the seed on stdin; safe to run again
   healthcheck            exit 0 if the local API answers /healthz (container healthcheck)
@@ -162,7 +163,7 @@ func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	const adminUsage = "usage: finuance admin create-user|set-password -email=… [-display-name=…] [-admin] -password-stdin\n" +
 		"       finuance admin grant-admin|revoke-admin|remove-second-factor -email=…\n" +
 		"       finuance admin llm-probe [-connection=…] [-model=…] [-out=dir]\n" +
-		"       finuance admin synthetic-users [-count=N] -seed-stdin (a lab with FINUANCE_SIMULATION only)"
+		"       finuance admin synthetic-users [-count=N] -seed-stdin|-seed-env=NAME (a lab with FINUANCE_SIMULATION only)"
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, adminUsage)
 		return 2
@@ -172,15 +173,20 @@ func admin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 		fs.SetOutput(stderr)
 		count := fs.Int("count", len(identity.Animals), "how many personas (the ten animals, then numbered ones)")
 		fromStdin := fs.Bool("seed-stdin", false, "read the simulator's seed from the first line of stdin")
-		if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 0 || !*fromStdin {
+		fromEnv := fs.String("seed-env", "", "read the seed from this environment variable instead (a container without a shell)")
+		if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 0 || *fromStdin == (*fromEnv != "") {
 			fmt.Fprintln(stderr, adminUsage)
 			return 2
+		}
+		seed := stdin
+		if *fromEnv != "" {
+			seed = strings.NewReader(os.Getenv(*fromEnv) + "\n")
 		}
 		cfg, ok := load(config.ForAdmin)
 		if !ok {
 			return 1
 		}
-		return fail(app.SyntheticUsers(ctx, cfg, app.SyntheticInput{Count: *count, Seed: stdin},
+		return fail(app.SyntheticUsers(ctx, cfg, app.SyntheticInput{Count: *count, Seed: seed},
 			func(f string, a ...any) { fmt.Fprintf(stdout, f+"\n", a...) }))
 	}
 	if args[0] == "llm-probe" {

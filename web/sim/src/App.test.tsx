@@ -255,6 +255,6 @@ describe('the feed parser and the links', () => {
   it('builds a Loki query for the request id', () => {
     const url = new URL(logsLink('http://localhost:3000/', 'sim-fox-1'));
     expect(url.pathname).toBe('/explore');
-    expect(url.searchParams.get('panes')).toContain('request_id=\\"sim-fox-1\\"');
+    expect(url.searchParams.get('panes')).toContain('|= \\"sim-fox-1\\"');
   });
 });

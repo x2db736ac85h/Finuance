@@ -51,3 +51,5 @@ query-smoke-export.csv
 
 # Claude Code: per-user settings (local paths, permissions)
 .claude/settings.local.json
+# the lab's secrets (make sim-up)
+.env.lab

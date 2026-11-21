@@ -1,0 +1,68 @@
+# The lab for the traffic simulator on one machine (PLAN 25.8, ADR 0043): `make sim-up` runs it with
+# compose.yaml and compose.observability.yaml as the Compose project finuance-lab, next to a stack
+# of your own (its own database volume, its own ports). The instance is a lab (FINUANCE_SIMULATION,
+# sign-up off), its assistant talks to the mock model, the ten animals are made from the seed, and
+# the simulator plays them through the web server, as a browser does.
+#   Lab:        http://localhost:8020 (sign in as an animal: make sim-password ANIMAL=fox)
+#   Simulator:  http://localhost:8090 (its control token: FINUANCE_SIM_CONTROL_TOKEN in .env.lab)
+#   Grafana:    http://localhost:3000
+# The secrets come from .env.lab, which make sim-up writes once (random, never committed).
+services:
+  db:
+    ports: !reset []
+  api:
+    environment:
+      FINUANCE_PUBLIC_ORIGIN: http://localhost:${FINUANCE_LAB_PORT:-8020}
+      FINUANCE_SIMULATION: "true"
+      FINUANCE_ALLOW_SIGNUP: "false"
+      FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
+      FINUANCE_AI_DEFAULT_MODEL: mock-tools
+    ports: !reset []
+    depends_on:
+      ai-mock: { condition: service_started }
+  worker:
+    environment:
+      FINUANCE_SIMULATION: "true"
+      FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
+      FINUANCE_AI_DEFAULT_MODEL: mock-tools
+    ports: !reset []
+  ai-mock:
+    profiles: !reset []
+  web:
+    ports: !override
+      - "127.0.0.1:${FINUANCE_LAB_PORT:-8020}:8080"
+  # The animals, made (or their passwords set again) from the seed; safe on every start.
+  animals:
+    image: finuance-backend:dev
+    command: ["admin", "synthetic-users", "-count=10", "-seed-env=FINUANCE_SIM_SEED"]
+    environment:
+      FINUANCE_ENV: dev
+      FINUANCE_SIMULATION: "true"
+      FINUANCE_DATABASE_URL: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
+      FINUANCE_SIM_SEED: ${FINUANCE_SIM_SEED:?the lab needs .env.lab, run make sim-up}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: "no"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+  sim:
+    image: finuance-sim:dev
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.sim
+    # the front door is the web server; the lab's public origin is what its browser pages send
+    command: ["run", "-target=http://web:8080", "-origin=http://localhost:${FINUANCE_LAB_PORT:-8020}", "-tz=Europe/Warsaw",
+      "-grafana=http://localhost:3000"]
+    environment:
+      FINUANCE_SIM_SEED: ${FINUANCE_SIM_SEED:?the lab needs .env.lab, run make sim-up}
+      FINUANCE_SIM_CONTROL_TOKEN: ${FINUANCE_SIM_CONTROL_TOKEN:?the lab needs .env.lab, run make sim-up}
+    ports:
+      - "127.0.0.1:${FINUANCE_SIM_PORT:-8090}:8090" # the control API, the page and /metrics
+    depends_on:
+      web: { condition: service_healthy }
+      animals: { condition: service_completed_successfully }
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
