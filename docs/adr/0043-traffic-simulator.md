@@ -84,7 +84,11 @@ and never delivers.
 
 **Being easy to spot.** The trusted mark is the server's (ADR 0041). Each request also carries
 `User-Agent: finuance-sim/<version> (<animal>)` and a request id `sim-<animal>-…` for people
-reading logs. Those two are informative only and decide nothing.
+reading logs. Those two are informative only and decide nothing. Some requests are turned away
+before the session layer reads the token, and so carry no user: signing in, an unknown path, and a
+path parameter in the wrong form (the generated router checks it before any middleware runs).
+These count as real, as ADR 0041 says of every request without a user. The simulator's own
+request ids still find them, and the coverage test allows exactly these.
 
 ## Consequences (positive, negative, follow-ups)
 
