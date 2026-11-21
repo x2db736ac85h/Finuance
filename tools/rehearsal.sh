@@ -270,7 +270,10 @@ netpol() {
   # addresses, not names: a pod without a policy of its own can't resolve anything
   local db api s3 as_api='app.kubernetes.io/name=finuance,app.kubernetes.io/instance=finuance,app.kubernetes.io/component=api'
   db=$(kubectl -n finuance get pod finuance-db-1 -o jsonpath='{.status.podIP}')
-  api=$(kubectl -n finuance get pod -l app.kubernetes.io/component=api -o jsonpath='{.items[0].status.podIP}')
+  # a running api pod: the first in the list can be one that is still being created (a rollout, the
+  # autoscaler), without an address yet
+  api=$(kubectl -n finuance get pod -l app.kubernetes.io/component=api --field-selector=status.phase=Running \
+    -o jsonpath='{.items[0].status.podIP}')
   s3=$(kubectl -n s3 get svc rustfs -o jsonpath='{.spec.clusterIP}')
   [ -n "$db" ] && [ -n "$api" ] && [ -n "$s3" ] || { echo "no address for the database, the api or RustFS" >&2; return 1; }
   # the controls: a pod elsewhere reaches a service without a policy, and Prometheus's label opens
