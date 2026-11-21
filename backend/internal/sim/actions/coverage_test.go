@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/app"
+	"github.com/x2db736ac85h/finuance/backend/internal/client/gen"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim"
@@ -86,6 +87,7 @@ func freeAddr(t *testing.T) string {
 func startLab(t *testing.T) *lab {
 	t.Helper()
 	tdb := testutil.Require(t, testDB)
+	tdb.Truncate(t) // every run starts without friendships, groups or chats
 	mock := httptest.NewServer(llmmock.New())
 	t.Cleanup(mock.Close)
 	httpAddr, adminAddr := freeAddr(t), freeAddr(t)
@@ -146,10 +148,14 @@ func (l *lab) requestsByTraffic(t *testing.T) map[string]float64 {
 	defer r.Body.Close()
 	body, _ := io.ReadAll(r.Body)
 	out := map[string]float64{}
-	re := regexp.MustCompile(`(?m)^http_server_requests_total\{[^}]*traffic="(\w+)"[^}]*\} (\S+)$`)
-	for _, m := range re.FindAllStringSubmatch(string(body), -1) {
+	// a route's label holds braces ({id}), so the labels end at the line's last "} "
+	line := regexp.MustCompile(`(?m)^http_server_requests_total\{(.*)\} (\S+)$`)
+	traffic := regexp.MustCompile(`traffic="(\w+)"`)
+	for _, m := range line.FindAllStringSubmatch(string(body), -1) {
 		v, _ := strconv.ParseFloat(m[2], 64)
-		out[m[1]] += v
+		if tm := traffic.FindStringSubmatch(m[1]); tm != nil {
+			out[tm[1]] += v
+		}
 	}
 	return out
 }
@@ -157,9 +163,6 @@ func (l *lab) requestsByTraffic(t *testing.T) map[string]float64 {
 // noUser are the routes a persona calls without being anyone yet: a request that carries no user
 // is real traffic by definition (ADR 0041), and so is one the router turns away before it reads
 // the token.
-// pending are the areas whose actions come with pull request 4 of the phase; it empties the list.
-var pending = []string{"imports", "labels", "groups", "rules", "budgets", "duplicates", "cash", "assistant", "sharing"}
-
 var noUser = []string{"POST /api/v1/auth/login", "GET /api/v1/meta", "unmatched"}
 
 // TestEveryActionRuns is the coverage test (PLAN 25.4): every action of the catalogue runs once
@@ -169,41 +172,75 @@ var noUser = []string{"POST /api/v1/auth/login", "GET /api/v1/meta", "unmatched"
 func TestEveryActionRuns(t *testing.T) {
 	l := startLab(t)
 	ctx := context.Background()
-	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All()})
+	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All(), Config: sim.Defaults()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := e.CheckTarget(ctx); err != nil {
 		t.Fatal(err)
 	}
-	a, err := e.Actor(ctx, identity.Nth(0))
+	otter, err := e.Actor(ctx, identity.Nth(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	owl, err := e.Actor(ctx, identity.Nth(1))
 	if err != nil {
 		t.Fatal(err)
 	}
 	from, to := platform.MustDate(2026, time.January, 1), platform.MustDate(2026, time.March, 31)
 	for _, account := range []int{statements.Current, statements.Savings} {
-		if err := actions.Import(ctx, a, account, from, to); err != nil {
+		if err := actions.Import(ctx, otter, account, from, to); err != nil {
 			t.Fatal(err)
 		}
 	}
 	before := l.requestsByTraffic(t)
 
+	byName := map[string]sim.Action{}
+	for _, act := range actions.All() {
+		byName[act.Name] = act
+	}
+	who := map[string]*sim.Actor{"otter": otter, "owl": owl}
+	ok := map[string]bool{}
+	for _, step := range script {
+		act, found := byName[step.action]
+		if !found {
+			t.Fatalf("the script names %q, which is not an action", step.action)
+		}
+		if step.before != nil {
+			step.before(t, ctx, who[step.who])
+		}
+		var ev sim.Event
+		for range 5 { // a draw can find nothing to act on (a search without rows): try again
+			if ev = e.Do(ctx, who[step.who], act); ev.Result != sim.ResultSkipped {
+				break
+			}
+		}
+		if ev.Result != sim.ResultOK {
+			t.Errorf("%s %s: %+v", step.who, step.action, ev)
+			continue
+		}
+		ok[step.action] = true
+	}
 	areas := map[string]bool{}
 	for _, act := range actions.All() {
 		areas[act.Area] = true
-		t.Run(act.Name, func(t *testing.T) {
-			if ev := e.Do(ctx, a, act); ev.Result != sim.ResultOK {
-				t.Errorf("%s: %+v", act.Name, ev)
-			}
-		})
+		if !ok[act.Name] {
+			t.Errorf("the action %s did not run successfully", act.Name)
+		}
 	}
 	for _, area := range sim.Areas {
-		if !areas[area] && !slices.Contains(pending, area) {
+		if !areas[area] {
 			t.Errorf("the area %q has no action", area)
 		}
 	}
 
 	lines := l.logs.accessLines(t)
+	synthetic := 0.0
+	for _, line := range lines {
+		if line["traffic"] == "synthetic" {
+			synthetic++
+		}
+	}
 	mine := 0
 	for _, line := range lines {
 		id, _ := line["request_id"].(string)
@@ -216,12 +253,60 @@ func TestEveryActionRuns(t *testing.T) {
 			t.Errorf("a persona's request is not labelled synthetic: %v", line)
 		}
 	}
-	if mine < len(actions.All()) {
+	if mine < len(script) {
 		t.Errorf("only %d access lines of the persona's requests", mine)
 	}
 	after := l.requestsByTraffic(t)
-	if after["synthetic"] <= before["synthetic"] {
-		t.Errorf("the request counter's synthetic series did not grow: %v → %v", before, after)
+	if after["synthetic"] <= before["synthetic"] || after["synthetic"] != synthetic {
+		t.Errorf("the request counter's synthetic series (%v → %v) does not match the %v synthetic access lines", before, after, synthetic)
 	}
 	t.Logf("%d access lines of the persona; requests by traffic: %v", mine, after)
+}
+
+// step is one action of the coverage script, by one persona; before prepares what it needs.
+type step struct {
+	who, action string
+	before      func(t *testing.T, ctx context.Context, a *sim.Actor)
+}
+
+// script runs every action in an order where each finds what it needs: imports first, the
+// group before it is used, the proposal before its undo, a friend code before it is redeemed, an
+// invitation before it is accepted.
+var script = []step{
+	{who: "otter", action: "imports.month"}, {who: "otter", action: "imports.overlap"}, {who: "otter", action: "imports.remap"},
+	{who: "otter", action: "imports.abandon"}, {who: "otter", action: "imports.again"}, {who: "otter", action: "imports.broken"},
+	{who: "otter", action: "table.window"}, {who: "otter", action: "table.filter"}, {who: "otter", action: "table.search"},
+	{who: "otter", action: "table.distinct"}, {who: "otter", action: "table.range"},
+	{who: "otter", action: "insights.charts"}, {who: "otter", action: "insights.overview"},
+	{who: "otter", action: "labels.category"}, {who: "otter", action: "labels.note"}, {who: "otter", action: "labels.bulk-category"},
+	{who: "otter", action: "groups.create"}, {who: "otter", action: "labels.bulk-group"}, {who: "otter", action: "groups.rename"},
+	{who: "otter", action: "groups.timeline"}, {who: "otter", action: "groups.report"}, {who: "otter", action: "groups.create"},
+	{who: "otter", action: "groups.delete"},
+	{who: "otter", action: "rules.suggestion"}, {who: "otter", action: "rules.preview"}, {who: "otter", action: "rules.apply"},
+	{who: "otter", action: "rules.category"}, {who: "otter", action: "rules.merge", before: twoOwnCategories},
+	{who: "otter", action: "budgets.read"}, {who: "otter", action: "budgets.set"}, {who: "otter", action: "budgets.goal"},
+	{who: "otter", action: "budgets.goal-update"},
+	{who: "otter", action: "duplicates.list"}, {who: "otter", action: "duplicates.prefer"}, {who: "otter", action: "duplicates.keep-both"},
+	{who: "otter", action: "duplicates.clear"},
+	{who: "otter", action: "cash.add"}, {who: "otter", action: "cash.edit"}, {who: "otter", action: "cash.add"},
+	{who: "otter", action: "cash.delete"}, {who: "otter", action: "cash.receipt"},
+	{who: "otter", action: "assistant.ask"}, {who: "otter", action: "assistant.stop"}, {who: "otter", action: "assistant.apply"},
+	{who: "otter", action: "assistant.revert"}, {who: "otter", action: "assistant.digest"},
+	{who: "owl", action: "sharing.code"}, {who: "otter", action: "sharing.befriend"}, {who: "otter", action: "sharing.group"},
+	{who: "owl", action: "sharing.accept"}, {who: "otter", action: "sharing.expense"}, {who: "otter", action: "sharing.settle"},
+	{who: "otter", action: "sharing.report"}, {who: "otter", action: "sharing.group"}, {who: "owl", action: "sharing.accept"},
+	{who: "owl", action: "sharing.leave"},
+	{who: "otter", action: "account.preferences"}, {who: "otter", action: "account.notifications"}, {who: "otter", action: "account.export"},
+	{who: "otter", action: "account.wrong-password"}, {who: "otter", action: "account.unknown-path"},
+}
+
+// twoOwnCategories makes sure two of the categories personas make exist, for a merge.
+func twoOwnCategories(t *testing.T, ctx context.Context, a *sim.Actor) {
+	t.Helper()
+	for _, name := range []string{"Hobby", "Podróże"} {
+		r, err := a.API.CreateCategoryWithResponse(ctx, nil, gen.CreateCategoryJSONRequestBody{Name: name})
+		if err != nil || (r.StatusCode() != http.StatusCreated && r.StatusCode() != http.StatusConflict) {
+			t.Fatalf("make %s: %v %v", name, r.StatusCode(), err)
+		}
+	}
 }

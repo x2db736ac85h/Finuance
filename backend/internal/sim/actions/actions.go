@@ -10,7 +10,8 @@ import (
 // All is the whole catalogue.
 func All() []sim.Action {
 	var out []sim.Action
-	for _, area := range [][]sim.Action{table(), insights(), account()} {
+	for _, area := range [][]sim.Action{table(), insights(), imports(), labels(), groups(), rules(), budgets(), duplicates(), cash(),
+		assistant(), sharing(), account()} {
 		out = append(out, area...)
 	}
 	return out

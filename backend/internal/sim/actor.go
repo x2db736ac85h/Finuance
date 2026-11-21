@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/client/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/statements"
 )
@@ -44,6 +45,9 @@ type Actor struct {
 	lastAction   string
 	lastStart    time.Time
 	every        map[string]time.Time
+	cal          calendar
+	imported     map[int]platform.Date // the last imported day per bank account
+	cash         uuid.UUID
 	raw          *http.Client // API's client, for the paths the contract doesn't have
 }
 
@@ -54,8 +58,8 @@ func newActor(e *Engine, p identity.Persona) (*Actor, error) {
 	}
 	sum := sha256.Sum256([]byte("finuance-sim/v1 rand " + p.Slug))
 	a := &Actor{Persona: p, Character: Characters[p.Animal], engine: e, password: password, accounts: map[int]uuid.UUID{},
-		every: map[string]time.Time{},
-		Rand:  mrand.New(mrand.NewPCG(binary.LittleEndian.Uint64(sum[:8]), binary.LittleEndian.Uint64(sum[8:16])))} //nolint:gosec // a simulation's stream, not a secret
+		every: map[string]time.Time{}, imported: map[int]platform.Date{},
+		Rand: mrand.New(mrand.NewPCG(binary.LittleEndian.Uint64(sum[:8]), binary.LittleEndian.Uint64(sum[8:16])))} //nolint:gosec // a simulation's stream, not a secret
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
@@ -104,6 +108,9 @@ func (a *Actor) Every(key string, d time.Duration) bool {
 	a.every[key] = now
 	return true
 }
+
+// Engine is the engine the persona plays in (its configuration, the notice board).
+func (a *Actor) Engine() *Engine { return a.engine }
 
 // Now is the engine's clock.
 func (a *Actor) Now() time.Time { return a.engine.o.Clock.Now() }
@@ -208,13 +215,22 @@ func (a *Actor) discover(ctx context.Context) error {
 	if err := Expect("list accounts", list.HTTPResponse, http.StatusOK); err != nil {
 		return err
 	}
-	found, data := map[int]uuid.UUID{}, false
+	found, data, lastOn := map[int]uuid.UUID{}, false, map[int]*platform.Date{}
 	for i := range *list.JSON200 {
 		acc := &(*list.JSON200)[i]
 		for _, n := range []int{statements.Current, statements.Savings} {
-			if acc.Name == statements.AccountName(n) {
+			if acc.Name == statements.AccountName(n) && acc.Kind == gen.AccountKindBank {
 				found[n] = acc.Id
+				if acc.LastOn != nil {
+					d := platform.DateOf(acc.LastOn.Time, time.UTC)
+					lastOn[n] = &d
+				}
 			}
+		}
+		if acc.Kind == gen.AccountKindCash && acc.Name == CashAccount {
+			a.mu.Lock()
+			a.cash = acc.Id
+			a.mu.Unlock()
 		}
 		data = data || acc.TxCount > 0
 	}
@@ -231,10 +247,36 @@ func (a *Actor) discover(ctx context.Context) error {
 		}
 		found[n] = made.JSON201.Id
 	}
+	cfg, _ := a.engine.Config()
 	a.mu.Lock()
 	a.accounts, a.hasData = found, data
+	a.startCalendarLocked(lastOn, cfg.ClockRate)
 	a.mu.Unlock()
 	return nil
+}
+
+// CashAccount is the name of the account a persona types its cash into.
+const CashAccount = "Cash"
+
+// CashAccountID is the persona's cash account, or the zero id before it has one.
+func (a *Actor) CashAccountID() uuid.UUID {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.cash
+}
+
+// SetCashAccount records the persona's cash account.
+func (a *Actor) SetCashAccount(id uuid.UUID) {
+	a.mu.Lock()
+	a.cash = id
+	a.mu.Unlock()
+}
+
+// SetAccount records the id of one of the persona's two bank accounts (after it made it again).
+func (a *Actor) SetAccount(n int, id uuid.UUID) {
+	a.mu.Lock()
+	a.accounts[n] = id
+	a.mu.Unlock()
 }
 
 // transport adds the simulator's headers to every request and keeps count of the persona's 5xx
