@@ -1,8 +1,8 @@
 # Progress
 
-**Current phase:** 24 — Observability: correlated logs, complete traces, the synthetic marker · **Branch:** `phase/24-close` (pull request 6 of 6) · **Status:** started on 2026-11-20 (`/phase-start 24`); pull requests 1 (59), 2 (60), 3 (62), 4 (63), 5 (64) and the gate's reference (67) merged; `v0.5.1-rc.2` released and on the homelab (68); the gate walked on 2026-11-21. Phase 23 is closed: `v0.5.0` released and on the homelab by digest, the gate done by the maintainer.
+**Current phase:** 25 — The traffic simulator: ten animals on a lab instance · **Branch:** `phase/25-lab-instance` (pull request 1 of 8) · **Status:** started on 2026-11-21 (`/phase-start 25`). Phase 24 is closed: `v0.5.1` released and on the homelab by digest (pull request 70), the gate walked by the agent at the maintainer's request; Loki and Alloy's cost after their first day (2026-11-22) is still to be recorded.
 
-**Released:** `v0.5.0` (2026-11-20). Phases 0–23 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
+**Released:** `v0.5.1` (2026-11-21). Phases 0–24 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
 
 **The plan from here:** `docs/PLAN.md` §9, "Rev 5 — the plan after going public" and Phases 22–29. A map of the system as built: [COMPONENTS.md](COMPONENTS.md).
 
@@ -47,7 +47,37 @@ Deployment
 
 ## Current phase tasks
 
-Phase 24 — Observability: correlated logs, complete traces, the synthetic marker (PLAN §9). Confirmed with `/phase-start 24` on 2026-11-20.
+Phase 25 — The traffic simulator: ten animals on a lab instance (PLAN §9). Confirmed with `/phase-start 25` on 2026-11-21.
+
+Pull requests:
+- **1** `phase/25-lab-instance`: 25.1.
+- **2** `phase/25-statements`: 25.2.
+- **3** `phase/25-engine`: 25.3 and the first action areas (table, insights, account) with the coverage test's frame.
+- **4** `phase/25-actions`: 25.4, the other areas and the coverage test complete.
+- **5** `phase/25-control`: 25.5, 25.6 and the Simulator dashboard.
+- **6** `phase/25-lab-stack`: 25.7, 25.8, 25.9.
+- **7** `phase/25-k6`: 25.10.
+- **Releases:** `v0.6.0-rc.1` (four images; the homelab gets the api and web), the day in the lab (25.12) on it, then `v0.6.0`.
+- **8** `phase/25-close`: 25.11, the record of 25.12, the phase close.
+
+Decisions at the phase start (the maintainer, 2026-11-21): the agent merges this phase's pull requests itself under the rules of Phase 24 (every CI check green and the local checks passed, the homelab checked after each, a report afterwards, a stop and a question when a failure can't be fixed properly or a rollout goes wrong); it may tag `v0.6.0-rc.N` and `v0.6.0`, and approving the `release` environment stays the maintainer's. The lab runs on Compose on the development machine (`make sim-up`) and on Kubernetes in the CI rehearsal only, not on the homelab; the day in the lab (25.12) runs on Compose. No new Go or npm dependency; k6 moves to 2.x as a bump of a pinned tool; the two new images (`finuance-sim`, `finuance-llmmock`) are this repository's own.
+
+- [x] 25.0 `.trivyignore` read (the standing first task) — 2026-11-21: empty, nothing to revisit
+- [ ] 25.1 the lab instance: an ADR, `/meta` reports `simulation`, the "Lab" chip, `finuance admin synthetic-users`, the animals' names and passwords from one seed, THREAT-MODEL entries
+- [ ] 25.2 statements on demand: two layouts, the same day identical in any range, overlapping ranges de-duplicate like real exports, every file passes `check-private.sh`
+- [ ] 25.3 the engine: personas, the scheduler on a fake clock, the ceilings, back-off, sign-in and tokens, the refusal of an instance that is not a lab
+- [ ] 25.4 the action catalogue, each action tested against the real API; the coverage test checks the `traffic` label in the access log and the metrics
+- [ ] 25.5 `api/sim.openapi.yaml`, the control API, the simulator's metrics and its access log
+- [ ] 25.6 the tuning page with unit tests and `web/e2e/sim/` (axe in every theme)
+- [ ] 25.7 `llmmock` with a bounded history; the images `finuance-sim` and `finuance-llmmock` built, scanned, signed and attested; the admission policy names exact repositories per namespace
+- [ ] 25.8 the lab on Compose (`make sim-up`, `sim-down`, `sim-password`); nginx re-resolves the api's address
+- [ ] 25.9 the lab on Kubernetes: `deploy/environments/lab/`, `deploy/helm/finuance-sim`, the hook job, the rehearsal's `lab` stage
+- [ ] 25.10 k6: synthetic load-test users, k6 2.x, which tool is for what
+- [ ] 25.11 documents (`docs/simulator.md` and the rest), `CHANGELOG.md`, `v0.6.0`
+- [ ] 25.12 a day in the lab: ten animals for 24 hours, every `5xx` and unexpected `4xx` a finding, the overview and the duplicates window measured
+- [ ] Gate (the maintainer): an evening with the page: switch presets, sign in as an animal, follow one action to its trace
+
+Phase 24 — Observability: correlated logs, complete traces, the synthetic marker (closed; PLAN §9). Confirmed with `/phase-start 24` on 2026-11-20.
 
 Pull requests, each merged on the maintainer's OK:
 - **1** `phase/24-logs-traces`: 24.1–24.4, the clock of `TestSeedDemo`.
@@ -59,6 +89,7 @@ Pull requests, each merged on the maintainer's OK:
 - **`phase/24-job-reference`** (added 2026-11-21, before the close): the reference the gate starts from (below, at the gate). Merged as pull request 67; it ships in `v0.5.1-rc.2`, on which the gate is walked.
 - **The candidates:** `v0.5.1-rc.1` (2026-11-21, pull request 66: migration 00029, every new pod admitted by the signature check, the `traffic` label on new series and lines, no alert besides `Watchdog`) and `v0.5.1-rc.2` (pull request 68, rolled out 10:34 UTC: no migration, every application synced and healthy, no error line, no alert besides `Watchdog`); both verified from outside (both digests' provenance from their tags at `34ab1b7` and `be84aea`).
 - **6** `phase/24-close`: 24.10, the phase close.
+- **The release:** `v0.5.1` (2026-11-21, tagged after pull request 69, approved by the maintainer), verified from outside (both digests' provenance from the tag at `335259a`) and on the homelab (pull request 70, rolled out 11:56 UTC): every application synced and healthy, no migration, no alert besides `Watchdog`, one start-up restart of the api and the worker (Backlog, 27.10).
 
 Decisions at the phase start (the maintainer, 2026-11-20): no heartbeat outside the machine for now (24.9's second half stays in the Backlog); Loki and Alloy are switched on for the homelab with small limits, measured after a day, and one value switches them off; trace sampling stays at everything on the homelab. Approved: Grafana Loki and Grafana Alloy in the cluster (named in the plan; versions after 24.6's re-check). No new Go or npm dependency.
 
@@ -150,8 +181,6 @@ Phase 21 — Going public (closed)
 
 In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance criteria and gate.
 
-- **Phase 24 — Observability**: panics counted; trace ids on every log line; Loki and Alloy; complete traces; the missing metrics; the trusted marker for synthetic traffic.
-- **Phase 25 — The traffic simulator**: ten animals on a lab instance, a separate service and image with its own tuning page; `v0.6.0`.
 - **Phase 26 — Cloud AI**: a Vertex AI connection with short-lived tokens, on synthetic data; `v0.7.0`.
 - **Phase 27 — Google Cloud lab**: Terraform and GKE Autopilot, up and down on demand.
 - **Phase 28 — New interface and phone**: several design directions and prototypes first, then the build; `v0.8.0`.
@@ -249,6 +278,7 @@ Still ideas
 
 ## Session log
 
+- 2026-11-21 (afternoon) — `v0.5.1` released, verified and on the homelab (70); Phase 24 closed. `/phase-start 25`: the plan approved with two decisions (the merge rules of Phase 24, the lab on Compose and in CI only) and split into eight pull requests; branch `phase/25-lab-instance`. Next: 25.1.
 - 2026-11-20 — Pull request 3 (52) merged. Pull request 4 (53): the register's application rows after four decisions by the maintainer; its first CI run found the tokens form wrapping in the layout test, fixed; merged, and the private register's statuses updated and pushed. Pull request 5: the cluster, delivery, edge and web rows after one more decision (no commit-signature check for now). A local E2E run failed at the sign-in limit per address with four workers and, separately, while the machine was busy; with two workers on a quiet machine 75 of 75 pass, Trusted Types included. Next: the rehearsal on pull request 5 (the new network probes and `verify-full`), its merge, then `v0.5.0-rc.1`.
 - 2026-11-20 (later) — Pull request 5's first rehearsal failed at the new probes: a network policy reaches a new pod a moment after it starts, so a probe that connects at once gets out; the probes now wait (the start window goes into THREAT-MODEL v3). Merged as 54: the homelab's pods use `verify-full`, Prometheus scrapes them, the admission policy and Tempo sit in the new project. The maintainer then synced the database chart, took back the `TEMPORARY` grant, validated the 16 amount checks and rolled out the signature check (its first sync failed on the order of two objects; pull request 55). The changelog gets its `[0.5.0]` heading. Next: `v0.5.0-rc.1`.
 - 2026-11-20 (evening) — `v0.5.0-rc.1` was tagged before the changelog's pull request (56) was merged and stopped with nothing built; `v0.5.0-rc.2` released, verified and deployed (57) under the signature check. Pull request 6: the homelab's default deny covers the namespace, Argo CD leaves the controller's webhook fields, THREAT-MODEL v3, `SECURITY.md`, and the full scan on the candidate with nothing found and nothing ignored. Next: the maintainer's OpenVAS run, `v0.5.0`, the gate.
