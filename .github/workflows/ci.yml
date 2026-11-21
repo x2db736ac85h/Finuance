@@ -72,7 +72,7 @@ jobs:
           cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -166,7 +166,7 @@ jobs:
           cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: golangci-lint (+ web lint)
@@ -304,7 +304,7 @@ jobs:
           backend/bin/osv-scanner scan -L backend/go.mod -L web/package-lock.json -L tools/legacy-oracle/package-lock.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: npm audit (HIGH/CRITICAL fail the build)
         working-directory: web
         run: |
@@ -344,7 +344,7 @@ jobs:
           go install "github.com/bitnami/sealed-secrets/cmd/kubeseal@${KUBESEAL_VERSION}"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       # tools/check-observability.sh also runs promtool from the pinned prom/prometheus image.
       - name: Lint, render and validate (helm lint, kubeconform -strict with CRD schemas, promtool)
         run: RENDER_DIR="$RUNNER_TEMP/rendered" YQ="$(go env GOPATH)/bin/yq" make helm-lint
@@ -426,6 +426,8 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
+          # 22, not 26: Playwright 1.56.1's browser install hangs under Node 26 (microsoft/playwright#40724;
+          # running it works). Until Playwright moves (docs/PROGRESS.md, Follow-ups).
           node-version: 22
           cache: npm
           cache-dependency-path: tools/legacy-oracle/package-lock.json
@@ -454,7 +456,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --no-audit --no-fund
@@ -493,6 +495,8 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
+          # 22, not 26: Playwright 1.56.1's browser install hangs under Node 26 (microsoft/playwright#40724;
+          # running it works). Until Playwright moves (docs/PROGRESS.md, Follow-ups).
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json

@@ -67,7 +67,7 @@ One Go binary runs as the API server, the background worker, the migration step 
 
 ## Quick start
 
-You need Docker with Compose, Node 22 and GNU Make.
+You need Docker with Compose, Node 26 and GNU Make.
 
 ```sh
 git clone https://github.com/x2db736ac85h/Finuance.git

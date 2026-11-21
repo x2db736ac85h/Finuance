@@ -2,8 +2,9 @@
 # - Go: the toolchain in backend/go.mod (CI's go-version-file) and Dockerfile.backend's build image;
 #   tools/check-toolchain.sh (make check) fails when the three differ, and Renovate updates them in one
 #   pull request.
-# - Node: CI's node-version 22 and the web image's build stage. Moving to Node 26 LTS is in
-#   docs/PROGRESS.md (Backlog).
+# - Node: CI's node-version 26 (LTS) and the web image's build stage (Phase 24; Node 22's end of
+#   life is 2027-04-30). Playwright 1.56.1's browser install hangs under Node 26, so install the
+#   browsers with Node 22 for now: `mise exec node@22 -- npx playwright install chromium`.
 [tools]
 go = "1.27.4"
-node = "22"
+node = "26"
