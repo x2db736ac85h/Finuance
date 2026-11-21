@@ -203,7 +203,8 @@ loki_has() { [ "$(loki_query "$1" | "$YQ" -p json '[.data.result[].values[]] | l
 
 logs() {
   log "logs and traces: Alloy, Loki and Tempo"
-  local t0; t0=$(date +%s) pf_loki pf_tempo status=0
+  local t0 pf_loki pf_tempo status=0
+  t0=$(date +%s)
   kubectl -n monitoring port-forward svc/loki 13100:3100 >/dev/null 2>&1 &
   pf_loki=$!
   kubectl -n monitoring port-forward svc/tempo 13200:3200 >/dev/null 2>&1 &
