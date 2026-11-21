@@ -4,21 +4,49 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
-## [Unreleased]
+## [0.5.1] - 2026-11-21
 
 ### Added
 
+- **Logs are collected on Kubernetes** (ADR 0042): the chart `deploy/k8s/telemetry` runs Grafana
+  Alloy and Loki. Alloy reads the logs of the app's pods through the Kubernetes API (a read-only
+  Role, no host path) and passes the app's traces on to Tempo; Loki keeps the lines 14 days.
+  Before a line reaches Loki, nginx's error lines lose the request line, the upstream address and
+  the referrer, and PostgreSQL's lines lose an error's detail and statement. Grafana links a line to
+  its trace and a trace to its lines; the API and jobs dashboards have log panels.
+  `logs.enabled: false` switches the logs off and keeps Alloy for the traces. The Compose profile
+  `make up-observability` collects the containers' logs the same way.
+- Every log line carries `trace_id` and `span_id`, and a job's lines carry `job_id`, `kind` and
+  `attempt`; the fields are listed in `docs/observability.md`.
+- A panicking request is counted: one access line with status 500, one 5xx, and
+  `finuance_panics_total` with the alert `FinuancePanic`.
+- Traces: a client span `llm.request` around each request to a model server (model, provider,
+  time to the first chunk, reported tokens, the error's kind; never a prompt or an answer); a
+  failing tool marks its span; the resource names the environment, the instance, the pod and the
+  namespace. `FINUANCE_OTEL_SAMPLE_RATIO` (the chart's `otel.sampleRatio`) samples a share of the
+  requests.
+- Metrics: `finuance_llm_request_duration_seconds`, `finuance_llm_time_to_first_token_seconds`,
+  `finuance_llm_tokens_total`, `finuance_rate_limited_total`, `finuance_auth_failures_total` and
+  `finuance_client_errors_total`. The latency histogram carries a request's trace id as an
+  exemplar (the admin port serves OpenMetrics).
+- Errors in the browser: a failure on the server's side shows its reference (the request id) in
+  the message; the web app reports its own uncaught errors to `POST /api/v1/client-events`, and the
+  content security policy reports to `POST /api/v1/csp-reports`. Both only count.
 - Synthetic users for a lab instance (ADR 0041): on an instance started with `FINUANCE_SIMULATION`
   a user can be marked as synthetic, and its requests and jobs are labelled `traffic="synthetic"`
   in logs, metrics and traces. The label comes from the user's row, never from the request. The
   service-level rules leave such traffic out unless `slo.includeSynthetic` is set, and every
   dashboard has a Traffic selector. Migration 00029.
+- The chart's `profiling` value switches `/debug/pprof` on the admin port on (off by default).
 
 ### Changed
 
 - `http_server_requests_total`, `http_server_request_duration_seconds`, `finuance_jobs_total` and
   the assistant's run, tool and model-request counters have a new label `traffic`. Rules or
   dashboards of your own that name every label of these series need it added.
+- The kubelet's probes are no longer traced, and their access lines are written at debug level.
+- The assistant's dashboard and its model-error alert watch the worker as well as the api.
+- The web image is built with Node 26.
 
 ## [0.5.0] - 2026-11-20
 
