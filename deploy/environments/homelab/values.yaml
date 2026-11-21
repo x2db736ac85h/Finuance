@@ -6,10 +6,10 @@
 image:
   # Bumped by release.yml (a pull request per release, vX.Y.Z tags only): the tag and the digests
   # of the images that release pushed and signed. The cluster runs the digests (PLAN 23.1).
-  tag: "0.5.1-rc.1"
+  tag: "0.5.1-rc.2"
   digests:
-    api: "sha256:b51dcb90687b48a2182f297746d223bff4ae646f0b7d1f17080b2bf92df03236"
-    web: "sha256:67419476dfc15bcac747cb08030c8ed7a0a9e5216bc6ec3ba2f8fce2e28c8715"
+    api: "sha256:1809dc4b293e6196c2e1ccbbb79def933f1a7b029747d6d919269ae59bcd3e79"
+    web: "sha256:433888f827b4dae83ab4566d0d5d5347b3b23fd690c62dc14cc4caa98b54b22f"
 # The images are public (Phase 22 task 22.1), so no registry login (imagePullSecrets) is needed.
 
 # Set by the private overlay (<host>); the placeholders here keep a render without it obviously wrong.
