@@ -23,6 +23,10 @@ import (
 type Options struct {
 	// Target is the lab's public address (https://lab.example): ingress, nginx, the API.
 	Target string
+	// Origin is the Origin the personas send (the lab's FINUANCE_PUBLIC_ORIGIN); empty: the
+	// target's own. It differs where the simulator reaches the front door by another name, as on
+	// Compose (http://web:8080 for http://localhost:8020).
+	Origin string
 	// Seed derives the personas' passwords (FINUANCE_SIM_SEED; identity.Password).
 	Seed    []byte
 	Version string
@@ -150,13 +154,17 @@ func New(o Options) (*Engine, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
 	}
-	e := &Engine{o: o, target: u, origin: u.Scheme + "://" + u.Host, cfg: o.Config.Clamp(), actors: map[string]*Actor{},
+	origin := u.Scheme + "://" + u.Host
+	if o.Origin != "" {
+		origin = strings.TrimRight(o.Origin, "/")
+	}
+	e := &Engine{o: o, target: u, origin: origin, cfg: o.Config.Clamp(), actors: map[string]*Actor{},
 		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]string{}, every: map[string]time.Time{},
 		logs: map[string]*personaLog{}, subs: map[chan Event]struct{}{}}
 	if o.Metrics != nil {
 		o.Metrics.config(&e.cfg, 0)
 	}
-	e.meta, err = gen.NewClientWithResponses(e.origin+u.Path+"/api/v1", gen.WithHTTPClient(&http.Client{Transport: o.Transport, Timeout: 30 * time.Second}))
+	e.meta, err = gen.NewClientWithResponses(u.Scheme+"://"+u.Host+u.Path+"/api/v1", gen.WithHTTPClient(&http.Client{Transport: o.Transport, Timeout: 30 * time.Second}))
 	if err != nil {
 		return nil, err
 	}

@@ -43,6 +43,8 @@ func TestDispatch(t *testing.T) {
 		{[]string{"admin", "synthetic-users"}, 2, "", "usage: finuance admin"},     // no -seed-stdin
 		{[]string{"admin", "synthetic-users", "-seed-stdin", "x"}, 2, "", "usage"}, // stray argument
 		{[]string{"admin", "synthetic-users", "-count=3", "-seed-stdin"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
+		{[]string{"admin", "synthetic-users", "-seed-env=FINUANCE_SIM_SEED"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
+		{[]string{"admin", "synthetic-users", "-seed-stdin", "-seed-env=X"}, 2, "", "usage"}, // one or the other
 		{[]string{"serve", "-nope"}, 2, "", "flag provided but not defined"},
 	} {
 		code, out, errOut := runArgs(nil, tc.args...)

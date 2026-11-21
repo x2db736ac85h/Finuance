@@ -265,6 +265,35 @@ up: $(ENV_FILE) web-dist ## Full Compose stack: db, migrate, api, worker, web (a
 up-observability: $(ENV_FILE) web-dist ## The Compose stack plus local Grafana, Prometheus and Tempo (grafana/otel-lgtm; http://localhost:3000)
 	VERSION=$(VERSION) $(COMPOSE) -f deploy/compose/compose.observability.yaml up -d $(UP_FLAGS) --wait
 
+# The lab for the traffic simulator (PLAN 25.8): a Compose project of its own next to `make up`.
+LAB_COMPOSE := docker compose -p finuance-lab --env-file $(ENV_FILE) --env-file .env.lab -f deploy/compose/compose.yaml \
+  -f deploy/compose/compose.observability.yaml -f deploy/compose/compose.lab.yaml
+ANIMAL ?= fox
+
+.env.lab:
+	@umask 077; { echo "# The lab's secrets (make sim-up); random, for this machine's lab only"; \
+	  echo "FINUANCE_SIM_SEED=$$(openssl rand -hex 32)"; echo "FINUANCE_SIM_CONTROL_TOKEN=$$(openssl rand -hex 32)"; } > .env.lab
+	@echo "Created .env.lab (the simulator's seed and control token)."
+
+.PHONY: sim-up
+sim-up: $(ENV_FILE) .env.lab web-dist ## The lab: a simulation instance, the mock model, the simulator and Grafana (http://localhost:8020, :8090, :3000)
+	cd web && npm run --silent build:sim
+	VERSION=$(VERSION) $(LAB_COMPOSE) up -d --build --wait
+	@set -a; . ./.env.lab; set +a; echo "Lab: http://localhost:8020 · simulator: http://localhost:8090/#token=$$FINUANCE_SIM_CONTROL_TOKEN · Grafana: http://localhost:3000"
+
+.PHONY: sim-down
+sim-down: ## Stop the lab and keep its database (SIM_RESET=1 drops the database volume as well)
+	$(LAB_COMPOSE) down $(if $(SIM_RESET),--volumes,)
+
+.PHONY: test-e2e-sim
+test-e2e-sim: ## Playwright's specs of the simulator's page against the running lab (make sim-up first)
+	@set -a; . ./.env.lab; set +a; cd web && E2E_SIM=1 E2E_SIM_URL=http://localhost:$${FINUANCE_SIM_PORT:-8090} \
+	  E2E_SIM_TOKEN="$$FINUANCE_SIM_CONTROL_TOKEN" npx playwright test
+
+.PHONY: sim-password
+sim-password: ## An animal's e-mail address and password, to sign in to the lab as it (ANIMAL=fox)
+	@$(LAB_COMPOSE) exec -T sim /finuance-sim password $(ANIMAL)
+
 .PHONY: web-dist
 web-dist: web/node_modules ## Build web/dist on the host; the web image uses it instead of building in Docker
 	cd web && npm run --silent build
@@ -308,10 +337,12 @@ eval-receipts: ## Receipt evals (images) against a real model that reads them: C
 ##@ Build and deploy
 
 .PHONY: images
-images: ## Build the backend and web images locally (web uses web/dist when present: make web-dist)
+images: ## Build the backend, web, simulator and mock-model images locally (web/dist and web/dist-sim are used when present)
 	docker build -f deploy/docker/Dockerfile.backend --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) \
 	  --build-arg DATE=$(DATE) -t finuance-backend:dev .
 	docker build -f deploy/docker/Dockerfile.web -t finuance-web:dev .
+	docker build -f deploy/docker/Dockerfile.sim --build-arg VERSION=$(VERSION) -t finuance-sim:dev .
+	docker build -f deploy/docker/Dockerfile.backend --target llmmock -t finuance-llmmock:dev .
 
 .PHONY: helm-lint
 helm-lint: ## Lint, render and validate the Helm charts, Argo CD manifests, dashboards and alert rules (needs helm, kubeconform, node, Docker, network)

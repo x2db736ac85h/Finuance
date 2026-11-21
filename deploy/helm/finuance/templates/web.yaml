@@ -42,6 +42,9 @@ spec:
           env:
             - name: FINUANCE_API_UPSTREAM
               value: {{ printf "%s-api:8080" $name | quote }}
+            # a Service keeps its address: no lookups while nginx runs (deploy/docker/nginx.conf)
+            - name: FINUANCE_API_RESOLVE
+              value: ""
             # nginx's client_max_body_size: the upload limit plus room for the multipart framing.
             - name: FINUANCE_MAX_BODY
               value: {{ printf "%dk" (add (div (int64 .Values.maxUploadBytes) 1024) 1024) | quote }}

@@ -1,0 +1,12 @@
+# Build context of Dockerfile.sim: the backend sources and the web app (for the tuning page).
+*
+!backend/
+backend/bin/
+backend/**/*_test.go
+backend/testutil/
+!web/
+web/node_modules/
+web/dist/
+web/playwright-report/
+web/test-results/
+web/screenshots/

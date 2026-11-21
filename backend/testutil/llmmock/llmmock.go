@@ -76,14 +76,18 @@ func (s *Server) Push(r ...Reply) {
 	s.mu.Unlock()
 }
 
-// Requests returns the chat request bodies received so far.
+// History is how many chat requests the mock remembers (Requests, Headers): the newest ones. A test
+// sends far fewer; a lab sends this many in an hour, and the mock runs for days (PLAN 25.7).
+const History = 256
+
+// Requests returns the chat request bodies received so far (the last History of them).
 func (s *Server) Requests() []json.RawMessage {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]json.RawMessage(nil), s.requests...)
 }
 
-// Headers returns the headers of the chat requests received so far.
+// Headers returns the headers of the chat requests received so far (the last History of them).
 func (s *Server) Headers() []http.Header {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -178,6 +182,10 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request, anthropic bool) {
 	s.mu.Lock()
 	s.requests = append(s.requests, body)
 	s.headers = append(s.headers, r.Header.Clone())
+	if over := len(s.requests) - History; over > 0 { // days of use in a lab: keep the newest only
+		s.requests = slices.Delete(s.requests, 0, over)
+		s.headers = slices.Delete(s.headers, 0, over)
+	}
 	s.mu.Unlock()
 	var req request
 	if err := json.Unmarshal(body, &req); err != nil {

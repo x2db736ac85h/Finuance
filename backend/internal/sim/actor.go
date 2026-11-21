@@ -308,6 +308,13 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	resp, err := t.base.RoundTrip(r)
 	t.a.mu.Lock()
+	// the id the logs use is the one the server answers: the simulator's own where the api takes it
+	// from the client, the web server's on Compose, which gives every request its own (PLAN 23.4)
+	if resp != nil {
+		if answered := resp.Header.Get("X-Request-ID"); answered != "" {
+			t.a.lastRequestID = answered
+		}
+	}
 	switch {
 	case err != nil || resp.StatusCode >= 500:
 		t.a.serverErrors++
