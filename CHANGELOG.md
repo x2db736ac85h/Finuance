@@ -4,6 +4,45 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
+## [0.6.0] - unreleased
+
+### Added
+
+- **A traffic simulator for a lab** (ADR 0043, [docs/simulator.md](docs/simulator.md)): the new
+  image `finuance-sim` plays ten synthetic users, each with a character and habits, against a lab
+  instance through its front door, all day. Between them they cover 57 actions in twelve feature
+  areas: imports by a data calendar, labels, groups, rules, budgets and goals, the duplicates
+  window, cash, the assistant (questions, proposals applied and reverted, digests), friends and
+  shared groups, and the account. Their bank statements are made on demand in two layouts, and
+  overlapping ones de-duplicate like real exports. The simulator refuses an instance whose
+  `/meta` does not report `simulation: true`. Ceilings in the code: 50 personas, 3× intensity,
+  30 actions a minute per persona, one assistant question at a time, back-off on `429` and on
+  `5xx`.
+- **The simulator's tuning page and control API** (`api/sim.openapi.yaml`, port 8090, behind a
+  control token):
+  - a card per animal, the feature areas and weights, schedule and limits, five presets;
+  - "act now", and a live feed whose request ids lead to the logs and from there to the trace.
+
+  The simulator's own metrics (`finuance_sim_*`) and the dashboard "Finuance · Simulator".
+- **A lab instance**: `FINUANCE_SIMULATION` makes `/meta` report `simulation`, and the web app then
+  shows a "Lab" chip in the title bar. `finuance admin synthetic-users` makes the animals with
+  passwords derived from a seed the simulator gets too.
+  - **On one machine:** `make sim-up`, with a lab, the mock model, the simulator and Grafana beside your own stack.
+  - **On Kubernetes:** `deploy/environments/lab` and the chart `deploy/helm/finuance-sim`, with the app chart's `simulation` switch and the job that makes the animals.
+- The mock model is published as the image `finuance-llmmock` for labs. Both new images are
+  built, scanned, signed and attested like the api and web images.
+
+### Changed
+
+- The image admission policy admits exact repositories per namespace: `finuance` runs only the
+  api and web images, a lab's namespace also the mock, the simulator's namespace the simulator.
+- The load test's users are synthetic (`finuance seed-demo -users=N -synthetic`, on a lab), so
+  a load test stays out of the instance's service-level numbers; k6 2.4.0.
+- On Docker Compose, nginx looks the api's name up again while it runs, so a recreated api
+  container is found without restarting the web container.
+- `tools/check-private.sh FILE…` reads relative paths from the caller's directory and fails on a
+  file it can't read.
+
 ## [0.5.1] - 2026-11-21
 
 ### Added
