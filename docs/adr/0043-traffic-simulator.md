@@ -59,6 +59,29 @@ magpie, heron, hedgehog, fox, squirrel, mole, sloth. A count above ten starts th
 a number (`otter-2`, "Otter 2"). Each has the address `<slug>@sim.invalid`; `.invalid` is reserved
 and never delivers.
 
+**Statements on demand** (`internal/sim/statements`, task 25.2).
+- **A day is a pure function.** A persona's bank history is a function of the persona and the
+  calendar day. Each day's rows come from SHA-256 in counter mode over the persona's slug and the
+  date, a stream whose output is fixed by its definition, unlike `math/rand`'s methods. Any range
+  therefore reproduces the same rows, and overlapping statements de-duplicate as real overlapping
+  exports do. `internal/demo` can't be reused: its stream starts at the beginning of the requested
+  range.
+- **Two accounts in two layouts.** Every persona has a current account and a savings account, one
+  Pekao-like and the other mBank-like (alternating by persona). This exercises detection and saved
+  import profiles, recurring payments (salary, rent, subscriptions) and transfer detection (both
+  halves of each transfer, on the same day).
+- **A stamp makes every upload byte-unique without changing a row.** The API answers `409` to bytes
+  it already holds, for example after an abandoned preview. The simulator therefore passes a new
+  stamp with every upload, which adds one line before the table:
+  - `Eksport;<stamp>` above the Pekao-like header;
+  - `#Eksport:;<stamp>;` in the mBank-like preamble.
+
+  The importer takes the record right above the first data row as the header, so it reads the
+  same rows with or without the stamp. The stamp keeps letters, digits, `-` and `_` only.
+- **Amounts** are `int64` grosze. Merchants, employers and landlords are invented, and account
+  numbers have 20 leading zeros. A year of every persona's statements passes
+  `tools/check-private.sh`.
+
 **Being easy to spot.** The trusted mark is the server's (ADR 0041). Each request also carries
 `User-Agent: finuance-sim/<version> (<animal>)` and a request id `sim-<animal>-…` for people
 reading logs. Those two are informative only and decide nothing.
