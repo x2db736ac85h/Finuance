@@ -37,6 +37,14 @@
         "hide": 0
       },
       {
+        "name": "loki",
+        "label": "Logs",
+        "type": "datasource",
+        "query": "loki",
+        "current": {},
+        "hide": 0
+      },
+      {
         "name": "namespace",
         "label": "Namespace",
         "type": "query",
@@ -913,6 +921,89 @@
           }
         }
       ]
+    },
+    {
+      "id": 19,
+      "type": "row",
+      "title": "Logs",
+      "collapsed": false,
+      "gridPos": {
+        "w": 24,
+        "h": 1,
+        "x": 0,
+        "y": 56
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "logs",
+      "title": "Warnings and errors of the api",
+      "description": "From Loki. A line's trace_id opens its trace; its request_id is the reference a user sees in an error message.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{namespace=\"$namespace\", container=\"api\"} | detected_level=~\"warn|error\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "w": 24,
+        "h": 10,
+        "x": 0,
+        "y": 57
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      }
+    },
+    {
+      "id": 21,
+      "type": "logs",
+      "title": "Errors at the proxy",
+      "description": "nginx's error log. The request line, the upstream address and the referrer are cut before the line reaches Loki.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "expr": "{namespace=\"$namespace\", container=\"web\"} |~ `\\[(error|crit|alert|emerg)\\]`",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "w": 24,
+        "h": 6,
+        "x": 0,
+        "y": 67
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      }
     }
   ]
 }

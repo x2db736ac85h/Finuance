@@ -1,0 +1,45 @@
+// Logs (PLAN 24.6, ADR 0042): every container of the pods in the namespaces named by
+// LOG_NAMESPACES, read through the Kubernetes API (a Role in each namespace; no access to the
+// node, no root user), cleaned by the stages in stages.alloy, then Loki.
+discovery.kubernetes "pods" {
+	role = "pod"
+
+	namespaces {
+		names = string.split(sys.env("LOG_NAMESPACES"), ",")
+	}
+}
+
+// Three labels: the namespace, the pod and the container. Everything else is in the line.
+discovery.relabel "pods" {
+	targets = discovery.kubernetes.pods.targets
+
+	rule {
+		source_labels = ["__meta_kubernetes_namespace"]
+		target_label  = "namespace"
+	}
+
+	rule {
+		source_labels = ["__meta_kubernetes_pod_name"]
+		target_label  = "pod"
+	}
+
+	rule {
+		source_labels = ["__meta_kubernetes_pod_container_name"]
+		target_label  = "container"
+	}
+}
+
+loki.source.kubernetes "pods" {
+	targets    = discovery.relabel.pods.output
+	forward_to = [finuance_logs.default.receiver]
+}
+
+finuance_logs "default" {
+	forward_to = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+	endpoint {
+		url = sys.env("LOKI_PUSH_URL")
+	}
+}

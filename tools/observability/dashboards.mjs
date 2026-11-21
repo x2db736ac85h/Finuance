@@ -1,7 +1,8 @@
 // Writes the Grafana dashboards of deploy/k8s/observability/files/dashboards (PLAN 17.3).
 // `node tools/observability/dashboards.mjs` regenerates them; tools/check-observability.sh fails
 // when the committed JSON differs. Every query selects a metric with braces (`name{…}`), so the
-// metric-name check can find it. Variables: the Prometheus data source and the namespace.
+// metric-name check can find it. Variables: the Prometheus data source and the namespace; the
+// dashboards with log panels also choose a Loki data source (PLAN 24.6).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +18,7 @@ const WORKER = `job="finuance-worker",${NS}`;
 const BOTH = `job=~"finuance-(api|worker)",${NS}`;
 const DB = `job="finuance-db",${NS}`;
 const ds = { type: 'prometheus', uid: '${datasource}' };
+const lokiDs = { type: 'loki', uid: '${loki}' };
 
 let nextId = 1;
 // The metrics that say whose traffic they count (ADR 0041): every panel reading one follows the
@@ -67,6 +69,17 @@ function table(title, expr, { w = 24, h = 8, unit = 'short', desc = '' } = {}) {
   };
 }
 
+/** A panel of log lines from Loki (PLAN 24.6): the newest first, each with its details (a trace_id
+ * opens the trace). Lines are not filtered by the Traffic variable: only the access line has it. */
+function logs(title, expr, { w = 24, h = 10, desc = '' } = {}) {
+  return {
+    id: nextId++, type: 'logs', title, description: desc, datasource: lokiDs,
+    targets: [{ datasource: lokiDs, expr, queryType: 'range', refId: 'A' }],
+    gridPos: { w, h },
+    options: { showTime: true, wrapLogMessage: true, sortOrder: 'Descending', enableLogDetails: true, dedupStrategy: 'none', prettifyLogMessage: false },
+  };
+}
+
 const row = (title) => ({ id: nextId++, type: 'row', title, collapsed: false, gridPos: { w: 24, h: 1 }, panels: [] });
 
 /** Places panels left to right, wrapping at 24 columns. */
@@ -81,7 +94,7 @@ function layout(panels) {
   return panels;
 }
 
-function dashboard(uid, title, description, panels, { tags = [] } = {}) {
+function dashboard(uid, title, description, panels, { tags = [], logs: withLogs = false } = {}) {
   nextId = 1;
   return {
     uid, title, description, tags: ['finuance', ...tags], editable: true, schemaVersion: 39, version: 1,
@@ -90,6 +103,7 @@ function dashboard(uid, title, description, panels, { tags = [] } = {}) {
     templating: {
       list: [
         { name: 'datasource', label: 'Data source', type: 'datasource', query: 'prometheus', current: {}, hide: 0 },
+        ...(withLogs ? [{ name: 'loki', label: 'Logs', type: 'datasource', query: 'loki', current: {}, hide: 0 }] : []),
         {
           name: 'namespace', label: 'Namespace', type: 'query', datasource: ds, refresh: 2, hide: 0, current: {},
           query: { query: 'label_values(finuance_build_info, namespace)', refId: 'ns' }, definition: 'label_values(finuance_build_info, namespace)',
@@ -143,7 +157,13 @@ const dashboards = {
       desc: 'The dots are single requests: one opens its trace in Tempo.' }),
     ts('p50 by route', [[q50('http_server_request_duration_seconds', API, ['route']), '{{route}}']], { unit: 's' }),
     table('Slowest routes (p95, last hour)', `topk(15, histogram_quantile(0.95, sum by (le, route) (rate(http_server_request_duration_seconds_bucket{${API}}[1h]))))`, { unit: 's' }),
-  ], { tags: ['api'] }),
+    row('Logs'),
+    logs('Warnings and errors of the api', `{${NS}, container="api"} | detected_level=~"warn|error"`,
+      { desc: 'From Loki. A line\'s trace_id opens its trace; its request_id is the reference a user sees in an error message.' }),
+    // regular expressions in backticks: LogQL reads a double-quoted string with Go's escapes
+    logs('Errors at the proxy', `{${NS}, container="web"} |~ \`\\[(error|crit|alert|emerg)\\]\``, { h: 6,
+      desc: 'nginx\'s error log. The request line, the upstream address and the referrer are cut before the line reaches Loki.' }),
+  ], { tags: ['api'], logs: true }),
 
   'finuance-jobs': dashboard('finuance-jobs', 'Finuance · Imports and jobs', 'River jobs on the worker, the import pipeline and its rows.', () => [
     stat('Imports committed (24 h)', `sum(increase(finuance_imports_total{${WORKER},result="committed"}[24h]))`, { decimals: 0 }),
@@ -160,7 +180,12 @@ const dashboards = {
       [`histogram_quantile(0.5, sum by (le) (rate(finuance_import_commit_duration_seconds_bucket{${WORKER}}[15m])))`, 'p50'],
       [`histogram_quantile(0.95, sum by (le) (rate(finuance_import_commit_duration_seconds_bucket{${WORKER}}[15m])))`, 'p95'],
     ], { unit: 's', w: 24 }),
-  ], { tags: ['worker'] }),
+    row('Logs'),
+    logs('Warnings and errors of the worker', `{${NS}, container="worker"} | detected_level=~"warn|error"`,
+      { desc: 'From Loki. Job lines carry job_id, kind and attempt; a line\'s trace_id opens the job\'s trace.' }),
+    logs('Database errors', `{${NS}, container=~"postgres|db"} |~ \`"error_severity":"(ERROR|FATAL|PANIC)"| (ERROR|FATAL|PANIC): \``, { h: 6,
+      desc: 'PostgreSQL\'s errors with their SQLSTATE and message. The detail and the statement are cut before the line reaches Loki.' }),
+  ], { tags: ['worker'], logs: true }),
 
   'finuance-assistant': dashboard('finuance-assistant', 'Finuance · Assistant', 'Assistant runs, plan-mode fallbacks, tools, rounds, latency, tokens and model errors. No prompt or answer text is ever recorded.', () => [
     stat('Runs (24 h)', `sum(increase(finuance_assistant_runs_total{${BOTH}}[24h]))`, { decimals: 0 }),

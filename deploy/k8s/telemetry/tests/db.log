@@ -1,0 +1,4 @@
+2026-11-21 10:00:04.000 UTC [88] ERROR:  duplicate key value violates unique constraint "users_email_key"
+2026-11-21 10:00:04.000 UTC [88] DETAIL:  Key (email)=(someone@example.com) already exists.
+2026-11-21 10:00:04.000 UTC [88] STATEMENT:  INSERT INTO users (email) VALUES ('someone@example.com')
+2026-11-21 10:00:05.000 UTC [27] LOG:  checkpoint starting: time

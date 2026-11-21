@@ -40,6 +40,13 @@
     },
     {
       "customType": "regex",
+      "description": "Loki's and Alloy's images in the telemetry chart's values (by tag and digest)",
+      "managerFilePatterns": ["/^deploy/k8s/telemetry/values\\.yaml$/"],
+      "matchStrings": ["image:\\s*(?<depName>[a-z0-9][a-z0-9./_-]*):(?<currentValue>[\\w.-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
       "description": "The CloudNativePG operand image of the database chart (a tag like 18.7-standard-trixie)",
       "managerFilePatterns": ["/^deploy/k8s/db/values\\.yaml$/"],
       "matchStrings": ["imageName:\\s*(?<depName>[^\\s:]+):(?<currentValue>\\S+)"],

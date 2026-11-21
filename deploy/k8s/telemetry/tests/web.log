@@ -1,0 +1,2 @@
+{"time":"2026-11-21T10:00:00+00:00","request_id":"abc123","remote_addr":"10.42.0.1","method":"GET","uri":"/api/v1/me","status":200,"bytes_sent":12,"request_length":300,"request_time":0.004,"upstream_time":"0.004"}
+2026/11/21 10:00:02 [error] 29#29: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 10.42.0.1, server: _, request: "GET /api/v1/search?q=secret\x22x HTTP/1.1", upstream: "http://10.43.0.5:8080/api/v1/search?q=secret", host: "f.example.com", referrer: "https://f.example.com/?q=secret"

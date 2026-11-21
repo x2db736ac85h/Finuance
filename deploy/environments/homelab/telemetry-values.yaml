@@ -1,0 +1,8 @@
+# Alloy and Loki for the homelab (PLAN 24.6, ADR 0042; Argo CD app deploy/k8s/argocd/apps/
+# telemetry.yaml, chart deploy/k8s/telemetry). Logs are on (the maintainer, 2026-11-20). What the two
+# cost on this machine is measured after their first day (docs/RUNBOOK.md "Logs"): they stay on while
+# Loki and Alloy together use less than 1 GiB of memory and a fifth of a CPU (the maintainer,
+# 2026-11-21). `logs.enabled: false` switches the logs off; Alloy then still carries the traces.
+logs:
+  enabled: true
+  namespaces: [finuance]

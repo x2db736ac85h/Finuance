@@ -1,0 +1,69 @@
+# Grafana Alloy and Loki for one machine (PLAN 24.6, ADR 0042; Argo CD app
+# deploy/k8s/argocd/apps/telemetry.yaml, namespace monitoring). Alloy receives the app's traces and
+# sends them on to Tempo; with logs on, it also reads the pods' logs through the Kubernetes API and
+# writes them to Loki. Hardened like the app's pods; Grafana's charts for both are not used: Loki's
+# runs a gateway, caches and a canary next to the single binary, more than one machine needs.
+
+# Logs: Loki, the Role that lets Alloy read the pods' logs, Alloy's log pipeline and Grafana's Loki
+# data source. Off, Alloy still carries the traces to Tempo.
+logs:
+  enabled: true
+  # Alloy reads the logs of every pod in these namespaces (a Role in each, read-only)
+  namespaces: [finuance]
+  retention: 336h # 14 days
+  storage:
+    size: 5Gi
+    storageClassName: local-path
+  # per tenant (there is one): far above what the app writes, low enough that a loop can't fill the disk
+  ingestion:
+    rateMB: 4
+    burstMB: 8
+
+traces:
+  # Tempo's OTLP over HTTP endpoint, without a path (the exporter adds /v1/traces)
+  endpoint: http://tempo.monitoring.svc:4318
+  tempoPodSelector:
+    matchLabels: { app.kubernetes.io/name: tempo }
+  # the pods that may send traces to Alloy (OTLP over HTTP, port 4318)
+  senders:
+    - namespaceSelector:
+        matchLabels: { kubernetes.io/metadata.name: finuance }
+      podSelector:
+        matchLabels: { app.kubernetes.io/name: finuance }
+
+# The Kubernetes API, for Alloy's pod discovery and log reading (logs only). An API server has no pod
+# to select and its address differs per cluster, so by default the rule names its ports only (443
+# for the Service, 6443 where k3s serves it); `to` narrows it to peers (an ipBlock of the server).
+kubernetesAPI:
+  ports: [443, 6443]
+  to: []
+
+dns:
+  namespaceSelector:
+    matchLabels: { kubernetes.io/metadata.name: kube-system }
+  podSelector:
+    matchLabels: { k8s-app: kube-dns }
+
+grafana:
+  # the pods that query Loki
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: grafana }
+  # Grafana's Loki data source as a ConfigMap for its datasource sidecar (kube-prometheus-stack's
+  # label), with a link from a line's trace_id to Tempo (data source uid "tempo")
+  datasource:
+    enabled: true
+    label: grafana_datasource
+    labelValue: "1"
+    tempoUid: tempo
+
+loki:
+  image: grafana/loki:3.7.10@sha256:b43c257ccfc925d4a50b8717cac61a3b51df8c48d01847936057e5c4075a24a7
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 768Mi }
+
+alloy:
+  image: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
+  resources:
+    requests: { cpu: 25m, memory: 96Mi }
+    limits: { memory: 384Mi }

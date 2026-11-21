@@ -1,0 +1,29 @@
+# Logs and the trace hop for the homelab (PLAN 24.6, ADR 0042): Grafana Alloy and Loki from the
+# chart in deploy/k8s/telemetry with the homelab values. Alloy receives the app's traces and sends
+# them to Tempo; with logs on (the homelab's values) it reads the pods' logs of the finuance
+# namespace through the Kubernetes API and writes them to Loki, which Grafana reads. After the app
+# (wave 0): its Role goes into the app's namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: telemetry
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform-manifests
+  source:
+    repoURL: git@github.com:x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/k8s/telemetry
+    helm:
+      releaseName: telemetry
+      valueFiles:
+        - ../../environments/homelab/telemetry-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

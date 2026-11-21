@@ -4,9 +4,11 @@
 # rendered alert rules pass `promtool check rules` and the unit tests in tests/rules.test.yaml, and
 # every metric a dashboard or rule uses exists: in metrics.txt (what the api and worker register,
 # kept current by TestMetricNames) or external-metrics.txt (CloudNativePG, the Barman Cloud plugin,
-# kube-state-metrics, the Go collectors).
-# Needs helm, kubeconform, mikefarah's yq ($YQ), node and promtool ($PROMTOOL; by default the
-# pinned prom/prometheus image through Docker).
+# kube-state-metrics, the Go collectors). For the telemetry chart (PLAN 24.6): Loki accepts its
+# configuration, Alloy validates its own, every Alloy file is formatted, and the log stages turn the
+# sample lines in deploy/k8s/telemetry/tests into tests/stages.expected (UPDATE=1 rewrites it).
+# Needs helm, kubeconform, mikefarah's yq ($YQ), node, Docker (Loki's and Alloy's images, from the
+# chart's values) and promtool ($PROMTOOL; by default the pinned prom/prometheus image through Docker).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 K8S=1.33.0
@@ -17,7 +19,8 @@ CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/784ec895547a36e548
 PROM_IMAGE=prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
 chart=deploy/k8s/observability
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+stages_container=finuance-alloy-stages-$$
+trap 'docker rm -f "$stages_container" >/dev/null 2>&1 || true; rm -rf "$work"' EXIT
 
 # promtool <args…> with paths inside $work
 promtool() {
@@ -97,4 +100,50 @@ while read -r m; do
 done <"$work/used.txt"
 [ "$missing" -eq 0 ] || exit 1
 echo "ok ($(wc -l <"$work/used.txt") metrics)"
+
+echo "== telemetry: Loki's and Alloy's configurations"
+tel=deploy/k8s/telemetry
+LOKI_IMAGE=$("$YQ" '.loki.image' "$tel/values.yaml")
+ALLOY_IMAGE=$("$YQ" '.alloy.image' "$tel/values.yaml")
+helm template telemetry "$tel" -n monitoring --kube-version "$K8S" -f deploy/environments/homelab/telemetry-values.yaml >"$work/telemetry.yaml"
+mkdir -p "$work/loki" "$work/alloy"
+"$YQ" 'select(.kind == "ConfigMap" and .metadata.name == "loki") | .data["loki.yaml"]' "$work/telemetry.yaml" >"$work/loki/loki.yaml"
+for f in traces logs stages; do
+  "$YQ" "select(.kind == \"ConfigMap\" and .metadata.name == \"alloy\") | .data[\"$f.alloy\"]" "$work/telemetry.yaml" >"$work/alloy/$f.alloy"
+done
+docker run --rm --network none -v "$work/loki:/conf:ro" "$LOKI_IMAGE" -config.file=/conf/loki.yaml -verify-config >"$work/loki.out" 2>&1 ||
+  { cat "$work/loki.out"; echo "check-observability: Loki refuses its configuration"; exit 1; }
+docker run --rm --network none -e LOG_NAMESPACES=finuance -e LOKI_PUSH_URL=http://loki:3100/loki/api/v1/push \
+  -e TEMPO_OTLP_ENDPOINT=http://tempo:4318 -v "$work/alloy:/etc/alloy:ro" "$ALLOY_IMAGE" validate /etc/alloy ||
+  { echo "check-observability: Alloy refuses its configuration"; exit 1; }
+for f in "$tel"/files/*.alloy "$tel"/tests/*.alloy; do
+  docker run --rm --network none -v "$PWD/$tel:/c:ro" "$ALLOY_IMAGE" fmt "/c/${f#"$tel"/}" | diff -q - "$f" >/dev/null ||
+    { echo "check-observability: $f is not formatted (alloy fmt)"; exit 1; }
+done
+echo ok
+
+echo "== telemetry: the log stages on the sample lines"
+mkdir -p "$work/stages"
+cp "$tel/files/stages.alloy" "$tel/tests/stages_test.alloy" "$work/stages/"
+docker run -d --name "$stages_container" --network none --user "$(id -u):$(id -g)" --tmpfs /data \
+  -v "$work/stages:/conf:ro" -v "$PWD/$tel/tests:/tests:ro" "$ALLOY_IMAGE" run /conf --storage.path=/data >/dev/null
+# as many lines as the expectation has (a stage drops some), then a moment for any line too many
+lines=$(grep -c . "$tel/tests/stages.expected" || true)
+[ "${UPDATE:-}" = 1 ] && lines=$(cat "$tel"/tests/*.log | grep -c .)
+for _ in $(seq 1 60); do
+  [ "$(docker logs "$stages_container" 2>&1 | grep -c 'component_id=loki.echo.out labels=')" -ge "$lines" ] && break
+  sleep 0.5
+done
+sleep 1
+# what would reach Loki: the labels, the line and its structured metadata (not the time it was read)
+docker logs "$stages_container" 2>&1 | grep 'component_id=loki.echo.out labels=' |
+  sed -E 's/^.* (labels=)/\1/; s/ entry_timestamp=[^ ]+//' | sort >"$work/stages.out"
+docker rm -f "$stages_container" >/dev/null
+if [ "${UPDATE:-}" = 1 ]; then cp "$work/stages.out" "$tel/tests/stages.expected"; fi
+diff "$tel/tests/stages.expected" "$work/stages.out" || { echo "check-observability: the log stages changed (UPDATE=1 after checking the diff)"; exit 1; }
+# the fields THREAT-MODEL §5 names never reach Loki, whatever the expectation says
+if grep -E 'detail\\":|query\\":|request: |upstream: |referrer: |\] (DETAIL|STATEMENT|CONTEXT|QUERY):' "$work/stages.out"; then
+  echo "check-observability: a field the stages must cut reaches Loki"; exit 1
+fi
+echo ok
 echo "check-observability: ok"

@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["logs", "traces", "kubernetesAPI", "dns", "grafana", "loki", "alloy"],
+  "definitions": {
+    "namespace": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" },
+    "selector": { "type": "object" },
+    "pinnedImage": {
+      "description": "an image by tag and digest (the admission policy refuses these images without a digest)",
+      "type": "string",
+      "pattern": "^[a-z0-9./_-]+:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}$"
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests", "limits"],
+      "properties": {
+        "requests": { "type": "object" },
+        "limits": { "type": "object", "required": ["memory"] }
+      }
+    }
+  },
+  "properties": {
+    "logs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "namespaces", "retention", "storage", "ingestion"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "namespaces": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/namespace" } },
+        "retention": { "type": "string", "pattern": "^[0-9]+h$" },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["size", "storageClassName"],
+          "properties": {
+            "size": { "type": "string", "pattern": "^[0-9]+(Mi|Gi|Ti)$" },
+            "storageClassName": { "type": "string", "minLength": 1 }
+          }
+        },
+        "ingestion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rateMB", "burstMB"],
+          "properties": {
+            "rateMB": { "type": "number", "exclusiveMinimum": 0 },
+            "burstMB": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    },
+    "traces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint", "tempoPodSelector", "senders"],
+      "properties": {
+        "endpoint": {
+          "description": "Tempo's OTLP over HTTP endpoint without a path: the exporter adds /v1/traces",
+          "type": "string",
+          "pattern": "^https?://[^/]+$"
+        },
+        "tempoPodSelector": { "$ref": "#/definitions/selector" },
+        "senders": { "type": "array", "minItems": 1, "items": { "type": "object" } }
+      }
+    },
+    "kubernetesAPI": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ports"],
+      "properties": {
+        "ports": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+        "to": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespaceSelector", "podSelector"],
+      "properties": {
+        "namespaceSelector": { "$ref": "#/definitions/selector" },
+        "podSelector": { "$ref": "#/definitions/selector" }
+      }
+    },
+    "grafana": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["podSelector", "datasource"],
+      "properties": {
+        "podSelector": { "$ref": "#/definitions/selector" },
+        "datasource": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "label", "labelValue", "tempoUid"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "label": { "type": "string", "minLength": 1 },
+            "labelValue": { "type": "string" },
+            "tempoUid": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "loki": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "resources"],
+      "properties": { "image": { "$ref": "#/definitions/pinnedImage" }, "resources": { "$ref": "#/definitions/resources" } }
+    },
+    "alloy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "resources"],
+      "properties": { "image": { "$ref": "#/definitions/pinnedImage" }, "resources": { "$ref": "#/definitions/resources" } }
+    }
+  }
+}

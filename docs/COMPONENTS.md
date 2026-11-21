@@ -31,6 +31,8 @@ flowchart TB
         prom["Prometheus + Alertmanager<br/>SLO rules, e-mail"]
         graf["Grafana<br/>6 dashboards"]
         tempo["Tempo<br/>traces, 72 h"]
+        alloy["Alloy<br/>pod logs, the traces' hop"]
+        loki["Loki<br/>logs, 14 days"]
     end
 
     spa --> ingress
@@ -47,6 +49,8 @@ flowchart TB
     worker -. "digests" .-> llm
     api -. "metrics, OTLP traces" .-> obs
     worker -. "metrics, OTLP traces" .-> obs
+    alloy --> tempo
+    alloy --> loki
 ```
 
 | Component | What it does | Code | Runs as | Talks to |
@@ -61,7 +65,7 @@ flowchart TB
 | **PostgreSQL** | All data and the job queue; forced row-level security; roles `finuance_owner` and `finuance_app` | `deploy/db/bootstrap.sql`, `deploy/k8s/db` | CloudNativePG cluster ×2, or one Compose container | The backup bucket |
 | **Model server** | Answers the assistant; optional | `internal/llm` (client side), `deploy/assistant/` | Outside the cluster (ADR 0020) | — |
 | **`llmmock`** | A scripted model server for tests, CI and the rehearsal; never in a release | `backend/testutil/llmmock`, `cmd/llmmock` | Compose profile, kind namespace | — |
-| **Monitoring** | Metrics, SLO rules, alerts by e-mail, dashboards, traces | `deploy/k8s/observability`, `deploy/k8s/tempo` | kube-prometheus-stack, Tempo | Scrapes api, worker, database, Traefik |
+| **Monitoring** | Metrics, SLO rules, alerts by e-mail, dashboards, traces, collected logs | `deploy/k8s/observability`, `deploy/k8s/tempo`, `deploy/k8s/telemetry` | kube-prometheus-stack, Tempo, Grafana Alloy, Loki | Scrapes api, worker, database, Traefik; Alloy reads the app's pod logs and passes its traces on (ADR 0042) |
 
 Not there yet:
 
@@ -200,7 +204,7 @@ flowchart LR
 | `k8s-rehearsal.yml` | Mondays, deploy pushes | The whole deployment on kind: operators, secrets, database with backup, the app, NetworkPolicy probes, streaming through the ingress, pod kills under load, restore |
 | `release.yml` | Version tags | Build, scan, SBOM, sign, the bump pull request |
 
-Argo CD applications, in sync order: projects → admission policy → Tempo → CloudNativePG operator, Sealed Secrets → Barman Cloud plugin, kube-prometheus-stack → RustFS → the secrets → the database (synced by hand) → Finuance → its dashboards and rules.
+Argo CD applications, in sync order: projects → admission policy → Tempo → CloudNativePG operator, Sealed Secrets → Barman Cloud plugin, kube-prometheus-stack → RustFS → the secrets → the database (synced by hand) → Finuance → its dashboards and rules, Alloy and Loki (`telemetry`).
 
 Namespaces on the reference cluster: `finuance` (web, api, worker, database), `finuance-restore` (restore drills), `s3` (RustFS), `monitoring`, `cnpg-system`, `kube-system` (Traefik, the admission policy), `argocd`. Pod Security `restricted`, default-deny NetworkPolicies, images admitted by registry.
 
@@ -208,14 +212,15 @@ Namespaces on the reference cluster: `finuance` (web, api, worker, database), `f
 
 | Signal | Emitted by | Where it ends up today | Gap (phase) |
 |---|---|---|---|
-| Access log, one JSON line per request | api (`middleware/logging.go`) | The container's standard output only | Not collected; no trace id on other lines (24) |
-| Job and assistant log lines | worker, api | Standard output | No job id, kind or trace id (24) |
-| Metrics | api and worker on the admin port | Prometheus; 6 dashboards; SLO and burn-rate alerts | Model latency missing; panics not counted (24) |
-| Traces: request → job → SQL, assistant run and tools | api, worker (OTLP) | Tempo, 72 hours | No span for the model request; client trace context trusted (23, 24) |
+| Access log, one JSON line per request | api (`middleware/logging.go`) | Standard output; Loki, 14 days (through Alloy) | — |
+| Every other log line (jobs, assistant, errors) | worker, api, with the trace and span ids; job lines with job id, kind and attempt | Standard output; Loki | — |
+| nginx and PostgreSQL logs | web, the database pods | Standard output; Loki, without the request line and a statement's detail | — |
+| Metrics | api and worker on the admin port | Prometheus (with exemplars); 6 dashboards; SLO and burn-rate alerts | — |
+| Traces: request → job → SQL, assistant run, model requests and tools | api, worker (OTLP) | Alloy → Tempo, 72 hours | — |
 | Activity log | Handlers, after a successful change | `audit_log`, shown in Settings → Activity | — |
-| Health | `/healthz`, `/readyz` | Probes | Logged and traced like real requests (24) |
-| Browser errors | — | Nowhere | Planned (24) |
-| Synthetic traffic | — | Indistinguishable | A server-side marker (24) |
+| Health | `/healthz`, `/readyz` | Probes; not traced, logged at debug level | — |
+| Browser errors | the web app, the browser's policy reports | `finuance_client_errors_total`, one log line each | — |
+| Synthetic traffic | the server, from the user's row (ADR 0041) | The `traffic` label in logs, metrics, traces and jobs | The simulator itself (25) |
 
 ## 7. Guard scripts and tools
 

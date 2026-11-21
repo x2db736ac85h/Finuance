@@ -55,7 +55,9 @@ services:
       FINUANCE_COOKIE_SECURE: ${FINUANCE_COOKIE_SECURE:-false}
       FINUANCE_ALLOW_SIGNUP: ${FINUANCE_ALLOW_SIGNUP:-true}
       FINUANCE_CONFIRM_PASSWORD: ${FINUANCE_CONFIRM_PASSWORD:-true} # the password again for a new access token or a role change
-      FINUANCE_PPROF: ${FINUANCE_PPROF:-true} # dev only; off unless set (the admin port is on 127.0.0.1)
+      # on in this development stack (the admin port is on 127.0.0.1 only); the binary's own default
+      # and the chart's `profiling` value are off. FINUANCE_PPROF=false switches it off here too.
+      FINUANCE_PPROF: ${FINUANCE_PPROF:-true}
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: ${FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       # web (nginx) forwards the client address; trust it from the Compose network only.
       FINUANCE_TRUSTED_PROXIES: ${FINUANCE_TRUSTED_PROXIES:-172.16.0.0/12}

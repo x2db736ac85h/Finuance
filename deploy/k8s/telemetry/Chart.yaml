@@ -1,0 +1,6 @@
+apiVersion: v2
+name: telemetry
+description: Grafana Alloy (the collector for the app's logs and traces) and Loki (the log store) for one machine (PLAN 24.6, ADR 0042)
+type: application
+version: 0.1.0
+appVersion: "alloy v1.22.0, loki 3.7.10"

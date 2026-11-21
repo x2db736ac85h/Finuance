@@ -45,3 +45,4 @@ One file per decision, numbered in the order they were taken. A record is not re
 | [0039](0039-image-signatures.md) | Image signatures at admission: Sigstore policy-controller, Finuance's images by digest | accepted | 2026-11-19 |
 | [0040](0040-two-step-sign-in.md) | Two-step sign-in with one-time codes (TOTP), recovery codes, the rule for administrators | accepted | 2026-11-20 |
 | [0041](0041-synthetic-users.md) | Synthetic users: the server decides whose traffic is synthetic (`users.kind`, the `traffic` label) | accepted | 2026-11-21 |
+| [0042](0042-log-and-trace-pipeline.md) | The log and trace pipeline: Alloy in front of Loki and Tempo, the log stages, one switch | accepted | 2026-11-21 |

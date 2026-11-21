@@ -1,0 +1,3 @@
+# Logs switched off: only Alloy, for the traces (tools/check-helm.sh renders this too).
+logs:
+  enabled: false

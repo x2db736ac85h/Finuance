@@ -1,0 +1,125 @@
+// Traces (PLAN 24.6, ADR 0042): OTLP over HTTP from the api and the worker, a second pass over the
+// attributes the app already drops itself (observability.Redact; TestCollectorDropsTheSameAttributes
+// keeps the two lists equal), then Tempo at TEMPO_OTLP_ENDPOINT.
+otelcol.receiver.otlp "app" {
+	http {
+		endpoint = "0.0.0.0:4318"
+	}
+
+	output {
+		traces = [otelcol.processor.memory_limiter.default.input]
+	}
+}
+
+otelcol.processor.memory_limiter "default" {
+	check_interval         = "1s"
+	limit_percentage       = 80
+	spike_limit_percentage = 20
+
+	output {
+		traces = [otelcol.processor.attributes.redact.input]
+	}
+}
+
+otelcol.processor.attributes "redact" {
+	action {
+		key    = "client.address"
+		action = "delete"
+	}
+
+	action {
+		key    = "client.port"
+		action = "delete"
+	}
+
+	action {
+		key    = "network.peer.address"
+		action = "delete"
+	}
+
+	action {
+		key    = "network.peer.port"
+		action = "delete"
+	}
+
+	action {
+		key    = "user_agent.original"
+		action = "delete"
+	}
+
+	action {
+		key    = "url.query"
+		action = "delete"
+	}
+
+	action {
+		key    = "url.full"
+		action = "delete"
+	}
+
+	action {
+		key    = "http.target"
+		action = "delete"
+	}
+
+	action {
+		key    = "http.url"
+		action = "delete"
+	}
+
+	action {
+		key    = "http.user_agent"
+		action = "delete"
+	}
+
+	action {
+		key    = "http.client_ip"
+		action = "delete"
+	}
+
+	action {
+		key    = "net.sock.peer.addr"
+		action = "delete"
+	}
+
+	action {
+		key    = "db.query.text"
+		action = "delete"
+	}
+
+	action {
+		key    = "db.statement"
+		action = "delete"
+	}
+
+	action {
+		key    = "pgx.query.parameters"
+		action = "delete"
+	}
+
+	action {
+		key    = "exception.message"
+		action = "delete"
+	}
+
+	action {
+		key    = "exception.stacktrace"
+		action = "delete"
+	}
+
+	output {
+		traces = [otelcol.processor.batch.default.input]
+	}
+}
+
+otelcol.processor.batch "default" {
+	output {
+		traces = [otelcol.exporter.otlphttp.tempo.input]
+	}
+}
+
+otelcol.exporter.otlphttp "tempo" {
+	client {
+		endpoint = sys.env("TEMPO_OTLP_ENDPOINT")
+	}
+}

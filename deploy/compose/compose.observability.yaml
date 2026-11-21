@@ -1,7 +1,9 @@
 # Local observability (PLAN 17.3): `make up-observability` adds Grafana, Prometheus, Tempo and an
 # OpenTelemetry collector in one container (grafana/otel-lgtm) to the Compose stack. Prometheus
 # scrapes the api and worker and evaluates the chart's rules; the api and worker send their traces
-# over OTLP, so a request, the job it enqueued and their SQL show up as one trace in Tempo.
+# over OTLP, so a request, the job it enqueued and their SQL show up as one trace in Tempo. Alloy
+# sends every container's log to the Loki in the same container, cleaned by the cluster's own stages
+# (PLAN 24.6): the dashboards' log panels and the links between a line and its trace work here too.
 # Grafana: http://localhost:3000 (anonymous admin, local only).
 services:
   observability:
@@ -19,6 +21,25 @@ services:
       interval: 5s
       timeout: 3s
       retries: 60
+  # Alloy reads the logs through the Docker socket, which is the machine's root: this profile is for a
+  # development machine only. DOCKER_SOCKET names another socket (rootless Docker, Podman).
+  alloy:
+    image: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
+    # as root for the socket, without capabilities: the image's own data folder is closed to it
+    # a folder of its own: the image's /etc/alloy holds a default configuration Alloy would load too
+    command: [run, /etc/finuance-alloy, --storage.path=/tmp/alloy, --disable-reporting]
+    environment:
+      COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME}
+    volumes:
+      - ./observability/alloy.alloy:/etc/finuance-alloy/compose.alloy:ro
+      - ../k8s/telemetry/files/stages.alloy:/etc/finuance-alloy/stages.alloy:ro
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      observability: { condition: service_healthy }
   api:
     environment:
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: http://observability:4318/v1/traces

@@ -100,14 +100,15 @@ developer:
       note: finuance-api and finuance-web on ghcr.io, signed with cosign.
 
 otel:
-  # Tempo in the monitoring namespace (OTLP over HTTP; deploy/k8s/argocd/apps/tempo.yaml).
-  endpoint: http://tempo.monitoring.svc:4318/v1/traces
+  # Alloy in the monitoring namespace, which sends the traces on to Tempo (OTLP over HTTP;
+  # deploy/k8s/argocd/apps/telemetry.yaml, ADR 0042).
+  endpoint: http://alloy.monitoring.svc:4318/v1/traces
   egress:
     - to:
         - namespaceSelector:
             matchLabels: { kubernetes.io/metadata.name: monitoring }
           podSelector:
-            matchLabels: { app.kubernetes.io/name: tempo }
+            matchLabels: { app.kubernetes.io/name: alloy }
       ports: [4318]
 
 podMonitor:

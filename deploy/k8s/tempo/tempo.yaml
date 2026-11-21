@@ -2,7 +2,8 @@
 # deploy/k8s/argocd/apps/tempo.yaml, namespace monitoring). Grafana's single-binary Helm chart is
 # deprecated and tempo-distributed runs six services on object storage, too much for one machine:
 # these manifests run the same binary, hardened like the app's pods. Only OTLP over HTTP (4318, from
-# the app's api and worker) and the query API (3200, from Grafana) are open.
+# Alloy, which receives the app's traces: deploy/k8s/telemetry) and the query API (3200, from
+# Grafana) are open.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -114,7 +115,8 @@ spec:
     - { name: http, port: 3200, targetPort: http }
     - { name: otlp-http, port: 4318, targetPort: otlp-http }
 ---
-# Traces only from the app's api and worker, queries only from Grafana; Tempo connects nowhere.
+# Traces only from Alloy (the app's api and worker send theirs there), queries only from Grafana;
+# Tempo connects nowhere.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -126,10 +128,8 @@ spec:
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
-        - namespaceSelector:
-            matchLabels: { kubernetes.io/metadata.name: finuance }
-          podSelector:
-            matchLabels: { app.kubernetes.io/name: finuance }
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: alloy }
       ports:
         - { port: 4318, protocol: TCP }
     - from:

@@ -74,6 +74,8 @@ jobs:
         run: tools/rehearsal.sh deploy
       - name: Smoke scripts through the ingress
         run: tools/rehearsal.sh smoke
+      - name: Logs and traces (Alloy, Loki, Tempo)
+        run: tools/rehearsal.sh logs
       - name: NetworkPolicies
         run: tools/rehearsal.sh netpol
       - name: Assistant stream through Traefik

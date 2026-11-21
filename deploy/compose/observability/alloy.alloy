@@ -1,0 +1,43 @@
+// Logs of the local observability profile (compose.observability.yaml, PLAN 24.6): every container of
+// this Compose project, read through the Docker socket, cleaned by the cluster's own stages
+// (deploy/k8s/telemetry/files/stages.alloy, mounted next to this file) and written to the Loki inside
+// the observability container. The labels are the cluster's: namespace and container (the Compose
+// service), so the dashboards' log panels work here too.
+discovery.docker "compose" {
+	host = "unix:///var/run/docker.sock"
+
+	filter {
+		name   = "label"
+		values = ["com.docker.compose.project=" + sys.env("COMPOSE_PROJECT")]
+	}
+}
+
+discovery.relabel "compose" {
+	targets = discovery.docker.compose.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "container"
+	}
+
+	rule {
+		target_label = "namespace"
+		replacement  = "finuance"
+	}
+}
+
+loki.source.docker "compose" {
+	host       = "unix:///var/run/docker.sock"
+	targets    = discovery.relabel.compose.output
+	forward_to = [finuance_logs.default.receiver]
+}
+
+finuance_logs "default" {
+	forward_to = [loki.write.lgtm.receiver]
+}
+
+loki.write "lgtm" {
+	endpoint {
+		url = "http://observability:3100/loki/api/v1/push"
+	}
+}

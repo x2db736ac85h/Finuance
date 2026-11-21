@@ -4,6 +4,9 @@
 # plugin, Sealed Secrets, an S3 stand-in (RustFS) and the mock model server, then the database and
 # app charts as the homelab runs them. It checks:
 #   - the smoke scripts through the ingress (HTTPS, a throwaway CA);
+#   - logs and traces (Alloy, Loki and Tempo as on the homelab): an api line in Loki with its trace
+#     id, that trace in Tempo through Alloy, lines of the worker, web and database, and a failing
+#     statement's line in Loki without its detail or statement;
 #   - the NetworkPolicies (a pod outside the app can't reach the database or the api);
 #   - an assistant answer streamed through Traefik without buffering (the mock's slow answer);
 #   - no failed request under load while api and web pods are deleted and rolled (k6);
@@ -17,7 +20,7 @@
 # Timings go to $SUMMARY (and the GitHub job summary). Needs docker, kind, kubectl, helm, kubeseal,
 # mikefarah's yq ($YQ), curl, openssl and python3.
 #
-#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|netpol|sse|podkill|restore|limits|signatures|summary|diagnostics|report|down]
+#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|logs|netpol|sse|podkill|restore|limits|signatures|summary|diagnostics|report|down]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -158,11 +161,26 @@ tls() {
     -extfile "$WORK/tls.ext" -out "$WORK/tls.crt" 2>/dev/null
 }
 
+# telemetry: Tempo and the telemetry chart (Alloy, Loki) in monitoring with the homelab's values,
+# under restricted Pod Security; kind's storage class is "standard". After the app's namespace exists
+# (Alloy's Role goes there), before the app (it sends its traces to Alloy).
+telemetry() {
+  kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+  kubectl label namespace monitoring --overwrite pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=latest
+  "$YQ" '(select(.kind == "PersistentVolumeClaim") | .spec.storageClassName) = "standard"' deploy/k8s/tempo/tempo.yaml | kubectl apply -f -
+  helm upgrade --install telemetry deploy/k8s/telemetry -n monitoring -f deploy/environments/homelab/telemetry-values.yaml \
+    --set logs.storage.storageClassName=standard --wait --timeout 5m
+  kubectl -n monitoring rollout status deploy/tempo --timeout=180s
+}
+
 deploy() {
   log "deploy: database and app charts into finuance"
   tls
   namespace finuance
   local t0; t0=$(date +%s)
+  telemetry
+  timing "Tempo, Alloy and Loki ready" $(($(date +%s) - t0))
+  t0=$(date +%s)
   helm upgrade --install finuance-db deploy/k8s/db -n finuance -f "$R/db-values.yaml"
   kubectl -n finuance wait cluster/finuance-db --for=condition=Ready --timeout=900s
   timing "database cluster ready (2 instances)" $(($(date +%s) - t0))
@@ -177,6 +195,43 @@ deploy() {
   wait_for 120 "https://localhost:8443/healthz through Traefik" curl_ca -f "$BASE/healthz"
   # /healthz is the web pod's; Traefik learns the api's endpoints on its own schedule
   wait_for 120 "the api through Traefik" curl_ca -f -o /dev/null "$BASE/api/v1/meta"
+}
+
+# loki_query <LogQL>: the last hour's matching lines as Loki's JSON (through the port-forward of logs)
+loki_query() { curl -fsS -G "http://localhost:13100/loki/api/v1/query_range" --data-urlencode "query=$1" --data-urlencode since=1h --data-urlencode limit=50; }
+loki_has() { [ "$(loki_query "$1" | "$YQ" -p json '[.data.result[].values[]] | length')" -gt 0 ]; }
+
+logs() {
+  log "logs and traces: Alloy, Loki and Tempo"
+  local t0; t0=$(date +%s) pf_loki pf_tempo status=0
+  kubectl -n monitoring port-forward svc/loki 13100:3100 >/dev/null 2>&1 &
+  pf_loki=$!
+  kubectl -n monitoring port-forward svc/tempo 13200:3200 >/dev/null 2>&1 &
+  pf_tempo=$!
+  wait_for 30 "Loki through a port-forward" curl -fsS http://localhost:13100/ready
+  wait_for 30 "Tempo through a port-forward" curl -fsS http://localhost:13200/ready
+  (
+    set -e
+    # the smoke scripts' requests: an api line with its trace id, and that trace in Tempo through Alloy
+    wait_for 120 "an api line with a trace id in Loki" loki_has '{namespace="finuance", container="api"} | trace_id!=""'
+    trace=$(loki_query '{namespace="finuance", container="api"} | trace_id!=""' | "$YQ" -p json '.data.result[0].stream.trace_id')
+    [[ $trace =~ ^[0-9a-f]{32}$ ]] || { echo "no trace id in Loki's answer: $trace" >&2; exit 1; }
+    wait_for 120 "trace $trace in Tempo" curl -fsS -o /dev/null "http://localhost:13200/api/traces/$trace"
+    for c in worker web postgres; do
+      wait_for 120 "lines of the $c container in Loki" loki_has "{namespace=\"finuance\", container=\"$c\"}"
+    done
+    # a failing statement with a detail that quotes a value: in Loki with its SQLSTATE, without the
+    # detail and the statement (THREAT-MODEL §5, deploy/k8s/telemetry/files/stages.alloy)
+    psql_in finuance "CREATE TEMP TABLE rehearsal_t (v text PRIMARY KEY); INSERT INTO rehearsal_t VALUES ('quoted-value'), ('quoted-value')" >/dev/null 2>&1 || true
+    wait_for 120 "the failing statement's line in Loki" loki_has '{namespace="finuance", container="postgres"} |= "23505"'
+    if loki_has '{namespace="finuance", container="postgres"} |= "quoted-value"'; then
+      echo "the failing statement's value reached Loki" >&2; exit 1
+    fi
+    fact "logs and traces" "an api line in Loki with trace id $trace, the trace in Tempo through Alloy; worker, web and database lines in Loki; a failing statement's line there with its SQLSTATE and without its detail or statement"
+  ) || status=1
+  kill "$pf_loki" "$pf_tempo" 2>/dev/null || true
+  timing "logs and traces checked" $(($(date +%s) - t0))
+  return $status
 }
 
 # run_smoke <base url> <namespace>
@@ -250,7 +305,8 @@ EOF
   if probe finuance stray-db probe=stray "sleep 8; nc -z -w 5 $db 5432"; then echo "an unlabelled pod in the app's namespace reached PostgreSQL" >&2; return 1; fi
   if probe finuance stray-out probe=stray "sleep 8; nc -z -w 5 $s3 9000"; then echo "an unlabelled pod in the app's namespace reached a service outside it" >&2; return 1; fi
   if probe finuance stray-api probe=stray "sleep 8; nc -z -w 5 $api 8080"; then echo "an unlabelled pod in the app's namespace reached the api" >&2; return 1; fi
-  kubectl delete namespace netpol-probe monitoring --wait=false >/dev/null
+  # monitoring stays: Tempo, Alloy and Loki run there (the probes in it removed themselves)
+  kubectl delete namespace netpol-probe --wait=false >/dev/null
   fact "NetworkPolicies" "blocked: an outside pod from PostgreSQL 5432, api 8080 and metrics 9090; the api's labels in another namespace and the chart's name without a database component from 5432; a pod of monitoring that is not Prometheus from 9090; an unlabelled pod in the app's namespace from PostgreSQL, the api and a service outside. Controls: an outside pod reached RustFS, Prometheus's label reached 9090"
 }
 
@@ -517,9 +573,9 @@ down() { kind delete cluster --name "$CLUSTER" || true; }
 case ${1:-all} in
   all)
     rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
-    images; cluster; platform; deploy; smoke; netpol; sse; podkill; restore; limits; signatures; summary
+    images; cluster; platform; deploy; smoke; logs; netpol; sse; podkill; restore; limits; signatures; summary
     ;;
-  images | cluster | platform | deploy | smoke | netpol | sse | podkill | restore | limits | signatures)
+  images | cluster | platform | deploy | smoke | logs | netpol | sse | podkill | restore | limits | signatures)
     mkdir -p "$WORK/logs"
     "$1" 2>&1 | tee "$WORK/logs/$1.log"
     ;;
