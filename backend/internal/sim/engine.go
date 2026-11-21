@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -78,6 +79,49 @@ type Engine struct {
 	model   chan struct{} // one assistant run at a time, across every persona
 	askDay  string        // the day AskedToday counts, in the instance's time zone
 	asked   int
+	board   map[string]string // what one persona leaves for another (a friend code)
+	every   map[string]time.Time
+}
+
+// Every reports whether at least d has passed since it last said yes for this key, across every
+// persona, and if so counts this time: for what the instance limits per address, which all
+// personas share behind the front door (ten friend codes entered an hour).
+func (e *Engine) Every(key string, d time.Duration) bool {
+	now := e.o.Clock.Now()
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if last, ok := e.every[key]; ok && now.Sub(last) < d {
+		return false
+	}
+	e.every[key] = now
+	return true
+}
+
+// Post leaves a note for other personas under key (a friend code under "friend-code/<slug>").
+func (e *Engine) Post(key, value string) {
+	e.mu.Lock()
+	e.board[key] = value
+	e.mu.Unlock()
+}
+
+// Take removes and returns the first note whose key starts with prefix and for which keep says
+// yes, in key order.
+func (e *Engine) Take(prefix string, keep func(key string) bool) (string, string, bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	keys := make([]string, 0, len(e.board))
+	for k := range e.board {
+		if strings.HasPrefix(k, prefix) && keep(k) {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return "", "", false
+	}
+	slices.Sort(keys)
+	v := e.board[keys[0]]
+	delete(e.board, keys[0])
+	return keys[0], v, true
 }
 
 // New checks the options and makes an engine; Run starts it.
@@ -102,7 +146,7 @@ func New(o Options) (*Engine, error) {
 		o.Log = slog.New(slog.DiscardHandler)
 	}
 	e := &Engine{o: o, target: u, origin: u.Scheme + "://" + u.Host, cfg: o.Config.Clamp(), actors: map[string]*Actor{},
-		running: map[string]bool{}, model: make(chan struct{}, 1)}
+		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]string{}, every: map[string]time.Time{}}
 	e.meta, err = gen.NewClientWithResponses(e.origin+u.Path+"/api/v1", gen.WithHTTPClient(&http.Client{Transport: o.Transport, Timeout: 30 * time.Second}))
 	if err != nil {
 		return nil, err

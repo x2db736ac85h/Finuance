@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/statements"
 )
@@ -206,7 +207,8 @@ func TestStart(t *testing.T) {
 
 func testActor(e *Engine, c Character) *Actor {
 	return &Actor{Persona: identity.Nth(0), Character: c, engine: e, Rand: rand.New(rand.NewPCG(1, 2)), //nolint:gosec // a test's stream
-		accounts: map[int]uuid.UUID{statements.Current: uuid.New(), statements.Savings: uuid.New()}, every: map[string]time.Time{}}
+		accounts: map[int]uuid.UUID{statements.Current: uuid.New(), statements.Savings: uuid.New()}, every: map[string]time.Time{},
+		imported: map[int]platform.Date{}}
 }
 
 func TestPause(t *testing.T) {
