@@ -304,6 +304,7 @@ In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance crit
 - **River's index maintenance fails every midnight** (found 2026-11-21 in the database's log): `REINDEX` of River's tables by the app role ends with SQLSTATE 42501, because the owner role owns them (`DB-7`). Nothing breaks, but it is an error line a day: switch River's reindexer off for the app role, or let the owner role run it.
 - **Alloy's and Loki's own metrics** (dropped spans, refused pushes) are not scraped; a PodMonitor and an alert when the project allows the kind.
 - **Argo CD sign-in through an identity provider** as soon as its UI is reachable beyond a port-forward.
+- **A Vitest test that waits too briefly under load** (found 2026-11-21 in `make check` before the `v0.6.0-rc.1` bump): `src/import/ImportWindow.test.tsx` "uploads into the account in view" did not find the Import dialog within `findByRole`'s one second (the test took 1.5 s, and MSW reported an unhandled `GET /api/v1/categories` in it). That run had 53 workers on a machine also running the 24-hour lab. The file passed alone three times and the next full run passed 511 of 511. If it fails again: see whether the dialog waits on that request, and make the test wait for what it needs rather than raising the timeout.
 
 ## Backlog (ideas, not scheduled)
 
@@ -321,6 +322,7 @@ Scheduled by Rev 5
 Still ideas
 - Argo CD verifies commit signatures for both repositories and `main` requires signed commits (`OPS-1`, `OPS-4`; the maintainer, 2026-11-20: not now). Merges made on GitHub are signed with GitHub's own key, so the check would still rest on the GitHub account; it needs key management in the cluster and a signing path for the release bot.
 - The sign-in and administration tables written only through database functions, with the columns revoked from the app role (`DB-1`, second half; the maintainer, 2026-11-20): it changes the bootstrap SQL of every install, so it wants its own phase and an upgrade path. Until then a guard test keeps the queries that write those tables to the sign-in, administration and cleanup code.
+- A generated client without the server's packages: `api/openapi.yaml` maps two schemas to Go types in `internal/ledger` and `internal/legacyimport` (`x-go-type`), so `client/gen` imports them and `fin` and `finuance-sim` link most of the server's packages (unused; found 2026-11-21). A client of their own or plain generated types would make both binaries smaller.
 - `fin mcp`: the CLI as an MCP server over stdio. Worth a decision after Phase 26: it needs either a library or a hand-written JSON-RPC layer.
 - Per-user model API keys. More interesting once a cloud model exists (Phase 26): each person would pay for and consent to their own provider.
 - Passkeys (WebAuthn) after the one-time-code second factor of Phase 23; needs a library.
