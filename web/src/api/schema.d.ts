@@ -5135,6 +5135,8 @@ export interface components {
             email: string;
             displayName: string;
             isDemo: boolean;
+            /** @description A user of the traffic simulator (only on an instance started with `FINUANCE_SIMULATION`); its traffic is labelled as synthetic */
+            isSynthetic: boolean;
             isAdmin: boolean;
             disabled: boolean;
             mustChangePassword: boolean;
@@ -5156,6 +5158,11 @@ export interface components {
             disabled: number;
             /** Format: int64 */
             demo: number;
+            /**
+             * Format: int64
+             * @description Users of the traffic simulator, counted in `users` too
+             */
+            synthetic: number;
             /**
              * Format: int64
              * @description Signed in during the last 7 days.

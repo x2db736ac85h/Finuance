@@ -44,7 +44,7 @@ func TestNoopTracingAndAdmin(t *testing.T) {
 		t.Fatalf("noop tracing: %v", err)
 	}
 	m := NewMetrics()
-	m.HTTPRequests.WithLabelValues("GET /x", "GET", "2xx").Inc()
+	m.HTTPRequests.WithLabelValues("GET /x", "GET", "2xx", "real").Inc()
 	srv := NewAdminServer(":0", m, true, nil)
 	w := httptest.NewRecorder()
 	srv.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/metrics", nil))
@@ -73,11 +73,11 @@ func TestNoopTracingAndAdmin(t *testing.T) {
 // bucket edge, or the SLI would have to round to 250 or 500 ms.
 func TestLatencyHistogramHasTheSLOBucket(t *testing.T) {
 	m := NewMetrics()
-	m.HTTPDuration.WithLabelValues("POST /api/v1/transactions/query").Observe(0.27)
+	m.HTTPDuration.WithLabelValues("POST /api/v1/transactions/query", "real").Observe(0.27)
 	srv := NewAdminServer(":0", m, false, nil)
 	w := httptest.NewRecorder()
 	srv.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/metrics", nil))
-	if !strings.Contains(w.Body.String(), `http_server_request_duration_seconds_bucket{route="POST /api/v1/transactions/query",le="0.3"} 1`) {
+	if !strings.Contains(w.Body.String(), `http_server_request_duration_seconds_bucket{route="POST /api/v1/transactions/query",traffic="real",le="0.3"} 1`) {
 		t.Error("no le=0.3 bucket counting a 270 ms request")
 	}
 }

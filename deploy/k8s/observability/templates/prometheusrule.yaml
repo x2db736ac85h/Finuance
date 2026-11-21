@@ -3,9 +3,13 @@
 {{- /* Requests that count for availability: every API route except health checks, the
        assistant (its failures are the model server's; FinuanceAssistantModelErrors covers them)
        and unmatched paths. */}}
-{{- $avail := printf `job="finuance-api",namespace="%s",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"` $ns }}
+{{- /* Synthetic traffic (the simulator's users, ADR 0041) is left out of the objectives unless
+       slo.includeSynthetic is set, as a lab instance does: there the simulator is the
+       traffic. A series without the label (a release before 0.6) matches too. */}}
+{{- $traffic := ternary "" `,traffic!="synthetic"` .Values.slo.includeSynthetic }}
+{{- $avail := printf `job="finuance-api",namespace="%s",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"%s` $ns $traffic }}
 {{- /* Requests that count for latency: the table query and the insight charts (docs/SLO.md). */}}
-{{- $lat := printf `job="finuance-api",namespace="%s",route=~"POST /api/v1/(transactions/query|insights/.*)"` $ns }}
+{{- $lat := printf `job="finuance-api",namespace="%s",route=~"POST /api/v1/(transactions/query|insights/.*)"%s` $ns $traffic }}
 # Recording rules and alerts for Finuance (PLAN 17.4, docs/SLO.md). Burn-rate alerts follow the
 # multi-window, multi-burn-rate pattern of the Google SRE workbook: "page" when 2 % of the 30-day
 # budget burns in an hour (14.4×, 1 h and 5 m windows), "ticket" when 5 % burns in 6 hours (6×,

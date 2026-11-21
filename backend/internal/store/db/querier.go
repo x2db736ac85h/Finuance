@@ -213,6 +213,9 @@ type Querier interface {
 	FinishLegacyImport(ctx context.Context, arg FinishLegacyImportParams) error
 	// The display name of a user (friends never see each other's e-mail).
 	FriendDisplayName(ctx context.Context, id uuid.UUID) (string, error)
+	// Whether two users are of the same kind: a person and a synthetic user never become friends
+	// (ADR 0041).
+	FriendKinds(ctx context.Context, arg FriendKindsParams) (bool, error)
 	GetAIChangeForUpdate(ctx context.Context, arg GetAIChangeForUpdateParams) (GetAIChangeForUpdateRow, error)
 	GetAccount(ctx context.Context, arg GetAccountParams) (Account, error)
 	GetAdviceArticle(ctx context.Context, id uuid.UUID) (GetAdviceArticleRow, error)
@@ -508,6 +511,9 @@ type Querier interface {
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
 	// An administrator's reset: a new one-time password the user has to replace at the next sign-in.
 	SetUserPasswordMustChange(ctx context.Context, arg SetUserPasswordMustChangeParams) error
+	// Marks a user as synthetic (the traffic simulator's users, ADR 0041). Never an administrator, and
+	// never back: a synthetic user stays one until it is deleted.
+	SetUserSynthetic(ctx context.Context, id uuid.UUID) (int64, error)
 	// Spending per shared group and category name, over the groups the user can see.
 	SharedCategorySpend(ctx context.Context) ([]SharedCategorySpendRow, error)
 	// The user's copies in a group and whether their source transaction still exists (a missing source

@@ -35,6 +35,7 @@ of these names for something else.
 | `job_id` | every line a job writes | River's id of the job |
 | `kind` | every line a job writes | the job's kind (`commit_import`, `reclassify`, …) |
 | `attempt` | every line a job writes | which attempt this is, from 1 |
+| `traffic` | the access line, every line a job writes | `real`, or `synthetic` for the traffic simulator's users and the jobs they queue; decided by the server from the user's row, never by the request |
 
 A line gets `trace_id` and `span_id` from the context it is logged with, so code logs with its
 context (`InfoContext` and friends; the linter requires it where a context is in scope). Errors
@@ -133,3 +134,24 @@ with its values or query. At most five reports per page load, and thirty a minut
 address at the server. A browser's policy report is counted and thrown away unread, because it
 quotes addresses. Both routes work without a session; the report route is the one route that takes
 a request without the client header, since the browser sends it by itself, and it changes nothing.
+
+## Synthetic traffic
+
+A lab instance can run a traffic simulator whose users are marked as synthetic in the database
+([ADR 0041](adr/0041-synthetic-users.md)). The server labels what they cause, and nothing a client
+sends can set or clear the label:
+
+- **Logs:** `traffic` is `synthetic` on the access line and on every line of a job such a user
+  queued. In Loki, `traffic="synthetic"` shows only the simulator and `traffic!="synthetic"` hides it.
+- **Metrics:** the label `traffic` (`real`, `synthetic`) on `http_server_requests_total`,
+  `http_server_request_duration_seconds`, `finuance_jobs_total`, `finuance_assistant_runs_total`,
+  `finuance_assistant_tool_calls_total` and `finuance_assistant_model_requests_total`. Every
+  dashboard has a **Traffic** selector (all, real, synthetic).
+- **Traces:** the request's and the job's span carry `finuance.synthetic=true`; in Tempo, search
+  for that attribute.
+- **Objectives:** the service-level rules leave synthetic traffic out, so the error budget
+  describes what people experience. A lab, where the simulator is the traffic, sets
+  `slo.includeSynthetic: true` in the observability chart.
+
+Synthetic users exist only on an instance started with `FINUANCE_SIMULATION=true`; elsewhere they
+can't be made and can't sign in.

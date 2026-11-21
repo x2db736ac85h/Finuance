@@ -567,7 +567,7 @@ func (run *Run) usage(t *turn, final Message) *RunUsage {
 func (run *Run) observe(ctx context.Context, span trace.Span, mode, result, errKind string, t *turn, t0 time.Time) {
 	m := run.r.cfg.Metrics
 	d := run.r.cfg.Clock.Now().Sub(t0)
-	m.Runs.WithLabelValues(mode, result).Inc()
+	m.Runs.WithLabelValues(mode, result, observability.Traffic(ctx)).Inc()
 	m.Duration.WithLabelValues(mode).Observe(d.Seconds())
 	rounds, sent, tools := 0, 0, []string(nil)
 	if t != nil {
@@ -667,7 +667,7 @@ func (run *Run) complete(ctx context.Context, emit func(Event), t *turn, req llm
 		m.LLMTokens.WithLabelValues(run.conn.Name, "input").Add(float64(res.Usage.Input))
 		m.LLMTokens.WithLabelValues(run.conn.Name, "output").Add(float64(res.Usage.Output))
 	}
-	run.r.cfg.Metrics.Upstream.WithLabelValues(run.conn.Name, result).Inc()
+	run.r.cfg.Metrics.Upstream.WithLabelValues(run.conn.Name, result, observability.Traffic(ctx)).Inc()
 	t.usage.Input += res.Usage.Input
 	t.usage.Output += res.Usage.Output
 	return res, err
@@ -757,7 +757,7 @@ func (run *Run) step(ctx context.Context, emit func(Event), sc Scope, t *turn, n
 		var err error
 		out, err = run.r.cfg.Tools.Run(ctx, run.userID, sc, name, rawArgs)
 		if err != nil {
-			run.r.cfg.Metrics.ToolCalls.WithLabelValues(knownTool(name), "error").Inc()
+			run.r.cfg.Metrics.ToolCalls.WithLabelValues(knownTool(name), "error", observability.Traffic(ctx)).Inc()
 			span.SetStatus(codes.Error, "tool failed") // a fixed text: the error can quote the arguments
 			return Outcome{}, err
 		}
@@ -767,7 +767,7 @@ func (run *Run) step(ctx context.Context, emit func(Event), sc Scope, t *turn, n
 			result = "unknown"
 		}
 	}
-	run.r.cfg.Metrics.ToolCalls.WithLabelValues(knownTool(name), result).Inc()
+	run.r.cfg.Metrics.ToolCalls.WithLabelValues(knownTool(name), result, observability.Traffic(ctx)).Inc()
 	st := Step{Tool: name, Args: args, Summary: out.Summary, Result: cutBytes(out.JSON, MaxStepResult), Matched: out.Matched,
 		Truncated: len(out.JSON) > MaxStepResult, ToolFilter: stepFilter(out.Filter), Proposal: out.Proposal}
 	t.steps = append(t.steps, st)

@@ -48,6 +48,7 @@ type User struct {
 	Email              string
 	DisplayName        string
 	IsDemo             bool
+	Synthetic          bool // the traffic simulator's user (ADR 0041)
 	IsAdmin            bool
 	Disabled           bool
 	MustChangePassword bool
@@ -60,7 +61,7 @@ type User struct {
 
 func userOf(u db.User) User {
 	limits, _ := instance.ParseLimits(u.Limits)
-	return User{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, IsAdmin: u.IsAdmin,
+	return User{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, Synthetic: u.Kind == auth.KindSynthetic, IsAdmin: u.IsAdmin,
 		Disabled: u.DisabledAt != nil, MustChangePassword: u.MustChangePassword, CreatedAt: u.CreatedAt,
 		LastLoginAt: u.LastLoginAt, Limits: limits}
 }
@@ -74,7 +75,7 @@ type UsersPage struct {
 
 // Totals count the instance's accounts.
 type Totals struct {
-	Users, Admins, Disabled, Demo, Active7, Active30 int64
+	Users, Admins, Disabled, Demo, Synthetic, Active7, Active30 int64
 }
 
 // ListUsers returns up to limit accounts, newest first, whose e-mail contains search.
@@ -227,6 +228,9 @@ func (s *Service) UpdateUser(ctx context.Context, actor, id uuid.UUID, in Update
 		if u.IsDemo && in.Admin != nil && *in.Admin {
 			return invalid("admin", "a demo account can't be an administrator")
 		}
+		if u.Kind == auth.KindSynthetic && in.Admin != nil && *in.Admin {
+			return invalid("admin", "a synthetic user can't be an administrator")
+		}
 		demote := in.Admin != nil && !*in.Admin && u.IsAdmin
 		disable := in.Disabled != nil && *in.Disabled && u.DisabledAt == nil
 		if demote || disable {
@@ -366,6 +370,9 @@ func (s *Service) SetAdminByEmail(ctx context.Context, email string, admin bool)
 	err = s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		if u.IsDemo && admin {
 			return invalid("email", "a demo account can't be an administrator")
+		}
+		if u.Synthetic && admin {
+			return invalid("email", "a synthetic user can't be an administrator")
 		}
 		if !admin {
 			if err := auth.GuardLastAdmin(ctx, q, u.ID); err != nil {

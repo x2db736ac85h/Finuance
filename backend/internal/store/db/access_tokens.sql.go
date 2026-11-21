@@ -126,7 +126,7 @@ func (q *Queries) ListAccessTokens(ctx context.Context, userID uuid.UUID) ([]Acc
 const resolveAccessToken = `-- name: ResolveAccessToken :one
 SELECT t.id AS token_id, t.scope, t.last_used_at, t.user_id,
        u.email, u.display_name, u.is_demo, u.created_at AS user_created_at,
-       u.is_admin, u.must_change_password, u.limits
+       u.is_admin, u.must_change_password, u.limits, u.kind
 FROM access_tokens t
 JOIN users u ON u.id = t.user_id
 WHERE t.token_hash = $1 AND t.revoked_at IS NULL AND t.expires_at > $2 AND u.disabled_at IS NULL
@@ -149,6 +149,7 @@ type ResolveAccessTokenRow struct {
 	IsAdmin            bool
 	MustChangePassword bool
 	Limits             []byte
+	Kind               string
 }
 
 // A live token and its user: not revoked, not expired, and the account not disabled.
@@ -167,6 +168,7 @@ func (q *Queries) ResolveAccessToken(ctx context.Context, arg ResolveAccessToken
 		&i.IsAdmin,
 		&i.MustChangePassword,
 		&i.Limits,
+		&i.Kind,
 	)
 	return i, err
 }

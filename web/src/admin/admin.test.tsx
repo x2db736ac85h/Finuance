@@ -38,6 +38,7 @@ const adminUser = (over: Partial<Schemas['AdminUser']> = {}): Schemas['AdminUser
   email: 'sam@example.com',
   displayName: 'Sam',
   isDemo: false,
+  isSynthetic: false,
   isAdmin: false,
   disabled: false,
   mustChangePassword: false,
@@ -47,7 +48,7 @@ const adminUser = (over: Partial<Schemas['AdminUser']> = {}): Schemas['AdminUser
   usage,
   ...over,
 });
-const totals = { users: 2, admins: 1, disabled: 0, demo: 0, active7: 1, active30: 2 };
+const totals = { users: 2, admins: 1, disabled: 0, demo: 0, synthetic: 0, active7: 1, active30: 2 };
 
 describe('administration', () => {
   it('is only for administrators', async () => {
@@ -201,6 +202,20 @@ describe('administration', () => {
     expect(await within(dialog).findByText('abcd-efgh-jkmn-pqrs')).toBeTruthy();
     expect(created).toEqual({ email: 'new@example.com', displayName: '', admin: false });
     expect(row).toBeTruthy();
+  });
+
+  it('marks the traffic simulator’s users in the list (ADR 0041)', async () => {
+    const robot = adminUser({
+      id: '00000000-0000-4000-8000-0000000000a3',
+      email: 'otter@example.com',
+      isSynthetic: true,
+    });
+    server.use(http.get(`${API}/admin/users`, () => HttpResponse.json({ users: [adminUser(), robot], totals })));
+    renderApp('/admin/users');
+    const row = (await screen.findByRole('button', { name: 'otter@example.com' })).closest('tr');
+    expect(row && within(row).getByText('Synthetic')).toBeTruthy();
+    const person = screen.getByRole('button', { name: 'sam@example.com' }).closest('tr');
+    expect(person && within(person).queryByText('Synthetic')).toBeNull();
   });
 
   it('acts on an account: limits, disable, delete with the e-mail', async () => {

@@ -19,6 +19,34 @@ tests:
     alert_rule_test:
       - { eval_time: 90m, alertname: FinuanceAvailabilityBurnFast, exp_alerts: [] }
 
+  # The traffic simulator's users fail and are slow, people's requests are fine: the objectives
+  # describe what people experience, so nothing burns (ADR 0041). The series people's requests
+  # write carry traffic="real"; a release before the label existed writes none, as above.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="2xx",traffic="real"}'
+        values: '0+100x120'
+      - series: 'http_server_requests_total{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",method="POST",status_class="5xx",traffic="synthetic"}'
+        values: '0+100x120'
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",traffic="real",le="0.3"}'
+        values: '0+100x120'
+      - series: 'http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",traffic="real"}'
+        values: '0+100x120'
+      - series: 'http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",traffic="synthetic",le="0.3"}'
+        values: '0x120'
+      - series: 'http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route="POST /api/v1/transactions/query",traffic="synthetic"}'
+        values: '0+100x120'
+    promql_expr_test:
+      - expr: finuance:slo_availability:error_ratio_rate1h
+        eval_time: 60m
+        exp_samples: [{ labels: 'finuance:slo_availability:error_ratio_rate1h', value: 0 }]
+      - expr: finuance:slo_latency:error_ratio_rate1h
+        eval_time: 60m
+        exp_samples: [{ labels: 'finuance:slo_latency:error_ratio_rate1h', value: 0 }]
+    alert_rule_test:
+      - { eval_time: 90m, alertname: FinuanceAvailabilityBurnFast, exp_alerts: [] }
+      - { eval_time: 90m, alertname: FinuanceLatencyBurnFast, exp_alerts: [] }
+
   # 10 % of requests fail: both availability burn alerts fire; the latency ones don't.
   - interval: 1m
     input_series:

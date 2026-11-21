@@ -90,7 +90,7 @@ func TestPanicIsCounted(t *testing.T) {
 			t.Errorf("access-line field %q is not in the contract", k)
 		}
 	}
-	if got := testutil.ToFloat64(m.HTTPRequests.WithLabelValues("GET /api/v1/boom", "GET", "5xx")); got != 1 {
+	if got := testutil.ToFloat64(m.HTTPRequests.WithLabelValues("GET /api/v1/boom", "GET", "5xx", "real")); got != 1 {
 		t.Errorf("5xx count = %v, want 1", got)
 	}
 	if got := testutil.ToFloat64(m.Panics); got != 1 {
@@ -172,7 +172,7 @@ func TestProbesAreQuiet(t *testing.T) {
 	if ended := spans.Ended(); len(ended) != 1 || ended[0].Name() != "GET /api/v1/meta" {
 		t.Errorf("%d spans, want only the API request's", len(ended))
 	}
-	if got := testutil.ToFloat64(m.HTTPRequests.WithLabelValues("GET /healthz", "GET", "2xx")); got != 1 {
+	if got := testutil.ToFloat64(m.HTTPRequests.WithLabelValues("GET /healthz", "GET", "2xx", "real")); got != 1 {
 		t.Errorf("the probe is not counted: %v", got) // the metrics still see it
 	}
 

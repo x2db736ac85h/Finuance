@@ -27,6 +27,9 @@ type Info struct {
 	TraceID   string
 	SpanID    string // the request span's id; with TraceID on the access line (the layer that writes it is outside the span)
 	UserHash  string // hex of the first 8 bytes of SHA-256(user id); never the id itself (§8.2)
+	// Synthetic: the signed-in user is a synthetic one (ADR 0041). Set by the session layer from
+	// the database; the outer layers label the access line and the request metrics with it.
+	Synthetic bool
 }
 
 type infoKey struct{}

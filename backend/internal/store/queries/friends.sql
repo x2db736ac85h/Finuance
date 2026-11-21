@@ -28,6 +28,11 @@ DELETE FROM friend_codes WHERE expires_at < @now;
 -- The display name of a user (friends never see each other's e-mail).
 SELECT display_name FROM users WHERE id = @id AND disabled_at IS NULL;
 
+-- name: FriendKinds :one
+-- Whether two users are of the same kind: a person and a synthetic user never become friends
+-- (ADR 0041).
+SELECT a.kind = b.kind AS same FROM users a, users b WHERE a.id = @a AND b.id = @b;
+
 -- name: AddFriendship :execrows
 INSERT INTO friendships (user_a, user_b, created_at) VALUES (@user_a, @user_b, @now)
 ON CONFLICT DO NOTHING;

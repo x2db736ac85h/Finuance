@@ -390,5 +390,6 @@ func NewAuth(st *store.Store, cfg config.Config) *auth.Service {
 		SessionTTL:     cfg.SessionTTL,
 		SessionIdleTTL: cfg.SessionIdleTTL,
 		AllowSignup:    cfg.AllowSignup,
+		Simulation:     cfg.Simulation,
 	})
 }

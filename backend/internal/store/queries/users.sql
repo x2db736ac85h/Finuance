@@ -22,6 +22,11 @@ UPDATE users SET password_hash = @password_hash WHERE id = @id;
 -- name: SetUserDisplayName :exec
 UPDATE users SET display_name = @display_name WHERE id = @id;
 
+-- name: SetUserSynthetic :execrows
+-- Marks a user as synthetic (the traffic simulator's users, ADR 0041). Never an administrator, and
+-- never back: a synthetic user stays one until it is deleted.
+UPDATE users SET kind = 'synthetic' WHERE id = @id AND NOT is_admin;
+
 -- name: DeleteUser :execrows
 -- Cascades to every user-owned table.
 DELETE FROM users WHERE id = @id;

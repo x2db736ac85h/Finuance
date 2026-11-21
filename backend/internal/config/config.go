@@ -44,7 +44,10 @@ type Config struct {
 	AllowSignup     bool
 	Profiling       bool // /debug/pprof on the admin port (FINUANCE_PPROF)
 	DemoMode        bool
-	DemoAssistant   bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
+	// Simulation: this instance is a lab for the traffic simulator; only here can synthetic users
+	// exist and sign in (FINUANCE_SIMULATION, ADR 0041). Never on an instance with real data.
+	Simulation    bool
+	DemoAssistant bool // the assistant on a demo instance (off unless set; DemoAssistantMessages, DemoMaxRows)
 	// Developer is the administrators' Developer section; nil unless FINUANCE_DEVELOPER_MODE=true.
 	Developer            *Developer
 	MaxUploadBytes       int64
@@ -129,6 +132,7 @@ func Load(lookup Lookup, req Requirement) (Config, error) {
 		ConfirmPassword:      p.bool("FINUANCE_CONFIRM_PASSWORD", true),
 		Profiling:            p.bool("FINUANCE_PPROF", false),
 		DemoMode:             p.bool("FINUANCE_DEMO_MODE", false),
+		Simulation:           p.bool("FINUANCE_SIMULATION", false),
 		DemoAssistant:        p.bool("FINUANCE_DEMO_ASSISTANT", false),
 		MaxUploadBytes:       int64(p.int("FINUANCE_MAX_UPLOAD_BYTES", 20<<20, 1024, 1<<31)),
 		MaxLegacyImportBytes: int64(p.int("FINUANCE_MAX_LEGACY_IMPORT_BYTES", 200<<20, 1024, 1<<33)),

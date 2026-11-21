@@ -8286,7 +8286,7 @@ components:
     AdminUser:
       type: object
       additionalProperties: false
-      required: [id, email, displayName, isDemo, isAdmin, disabled, mustChangePassword, secondFactor, createdAt, limits, usage]
+      required: [id, email, displayName, isDemo, isSynthetic, isAdmin, disabled, mustChangePassword, secondFactor, createdAt, limits, usage]
       properties:
         id:
           type: string
@@ -8297,6 +8297,9 @@ components:
           type: string
         isDemo:
           type: boolean
+        isSynthetic:
+          type: boolean
+          description: A user of the traffic simulator (only on an instance started with `FINUANCE_SIMULATION`); its traffic is labelled as synthetic
         isAdmin:
           type: boolean
         disabled:
@@ -8319,7 +8322,7 @@ components:
     UserTotals:
       type: object
       additionalProperties: false
-      required: [users, admins, disabled, demo, active7, active30]
+      required: [users, admins, disabled, demo, synthetic, active7, active30]
       properties:
         users:
           type: integer
@@ -8333,6 +8336,10 @@ components:
         demo:
           type: integer
           format: int64
+        synthetic:
+          type: integer
+          format: int64
+          description: Users of the traffic simulator, counted in `users` too
         active7:
           type: integer
           format: int64

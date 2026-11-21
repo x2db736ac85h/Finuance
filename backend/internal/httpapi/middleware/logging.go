@@ -37,6 +37,7 @@ func Logging(base *slog.Logger) Middleware {
 					slog.Int64("bytes", rec.bytes),
 					slog.Float64("duration_ms", float64(time.Since(start).Microseconds())/1000),
 					slog.String("client_ip", info.ClientIP),
+					slog.String("traffic", observability.TrafficLabel(info.Synthetic)),
 				}
 				if info.TraceID != "" { // probes and requests refused before the tracing layer have none
 					attrs = append(attrs, slog.String("trace_id", info.TraceID), slog.String("span_id", info.SpanID))

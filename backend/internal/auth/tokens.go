@@ -155,8 +155,11 @@ func (s *Service) ResolveToken(ctx context.Context, secret string) (Identity, er
 		}
 		limits, _ := instance.ParseLimits(r.Limits)
 		id = Identity{User: User{ID: r.UserID, Email: r.Email, DisplayName: r.DisplayName, IsDemo: r.IsDemo, CreatedAt: r.UserCreatedAt,
-			IsAdmin: r.IsAdmin, MustChangePassword: r.MustChangePassword, Limits: limits},
+			IsAdmin: r.IsAdmin, MustChangePassword: r.MustChangePassword, Limits: limits, Synthetic: r.Kind == KindSynthetic},
 			Token: &TokenAccess{ID: r.TokenID, Scope: r.Scope}}
+		if id.User.Synthetic && !s.cfg.Simulation {
+			return pgx.ErrNoRows // as if the token did not exist (ADR 0041)
+		}
 		if r.LastUsedAt == nil || now.Sub(*r.LastUsedAt) >= tokenTouchEvery {
 			return q.TouchAccessToken(ctx, db.TouchAccessTokenParams{ID: r.TokenID, Now: now})
 		}

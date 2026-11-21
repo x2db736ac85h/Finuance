@@ -27,14 +27,14 @@ func NewMetrics() *Metrics {
 		Registry: reg,
 		HTTPRequests: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "http_server_requests_total",
-			Help: "HTTP requests by route pattern, method and status class.",
-		}, []string{"route", "method", "status_class"}),
+			Help: "HTTP requests by route pattern, method, status class and traffic (real, or synthetic for the simulator's users).",
+		}, []string{"route", "method", "status_class", "traffic"}),
 		HTTPDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name: "http_server_request_duration_seconds",
 			Help: "HTTP request duration by route pattern.",
 			// 0.3 s is the latency SLO's threshold (docs/SLO.md): the SLI counts requests in that bucket.
 			Buckets: []float64{.005, .01, .025, .05, .1, .25, .3, .5, 1, 2.5, 5, 10, 30},
-		}, []string{"route"}),
+		}, []string{"route", "traffic"}),
 		HTTPInFlight: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "http_server_requests_in_flight",
 			Help: "HTTP requests currently being served.",

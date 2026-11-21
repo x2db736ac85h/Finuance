@@ -52,6 +52,34 @@
           "refId": "ns"
         },
         "definition": "label_values(finuance_build_info, namespace)"
+      },
+      {
+        "name": "traffic",
+        "label": "Traffic",
+        "type": "custom",
+        "hide": 0,
+        "query": "all : .*,real,synthetic",
+        "current": {
+          "text": "all",
+          "value": ".*"
+        },
+        "options": [
+          {
+            "text": "all",
+            "value": ".*",
+            "selected": true
+          },
+          {
+            "text": "real",
+            "value": "real",
+            "selected": false
+          },
+          {
+            "text": "synthetic",
+            "value": "synthetic",
+            "selected": false
+          }
+        ]
       }
     ]
   },
@@ -74,7 +102,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(finuance_assistant_runs_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[24h]))",
+          "expr": "sum(increase(finuance_assistant_runs_total{traffic=~\"$traffic\",job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[24h]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -129,7 +157,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(finuance_assistant_runs_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\",result=\"fallback_plan\"}[24h]))",
+          "expr": "sum(increase(finuance_assistant_runs_total{traffic=~\"$traffic\",job=~\"finuance-(api|worker)\",namespace=\"$namespace\",result=\"fallback_plan\"}[24h]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -184,7 +212,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(sum(rate(finuance_assistant_model_requests_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\",result!=\"ok\"}[1h])) or vector(0)) / (sum(rate(finuance_assistant_model_requests_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h])))",
+          "expr": "(sum(rate(finuance_assistant_model_requests_total{traffic=~\"$traffic\",job=~\"finuance-(api|worker)\",namespace=\"$namespace\",result!=\"ok\"}[1h])) or vector(0)) / (sum(rate(finuance_assistant_model_requests_total{traffic=~\"$traffic\",job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[1h])))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -313,7 +341,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (mode, result) (rate(finuance_assistant_runs_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
+          "expr": "sum by (mode, result) (rate(finuance_assistant_runs_total{traffic=~\"$traffic\",job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
           "legendFormat": "{{mode}} {{result}}",
           "refId": "A"
         }
@@ -443,7 +471,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (tool, result) (rate(finuance_assistant_tool_calls_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
+          "expr": "sum by (tool, result) (rate(finuance_assistant_tool_calls_total{traffic=~\"$traffic\",job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
           "legendFormat": "{{tool}} {{result}}",
           "refId": "A"
         }
@@ -497,7 +525,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (connection, result) (rate(finuance_assistant_model_requests_total{job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
+          "expr": "sum by (connection, result) (rate(finuance_assistant_model_requests_total{traffic=~\"$traffic\",job=~\"finuance-(api|worker)\",namespace=\"$namespace\"}[15m]))",
           "legendFormat": "{{connection}} {{result}}",
           "refId": "A"
         }

@@ -81,6 +81,24 @@ func (q *Queries) FriendDisplayName(ctx context.Context, id uuid.UUID) (string, 
 	return display_name, err
 }
 
+const friendKinds = `-- name: FriendKinds :one
+SELECT a.kind = b.kind AS same FROM users a, users b WHERE a.id = $1 AND b.id = $2
+`
+
+type FriendKindsParams struct {
+	A uuid.UUID
+	B uuid.UUID
+}
+
+// Whether two users are of the same kind: a person and a synthetic user never become friends
+// (ADR 0041).
+func (q *Queries) FriendKinds(ctx context.Context, arg FriendKindsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, friendKinds, arg.A, arg.B)
+	var same bool
+	err := row.Scan(&same)
+	return same, err
+}
+
 const listFriends = `-- name: ListFriends :many
 SELECT u.id, u.display_name, f.created_at
 FROM friendships f

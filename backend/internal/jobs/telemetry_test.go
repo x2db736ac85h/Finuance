@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -100,7 +101,7 @@ func TestTelemetryCarriesTheTraceIntoTheJob(t *testing.T) {
 	if failed.Parent().IsValid() {
 		t.Error("a job inserted without a trace got a parent")
 	}
-	if testutil.ToFloat64(m.Jobs.WithLabelValues("commit_import", "ok")) != 1 || testutil.ToFloat64(m.Jobs.WithLabelValues("commit_import", "error")) != 1 {
+	if testutil.ToFloat64(m.Jobs.WithLabelValues("commit_import", "ok", "real")) != 1 || testutil.ToFloat64(m.Jobs.WithLabelValues("commit_import", "error", "real")) != 1 {
 		t.Error("job counts not recorded")
 	}
 	if testutil.CollectAndCount(m.Duration) != 1 {
@@ -223,6 +224,71 @@ func TestJobLinesNameTheJob(t *testing.T) {
 	for k := range line {
 		if k != "new" && !slices.Contains(observability.LogFields, k) {
 			t.Errorf("field %q is not in the contract", k)
+		}
+	}
+}
+
+// TestSyntheticJobs: a job queued while serving a synthetic user carries the mark in its metadata
+// (written from the server's context, next to the trace context), and when it is worked the mark
+// labels its metric, its log lines and its span, and reaches whatever the job queues in turn. A
+// job queued for a person carries nothing and counts as real (ADR 0041, PLAN 24.7).
+func TestSyntheticJobs(t *testing.T) {
+	rec, tp := recorder()
+	m := NewJobMetrics(nil)
+	tel := NewTelemetry(tp, propagation.TraceContext{}, m)
+	insert := func(ctx context.Context, metadata string) []byte {
+		p := &rivertype.JobInsertParams{Kind: "commit_import", Metadata: []byte(metadata)}
+		if _, err := tel.InsertMany(ctx, []*rivertype.JobInsertParams{p}, func(context.Context) ([]*rivertype.JobInsertResult, error) { return nil, nil }); err != nil {
+			t.Fatal(err)
+		}
+		return p.Metadata
+	}
+	person := insert(context.Background(), `{"keep":1}`)
+	robot := insert(observability.WithTraffic(context.Background(), true), `{"keep":1}`)
+	if strings.Contains(string(person), "synthetic") || !strings.Contains(string(robot), `"finuance_synthetic":true`) || !strings.Contains(string(robot), `"keep":1`) {
+		t.Fatalf("metadata: a person's %s, a synthetic user's %s", person, robot)
+	}
+
+	var b bytes.Buffer
+	base := observability.WithLogger(context.Background(), observability.NewLogger(&b, config.EnvProd, slog.LevelInfo))
+	var inner bool
+	work := func(id int64, metadata []byte) {
+		job := &rivertype.JobRow{ID: id, Kind: "commit_import", Attempt: 1, Metadata: metadata}
+		if err := tel.Work(base, job, func(ctx context.Context) error {
+			inner = observability.Synthetic(ctx)
+			observability.Logger(ctx).InfoContext(ctx, "import committed")
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	work(1, person)
+	if inner || !strings.Contains(b.String(), `"traffic":"real"`) {
+		t.Errorf("a person's job: synthetic in the context = %v, line %s", inner, b.String())
+	}
+	b.Reset()
+	work(2, robot)
+	if !inner || !strings.Contains(b.String(), `"traffic":"synthetic"`) {
+		t.Errorf("a synthetic user's job: synthetic in the context = %v, line %s", inner, b.String())
+	}
+	if r, s := testutil.ToFloat64(m.Jobs.WithLabelValues("commit_import", "ok", "real")), testutil.ToFloat64(m.Jobs.WithLabelValues("commit_import", "ok", "synthetic")); r != 1 || s != 1 {
+		t.Errorf("finuance_jobs_total: real = %v, synthetic = %v, want 1 and 1", r, s)
+	}
+	var marked int
+	for _, s := range rec.Ended() {
+		for _, kv := range s.Attributes() {
+			if kv.Key == "finuance.synthetic" && kv.Value.AsBool() {
+				marked++
+			}
+		}
+	}
+	if marked != 1 {
+		t.Errorf("%d job spans carry finuance.synthetic, want the synthetic user's only", marked)
+	}
+	// a mark that is not exactly the server's own is no mark
+	for _, forged := range []string{`{"finuance_synthetic":"true"}`, `{"synthetic":true}`, `not json`} {
+		if isSynthetic([]byte(forged)) {
+			t.Errorf("metadata %s counts as synthetic", forged)
 		}
 	}
 }
