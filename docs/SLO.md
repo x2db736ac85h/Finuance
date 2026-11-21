@@ -18,7 +18,15 @@ dashboard shows both, the budget left and the burn rates.
   depends on a model server outside the app (ADR 0020); its failures are watched by
   `FinuanceAssistantModelErrors` instead, so a sleeping LM Studio doesn't burn the app's budget.
   4xx answers are the client's (validation, conflicts, rate limits) and count as good, as does
-  499 for a request whose client went away before the answer (a cancelled fetch).
+  499 for a request whose client went away before the answer (a cancelled fetch). A handler that
+  panics is a 5xx like any other failure (Phase 24); `FinuancePanic` also raises a ticket for it.
+- **Synthetic traffic is left out** (Phase 24, ADR 0041): both SLIs select
+  `traffic!="synthetic"`, so the requests of a traffic simulator's users don't spend or earn the
+  budget, which describes what people experience. A series without the label (a release before
+  0.5.1) still counts. A lab instance, where the simulator is the traffic, sets
+  `slo.includeSynthetic: true` in the observability chart, and the selector is dropped. On the SLO
+  dashboard the **Traffic** selector filters the panels computed from the request series (the SLIs
+  and the budget left); the burn-rate panels read the recording rules, which follow the chart value.
 - **Latency** counts `POST /api/v1/transactions/query` and `POST /api/v1/insights/*`: the requests a
   user waits for while browsing the table and the charts. 300 ms is the target of PLAN §8.3 for
   100k-row users; the latency histogram has a bucket at exactly 0.3 s
@@ -44,12 +52,19 @@ budget in exactly 30 days.
 | `FinuanceLatencyBurnSlow` | ticket | slow ratio > 6 × 5 % over 6 h **and** 30 m | 5 % |
 
 The short window makes an alert stop soon after the problem does. Other alerts in the same chart:
-targets down or absent, import commits failing after their retries, job kinds failing over 10 %,
-the connection pool over 90 %, assistant model errors, PostgreSQL down or absent, replication lag,
+targets down or absent, a request handler that panicked (`FinuancePanic`), import commits failing
+after their retries, job kinds failing over 10 %, the connection pool over 90 %, assistant model
+errors (from the api's chats and the worker's digests), PostgreSQL down or absent, replication lag,
 WAL archiving failing, the last backup older than 26 hours (or none reported), pods in
 CrashLoopBackOff, no api pod ready for a minute, and over 5 % of Finuance's requests failing at the
 ingress for 5 minutes (with `ingress.traefik`). Every alert goes by e-mail (Phase 17 decision): pages at once and every hour,
 tickets grouped and once a day (`alerting.email`, an `AlertmanagerConfig`).
+
+**From an alert to its cause.** A burn-rate alert names the SLO; the *Finuance · API* dashboard
+shows which route fails or is slow. A dot on its latency panel is an exemplar: it opens the trace of
+one request in that bucket. The dashboard's log panel lists the api's errors, each with its
+`request_id` and `trace_id`, and a trace's "Logs for this span" lists every line of that request
+and of the job it queued ([observability.md](observability.md#following-one-request)).
 
 ## Daily digest
 
@@ -77,7 +92,8 @@ on its own route: once, no "resolved". `tests/digest.test.yaml` checks the text 
 
 The digest runs on the same machine as everything it reports on: a day without it means the machine,
 Prometheus, Alertmanager or the mail path was down (as on 2026-11-05, when the machine lost its
-network for 9½ hours). There is deliberately no outside heartbeat (the maintainer, 2026-11-06).
+network for 9½ hours). There is deliberately no outside heartbeat (the maintainer, 2026-11-06, and
+again at the start of Phase 24 on 2026-11-20; the Backlog keeps it).
 
 ## Error budget policy
 
@@ -92,6 +108,7 @@ release or a slow query shows up as a number rather than a feeling.
 ## Where it runs
 
 The dashboards and rules need the Prometheus Operator and Grafana's dashboard sidecar
-(kube-prometheus-stack), installed in Phase 18 with the alert receiver's SMTP secret. Until then,
-`make up-observability` runs the same dashboards locally against Compose (Grafana's `otel-lgtm`
-image), and `make loadtest` checks the latency SLO under load (docs/perf.md "Phase 17").
+(kube-prometheus-stack), on the reference environment since Phase 18 with the alert receiver's SMTP
+secret (RUNBOOK step 13). `make up-observability` runs the same dashboards locally against Compose
+(Grafana's `otel-lgtm` image, with the containers' logs), and `make loadtest` checks the latency SLO
+under load (docs/perf.md "Phase 17").

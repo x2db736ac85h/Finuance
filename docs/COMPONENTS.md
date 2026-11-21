@@ -1,6 +1,6 @@
 # Component map
 
-Every part of Finuance as it is built at `v0.4.1` (written 2026-11-16), where its code lives and what it talks to. Parts that are planned and not built yet are marked **planned** with their phase (`docs/PLAN.md` §9). [ARCHITECTURE.md](ARCHITECTURE.md) explains the data model, tenant isolation and the query engine in depth; this page is the overview.
+Every part of Finuance as it is built at `v0.5.1` (written 2026-11-16, brought up to date 2026-11-21 at the end of Phase 24), where its code lives and what it talks to. Parts that are planned and not built yet are marked **planned** with their phase (`docs/PLAN.md` §9). [ARCHITECTURE.md](ARCHITECTURE.md) explains the request path, the deployment, the data model, tenant isolation and the query engine in depth; this page is the map.
 
 ## 1. What runs
 
@@ -58,21 +58,20 @@ flowchart TB
 | **React app** | The whole interface; typed API client; no HTML built from strings | `web/src/` | Static files in the browser | `/api/v1/*` on the same origin, session cookie |
 | **`fin`** | Command line for people and agents (JSON, CSV, table output) | `backend/cmd/fin`, `internal/fincli`, `internal/client/gen` | A local binary | The API with an access token (ADR 0036) |
 | **web** | Serves the app with a strict CSP; proxies `/api/` under Compose | `deploy/docker/Dockerfile.web`, `nginx.conf` | Deployment ×2, unprivileged nginx | The api |
-| **api** | Every HTTP endpoint (113 paths, 155 operations), sessions and CSRF, rate limits, the assistant's run loop | `backend/cmd/finuance`, `internal/app`, `internal/httpapi` | Deployment ×2–4 (HPA), `finuance serve` | PostgreSQL, the model server, the OTLP endpoint |
+| **api** | Every HTTP endpoint (120 paths, 163 operations), sessions, access tokens, two-step sign-in, CSRF, rate limits, the assistant's run loop, the browser's error reports | `backend/cmd/finuance`, `internal/app`, `internal/httpapi` | Deployment ×2–4 (HPA), `finuance serve` | PostgreSQL, the model server, the OTLP endpoint |
 | **worker** | Background jobs: committing imports, reclassifying, legacy imports, digests, cleanups | `internal/jobs` | Deployment ×1, `finuance worker` | PostgreSQL, the model server |
-| **migrate** | Schema migrations (goose, 24 files) | `internal/store/migrations` | Job before each rollout, owner role | PostgreSQL |
-| **admin CLI** | `create-user`, `set-password`, `grant-admin`, `revoke-admin`, `llm-probe`; `seed-demo` | `internal/app/admin.go` | Run by hand in a pod or locally | PostgreSQL |
+| **migrate** | Schema migrations (goose, 29 files) | `internal/store/migrations` | Job before each rollout, owner role | PostgreSQL |
+| **admin CLI** | `create-user`, `set-password`, `grant-admin`, `revoke-admin`, `remove-second-factor`, `llm-probe`; `seed-demo` | `internal/app/admin.go` | Run by hand in a pod or locally | PostgreSQL |
 | **PostgreSQL** | All data and the job queue; forced row-level security; roles `finuance_owner` and `finuance_app` | `deploy/db/bootstrap.sql`, `deploy/k8s/db` | CloudNativePG cluster ×2, or one Compose container | The backup bucket |
 | **Model server** | Answers the assistant; optional | `internal/llm` (client side), `deploy/assistant/` | Outside the cluster (ADR 0020) | — |
 | **`llmmock`** | A scripted model server for tests, CI and the rehearsal; never in a release | `backend/testutil/llmmock`, `cmd/llmmock` | Compose profile, kind namespace | — |
-| **Monitoring** | Metrics, SLO rules, alerts by e-mail, dashboards, traces, collected logs | `deploy/k8s/observability`, `deploy/k8s/tempo`, `deploy/k8s/telemetry` | kube-prometheus-stack, Tempo, Grafana Alloy, Loki | Scrapes api, worker, database, Traefik; Alloy reads the app's pod logs and passes its traces on (ADR 0042) |
+| **Monitoring** | Metrics with exemplars, SLO rules, alerts by e-mail, the daily digest, dashboards, traces, collected logs | `deploy/k8s/observability`, `deploy/k8s/tempo`, `deploy/k8s/telemetry` | kube-prometheus-stack, Tempo, Grafana Alloy, Loki | Scrapes api, worker, database, Traefik; Alloy reads the app's pod logs and passes its traces on (ADR 0042) |
+| **Admission** | Pods in Finuance's namespaces only with images from the listed registries; Finuance's own only with the release workflow's signed build provenance | `deploy/k8s/admission`, `deploy/k8s/policy-controller` | A `ValidatingAdmissionPolicy`; Sigstore policy-controller in `cosign-system` (ADRs 0024, 0039) | The Kubernetes API, the registry's signatures |
 
 Not there yet:
 
 | Planned component | Phase |
 |---|---|
-| Signature check at admission (Sigstore policy-controller), images by digest | 23 |
-| Loki and Grafana Alloy: collected logs, traces routed through Alloy | 24 |
 | `finuance-sim`: the traffic simulator with its tuning page; a lab instance; `llmmock` as a lab image | 25 |
 | A Vertex AI connection (token source in `internal/llm`) | 26 |
 | A lab on GKE Autopilot built by Terraform (`deploy/terraform/`), Gateway API in the chart | 27 |
@@ -163,15 +162,15 @@ A job is inserted in the same transaction as the change that needs it, and carri
 | `shared/` | Shared groups and the Shared tab |
 | `legacy/` | Migrating a backup of the single-file app (decrypted in the browser) |
 
-Tests: Vitest beside the code; Playwright in `web/e2e/` (23 spec files, with axe checks, screenshots and the parity run against the legacy app).
+Tests: Vitest beside the code; Playwright in `web/e2e/` (24 spec files, with axe checks, screenshots and the parity run against the legacy app).
 
 ## 4. Data
 
-One PostgreSQL database. Tables by area (migrations `00001`–`00024`):
+One PostgreSQL database. Tables by area (migrations `00001`–`00029`):
 
 | Area | Tables (examples) | Isolation |
 |---|---|---|
-| Identity | `users`, `sessions`, access tokens, friend codes | No RLS (resolved before the user is known); every query by `user_id` |
+| Identity | `users` (with `kind`: a person or a synthetic user, ADR 0041), `sessions`, access tokens, friend codes, `user_second_factors`, `recovery_codes`, `login_challenges` | No RLS (resolved before the user is known); every query by `user_id`; written only by the sign-in, administration and cleanup code |
 | Ledger | `accounts`, `imports`, `import_files`, `import_rows`, `transactions`, `tx_annotations`, `dedupe_overrides`, `categories`, `groups`, `budgets`, `import_profiles`, rules, goals, investments | Forced RLS, one tenant policy |
 | Sharing | `shared_groups`, members, expenses, splits, settlements, links; `friendships`; `notifications` | Forced RLS by membership (`shared_member_role()`), or by either side |
 | Assistant | chats, attachments, `ai_changes`, usage, digests | Forced RLS |
@@ -186,9 +185,9 @@ flowchart LR
     pr["Pull request"] --> ci["CI<br/>guardrails · backend · web · images ·<br/>security · helm · oracle · e2e"]
     ci --> main["main"]
     main --> tag["Tag vX.Y.Z(-rc.N)"]
-    tag --> rel["release<br/>multi-arch build, Trivy,<br/>SBOM, cosign keyless"]
+    tag --> rel["release<br/>approved by the maintainer;<br/>multi-arch build, Trivy, SBOM,<br/>cosign keyless, build provenance"]
     rel --> ghcr[("ghcr.io<br/>finuance-api, finuance-web")]
-    rel --> bump["gitops-bump<br/>pull request with the new tag"]
+    rel --> bump["gitops-bump<br/>pull request with the tag and digests"]
     bump --> main
     main --> argo["Argo CD<br/>app of apps"]
     priv["Private overlay repository<br/>host names, addresses"] --> argo
@@ -198,15 +197,17 @@ flowchart LR
 
 | Workflow | When | What |
 |---|---|---|
-| `ci.yml` | Pushes and pull requests | gitleaks and the private-data guards; Go lint, tests, fuzz smoke, `govulncheck`; integration tests with PostgreSQL; both images built and scanned; Trivy on the tree; `npm audit`; Helm lint, kubeconform, rules tests, sealing round trip; the legacy oracle is fresh; web lint, types, Vitest, build; Playwright on Compose |
+| `ci.yml` | Pushes and pull requests | gitleaks and the private-data guards; pins, zizmor and actionlint; Go lint, tests, fuzz smoke, `govulncheck`; integration tests with PostgreSQL; both images built and scanned; Trivy on the tree; `npm audit`; Helm lint, kubeconform, rules tests, sealing round trip; the legacy oracle is fresh; web lint, types, Vitest, build; Playwright on Compose |
 | `nightly.yml` | Daily | Fuzzing, 60 s per target |
 | `weekly.yml` | Mondays | ZAP baseline and API scan, k6 smoke against the SLO thresholds, the demo-mode E2E |
-| `k8s-rehearsal.yml` | Mondays, deploy pushes | The whole deployment on kind: operators, secrets, database with backup, the app, NetworkPolicy probes, streaming through the ingress, pod kills under load, restore |
-| `release.yml` | Version tags | Build, scan, SBOM, sign, the bump pull request |
+| `k8s-rehearsal.yml` | Mondays, deploy pushes | The whole deployment on kind: operators, secrets, database with backup, the app, NetworkPolicy probes, signatures at admission, ingress limits, streaming through the ingress, logs and traces through Alloy, pod kills under load, restore |
+| `release.yml` | Version tags, after the maintainer approves the `release` environment | Build, scan, SBOM, sign, build provenance, release notes from the changelog, the bump pull request (final releases) |
+| `codeql.yml`, `scorecard.yml` | Pull requests (CodeQL), pushes to `main`, weekly | Code scanning (Go, TypeScript, the workflows, Python); OpenSSF Scorecard |
+| `daily-scan.yml` | Daily | Trivy on the released images: opens an issue on a new finding and closes it when fixed |
 
-Argo CD applications, in sync order: projects → admission policy → Tempo → CloudNativePG operator, Sealed Secrets → Barman Cloud plugin, kube-prometheus-stack → RustFS → the secrets → the database (synced by hand) → Finuance → its dashboards and rules, Alloy and Loki (`telemetry`).
+Argo CD applications, in sync order: projects → admission policy → Tempo → CloudNativePG operator, Sealed Secrets → Barman Cloud plugin, kube-prometheus-stack → RustFS → the secrets → the database (synced by hand) → Finuance → its dashboards and rules, Alloy and Loki (`telemetry`) → policy-controller (synced by hand, ADR 0039).
 
-Namespaces on the reference cluster: `finuance` (web, api, worker, database), `finuance-restore` (restore drills), `s3` (RustFS), `monitoring`, `cnpg-system`, `kube-system` (Traefik, the admission policy), `argocd`. Pod Security `restricted`, default-deny NetworkPolicies, images admitted by registry.
+Namespaces on the reference cluster: `finuance` (web, api, worker, database), `finuance-restore` (restore drills), `s3` (RustFS), `monitoring`, `cnpg-system`, `kube-system` (Traefik, the admission policy), `cosign-system` (policy-controller), `argocd`. Pod Security `restricted`, default-deny NetworkPolicies for every pod of the namespace, images admitted by registry and, for Finuance's own, by signed provenance.
 
 ## 6. What the system tells you
 

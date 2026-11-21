@@ -1,8 +1,8 @@
 # Architecture
 
-How Finuance is put together, for someone reading the code for the first time. The plan (`docs/PLAN.md`) is the specification. This document explains what is built and why it is shaped that way. It grows phase by phase. Phase 4 adds the data model and tenant isolation; Phase 8 the web app.
+How Finuance is put together, for someone reading the code for the first time, as it stands at 0.5.1 (Phase 24). The plan (`docs/PLAN.md`) was the specification; this document explains what is built and why it is shaped that way.
 
-> 🚧 This describes the system after Phase 11, plus the Kubernetes deployment of Phase 16 ([Deployment](#deployment)). Parts from Phases 12–20 (the overview, the AI assistant and its model server, the `rules` package of Phase 15, administration and sharing of Phase 19) appear in the diagrams and the package table where they fit and are described in their own documents (`docs/assistant.md`, `docs/admin.md`, `docs/sharing.md`, the ADRs).
+**The map is [COMPONENTS.md](COMPONENTS.md):** every part that runs, the packages, the jobs, the workflows, the Argo CD applications and the signals, each with where its code lives. This document goes deeper where the design needs explaining: the request path, the deployment, the data model, tenant isolation and the query engine. Features have their own documents: [assistant.md](assistant.md), [admin.md](admin.md), [sharing.md](sharing.md), [observability.md](observability.md), [SLO.md](SLO.md), and the decisions are in [the ADRs](adr/README.md).
 
 ## Components
 
@@ -14,28 +14,47 @@ flowchart TB
     web["web<br/>nginx, static files"]
     api["api — finuance serve<br/>net/http + strict OpenAPI handlers<br/>stateless, N replicas"]
     worker["worker — finuance worker<br/>River jobs"]
+    cli["fin CLI<br/>access token"]
     pg[("PostgreSQL<br/>app tables + RLS<br/>River job tables")]
-    llm["LLM server (optional)<br/>OpenAI-compatible"]
+    llm["Model server (optional)<br/>OpenAI or Anthropic format"]
+    otel["Telemetry<br/>Prometheus scrapes the admin port,<br/>OTLP traces, logs on stderr"]
 
     spa -- "static assets" --> web
     spa -- "JSON over HTTPS, session cookie<br/>same origin: /api → api" --> api
+    cli -- "JSON, Bearer token" --> api
     api -- "pgx: tx + app.user_id" --> pg
     worker -- "pgx: tx + app.user_id" --> pg
     api -. "enqueue jobs (River InsertTx)" .-> pg
     api -. "assistant only" .-> llm
     worker -. "assistant digests" .-> llm
+    api -. "metrics, traces, logs" .-> otel
+    worker -. "metrics, traces, logs" .-> otel
 ```
 
-- **One Go binary, one image.** The subcommands are `serve`, `worker`, `migrate`, `seed-demo`, `admin`, `healthcheck` and `version`.
+- **One Go binary, one image.** The subcommands are `serve`, `worker`, `migrate`, `seed-demo`, `admin` (with `llm-probe`), `healthcheck` and `version`. The `fin` command line is a second, small binary that only speaks the public API (ADR 0036).
 - **api** serves HTTP and never runs jobs. Slow work, such as committing an import, is enqueued in the same database transaction as the state change, so a job exists exactly when its change was committed.
 - **worker** runs the River workers on the same domain packages as api.
 - **web** serves static files. Everything is same-origin (ingress or nginx path routing), so there is no CORS and cookies stay `SameSite=Lax`.
 
+### The request path
+
+Every request passes the same layers, outermost first (`httpapi/server.go`):
+
+`Recover → AssignRequestID → RealIP → Logging → Metrics → Tracing → SecurityHeaders → MaxBytes → Route`, then the session and token layer, the handler, a domain package, `store.WithUser`, PostgreSQL.
+
+- **`Recover` is outermost**, so a panic anywhere below becomes a 500 problem response. `Logging` and `Metrics` record in a `defer`, so the panicking request still gets its access line and its 5xx count, and `finuance_panics_total` raises an alert (Phase 24).
+- **The request id comes before the logger**, so every line the request writes carries it, and the problem response returns it as `requestId`. The logger's handler adds `trace_id` and `span_id` from whatever span is current, so the request's lines, its job's lines and the assistant's lines can all be joined to the trace ([observability.md](observability.md)).
+- **Tracing starts a new trace for every request**: a client's `traceparent` is kept only as a link (THREAT-MODEL T15). The exporter removes addresses, query strings, statement text and error text before a span leaves the process (`observability.Redact`).
+- **The session and token layer** checks the CSRF header and `Origin`, resolves a session cookie or a personal access token (with its scopes), and gates `/admin` (administrators only, else `404`), the one-time-password change, switched-off features and, when the instance asks for it, an administrator's two-step sign-in (`403 second_factor_required` until they enrol). It also reads the user's `kind`, which labels the request `real` or `synthetic` (ADR 0041).
+- **Rate limits** are per address and per user, applied by the handlers and the token layer, and count what they refuse (`finuance_rate_limited_total`). An optional second layer of limits runs at the ingress (Traefik middlewares, `ingress.limits`).
+
 ### Backend packages
 
 ```
-cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {store, ingest, money, platform}
+cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth, sharing, assistant, admin, …} → {store, ingest, money, platform, observability}
 ```
+
+Every package and what it depends on is drawn in [COMPONENTS.md §2](COMPONENTS.md#2-inside-the-go-binary); the table below says what the less obvious ones are for.
 
 `rules` (Phase 15) stores the categorisation rules and reclassifies transactions: rules from scratch in position order, then transfer detection, as the `reclassify` job (ADRs 0017, 0018); a rule's match compiles with `query`'s filter compiler. `insights` holds the chart rules; its aggregation SQL lives in `query` (`insights.go`), the only package besides `store` that runs SQL.
 
@@ -50,7 +69,9 @@ cmd → app → {httpapi, jobs} → {ledger, query, insights, rules, auth} → {
 | `friends`, `notify` | Between users (Phase 19, ADR 0027). `friends` makes and redeems friend codes (hashed, outside RLS like sessions) and keeps friendships (forced RLS for the two sides); `notify` writes in-app notifications under the recipient's own context and lists them. Friends see display names only. |
 | `assistant`, `llm`, `goals`, `aichanges`, `advice`, `secret` | The assistant (Phases 13 and 20). `llm` speaks the OpenAI and Anthropic protocols (images included); `assistant` holds the connections (the file's and those stored in the panel, reloaded every minute; keys sealed by `secret`, ADR 0035), the read-only tools, the run loop, the chats, the digests (run by the worker, ADR 0033) and the daily token budget; `goals` computes progress on read (ADR 0031); `aichanges` lists and undoes the changes applied from proposals, which every write path records in the same transaction (ADR 0030); `advice` is the article library and its full-text search (ADR 0034). |
 | `fincli`, `client/gen` | The `fin` command line (Phase 20): a client generated from `api/openapi.yaml`, authenticated with a personal access token (ADR 0036). |
-| `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. `httpapi`'s session layer also gates `/admin` (administrators only, else `404`), the one-time-password change and switched-off features. |
+| `auth` | Passwords (Argon2id), sessions, personal access tokens, two-step sign-in with one-time codes and recovery codes (ADR 0040), the demo visitor, and marking a user as synthetic on a simulation instance (ADR 0041). Its tables are outside RLS and written only by `auth` and `admin` (`TestAuthTablesAreWrittenByTheirOwnersOnly`). |
+| `httpapi`, `jobs` | Map HTTP requests and River jobs onto the domain packages. They contain no SQL. `httpapi`'s middleware is the request path above; `jobs` gives each job a logger with its id, kind and attempt, continues the trace of the request that queued it and carries its `traffic` mark. |
+| `observability`, `platform`, `config` | The logger (JSON, with trace and span ids; errors logged as their class only), metrics, tracing and the span filter (Phase 24, [observability.md](observability.md)); ids, the hashed user id and safe database errors; the configuration from `FINUANCE_*` variables, which fails closed. |
 
 A guard test (`store/guard_test.go`) parses every non-test file outside `internal/store`. It fails on direct `Query`/`Exec`/`Begin` calls, and on building a sqlc querier (`db.New`) that would bypass `WithUser`.
 
@@ -67,14 +88,14 @@ A Vite + React + TypeScript single-page app that recreates the legacy `finuance.
 | `import/` | The upload queue (`queue.ts`: one file at a time, fast path, duplicate files) and the import window at `/imports/:id`. The window's working copy is a `PreviewEditor` (`editor.ts`): edits wait 300 ms and go to the server as one `PATCH`, and the screen renders the server's re-staged preview. Committed imports are edited locally and sent with *Reprocess*. |
 | `ui/` | Primitives: Popover and Menu (Floating UI), Modal, Toast queue, Tooltip, buttons, inputs. Open modals and popovers register as layers, so the global keyboard manager leaves their keys alone. |
 
-The production image (`deploy/docker/Dockerfile.web`) is unprivileged nginx: static files with a strict CSP (`script-src 'self'; style-src 'self'; connect-src 'self'`), immutable hashed assets, `no-cache` for `index.html`, and `/api/` proxied to the API without buffering (exports stream through). No HTML is ever built from strings (an ESLint rule bans `innerHTML` and `dangerouslySetInnerHTML`), which is what makes that CSP possible.
+The production image (`deploy/docker/Dockerfile.web`) is unprivileged nginx: static files with a strict CSP (`script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'`, Trusted Types required, reports to `/api/v1/csp-reports`), immutable hashed assets, `no-cache` for `index.html`, a JSON access log without query strings, and `/api/` proxied to the API without buffering (exports stream through). No HTML is ever built from strings (an ESLint rule bans `innerHTML` and `dangerouslySetInnerHTML`), which is what makes that CSP possible. The app reports its own uncaught errors to `/api/v1/client-events` (the error's class and the screen's route pattern, nothing else), and an error a server answered shows its request id as "Reference: …".
 
 ## Deployment
 
 Two ways to run it, from the same images (`ghcr.io/x2db736ac85h/finuance-api`, `finuance-web`):
 
 - **Docker Compose** (`deploy/compose/compose.prod.yaml`): one machine; nginx in the web container proxies `/api` to the api.
-- **Kubernetes** (Phase 16; [docs/RUNBOOK.md](RUNBOOK.md)): the Helm chart `deploy/helm/finuance`, the database chart `deploy/k8s/db` on CloudNativePG, and Argo CD applications in `deploy/k8s/argocd`, with the homelab's values in `deploy/environments/homelab`.
+- **Kubernetes** (Phase 16; [docs/RUNBOOK.md](RUNBOOK.md)): the Helm chart `deploy/helm/finuance`, the database chart `deploy/k8s/db` on CloudNativePG, the monitoring charts `deploy/k8s/observability`, `deploy/k8s/tempo` and `deploy/k8s/telemetry`, and Argo CD applications in `deploy/k8s/argocd` (their order is in [COMPONENTS.md §5](COMPONENTS.md#5-how-a-change-reaches-a-cluster)), with the homelab's values in `deploy/environments/homelab`.
 
 ```mermaid
 flowchart TB
@@ -90,7 +111,13 @@ flowchart TB
     s3[("S3-compatible bucket<br/>WAL + daily base backups")]
     llm["Model server outside the cluster<br/>(Ollama or LM Studio, ADR 0020)"]
     argo["Argo CD<br/>app-of-apps, syncs main"]
-    mon["namespace monitoring<br/>Prometheus, Alertmanager (e-mail),<br/>Grafana, Tempo"]
+    adm["Admission (kube-system, cosign-system)<br/>registry policy + signed provenance"]
+    subgraph mon["namespace monitoring"]
+        prom["Prometheus, Alertmanager (e-mail),<br/>Grafana"]
+        alloy["Alloy<br/>OTLP in, pod logs via the API"]
+        tempo["Tempo<br/>traces, 72 h"]
+        loki["Loki<br/>logs, 14 days"]
+    end
 
     traefik -- "/ " --> web
     traefik -- "/api/" --> api
@@ -102,9 +129,15 @@ flowchart TB
     worker -. "digests: the same address" .-> llm
     secrets -. "PGPASSWORD" .-> api
     argo -. "Helm charts + values" .-> ns
-    api -. "metrics, OTLP traces" .-> mon
-    worker -. "metrics, OTLP traces" .-> mon
-    traefik -. "metrics" .-> mon
+    adm -. "admits pods" .-> ns
+    prom -. "scrapes metrics" .-> api
+    prom -. "scrapes metrics" .-> worker
+    prom -. "scrapes metrics" .-> traefik
+    api -. "OTLP traces" .-> alloy
+    worker -. "OTLP traces" .-> alloy
+    alloy -. "reads pod logs" .-> ns
+    alloy --> tempo
+    alloy --> loki
 ```
 
 - **Same origin, two routes.** The Ingress sends `/api/` straight to the api (streamed assistant answers need no buffering) and everything else to web. Under Compose, nginx does that split.
@@ -112,11 +145,12 @@ flowchart TB
 - **Zero-downtime rollouts.** Rolling updates with `maxUnavailable: 0`; api and web pause in `preStop` until Traefik has dropped them from its endpoints; the api drains in-flight requests on SIGTERM. The CI rehearsal checks this under load.
 - **Passwords never sit in a URL.** The ConfigMap holds password-less database URLs; each process gets `PGPASSWORD` from the role's basic-auth secret, the same secret CloudNativePG's managed role reads.
 - **Backups** are continuous WAL archiving plus a daily base backup through the Barman Cloud plugin, with a 14-day recovery window. A restore is a new cluster from the bucket, optionally to a point in time.
-- **GitOps.** A release opens a pull request that bumps the image tag in the homelab values; merging it deploys, reverting it rolls back. The database application syncs only by hand.
+- **GitOps.** A release opens a pull request that sets the image tag and both images' digests in the homelab values; merging it deploys, reverting it rolls back. The database application syncs only by hand. Machine details come from a private overlay repository that Argo CD reads as a second source (ADR 0023).
 - **The rehearsal** (`tools/rehearsal.sh`, the `k8s-rehearsal` workflow) runs all of this on a kind cluster, with RustFS as the bucket and the mock model server.
 - **Readiness under load.** `/readyz` checks the database and the migration version, but a check that only times out within 30 s of its last success counts as busy: every replica shares the database, and failing them all at once would turn slow answers into refused ones at the ingress (Phase 18 load test).
-- **Monitoring** (Phase 18): kube-prometheus-stack scrapes the api, the worker, the database and Traefik; Finuance's dashboards, SLO rules and e-mail receiver come from `deploy/k8s/observability`; traces go to Tempo over OTLP/HTTP. Availability is measured at the api and, separately, at the ingress.
-- **Image admission** (Phase 18): a built-in `ValidatingAdmissionPolicy` admits pods in Finuance's namespaces only with images from the registries listed per namespace (Finuance's own only from `ghcr.io/x2db736ac85h`); signature checks follow in Phase 23 (ADR 0024).
+- **Monitoring** (Phases 18 and 24): kube-prometheus-stack scrapes the api, the worker, the database and Traefik; Finuance's dashboards, SLO rules and e-mail receiver come from `deploy/k8s/observability`. The app sends its traces to Grafana Alloy, which deletes the same span attributes again and passes them on to Tempo; Alloy also reads the namespace's pod logs through the Kubernetes API (a read-only Role) and writes them to Loki after cutting the request lines and statement details the logs may quote (ADR 0042). Grafana joins the three: a log line opens its trace, a span its lines, a latency bucket's exemplar its trace. `logs.enabled: false` switches the logs off and keeps the traces. Availability is measured at the api and, separately, at the ingress; synthetic traffic is left out of the objectives ([SLO.md](SLO.md)).
+- **Image admission** (Phases 18 and 23): a built-in `ValidatingAdmissionPolicy` admits pods in Finuance's namespaces only with images from the registries listed per namespace (Finuance's own only from `ghcr.io/x2db736ac85h`), and Sigstore's policy-controller admits Finuance's images only with the signed build provenance of this repository's release workflow (ADR 0039). The homelab runs the images by digest.
+- **Network.** The default deny covers every pod of the namespace; names resolve in `kube-system` only; the database admits the api, the worker and the migration job and talks TLS with `verify-full`; the metrics ports admit Prometheus only; the app's traces may go to Alloy only.
 - **Single-node k3s** (the reference environment, ADR 0022): Traefik on host ports and reachable only from the tailnet (an nftables table on the host), a Tailscale `*.ts.net` certificate, RustFS in the cluster as the backup bucket, the model server on the host; the machine-specific values come from a private repository (ADR 0023).
 
 ## Data model
@@ -156,7 +190,9 @@ erDiagram
         uuid id PK
         citext email UK
         text password_hash
+        bool is_admin
         bool is_demo
+        text kind "person or synthetic"
     }
     sessions {
         bytea token_hash PK "SHA-256 of the cookie token"
@@ -217,7 +253,7 @@ erDiagram
     }
 ```
 
-Every table except `users` and `sessions` also has `user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE`. It is omitted from the diagram for readability. `budgets`, `import_profiles`, `investment_profile` and `investment_positions` are left out of the attribute lists. The full DDL is `backend/internal/store/migrations/00002_core.sql` (PLAN §5.2).
+Every table except `users` and `sessions` also has `user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE`. It is omitted from the diagram for readability. `budgets`, `import_profiles`, `investment_profile` and `investment_positions` are left out of the attribute lists. The diagram is the ledger's core, whose full DDL is `backend/internal/store/migrations/00002_core.sql` (PLAN §5.2); the tables added since (rules, sharing, friends and notifications, the assistant, the activity log, access tokens, two-step sign-in, the instance's settings) are listed by area in [COMPONENTS.md §4](COMPONENTS.md#4-data), and the 29 migrations are the full schema.
 
 ### De-duplication in the schema
 
@@ -330,7 +366,7 @@ sequenceDiagram
 
   Composite foreign keys on `(user_id, id)` would enforce this in the schema itself. That would be a schema change for a later ADR.
 - **Referential actions** (`ON DELETE CASCADE` / `SET NULL`) also run without row security. That is what makes deleting a user or an account remove all of its rows even under `FORCE` (`TestRLSCascadesStillWork`).
-- **Tables outside RLS on purpose**: `users`, `sessions`, friend codes and personal access tokens are resolved before the user is known, so they carry `user_id` but no policy; every query of them except the lookup that finds the user (by e-mail address or by the hash of a token or code) filters by `user_id`. The instance tables (settings, themes, the advice library, assistant connections and tuning) hold no user data.
+- **Tables outside RLS on purpose**: `users`, `sessions`, friend codes, personal access tokens and the two-step sign-in tables (`user_second_factors`, `recovery_codes`, `login_challenges`) are resolved before the user is known, so they carry `user_id` but no policy; every query of them except the lookup that finds the user (by e-mail address or by the hash of a token, code or challenge) filters by `user_id`, and only the sign-in, administration and cleanup code writes them. The instance tables (settings, themes, the advice library, assistant connections and tuning) hold no user data. Each of these tables is named with its reason in a test (`TestEveryTableHasRLSOrAReason`), so a new table without RLS fails until it has one.
 - **Bulk loads can't use `COPY FROM`.** PostgreSQL refuses it on tables with RLS. Staged rows are inserted with `INSERT … SELECT FROM unnest(…)`, 5,000 rows per statement (`store.InsertImportRows`).
 
 ### How it is tested
@@ -345,5 +381,7 @@ sequenceDiagram
 | `TestRLSWithoutUserSeesNothing` | Without `app.user_id`, and as the owner role, tables are empty and writes fail. |
 | `TestRLSCascadesStillWork` | Deleting a user removes their rows everywhere and leaves the other user intact. |
 | `TestEveryUserTableHasForcedRLS` | The catalog: every table with `user_id` (except `sessions`) has RLS enabled, forced, and exactly its `_tenant` policy. |
+| `TestEveryTableHasRLSOrAReason` | The catalog: every table of the schema has RLS or is listed with the reason it has none. |
+| `TestAuthTablesAreWrittenByTheirOwnersOnly` | The queries that write the sign-in and administration tables are called only from the sign-in, administration and cleanup code. |
 
 Removing one table's policy makes all of them fail. This was checked by hand while the suite was written.
