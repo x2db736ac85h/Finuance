@@ -19,7 +19,13 @@ const DB = `job="finuance-db",${NS}`;
 const ds = { type: 'prometheus', uid: '${datasource}' };
 
 let nextId = 1;
-const target = (expr, legend = '', i = 0) => ({ datasource: ds, expr, legendFormat: legend, refId: String.fromCharCode(65 + i) });
+// The metrics that say whose traffic they count (ADR 0041): every panel reading one follows the
+// dashboard's Traffic variable (all, real, synthetic). Added here, in one place, so a new panel
+// can't forget it; a series from a release before the label existed has none and shows under "all".
+const TRAFFIC_METRICS =
+  /\b(http_server_requests_total|http_server_request_duration_seconds_(?:bucket|count|sum)|finuance_jobs_total|finuance_assistant_(?:runs|tool_calls|model_requests)_total)\{/g;
+const withTraffic = (expr) => expr.replace(TRAFFIC_METRICS, '$1{traffic=~"$traffic",');
+const target = (expr, legend = '', i = 0) => ({ datasource: ds, expr: withTraffic(expr), legendFormat: legend, refId: String.fromCharCode(65 + i) });
 const targets = (qs) => qs.map(([expr, legend], i) => target(expr, legend, i));
 
 /** A time series panel; qs = [[expr, legend], …]. */
@@ -87,6 +93,15 @@ function dashboard(uid, title, description, panels, { tags = [] } = {}) {
         {
           name: 'namespace', label: 'Namespace', type: 'query', datasource: ds, refresh: 2, hide: 0, current: {},
           query: { query: 'label_values(finuance_build_info, namespace)', refId: 'ns' }, definition: 'label_values(finuance_build_info, namespace)',
+        },
+        {
+          name: 'traffic', label: 'Traffic', type: 'custom', hide: 0, query: 'all : .*,real,synthetic',
+          current: { text: 'all', value: '.*' },
+          options: [
+            { text: 'all', value: '.*', selected: true },
+            { text: 'real', value: 'real', selected: false },
+            { text: 'synthetic', value: 'synthetic', selected: false },
+          ],
         },
       ],
     },

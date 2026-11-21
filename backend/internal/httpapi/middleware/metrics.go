@@ -26,14 +26,15 @@ func Metrics(m *observability.Metrics) Middleware {
 				if route == "" { // a panic before or inside the handler: Route has not recorded the pattern yet
 					route = routeName(r.Pattern)
 				}
-				m.HTTPRequests.WithLabelValues(route, r.Method, observability.StatusClass(rec.outcome(panicked))).Inc()
+				traffic := observability.TrafficLabel(info.Synthetic)
+				m.HTTPRequests.WithLabelValues(route, r.Method, observability.StatusClass(rec.outcome(panicked)), traffic).Inc()
 				// An exemplar: the trace id of this request on the bucket it falls into, so a slow bucket
 				// leads to a trace (PLAN 24.5). Only scrapers that ask for OpenMetrics receive it.
 				d := time.Since(start).Seconds()
-				if eo, ok := m.HTTPDuration.WithLabelValues(route).(prometheus.ExemplarObserver); ok && info.TraceID != "" {
+				if eo, ok := m.HTTPDuration.WithLabelValues(route, traffic).(prometheus.ExemplarObserver); ok && info.TraceID != "" {
 					eo.ObserveWithExemplar(d, prometheus.Labels{"trace_id": info.TraceID})
 				} else {
-					m.HTTPDuration.WithLabelValues(route).Observe(d)
+					m.HTTPDuration.WithLabelValues(route, traffic).Observe(d)
 				}
 			}()
 			next.ServeHTTP(rec, r)

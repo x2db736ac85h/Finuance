@@ -7,71 +7,71 @@ groups:
       # instead of 0 (no burn rate, blank dashboards).
       - record: finuance:slo_availability:error_ratio_rate5m
         expr: |
-          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",status_class="5xx"}[5m])) or vector(0))
+          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic",status_class="5xx"}[5m])) or vector(0))
           /
-          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"}[5m]))
+          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic"}[5m]))
       - record: finuance:slo_latency:error_ratio_rate5m
         expr: |
           1 - (
-            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",le="0.3"}[5m]))
+            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic",le="0.3"}[5m]))
             /
-            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)"}[5m]))
+            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic"}[5m]))
           )
       # "or vector(0)": with no 5xx at all the series doesn't exist, and the ratio would be empty
       # instead of 0 (no burn rate, blank dashboards).
       - record: finuance:slo_availability:error_ratio_rate30m
         expr: |
-          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",status_class="5xx"}[30m])) or vector(0))
+          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic",status_class="5xx"}[30m])) or vector(0))
           /
-          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"}[30m]))
+          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic"}[30m]))
       - record: finuance:slo_latency:error_ratio_rate30m
         expr: |
           1 - (
-            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",le="0.3"}[30m]))
+            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic",le="0.3"}[30m]))
             /
-            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)"}[30m]))
+            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic"}[30m]))
           )
       # "or vector(0)": with no 5xx at all the series doesn't exist, and the ratio would be empty
       # instead of 0 (no burn rate, blank dashboards).
       - record: finuance:slo_availability:error_ratio_rate1h
         expr: |
-          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",status_class="5xx"}[1h])) or vector(0))
+          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic",status_class="5xx"}[1h])) or vector(0))
           /
-          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"}[1h]))
+          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic"}[1h]))
       - record: finuance:slo_latency:error_ratio_rate1h
         expr: |
           1 - (
-            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",le="0.3"}[1h]))
+            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic",le="0.3"}[1h]))
             /
-            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)"}[1h]))
+            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic"}[1h]))
           )
       # "or vector(0)": with no 5xx at all the series doesn't exist, and the ratio would be empty
       # instead of 0 (no burn rate, blank dashboards).
       - record: finuance:slo_availability:error_ratio_rate6h
         expr: |
-          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",status_class="5xx"}[6h])) or vector(0))
+          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic",status_class="5xx"}[6h])) or vector(0))
           /
-          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"}[6h]))
+          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic"}[6h]))
       - record: finuance:slo_latency:error_ratio_rate6h
         expr: |
           1 - (
-            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",le="0.3"}[6h]))
+            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic",le="0.3"}[6h]))
             /
-            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)"}[6h]))
+            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic"}[6h]))
           )
       # "or vector(0)": with no 5xx at all the series doesn't exist, and the ratio would be empty
       # instead of 0 (no burn rate, blank dashboards).
       - record: finuance:slo_availability:error_ratio_rate3d
         expr: |
-          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",status_class="5xx"}[3d])) or vector(0))
+          (sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic",status_class="5xx"}[3d])) or vector(0))
           /
-          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"}[3d]))
+          sum(rate(http_server_requests_total{job="finuance-api",namespace="finuance",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched",traffic!="synthetic"}[3d]))
       - record: finuance:slo_latency:error_ratio_rate3d
         expr: |
           1 - (
-            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",le="0.3"}[3d]))
+            sum(rate(http_server_request_duration_seconds_bucket{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic",le="0.3"}[3d]))
             /
-            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)"}[3d]))
+            sum(rate(http_server_request_duration_seconds_count{job="finuance-api",namespace="finuance",route=~"POST /api/v1/(transactions/query|insights/.*)",traffic!="synthetic"}[3d]))
           )
   - name: finuance-slo.alerts
     rules:

@@ -52,6 +52,34 @@
           "refId": "ns"
         },
         "definition": "label_values(finuance_build_info, namespace)"
+      },
+      {
+        "name": "traffic",
+        "label": "Traffic",
+        "type": "custom",
+        "hide": 0,
+        "query": "all : .*,real,synthetic",
+        "current": {
+          "text": "all",
+          "value": ".*"
+        },
+        "options": [
+          {
+            "text": "all",
+            "value": ".*",
+            "selected": true
+          },
+          {
+            "text": "real",
+            "value": "real",
+            "selected": false
+          },
+          {
+            "text": "synthetic",
+            "value": "synthetic",
+            "selected": false
+          }
+        ]
       }
     ]
   },
@@ -188,7 +216,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(finuance_jobs_total{job=\"finuance-worker\",namespace=\"$namespace\",result=\"error\"}[1h])) or vector(0)",
+          "expr": "sum(increase(finuance_jobs_total{traffic=~\"$traffic\",job=\"finuance-worker\",namespace=\"$namespace\",result=\"error\"}[1h])) or vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -314,7 +342,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (kind, result) (rate(finuance_jobs_total{job=\"finuance-worker\",namespace=\"$namespace\"}[5m]))",
+          "expr": "sum by (kind, result) (rate(finuance_jobs_total{traffic=~\"$traffic\",job=\"finuance-worker\",namespace=\"$namespace\"}[5m]))",
           "legendFormat": "{{kind}} {{result}}",
           "refId": "A"
         }

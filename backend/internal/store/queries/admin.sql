@@ -16,6 +16,7 @@ SELECT count(*) AS total,
        count(*) FILTER (WHERE is_admin AND disabled_at IS NULL) AS admins,
        count(*) FILTER (WHERE disabled_at IS NOT NULL) AS disabled,
        count(*) FILTER (WHERE is_demo) AS demo,
+       count(*) FILTER (WHERE kind = 'synthetic') AS synthetic,
        count(*) FILTER (WHERE last_login_at > @active7::timestamptz) AS active7,
        count(*) FILTER (WHERE last_login_at > @active30::timestamptz) AS active30
 FROM users;

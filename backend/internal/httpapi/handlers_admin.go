@@ -44,7 +44,7 @@ func limitsIn(l gen.LimitOverrides) instance.Limits {
 }
 
 func adminUserDTO(u admin.User) gen.AdminUser {
-	return gen.AdminUser{Id: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, IsAdmin: u.IsAdmin,
+	return gen.AdminUser{Id: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, IsSynthetic: u.Synthetic, IsAdmin: u.IsAdmin,
 		Disabled: u.Disabled, MustChangePassword: u.MustChangePassword, SecondFactor: u.SecondFactor, CreatedAt: u.CreatedAt, LastLoginAt: u.LastLoginAt,
 		Limits: limitsDTO(u.Limits), Usage: gen.UserUsage{Accounts: u.Usage.Accounts, Transactions: u.Usage.Transactions,
 			Imports: u.Usage.Imports, StoredBytes: u.Usage.StoredBytes, Chats: u.Usage.Chats, LastActivity: u.Usage.LastActivity,
@@ -52,7 +52,7 @@ func adminUserDTO(u admin.User) gen.AdminUser {
 }
 
 func totalsDTO(t admin.Totals) gen.UserTotals {
-	return gen.UserTotals{Users: t.Users, Admins: t.Admins, Disabled: t.Disabled, Demo: t.Demo, Active7: t.Active7, Active30: t.Active30}
+	return gen.UserTotals{Users: t.Users, Admins: t.Admins, Disabled: t.Disabled, Demo: t.Demo, Synthetic: t.Synthetic, Active7: t.Active7, Active30: t.Active30}
 }
 
 // AdminListUsers returns one page of accounts with their usage counts.

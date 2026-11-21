@@ -8,11 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/x2db736ac85h/finuance/backend/internal/admin"
 	"github.com/x2db736ac85h/finuance/backend/internal/auth"
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	mw "github.com/x2db736ac85h/finuance/backend/internal/httpapi/middleware"
 	"github.com/x2db736ac85h/finuance/backend/internal/instance"
+	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
@@ -86,7 +90,7 @@ func requireSession(svc *auth.Service, adm *admin.Service, prod bool, tokens *mw
 					WriteProblem(w, r, err, prod)
 					return
 				}
-				next.ServeHTTP(w, r)
+				next.ServeHTTP(w, markTraffic(r, ra.identity.User))
 				return
 			}
 			if c, err := r.Cookie(cookie); err == nil {
@@ -111,9 +115,22 @@ func requireSession(svc *auth.Service, adm *admin.Service, prod bool, tokens *mw
 				WriteProblem(w, r, err, prod)
 				return
 			}
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, markTraffic(r, id.User))
 		})
 	}
+}
+
+// markTraffic labels the request as a synthetic user's when the signed-in user is one (ADR 0041):
+// on the request's Info for the access line and the request metrics, on the span, and in the
+// context for whatever the handler starts (a job, an assistant run). The answer comes from the
+// user's row; nothing in the request is read for it.
+func markTraffic(r *http.Request, u auth.User) *http.Request {
+	if !u.Synthetic {
+		return r
+	}
+	mw.FromContext(r.Context()).Synthetic = true
+	trace.SpanFromContext(r.Context()).SetAttributes(attribute.Bool("finuance.synthetic", true), attribute.String("user_agent.synthetic.type", "test"))
+	return r.WithContext(observability.WithTraffic(r.Context(), true))
 }
 
 // resolveBearer authenticates a personal access token for one route: a route no token reaches is

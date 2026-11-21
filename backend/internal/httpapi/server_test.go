@@ -106,7 +106,7 @@ func TestNotFoundIsProblemAndUnmatchedLabel(t *testing.T) {
 			t.Errorf("%s: problem = %v", p, pr)
 		}
 	}
-	if n := testutil.ToFloat64(hs.metrics.HTTPRequests.WithLabelValues("unmatched", "GET", "4xx")); n != 2 {
+	if n := testutil.ToFloat64(hs.metrics.HTTPRequests.WithLabelValues("unmatched", "GET", "4xx", "real")); n != 2 {
 		t.Errorf("unmatched 4xx = %v, want 2", n)
 	}
 }
@@ -115,7 +115,7 @@ func TestMetricsUseRoutePattern(t *testing.T) {
 	hs := newHarness(t, nil)
 	hs.do("GET", "/api/v1/meta", nil)
 	hs.do("GET", "/api/v1/meta?x=1", nil)
-	if n := testutil.ToFloat64(hs.metrics.HTTPRequests.WithLabelValues("GET /api/v1/meta", "GET", "2xx")); n != 2 {
+	if n := testutil.ToFloat64(hs.metrics.HTTPRequests.WithLabelValues("GET /api/v1/meta", "GET", "2xx", "real")); n != 2 {
 		t.Errorf("meta requests = %v, want 2", n)
 	}
 	out, err := testutil.CollectAndLint(hs.metrics.HTTPRequests)

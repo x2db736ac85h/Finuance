@@ -52,6 +52,34 @@
           "refId": "ns"
         },
         "definition": "label_values(finuance_build_info, namespace)"
+      },
+      {
+        "name": "traffic",
+        "label": "Traffic",
+        "type": "custom",
+        "hide": 0,
+        "query": "all : .*,real,synthetic",
+        "current": {
+          "text": "all",
+          "value": ".*"
+        },
+        "options": [
+          {
+            "text": "all",
+            "value": ".*",
+            "selected": true
+          },
+          {
+            "text": "real",
+            "value": "real",
+            "selected": false
+          },
+          {
+            "text": "synthetic",
+            "value": "synthetic",
+            "selected": false
+          }
+        ]
       }
     ]
   },
@@ -74,7 +102,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "1 - ((sum(increase(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\",status_class=\"5xx\"}[30d])) or vector(0)) / (sum(increase(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\"}[30d]))))",
+          "expr": "1 - ((sum(increase(http_server_requests_total{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\",status_class=\"5xx\"}[30d])) or vector(0)) / (sum(increase(http_server_requests_total{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\"}[30d]))))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -133,7 +161,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "1 - ((1 - (1 - ((sum(increase(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\",status_class=\"5xx\"}[30d])) or vector(0)) / (sum(increase(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\"}[30d])))))) / 0.005)",
+          "expr": "1 - ((1 - (1 - ((sum(increase(http_server_requests_total{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\",status_class=\"5xx\"}[30d])) or vector(0)) / (sum(increase(http_server_requests_total{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\"}[30d])))))) / 0.005)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -196,7 +224,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(http_server_request_duration_seconds_bucket{job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\",le=\"0.3\"}[30d])) / sum(increase(http_server_request_duration_seconds_count{job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\"}[30d]))",
+          "expr": "sum(increase(http_server_request_duration_seconds_bucket{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\",le=\"0.3\"}[30d])) / sum(increase(http_server_request_duration_seconds_count{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\"}[30d]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -255,7 +283,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "1 - ((1 - (sum(increase(http_server_request_duration_seconds_bucket{job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\",le=\"0.3\"}[30d])) / sum(increase(http_server_request_duration_seconds_count{job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\"}[30d])))) / 0.05)",
+          "expr": "1 - ((1 - (sum(increase(http_server_request_duration_seconds_bucket{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\",le=\"0.3\"}[30d])) / sum(increase(http_server_request_duration_seconds_count{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\"}[30d])))) / 0.05)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -475,7 +503,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_server_request_duration_seconds_bucket{job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_server_request_duration_seconds_bucket{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route=~\"POST /api/v1/(transactions/query|insights/.*)\"}[5m])))",
           "legendFormat": "p95 {{route}}",
           "refId": "A"
         }
@@ -605,7 +633,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\",status_class=\"5xx\"}[5m])) or vector(0)) / (sum(rate(http_server_requests_total{job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\"}[5m])))",
+          "expr": "(sum(rate(http_server_requests_total{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\",status_class=\"5xx\"}[5m])) or vector(0)) / (sum(rate(http_server_requests_total{traffic=~\"$traffic\",job=\"finuance-api\",namespace=\"$namespace\",route!~\"GET /(healthz|readyz)|.*/assistant/.*|unmatched\"}[5m])))",
           "legendFormat": "api 5xx (SLO routes)",
           "refId": "B"
         }

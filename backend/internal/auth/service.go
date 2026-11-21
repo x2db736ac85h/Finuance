@@ -52,6 +52,8 @@ type Config struct {
 	Box *secret.Box
 	// Issuer names this instance in an authenticator app's list ("" = "Finuance").
 	Issuer string
+	// Simulation: synthetic users can be made and can sign in (FINUANCE_SIMULATION, ADR 0041).
+	Simulation bool
 }
 
 // User is an account as the API shows it.
@@ -70,12 +72,16 @@ type User struct {
 	// SecondFactor: two-step sign-in is on for the account (set when a session is resolved or the
 	// second step completes).
 	SecondFactor bool
+	// Synthetic: the traffic simulator's user (users.kind, ADR 0041). Read from the database with
+	// the session or token, never from the request; it labels the user's traffic.
+	Synthetic bool
 }
 
 func userOf(u db.User) User {
 	limits, _ := instance.ParseLimits(u.Limits) // the admin service validated them when it stored them
 	return User{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsDemo: u.IsDemo, CreatedAt: u.CreatedAt,
-		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword, Limits: limits, Disabled: u.DisabledAt != nil}
+		IsAdmin: u.IsAdmin, MustChangePassword: u.MustChangePassword, Limits: limits, Disabled: u.DisabledAt != nil,
+		Synthetic: u.Kind == KindSynthetic}
 }
 
 // Service implements signup, login, sessions and the /me operations.
@@ -248,6 +254,9 @@ func (s *Service) Login(ctx context.Context, email, password, previousToken stri
 	}
 	if u.DisabledAt != nil { // only after the right password, so this reveals no more than a failure
 		return User{}, "", fmt.Errorf("this account has been disabled by an administrator: %w", platform.ErrAccountDisabled)
+	}
+	if u.Kind == KindSynthetic && !s.cfg.Simulation { // a synthetic user outside a simulation instance: no way in
+		return User{}, "", fmt.Errorf("synthetic users sign in on a simulation instance only: %w", platform.ErrAccountDisabled)
 	}
 	var rehash string
 	if NeedsRehash(u.PasswordHash, s.cfg.Params) {

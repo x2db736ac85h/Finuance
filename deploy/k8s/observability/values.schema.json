@@ -15,6 +15,11 @@
         "folderAnnotation": { "type": "string" }
       }
     },
+    "slo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "includeSynthetic": { "type": "boolean" } }
+    },
     "rules": {
       "type": "object",
       "additionalProperties": false,

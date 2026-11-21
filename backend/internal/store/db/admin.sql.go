@@ -18,6 +18,7 @@ SELECT count(*) AS total,
        count(*) FILTER (WHERE is_admin AND disabled_at IS NULL) AS admins,
        count(*) FILTER (WHERE disabled_at IS NOT NULL) AS disabled,
        count(*) FILTER (WHERE is_demo) AS demo,
+       count(*) FILTER (WHERE kind = 'synthetic') AS synthetic,
        count(*) FILTER (WHERE last_login_at > $1::timestamptz) AS active7,
        count(*) FILTER (WHERE last_login_at > $2::timestamptz) AS active30
 FROM users
@@ -29,12 +30,13 @@ type AdminCountUsersParams struct {
 }
 
 type AdminCountUsersRow struct {
-	Total    int64
-	Admins   int64
-	Disabled int64
-	Demo     int64
-	Active7  int64
-	Active30 int64
+	Total     int64
+	Admins    int64
+	Disabled  int64
+	Demo      int64
+	Synthetic int64
+	Active7   int64
+	Active30  int64
 }
 
 func (q *Queries) AdminCountUsers(ctx context.Context, arg AdminCountUsersParams) (AdminCountUsersRow, error) {
@@ -45,6 +47,7 @@ func (q *Queries) AdminCountUsers(ctx context.Context, arg AdminCountUsersParams
 		&i.Admins,
 		&i.Disabled,
 		&i.Demo,
+		&i.Synthetic,
 		&i.Active7,
 		&i.Active30,
 	)
@@ -53,7 +56,7 @@ func (q *Queries) AdminCountUsers(ctx context.Context, arg AdminCountUsersParams
 
 const adminListUsers = `-- name: AdminListUsers :many
 
-SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at FROM users
+SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at, kind FROM users
 WHERE ($1::text = '' OR email ILIKE '%' || $1::text || '%')
   AND ($2::timestamptz IS NULL OR (created_at, id) < ($2::timestamptz, $3::uuid))
 ORDER BY created_at DESC, id DESC
@@ -99,6 +102,7 @@ func (q *Queries) AdminListUsers(ctx context.Context, arg AdminListUsersParams) 
 			&i.MustChangePassword,
 			&i.Limits,
 			&i.DigestDueAt,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -206,7 +210,7 @@ func (q *Queries) CreateTheme(ctx context.Context, arg CreateThemeParams) (Theme
 const createUserWithRole = `-- name: CreateUserWithRole :one
 INSERT INTO users (id, email, password_hash, display_name, is_admin, must_change_password)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at
+RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at, kind
 `
 
 type CreateUserWithRoleParams struct {
@@ -241,6 +245,7 @@ func (q *Queries) CreateUserWithRole(ctx context.Context, arg CreateUserWithRole
 		&i.MustChangePassword,
 		&i.Limits,
 		&i.DigestDueAt,
+		&i.Kind,
 	)
 	return i, err
 }

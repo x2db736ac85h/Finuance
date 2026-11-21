@@ -602,6 +602,7 @@ type User struct {
 	MustChangePassword bool
 	Limits             []byte
 	DigestDueAt        *time.Time
+	Kind               string
 }
 
 type UserPreference struct {

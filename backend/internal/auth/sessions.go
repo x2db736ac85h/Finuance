@@ -106,7 +106,11 @@ func (s *Service) Resolve(ctx context.Context, token string) (Identity, error) {
 		limits, _ := instance.ParseLimits(row.Limits)
 		id = Identity{TokenHash: hash, User: User{ID: row.UserID, Email: row.Email, DisplayName: row.DisplayName,
 			IsDemo: row.IsDemo, CreatedAt: row.UserCreatedAt, IsAdmin: row.IsAdmin,
-			MustChangePassword: row.MustChangePassword, Limits: limits, SecondFactor: row.SecondFactor}}
+			MustChangePassword: row.MustChangePassword, Limits: limits, SecondFactor: row.SecondFactor,
+			Synthetic: row.Kind == KindSynthetic}}
+		if id.User.Synthetic && !s.cfg.Simulation {
+			return pgx.ErrNoRows // as if the session did not exist (ADR 0041)
+		}
 		if now.Sub(row.LastSeenAt) >= touchEvery {
 			return q.TouchSession(ctx, db.TouchSessionParams{TokenHash: hash[:], Now: now})
 		}

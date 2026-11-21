@@ -101,7 +101,7 @@ export function UsersAdmin() {
                     </button>
                     {u.displayName && <span className="hint"> {u.displayName}</span>}
                   </td>
-                  <td>{u.isAdmin ? 'Administrator' : u.isDemo ? 'Demo' : 'User'}</td>
+                  <td>{u.isAdmin ? 'Administrator' : u.isSynthetic ? 'Synthetic' : u.isDemo ? 'Demo' : 'User'}</td>
                   <td>{status(u)}</td>
                   <td>{u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : 'never'}</td>
                   <td className="num">{fmtInt(u.usage.transactions)}</td>

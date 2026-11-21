@@ -46,7 +46,7 @@ type JobMetrics struct {
 func NewJobMetrics(reg prometheus.Registerer) *JobMetrics {
 	m := &JobMetrics{
 		Jobs: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "finuance_jobs_total",
-			Help: "Worked River jobs by kind and result (ok, error)."}, []string{"kind", "result"}),
+			Help: "Worked River jobs by kind, result (ok, error) and traffic (real, synthetic)."}, []string{"kind", "result", "traffic"}),
 		Duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "finuance_job_duration_seconds",
 			Help: "Duration of worked River jobs by kind.", Buckets: []float64{.01, .05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60, 120}},
 			[]string{"kind"}),
@@ -68,12 +68,44 @@ func NewTelemetry(tp trace.TracerProvider, prop propagation.TextMapPropagator, m
 	return &Telemetry{Tracer: tp.Tracer("github.com/x2db736ac85h/finuance/backend/internal/jobs"), Propagator: prop, Metrics: m}
 }
 
+// syntheticKey is the metadata key that marks a job queued for a synthetic user (ADR 0041).
+const syntheticKey = "finuance_synthetic"
+
+// withSynthetic returns metadata (a JSON object, possibly empty) with the synthetic mark.
+func withSynthetic(metadata []byte) []byte {
+	obj := map[string]json.RawMessage{}
+	if len(metadata) > 0 {
+		if err := json.Unmarshal(metadata, &obj); err != nil || obj == nil {
+			obj = map[string]json.RawMessage{}
+		}
+	}
+	obj[syntheticKey] = json.RawMessage("true")
+	out, err := json.Marshal(obj)
+	if err != nil {
+		return metadata
+	}
+	return out
+}
+
+// isSynthetic reads the mark stored by withSynthetic.
+func isSynthetic(metadata []byte) bool {
+	var obj struct {
+		Synthetic bool `json:"finuance_synthetic"`
+	}
+	return len(metadata) > 0 && json.Unmarshal(metadata, &obj) == nil && obj.Synthetic
+}
+
 // traceKey is the metadata key holding the trace context (a JSON object of carrier keys).
 const traceKey = "otel"
 
 // InsertMany adds the caller's trace context to every inserted job's metadata.
 func (t *Telemetry) InsertMany(ctx context.Context, params []*rivertype.JobInsertParams,
 	doInner func(context.Context) ([]*rivertype.JobInsertResult, error)) ([]*rivertype.JobInsertResult, error) {
+	if observability.Synthetic(ctx) { // from the server's own context, never from a header (ADR 0041)
+		for _, p := range params {
+			p.Metadata = withSynthetic(p.Metadata)
+		}
+	}
 	if t.Propagator != nil {
 		carrier := propagation.MapCarrier{}
 		t.Propagator.Inject(ctx, carrier)
@@ -99,9 +131,15 @@ func (t *Telemetry) Work(ctx context.Context, job *rivertype.JobRow, doInner fun
 		trace.WithAttributes(attribute.String("river.kind", job.Kind), attribute.Int64("river.job_id", job.ID),
 			attribute.Int("river.attempt", job.Attempt), attribute.String("river.queue", job.Queue)))
 	defer span.End()
+	synthetic := isSynthetic(job.Metadata)
+	traffic := observability.TrafficLabel(synthetic)
+	if synthetic {
+		ctx = observability.WithTraffic(ctx, true) // for the jobs this one queues and the model requests it makes
+		span.SetAttributes(attribute.Bool("finuance.synthetic", true))
+	}
 	// every line the job writes names the job; with the span in ctx it gets trace_id and span_id too
 	ctx = observability.WithLogger(ctx, observability.Logger(ctx).With(
-		slog.Int64("job_id", job.ID), slog.String("kind", job.Kind), slog.Int("attempt", job.Attempt)))
+		slog.Int64("job_id", job.ID), slog.String("kind", job.Kind), slog.Int("attempt", job.Attempt), slog.String("traffic", traffic)))
 	start := time.Now()
 	err := doInner(ctx)
 	result := "ok"
@@ -110,7 +148,7 @@ func (t *Telemetry) Work(ctx context.Context, job *rivertype.JobRow, doInner fun
 		span.SetStatus(codes.Error, "job failed")
 	}
 	if t.Metrics != nil {
-		t.Metrics.Jobs.WithLabelValues(job.Kind, result).Inc()
+		t.Metrics.Jobs.WithLabelValues(job.Kind, result, traffic).Inc()
 		t.Metrics.Duration.WithLabelValues(job.Kind).Observe(time.Since(start).Seconds())
 	}
 	return err

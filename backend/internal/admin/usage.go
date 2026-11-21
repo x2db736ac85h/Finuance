@@ -79,7 +79,7 @@ func (s *Service) InstanceUsage(ctx context.Context, days int) (InstanceUsage, e
 				if err != nil {
 					return err
 				}
-				out.Totals = Totals{Users: t.Total, Admins: t.Admins, Disabled: t.Disabled, Demo: t.Demo, Active7: t.Active7, Active30: t.Active30}
+				out.Totals = Totals{Users: t.Total, Admins: t.Admins, Disabled: t.Disabled, Demo: t.Demo, Synthetic: t.Synthetic, Active7: t.Active7, Active30: t.Active30}
 			}
 			ids, err = q.ListUserIDsAfter(ctx, db.ListUserIDsAfterParams{After: after, PageSize: 500})
 			return err

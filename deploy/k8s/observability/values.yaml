@@ -15,6 +15,12 @@ dashboards:
   folder: Finuance
   folderAnnotation: grafana_folder
 
+slo:
+  # Count the traffic of synthetic users (the traffic simulator's, ADR 0041) in the service-level
+  # objectives. Off: the objectives describe what people experience. A lab instance, where the
+  # simulator is the only traffic, switches it on.
+  includeSynthetic: false
+
 rules:
   enabled: true
   # Labels the Prometheus ruleSelector matches (kube-prometheus-stack: release: <release name>).

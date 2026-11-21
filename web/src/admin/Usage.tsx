@@ -13,6 +13,8 @@ export function UsageAdmin() {
   const tokens = u.days.reduce((n, d) => n + d.tokens, 0);
   const tiles: [string, string][] = [
     ['Accounts', fmtInt(u.totals.users)],
+    // the traffic simulator's users, only on an instance that has any
+    ...(u.totals.synthetic > 0 ? ([['Synthetic users', fmtInt(u.totals.synthetic)]] as [string, string][]) : []),
     ['Active in 7 days', fmtInt(u.totals.active7)],
     ['Active in 30 days', fmtInt(u.totals.active30)],
     ['Transactions', fmtInt(u.transactions)],

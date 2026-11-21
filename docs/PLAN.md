@@ -499,6 +499,7 @@ httpapi                      : maps HTTP ⇄ domain; no SQL strings
 | `FINUANCE_MAX_UPLOAD_BYTES` | `20971520` | 20 MiB per file |
 | `FINUANCE_MAX_LEGACY_IMPORT_BYTES` | `209715200` | 200 MiB per legacy import upload (all files + manifest) |
 | `FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT` | empty | Tracing disabled when empty |
+| `FINUANCE_SIMULATION` | `false` | A lab instance for the traffic simulator: only here can synthetic users be made and sign in (ADR 0041). Never on an instance with real data |
 | `FINUANCE_OTEL_SAMPLE_RATIO` | `1` | The share of requests that are traced, 0 to 1 (Phase 24); a job follows the request that queued it |
 | `FINUANCE_LOG_LEVEL` | `info` | |
 | `FINUANCE_TRUSTED_PROXIES` | empty | CIDRs allowed to set `X-Forwarded-For` |

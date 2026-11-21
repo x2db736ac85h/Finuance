@@ -172,6 +172,13 @@ func (s *Service) Redeem(ctx context.Context, userID uuid.UUID, typed string) (F
 			return err
 		}
 		owner = taken
+		// a person and a synthetic user never become friends (ADR 0041); returning here rolls the
+		// transaction back, so the code is not used up
+		if same, err := q.FriendKinds(ctx, db.FriendKindsParams{A: userID, B: owner}); err != nil {
+			return err
+		} else if !same {
+			return fmt.Errorf("this code can't be used with this account: %w", ErrInvalid)
+		}
 		if myName, err = displayName(ctx, q, userID); err != nil {
 			return err
 		}

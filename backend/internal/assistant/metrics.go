@@ -4,12 +4,12 @@ import "github.com/prometheus/client_golang/prometheus"
 
 // Metrics are the assistant's Prometheus metrics (PLAN §8.2). They carry no user data.
 type Metrics struct {
-	Runs      *prometheus.CounterVec   // finuance_assistant_runs_total{mode, result}
+	Runs      *prometheus.CounterVec   // finuance_assistant_runs_total{mode, result, traffic}
 	Duration  *prometheus.HistogramVec // finuance_assistant_run_duration_seconds{mode}
-	ToolCalls *prometheus.CounterVec   // finuance_assistant_tool_calls_total{tool, result}
+	ToolCalls *prometheus.CounterVec   // finuance_assistant_tool_calls_total{tool, result, traffic}
 	Rounds    prometheus.Histogram     // finuance_assistant_rounds
 	Tokens    prometheus.Histogram     // finuance_assistant_tokens_sent_approx
-	Upstream  *prometheus.CounterVec   // finuance_assistant_model_requests_total{connection, result}
+	Upstream  *prometheus.CounterVec   // finuance_assistant_model_requests_total{connection, result, traffic}
 	// One request to a model server (PLAN 24.5), next to the span llm.request:
 	LLMDuration   *prometheus.HistogramVec // finuance_llm_request_duration_seconds{connection}
 	LLMFirstToken *prometheus.HistogramVec // finuance_llm_time_to_first_token_seconds{connection}
@@ -20,17 +20,17 @@ type Metrics struct {
 func NewMetrics(reg prometheus.Registerer) *Metrics {
 	m := &Metrics{
 		Runs: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "finuance_assistant_runs_total",
-			Help: "Assistant runs by mode and result (ok, error, stopped, fallback_plan)."}, []string{"mode", "result"}),
+			Help: "Assistant runs by mode, result (ok, error, stopped, fallback_plan) and traffic (real, synthetic)."}, []string{"mode", "result", "traffic"}),
 		Duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "finuance_assistant_run_duration_seconds",
 			Help: "Duration of an assistant run.", Buckets: []float64{.5, 1, 2.5, 5, 10, 20, 30, 60, 120, 300}}, []string{"mode"}),
 		ToolCalls: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "finuance_assistant_tool_calls_total",
-			Help: "Assistant tool calls by tool and result (ok, error, unknown, repeated)."}, []string{"tool", "result"}),
+			Help: "Assistant tool calls by tool, result (ok, error, unknown, repeated) and traffic."}, []string{"tool", "result", "traffic"}),
 		Rounds: prometheus.NewHistogram(prometheus.HistogramOpts{Name: "finuance_assistant_rounds",
 			Help: "Model requests per assistant run.", Buckets: []float64{1, 2, 3, 4, 5, 6, 7, 8}}),
 		Tokens: prometheus.NewHistogram(prometheus.HistogramOpts{Name: "finuance_assistant_tokens_sent_approx",
 			Help: "Approximate tokens sent to the model per run (JSON length / 4).", Buckets: prometheus.ExponentialBuckets(500, 2, 9)}),
 		Upstream: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "finuance_assistant_model_requests_total",
-			Help: "Requests to model servers by connection and result (ok or an error kind)."}, []string{"connection", "result"}),
+			Help: "Requests to model servers by connection, result (ok or an error kind) and traffic."}, []string{"connection", "result", "traffic"}),
 		LLMDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "finuance_llm_request_duration_seconds",
 			Help: "Duration of one request to a model server, to the end of its answer.", Buckets: []float64{.25, .5, 1, 2.5, 5, 10, 20, 30, 60, 120, 300}}, []string{"connection"}),
 		LLMFirstToken: prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "finuance_llm_time_to_first_token_seconds",

@@ -6,6 +6,20 @@ notes of their version.
 
 ## [Unreleased]
 
+### Added
+
+- Synthetic users for a lab instance (ADR 0041): on an instance started with `FINUANCE_SIMULATION`
+  a user can be marked as synthetic, and its requests and jobs are labelled `traffic="synthetic"`
+  in logs, metrics and traces. The label comes from the user's row, never from the request. The
+  service-level rules leave such traffic out unless `slo.includeSynthetic` is set, and every
+  dashboard has a Traffic selector. Migration 00029.
+
+### Changed
+
+- `http_server_requests_total`, `http_server_request_duration_seconds`, `finuance_jobs_total` and
+  the assistant's run, tool and model-request counters have a new label `traffic`. Rules or
+  dashboards of your own that name every label of these series need it added.
+
 ## [0.5.0] - 2026-11-20
 
 ### Changed

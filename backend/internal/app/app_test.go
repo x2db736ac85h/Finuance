@@ -92,7 +92,7 @@ func TestServeEndToEnd(t *testing.T) {
 		t.Errorf("meta: %d %s", code, body)
 	}
 	_, metrics := get(t, "http://"+cfg.AdminAddr+"/metrics")
-	for _, want := range []string{`http_server_requests_total{method="GET",route="GET /api/v1/meta",status_class="2xx"} 1`,
+	for _, want := range []string{`http_server_requests_total{method="GET",route="GET /api/v1/meta",status_class="2xx",traffic="real"} 1`,
 		"pgxpool_max_conns 10", `finuance_build_info{commit="abc",version="v-test"} 1`} {
 		if !strings.Contains(metrics, want) {
 			t.Errorf("/metrics lacks %q", want)

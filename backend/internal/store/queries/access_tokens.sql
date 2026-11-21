@@ -10,7 +10,7 @@ RETURNING *;
 -- A live token and its user: not revoked, not expired, and the account not disabled.
 SELECT t.id AS token_id, t.scope, t.last_used_at, t.user_id,
        u.email, u.display_name, u.is_demo, u.created_at AS user_created_at,
-       u.is_admin, u.must_change_password, u.limits
+       u.is_admin, u.must_change_password, u.limits, u.kind
 FROM access_tokens t
 JOIN users u ON u.id = t.user_id
 WHERE t.token_hash = @token_hash AND t.revoked_at IS NULL AND t.expires_at > @now AND u.disabled_at IS NULL;

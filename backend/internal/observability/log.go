@@ -73,4 +73,5 @@ var LogFields = []string{
 	"user",                                                           // platform.UserHash, never the id
 	"route", "method", "status", "bytes", "duration_ms", "client_ip", // the access line
 	"job_id", "kind", "attempt", // a job's lines
+	"traffic", // real or synthetic (ADR 0041): on the access line and on a job's lines
 }

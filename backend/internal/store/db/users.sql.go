@@ -16,7 +16,7 @@ const createUser = `-- name: CreateUser :one
 
 INSERT INTO users (id, email, password_hash, display_name, is_demo)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at
+RETURNING id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at, kind
 `
 
 type CreateUserParams struct {
@@ -51,6 +51,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.MustChangePassword,
 		&i.Limits,
 		&i.DigestDueAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -95,7 +96,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) (int64, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at FROM users WHERE id = $1
+SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at, kind FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -114,12 +115,13 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.MustChangePassword,
 		&i.Limits,
 		&i.DigestDueAt,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at FROM users WHERE email = $1
+SELECT id, email, password_hash, display_name, is_demo, created_at, last_login_at, is_admin, disabled_at, must_change_password, limits, digest_due_at, kind FROM users WHERE email = $1
 `
 
 // email is citext, so the lookup ignores case.
@@ -139,6 +141,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.MustChangePassword,
 		&i.Limits,
 		&i.DigestDueAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -183,4 +186,18 @@ type SetUserPasswordParams struct {
 func (q *Queries) SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error {
 	_, err := q.db.Exec(ctx, setUserPassword, arg.PasswordHash, arg.ID)
 	return err
+}
+
+const setUserSynthetic = `-- name: SetUserSynthetic :execrows
+UPDATE users SET kind = 'synthetic' WHERE id = $1 AND NOT is_admin
+`
+
+// Marks a user as synthetic (the traffic simulator's users, ADR 0041). Never an administrator, and
+// never back: a synthetic user stays one until it is deleted.
+func (q *Queries) SetUserSynthetic(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, setUserSynthetic, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

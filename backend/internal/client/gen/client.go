@@ -2791,7 +2791,10 @@ type AdminUser struct {
 	Id          openapi_types.UUID `json:"id"`
 	IsAdmin     bool               `json:"isAdmin"`
 	IsDemo      bool               `json:"isDemo"`
-	LastLoginAt *time.Time         `json:"lastLoginAt,omitempty"`
+
+	// IsSynthetic A user of the traffic simulator (only on an instance started with `FINUANCE_SIMULATION`); its traffic is labelled as synthetic
+	IsSynthetic bool       `json:"isSynthetic"`
+	LastLoginAt *time.Time `json:"lastLoginAt,omitempty"`
 
 	// Limits Limits; a missing value means the next level decides (user → instance → the server's bound or none).
 	Limits             LimitOverrides `json:"limits"`
@@ -5521,7 +5524,10 @@ type UserTotals struct {
 	Admins   int64 `json:"admins"`
 	Demo     int64 `json:"demo"`
 	Disabled int64 `json:"disabled"`
-	Users    int64 `json:"users"`
+
+	// Synthetic Users of the traffic simulator, counted in `users` too
+	Synthetic int64 `json:"synthetic"`
+	Users     int64 `json:"users"`
 }
 
 // UserUsage Counts of an account's data (never the data).
