@@ -363,7 +363,7 @@ Four Argo CD apps in the namespace `monitoring`, none of them exposed (port-forw
 | App | Wave | What |
 |---|---|---|
 | `tempo` | −6 | Tempo 2.9.5 from `deploy/k8s/tempo` (the Helm chart is deprecated): OTLP/HTTP on 4318 only, traces kept 72 h on a 5 Gi volume, read-only as uid 10001; its NetworkPolicy admits 4318 from Alloy and 3200 from Grafana |
-| `kube-prometheus-stack` | −4 | chart 92.16.1 with `homelab/monitoring-values.yaml`: Prometheus (7 days or 8 GB on a 10 Gi volume), Alertmanager, Grafana (dashboard sidecar, Tempo data source), kube-state-metrics, node-exporter; k3s's built-in etcd/scheduler/controller-manager/proxy aren't scraped (nothing separate to scrape). After Sealed Secrets, because it also syncs Grafana's sealed admin login |
+| `kube-prometheus-stack` | −4 | chart 93.4.1 (Grafana 13.3.1, Prometheus 3.16.0) with `homelab/monitoring-values.yaml`: Prometheus (7 days or 8 GB on a 10 Gi volume, exemplar storage), Alertmanager, Grafana (dashboard and data source sidecars, Tempo data source), kube-state-metrics, node-exporter; k3s's built-in etcd/scheduler/controller-manager/proxy aren't scraped (nothing separate to scrape). After Sealed Secrets, because it also syncs Grafana's sealed admin login |
 | `finuance-observability` | 1 | `deploy/k8s/observability` (the six dashboards, SLO and alert rules, the e-mail receiver) with `homelab/observability-values.yaml` and the overlay's addresses (`$env/homelab/observability-values.yaml`, template `observability-values.example.yaml`), plus the sealed SMTP password |
 | `telemetry` | 1 | `deploy/k8s/telemetry` with `homelab/telemetry-values.yaml` (Phase 24.6, ADR 0042): Alloy v1.22.0 (the app's traces on to Tempo; the logs of the `finuance` namespace through the Kubernetes API, with a read-only Role there) and Loki 3.7.10 (single binary, 14 days on a 5 Gi volume, uid 10001), Grafana's Loki data source. See [Logs](#logs) |
 
@@ -893,7 +893,43 @@ Symptoms: api pods not ready (`/readyz` 503), the app shows errors, `finuance-db
 
 ### Imports stuck in "committing"
 
-The worker runs commits: `kubectl -n finuance logs deploy/finuance-worker`, and the `finuance_jobs_total` / `finuance_imports_total` metrics on its port 9090. A failed job is retried, then the import is marked failed and can be retried from the UI (*Try again*).
+The worker runs commits: `kubectl -n finuance logs deploy/finuance-worker`, and the `finuance_jobs_total` / `finuance_imports_total` metrics on its port 9090. A failed job is retried, then the import is marked failed and can be retried from the UI (*Try again*). A failed import's message ends with "(Reference: <id>)": `{namespace="finuance"} | request_id="<id>"` in Loki finds the request that queued the commit and the worker's lines ([observability.md](observability.md#following-one-request)).
+
+### Following a failed import (a drill)
+
+To see the whole path once (the Phase 24 gate), without touching anyone's data: a temporary check
+on `imports` refuses to mark one file's import as committed, so its commit fails three times within
+about 20 seconds and the import is marked failed with its reference. Every other import passes the
+check, and nothing is written while it fails (each attempt is one transaction that is rolled back).
+
+1. In the app, create an account for the drill and keep a synthetic file ready under the name
+   `gate-drill.csv` (any file from `testdata/fixtures/synthetic/`).
+2. Add the check, as the database's superuser on the primary:
+
+   ```sh
+   P=$(kubectl -n finuance get cluster finuance-db -o jsonpath='{.status.currentPrimary}')
+   kubectl -n finuance exec "$P" -c postgres -- psql -X -d finuance -c \
+     "SET lock_timeout = '2s'; ALTER TABLE imports ADD CONSTRAINT gate_drill CHECK (status <> 'committed' OR filename <> 'gate-drill.csv') NOT VALID;"
+   ```
+
+   (`NOT VALID`: existing rows are not read; `lock_timeout`: the statement gives up instead of
+   waiting behind a long query.)
+3. Drop `gate-drill.csv` on the drill account and commit it. After about 20 seconds the toast says
+   "The import could not be committed. … (Reference: <id>)".
+4. Remove the check at once:
+
+   ```sh
+   kubectl -n finuance exec "$P" -c postgres -- psql -X -d finuance -c 'ALTER TABLE imports DROP CONSTRAINT gate_drill;'
+   ```
+
+5. Grafana → Explore → Loki: `{namespace="finuance"} | request_id="<id>"` shows the commit
+   request's access line and the worker's `commit_import failed` line, whose `error` names the
+   check `gate_drill`. Its `trace_id` opens the trace in Tempo: the request's span with the
+   job's three attempts below it, each with an error status. "Logs for this span" goes back.
+6. Delete the failed import and the drill account in the app.
+
+On Compose, the same check in `docker compose exec db psql -U postgres -d finuance`, and Grafana
+from `make up-observability`.
 
 ## Upgrading PostgreSQL (minor release)
 

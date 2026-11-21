@@ -10,6 +10,47 @@ No signal carries what a person typed, what a model wrote or what a tool returne
 query strings, no statement parameters, no prompt or answer text. A user appears as a hash
 ([THREAT-MODEL.md](THREAT-MODEL.md), boundary B9 and row I20).
 
+## Where the signals go
+
+```mermaid
+flowchart LR
+    subgraph app["namespace finuance"]
+        api["api"]
+        worker["worker"]
+        web["web (nginx)"]
+        db[("PostgreSQL")]
+    end
+    subgraph mon["namespace monitoring"]
+        prom["Prometheus<br/>7 days, exemplars"]
+        alloy["Alloy<br/>deletes span attributes,<br/>cuts log fields"]
+        tempo["Tempo<br/>72 hours"]
+        loki["Loki<br/>14 days"]
+        graf["Grafana<br/>dashboards, Explore"]
+        am["Alertmanager<br/>e-mail"]
+    end
+    api -- "OTLP traces" --> alloy
+    worker -- "OTLP traces" --> alloy
+    alloy --> tempo
+    alloy -- "reads pod logs<br/>through the API" --> app
+    alloy --> loki
+    prom -- "scrapes /metrics" --> api
+    prom -- "scrapes /metrics" --> worker
+    prom -- "scrapes" --> db
+    prom --> am
+    graf --> prom
+    graf --> tempo
+    graf --> loki
+```
+
+On Compose, `make up-observability` runs the same dashboards in Grafana's `otel-lgtm` image: the
+api and the worker send their traces to it, its Prometheus scrapes their admin ports, and an Alloy
+container reads the containers' logs through the Docker socket and applies the same stages as on
+Kubernetes. The links between the signals described below (a log line's `trace_id` opens the
+trace, a span's "Logs for this span" lists its lines, an exemplar on a latency panel opens one
+request's trace) are configured for the Kubernetes install: the Loki data source comes with
+`deploy/k8s/telemetry`, the Tempo and Prometheus ones with the monitoring values. `otel-lgtm`
+brings its own data sources.
+
 ## Log fields
 
 In production every line is one JSON object. The fields below mean the same on every line; the

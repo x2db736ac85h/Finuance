@@ -5,7 +5,7 @@
        and unmatched paths. */}}
 {{- /* Synthetic traffic (the simulator's users, ADR 0041) is left out of the objectives unless
        slo.includeSynthetic is set, as a lab instance does: there the simulator is the
-       traffic. A series without the label (a release before 0.6) matches too. */}}
+       traffic. A series without the label (a release before 0.5.1) matches too. */}}
 {{- $traffic := ternary "" `,traffic!="synthetic"` .Values.slo.includeSynthetic }}
 {{- $avail := printf `job="finuance-api",namespace="%s",route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"%s` $ns $traffic }}
 {{- /* Requests that count for latency: the table query and the insight charts (docs/SLO.md). */}}
