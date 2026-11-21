@@ -15,6 +15,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 )
 
@@ -94,6 +95,85 @@ func Admin(ctx context.Context, cfg config.Config, in AdminInput, out func(forma
 		return nil
 	}
 	return fmt.Errorf("unknown admin command %q (want create-user, set-password, grant-admin, revoke-admin or remove-second-factor)", in.Command)
+}
+
+// SyntheticInput is `finuance admin synthetic-users`.
+type SyntheticInput struct {
+	Count int       // the first Count personas (identity.First)
+	Seed  io.Reader // stdin; the first line is the simulator's seed (FINUANCE_SIM_SEED)
+}
+
+// SyntheticUsers makes the traffic simulator's users on a lab instance (PLAN 25.1, ADR 0041 and
+// 0043): for each of the first Count personas it creates the missing account, marks it synthetic
+// and gives it the password derived from the seed, which the simulator derives the same way. A
+// second run with the same seed changes nothing, so it can run on every deploy; a new seed resets
+// the passwords, which ends those users' sessions and tokens. It refuses on an instance without
+// FINUANCE_SIMULATION before touching anything, and it never changes a person's account that
+// happens to use a persona's address.
+func SyntheticUsers(ctx context.Context, cfg config.Config, in SyntheticInput, out func(format string, args ...any)) error {
+	if !cfg.Simulation {
+		return fmt.Errorf("synthetic users need an instance started with FINUANCE_SIMULATION=true: %w", platform.ErrForbidden)
+	}
+	personas, err := identity.First(in.Count)
+	if err != nil {
+		return err
+	}
+	seed, err := identity.ReadSeed(in.Seed)
+	if err != nil {
+		return err
+	}
+	pool, err := store.Open(ctx, cfg.DatabaseURL, 2, noop.NewTracerProvider(), store.Timeouts{})
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	svc := NewAuth(store.New(pool), cfg)
+	// first every address, so that a person's account at one of them stops the run before any change
+	existing := make([]*auth.User, len(personas))
+	for i, p := range personas {
+		u, err := svc.UserByEmail(ctx, p.Email)
+		switch {
+		case errors.Is(err, platform.ErrNotFound):
+			continue
+		case err != nil:
+			return fmt.Errorf("%s: %w", p.Slug, err)
+		case !u.Synthetic:
+			return fmt.Errorf("%s: the account %s is a person's; nothing was changed: %w", p.Slug, p.Email, platform.ErrConflict)
+		}
+		existing[i] = &u
+	}
+	var created, reset, unchanged int
+	for i, p := range personas {
+		password, err := identity.Password(seed, p.Slug)
+		if err != nil {
+			return err
+		}
+		if existing[i] == nil {
+			u, err := svc.CreateUser(ctx, auth.SignupInput{Email: p.Email, Password: password, DisplayName: p.Name})
+			if err != nil {
+				return fmt.Errorf("%s: %w", p.Slug, err)
+			}
+			if err := svc.MarkSynthetic(ctx, u.ID); err != nil {
+				return fmt.Errorf("%s: %w", p.Slug, err)
+			}
+			created++
+			continue
+		}
+		var ve *platform.ValidationError
+		switch err := svc.CheckPassword(ctx, existing[i].ID, "password", password); {
+		case err == nil:
+			unchanged++
+		case errors.As(err, &ve): // another seed: this one wins
+			if err := svc.SetPassword(ctx, p.Email, password); err != nil {
+				return fmt.Errorf("%s: %w", p.Slug, err)
+			}
+			reset++
+		default:
+			return fmt.Errorf("%s: %w", p.Slug, err)
+		}
+	}
+	out("synthetic users: %d created, %d with a new password, %d unchanged", created, reset, unchanged)
+	return nil
 }
 
 // readPassword takes the first line of r, without the line ending.

@@ -32,6 +32,19 @@ describe('shell', () => {
     expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Search all columns' }).disabled).toBe(true);
   });
 
+  it('names a lab instance in the title bar, and only a lab', async () => {
+    renderApp('/');
+    expect(await screen.findByRole('heading', { name: 'Drop CSV files here' })).toBeTruthy();
+    expect(screen.queryByText('Lab')).toBeNull();
+  });
+
+  it('shows the Lab chip on an instance that is a lab for the simulator', async () => {
+    db.simulation = true;
+    renderApp('/');
+    const chip = await screen.findByText('Lab');
+    expect(chip.title).toMatch(/synthetic users/);
+  });
+
   it('loads demo data: toast, demo account in the sidebar, navigation to it', async () => {
     const demo = account({
       id: '00000000-0000-4000-8000-0000000000d1',

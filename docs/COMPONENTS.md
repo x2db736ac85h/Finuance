@@ -61,7 +61,7 @@ flowchart TB
 | **api** | Every HTTP endpoint (120 paths, 163 operations), sessions, access tokens, two-step sign-in, CSRF, rate limits, the assistant's run loop, the browser's error reports | `backend/cmd/finuance`, `internal/app`, `internal/httpapi` | Deployment ×2–4 (HPA), `finuance serve` | PostgreSQL, the model server, the OTLP endpoint |
 | **worker** | Background jobs: committing imports, reclassifying, legacy imports, digests, cleanups | `internal/jobs` | Deployment ×1, `finuance worker` | PostgreSQL, the model server |
 | **migrate** | Schema migrations (goose, 29 files) | `internal/store/migrations` | Job before each rollout, owner role | PostgreSQL |
-| **admin CLI** | `create-user`, `set-password`, `grant-admin`, `revoke-admin`, `remove-second-factor`, `llm-probe`; `seed-demo` | `internal/app/admin.go` | Run by hand in a pod or locally | PostgreSQL |
+| **admin CLI** | `create-user`, `set-password`, `grant-admin`, `revoke-admin`, `remove-second-factor`, `llm-probe`, `synthetic-users` (a lab only, ADR 0043); `seed-demo` | `internal/app/admin.go` | Run by hand in a pod or locally | PostgreSQL |
 | **PostgreSQL** | All data and the job queue; forced row-level security; roles `finuance_owner` and `finuance_app` | `deploy/db/bootstrap.sql`, `deploy/k8s/db` | CloudNativePG cluster ×2, or one Compose container | The backup bucket |
 | **Model server** | Answers the assistant; optional | `internal/llm` (client side), `deploy/assistant/` | Outside the cluster (ADR 0020) | — |
 | **`llmmock`** | A scripted model server for tests, CI and the rehearsal; never in a release | `backend/testutil/llmmock`, `cmd/llmmock` | Compose profile, kind namespace | — |

@@ -13,6 +13,8 @@ export type Db = {
   signupEnabled: boolean;
   confirmPassword: boolean;
   demoMode: boolean;
+  /** GET /meta: a lab instance for the traffic simulator (Phase 25). */
+  simulation: boolean;
   /** GET /meta: switches, view defaults and approved themes (Phase 19). */
   features: Schemas['Features'];
   defaults: Schemas['ViewDefaults'];
@@ -78,6 +80,7 @@ export const freshDb = (): Db => ({
   signupEnabled: true,
   confirmPassword: false,
   demoMode: false,
+  simulation: false,
   features: { overview: true, assistant: true, assistantDigests: true, friends: true, sharedGroups: true },
   friends: [],
   notifications: [],
@@ -170,6 +173,7 @@ export const server = setupServer(
       signupEnabled: db.signupEnabled,
       confirmPassword: db.confirmPassword,
       demoMode: db.demoMode,
+      simulation: db.simulation,
       assistantEnabled: false,
       features: db.features,
       defaults: db.defaults,

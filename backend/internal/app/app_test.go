@@ -25,6 +25,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
 	"github.com/x2db736ac85h/finuance/backend/internal/store"
 	"github.com/x2db736ac85h/finuance/backend/internal/store/db"
 	"github.com/x2db736ac85h/finuance/backend/testutil"
@@ -244,6 +245,111 @@ func TestAdminCommands(t *testing.T) {
 	}
 	if len(out) != 2 || !strings.Contains(out[0], "created user "+email) || strings.Contains(strings.Join(out, " "), "password 123") {
 		t.Errorf("output = %q", out)
+	}
+}
+
+// TestSyntheticUsers: `finuance admin synthetic-users` makes the simulator's users on a lab only,
+// with the passwords the simulator derives from the same seed; running it again changes nothing
+// (it runs on every deploy), a new seed resets the passwords, and a person's account at a
+// persona's address is left alone (PLAN 25.1).
+func TestSyntheticUsers(t *testing.T) {
+	tdb := testutil.Require(t, testDB)
+	tdb.Truncate(t)
+	ctx := context.Background()
+	var out []string
+	log := func(f string, a ...any) { out = append(out, fmt.Sprintf(f, a...)) }
+	seed := strings.Repeat("s", identity.MinSeedBytes)
+	plain := testConfig(t, tdb)
+	if err := SyntheticUsers(ctx, plain, SyntheticInput{Count: 3, Seed: strings.NewReader(seed + "\n")}, log); !errors.Is(err, platform.ErrForbidden) {
+		t.Fatalf("on an instance that is not a lab: %v", err)
+	}
+	svc := NewAuth(store.New(tdb.App), plain)
+	if _, err := svc.UserByEmail(ctx, identity.Nth(0).Email); !errors.Is(err, platform.ErrNotFound) {
+		t.Fatalf("a refused run left a user behind: %v", err)
+	}
+
+	lab := testConfig(t, tdb)
+	lab.Simulation, lab.AllowSignup = true, false
+	labAuth := NewAuth(store.New(tdb.App), lab)
+	for _, bad := range []SyntheticInput{
+		{Count: 0, Seed: strings.NewReader(seed + "\n")},
+		{Count: identity.Max + 1, Seed: strings.NewReader(seed + "\n")},
+		{Count: 3, Seed: strings.NewReader("too short\n")},
+		{Count: 3},
+	} {
+		if err := SyntheticUsers(ctx, lab, bad, log); err == nil {
+			t.Errorf("SyntheticUsers(%d, …) succeeded", bad.Count)
+		}
+	}
+	// a person already uses the fourth persona's address: the run changes nothing at all
+	squatter := identity.Nth(3)
+	if _, err := labAuth.CreateUser(ctx, auth.SignupInput{Email: squatter.Email, Password: "a person's password"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := SyntheticUsers(ctx, lab, SyntheticInput{Count: 4, Seed: strings.NewReader(seed + "\n")}, log); !errors.Is(err, platform.ErrConflict) {
+		t.Errorf("over a person's account: %v", err)
+	}
+	if u, err := labAuth.UserByEmail(ctx, squatter.Email); err != nil || u.Synthetic {
+		t.Errorf("the person's account: %+v, %v", u, err)
+	}
+	if _, err := labAuth.UserByEmail(ctx, identity.Nth(0).Email); !errors.Is(err, platform.ErrNotFound) {
+		t.Errorf("a refused run created the first persona: %v", err)
+	}
+	if _, _, err := labAuth.Login(ctx, squatter.Email, "a person's password", "", auth.Client{}); err != nil {
+		t.Errorf("the person's password changed: %v", err)
+	}
+
+	out = nil
+	if err := SyntheticUsers(ctx, lab, SyntheticInput{Count: 3, Seed: strings.NewReader(seed + "\n")}, log); err != nil {
+		t.Fatal(err)
+	}
+	personas, _ := identity.First(3)
+	sessions := map[string]string{}
+	for _, p := range personas {
+		u, err := labAuth.UserByEmail(ctx, p.Email)
+		if err != nil || !u.Synthetic || u.IsAdmin || u.DisplayName != p.Name {
+			t.Fatalf("%s: %+v, %v", p.Slug, u, err)
+		}
+		pw, _ := identity.Password([]byte(seed), p.Slug)
+		_, token, err := labAuth.Login(ctx, p.Email, pw, "", auth.Client{})
+		if err != nil {
+			t.Fatalf("%s signs in with the derived password: %v", p.Slug, err)
+		}
+		sessions[p.Slug] = token
+	}
+	// again with the same seed: nothing changes, and the sessions survive
+	if err := SyntheticUsers(ctx, lab, SyntheticInput{Count: 3, Seed: strings.NewReader(seed + "\n")}, log); err != nil {
+		t.Fatal(err)
+	}
+	for slug, token := range sessions {
+		if _, err := labAuth.Resolve(ctx, token); err != nil {
+			t.Errorf("%s's session ended on a second run: %v", slug, err)
+		}
+	}
+	// a new seed: new passwords, the old sessions end
+	other := strings.Repeat("t", identity.MinSeedBytes)
+	if err := SyntheticUsers(ctx, lab, SyntheticInput{Count: 3, Seed: strings.NewReader(other + "\n")}, log); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range personas {
+		if _, err := labAuth.Resolve(ctx, sessions[p.Slug]); !errors.Is(err, platform.ErrUnauthenticated) {
+			t.Errorf("%s's session survived a new seed: %v", p.Slug, err)
+		}
+		pw, _ := identity.Password([]byte(other), p.Slug)
+		if _, _, err := labAuth.Login(ctx, p.Email, pw, "", auth.Client{}); err != nil {
+			t.Errorf("%s with the new seed's password: %v", p.Slug, err)
+		}
+	}
+	want := []string{
+		"synthetic users: 3 created, 0 with a new password, 0 unchanged",
+		"synthetic users: 0 created, 0 with a new password, 3 unchanged",
+		"synthetic users: 0 created, 3 with a new password, 0 unchanged",
+	}
+	if strings.Join(out, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output = %q, want %q", out, want)
+	}
+	if strings.Contains(strings.Join(out, " "), seed) {
+		t.Error("the seed was printed")
 	}
 }
 

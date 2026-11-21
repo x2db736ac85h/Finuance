@@ -30,6 +30,14 @@ ask) gets back in with:
 finuance admin remove-second-factor -email=you@example.com
 ```
 
+On a lab for the traffic simulator (an instance started with `FINUANCE_SIMULATION=true`, ADR 0043),
+one more command makes the simulator's users, the animals, with passwords derived from the seed the
+simulator is given too. It refuses on any other instance and is safe to run again:
+
+```bash
+printf '%s\n' "$FINUANCE_SIM_SEED" | finuance admin synthetic-users -count=10 -seed-stdin
+```
+
 On Kubernetes run them in the api pod (`kubectl -n finuance exec -i deploy/finuance-api -- /finuance admin …`),
 with Compose `docker compose exec -T api /finuance admin …`. The last active administrator can't be
 demoted, disabled or deleted.

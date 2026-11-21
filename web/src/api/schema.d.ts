@@ -2616,6 +2616,12 @@ export interface components {
             demoMode: boolean;
             /** @description Whether creating an access token and changing an administrator's role ask for the current password (`FINUANCE_CONFIRM_PASSWORD`, on by default). */
             confirmPassword: boolean;
+            /**
+             * @description Whether this instance is a lab for the traffic simulator (`FINUANCE_SIMULATION`, ADR 0041 and 0043): only here can
+             *     synthetic users exist and sign in. The simulator refuses to start against an instance that does not report it, and the
+             *     web app shows a "Lab" chip.
+             */
+            simulation: boolean;
         };
         User: {
             isAdmin: boolean;
