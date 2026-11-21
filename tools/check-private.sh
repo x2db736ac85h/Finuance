@@ -18,12 +18,24 @@
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
+here="$PWD"
 cd "$root"
 
 status=0
 
 if [ "$#" -gt 0 ]; then
-  files=("$@")
+  # paths are the caller's, relative to where it was called from; a file that can't be read fails
+  # (perl would only warn and scan nothing)
+  files=()
+  for f in "$@"; do
+    case "$f" in /*) ;; *) f="$here/$f" ;; esac
+    if [ ! -f "$f" ] || [ ! -r "$f" ]; then
+      echo "check-private: can't read $f" >&2
+      status=1
+      continue
+    fi
+    files+=("$f")
+  done
 else
   private="$(git ls-files --cached -- testdata/private/ | grep -v '^testdata/private/\.gitkeep$' || true)"
   if [ -n "$private" ]; then

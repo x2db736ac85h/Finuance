@@ -1,0 +1,32 @@
+﻿mBank Przykładowy S.A. Bankowość Detaliczna;
+			Skrytka Pocztowa 0000;
+			00-000 Miasto 2;
+			www.example.pl;
+			Infolinia: 000 000 000;
+			+48 (00) 0 000 000;
+			
+
+#Klient;
+OTTER PRZYKŁADOWY;
+
+Lista operacji;
+
+#Za okres:;
+01.01.2026;31.03.2026;
+
+#zgodnie z wybranymi filtrami wyszukiwania;
+      #dla rachunków:;
+      Konto - 00000000000000000000700002;
+      
+      #Lista nie jest dokumentem w rozumieniu art. 7 Ustawy Prawo Bankowe, ponieważ operacje można samodzielnie edytować.;
+      
+      #Waluta;#Wpływy;#Wydatki;
+PLN;914,66;0,00;
+      
+#Data operacji;#Opis operacji;#Rachunek;#Kategoria;#Kwota;
+2026-03-31;"BANK  KAPITALIZACJA ODSETEK  KAPITALIZACJA ODSETEK";"Konto 0000 ... 0002";"Odsetki";1,77 PLN;;
+2026-03-11;"PRZELEW WŁASNY  PRZELEW WŁASNY  OSZCZĘDNOŚCI 03/2026  00000000000000000000700001";"Konto 0000 ... 0002";"Przelew własny";300,00 PLN;;
+2026-02-28;"BANK  KAPITALIZACJA ODSETEK  KAPITALIZACJA ODSETEK";"Konto 0000 ... 0002";"Odsetki";10,92 PLN;;
+2026-02-11;"PRZELEW WŁASNY  PRZELEW WŁASNY  OSZCZĘDNOŚCI 02/2026  00000000000000000000700001";"Konto 0000 ... 0002";"Przelew własny";300,00 PLN;;
+2026-01-31;"BANK  KAPITALIZACJA ODSETEK  KAPITALIZACJA ODSETEK";"Konto 0000 ... 0002";"Odsetki";1,97 PLN;;
+2026-01-11;"PRZELEW WŁASNY  PRZELEW WŁASNY  OSZCZĘDNOŚCI 01/2026  00000000000000000000700001";"Konto 0000 ... 0002";"Przelew własny";300,00 PLN;;

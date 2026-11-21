@@ -70,6 +70,17 @@ passes "the card networks' test numbers" docs/b.md "4111 1111 1111 1111, 4242424
 passes "a card-like number that fails the Luhn check" docs/b.md "ref $wrong"
 passes "a Luhn-valid number without a card prefix" testdata/b.csv "ID $noprefix"
 
+# paths relative to the caller's directory are read there, and a file that can't be read fails
+printf '%s\n' "konto $digits" >"$tmp/docs/d.md"
+if (cd "$tmp" && "$root/tools/check-private.sh" docs/d.md >/dev/null 2>&1); then
+  echo "check-private-test: a relative path from another directory was not read" >&2
+  fails=$((fails + 1))
+fi
+if "$root/tools/check-private.sh" "$tmp/docs/missing.md" >/dev/null 2>&1; then
+  echo "check-private-test: a file that does not exist passed" >&2
+  fails=$((fails + 1))
+fi
+
 # the message must not repeat the value it found
 printf '%s\n' "$mail" >"$tmp/docs/c.md"
 if "$root/tools/check-private.sh" "$tmp/docs/c.md" 2>&1 | grep -q "jan.kowalski"; then
