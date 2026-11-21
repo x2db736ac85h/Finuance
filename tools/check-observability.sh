@@ -3,7 +3,8 @@
 # writes, the chart lints and renders with every values file and validates with kubeconform, the
 # rendered alert rules pass `promtool check rules` and the unit tests in tests/rules.test.yaml, and
 # every metric a dashboard or rule uses exists: in metrics.txt (what the api and worker register,
-# kept current by TestMetricNames) or external-metrics.txt (CloudNativePG, the Barman Cloud plugin,
+# kept current by TestMetricNames), sim-metrics.txt (the simulator's, TestSimMetricNames) or
+# external-metrics.txt (CloudNativePG, the Barman Cloud plugin,
 # kube-state-metrics, the Go collectors). For the telemetry chart (PLAN 24.6): Loki accepts its
 # configuration, Alloy validates its own, every Alloy file is formatted, and the log stages turn the
 # sample lines in deploy/k8s/telemetry/tests into tests/stages.expected (UPDATE=1 rewrites it).
@@ -90,7 +91,7 @@ echo "== every metric used exists"
 } >"$work/exprs.txt"
 grep -oE '[A-Za-z_:][A-Za-z0-9_:]*\{[^{]' "$work/exprs.txt" | sed -E 's/\{.$//' | sort -u >"$work/used.txt"
 "$YQ" '.groups[].rules[] | select(has("record")) | .record' "$work/rules.yaml" | sort -u >"$work/recorded.txt"
-known=$(cat <(grep -v '^#' "$chart/metrics.txt") <(grep -v '^#' "$chart/external-metrics.txt") "$work/recorded.txt" | grep -v '^$' | sort -u)
+known=$(cat <(grep -v '^#' "$chart/metrics.txt") <(grep -v '^#' "$chart/sim-metrics.txt") <(grep -v '^#' "$chart/external-metrics.txt") "$work/recorded.txt" | grep -v '^$' | sort -u)
 missing=0
 while read -r m; do
   family=$(sed -E 's/_(bucket|sum|count)$//' <<<"$m")

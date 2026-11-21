@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+# The traffic simulator's control API (api/sim.openapi.yaml, PLAN 25.5): server, models and the
+# embedded spec for its request validator.
+package: gen
+output: internal/sim/control/gen/gen.go
+generate:
+  std-http-server: true
+  strict-server: true
+  models: true
+  embedded-spec: true

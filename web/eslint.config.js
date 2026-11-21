@@ -5,7 +5,17 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['dist', 'node_modules', 'src/api/schema.d.ts', 'playwright-report', 'test-results'] },
+  {
+    ignores: [
+      'dist',
+      'dist-sim',
+      'node_modules',
+      'src/api/schema.d.ts',
+      'sim/src/api/schema.d.ts',
+      'playwright-report',
+      'test-results',
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   {

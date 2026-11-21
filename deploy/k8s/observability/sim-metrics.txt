@@ -1,0 +1,6 @@
+# Metrics the traffic simulator registers (TestSimMetricNames; go_* and process_* are standard).
+finuance_sim_action_duration_seconds
+finuance_sim_actions_total
+finuance_sim_active_personas
+finuance_sim_config_generation
+finuance_sim_paused

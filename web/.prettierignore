@@ -1,4 +1,5 @@
 dist
+dist-sim
 node_modules
 src/api/schema.d.ts
 playwright-report

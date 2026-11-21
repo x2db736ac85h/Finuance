@@ -1,6 +1,13 @@
 package sim
 
-import "time"
+import (
+	"time"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
+)
+
+// AnimalOrder is the ten animals in the order personas are numbered.
+func AnimalOrder() []string { return identity.Animals[:] }
 
 // Character is an animal's habits (PLAN Phase 25, "The animals"): what it mostly does, when it is
 // awake and how long it thinks between two actions. Personas above ten reuse their animal's.
