@@ -173,11 +173,13 @@ func (q *Queries) ListRules(ctx context.Context, userID uuid.UUID) ([]ListRulesR
 }
 
 const lockUserAccounts = `-- name: LockUserAccounts :exec
-SELECT id FROM accounts WHERE user_id = $1 ORDER BY id FOR UPDATE
+SELECT id FROM accounts WHERE user_id = $1 ORDER BY id FOR NO KEY UPDATE
 `
 
 // Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
-// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
+// in id order, so it waits for commits, deletes and reprocesses and they wait for it. NO KEY UPDATE,
+// as the other writer locks: FOR UPDATE also blocked the foreign-key checks of a label edit's
+// annotation, which then waited past its lock timeout or deadlocked with this job (PLAN 25.17).
 func (q *Queries) LockUserAccounts(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, lockUserAccounts, userID)
 	return err

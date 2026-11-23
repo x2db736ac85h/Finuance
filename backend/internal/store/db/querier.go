@@ -402,7 +402,9 @@ type Querier interface {
 	// needs the UPDATE policy, which only the owner passes (API-8).
 	LockSharedGroup(ctx context.Context, groupID uuid.UUID) error
 	// Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
-	// in id order, so it waits for commits, deletes and reprocesses and they wait for it.
+	// in id order, so it waits for commits, deletes and reprocesses and they wait for it. NO KEY UPDATE,
+	// as the other writer locks: FOR UPDATE also blocked the foreign-key checks of a label edit's
+	// annotation, which then waited past its lock timeout or deadlocked with this job (PLAN 25.17).
 	LockUserAccounts(ctx context.Context, userID uuid.UUID) error
 	MarkAIChangeReverted(ctx context.Context, arg MarkAIChangeRevertedParams) error
 	MarkAssistantAttachmentsSent(ctx context.Context, arg MarkAssistantAttachmentsSentParams) error
