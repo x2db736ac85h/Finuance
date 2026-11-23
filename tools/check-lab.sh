@@ -4,8 +4,11 @@
 #      assistant, a deliberate mistake, the overview; each answers ok;
 #   2. Prometheus counts synthetic requests on the lab and scrapes the simulator's own metrics;
 #   3. Loki holds the api's line of the last action, found by the request id the feed shows,
-#      and the line says traffic=synthetic.
-# Needs curl and jq; reads the control token from .env.lab and never prints it.
+#      and the line says traffic=synthetic;
+#   4. what the load costs (ADR 0044): Alloy's cAdvisor and PostgreSQL figures in Prometheus, the
+#      simulator's live strip, and the console's link in the lab administrator's Developer section.
+# Needs curl and jq; reads the control token and the administrator's password from .env.lab and
+# never prints them.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a
@@ -57,4 +60,27 @@ for _ in $(seq 30); do
 done
 [ -n "$line" ] || fail "Loki has no api line with request id $id"
 grep -qE 'traffic=synthetic|"traffic":"synthetic"' <<<"$line" || fail "the api's line is not labelled synthetic: $line"
+
+echo "== what the load costs"
+prom_has 'count(container_memory_working_set_bytes{namespace="finuance",container="api"})' ||
+  fail "Prometheus has no container figures (Alloy's cAdvisor: the host's cgroups, containerd's socket)"
+prom_has 'sum(pg_up{job="finuance-db"})' || fail "Prometheus has no PostgreSQL figures (Alloy's PostgreSQL exporter)"
+res=
+for _ in $(seq 30); do
+  res=$(call "$sim/api/resources")
+  [ "$(jq '.available and (.containers | map(.name) | index("api")) != null' <<<"$res")" = true ] && break
+  sleep 3
+done
+[ "$(jq .available <<<"$res")" = true ] || fail "the simulator's live strip has no figures: $(jq -c '{available, error}' <<<"$res")"
+echo "   live strip: $(jq -r '[.containers[].name] | join(", ")' <<<"$res")"
+web=http://localhost:${FINUANCE_LAB_PORT:-8020}
+jar=$(mktemp)
+trap 'rm -f "$jar"' EXIT
+jq -cn '{email: "admin@lab.invalid", password: env.FINUANCE_LAB_ADMIN_PASSWORD}' | # not on a command line
+  curl -fsS -c "$jar" -H 'X-Finuance-Client: web' -H "Origin: $web" -H 'Content-Type: application/json' \
+    -X POST "$web/api/v1/auth/login" -d @- -o /dev/null || fail "the lab administrator can't sign in"
+curl -fsS -b "$jar" -H 'X-Finuance-Client: web' -H "Origin: $web" "$web/api/v1/admin/developer" |
+  jq -e '.links | map(.name) | index("Synthetic users console") != null' >/dev/null ||
+  fail "the Developer section has no link to the synthetic users console"
+echo "   Settings → Developer links the synthetic users console"
 echo "check-lab: ok"

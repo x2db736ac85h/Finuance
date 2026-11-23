@@ -107,6 +107,11 @@ echo "== the simulator: restricted pods, its own namespace closed, egress to DNS
 # only DNS plus what simulator.egress names (the values name none: DNS alone)
 [ "$("$YQ" -N 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-sim") | .spec.egress | length' "$out/sim-simulator.yaml")" = 1 ] ||
   { echo "check-helm: the simulator may reach more than DNS and the lab"; exit 1; }
+# the live strip's Prometheus, when a cluster names one (ADR 0044)
+"$YQ" -e 'select(.kind == "Deployment") | .spec.template.spec.containers[0].args | (contains(["-prometheus=http://kube-prometheus-stack-prometheus.monitoring:9090"]) and contains(["-namespace=finuance-lab"]))' \
+  "$out/sim-ci-simulator-values.yaml" >/dev/null || { echo "check-helm: the simulator is not given its Prometheus"; exit 1; }
+"$YQ" -e 'select(.kind == "Deployment") | .spec.template.spec.containers[0].args | any_c(test("^-prometheus")) | not' \
+  "$out/sim-simulator.yaml" >/dev/null || { echo "check-helm: the lab's values give the simulator a Prometheus they don't name"; exit 1; }
 "$YQ" -e 'select(.kind == "Service") | .spec.type == "ClusterIP"' "$out/sim-simulator.yaml" >/dev/null ||
   { echo "check-helm: the simulator's service is published beyond the cluster"; exit 1; }
 [ -z "$("$YQ" -N 'select(.kind == "Ingress") | .metadata.name' "$out/sim-simulator.yaml" "$out/sim-mock.yaml")" ] ||

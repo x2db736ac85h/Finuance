@@ -56,6 +56,15 @@ export function useChangeConfig(client: Client) {
   });
 }
 
+/** What the load costs, from the lab's Prometheus through the simulator, every five seconds. */
+export function useResources(client: Client) {
+  return useQuery({
+    queryKey: ['resources'],
+    queryFn: async () => data(await client.GET('/resources')),
+    refetchInterval: 5000,
+  });
+}
+
 /** Asks every animal that plays to rebuild its history with the configured profile. */
 export function useRebuildHistory(client: Client) {
   const qc = useQueryClient();

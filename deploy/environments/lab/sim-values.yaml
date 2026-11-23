@@ -9,6 +9,8 @@ simulator:
   activeHours: true
   seedSecret: { name: finuance-sim-seed, key: seed }
   controlTokenSecret: { name: finuance-sim-control, key: token }
+  # a cluster's overlay names its Prometheus here, with an egress entry for its pods (ADR 0044)
+  prometheus: { url: "", namespace: finuance-lab }
 mock:
   enabled: false
 podMonitor:

@@ -228,6 +228,7 @@ Namespaces on the reference cluster: `finuance` (web, api, worker, database), `f
 | Browser errors | the web app, the browser's policy reports | `finuance_client_errors_total`, one log line each | — |
 | Synthetic traffic | the server, from the user's row (ADR 0041) | The `traffic` label in logs, metrics, traces and jobs | — |
 | The simulator's view | `finuance-sim` | `finuance_sim_*` metrics, the dashboard "Finuance · Simulator", its live feed with each action's request id | — |
+| What the load costs | the kubelet's cAdvisor and CloudNativePG; on the Compose lab Alloy's cAdvisor and PostgreSQL exporter | The dashboard "Finuance · Lab resources", the simulator page's live strip (`GET /api/resources`) | — |
 
 ## 7. Guard scripts and tools
 

@@ -121,6 +121,17 @@ for f in "$tel"/files/*.alloy "$tel"/tests/*.alloy; do
   docker run --rm --network none -v "$PWD/$tel:/c:ro" "$ALLOY_IMAGE" fmt "/c/${f#"$tel"/}" | diff -q - "$f" >/dev/null ||
     { echo "check-observability: $f is not formatted (alloy fmt)"; exit 1; }
 done
+# Compose's Alloy as the lab loads it: its logs, the cluster's stages and the lab's metrics (PLAN 25.16)
+compose=deploy/compose/observability
+mkdir -p "$work/compose-alloy"
+cp "$compose/alloy.alloy" "$work/compose-alloy/compose.alloy"
+cp "$compose/metrics.alloy" "$tel/files/stages.alloy" "$work/compose-alloy/"
+docker run --rm --network none -e COMPOSE_PROJECT=finuance-lab -e PG_DSN=postgres://x@db/x -v "$work/compose-alloy:/etc/alloy:ro" \
+  "$ALLOY_IMAGE" validate /etc/alloy || { echo "check-observability: Alloy refuses Compose's configuration"; exit 1; }
+for f in "$compose"/*.alloy; do
+  docker run --rm --network none -v "$PWD/$compose:/c:ro" "$ALLOY_IMAGE" fmt "/c/${f#"$compose"/}" | diff -q - "$f" >/dev/null ||
+    { echo "check-observability: $f is not formatted (alloy fmt)"; exit 1; }
+done
 echo ok
 
 echo "== telemetry: the log stages on the sample lines"

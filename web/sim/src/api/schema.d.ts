@@ -150,6 +150,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/resources': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * What the lab costs, from its Prometheus, over the last 15 minutes
+     * @description CPU and memory of every container of the lab and of the simulator, the animals' actions and the API's requests a second, its p95 and its server errors, every 15 seconds (ADR 0044). Fixed queries; `available` is false when the simulator was given no Prometheus or it doesn't answer.
+     */
+    get: operations['getResources'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/history/rebuild': {
     parameters: {
       query?: never;
@@ -261,6 +281,36 @@ export interface components {
       variety: number;
       /** @description How far back a rebuilt history starts (1 … 10). */
       years: number;
+    };
+    Resources: {
+      available: boolean;
+      /** @description Why the figures are missing. */
+      error?: string;
+      containers: components['schemas']['ContainerUsage'][];
+      series: components['schemas']['ResourceSeries'][];
+    };
+    ContainerUsage: {
+      name: string;
+      /** @description Cores busy. */
+      cpu: components['schemas']['Point'][];
+      memoryBytes: components['schemas']['Point'][];
+    };
+    ResourceSeries: {
+      /**
+       * @description The animals' actions a second, the API's requests a second, its p95 in seconds, its 5xx a second.
+       * @enum {string}
+       */
+      name: 'actions' | 'requests' | 'p95' | 'serverErrors';
+      points: components['schemas']['Point'][];
+    };
+    Point: {
+      /**
+       * Format: int64
+       * @description Unix time in seconds.
+       */
+      t: number;
+      /** Format: double */
+      v: number;
     };
     RebuildStatus: {
       /**
@@ -604,6 +654,27 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Event'];
+        };
+      };
+      default: components['responses']['Problem'];
+    };
+  };
+  getResources: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The figures. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Resources'];
         };
       };
       default: components['responses']['Problem'];

@@ -28,6 +28,9 @@ simulator:
   activeHours: true
   # Grafana's address for the feed's links (empty: no links).
   grafana: ""
+  # The lab's Prometheus, for the page's live strip of what the load costs (ADR 0044; empty: none),
+  # and the lab's namespace there. Its address also needs an entry in egress (the Prometheus pods).
+  prometheus: { url: "", namespace: finuance }
   # Existing Secrets: the seed (the lab's synthetic-users job gets the same one) and the control
   # API's token. Both at least 32 bytes.
   seedSecret: { name: "", key: seed }

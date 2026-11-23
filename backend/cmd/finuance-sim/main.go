@@ -37,6 +37,7 @@ const usage = `usage: finuance-sim <command> [flags]
 
 commands:
   run -target=https://lab.example [-listen=:8090] [-personas=N] [-intensity=‰] [-tz=Europe/Warsaw]
+      [-prometheus=http://prometheus:9090 -namespace=finuance]
                     play the personas against a lab, with the control API, the tuning page and
                     /metrics on -listen; refuses an instance whose /meta does not report
                     simulation: true
@@ -111,6 +112,8 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 	tz := fs.String("tz", "Europe/Warsaw", "the instance's time zone, for the active hours")
 	listen := fs.String("listen", envOr(getenv, "FINUANCE_SIM_LISTEN", ":8090"), "the control API's, the page's and /metrics' address")
 	grafana := fs.String("grafana", getenv("FINUANCE_SIM_GRAFANA_URL"), "Grafana's address, for the feed's links")
+	prom := fs.String("prometheus", getenv("FINUANCE_SIM_PROMETHEUS_URL"), "the lab's Prometheus, for the page's live strip of what the load costs")
+	namespace := fs.String("namespace", envOr(getenv, "FINUANCE_SIM_LAB_NAMESPACE", "finuance"), "the lab's namespace in that Prometheus")
 	origin := fs.String("origin", getenv("FINUANCE_SIM_ORIGIN"), "the Origin to send, when the target is reached by another name than the lab's public one")
 	caFile := fs.String("ca-file", getenv("FINUANCE_SIM_CA_FILE"), "a PEM file with the authority that signed the lab's certificate, besides the system's")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
@@ -136,9 +139,9 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 		return 1
 	}
 	h, err := control.Handler(control.Options{Engine: e, Token: getenv("FINUANCE_SIM_CONTROL_TOKEN"), Version: version,
-		Grafana: *grafana, Registry: reg, Log: log})
+		Grafana: *grafana, Prometheus: *prom, Namespace: *namespace, Registry: reg, Log: log})
 	if err != nil {
-		fmt.Fprintln(stderr, "finuance-sim: FINUANCE_SIM_CONTROL_TOKEN:", err)
+		fmt.Fprintln(stderr, "finuance-sim:", err)
 		return 1
 	}
 	srv := &http.Server{Addr: *listen, Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: time.Minute, IdleTimeout: 2 * time.Minute}

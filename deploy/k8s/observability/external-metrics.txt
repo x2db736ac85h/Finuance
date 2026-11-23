@@ -42,3 +42,16 @@ node_memory_MemAvailable_bytes
 node_memory_MemTotal_bytes
 # Traefik v3 (k3s's bundled chart 40.x; with metrics.prometheus.addRoutersLabels)
 traefik_router_requests_total
+# cAdvisor: the kubelet's on a cluster, Alloy v1.22.0's prometheus.exporter.cadvisor on the Compose
+# lab (deploy/compose/observability/metrics.alloy; the dashboard "Finuance · Lab resources")
+container_cpu_usage_seconds_total
+container_fs_reads_bytes_total
+container_fs_writes_bytes_total
+container_memory_working_set_bytes
+# postgres_exporter in Alloy v1.22.0 (prometheus.exporter.postgres, collector stat_database), the
+# Compose lab only; a cluster has CloudNativePG's names above
+pg_stat_database_blks_hit
+pg_stat_database_blks_read
+pg_stat_database_numbackends
+pg_stat_database_xact_commit
+pg_stat_database_xact_rollback

@@ -280,14 +280,23 @@ ANIMAL ?= fox
 
 .env.lab:
 	@umask 077; { echo "# The lab's secrets (make sim-up); random, for this machine's lab only"; \
-	  echo "FINUANCE_SIM_SEED=$$(openssl rand -hex 32)"; echo "FINUANCE_SIM_CONTROL_TOKEN=$$(openssl rand -hex 32)"; } > .env.lab
-	@echo "Created .env.lab (the simulator's seed and control token)."
+	  echo "FINUANCE_SIM_SEED=$$(openssl rand -hex 32)"; echo "FINUANCE_SIM_CONTROL_TOKEN=$$(openssl rand -hex 32)"; \
+	  echo "FINUANCE_LAB_ADMIN_PASSWORD=$$(openssl rand -hex 16)"; } > .env.lab
+	@echo "Created .env.lab (the simulator's seed and control token, the lab administrator's password)."
+
+# The lab's administrator (a person, not an animal): sees Settings → Developer, which links the
+# synthetic users console (ADR 0044). Its password is in .env.lab.
+LAB_ADMIN_EMAIL := admin@lab.invalid
 
 .PHONY: sim-up
 sim-up: $(ENV_FILE) .env.lab web-dist ## The lab: a simulation instance, the mock model, the simulator and Grafana (http://localhost:8020, :8090, :3000)
+	@grep -q '^FINUANCE_LAB_ADMIN_PASSWORD=' .env.lab || { umask 077; echo "FINUANCE_LAB_ADMIN_PASSWORD=$$(openssl rand -hex 16)" >> .env.lab; }
 	cd web && npm run --silent build:sim
 	VERSION=$(VERSION) $(LAB_COMPOSE) up -d --build --wait
+	@set -a; . ./.env.lab; set +a; printf '%s\n' "$$FINUANCE_LAB_ADMIN_PASSWORD" | $(LAB_COMPOSE) exec -T api /finuance admin create-user \
+	  -admin -email=$(LAB_ADMIN_EMAIL) -display-name="Lab administrator" -password-stdin >/dev/null 2>&1 || true # there already
 	@set -a; . ./.env.lab; set +a; echo "Lab: http://localhost:8020 · simulator: http://localhost:8090/#token=$$FINUANCE_SIM_CONTROL_TOKEN · Grafana: http://localhost:3000"
+	@echo "Lab administrator (Settings → Developer links the console): $(LAB_ADMIN_EMAIL), make sim-password ANIMAL=admin"
 
 .PHONY: sim-down
 sim-down: ## Stop the lab and keep its database (SIM_RESET=1 drops the database volume as well)
@@ -299,8 +308,9 @@ test-e2e-sim: ## Playwright's specs of the simulator's page against the running 
 	  E2E_SIM_TOKEN="$$FINUANCE_SIM_CONTROL_TOKEN" npx playwright test
 
 .PHONY: sim-password
-sim-password: ## An animal's e-mail address and password, to sign in to the lab as it (ANIMAL=fox)
-	@$(LAB_COMPOSE) exec -T sim /finuance-sim password $(ANIMAL)
+sim-password: ## An animal's e-mail address and password, to sign in to the lab as it (ANIMAL=fox; admin: the lab administrator)
+	@if [ "$(ANIMAL)" = admin ]; then set -a; . ./.env.lab; set +a; printf '%s\t%s\n' "$(LAB_ADMIN_EMAIL)" "$$FINUANCE_LAB_ADMIN_PASSWORD"; \
+	  else $(LAB_COMPOSE) exec -T sim /finuance-sim password $(ANIMAL); fi
 
 .PHONY: web-dist
 web-dist: web/node_modules ## Build web/dist on the host; the web image uses it instead of building in Docker

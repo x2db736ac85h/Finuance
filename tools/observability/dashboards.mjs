@@ -299,6 +299,42 @@ const dashboards = {
     ts('Configuration changes', [[`max(finuance_sim_config_generation{${SIM}})`, 'generation']], { w: 24, h: 5, desc: 'Every change on the tuning page raises the generation.' }),
   ], { tags: ['simulator'] }),
 
+  'finuance-lab-resources': dashboard('finuance-lab-resources', 'Finuance · Lab resources', 'What the load costs (ADR 0044): CPU, memory and disk of every container, the database\'s work and the API\'s answers, with the simulator\'s actions over them. On Compose from Alloy\'s cAdvisor and PostgreSQL exporters (the lab: make sim-up), on a cluster from the kubelet and CloudNativePG. The simulator\'s own containers count with the lab\'s.', () => {
+    // the lab's namespace and the simulator's (on a cluster it has its own; on Compose both are finuance)
+    const CT = 'namespace=~"$namespace|finuance-sim",container!="",container!="POD"';
+    // PostgreSQL's statistics: postgres_exporter's names on Compose, CloudNativePG's on a cluster
+    const pg = (stat, f) => `${f(`pg_stat_database_${stat}{${DB},datname="finuance"}`)} or ${f(`cnpg_pg_stat_database_${stat}{${DB},datname="finuance"}`)}`;
+    const rate1m = (sel) => `sum(rate(${sel}[1m]))`;
+    return [
+      stat('Animals\' actions a second', orZero(`sum(rate(finuance_sim_actions_total{${SIM}}[1m]))`), { decimals: 1 }),
+      stat('API requests a second', orZero(`sum(rate(http_server_requests_total{${API}}[1m]))`), { decimals: 1 }),
+      stat('API p95', q95('http_server_request_duration_seconds', API, []), { unit: 's', decimals: 3, thresholds: [[null, 'green'], [0.3, 'orange'], [1, 'red']] }),
+      stat('Server errors a second', orZero(`sum(rate(http_server_requests_total{${API},status_class="5xx"}[1m]))`), { decimals: 2, thresholds: [[null, 'green'], [0.01, 'orange'], [1, 'red']] }),
+      row('Load and answers'),
+      ts('Actions and requests a second', [
+        [`sum(rate(finuance_sim_actions_total{${SIM}}[1m]))`, 'the animals\' actions'],
+        [`sum(rate(http_server_requests_total{${API}}[1m]))`, 'API requests'],
+      ], { unit: 'reqps', desc: 'An action makes about three requests. Traffic = synthetic shows the animals\' requests alone.' }),
+      ts('API latency', [
+        [q50('http_server_request_duration_seconds', API, []), 'p50'],
+        [q95('http_server_request_duration_seconds', API, []), 'p95'],
+      ], { unit: 's', exemplars: true }),
+      row('Containers'),
+      ts('CPU by container', [[`sum by (container) (rate(container_cpu_usage_seconds_total{${CT}}[1m]))`, '{{container}}']], { stack: true, desc: 'In cores: 1 is one core busy all the time.' }),
+      ts('Memory by container', [[`sum by (container) (container_memory_working_set_bytes{${CT}})`, '{{container}}']], { unit: 'bytes', stack: true, desc: 'The working set, what the kernel would keep under pressure.' }),
+      ts('Disk read by container', [[`sum by (container) (rate(container_fs_reads_bytes_total{${CT}}[1m]))`, '{{container}}']], { unit: 'Bps' }),
+      ts('Disk written by container', [[`sum by (container) (rate(container_fs_writes_bytes_total{${CT}}[1m]))`, '{{container}}']], { unit: 'Bps' }),
+      row('Database'),
+      ts('Transactions a second', [[pg('xact_commit', rate1m), 'committed'], [pg('xact_rollback', rate1m), 'rolled back']], { unit: 'ops' }),
+      ts('Cache hits', [[`(${pg('blks_hit', rate1m)}) / ((${pg('blks_hit', rate1m)}) + (${pg('blks_read', rate1m)}))`, 'hits']], { unit: 'percentunit', min: 0, desc: 'Blocks found in shared buffers rather than read from disk.' }),
+      ts('Connections', [
+        [`sum(pg_stat_database_numbackends{${DB},datname="finuance"}) or sum(cnpg_backends_total{${DB},datname="finuance"})`, 'to the database'],
+        [`sum by (job) (pgxpool_acquired_conns{job=~"finuance-(api|worker)",${NS}})`, 'in use {{job}}'],
+      ]),
+      ts('Waits for a connection', [[`sum by (job) (rate(pgxpool_empty_acquire_total{job=~"finuance-(api|worker)",${NS}}[1m]))`, '{{job}}']], { unit: 'ops', desc: 'Acquires that found the pool empty: the load has reached the pool\'s size.' }),
+    ];
+  }, { tags: ['simulator'] }),
+
   'finuance-slo': dashboard('finuance-slo', 'Finuance · SLOs', 'Availability (99.5 % non-5xx over 30 days) and latency (95 % of table and chart requests under 300 ms), their error budgets and burn rates (docs/SLO.md).', () => {
     const avail = `job="finuance-api",${NS},route!~"GET /(healthz|readyz)|.*/assistant/.*|unmatched"`;
     const lat = `job="finuance-api",${NS},route=~"POST /api/v1/(transactions/query|insights/.*)"`;

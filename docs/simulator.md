@@ -112,12 +112,33 @@ finuance-sim users -count=50 -out=users.json                                    
 that profile. `make loadtest-seed` uses both on a lab, so k6 signs in as the animals
 ([loadtest/README.md](../loadtest/README.md)).
 
+## What the load costs
+
+- **On the page:** *What the load costs* shows the animals' actions and the API's requests a
+  second, its p95 and its server errors, and each container's CPU and memory, over the last 15
+  minutes (`GET /api/resources`: fixed queries against the lab's Prometheus, `-prometheus`; every
+  five seconds, one query for every viewer). *Flow* draws each action as a dot from the animals
+  through the web server and the API to the database, the worker (imports) or the mock model
+  (questions), in its result's colour; with reduced motion it shows the counts of the last minute.
+- **In Grafana:** the dashboard "Finuance · Lab resources": CPU, memory and disk per container,
+  the database's transactions, cache hits and connections, the pool's waits, and the animals'
+  actions next to the API's requests and latency.
+- **Where the figures come from:** on the Compose lab, Alloy's own cAdvisor (the host's cgroups,
+  containerd's socket and, read only, Docker's root for its classic storage; like the Docker socket
+  it already reads, a development machine only) and
+  its PostgreSQL exporter as the application role (`deploy/compose/observability/metrics.alloy`);
+  on a cluster, the kubelet's cAdvisor and CloudNativePG's metrics, with the simulator chart's
+  `simulator.prometheus` and an egress entry for Prometheus.
+- **From the lab itself:** Settings → Developer links the console and the two dashboards. `make
+  sim-up` makes the lab's administrator (`admin@lab.invalid`, a person; `make sim-password
+  ANIMAL=admin`), who sees that section.
+
 ## Finding its traffic
 
 - **Metrics:** the `traffic` label, `synthetic` or `real`, on the request, job and assistant counters; every dashboard's Traffic variable. Requests without a user (signing in, the probes, unknown paths) count as real.
 - **Logs:** `traffic=synthetic` on the api's access line. In Loki on Kubernetes it is the `traffic` label (`{namespace="finuance-lab", traffic="synthetic"}`).
 - **Traces:** the span attributes `finuance.synthetic=true` and `user_agent.synthetic.type=test`.
-- **The simulator's own view:** `finuance_sim_*` metrics and the dashboard "Finuance · Simulator" (actions by animal and by area, errors, the latency it saw next to the server's).
+- **The simulator's own view:** `finuance_sim_*` metrics and the dashboard "Finuance · Simulator" (actions by animal and by area, errors, the latency it saw next to the server's); what its load costs in "Finuance · Lab resources".
 - **One action:** the feed shows each action's request id, which is the id the server answered (on Compose the web server assigns its own). It finds the action's lines in Loki, and a line's `trace_id` opens its trace.
 
 The service-level objectives leave synthetic traffic out (`traffic!="synthetic"`) unless the
