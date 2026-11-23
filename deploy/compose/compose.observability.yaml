@@ -16,6 +16,7 @@ services:
       - ./observability/rules.yaml:/finuance/rules.yaml:ro
       - ./observability/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/finuance.yaml:ro
       - ../k8s/observability/files/dashboards:/finuance/dashboards:ro
+    restart: unless-stopped # back after a reboot like the stack it watches (found in 25.12)
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:9090/-/ready"]
       interval: 5s
@@ -27,13 +28,17 @@ services:
     image: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
     # as root for the socket, without capabilities: the image's own data folder is closed to it
     # a folder of its own: the image's /etc/alloy holds a default configuration Alloy would load too
-    command: [run, /etc/finuance-alloy, --storage.path=/tmp/alloy, --disable-reporting]
+    # where each container's log was read up to lives on a volume: with it on the tmpfs, a restarted
+    # Alloy read every log again from the start and Loki stored part of it twice (found in 25.12)
+    command: [run, /etc/finuance-alloy, --storage.path=/var/lib/alloy, --disable-reporting]
+    restart: unless-stopped
     environment:
       COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME}
     volumes:
       - ./observability/alloy.alloy:/etc/finuance-alloy/compose.alloy:ro
       - ../k8s/telemetry/files/stages.alloy:/etc/finuance-alloy/stages.alloy:ro
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -46,3 +51,5 @@ services:
   worker:
     environment:
       FINUANCE_OTEL_EXPORTER_OTLP_ENDPOINT: http://observability:4318/v1/traces
+volumes:
+  alloy-data:
