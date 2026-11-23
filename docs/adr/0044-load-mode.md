@@ -41,9 +41,11 @@ the system, to replace the load-test users, and to show what the load costs.
    through the same front door, so the simulator paces its sign-ins under the instance's sign-in
    limit (25 at once, then one every 2.5 seconds), and 500 animals join over about 20 minutes. A
    mistyped password takes a sign-in turn too. Each animal is a user of its own and keeps below the
-   instance's limits per user at their defaults: a question to the assistant every two minutes at
-   most (30 an hour), an upload every 2.5 seconds (it waits; 30 a minute), an invitation every 2.5
-   minutes (30 an hour). The first load runs found each of these as `429`s.
+   instance's limits per user at their defaults, with token buckets like the instance's own: at the
+   same rate (a question every two minutes, an upload every 2.5 seconds, an invitation every 2.5
+   minutes) and a smaller burst (20, 20, 10, where the instance allows 30). A question or an
+   invitation without a turn is skipped; an upload waits for one. The first load runs found each of
+   these as `429`s.
 5. **Bounded telemetry.**
    - The simulator's metrics are labelled by **animal** (ten values), not by persona: 500
      personas would make tens of thousands of series. The page keeps the per-persona detail.

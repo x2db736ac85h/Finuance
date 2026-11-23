@@ -106,7 +106,7 @@ func sharedGroups(ctx context.Context, a *sim.Actor) ([]gen.SharedGroup, error) 
 
 // sharingGroup makes a shared group for a trip and invites one of the persona's friends.
 func sharingGroup(ctx context.Context, a *sim.Actor) error {
-	if !a.Every("shared.invite", sim.InviteEvery) { // the instance's limit of invitations per user and hour
+	if !a.Allow(sim.Invites) { // the instance's limit of invitations per user and hour
 		return sim.ErrNothingToDo
 	}
 	fr, err := friends(ctx, a)

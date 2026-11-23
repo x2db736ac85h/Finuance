@@ -323,23 +323,42 @@ func TestFeedIsSampled(t *testing.T) {
 	}
 }
 
-// TestPace: Pace spaces one persona's uploads by the interval, waiting rather than skipping, and
-// lets one through at once after a pause.
-func TestPace(t *testing.T) {
+// TestLimits: a persona keeps below the instance's limits per user as a token bucket does: a burst
+// at once, then one turn every interval; Allow skips when none is free, Pace waits for one. Each
+// default stays below the instance's (30 at once, 30 an hour or a minute).
+func TestLimits(t *testing.T) {
 	e, clock := newTestEngine(t, &fakeLab{simulation: true}, nil)
 	a := testActor(e, Character{})
-	for range 3 {
-		if err := a.Pace(context.Background(), "upload", UploadEvery); err != nil {
+	l := Limit{"test", time.Minute, 3}
+	for i := range 3 {
+		if !a.Allow(l) {
+			t.Fatalf("turn %d of the burst refused", i)
+		}
+	}
+	if a.Allow(l) {
+		t.Fatal("a fourth turn at once")
+	}
+	clock.now = clock.now.Add(time.Minute)
+	if !a.Allow(l) || a.Allow(l) {
+		t.Error("not one turn a minute later")
+	}
+	u := Limit{"test-upload", 2 * time.Second, 2}
+	for range 4 {
+		if err := a.Pace(context.Background(), u); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if got, want := clock.sleeps(), []time.Duration{UploadEvery, UploadEvery}; !slices.Equal(got, want) {
+	if got, want := clock.sleeps(), []time.Duration{2 * time.Second, 2 * time.Second}; !slices.Equal(got, want) {
 		t.Errorf("slept %v, want %v", got, want)
 	}
-	clock.now = clock.now.Add(time.Minute)
-	before := len(clock.sleeps())
-	if err := a.Pace(context.Background(), "upload", UploadEvery); err != nil || len(clock.sleeps()) != before {
-		t.Errorf("after a pause it waited: %v", clock.sleeps()[before:])
+	for _, d := range []struct {
+		l      Limit
+		per    time.Duration
+		events int
+	}{{Questions, time.Hour, 30}, {Uploads, time.Minute, 30}, {Invites, time.Hour, 30}} {
+		if d.l.Burst >= d.events || d.l.Every < d.per/time.Duration(d.events) {
+			t.Errorf("%s: %v with a burst of %d passes the instance's %d in %v", d.l.Key, d.l.Every, d.l.Burst, d.events, d.per)
+		}
 	}
 }
 
