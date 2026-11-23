@@ -1,6 +1,6 @@
 # 0043. The traffic simulator: a separate client that plays synthetic users on a lab
 
-- Status: accepted
+- Status: accepted; decision 7 changed by [ADR 0044](0044-load-mode.md) (load mode, 2026-11-23)
 - Date: 2026-11-21
 
 ## Context

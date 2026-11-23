@@ -145,10 +145,14 @@ func runEngine(ctx context.Context, args []string, getenv func(string) string, s
 	return code
 }
 
-// transportWith is the default transport, trusting also the authority in caFile ("" for none): a
-// lab with a certificate of its own (the rehearsal's, a private authority).
+// transportWith is the default transport with room for load mode's connections, trusting also the
+// authority in caFile ("" for none): a lab with a certificate of its own (the rehearsal's, a
+// private authority).
 func transportWith(caFile string) (http.RoundTripper, error) {
 	t := http.DefaultTransport.(*http.Transport).Clone()
+	// the default keeps two idle connections per host: at hundreds of requests a second the rest
+	// would be opened and closed again, until the local ports run out (ADR 0044)
+	t.MaxIdleConns, t.MaxIdleConnsPerHost = 512, 256
 	if caFile == "" {
 		return t, nil
 	}

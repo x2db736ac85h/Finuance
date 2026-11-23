@@ -21,6 +21,7 @@ const event: Schemas['Event'] = {
 };
 
 let config: Schemas['ConfigDoc'];
+let state: Partial<Schemas['State']>;
 let puts: Schemas['ConfigDoc'][];
 let posts: string[];
 let seenHeaders: Headers[];
@@ -29,6 +30,7 @@ const reset = () => {
   config = {
     generation: 4,
     config: {
+      mode: 'realistic',
       personas: 10,
       paused: false,
       intensity: 1000,
@@ -36,8 +38,16 @@ const reset = () => {
       clockRate: 1,
       mistakes: 20,
       assistantPerDay: 100,
+      rate: 50,
+      rampSeconds: 60,
+      loadMinutes: 30,
+      pushThrough: false,
+      runSeed: 1234,
+      jitter: 100,
+      bursts: 0,
     },
   };
+  state = {};
   puts = [];
   posts = [];
   seenHeaders = [];
@@ -64,9 +74,11 @@ const server = setupServer(
         version: 'test',
         paused: config.config.paused,
         generation: config.generation,
+        mode: config.config.mode,
+        rate: 0,
         grafana: 'http://localhost:3000',
         totals: { ok: 3, error: 1, skipped: 0 },
-        personas: [
+        personas: state.personas ?? [
           {
             slug: 'otter',
             name: 'Otter',
@@ -74,6 +86,7 @@ const server = setupServer(
             says: 'the tidy one',
             on: true,
             signedIn: true,
+            missing: false,
             counts: { ok: 2, error: 1, skipped: 0 },
           },
           {
@@ -83,10 +96,12 @@ const server = setupServer(
             says: 'the one who asks',
             on: true,
             signedIn: true,
+            missing: false,
             action: 'assistant.ask',
             counts: { ok: 1, error: 0, skipped: 0 },
           },
         ],
+        ...state,
       } satisfies Schemas['State']),
     ),
   ),
@@ -100,7 +115,18 @@ const server = setupServer(
         ],
         characters: [{ animal: 'fox', says: 'the one who asks', weights: { 'assistant.ask': 25 } }],
         presets: ['error-storm', 'quiet-day'],
-        ceilings: { personas: 50, intensity: 3000, clockRate: 1440, assistantPerDay: 500, actionsPerMinute: 30 },
+        ceilings: {
+          personas: 50,
+          intensity: 3000,
+          clockRate: 1440,
+          assistantPerDay: 500,
+          actionsPerMinute: 30,
+          loadPersonas: 500,
+          rate: 1000,
+          rampSeconds: 3600,
+          loadMinutes: 1440,
+          loadActionsPerSecond: 2,
+        },
       } satisfies Schemas['Catalogue']),
     ),
   ),
@@ -233,6 +259,91 @@ describe('the tuning page', () => {
     expect(within(result).getByRole('link', { name: 'Logs and trace' }).getAttribute('href')).toContain(
       'localhost:3000/explore',
     );
+  });
+
+  it('switches to load mode and sets the target', async () => {
+    const user = await openWithToken();
+    await user.click(await screen.findByRole('radio', { name: 'Load: one target for the lab' }));
+    await waitFor(() => {
+      expect(puts.at(-1)?.config.mode).toBe('load');
+    });
+    const rate = await screen.findByLabelText(/^Actions a second/);
+    await user.clear(rate);
+    await user.type(rate, '40');
+    await waitFor(() => {
+      expect(puts.at(-1)?.config.rate).toBe(40);
+    });
+    expect(screen.getByText(/needs at least 20 animals; 10 play/)).toBeTruthy();
+    expect(screen.getByRole('spinbutton', { name: /^Personas/ }).getAttribute('max')).toBe('500');
+    await user.click(screen.getByRole('checkbox', { name: /Push through server errors/ }));
+    await waitFor(() => {
+      expect(puts.at(-1)?.config.pushThrough).toBe(true);
+    });
+  });
+
+  it('shows the load and when it ends in the header', async () => {
+    config.config.mode = 'load';
+    state = { mode: 'load', rate: 120.4, loadEndsAt: '2026-11-23T14:30:00Z' };
+    await openWithToken();
+    const now = await screen.findByLabelText('Load now');
+    expect(now.textContent).toContain('120 a second');
+    expect(now.textContent).toContain('until');
+    expect(screen.queryByLabelText('Intensity')).toBeNull();
+  });
+
+  it('draws a new run seed and sets the jitter', async () => {
+    const user = await openWithToken();
+    const section = await screen.findByRole('region', { name: 'Randomness' });
+    await user.click(within(section).getByRole('button', { name: 'New seed' }));
+    await waitFor(() => {
+      expect(puts.at(-1)?.config.runSeed).toBe(0);
+    });
+    expect(within(section).getByLabelText(/^Mistakes/)).toBeTruthy();
+    expect(within(section).getByLabelText<HTMLInputElement>('Timing jitter').value).toBe('100');
+  });
+
+  it('shows more than twenty personas as one card per animal', async () => {
+    const animals = ['otter', 'fox', 'owl'];
+    state = {
+      personas: Array.from({ length: 30 }, (_, i) => {
+        const animal = animals[i % 3] ?? 'otter';
+        return {
+          slug: `${animal}-${String(i)}`,
+          name: animal,
+          animal,
+          says: `the ${animal}`,
+          on: true,
+          signedIn: i < 27,
+          missing: i >= 27,
+          counts: { ok: 1, error: 0, skipped: 0 },
+        };
+      }),
+    };
+    await openWithToken();
+    const otter = await screen.findByRole('article', { name: 'Otter' });
+    expect(within(otter).getByText('×10')).toBeTruthy();
+    expect(within(otter).getByText(/9 signed in, 1 not in the lab/)).toBeTruthy();
+    expect(screen.getAllByRole('article')).toHaveLength(3);
+  });
+
+  it('says when an animal is not in the lab', async () => {
+    state = {
+      personas: [
+        {
+          slug: 'otter-2',
+          name: 'Otter 2',
+          animal: 'otter',
+          says: 'the tidy one',
+          on: true,
+          signedIn: false,
+          missing: true,
+          counts: { ok: 0, error: 0, skipped: 0 },
+        },
+      ],
+    };
+    await openWithToken();
+    const card = await screen.findByRole('article', { name: 'Otter 2' });
+    expect(within(card).getByText(/not in the lab/)).toBeTruthy();
   });
 
   it('shows the feed', async () => {

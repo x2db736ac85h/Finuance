@@ -69,6 +69,7 @@ type fakeLab struct {
 	accounts   []map[string]any
 	status     int // the answer to GET /api/v1/notifications (a test action's route)
 	logins     []string
+	refuse     map[string]bool // e-mail addresses whose sign-in is refused (no such user)
 	retryAfter string
 }
 
@@ -85,6 +86,11 @@ func (f *fakeLab) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Email string }
 		_ = json.NewDecoder(r.Body).Decode(&in)
 		f.logins = append(f.logins, in.Email)
+		if f.refuse[in.Email] {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"code":"invalid_credentials"}`))
+			return
+		}
 		_, _ = w.Write([]byte(`{}`))
 	case "GET /api/v1/me/tokens":
 		_ = json.NewEncoder(w).Encode([]map[string]any{

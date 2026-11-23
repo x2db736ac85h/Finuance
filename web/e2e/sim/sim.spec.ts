@@ -72,3 +72,16 @@ test('the page is accessible in both modes', async ({ page }) => {
   await open(page);
   await check(page, 'simulator');
 });
+
+test('load mode: a target, shown in the header, and back to realistic mode', async ({ page }) => {
+  await open(page);
+  const load = page.getByRole('radio', { name: /^Load: one target/ });
+  await load.click(); // checked once the simulator has the new configuration
+  await expect(load).toBeChecked();
+  await page.getByRole('spinbutton', { name: /^Actions a second/ }).fill('5');
+  await expect(page.getByLabel('Load now')).toContainText('a second', { timeout: 10_000 });
+  await expect(page.getByLabel('Load now')).toContainText('until');
+  await check(page, 'simulator in load mode');
+  await page.getByRole('button', { name: 'Back to the defaults' }).click();
+  await expect(page.getByLabel('Intensity')).toBeVisible();
+});

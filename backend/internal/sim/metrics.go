@@ -20,7 +20,8 @@ type Metrics struct {
 func NewMetrics(reg prometheus.Registerer) *Metrics {
 	m := &Metrics{
 		actions: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "finuance_sim_actions_total",
-			Help: "Actions the simulator ran, by persona, action and result (ok, error, skipped)."}, []string{"persona", "action", "result"}),
+			Help: "Actions the simulator ran, by animal (otter-2 counts as otter, ADR 0044), action and result (ok, error, skipped)."},
+			[]string{"animal", "action", "result"}),
 		duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "finuance_sim_action_duration_seconds",
 			Help:    "How long an action took as the simulator saw it, all its requests together.",
 			Buckets: []float64{.025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60}}, []string{"action"}),
@@ -33,7 +34,11 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 }
 
 func (m *Metrics) observe(ev Event) {
-	m.actions.WithLabelValues(ev.Persona, ev.Action, ev.Result).Inc()
+	animal := ev.Persona
+	if p, ok := identity.BySlug(ev.Persona); ok {
+		animal = p.Animal
+	}
+	m.actions.WithLabelValues(animal, ev.Action, ev.Result).Inc()
 	if ev.Result != ResultSkipped {
 		m.duration.WithLabelValues(ev.Action).Observe(ev.Duration.Seconds())
 	}

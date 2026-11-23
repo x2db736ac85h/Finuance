@@ -138,6 +138,13 @@ func startLab(t *testing.T) *lab {
 	return l
 }
 
+// repeatable is the default configuration with a fixed run seed: the same draws on every run.
+func repeatable() sim.Config {
+	c := sim.Defaults()
+	c.RunSeed = 1
+	return c
+}
+
 // requestsByTraffic sums http_server_requests_total by its traffic label.
 func (l *lab) requestsByTraffic(t *testing.T) map[string]float64 {
 	t.Helper()
@@ -172,7 +179,7 @@ var noUser = []string{"POST /api/v1/auth/login", "GET /api/v1/meta", "unmatched"
 func TestEveryActionRuns(t *testing.T) {
 	l := startLab(t)
 	ctx := context.Background()
-	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All(), Config: sim.Defaults()})
+	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All(), Config: repeatable()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +324,7 @@ func twoOwnCategories(t *testing.T, ctx context.Context, a *sim.Actor) {
 func TestEmptyStatementIsNotCommitted(t *testing.T) {
 	l := startLab(t)
 	ctx := context.Background()
-	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All(), Config: sim.Defaults()})
+	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All(), Config: repeatable()})
 	if err != nil {
 		t.Fatal(err)
 	}

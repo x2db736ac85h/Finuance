@@ -66,10 +66,11 @@ func TestShortSeed(t *testing.T) {
 
 func TestNames(t *testing.T) {
 	cases := map[int]Persona{
-		0:  {Index: 0, Animal: "otter", Slug: "otter", Name: "Otter", Email: "otter@sim.invalid"},
-		6:  {Index: 6, Animal: "fox", Slug: "fox", Name: "Fox", Email: "fox@sim.invalid"},
-		10: {Index: 10, Animal: "otter", Slug: "otter-2", Name: "Otter 2", Email: "otter-2@sim.invalid"},
-		49: {Index: 49, Animal: "sloth", Slug: "sloth-5", Name: "Sloth 5", Email: "sloth-5@sim.invalid"},
+		0:   {Index: 0, Animal: "otter", Slug: "otter", Name: "Otter", Email: "otter@sim.invalid"},
+		6:   {Index: 6, Animal: "fox", Slug: "fox", Name: "Fox", Email: "fox@sim.invalid"},
+		10:  {Index: 10, Animal: "otter", Slug: "otter-2", Name: "Otter 2", Email: "otter-2@sim.invalid"},
+		49:  {Index: 49, Animal: "sloth", Slug: "sloth-5", Name: "Sloth 5", Email: "sloth-5@sim.invalid"},
+		499: {Index: 499, Animal: "sloth", Slug: "sloth-50", Name: "Sloth 50", Email: "sloth-50@sim.invalid"},
 	}
 	for i, want := range cases {
 		if got := Nth(i); got != want {
@@ -79,8 +80,15 @@ func TestNames(t *testing.T) {
 			t.Errorf("BySlug(%q) = %+v, %v", want.Slug, got, ok)
 		}
 	}
-	if _, ok := BySlug("unicorn"); ok {
-		t.Error("an unknown slug was found")
+	for _, slug := range []string{"unicorn", "otter-1", "otter-02", "otter-51", "otter-", "-2", "otter-x", ""} {
+		if _, ok := BySlug(slug); ok {
+			t.Errorf("BySlug(%q) found a persona", slug)
+		}
+	}
+	for i := range Max {
+		if p := Nth(i); func() bool { got, ok := BySlug(p.Slug); return !ok || got != p }() {
+			t.Fatalf("BySlug(%q) does not find persona %d", p.Slug, i)
+		}
 	}
 	if _, err := First(0); err == nil {
 		t.Error("First(0)")

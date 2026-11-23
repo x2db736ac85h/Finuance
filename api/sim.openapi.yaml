@@ -108,7 +108,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [quiet-day, month-end, assistant-heavy, import-flood, error-storm]
+            enum: [quiet-day, month-end, assistant-heavy, import-flood, error-storm, ramp, soak, spike]
       responses:
         "200":
           description: The configuration with the preset applied.
@@ -214,8 +214,13 @@ components:
       type: object
       additionalProperties: false
       description: The tuning page's settings (`internal/sim` Config); see Catalogue for the ceilings.
-      required: [personas, paused, intensity, activeHours, clockRate, mistakes, assistantPerDay]
+      required: [mode, personas, paused, intensity, activeHours, clockRate, mistakes, assistantPerDay, rate, rampSeconds,
+        loadMinutes, pushThrough, runSeed, jitter, bursts]
       properties:
+        mode:
+          type: string
+          enum: [realistic, load]
+          description: Realistic plays the characters at their own pace; load paces every persona by one lab-wide target (ADR 0044).
         personas:
           type: integer
           description: How many personas play, the first N.
@@ -224,7 +229,7 @@ components:
           items:
             type: string
             maxLength: 32
-          maxItems: 50
+          maxItems: 500
           description: Personas (by slug) that sit this out.
         paused:
           type: boolean
@@ -246,7 +251,7 @@ components:
         personaWeights:
           type: object
           description: An action's weight for one persona, by slug.
-          maxProperties: 50
+          maxProperties: 500
           additionalProperties:
             type: object
             maxProperties: 200
@@ -262,6 +267,28 @@ components:
           description: The share of deliberate mistakes, in per mille.
         assistantPerDay:
           type: integer
+        rate:
+          type: integer
+          description: Load mode's lab-wide target, in actions a second.
+        rampSeconds:
+          type: integer
+          description: How long load mode takes to move to a new target (from nothing when it starts).
+        loadMinutes:
+          type: integer
+          description: How long load mode runs before it returns to realistic mode by itself.
+        pushThrough:
+          type: boolean
+          description: Load mode keeps going through 5xx answers instead of backing off.
+        runSeed:
+          type: integer
+          format: int64
+          description: Enters every persona's random stream, so a run can be repeated; 0 draws a new one (at most 2^53 − 1).
+        jitter:
+          type: integer
+          description: How much think times vary (in load mode, the pacer's intervals), in percent; 100 is the characters' own range.
+        bursts:
+          type: integer
+          description: The chance in per mille that an action starts a burst of quick ones; in load mode, the depth of the pacer's bucket.
     ConfigDoc:
       type: object
       additionalProperties: false
@@ -275,11 +302,22 @@ components:
     State:
       type: object
       additionalProperties: false
-      required: [target, version, paused, generation, personas, totals]
+      required: [target, version, paused, generation, mode, rate, personas, totals]
       properties:
         target:
           type: string
           description: The lab's address.
+        mode:
+          type: string
+          enum: [realistic, load]
+        rate:
+          type: number
+          format: double
+          description: Load mode's target now, on its ramp, in actions a second (0 in realistic mode).
+        loadEndsAt:
+          type: string
+          format: date-time
+          description: When load mode returns to realistic mode by itself.
         version:
           type: string
         paused:
@@ -299,7 +337,7 @@ components:
     PersonaState:
       type: object
       additionalProperties: false
-      required: ["slug", "name", "animal", "says", "on", "signedIn", "counts"]
+      required: ["slug", "name", "animal", "says", "on", "signedIn", "missing", "counts"]
       properties:
         slug:
           type: string
@@ -313,6 +351,9 @@ components:
           type: boolean
         signedIn:
           type: boolean
+        missing:
+          type: boolean
+          description: Its sign-in was refused, so the lab has no such animal (or another seed); it waits for the next change.
         action:
           type: string
           description: The action it is doing now.
@@ -387,9 +428,20 @@ components:
     Ceilings:
       type: object
       additionalProperties: false
-      required: [personas, intensity, clockRate, assistantPerDay, actionsPerMinute]
+      required: [personas, intensity, clockRate, assistantPerDay, actionsPerMinute, loadPersonas, rate, rampSeconds,
+        loadMinutes, loadActionsPerSecond]
       properties:
         personas:
+          type: integer
+        loadPersonas:
+          type: integer
+        rate:
+          type: integer
+        rampSeconds:
+          type: integer
+        loadMinutes:
+          type: integer
+        loadActionsPerSecond:
           type: integer
         intensity:
           type: integer

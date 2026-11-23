@@ -89,7 +89,15 @@ type Engine struct {
 	every   map[string]time.Time
 	logs    map[string]*personaLog
 	recent  []Event
-	subs    map[chan Event]struct{}
+	subs    map[chan Event]*pacer // each viewer's feed, sampled at FeedRate
+
+	// load mode (ADR 0044): the lab-wide schedule, when load mode began, and the ramp towards the
+	// current target from the rate at the last change
+	load         pacer
+	loadSince    time.Time
+	rampFrom     time.Time
+	rampFromRate float64
+	signIns      pacer // every persona's sign-in, paced below the instance's limit per address
 }
 
 // Every reports whether at least d has passed since it last said yes for this key, across every
@@ -158,9 +166,12 @@ func New(o Options) (*Engine, error) {
 	if o.Origin != "" {
 		origin = strings.TrimRight(o.Origin, "/")
 	}
-	e := &Engine{o: o, target: u, origin: origin, cfg: o.Config.Clamp(), actors: map[string]*Actor{},
+	e := &Engine{o: o, target: u, origin: origin, cfg: withRunSeed(o.Config.Clamp()), actors: map[string]*Actor{},
 		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]string{}, every: map[string]time.Time{},
-		logs: map[string]*personaLog{}, subs: map[chan Event]struct{}{}}
+		logs: map[string]*personaLog{}, subs: map[chan Event]*pacer{}}
+	if e.cfg.Mode == ModeLoad {
+		e.loadSince, e.rampFrom = o.Clock.Now(), o.Clock.Now()
+	}
 	if o.Metrics != nil {
 		o.Metrics.config(&e.cfg, 0)
 	}
@@ -194,10 +205,29 @@ func (e *Engine) Config() (Config, int64) {
 }
 
 // SetConfig replaces the configuration, held to the ceilings, and returns it with its generation.
-// A waiting persona sees the change within ConfigCheck.
+// A waiting persona sees the change within ConfigCheck. Entering load mode starts its clock and a
+// ramp from nothing; a new target or ramp in load mode ramps from the rate reached so far. A new
+// run seed re-seeds every persona's stream.
 func (e *Engine) SetConfig(c Config) (Config, int64) {
+	now := e.o.Clock.Now()
 	e.mu.Lock()
-	e.cfg = c.Clamp()
+	old := e.cfg
+	c = withRunSeed(c.Clamp())
+	switch {
+	case c.Mode == ModeLoad && old.Mode != ModeLoad:
+		e.loadSince, e.rampFrom, e.rampFromRate = now, now, 0
+	case c.Mode == ModeLoad && (c.Rate != old.Rate || c.RampSeconds != old.RampSeconds):
+		e.rampFromRate, e.rampFrom = e.rateLocked(&old, now), now
+	}
+	e.load = pacer{}
+	if c.RunSeed != old.RunSeed {
+		for _, a := range e.actors {
+			a.mu.Lock()
+			a.Rand = streamOf(a.Persona.Slug, c.RunSeed)
+			a.mu.Unlock()
+		}
+	}
+	e.cfg = c
 	e.gen++
 	cfg, gen := e.cfg, e.gen
 	e.mu.Unlock()
@@ -215,7 +245,7 @@ func (e *Engine) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	for {
-		cfg, _ := e.Config()
+		cfg := e.endLoadIfDue(ctx)
 		for i := range cfg.Personas {
 			p := identity.Nth(i)
 			e.mu.Lock()
@@ -246,11 +276,104 @@ func (e *Engine) Actor(ctx context.Context, p identity.Persona) (*Actor, error) 
 	}
 	e.mu.Unlock()
 	if !a.signedIn() {
+		if err := e.signInTurn(ctx); err != nil {
+			return a, err
+		}
 		if err := a.start(ctx); err != nil {
 			return a, err
 		}
 	}
 	return a, nil
+}
+
+// waitForChange marks the persona missing until the configuration changes (or ctx ends).
+func (e *Engine) waitForChange(ctx context.Context, slug string) {
+	_, gen := e.Config()
+	e.mu.Lock()
+	e.logOf(slug).missing = true
+	e.mu.Unlock()
+	for ctx.Err() == nil {
+		if _, g := e.Config(); g != gen {
+			break
+		}
+		_ = e.o.Clock.Sleep(ctx, ConfigCheck)
+	}
+	e.mu.Lock()
+	e.logOf(slug).missing = false
+	e.mu.Unlock()
+}
+
+// signInTurn waits for a turn to sign in: every persona comes through the same front door, and the
+// instance allows an address 30 sign-ins a minute (ADR 0044).
+func (e *Engine) signInTurn(ctx context.Context) error {
+	now := e.o.Clock.Now()
+	e.mu.Lock()
+	t := e.signIns.reserve(now, SignInEvery, SignInEvery, SignInBurst)
+	e.mu.Unlock()
+	if d := t.Sub(now); d > 0 {
+		return e.o.Clock.Sleep(ctx, d)
+	}
+	return nil
+}
+
+// endLoadIfDue returns load mode to realistic mode once its time is up (the other settings stay,
+// the personas above realistic mode's ceiling stop) and returns the configuration in force.
+func (e *Engine) endLoadIfDue(ctx context.Context) Config {
+	cfg, _ := e.Config()
+	if cfg.Mode == ModeLoad && !e.o.Clock.Now().Before(e.LoadEndsAt()) {
+		cfg.Mode = ModeRealistic
+		cfg, _ = e.SetConfig(cfg)
+		e.o.Log.InfoContext(ctx, "load mode ended", slog.Int("personas", cfg.Personas))
+	}
+	return cfg
+}
+
+// LoadEndsAt is when load mode returns to realistic mode by itself (zero outside load mode).
+func (e *Engine) LoadEndsAt() time.Time {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.cfg.Mode != ModeLoad {
+		return time.Time{}
+	}
+	return e.loadSince.Add(time.Duration(e.cfg.LoadMinutes) * time.Minute)
+}
+
+// Rate is load mode's lab-wide target now, in actions a second, on its ramp (0 outside load mode).
+func (e *Engine) Rate() float64 {
+	now := e.o.Clock.Now()
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.cfg.Mode != ModeLoad {
+		return 0
+	}
+	return e.rateLocked(&e.cfg, now)
+}
+
+// rateLocked is the target at now on the ramp from rampFromRate to cfg.Rate (the caller holds e.mu);
+// never below one action a second.
+func (e *Engine) rateLocked(cfg *Config, now time.Time) float64 {
+	target := float64(cfg.Rate)
+	if ramp := time.Duration(cfg.RampSeconds) * time.Second; ramp > 0 {
+		if done := float64(now.Sub(e.rampFrom)) / float64(ramp); done < 1 {
+			target = e.rampFromRate + (target-e.rampFromRate)*max(done, 0)
+		}
+	}
+	return max(target, 1)
+}
+
+// loadTurn reserves the persona's next turn on load mode's lab-wide schedule: one turn every
+// 1/rate on average, each interval stretched or shrunk by Jitter, and as many at once after a
+// quiet spell as Bursts allows (at most one second's worth above the target).
+func (e *Engine) loadTurn(a *Actor, cfg *Config, now time.Time) time.Time {
+	a.mu.Lock()
+	u := a.Rand.Float64()
+	a.mu.Unlock()
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	rate := e.rateLocked(cfg, now)
+	interval := time.Duration(float64(time.Second) / rate)
+	step := time.Duration(float64(interval) * (1 + float64(cfg.Jitter)/100*(2*u-1)))
+	return e.load.reserve(now, interval, step, 1+rate*float64(cfg.Bursts)/1000)
 }
 
 // play is one persona's life: sign in, then think, act, think, act … while it is switched on.
@@ -264,6 +387,13 @@ func (e *Engine) play(ctx context.Context, p identity.Persona) {
 			continue
 		}
 		a, err := e.Actor(ctx, p)
+		if se := (*StatusError)(nil); errors.As(err, &se) && se.Op == "sign in" && se.Status == http.StatusUnauthorized {
+			// not in the lab (more personas than synthetic-users made, or another seed): it waits
+			// for the next change of configuration instead of taking the others' sign-in turns
+			log.InfoContext(ctx, "not in the lab", slog.String("request_id", se.RequestID))
+			e.waitForChange(ctx, p.Slug)
+			continue
+		}
 		if err != nil {
 			failures++
 			wait := backoff(failures)
@@ -294,9 +424,15 @@ func (e *Engine) play(ctx context.Context, p identity.Persona) {
 func (e *Engine) wait(ctx context.Context, a *Actor) bool {
 	cfg, gen := e.Config()
 	now := e.o.Clock.Now()
-	until := now.Add(e.pause(a, &cfg, now))
+	var until time.Time
+	gap := MinGap
+	if cfg.Mode == ModeLoad {
+		until, gap = e.loadTurn(a, &cfg, now), MinLoadGap
+	} else {
+		until = now.Add(e.pause(a, &cfg, now))
+	}
 	a.mu.Lock()
-	if earliest := a.lastStart.Add(MinGap); until.Before(earliest) {
+	if earliest := a.lastStart.Add(gap); until.Before(earliest) {
 		until = earliest
 	}
 	a.mu.Unlock()
@@ -314,16 +450,28 @@ func (e *Engine) wait(ctx context.Context, a *Actor) bool {
 	}
 }
 
-// pause draws the time before the persona's next action: its character's think time, divided by
-// the intensity and, with active hours on, stretched by the hour's activity. Asleep (activity 0)
-// it waits for the next hour. Never shorter than MinGap.
+// pause draws the time before the persona's next action in realistic mode: its character's think
+// time, spread around its mean by Jitter, divided by the intensity and, with active hours on,
+// stretched by the hour's activity. Asleep (activity 0) it waits for the next hour. A burst (the
+// chance is Bursts) makes the next few actions come at MinGap. Never shorter than MinGap.
 func (e *Engine) pause(a *Actor, cfg *Config, now time.Time) time.Duration {
 	if cfg.Intensity == 0 {
 		return ConfigCheck
 	}
 	lo, hi := a.Character.Think[0], a.Character.Think[1]
+	spread := time.Duration(float64(hi-lo) * float64(cfg.Jitter) / 100)
 	a.mu.Lock()
-	d := lo + time.Duration(a.Rand.Int64N(int64(hi-lo)+1))
+	if a.burst > 0 {
+		a.burst--
+		a.mu.Unlock()
+		return MinGap
+	}
+	if cfg.Bursts > 0 && a.Rand.IntN(1000) < cfg.Bursts {
+		a.burst = 2 + a.Rand.IntN(6)
+		a.mu.Unlock()
+		return MinGap
+	}
+	d := (lo+hi)/2 - spread/2 + time.Duration(a.Rand.Int64N(int64(spread)+1))
 	a.mu.Unlock()
 	d = d * 1000 / time.Duration(cfg.Intensity)
 	if cfg.ActiveHours {
@@ -441,10 +589,11 @@ func (e *Engine) takeQuestion() bool {
 }
 
 // afterwards applies the back-off after an action: a 429 waits its Retry-After (half a minute
-// without one), five 5xx answers in a row wait FirstBackoff, doubling up to MaxBackoff, and a 401
-// signs the persona in again.
+// without one), five 5xx answers in a row wait FirstBackoff, doubling up to MaxBackoff (unless load
+// mode pushes through), and a 401 signs the persona in again.
 func (e *Engine) afterwards(ctx context.Context, a *Actor, ev Event) {
 	var wait time.Duration
+	cfg, _ := e.Config()
 	a.mu.Lock()
 	switch {
 	case ev.Status == http.StatusUnauthorized:
@@ -454,6 +603,8 @@ func (e *Engine) afterwards(ctx context.Context, a *Actor, ev Event) {
 		if ev.RetryAfter > 0 {
 			wait = ev.RetryAfter
 		}
+	case a.serverErrors >= ServerErrorsInARow && cfg.Mode == ModeLoad && cfg.PushThrough:
+		a.serverErrors = 0
 	case a.serverErrors >= ServerErrorsInARow:
 		a.backoffs++
 		wait = backoff(a.backoffs)

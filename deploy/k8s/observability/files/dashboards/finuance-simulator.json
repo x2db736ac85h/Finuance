@@ -335,7 +335,7 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Actions a minute by persona",
+      "title": "Actions a minute by animal",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -347,8 +347,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (persona) (rate(finuance_sim_actions_total{job=\"finuance-sim\"}[5m])) * 60",
-          "legendFormat": "{{persona}}",
+          "expr": "sum by (animal) (rate(finuance_sim_actions_total{job=\"finuance-sim\"}[5m])) * 60",
+          "legendFormat": "{{animal}}",
           "refId": "A"
         }
       ],

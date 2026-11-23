@@ -287,7 +287,7 @@ const dashboards = {
     stat('Personas on', `max(finuance_sim_active_personas{${SIM}})`, { decimals: 0 }),
     stat('Paused', `max(finuance_sim_paused{${SIM}})`, { decimals: 0, thresholds: [[null, 'green'], [1, 'orange']], desc: '1 while the tuning page has paused every persona.' }),
     row('What the personas do'),
-    ts('Actions a minute by persona', [[`sum by (persona) (rate(finuance_sim_actions_total{${SIM}}[5m])) * 60`, '{{persona}}']], { stack: true }),
+    ts('Actions a minute by animal', [[`sum by (animal) (rate(finuance_sim_actions_total{${SIM}}[5m])) * 60`, '{{animal}}']], { stack: true }),
     ts('Actions a minute by area', [[`sum by (area) (label_replace(rate(finuance_sim_actions_total{${SIM}}[5m]), "area", "$1", "action", "([a-z]+)\\..*")) * 60`, '{{area}}']], { stack: true }),
     ts('Errors by action', [[`sum by (action) (rate(finuance_sim_actions_total{${SIM},result="error"}[15m])) * 60`, '{{action}}']], { desc: 'An answer the action did not expect. Each one is in the simulator\'s feed with its request id, which finds its lines in Loki and from there its trace.' }),
     ts('Skipped by action', [[`sum by (action) (rate(finuance_sim_actions_total{${SIM},result="skipped"}[15m])) * 60`, '{{action}}']], { desc: 'Nothing to act on (no group to report yet), a pace of the action\'s own, or a ceiling (one assistant run at a time, the daily cap on questions).' }),

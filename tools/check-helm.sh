@@ -306,7 +306,7 @@ must_fail "profiling is not a boolean" "/profiling" "$app" "${o[@]}" --set ingre
 must_fail "extraEnv sets FINUANCE_PPROF (the profiling value does)" "invalid propertyName 'FINUANCE_PPROF'" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.FINUANCE_PPROF=true
 must_fail "extraEnv sets FINUANCE_SIMULATION (the simulation value does)" "invalid propertyName 'FINUANCE_SIMULATION'" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.FINUANCE_SIMULATION=true
 must_fail "a seed for the personas on an instance that is not a lab" "synthetic users exist on a lab only" "$app" "${o[@]}" --set ingress.tls.mode=none --set simulation.syntheticUsers.seedSecret.name=sim-seed
-must_fail "more personas than the simulator plays" "/simulation/syntheticUsers/count" "$app" "${o[@]}" --set ingress.tls.mode=none --set simulation.syntheticUsers.count=51
+must_fail "more personas than the simulator plays" "/simulation/syntheticUsers/count" "$app" "${o[@]}" --set ingress.tls.mode=none --set simulation.syntheticUsers.count=501
 must_fail "the simulator without a target" "simulator.target is required" deploy/helm/finuance-sim
 must_fail "the simulator without its secrets" "simulator.seedSecret.name and simulator.controlTokenSecret.name are required" deploy/helm/finuance-sim --set simulator.target=https://lab.example
 must_fail "Loki's image has no digest" "/loki/image" "$tel" --set loki.image=grafana/loki:3.7.10

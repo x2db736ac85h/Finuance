@@ -30,7 +30,8 @@ type Actor struct {
 	// API calls with the persona's access token; Web with its session cookie (for the routes no
 	// token reaches); Anon with neither (a failed sign-in, the public routes).
 	API, Web, Anon *gen.ClientWithResponses
-	// Rand is the persona's own stream, seeded from its name: a run can be repeated.
+	// Rand is the persona's own stream, seeded from its name and the run seed: a run with the same
+	// seed can be repeated.
 	Rand *mrand.Rand
 
 	engine   *Engine
@@ -42,6 +43,7 @@ type Actor struct {
 	hasData       bool
 	serverErrors  int // 5xx answers in a row
 	backoffs      int // back-offs in a row
+	burst         int // quick actions left in a burst (Config.Bursts)
 	lastAction    string
 	lastStart     time.Time
 	every         map[string]time.Time
@@ -57,10 +59,8 @@ func newActor(e *Engine, p identity.Persona) (*Actor, error) {
 	if err != nil {
 		return nil, err
 	}
-	sum := sha256.Sum256([]byte("finuance-sim/v1 rand " + p.Slug))
 	a := &Actor{Persona: p, Character: Characters[p.Animal], engine: e, password: password, accounts: map[int]uuid.UUID{},
-		every: map[string]time.Time{}, imported: map[int]platform.Date{},
-		Rand: mrand.New(mrand.NewPCG(binary.LittleEndian.Uint64(sum[:8]), binary.LittleEndian.Uint64(sum[8:16])))} //nolint:gosec // a simulation's stream, not a secret
+		every: map[string]time.Time{}, imported: map[int]platform.Date{}, Rand: streamOf(p.Slug, e.cfg.RunSeed)} // the caller holds e.mu
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
@@ -84,6 +84,22 @@ func newActor(e *Engine, p identity.Persona) (*Actor, error) {
 		return nil, err
 	}
 	return a, nil
+}
+
+// streamOf is a persona's random stream for a run seed.
+func streamOf(slug string, runSeed int64) *mrand.Rand {
+	sum := sha256.Sum256(fmt.Appendf(nil, "finuance-sim/v1 rand %s %d", slug, runSeed))
+	return mrand.New(mrand.NewPCG(binary.LittleEndian.Uint64(sum[:8]), binary.LittleEndian.Uint64(sum[8:16]))) //nolint:gosec // a simulation's stream, not a secret
+}
+
+// withRunSeed draws a run seed when c has none (1 … MaxRunSeed).
+func withRunSeed(c Config) Config {
+	for c.RunSeed == 0 {
+		var b [8]byte
+		_, _ = rand.Read(b[:])
+		c.RunSeed = int64(binary.LittleEndian.Uint64(b[:]) & MaxRunSeed) //nolint:gosec // masked to 53 bits
+	}
+	return c
 }
 
 // IntN draws from the persona's stream: a number in [0, n).

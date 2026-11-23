@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"time"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
 )
@@ -36,15 +37,17 @@ type PersonaState struct {
 	Character Character
 	On        bool
 	SignedIn  bool
+	Missing   bool   // its sign-in was refused: the lab has no such animal (or another seed)
 	Action    string // what it is doing now
 	Counts    Counts
 	Last      *Event
 }
 
 type personaLog struct {
-	counts Counts
-	last   *Event
-	now    string
+	counts  Counts
+	missing bool
+	last    *Event
+	now     string
 }
 
 // State returns the personas the configuration covers, in order, and the totals.
@@ -54,7 +57,7 @@ func (e *Engine) State() ([]PersonaState, Counts) {
 	defer e.mu.Unlock()
 	var out []PersonaState
 	var total Counts
-	for i := range MaxPersonas {
+	for i := range identity.Max {
 		p := identity.Nth(i)
 		lg := e.logs[p.Slug]
 		if i >= cfg.Personas && lg == nil {
@@ -65,7 +68,7 @@ func (e *Engine) State() ([]PersonaState, Counts) {
 			st.SignedIn = a.signedIn()
 		}
 		if lg != nil {
-			st.Counts, st.Last, st.Action = lg.counts, lg.last, lg.now
+			st.Counts, st.Last, st.Action, st.Missing = lg.counts, lg.last, lg.now, lg.missing
 			total.OK, total.Error, total.Skipped = total.OK+lg.counts.OK, total.Error+lg.counts.Error, total.Skipped+lg.counts.Skipped
 		}
 		out = append(out, st)
@@ -80,12 +83,13 @@ func (e *Engine) Recent() []Event {
 	return slices.Clone(e.recent)
 }
 
-// Subscribe returns a channel that receives every new action, and a function that ends the
-// subscription. A subscriber that doesn't keep up misses actions rather than slowing the engine.
+// Subscribe returns a channel that receives the new actions, and a function that ends the
+// subscription. Above FeedRate actions a second it samples (load mode, ADR 0044), and a subscriber
+// that doesn't keep up misses actions rather than slowing the engine; the state's counts stay exact.
 func (e *Engine) Subscribe() (<-chan Event, func()) {
 	ch := make(chan Event, 64)
 	e.mu.Lock()
-	e.subs[ch] = struct{}{}
+	e.subs[ch] = &pacer{}
 	e.mu.Unlock()
 	return ch, func() {
 		e.mu.Lock()
@@ -111,7 +115,10 @@ func (e *Engine) record(ev Event) {
 	if len(e.recent) > recentEvents {
 		e.recent = slices.Delete(e.recent, 0, len(e.recent)-recentEvents)
 	}
-	for ch := range e.subs {
+	for ch, p := range e.subs {
+		if !p.allow(ev.Time, time.Second/FeedRate, FeedRate) {
+			continue
+		}
 		select {
 		case ch <- ev:
 		default:
