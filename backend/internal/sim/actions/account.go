@@ -66,10 +66,15 @@ func accountExport(ctx context.Context, a *sim.Actor) error {
 }
 
 // wrongPassword is a mistyped password: 401. At most one every ten minutes per persona, so that
-// the instance's limit of 20 failures an hour per address never locks the persona out.
+// the instance's limit of failures per e-mail address never locks the persona out, and only on a
+// sign-in turn: it counts against the instance's 30 sign-ins a minute per address, which every
+// persona shares (in load mode they ran past it, found in the first load run).
 func wrongPassword(ctx context.Context, a *sim.Actor) error {
 	if !a.Every("account.wrong-password", 10*time.Minute) {
 		return sim.ErrNothingToDo
+	}
+	if err := a.Engine().SignInTurn(ctx); err != nil {
+		return err
 	}
 	r, err := a.Anon.LoginWithResponse(ctx, gen.LoginJSONRequestBody{Email: a.Persona.Email, Password: a.Password() + "x"})
 	if err != nil {

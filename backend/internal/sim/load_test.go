@@ -160,7 +160,7 @@ func TestPushThrough(t *testing.T) {
 func TestSignInsArePaced(t *testing.T) {
 	e, clock := newTestEngine(t, &fakeLab{simulation: true}, nil)
 	for range SignInBurst + 3 {
-		if err := e.signInTurn(context.Background()); err != nil {
+		if err := e.SignInTurn(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -320,5 +320,25 @@ func TestFeedIsSampled(t *testing.T) {
 	}
 	if _, totals := e.State(); totals.OK != 400 {
 		t.Errorf("the state counted %d", totals.OK)
+	}
+}
+
+// TestPace: Pace spaces one persona's uploads by the interval, waiting rather than skipping, and
+// lets one through at once after a pause.
+func TestPace(t *testing.T) {
+	e, clock := newTestEngine(t, &fakeLab{simulation: true}, nil)
+	a := testActor(e, Character{})
+	for range 3 {
+		if err := a.Pace(context.Background(), "upload", UploadEvery); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, want := clock.sleeps(), []time.Duration{UploadEvery, UploadEvery}; !slices.Equal(got, want) {
+		t.Errorf("slept %v, want %v", got, want)
+	}
+	clock.now = clock.now.Add(time.Minute)
+	before := len(clock.sleeps())
+	if err := a.Pace(context.Background(), "upload", UploadEvery); err != nil || len(clock.sleeps()) != before {
+		t.Errorf("after a pause it waited: %v", clock.sleeps()[before:])
 	}
 }

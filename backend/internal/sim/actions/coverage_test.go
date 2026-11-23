@@ -138,6 +138,10 @@ func startLab(t *testing.T) *lab {
 	return l
 }
 
+// fresh lets a step run right after one the instance limits per user (a question, an
+// invitation): the script runs them back to back, faster than the personas pace themselves.
+func fresh(_ *testing.T, _ context.Context, a *sim.Actor) { a.ForgetPaces() }
+
 // repeatable is the default configuration with a fixed run seed: the same draws on every run.
 func repeatable() sim.Config {
 	c := sim.Defaults()
@@ -297,11 +301,11 @@ var script = []step{
 	{who: "otter", action: "duplicates.clear"},
 	{who: "otter", action: "cash.add"}, {who: "otter", action: "cash.edit"}, {who: "otter", action: "cash.add"},
 	{who: "otter", action: "cash.delete"}, {who: "otter", action: "cash.receipt"},
-	{who: "otter", action: "assistant.ask"}, {who: "otter", action: "assistant.stop"}, {who: "otter", action: "assistant.apply"},
+	{who: "otter", action: "assistant.ask", before: fresh}, {who: "otter", action: "assistant.stop", before: fresh}, {who: "otter", action: "assistant.apply", before: fresh},
 	{who: "otter", action: "assistant.revert"}, {who: "otter", action: "assistant.digest"},
 	{who: "owl", action: "sharing.code"}, {who: "otter", action: "sharing.befriend"}, {who: "otter", action: "sharing.group"},
 	{who: "owl", action: "sharing.accept"}, {who: "otter", action: "sharing.expense"}, {who: "otter", action: "sharing.settle"},
-	{who: "otter", action: "sharing.report"}, {who: "otter", action: "sharing.group"}, {who: "owl", action: "sharing.accept"},
+	{who: "otter", action: "sharing.report"}, {who: "otter", action: "sharing.group", before: fresh}, {who: "owl", action: "sharing.accept"},
 	{who: "owl", action: "sharing.leave"},
 	{who: "otter", action: "account.preferences"}, {who: "otter", action: "account.notifications"}, {who: "otter", action: "account.export"},
 	{who: "otter", action: "account.wrong-password"}, {who: "otter", action: "account.unknown-path"},

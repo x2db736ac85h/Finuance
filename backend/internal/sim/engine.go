@@ -276,7 +276,7 @@ func (e *Engine) Actor(ctx context.Context, p identity.Persona) (*Actor, error) 
 	}
 	e.mu.Unlock()
 	if !a.signedIn() {
-		if err := e.signInTurn(ctx); err != nil {
+		if err := e.SignInTurn(ctx); err != nil {
 			return a, err
 		}
 		if err := a.start(ctx); err != nil {
@@ -303,9 +303,9 @@ func (e *Engine) waitForChange(ctx context.Context, slug string) {
 	e.mu.Unlock()
 }
 
-// signInTurn waits for a turn to sign in: every persona comes through the same front door, and the
-// instance allows an address 30 sign-ins a minute (ADR 0044).
-func (e *Engine) signInTurn(ctx context.Context) error {
+// SignInTurn waits for a turn to sign in: every persona comes through the same front door, and the
+// instance allows an address 30 sign-ins a minute (ADR 0044). A mistyped password takes one too.
+func (e *Engine) SignInTurn(ctx context.Context) error {
 	now := e.o.Clock.Now()
 	e.mu.Lock()
 	t := e.signIns.reserve(now, SignInEvery, SignInEvery, SignInBurst)
