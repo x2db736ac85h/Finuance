@@ -37,8 +37,10 @@ WHERE r.user_id = @user_id AND r.id = o.id;
 
 -- name: LockUserAccounts :exec
 -- Reclassifying writes to every account of the user: it takes each account's writer lock (ADR 0013)
--- in id order, so it waits for commits, deletes and reprocesses and they wait for it.
-SELECT id FROM accounts WHERE user_id = @user_id ORDER BY id FOR UPDATE;
+-- in id order, so it waits for commits, deletes and reprocesses and they wait for it. NO KEY UPDATE,
+-- as the other writer locks: FOR UPDATE also blocked the foreign-key checks of a label edit's
+-- annotation, which then waited past its lock timeout or deadlocked with this job (PLAN 25.17).
+SELECT id FROM accounts WHERE user_id = @user_id ORDER BY id FOR NO KEY UPDATE;
 
 -- name: ResetRuleCategories :execrows
 -- Reclassify step 1: categories set by rules go back to the bank's category.

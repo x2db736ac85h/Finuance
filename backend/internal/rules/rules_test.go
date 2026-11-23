@@ -416,3 +416,41 @@ func TestReclassifyTenancy(t *testing.T) {
 		t.Errorf("another user sees %d rules (%v)", len(rs), err)
 	}
 }
+
+// TestReclassifyLetsLabelEditsThrough (found by the load run, PLAN 25.17): the reclassification's
+// lock on a user's accounts is FOR NO KEY UPDATE, as every writer lock is (ADR 0013), so a label
+// edit, whose annotation's foreign key takes KEY SHARE on the account, doesn't wait for a running
+// reclassification. With FOR UPDATE it waited past the request path's 5 s lock timeout (409
+// account_busy), and when the edit had already updated a row the reclassification was about to
+// update, the two deadlocked (500).
+func TestReclassifyLetsLabelEditsThrough(t *testing.T) {
+	e := newEnv(t)
+	acc := e.account("Konto")
+	e.importInto(acc, "a", "01.10.2026;SKLEP;zakupy;-10,00;Zakupy\n")
+	var id uuid.UUID
+	for _, r := range e.rows() {
+		id = r.id
+	}
+	locked, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		done <- e.st.WithUser(e.ctx, e.u, func(q *db.Queries, _ pgx.Tx) error {
+			if err := q.LockUserAccounts(e.ctx, e.u); err != nil {
+				return err
+			}
+			close(locked)
+			<-release
+			return nil
+		})
+	}()
+	<-locked
+	ctx, cancel := context.WithTimeout(e.ctx, 3*time.Second)
+	defer cancel()
+	n, err := e.l.Annotate(ctx, e.u, []uuid.UUID{id}, ledger.AnnotationPatch{SetNote: true, Note: "paragon w szufladzie"})
+	close(release)
+	if lockErr := <-done; lockErr != nil {
+		t.Fatal(lockErr)
+	}
+	if err != nil || n != 1 {
+		t.Fatalf("a label edit while the reclassification holds its lock: %d, %v", n, err)
+	}
+}
