@@ -37,7 +37,8 @@ blob-report/
 !.vscode/extensions.json
 *.swp
 
-# tools/perf/grid.mjs writes its result next to where it runs
+# tools/perf/*.mjs write their results next to where they run
+/perf-duplicates.json
 /perf-grid.json
 /perf-overview.json
 
