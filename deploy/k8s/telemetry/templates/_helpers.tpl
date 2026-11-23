@@ -64,6 +64,11 @@ limits_config:
   ingestion_burst_size_mb: {{ .Values.logs.ingestion.burstMB }}
   reject_old_samples: true
   reject_old_samples_max_age: 168h
+  # One ingester: automatic stream sharding spreads nothing, and a shard is a new stream without a
+  # newest entry, so an Alloy that reads its logs again (a new pod, an emptyDir lost) would write
+  # the same lines a second time into it. Found on the Compose lab in 25.12.
+  shard_streams:
+    enabled: false
 query_range:
   results_cache:
     cache:

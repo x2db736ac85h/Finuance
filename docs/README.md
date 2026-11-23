@@ -13,8 +13,10 @@
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Assets, attackers, threats and the controls (with the tests that prove them), and the security scans |
 | [security-scan.md](security-scan.md) | The latest results of every security scan (Trivy, npm audit, ZAP, OpenVAS, …) and the decision on each finding |
 | [SLO.md](SLO.md) | The service level objectives, how they are measured and alerted on, and the error budget policy |
+| [observability.md](observability.md) | Logs, metrics and traces: where each goes, the log fields, following one request or a failed import from the browser to its job, synthetic traffic |
+| [simulator.md](simulator.md) | The traffic simulator: the ten animals, running a lab (`make sim-up`) and tuning it, finding its traffic, what it must never be pointed at |
 | [adr/](adr/) | Architecture decision records: why Go + PostgreSQL, money in minor units, row-level security, sessions and CSRF, the CSV export format, … |
-| [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3) |
+| [../api/openapi.yaml](../api/openapi.yaml) | The HTTP API, specification first (OpenAPI 3); the simulator's control API is [../api/sim.openapi.yaml](../api/sim.openapi.yaml) |
 | [assistant.md](assistant.md) | Setting up the assistant: model servers (local and cloud), capabilities (images included), limits and the daily token budget, retention, receipts, digests, the advice library, the probe and the evals |
 | [migration.md](migration.md) | Moving a backup of the single-file app into Finuance |
 | [admin.md](admin.md) | Administrators: the first one, the panel (accounts, limits, defaults and features, colour themes, the assistant's connections, tuning and advice library, usage) |
@@ -31,8 +33,8 @@
 |---|---|
 | [../CHANGELOG.md](../CHANGELOG.md), [../CONTRIBUTING.md](../CONTRIBUTING.md), [../SECURITY.md](../SECURITY.md) | Release notes, how to contribute, how to report a vulnerability |
 | [adr/README.md](adr/README.md) | The index of the decision records |
-| [../deploy/k8s/README.md](../deploy/k8s/README.md), [../deploy/helm/finuance/README.md](../deploy/helm/finuance/README.md), [../deploy/environments/homelab/README.md](../deploy/environments/homelab/README.md) | The Kubernetes manifests, the application chart and its values, the reference environment's files |
-| [../loadtest/README.md](../loadtest/README.md), [../evals/assistant/README.md](../evals/assistant/README.md) | Running the load test and the assistant evals |
+| [../deploy/k8s/README.md](../deploy/k8s/README.md), [../deploy/helm/finuance/README.md](../deploy/helm/finuance/README.md), [../deploy/environments/homelab/README.md](../deploy/environments/homelab/README.md), [../deploy/environments/lab/README.md](../deploy/environments/lab/README.md) | The Kubernetes manifests, the application chart and its values, the reference environment's files, a lab on a cluster |
+| [../loadtest/README.md](../loadtest/README.md), [../evals/assistant/README.md](../evals/assistant/README.md) | Running the load test (and which tool is for what: k6 or the simulator) and the assistant evals |
 | [../tools/legacy-oracle/README.md](../tools/legacy-oracle/README.md), [../legacy/README.md](../legacy/README.md) | The oracle that drives the single-file prototype (it also generates the synthetic fixtures), and the prototype itself |
 | [../backend/cmd/anonymize/README.md](../backend/cmd/anonymize/README.md) | The anonymiser for bank exports |
 

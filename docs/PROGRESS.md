@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 25 — The traffic simulator: ten animals on a lab instance · **Branch:** `phase/25-lab-instance` (pull request 1 of 8) · **Status:** started on 2026-11-21 (`/phase-start 25`). Phase 24 is closed: `v0.5.1` released and on the homelab by digest (pull request 70), the gate walked by the agent at the maintainer's request; Loki and Alloy's cost after their first day (2026-11-22) is still to be recorded.
+**Current phase:** 25 — The traffic simulator: ten animals on a lab instance · **Branch:** `phase/25-lab-day` (the record of the day in the lab; then the load mode, 25.13–25.17) · **Status:** started on 2026-11-21 (`/phase-start 25`). Phase 24 is closed: `v0.5.1` released and on the homelab by digest (pull request 70), the gate walked by the agent at the maintainer's request; Loki and Alloy's cost after their first day (2026-11-22) is still to be recorded.
 
 **Released:** `v0.5.1` (2026-11-21). Phases 0–24 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
 
@@ -57,10 +57,17 @@ Pull requests:
 - **5** `phase/25-control`: 25.5, 25.6 and the Simulator dashboard.
 - **6** `phase/25-lab-stack`: 25.7, 25.8, 25.9.
 - **7** `phase/25-k6`: 25.10.
-- **Releases:** `v0.6.0-rc.1` (four images; the homelab gets the api and web), the day in the lab (25.12) on it, then `v0.6.0`.
-- **8** `phase/25-close`: 25.11, the record of 25.12, the phase close.
+- **Releases:** `v0.6.0-rc.1` (four images; the homelab gets the api and web), the day in the lab (25.12) on it.
+- **9** `phase/25-lab-day`: the record of 25.12 and its three fixes, the 25.11 documents written so far.
+- **10** `phase/25-load-mode`: 25.13, 25.14.
+- **11** `phase/25-history`: 25.15.
+- **12** `phase/25-lab-resources`: 25.16.
+- **Releases:** `v0.6.0-rc.2`, the load run (25.17) on it, the gate, then `v0.6.0`.
+- **13** `phase/25-close`: the rest of 25.11 (`CHANGELOG.md`), the record of 25.17, the phase close.
 
 Decisions at the phase start (the maintainer, 2026-11-21): the agent merges this phase's pull requests itself under the rules of Phase 24 (every CI check green and the local checks passed, the homelab checked after each, a report afterwards, a stop and a question when a failure can't be fixed properly or a rollout goes wrong); it may tag `v0.6.0-rc.N` and `v0.6.0`, and approving the `release` environment stays the maintainer's. The lab runs on Compose on the development machine (`make sim-up`) and on Kubernetes in the CI rehearsal only, not on the homelab; the day in the lab (25.12) runs on Compose. No new Go or npm dependency; k6 moves to 2.x as a bump of a pinned tool; the two new images (`finuance-sim`, `finuance-llmmock`) are this repository's own.
+
+Decisions of 2026-11-23 (the maintainer, after the day in the lab): the animals must be able to load the system, so decision 7 of ADR 0043 changes (ADR 0044): a **load mode**, lab only and capped (500 animals, 2 actions a second each, 1,000 a second in all), next to today's realistic mode; the **animals replace the synthetic load-test users** (history profiles sized like the load test's, k6 signs in as animals, `seed-demo -synthetic` goes); the page's **randomness** covers a run seed, timing jitter, data variety and the mistake share; what the load costs shows in a **Grafana dashboard plus a live strip and a flow animation on the page**, which the lab's Developer section links. The phase's merge rules apply to the new pull requests. No new Go or npm dependency, no new image.
 
 - [x] 25.0 `.trivyignore` read (the standing first task) — 2026-11-21: empty, nothing to revisit
 - [x] 25.1 the lab instance: an ADR, `/meta` reports `simulation`, the "Lab" chip, `finuance admin synthetic-users`, the animals' names and passwords from one seed, THREAT-MODEL entries — 2026-11-21 (pull request 1): ADR 0043 (the plan's eight decisions and how they are carried out; k6 2.0's removal of the externally controlled executor confirmed in its release notes); `GET /meta` has `simulation`, the web app's title bar a "Lab" chip (checked in both themes on a local lab stack); `internal/sim/identity` (otter … sloth, then otter-2 …, at most 50; `<slug>@sim.invalid`; HKDF-SHA256 from the seed in the standard library, vectors checked against an independent RFC 5869 implementation); `finuance admin synthetic-users [-count=N] -seed-stdin` refuses outside a lab before touching anything, stops with nothing changed when a person owns a persona's address, changes nothing on a second run with the same seed (sessions survive), and resets the passwords with a new one; THREAT-MODEL B10, a new actor, T19, D14, I23; `docs/admin.md`. `TestSyntheticUsers`, `TestDerivation`, `TestEveryPersonaDiffers`, the `/meta` cases, `TestDispatch` cases, two web tests
@@ -125,7 +132,17 @@ Decisions at the phase start (the maintainer, 2026-11-21): the agent merges this
   - **The homelab drill's k6 user stays a person:** the homelab is not a lab.
   - **`loadtest/README.md`** says which tool is for what (k6 for load and breaking points, its pod-kill script for rollouts, the simulator for every feature all day).
 - [ ] 25.11 documents (`docs/simulator.md` and the rest), `CHANGELOG.md`, `v0.6.0`
-- [ ] 25.12 a day in the lab: ten animals for 24 hours, every `5xx` and unexpected `4xx` a finding, the overview and the duplicates window measured
+- [x] 25.12 a day in the lab: ten animals for 24 hours, every `5xx` and unexpected `4xx` a finding, the overview and the duplicates window measured — 2026-11-21 20:00 to 2026-11-22 20:00 UTC on the Compose lab (`docs/perf.md` "Phase 25: a day in the lab"): 2,001 actions, 0 `5xx`, no panic, no failed job, every `4xx` meant but two; overview p95 62 ms, duplicates p95 44 ms. Found and fixed (pull request 9):
+  - **an empty statement:** the squirrel's savings account had a week without a row, and the server rightly refused to commit it; the simulator now deletes the preview and counts the days as imported (`TestEmptyStatementIsNotCommitted`);
+  - **after a reboot:** the lab's Grafana and Alloy had no restart policy, so the machine's restart after 26 hours left the animals running unobserved;
+  - **doubled log lines:** Alloy kept its read positions on a tmpfs, so a restarted Alloy read every log again and Loki stored part of the worker's lines twice in new stream shards. Positions now live on a volume, and the cluster's Loki doesn't shard streams (one ingester gains nothing from it).
+
+  Not measured: the mock's memory (Prometheus doesn't scrape it; 25.16 adds container metrics) and the duplicates window's first render in a browser. The animals put almost no load on the lab (about three requests a minute), so the overview cache and the duplicates window are decided on the load run (25.17)
+- [ ] 25.13 load mode (ADR 0044): `Config.Mode` realistic or load; in load mode at most 500 animals (`identity.Max`), 2 actions a second each, a lab-wide target of at most 1,000 a second through one pacer; the lab check, the assistant's limits and `Retry-After` stay; back-off on `5xx` switchable in load mode only; Ramp, Soak and Spike presets; `synthetic-users -count` and both charts follow; THREAT-MODEL D14, B10
+- [ ] 25.14 randomness: a run seed (0 draws one, the page shows it), timing jitter and bursts, the mistake share in one section
+- [ ] 25.15 one set of synthetic users: history profiles (rows per day, years, amount spread, merchants and categories; part of the statements' stream and the account's name), *Rebuild history* on the page, `finuance-sim seed` and `finuance-sim users` for CI and k6; k6 signs in as animals; `seed-demo -synthetic` removed
+- [ ] 25.16 what the load costs: container and PostgreSQL metrics on Compose through Alloy's own exporters, the dashboard "Finuance · Lab resources", `GET /api/resources` and a live strip on the page, the flow animation, the Developer section's link to the page (a lab administrator made by `make sim-up`)
+- [ ] 25.17 a load run: load-test-sized animals ramped to the breaking point and soaked for an hour, the duplicates window's first render in a browser, in `docs/perf.md` next to Phase 18's k6 numbers; the overview cache and the duplicates window decided
 - [ ] Gate (the maintainer): an evening with the page: switch presets, sign in as an animal, follow one action to its trace
 
 Phase 24 — Observability: correlated logs, complete traces, the synthetic marker (closed; PLAN §9). Confirmed with `/phase-start 24` on 2026-11-20.
@@ -278,6 +295,7 @@ In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance crit
 - 25.7: the simulator's image has its own `deploy/docker/Dockerfile.sim`, not a target of `Dockerfile.backend` as planned: it needs the web app for its page, and the backend's build context holds only `backend/`. The mock stays a target there.
 - 25.8: the web server keeps giving every request its own id (23.4's control, tested in E2E and `check-access-log.sh`); on Compose the simulator's `sim-<animal>-…` ids therefore don't reach the logs, and the feed shows the id the server answered. On Kubernetes the ingress sends `/api/` to the api, which keeps a well-formed client id.
 - Phase 25 has nine pull requests, not eight: the lab on Kubernetes (25.9) has its own (7), and k6 (25.10) and the close move to 8 and 9.
+- Phase 25 grows by 25.13–25.17 and four pull requests (the maintainer, 2026-11-23): the day in the lab showed the animals can't load the system, which the maintainer wants them to do; decision 7 of ADR 0043 (no load generator) is replaced by ADR 0044.
 - 25.4: the receipt is told to the lab's mock in words (`receipt 12.50 "Shop" on …`), not sent as a photo: the mock reads no pictures unless the run picks its vision model, which the lab's users may not choose. The matching tool, the proposal and its apply (the note through `PATCH /transactions/{id}` with the assistant's headers) are the same.
 - Phase 24's gate: a failed import named no request, so pull request 67 (not in the plan) carries the request id into jobs and a failed job's message; the gate is walked on `v0.5.1-rc.2`. A commit can't be made to fail on purpose without touching the database, so the RUNBOOK's drill adds a temporary check that refuses one file name.
 - Phase 24 shipped as pull requests 59 (1), 60 (2), 62 (3), 63 (4), 64 (5), 65 (the rehearsal's api pod), 66 (`v0.5.1-rc.1` on the homelab), 67 (the gate's reference), 68 (`v0.5.1-rc.2` on the homelab) and 6 (the close).
@@ -304,6 +322,7 @@ In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance crit
 - **River's index maintenance fails every midnight** (found 2026-11-21 in the database's log): `REINDEX` of River's tables by the app role ends with SQLSTATE 42501, because the owner role owns them (`DB-7`). Nothing breaks, but it is an error line a day: switch River's reindexer off for the app role, or let the owner role run it.
 - **Alloy's and Loki's own metrics** (dropped spans, refused pushes) are not scraped; a PodMonitor and an alert when the project allows the kind.
 - **Argo CD sign-in through an identity provider** as soon as its UI is reachable beyond a port-forward.
+- **A Vitest test that waits too briefly under load** (found 2026-11-21 in `make check` before the `v0.6.0-rc.1` bump): `src/import/ImportWindow.test.tsx` "uploads into the account in view" did not find the Import dialog within `findByRole`'s one second (the test took 1.5 s, and MSW reported an unhandled `GET /api/v1/categories` in it). That run had 53 workers on a machine also running the 24-hour lab. The file passed alone three times and the next full run passed 511 of 511. If it fails again: see whether the dialog waits on that request, and make the test wait for what it needs rather than raising the timeout.
 
 ## Backlog (ideas, not scheduled)
 
@@ -313,7 +332,7 @@ Scheduled by Rev 5
 - A `profiling` value in the Helm chart for `FINUANCE_PPROF` → 24.9.
 - An alert path that survives an outage of the machine itself → 24.9 (a heartbeat outside the machine; the maintainer chooses the service).
 - Compose: nginx re-resolves the api upstream after the api container is recreated → 25.8.
-- Overview under load: cache the month aggregates → decided on the numbers of 25.12.
+- Overview under load: cache the month aggregates → decided on the load run of 25.17 (the day in the lab, 25.12, was too light to decide it).
 - The api and worker retry their first database connection instead of restarting once → 27.10.
 - Evals on the model server actually used and on candidate models → 26.7.
 - A thinking toggle next to the question field; the duplicates window's first render of many groups; a cheaper first render for the Vitest files that time out → Phase 28.
@@ -321,6 +340,7 @@ Scheduled by Rev 5
 Still ideas
 - Argo CD verifies commit signatures for both repositories and `main` requires signed commits (`OPS-1`, `OPS-4`; the maintainer, 2026-11-20: not now). Merges made on GitHub are signed with GitHub's own key, so the check would still rest on the GitHub account; it needs key management in the cluster and a signing path for the release bot.
 - The sign-in and administration tables written only through database functions, with the columns revoked from the app role (`DB-1`, second half; the maintainer, 2026-11-20): it changes the bootstrap SQL of every install, so it wants its own phase and an upgrade path. Until then a guard test keeps the queries that write those tables to the sign-in, administration and cleanup code.
+- A generated client without the server's packages: `api/openapi.yaml` maps two schemas to Go types in `internal/ledger` and `internal/legacyimport` (`x-go-type`), so `client/gen` imports them and `fin` and `finuance-sim` link most of the server's packages (unused; found 2026-11-21). A client of their own or plain generated types would make both binaries smaller.
 - `fin mcp`: the CLI as an MCP server over stdio. Worth a decision after Phase 26: it needs either a library or a hand-written JSON-RPC layer.
 - Per-user model API keys. More interesting once a cloud model exists (Phase 26): each person would pay for and consent to their own provider.
 - Passkeys (WebAuthn) after the one-time-code second factor of Phase 23; needs a library.
@@ -333,6 +353,7 @@ Still ideas
 
 ## Session log
 
+- 2026-11-23 — The machine restarted on 2026-11-22 after 26 hours of the day in the lab; its Grafana didn't come back. Started again, the day's numbers read (`docs/perf.md`): no `5xx`, two failed actions (an empty statement), doubled worker lines in Loki (Alloy's positions on a tmpfs, Loki's stream shards); the three fixed. The maintainer asked for the animals to load the system, replace the load-test users and get resource views; planned as 25.13–25.17 and approved. Next: pull request 9, then the load mode.
 - 2026-11-21 (afternoon) — `v0.5.1` released, verified and on the homelab (70); Phase 24 closed. `/phase-start 25`: the plan approved with two decisions (the merge rules of Phase 24, the lab on Compose and in CI only) and split into eight pull requests; branch `phase/25-lab-instance`. Next: 25.1.
 - 2026-11-20 — Pull request 3 (52) merged. Pull request 4 (53): the register's application rows after four decisions by the maintainer; its first CI run found the tokens form wrapping in the layout test, fixed; merged, and the private register's statuses updated and pushed. Pull request 5: the cluster, delivery, edge and web rows after one more decision (no commit-signature check for now). A local E2E run failed at the sign-in limit per address with four workers and, separately, while the machine was busy; with two workers on a quiet machine 75 of 75 pass, Trusted Types included. Next: the rehearsal on pull request 5 (the new network probes and `verify-full`), its merge, then `v0.5.0-rc.1`.
 - 2026-11-20 (later) — Pull request 5's first rehearsal failed at the new probes: a network policy reaches a new pod a moment after it starts, so a probe that connects at once gets out; the probes now wait (the start window goes into THREAT-MODEL v3). Merged as 54: the homelab's pods use `verify-full`, Prometheus scrapes them, the admission policy and Tempo sit in the new project. The maintainer then synced the database chart, took back the `TEMPORARY` grant, validated the 16 amount checks and rolled out the signature check (its first sync failed on the order of two objects; pull request 55). The changelog gets its `[0.5.0]` heading. Next: `v0.5.0-rc.1`.

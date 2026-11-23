@@ -487,7 +487,10 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<host>:80/                    
 The Argo CD app `admission-policy` (wave −8) installs a built-in `ValidatingAdmissionPolicy`
 (`deploy/k8s/admission/image-policy.yaml`): pods in `finuance`, `finuance-restore`, `s3` and
 `monitoring` may only use images from the registries listed for their namespace, and RustFS, the AWS
-CLI and Tempo only by digest. A refused pod appears as a `FailedCreate` event on its ReplicaSet, Job
+CLI and Tempo only by digest. Since 0.6.0, Finuance's own images are named by exact repository per
+namespace: `finuance` and `finuance-restore` run only `finuance-api` and `finuance-web`, a lab's
+`finuance-lab` also `finuance-llmmock`, and `finuance-sim` only `finuance-sim`, so the lab's images
+can never start next to real data. A refused pod appears as a `FailedCreate` event on its ReplicaSet, Job
 or CloudNativePG cluster, naming the image. Before a chart upgrade brings an image from a new
 registry, add its prefix to the policy. Check with server-side dry runs (nothing is created):
 
@@ -498,6 +501,13 @@ pod finuance ghcr.io/x2db736ac85h/finuance-api:0.2.0-rc.1   # created (server dr
 pod finuance docker.io/library/busybox:1.37                   # denied: image not allowed in namespace finuance
 pod s3 rustfs/rustfs:1.0.1                                    # denied: image must be pinned by digest
 ```
+
+**Check** (2026-11-21, 0.6.0): a server-side dry run of the narrower policy against `finuance` on
+the homelab admitted every image its pods run; after the merge (pull request 76) the web pods restarted
+under it with no refusal. The rehearsal's `admission` stage probes the per-namespace rule each run:
+each namespace's own images admitted, the simulator and the mock refused in `finuance`, the
+simulator refused in `finuance-lab`, the api refused in `finuance-sim`, a look-alike repository
+refused.
 
 **Check** (2026-11-02): nine dry-run cases as expected (Finuance's and CloudNativePG's images admitted
 in `finuance`, Docker Hub and another ghcr.io owner refused; RustFS refused without a digest and
@@ -867,6 +877,45 @@ ALTER FUNCTION pg_catalog.textlike(text, text) LEAKPROOF;
 ```
 
 Without it, search still works but cannot use the trigram index under row-level security (docs/perf.md, Phase 7). The chart's bootstrap SQL already does this for new clusters.
+
+## The lab and the traffic simulator
+
+A lab is an instance with `FINUANCE_SIMULATION=true` and synthetic users only, with the traffic
+simulator playing ten animals against it ([simulator.md](simulator.md), ADR 0043). It is never the
+homelab: the homelab is not a lab, refuses synthetic users, and its namespace refuses the
+simulator's image.
+
+**On this machine** (Compose project `finuance-lab`, next to your own stack):
+
+| | |
+|---|---|
+| Start | `make sim-up` (writes `.env.lab` once: the seed and the control token; prints the page's address with the token in its fragment) |
+| Ports | the lab 8020, the simulator's page, API and metrics 8090, Grafana 3000, Prometheus 9095 (Grafana's port is the homelab's forward too: one at a time) |
+| Sign in as an animal | `make sim-password ANIMAL=fox`, then `fox@sim.invalid` on http://localhost:8020 |
+| Check it | `tools/check-lab.sh` (six actions, Prometheus, Loki); `make test-e2e-sim` (the page) |
+| Stop | `make sim-down`; `make sim-down SIM_RESET=1` also drops the lab's database |
+| New passwords | delete `.env.lab` and `make sim-up` again: the animals' passwords follow the new seed, their data stays |
+
+**On Kubernetes:** [`deploy/environments/lab`](../deploy/environments/lab) says what a cluster adds.
+The rehearsal's `lab` stage is the working example.
+
+**When something is off:**
+
+- **The simulator restarts and logs "not a lab":** its target's `GET /meta` does not report
+  `simulation: true`. That is the guard working; point it at a lab.
+- **An animal does nothing:** its card shows whether it is on and signed in, and the feed shows
+  each skipped action's reason and each error's status. Otherwise it is outside its active hours
+  (clear "Follow the characters' daily hours" to check), or backing off: after five `5xx` in a row it waits one
+  minute, doubling up to 15, and after a `429` its `Retry-After`. The simulator's own log says so
+  (`backing off` with the animal and how long; `docker logs finuance-lab-sim-1`). A `401` makes it
+  sign in again by itself.
+- **Many `429`:** the instance's limits per address are shared by every animal behind one front
+  door. Lower the intensity or the import and question weights; the simulator already paces friend
+  codes and honours `Retry-After`.
+- **Following one action:** the feed's request id → Grafana's Explore (the feed links it) → the
+  line's `trace_id` → the trace.
+- **nginx after the api was recreated:** on Compose the web server looks the api's name up again
+  (`FINUANCE_API_RESOLVE`); a new api address answers within a minute without restarting web.
 
 ## Playbooks
 
