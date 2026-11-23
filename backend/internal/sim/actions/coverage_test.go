@@ -310,3 +310,44 @@ func twoOwnCategories(t *testing.T, ctx context.Context, a *sim.Actor) {
 		}
 	}
 }
+
+// TestEmptyStatementIsNotCommitted (found in the day in the lab, 25.12): a week of a savings account
+// can have no row at all, and the server rightly refuses to commit such a statement (409). Import
+// deletes the empty preview instead, so the days count as imported and nothing is left behind.
+func TestEmptyStatementIsNotCommitted(t *testing.T) {
+	l := startLab(t)
+	ctx := context.Background()
+	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All(), Config: sim.Defaults()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	otter, err := e.Actor(ctx, identity.Nth(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var from, to platform.Date
+	for d := platform.MustDate(2026, time.January, 1); ; d = sim.AddDays(d, 1) {
+		if d.Time().Year() > 2026 {
+			t.Fatal("no week of 2026 without a row in the savings account")
+		}
+		if len(statements.Rows(otter.Persona, statements.Savings, d, sim.AddDays(d, 6))) == 0 {
+			from, to = d, sim.AddDays(d, 6)
+			break
+		}
+	}
+	if err := actions.Import(ctx, otter, statements.Savings, from, to); err != nil {
+		t.Fatalf("an empty statement from %v to %v: %v", from, to, err)
+	}
+	list, err := otter.API.ListImportsWithResponse(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if list.JSON200 == nil || len(*list.JSON200) != 0 {
+		t.Errorf("imports left behind: %+v", list.JSON200)
+	}
+	for _, line := range l.logs.accessLines(t) {
+		if line["route"] == "POST /api/v1/imports/{id}/commit" {
+			t.Errorf("the empty statement was sent to commit: %v", line)
+		}
+	}
+}

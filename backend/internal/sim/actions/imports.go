@@ -274,16 +274,25 @@ func upload(ctx context.Context, a *sim.Actor, account int, from, to platform.Da
 }
 
 // Import uploads a statement of the persona's account for the days from … to and commits it,
-// waiting until the worker is done (two minutes at most, as the web app waits).
+// waiting until the worker is done (two minutes at most, as the web app waits). A statement
+// without a row (a week of a savings account with no transfer and no interest) can't be committed:
+// its preview is deleted, as a person closes the window, and the days count as imported.
 func Import(ctx context.Context, a *sim.Actor, account int, from, to platform.Date) error {
 	pv, committed, err := upload(ctx, a, account, from, to)
 	if err != nil {
 		return err
 	}
+	id := pv.Import.Id
+	if !committed && pv.Stats.Rows-pv.Stats.Errors == 0 { // also before the columns: without rows none can be read
+		d, err := a.API.DeleteImportWithResponse(ctx, id)
+		if err != nil {
+			return err
+		}
+		return sim.Expect("delete the empty preview", d.HTTPResponse, http.StatusNoContent)
+	}
 	if len(pv.Missing) > 0 {
 		return fmt.Errorf("the statement's columns for %v were not found", pv.Missing)
 	}
-	id := pv.Import.Id
 	if !committed {
 		r, err := a.API.CommitImportWithResponse(ctx, id, gen.CommitImportJSONRequestBody{})
 		if err != nil {
