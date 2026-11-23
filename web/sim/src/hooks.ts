@@ -56,6 +56,17 @@ export function useChangeConfig(client: Client) {
   });
 }
 
+/** Asks every animal that plays to rebuild its history with the configured profile. */
+export function useRebuildHistory(client: Client) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => data(await client.POST('/history/rebuild')),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['state'] });
+    },
+  });
+}
+
 /** A POST that answers the configuration: pause, resume, reset, a preset. */
 export function useConfigAction(client: Client) {
   const qc = useQueryClient();

@@ -11,7 +11,7 @@ import (
 func All() []sim.Action {
 	var out []sim.Action
 	for _, area := range [][]sim.Action{table(), insights(), imports(), labels(), groups(), rules(), budgets(), duplicates(), cash(),
-		assistant(), sharing(), account()} {
+		assistant(), sharing(), account(), history()} {
 		out = append(out, area...)
 	}
 	return out

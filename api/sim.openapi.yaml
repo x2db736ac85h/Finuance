@@ -167,6 +167,23 @@ paths:
                 $ref: "#/components/schemas/Event"
         default:
           $ref: "#/components/responses/Problem"
+  /history/rebuild:
+    post:
+      operationId: rebuildHistory
+      summary: Every persona that plays rebuilds its history with the configured profile
+      description: >-
+        Each persona deletes its two bank accounts at its next turn, makes them again under the
+        configuration's history profile and imports that history up to yesterday (ADR 0044), a few
+        personas at a time. The feed shows each rebuild as `history.rebuild`.
+      responses:
+        "200":
+          description: The request is taken.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RebuildStatus"
+        default:
+          $ref: "#/components/responses/Problem"
   /events:
     get:
       operationId: streamEvents
@@ -215,7 +232,7 @@ components:
       additionalProperties: false
       description: The tuning page's settings (`internal/sim` Config); see Catalogue for the ceilings.
       required: [mode, personas, paused, intensity, activeHours, clockRate, mistakes, assistantPerDay, rate, rampSeconds,
-        loadMinutes, pushThrough, runSeed, jitter, bursts]
+        loadMinutes, pushThrough, runSeed, jitter, bursts, history]
       properties:
         mode:
           type: string
@@ -289,6 +306,38 @@ components:
         bursts:
           type: integer
           description: The chance in per mille that an action starts a burst of quick ones; in load mode, the depth of the pacer's bucket.
+        history:
+          $ref: "#/components/schemas/History"
+    History:
+      type: object
+      additionalProperties: false
+      description: How much a new or rebuilt history holds (ADR 0044).
+      required: [density, spread, variety, years]
+      properties:
+        density:
+          type: integer
+          description: The day's spending drawn this many times (1 … 20; about 1.7 rows each).
+        spread:
+          type: integer
+          description: The amounts' range in percent of the default (50 … 300).
+        variety:
+          type: integer
+          description: How many shops of each merchant (1 … 5).
+        years:
+          type: integer
+          description: How far back a rebuilt history starts (1 … 10).
+    RebuildStatus:
+      type: object
+      additionalProperties: false
+      required: [generation, pending]
+      properties:
+        generation:
+          type: integer
+          format: int64
+          description: The last rebuild asked for (0 for none).
+        pending:
+          type: integer
+          description: Personas that play and have yet to rebuild.
     ConfigDoc:
       type: object
       additionalProperties: false
@@ -302,7 +351,7 @@ components:
     State:
       type: object
       additionalProperties: false
-      required: [target, version, paused, generation, mode, rate, personas, totals]
+      required: [target, version, paused, generation, mode, rate, rebuild, historyEstimate, personas, totals]
       properties:
         target:
           type: string
@@ -318,6 +367,11 @@ components:
           type: string
           format: date-time
           description: When load mode returns to realistic mode by itself.
+        rebuild:
+          $ref: "#/components/schemas/RebuildStatus"
+        historyEstimate:
+          type: integer
+          description: About how many transactions a history of the configured profile holds per persona.
         version:
           type: string
         paused:
@@ -354,6 +408,9 @@ components:
         missing:
           type: boolean
           description: Its sign-in was refused, so the lab has no such animal (or another seed); it waits for the next change.
+        history:
+          type: string
+          description: Its history profile's label (empty for the default), read from its accounts' names.
         action:
           type: string
           description: The action it is doing now.
@@ -429,7 +486,7 @@ components:
       type: object
       additionalProperties: false
       required: [personas, intensity, clockRate, assistantPerDay, actionsPerMinute, loadPersonas, rate, rampSeconds,
-        loadMinutes, loadActionsPerSecond]
+        loadMinutes, loadActionsPerSecond, history]
       properties:
         personas:
           type: integer
@@ -443,6 +500,8 @@ components:
           type: integer
         loadActionsPerSecond:
           type: integer
+        history:
+          $ref: "#/components/schemas/History"
         intensity:
           type: integer
         clockRate:

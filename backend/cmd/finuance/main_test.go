@@ -40,9 +40,9 @@ func TestDispatch(t *testing.T) {
 		{[]string{"admin", "set-password", "-email=a@b.c", "-admin", "-password-stdin"}, 2, "", "usage"}, // -admin only with create-user
 		{[]string{"admin", "grant-admin", "-email=a@b.c"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
 		{[]string{"admin", "create-user", "-email=a@b.c", "-admin", "-password-stdin"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
-		{[]string{"seed-demo", "-email=a@b.c", "-synthetic"}, 2, "", "usage: finuance seed-demo"}, // -synthetic needs -users
-		{[]string{"admin", "synthetic-users"}, 2, "", "usage: finuance admin"},                    // no -seed-stdin
-		{[]string{"admin", "synthetic-users", "-seed-stdin", "x"}, 2, "", "usage"},                // stray argument
+		{[]string{"seed-demo", "-email=a@b.c", "-synthetic"}, 2, "", "flag provided but not defined: -synthetic"}, // ADR 0044: the animals instead
+		{[]string{"admin", "synthetic-users"}, 2, "", "usage: finuance admin"},                                    // no -seed-stdin
+		{[]string{"admin", "synthetic-users", "-seed-stdin", "x"}, 2, "", "usage"},                                // stray argument
 		{[]string{"admin", "synthetic-users", "-count=3", "-seed-stdin"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
 		{[]string{"admin", "synthetic-users", "-seed-env=FINUANCE_SIM_SEED"}, 1, "", "FINUANCE_DATABASE_URL: is required"},
 		{[]string{"admin", "synthetic-users", "-seed-stdin", "-seed-env=X"}, 2, "", "usage"}, // one or the other

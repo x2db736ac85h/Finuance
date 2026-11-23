@@ -169,9 +169,19 @@ func profileOf(p identity.Persona) profile {
 }
 
 // Day returns the persona's rows for one day on both accounts, in the order they were drawn.
-func Day(p identity.Persona, d platform.Date) []Row {
+func Day(p identity.Persona, d platform.Date) []Row { return DayWith(p, d, History{}) }
+
+// DayWith is Day under a history profile: the default's days are Day's; another profile's are drawn
+// from a stream of their own, its spending drawn Density times, its amounts spread and its shops
+// multiplied.
+func DayWith(p identity.Persona, d platform.Date, h History) []Row {
+	h = h.Normal()
 	pr := profileOf(p)
-	s := newStream("finuance-sim/v1 day", p.Slug, d.String())
+	parts := []string{"finuance-sim/v1 day", p.Slug, d.String()}
+	if k := h.key(); k != "" {
+		parts = append(parts, k)
+	}
+	s := newStream(parts...)
 	cur, sav := Number(p, Current), Number(p, Savings)
 	var rows []Row
 	add := func(r Row) {
@@ -204,17 +214,23 @@ func Day(p identity.Persona, d platform.Date) []Row {
 		add(Row{Account: Current, Payee: "DOSTAWCA ENERGII ZIELONA MOC", Title: "PRĄD " + month, Amount: -(15_000 + s.skewed(0, 15_000)),
 			Kind: directDebit, Category: "Rachunki"})
 	}
-	for _, c := range everyday {
-		if !s.permille(c.p * pr.spend / 100) {
-			continue
+	for range h.Density {
+		for _, c := range everyday {
+			if !s.permille(c.p * pr.spend / 100) {
+				continue
+			}
+			payee := pick(s, c.payees)
+			if h.Variety > 1 {
+				i := s.intn(len(c.payees) * h.Variety)
+				payee = shop(c.payees[i%len(c.payees)], i/len(c.payees)+1)
+			}
+			amount := s.skewed(c.lo, c.lo+(c.hi-c.lo)*int64(h.Spread)/100)
+			r := Row{Account: Current, Payee: payee, Title: "ZAKUP", Amount: -amount, Kind: c.kind, Category: c.category}
+			if c.kind == card && s.permille(300) {
+				r.Value = platform.DateOf(d.Time().AddDate(0, 0, -1), time.UTC)
+			}
+			add(r)
 		}
-		payee := pick(s, c.payees)
-		amount := s.skewed(c.lo, c.hi)
-		r := Row{Account: Current, Payee: payee, Title: "ZAKUP", Amount: -amount, Kind: c.kind, Category: c.category}
-		if c.kind == card && s.permille(300) {
-			r.Value = platform.DateOf(d.Time().AddDate(0, 0, -1), time.UTC)
-		}
-		add(r)
 	}
 	if d.D == 20 && s.permille(250) { // now and then money comes back from savings
 		amount := 20_000 + int64(s.intn(9))*10_000
@@ -231,9 +247,14 @@ func Day(p identity.Persona, d platform.Date) []Row {
 // Rows returns the rows of one account for the days from … to (inclusive), newest first; within a
 // day the last drawn row comes first, as a bank lists the latest operation on top.
 func Rows(p identity.Persona, account int, from, to platform.Date) []Row {
+	return RowsWith(p, account, from, to, History{})
+}
+
+// RowsWith is Rows under a history profile.
+func RowsWith(p identity.Persona, account int, from, to platform.Date, h History) []Row {
 	var out []Row
 	for t := to.Time(); !t.Before(from.Time()); t = t.AddDate(0, 0, -1) {
-		day := Day(p, platform.DateOf(t, time.UTC))
+		day := DayWith(p, platform.DateOf(t, time.UTC), h)
 		for i := len(day) - 1; i >= 0; i-- {
 			if day[i].Account == account {
 				out = append(out, day[i])

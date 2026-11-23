@@ -217,7 +217,7 @@ func restart(ctx context.Context, a *sim.Actor) error {
 		if err := sim.Expect("delete an account", d.HTTPResponse, http.StatusNoContent); err != nil {
 			return err
 		}
-		made, err := a.API.CreateAccountWithResponse(ctx, gen.CreateAccountJSONRequestBody{Name: statements.AccountName(n)})
+		made, err := a.API.CreateAccountWithResponse(ctx, gen.CreateAccountJSONRequestBody{Name: statements.AccountNameFor(n, a.History())})
 		if err != nil {
 			return err
 		}
@@ -254,19 +254,25 @@ func upload(ctx context.Context, a *sim.Actor, account int, from, to platform.Da
 		return nil, false, err
 	}
 	stamp := fmt.Sprintf("sim-%s-%d", a.Persona.Slug, a.Now().UnixNano())
-	name, content := statements.File(a.Persona, account, from, to, stamp)
-	var body bytes.Buffer
-	mw := multipart.NewWriter(&body)
-	_ = mw.WriteField("accountId", a.Account(account).String())
-	part, err := mw.CreateFormFile("file", name)
-	if err != nil {
-		return nil, false, err
-	}
-	_, _ = part.Write(content)
-	if err := mw.Close(); err != nil {
-		return nil, false, err
-	}
-	r, err := a.API.UploadImportWithBodyWithResponse(ctx, &gen.UploadImportParams{}, mw.FormDataContentType(), &body)
+	name, content := statements.FileWith(a.Persona, account, from, to, stamp, a.History())
+	var r *gen.UploadImportResponse
+	err := a.WhileBusy(ctx, func() (sim.Answer, error) {
+		var body bytes.Buffer
+		mw := multipart.NewWriter(&body)
+		_ = mw.WriteField("accountId", a.Account(account).String())
+		part, err := mw.CreateFormFile("file", name)
+		if err != nil {
+			return sim.Answer{}, err
+		}
+		_, _ = part.Write(content)
+		if err := mw.Close(); err != nil {
+			return sim.Answer{}, err
+		}
+		if r, err = a.API.UploadImportWithBodyWithResponse(ctx, &gen.UploadImportParams{}, mw.FormDataContentType(), &body); err != nil {
+			return sim.Answer{}, err
+		}
+		return sim.AnswerOf(r.HTTPResponse, r.Body), nil
+	})
 	if err != nil {
 		return nil, false, err
 	}
@@ -300,8 +306,14 @@ func Import(ctx context.Context, a *sim.Actor, account int, from, to platform.Da
 		return fmt.Errorf("the statement's columns for %v were not found", pv.Missing)
 	}
 	if !committed {
-		r, err := a.API.CommitImportWithResponse(ctx, id, gen.CommitImportJSONRequestBody{})
-		if err != nil {
+		var r *gen.CommitImportResponse
+		if err := a.WhileBusy(ctx, func() (sim.Answer, error) {
+			var err error
+			if r, err = a.API.CommitImportWithResponse(ctx, id, gen.CommitImportJSONRequestBody{}); err != nil {
+				return sim.Answer{}, err
+			}
+			return sim.AnswerOf(r.HTTPResponse, r.Body), nil
+		}); err != nil {
 			return err
 		}
 		if err := sim.Expect("commit", r.HTTPResponse, http.StatusAccepted); err != nil {

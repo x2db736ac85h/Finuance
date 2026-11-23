@@ -13,8 +13,9 @@ import (
 // starts without data begins three years back when the calendar runs fast, and today otherwise
 // (then its first import brings a year of history).
 
-// historyDays is how far back a persona's first import reaches when its calendar starts today.
-const historyDays = 365
+// historyDays is how far back a persona's first import reaches when its calendar starts today: its
+// history profile's years (one by default).
+func (a *Actor) historyDaysLocked() int { return a.history.Normal().Years * 365 }
 
 // Today is the instance's today, in its time zone.
 func (a *Actor) Today() platform.Date {
@@ -65,7 +66,7 @@ func (a *Actor) startCalendarLocked(lastOn map[int]*platform.Date, rate int) {
 		if d := lastOn[n]; d != nil {
 			a.imported[n] = *d
 		} else {
-			a.imported[n] = addDays(start, -historyDays-1)
+			a.imported[n] = addDays(start, -a.historyDaysLocked()-1)
 		}
 	}
 }
@@ -93,8 +94,25 @@ func (a *Actor) Restart() {
 	defer a.mu.Unlock()
 	start := addDays(today, -3*365)
 	a.cal = calendar{anchorReal: now, anchorDay: start, rate: cfg.ClockRate}
-	a.imported = map[int]platform.Date{statements.Current: addDays(start, -historyDays-1), statements.Savings: addDays(start, -historyDays-1)}
+	back := addDays(start, -a.historyDaysLocked()-1)
+	a.imported = map[int]platform.Date{statements.Current: back, statements.Savings: back}
 	a.hasData = false
+}
+
+// StartHistory starts a rebuilt history (its accounts made again): the calendar at today, and
+// nothing imported since its profile's years back, which the rebuild then imports. It returns the
+// first day of that history.
+func (a *Actor) StartHistory() platform.Date {
+	now := a.engine.o.Clock.Now()
+	today := platform.DateOf(now, a.engine.o.Location)
+	cfg, _ := a.engine.Config()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	first := addDays(today, -a.historyDaysLocked())
+	a.cal = calendar{anchorReal: now, anchorDay: today, rate: cfg.ClockRate}
+	a.imported = map[int]platform.Date{statements.Current: addDays(first, -1), statements.Savings: addDays(first, -1)}
+	a.hasData = false
+	return first
 }
 
 type calendar struct {

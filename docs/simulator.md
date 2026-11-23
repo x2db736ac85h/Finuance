@@ -81,7 +81,36 @@ code:
 Load mode can only play the animals the lab made: `make sim-up` makes 100 (`SIM_ANIMALS`, at most
 500). An animal the lab doesn't have shows as "not in the lab" and waits for the next change.
 
+Each animal is a user of its own, so it keeps below the instance's limits per user, with token
+buckets like the instance's: a question to the assistant every two minutes, an upload every 2.5
+seconds (it waits), an invitation every 2.5 minutes, each with a burst below the instance's 30.
+
 The control API is [`api/sim.openapi.yaml`](../api/sim.openapi.yaml).
+
+## How much data the animals have
+
+The **history profile** (the page's *History* section, ADR 0044) says how much a new or rebuilt
+history holds: the day's spending drawn up to 20 times (about 1.7 rows each), the amounts' spread,
+how many shops each merchant has, and how many years back it reaches. The page estimates the
+transactions per animal (density 11 over three years is about 20,000, the size the load test used
+before). The default profile writes the statements the simulator always wrote.
+
+A profile is written into the accounts' names (`Current account · d11 s100 v1 y3`), so a restarted
+simulator reads it back and overlapping statements still de-duplicate. New animals start with the
+configured profile; the others keep theirs until *Rebuild history*: each animal that plays deletes
+its two bank accounts at its next turn, makes them again and imports the history through the normal
+upload, eight at a time.
+
+Without the page:
+
+```sh
+finuance-sim seed -target=http://localhost:8020 -count=50 -rows=20000 -years=3   # FINUANCE_SIM_SEED set
+finuance-sim users -count=50 -out=users.json                                      # e-mails and passwords for k6
+```
+
+`seed` rebuilds each animal's history, or imports only the days since for an animal that already has
+that profile. `make loadtest-seed` uses both on a lab, so k6 signs in as the animals
+([loadtest/README.md](../loadtest/README.md)).
 
 ## Finding its traffic
 

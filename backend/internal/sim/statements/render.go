@@ -31,13 +31,18 @@ var mbankKinds = map[kind]string{
 // reads the same rows). The API answers 409 to bytes it already holds; the simulator passes a new
 // stamp for every upload, and the sample files have none.
 func File(p identity.Persona, account int, from, to platform.Date, stamp string) (string, []byte) {
+	return FileWith(p, account, from, to, stamp, History{})
+}
+
+// FileWith is File under a history profile.
+func FileWith(p identity.Persona, account int, from, to platform.Date, stamp string, h History) (string, []byte) {
 	stamp = strings.Map(func(r rune) rune { // letters, digits, '-' and '_' only: never a delimiter or a quote
 		if r == '-' || r == '_' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' {
 			return r
 		}
 		return -1
 	}, stamp)
-	rows := Rows(p, account, from, to)
+	rows := RowsWith(p, account, from, to, h)
 	name := fmt.Sprintf("%s-%s-%s-%s.csv", p.Slug, strings.ToLower(strings.ReplaceAll(AccountName(account), " ", "-")), from, to)
 	if LayoutOf(p, account) == MBankLike {
 		return name, mbank(p, account, from, to, rows, stamp)

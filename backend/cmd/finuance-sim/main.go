@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/actions"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/control"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
+	"github.com/x2db736ac85h/finuance/backend/internal/sim/statements"
 )
 
 var version = "dev"
@@ -37,6 +40,14 @@ commands:
                     play the personas against a lab, with the control API, the tuning page and
                     /metrics on -listen; refuses an instance whose /meta does not report
                     simulation: true
+  seed -target=https://lab.example [-count=N] [-rows=N | -density=N] [-years=N] [-spread=%] [-variety=N]
+                    give the first N animals a history of that profile through the normal upload
+                    (ADR 0044) and exit: a rebuild, or only the days since for an animal that
+                    already has that profile; -rows picks the density for about that many
+                    transactions each
+  users -count=N -out=FILE
+                    write the first N animals' e-mail addresses and passwords as JSON (mode 0600),
+                    for k6 (loadtest/finuance.js, USERS_FILE)
   password <animal> print one persona's password (to sign in as it and look at its screens)
   version           print the version
 
@@ -80,6 +91,10 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		return 0
 	case "run":
 		return runEngine(ctx, args[1:], getenv, stderr)
+	case "seed":
+		return seed(ctx, args[1:], getenv, stdout, stderr)
+	case "users":
+		return users(args[1:], getenv, stderr)
 	}
 	fmt.Fprintf(stderr, "finuance-sim: unknown command %q\n\n%s", args[0], usage)
 	return 2
@@ -169,6 +184,103 @@ func transportWith(caFile string) (http.RoundTripper, error) {
 	}
 	t.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
 	return t, nil
+}
+
+// seed builds the first -count animals' histories (actions.Seed) and reports each one.
+func seed(ctx context.Context, args []string, getenv func(string) string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	cfg := sim.Defaults()
+	target := fs.String("target", getenv("FINUANCE_SIM_TARGET"), "the lab's public address (FINUANCE_SIM_TARGET)")
+	origin := fs.String("origin", getenv("FINUANCE_SIM_ORIGIN"), "the Origin to send, when the target is reached by another name")
+	caFile := fs.String("ca-file", getenv("FINUANCE_SIM_CA_FILE"), "a PEM file with the authority that signed the lab's certificate")
+	count := fs.Int("count", 10, fmt.Sprintf("how many animals, the first N (1 … %d)", sim.MaxLoadPersonas))
+	rows := fs.Int("rows", 0, "about this many transactions per animal (picks -density for -years)")
+	fs.IntVar(&cfg.History.Density, "density", 1, fmt.Sprintf("the day's spending drawn this many times (1 … %d)", statements.MaxDensity))
+	fs.IntVar(&cfg.History.Years, "years", 1, fmt.Sprintf("how many years back the history starts (1 … %d)", statements.MaxYears))
+	fs.IntVar(&cfg.History.Spread, "spread", 100, "the amounts' range in percent of the default (50 … 300)")
+	fs.IntVar(&cfg.History.Variety, "variety", 1, fmt.Sprintf("shops per merchant (1 … %d)", statements.MaxVariety))
+	parallel := fs.Int("parallel", sim.MaxRebuilds, "how many animals at once")
+	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
+		return 2
+	}
+	if *count < 1 || *count > sim.MaxLoadPersonas {
+		fmt.Fprintf(stderr, "finuance-sim: -count must be between 1 and %d\n", sim.MaxLoadPersonas)
+		return 2
+	}
+	if *rows > 0 {
+		cfg.History.Density = statements.DensityFor(*rows, cfg.History.Normal().Years)
+	}
+	transport, err := transportWith(*caFile)
+	if err != nil {
+		fmt.Fprintln(stderr, "finuance-sim: -ca-file:", err)
+		return 2
+	}
+	e, err := sim.New(sim.Options{Target: *target, Origin: *origin, Transport: transport, Seed: []byte(getenv("FINUANCE_SIM_SEED")),
+		Version: version, Actions: actions.All(), Config: cfg})
+	if err != nil {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		return 1
+	}
+	if err := e.CheckTarget(ctx); err != nil {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		return 1
+	}
+	h, _ := e.Config()
+	fmt.Fprintf(stdout, "seeding %d animals with history %q (about %d transactions each)\n", *count, h.History.Label(),
+		statements.Estimate(h.History))
+	var mu sync.Mutex
+	err = actions.Seed(ctx, e, *count, *parallel, func(ev sim.Event) {
+		mu.Lock()
+		defer mu.Unlock()
+		fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\n", ev.Persona, ev.Action, ev.Result, ev.Duration.Round(time.Second))
+	})
+	if err != nil {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		return 1
+	}
+	return 0
+}
+
+// users writes the first -count animals' credentials for k6, readable by this user only.
+func users(args []string, getenv func(string) string, stderr io.Writer) int {
+	fs := flag.NewFlagSet("users", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	count := fs.Int("count", 10, fmt.Sprintf("how many animals, the first N (1 … %d)", sim.MaxLoadPersonas))
+	out := fs.String("out", "", "the file to write (JSON; replaced, mode 0600)")
+	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || *out == "" {
+		fmt.Fprint(stderr, usage)
+		return 2
+	}
+	ps, err := identity.First(*count)
+	if err != nil {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		return 2
+	}
+	type cred struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	creds := make([]cred, 0, len(ps))
+	for _, p := range ps {
+		pw, err := identity.Password([]byte(getenv("FINUANCE_SIM_SEED")), p.Slug)
+		if err != nil {
+			fmt.Fprintln(stderr, "finuance-sim: FINUANCE_SIM_SEED:", err)
+			return 1
+		}
+		creds = append(creds, cred{p.Email, pw})
+	}
+	b, err := json.MarshalIndent(creds, "", "  ") //nolint:gosec // the command's purpose: the animals' passwords for k6, in a file only this user reads
+	if err != nil {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		return 1
+	}
+	_ = os.Remove(*out) // a new file, so an older one's wider mode doesn't carry over
+	if err := os.WriteFile(*out, append(b, '\n'), 0o600); err != nil {
+		fmt.Fprintln(stderr, "finuance-sim:", err)
+		return 1
+	}
+	return 0
 }
 
 func envOr(getenv func(string) string, name, def string) string {

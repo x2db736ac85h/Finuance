@@ -25,6 +25,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/sim"
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/control/gen"
+	"github.com/x2db736ac85h/finuance/backend/internal/sim/statements"
 )
 
 //go:embed ui
@@ -191,10 +192,16 @@ func (s *server) GetState(context.Context, gen.GetStateRequestObject) (gen.GetSt
 	if ends := e.LoadEndsAt(); !ends.IsZero() {
 		out.LoadEndsAt = &ends
 	}
+	rebuilt, pending := e.Rebuilds()
+	out.Rebuild = gen.RebuildStatus{Generation: rebuilt, Pending: pending}
+	out.HistoryEstimate = statements.Estimate(cfg.History)
 	for i := range personas {
 		p := &personas[i]
 		ps := gen.PersonaState{Slug: p.Persona.Slug, Name: p.Persona.Name, Animal: p.Persona.Animal, Says: p.Character.Says,
 			On: p.On, SignedIn: p.SignedIn, Missing: p.Missing, Counts: counts(p.Counts)}
+		if p.History != "" {
+			ps.History = &p.History
+		}
 		if p.Action != "" {
 			ps.Action = &p.Action
 		}
@@ -211,7 +218,9 @@ func (s *server) GetCatalogue(context.Context, gen.GetCatalogueRequestObject) (g
 	out := gen.GetCatalogue200JSONResponse{Areas: sim.Areas, Ceilings: gen.Ceilings{Personas: sim.MaxPersonas, Intensity: sim.MaxIntensity,
 		ClockRate: sim.MaxClockRate, AssistantPerDay: sim.MaxAssistantPerDay, ActionsPerMinute: int(time.Minute / sim.MinGap),
 		LoadPersonas: sim.MaxLoadPersonas, Rate: sim.MaxRate, RampSeconds: sim.MaxRampSeconds, LoadMinutes: sim.MaxLoadMinutes,
-		LoadActionsPerSecond: int(time.Second / sim.MinLoadGap)}}
+		LoadActionsPerSecond: int(time.Second / sim.MinLoadGap),
+		History: gen.History{Density: statements.MaxDensity, Spread: statements.MaxSpread, Variety: statements.MaxVariety,
+			Years: statements.MaxYears}}}
 	costs := map[sim.Cost]gen.CatalogueActionCost{sim.Light: gen.Light, sim.Heavy: gen.Heavy, sim.Model: gen.Model}
 	for _, a := range s.o.Engine.Actions() {
 		out.Actions = append(out.Actions, gen.CatalogueAction{Name: a.Name, Area: a.Area, Cost: costs[a.Cost], Mistake: a.Mistake})
@@ -256,6 +265,13 @@ func (s *server) ApplyPreset(_ context.Context, req gen.ApplyPresetRequestObject
 	}
 	cfg, g := s.change(preset)
 	return gen.ApplyPreset200JSONResponse(doc(cfg, g)), nil
+}
+
+// RebuildHistory asks every persona that plays to rebuild its history (ADR 0044).
+func (s *server) RebuildHistory(context.Context, gen.RebuildHistoryRequestObject) (gen.RebuildHistoryResponseObject, error) {
+	s.o.Engine.RequestRebuild()
+	generation, pending := s.o.Engine.Rebuilds()
+	return gen.RebuildHistory200JSONResponse{Generation: generation, Pending: pending}, nil
 }
 
 func (s *server) Pause(context.Context, gen.PauseRequestObject) (gen.PauseResponseObject, error) {
@@ -368,7 +384,8 @@ func doc(c sim.Config, generation int64) gen.ConfigDoc {
 	out := gen.ConfigDoc{Generation: generation, Config: gen.Config{Mode: gen.ConfigMode(c.Mode), Personas: c.Personas,
 		Paused: c.Paused, Intensity: c.Intensity, ActiveHours: c.ActiveHours, ClockRate: c.ClockRate, Mistakes: c.Mistakes,
 		AssistantPerDay: c.AssistantPerDay, Rate: c.Rate, RampSeconds: c.RampSeconds, LoadMinutes: c.LoadMinutes,
-		PushThrough: c.PushThrough, RunSeed: c.RunSeed, Jitter: c.Jitter, Bursts: c.Bursts}}
+		PushThrough: c.PushThrough, RunSeed: c.RunSeed, Jitter: c.Jitter, Bursts: c.Bursts,
+		History: gen.History{Density: c.History.Density, Spread: c.History.Spread, Variety: c.History.Variety, Years: c.History.Years}}}
 	if len(c.Off) > 0 {
 		out.Config.Off = &c.Off
 	}
@@ -388,7 +405,8 @@ func fromAPI(c gen.Config) sim.Config {
 	out := sim.Config{Mode: string(c.Mode), Personas: c.Personas, Paused: c.Paused, Intensity: c.Intensity,
 		ActiveHours: c.ActiveHours, ClockRate: c.ClockRate, Mistakes: c.Mistakes, AssistantPerDay: c.AssistantPerDay,
 		Rate: c.Rate, RampSeconds: c.RampSeconds, LoadMinutes: c.LoadMinutes, PushThrough: c.PushThrough, RunSeed: c.RunSeed,
-		Jitter: c.Jitter, Bursts: c.Bursts}
+		Jitter: c.Jitter, Bursts: c.Bursts, History: statements.History{Density: c.History.Density, Spread: c.History.Spread,
+			Variety: c.History.Variety, Years: c.History.Years}}
 	if c.Off != nil {
 		out.Off = *c.Off
 	}

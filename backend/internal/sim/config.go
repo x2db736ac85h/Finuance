@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/sim/identity"
+	"github.com/x2db736ac85h/finuance/backend/internal/sim/statements"
 )
 
 // Areas are the feature areas of the action catalogue (PLAN Phase 25, "The action catalogue").
@@ -41,6 +42,9 @@ type Config struct {
 	// Bursts is the chance, in per mille, that an action starts a burst of a few quick ones; in load
 	// mode it deepens the pacer's bucket (1000: one second's worth).
 	Bursts int `json:"bursts"`
+	// History is the profile a new or rebuilt history is made with (ADR 0044); a persona keeps the
+	// one its accounts were made with until its history is rebuilt.
+	History statements.History `json:"history"`
 	// Personas is how many personas play: the first N (identity.First).
 	Personas int `json:"personas"`
 	// Off lists personas (by slug) that sit this out.
@@ -68,7 +72,8 @@ type Config struct {
 // Defaults is the configuration a simulator starts with when nothing else is given.
 func Defaults() Config {
 	return Config{Mode: ModeRealistic, Personas: len(identity.Animals), Intensity: 1000, ActiveHours: true, ClockRate: 1,
-		Mistakes: 20, AssistantPerDay: 100, Rate: 50, RampSeconds: 60, LoadMinutes: 30, Jitter: 100}
+		Mistakes: 20, AssistantPerDay: 100, Rate: 50, RampSeconds: 60, LoadMinutes: 30, Jitter: 100,
+		History: statements.History{}.Normal()}
 }
 
 // Clamp returns c held to the ceilings: every number within its range, unknown areas, personas
@@ -85,6 +90,7 @@ func (c Config) Clamp() Config {
 	c.LoadMinutes = clamp(c.LoadMinutes, 1, MaxLoadMinutes)
 	c.Jitter = clamp(c.Jitter, 0, 100)
 	c.Bursts = clamp(c.Bursts, 0, 1000)
+	c.History = c.History.Normal()
 	if c.RunSeed < 0 || c.RunSeed > MaxRunSeed {
 		c.RunSeed = 0 // the engine draws one
 	}

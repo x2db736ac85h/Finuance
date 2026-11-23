@@ -38,6 +38,7 @@ type PersonaState struct {
 	On        bool
 	SignedIn  bool
 	Missing   bool   // its sign-in was refused: the lab has no such animal (or another seed)
+	History   string // its history profile's label ("" for the default)
 	Action    string // what it is doing now
 	Counts    Counts
 	Last      *Event
@@ -66,6 +67,7 @@ func (e *Engine) State() ([]PersonaState, Counts) {
 		st := PersonaState{Persona: p, Character: Characters[p.Animal], On: cfg.personaOn(p)}
 		if a := e.actors[p.Slug]; a != nil {
 			st.SignedIn = a.signedIn()
+			st.History = a.History().Label()
 		}
 		if lg != nil {
 			st.Counts, st.Last, st.Action, st.Missing = lg.counts, lg.last, lg.now, lg.missing

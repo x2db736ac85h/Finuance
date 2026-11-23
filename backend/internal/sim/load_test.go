@@ -361,3 +361,103 @@ func TestLimits(t *testing.T) {
 		}
 	}
 }
+
+// TestWhileBusy: a 409 account_busy (the account's lock is held) is sent again after BusyWait or
+// its Retry-After, at most BusyTries times in all; a 409 of another kind (a file already imported)
+// and other answers return at once.
+func TestWhileBusy(t *testing.T) {
+	e, clock := newTestEngine(t, &fakeLab{simulation: true}, nil)
+	a := testActor(e, Character{})
+	busy := `{"status":409,"code":"account_busy","title":"Account busy"}`
+	type answer struct {
+		status     int
+		body       string
+		retryAfter string
+	}
+	var last int
+	answers := func(as ...answer) func() (Answer, error) {
+		return func() (Answer, error) {
+			x := as[0]
+			if len(as) > 1 {
+				as = as[1:]
+			}
+			h := http.Header{}
+			if x.retryAfter != "" {
+				h.Set("Retry-After", x.retryAfter)
+			}
+			last = x.status
+			return Answer{Status: x.status, Header: h, Body: []byte(x.body)}, nil
+		}
+	}
+	for _, c := range []struct {
+		name    string
+		answers []answer
+		want    int
+		slept   []time.Duration
+	}{
+		{"busy twice, then taken", []answer{{409, busy, ""}, {409, busy, "7"}, {201, "{}", ""}}, 201, []time.Duration{BusyWait, 7 * time.Second}},
+		{"busy every time", []answer{{409, busy, ""}}, 409, []time.Duration{BusyWait, BusyWait, BusyWait, BusyWait}},
+		{"a file already imported", []answer{{409, `{"code":"duplicate_file"}`, ""}}, 409, nil},
+		{"taken at once", []answer{{201, "{}", ""}}, 201, nil},
+	} {
+		before := len(clock.sleeps())
+		err := a.WhileBusy(context.Background(), answers(c.answers...))
+		if slept := clock.sleeps()[before:]; err != nil || last != c.want || !slices.Equal(slept, c.slept) {
+			t.Errorf("%s: %v %v, slept %v", c.name, last, err, slept)
+		}
+	}
+}
+
+// TestRebuildRequests: a rebuild request reaches every persona that plays once, at most
+// MaxRebuilds at a time, and the state counts those still to do it.
+func TestRebuildRequests(t *testing.T) {
+	ran := 0
+	acts := []Action{{Name: RebuildAction, Area: "imports", OnDemand: true, Run: func(context.Context, *Actor) error { ran++; return nil }}}
+	e, _ := newTestEngine(t, &fakeLab{simulation: true}, acts)
+	cfg, _ := e.Config()
+	cfg.Mode, cfg.Personas = ModeLoad, MaxRebuilds+2
+	e.SetConfig(cfg)
+	var actors []*Actor
+	for i := range cfg.Personas {
+		a := testActor(e, Character{})
+		a.Persona = identity.Nth(i)
+		e.actors[a.Persona.Slug] = a
+		actors = append(actors, a)
+	}
+	if _, ok := e.rebuildTurn(actors[0]); ok {
+		t.Fatal("a rebuild nobody asked for")
+	}
+	if g, pending := e.Rebuilds(); g != 0 || pending != 0 {
+		t.Errorf("before a request: %d, %d pending", g, pending)
+	}
+	e.RequestRebuild()
+	if _, pending := e.Rebuilds(); pending != len(actors) {
+		t.Errorf("%d pending, want %d", pending, len(actors))
+	}
+	got := 0
+	for _, a := range actors {
+		if _, ok := e.rebuildTurn(a); ok {
+			got++
+		}
+	}
+	if got != MaxRebuilds {
+		t.Errorf("%d rebuilds at once, want %d", got, MaxRebuilds)
+	}
+	for range got {
+		<-e.rebuilds
+	}
+	for _, a := range actors {
+		if _, ok := e.rebuildTurn(a); ok {
+			<-e.rebuilds
+		}
+	}
+	if _, pending := e.Rebuilds(); pending != 0 {
+		t.Errorf("%d still pending", pending)
+	}
+	if _, ok := e.rebuildTurn(actors[0]); ok {
+		t.Error("a persona rebuilt twice for one request")
+	}
+	if act, ok := e.draw(actors[0], &cfg); ok {
+		t.Errorf("an on-demand action was drawn: %s", act.Name)
+	}
+}

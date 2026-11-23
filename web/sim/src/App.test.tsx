@@ -45,6 +45,7 @@ const reset = () => {
       runSeed: 1234,
       jitter: 100,
       bursts: 0,
+      history: { density: 1, spread: 100, variety: 1, years: 1 },
     },
   };
   state = {};
@@ -76,6 +77,8 @@ const server = setupServer(
         generation: config.generation,
         mode: config.config.mode,
         rate: 0,
+        rebuild: { generation: 0, pending: 0 },
+        historyEstimate: 735,
         grafana: 'http://localhost:3000',
         totals: { ok: 3, error: 1, skipped: 0 },
         personas: state.personas ?? [
@@ -126,6 +129,7 @@ const server = setupServer(
           rampSeconds: 3600,
           loadMinutes: 1440,
           loadActionsPerSecond: 2,
+          history: { density: 20, spread: 300, variety: 5, years: 10 },
         },
       } satisfies Schemas['Catalogue']),
     ),
@@ -145,6 +149,13 @@ const server = setupServer(
       posts.push('pause');
       config = { generation: config.generation + 1, config: { ...config.config, paused: true } };
       return HttpResponse.json(config);
+    }),
+  ),
+  http.post(`${API}/history/rebuild`, ({ request }) =>
+    authed(request, () => {
+      posts.push('rebuild');
+      state = { ...state, rebuild: { generation: 1, pending: 2 } };
+      return HttpResponse.json({ generation: 1, pending: 2 });
     }),
   ),
   http.post(`${API}/presets/:name`, ({ request, params }) =>
@@ -344,6 +355,24 @@ describe('the tuning page', () => {
     await openWithToken();
     const card = await screen.findByRole('article', { name: 'Otter 2' });
     expect(within(card).getByText(/not in the lab/)).toBeTruthy();
+  });
+
+  it('sets the history profile, shows the estimate and asks for a rebuild', async () => {
+    const user = await openWithToken();
+    const section = await screen.findByRole('region', { name: 'History' });
+    expect(within(section).getByText(/About 735 transactions per animal/)).toBeTruthy();
+    const density = within(section).getByRole('spinbutton', { name: /^Spending a day/ });
+    expect(density.getAttribute('max')).toBe('20');
+    await user.clear(density);
+    await user.type(density, '9');
+    await waitFor(() => {
+      expect(puts.at(-1)?.config.history).toEqual({ density: 9, spread: 100, variety: 1, years: 1 });
+    });
+    await user.click(within(section).getByRole('button', { name: 'Rebuild history' }));
+    await waitFor(() => {
+      expect(posts).toContain('rebuild');
+    });
+    expect(await within(section).findByRole('status')).toHaveProperty('textContent', '2 animals still to rebuild');
   });
 
   it('shows the feed', async () => {

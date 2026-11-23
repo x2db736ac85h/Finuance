@@ -30,6 +30,9 @@ const (
 	// address (30 a minute), which every persona shares behind the front door.
 	SignInBurst = 25
 	SignInEvery = 2500 * time.Millisecond
+	// MaxRebuilds is how many personas rebuild their history at once (each import waits for the
+	// worker's commit).
+	MaxRebuilds = 8
 	// FeedRate is the most actions a second the feed sends one viewer; beyond it, it samples.
 	FeedRate = 50
 	// MaxRunSeed is the largest run seed: a page in a browser reads numbers up to 2^53 exactly.
