@@ -14,6 +14,7 @@ import {
   useChangeConfig,
   useConfig,
   useConfigAction,
+  useRebuildHistory,
   useSimState,
 } from './hooks';
 import { logsLink, useFeed } from './useFeed';
@@ -113,6 +114,7 @@ export function Dashboard({ client, token }: Props) {
       </section>
 
       <Load catalogue={cat} cfg={cfg} set={set} />
+      <History client={client} catalogue={cat} cfg={cfg} state={st} set={set} />
 
       <section aria-label="Personas" className="sim-personas">
         <h2>Personas</h2>
@@ -166,6 +168,7 @@ function PersonaCard({
         {p.action ? 'Doing ' : 'Last: '}
         <span className="mono">{doing}</span>
       </p>
+      {p.history && <p className="hint">history {p.history}</p>}
       <div
         className="sim-bar"
         role="img"
@@ -348,6 +351,67 @@ function Load({ catalogue, cfg, set }: { catalogue: Schemas['Catalogue']; cfg: C
           </p>
         </>
       )}
+    </section>
+  );
+}
+
+/** The history profile (ADR 0044): how much a new or rebuilt history holds, and Rebuild history. */
+function History({
+  client,
+  catalogue,
+  cfg,
+  state,
+  set,
+}: {
+  client: Client;
+  catalogue: Schemas['Catalogue'];
+  cfg: Config;
+  state: Schemas['State'];
+  set: Setter;
+}) {
+  const ceil = catalogue.ceilings.history;
+  const rebuild = useRebuildHistory(client);
+  const field = (label: string, key: keyof Config['history'], min: number, max: number) => (
+    <NumberField
+      label={label}
+      value={cfg.history[key]}
+      min={min}
+      max={max}
+      apply={(c, v) => ({ ...c, history: { ...c.history, [key]: v } })}
+      set={set}
+    />
+  );
+  return (
+    <section aria-label="History" className="sim-load">
+      <h2>History</h2>
+      <div className="sim-row">
+        {field('Spending a day, ×', 'density', 1, ceil.density)}
+        {field('Amount spread, %', 'spread', 50, ceil.spread)}
+        {field('Shops per merchant', 'variety', 1, ceil.variety)}
+        {field('Years back', 'years', 1, ceil.years)}
+      </div>
+      <p className="hint">
+        About {state.historyEstimate.toLocaleString()} transactions per animal. New animals start with this profile; the
+        others keep theirs until their history is rebuilt.
+      </p>
+      <div className="sim-seed">
+        <Button
+          onClick={() => {
+            rebuild.mutate();
+          }}
+        >
+          Rebuild history
+        </Button>
+        {state.rebuild.pending > 0 && (
+          <span className="hint" role="status">
+            {state.rebuild.pending} animals still to rebuild
+          </span>
+        )}
+      </div>
+      <p className="hint">
+        Each animal that plays deletes its two bank accounts, makes them again and imports the history through the
+        normal upload, a few at a time.
+      </p>
     </section>
   );
 }

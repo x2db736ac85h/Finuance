@@ -16,10 +16,14 @@ LOADTEST_BASE_URL ?= http://localhost:8000
 LOADTEST_USERS ?= 50
 LOADTEST_ROWS ?= 20000
 LOADTEST_PASSWORD ?= load test password
-# the load test's users are synthetic (PLAN 25.10): its traffic stays out of the instance's
-# service-level numbers. That needs a lab (FINUANCE_SIMULATION=true make up, or make sim-up);
-# LOADTEST_SYNTHETIC= seeds ordinary users for an instance that is not one.
-LOADTEST_SYNTHETIC ?= 1
+# On a lab (FINUANCE_SIMULATION=true make up) the load test's users are the simulator's animals
+# (ADR 0044): finuance-sim gives them their history over LOADTEST_YEARS and writes their passwords
+# for k6 (loadtest/users.json, from a seed of their own in loadtest/.sim-seed). Their traffic stays
+# out of the instance's service-level numbers. LOADTEST_PEOPLE=1 seeds people instead, for an
+# instance that is not a lab.
+LOADTEST_YEARS ?= 3
+LOADTEST_PEOPLE ?=
+LOADTEST_SEED := loadtest/.sim-seed
 PROFILE ?= load
 FUZZTIME ?= 30s
 BIN      := backend/bin
@@ -361,6 +365,7 @@ loadtest: ## k6 load test against the running stack (PROFILE=load|smoke|ramp, LO
 	PASSWORD="$(LOADTEST_PASSWORD)" docker run --rm --network host --user "$$(id -u):$$(id -g)" \
 	  -v "$(CURDIR)/loadtest:/scripts:ro" -v "$(CURDIR)/loadtest/results:/out" \
 	  -e BASE_URL=$(LOADTEST_BASE_URL) -e USERS=$(LOADTEST_USERS) -e PASSWORD -e PROFILE=$(PROFILE) \
+	  $(if $(LOADTEST_PEOPLE),,-e USERS_FILE=/scripts/users.json) \
 	  $(K6_IMAGE) run --quiet --summary-export=/out/summary-$(PROFILE).json /scripts/finuance.js
 
 .PHONY: zap
@@ -368,6 +373,14 @@ zap: ## OWASP ZAP baseline + API scan against the running stack (needs sign-ups;
 	BASE_URL=$(LOADTEST_BASE_URL) tools/zap-scan.sh
 
 .PHONY: loadtest-seed
-loadtest-seed: $(ENV_FILE) ## Seed LOADTEST_USERS load-test users with LOADTEST_ROWS demo rows each (in the running api container)
+loadtest-seed: $(ENV_FILE) ## Give LOADTEST_USERS animals about LOADTEST_ROWS transactions each on a lab (LOADTEST_PEOPLE=1: people elsewhere)
+ifeq ($(LOADTEST_PEOPLE),)
+	@test -s $(LOADTEST_SEED) || { umask 077; openssl rand -hex 32 > $(LOADTEST_SEED); }
+	$(COMPOSE) exec -T api /finuance admin synthetic-users -count=$(LOADTEST_USERS) -seed-stdin < $(LOADTEST_SEED)
+	@export FINUANCE_SIM_SEED="$$(cat $(LOADTEST_SEED))"; cd backend && \
+	  go run ./cmd/finuance-sim seed -target=$(LOADTEST_BASE_URL) -count=$(LOADTEST_USERS) -rows=$(LOADTEST_ROWS) -years=$(LOADTEST_YEARS) && \
+	  go run ./cmd/finuance-sim users -count=$(LOADTEST_USERS) -out=../loadtest/users.json
+else
 	echo "$(LOADTEST_PASSWORD)" | $(COMPOSE) exec -T api /finuance seed-demo -email=loadtest@example.test \
-	  -users=$(LOADTEST_USERS) -rows=$(LOADTEST_ROWS) -password-stdin $(if $(LOADTEST_SYNTHETIC),-synthetic,)
+	  -users=$(LOADTEST_USERS) -rows=$(LOADTEST_ROWS) -password-stdin
+endif

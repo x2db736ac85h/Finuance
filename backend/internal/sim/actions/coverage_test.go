@@ -309,6 +309,7 @@ var script = []step{
 	{who: "owl", action: "sharing.leave"},
 	{who: "otter", action: "account.preferences"}, {who: "otter", action: "account.notifications"}, {who: "otter", action: "account.export"},
 	{who: "otter", action: "account.wrong-password"}, {who: "otter", action: "account.unknown-path"},
+	{who: "owl", action: "history.rebuild"}, // last: it makes Owl's accounts again
 }
 
 // twoOwnCategories makes sure two of the categories personas make exist, for a merge.
@@ -360,5 +361,76 @@ func TestEmptyStatementIsNotCommitted(t *testing.T) {
 		if line["route"] == "POST /api/v1/imports/{id}/commit" {
 			t.Errorf("the empty statement was sent to commit: %v", line)
 		}
+	}
+}
+
+// TestHistoryRebuildAndSeed (ADR 0044): seeding rebuilds each persona's history under the
+// configured profile (its label in the accounts' names, about as many transactions as the page
+// estimates); seeding again imports nothing new; another profile rebuilds again.
+func TestHistoryRebuildAndSeed(t *testing.T) {
+	l := startLab(t)
+	ctx := context.Background()
+	cfg := repeatable()
+	cfg.History = statements.History{Density: 3, Years: 1}
+	e, err := sim.New(sim.Options{Target: l.url, Seed: []byte(seed), Version: "test", Actions: actions.All(), Config: cfg})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	var events []sim.Event
+	seedNow := func() []sim.Event {
+		events = nil
+		if err := actions.Seed(ctx, e, 2, 2, func(ev sim.Event) { mu.Lock(); events = append(events, ev); mu.Unlock() }); err != nil {
+			t.Fatal(err)
+		}
+		return events
+	}
+	accounts := func() (names []string, txs int) {
+		otter, err := e.Actor(ctx, identity.Nth(0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := otter.API.ListAccountsWithResponse(ctx)
+		if err != nil || r.JSON200 == nil {
+			t.Fatal(err, r.StatusCode())
+		}
+		for _, acc := range *r.JSON200 {
+			if acc.Kind == gen.AccountKindBank {
+				names, txs = append(names, acc.Name), txs+int(acc.TxCount)
+			}
+		}
+		slices.Sort(names)
+		return names, txs
+	}
+	for _, ev := range seedNow() {
+		if ev.Action != sim.RebuildAction || ev.Result != sim.ResultOK {
+			t.Errorf("first seed: %+v", ev)
+		}
+	}
+	h := cfg.History.Normal()
+	names, txs := accounts()
+	if want := []string{statements.AccountNameFor(statements.Current, h), statements.AccountNameFor(statements.Savings, h)}; !slices.Equal(names, want) {
+		t.Errorf("accounts %q, want %q", names, want)
+	}
+	if est := statements.Estimate(h); txs < est*6/10 || txs > est*14/10 {
+		t.Errorf("%d transactions, the estimate is %d", txs, est)
+	}
+	for _, ev := range seedNow() {
+		if ev.Action != "history.top-up" || ev.Result == sim.ResultError {
+			t.Errorf("second seed: %+v", ev)
+		}
+	}
+	if _, again := accounts(); again != txs {
+		t.Errorf("seeding again changed %d transactions to %d", txs, again)
+	}
+	cfg.History = statements.History{}
+	e.SetConfig(cfg)
+	for _, ev := range seedNow() {
+		if ev.Action != sim.RebuildAction || ev.Result != sim.ResultOK {
+			t.Errorf("seed with the default profile: %+v", ev)
+		}
+	}
+	if names, _ := accounts(); !slices.Equal(names, []string{statements.AccountName(statements.Current), statements.AccountName(statements.Savings)}) {
+		t.Errorf("after the default profile: %q", names)
 	}
 }

@@ -251,9 +251,22 @@ func TestEveryStatementPassesThePrivateCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	var files []string
-	for i := range identity.Max {
-		for _, account := range []int{Current, Savings} {
-			name, body := File(identity.Nth(i), account, date(2025, time.January, 1), date(2025, time.December, 31), "sim-check-1")
+	// the fifty personas of realistic mode, and from load mode's 500 a few: the same pools of
+	// names and values with other indices; each once more with the widest history profile
+	persons := []int{99, 250, 499}
+	for i := range 50 {
+		persons = append(persons, i)
+	}
+	wide := History{Density: 2, Spread: MaxSpread, Variety: MaxVariety} // more rows add no new names
+	for _, i := range persons {
+		for _, f := range []struct {
+			account int
+			h       History
+		}{{Current, History{}}, {Savings, History{}}, {Current, wide}} {
+			name, body := FileWith(identity.Nth(i), f.account, date(2025, time.January, 1), date(2025, time.December, 31), "sim-check-1", f.h)
+			if !f.h.IsDefault() {
+				name = "wide-" + name
+			}
 			path := filepath.Join(dir, name)
 			if err := os.WriteFile(path, body, 0o600); err != nil {
 				t.Fatal(err)

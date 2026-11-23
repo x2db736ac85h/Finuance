@@ -40,7 +40,9 @@ type Action struct {
 	Recomputes bool
 	// Mistake: the action is a deliberate mistake (a 4xx); its answer is the expected one.
 	Mistake bool
-	Run     func(ctx context.Context, a *Actor) error
+	// OnDemand: never drawn; it runs when asked (act now, a history rebuild).
+	OnDemand bool
+	Run      func(ctx context.Context, a *Actor) error
 }
 
 // StatusError is an answer the action did not expect.

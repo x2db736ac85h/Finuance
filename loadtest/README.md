@@ -16,17 +16,21 @@ make loadtest                        # PROFILE=load (default), smoke or ramp
 | `smoke` | 1 minute, a few users, one import | the weekly workflow (Phase 17 push 3) |
 | `ramp` | browsing without think time, 10 → 320 table views per second over 5 minutes | finding where the stack breaks |
 
-Every virtual user signs in once in `setup()` as one of the seeded users
-(`loadtest+001@example.test` …, password `LOADTEST_PASSWORD`), paced under the sign-in limit of 30
-per minute and address. Imports are deleted again after they commit, so repeated runs keep the
+Every virtual user signs in once in `setup()` as one of the seeded users, paced under the sign-in
+limit of 30 per minute and address. Imports are deleted again after they commit, so repeated runs keep the
 same data. Results: the k6 summary on the terminal and `results/summary-<profile>.json`
 (gitignored). The thresholds make `make loadtest` fail when an SLO is missed.
 
-**The users are synthetic** (PLAN 25.10, ADR 0041). The server labels their requests
-`traffic="synthetic"`, so a load test does not burn the error budget of the instance it runs
-against, and Grafana's Traffic variable shows or hides it. Synthetic users exist only on a lab
-(`FINUANCE_SIMULATION=true`); `make loadtest-seed LOADTEST_SYNTHETIC=` seeds ordinary users for an
-instance that is not one, and their traffic then counts as real.
+**The users are the simulator's animals** (ADR 0044). On a lab (`FINUANCE_SIMULATION=true make up`),
+`make loadtest-seed` makes `LOADTEST_USERS` animals from a seed of its own (`loadtest/.sim-seed`,
+random, written once), gives each about `LOADTEST_ROWS` transactions over `LOADTEST_YEARS` through
+the normal upload (`finuance-sim seed`: a rebuild, or only the days since on a second run) and
+writes their e-mail addresses and passwords for k6 (`finuance-sim users`, `loadtest/users.json`,
+mode 0600; both files gitignored). The server labels their requests `traffic="synthetic"`, so a load
+test does not burn the error budget of the instance it runs against, and Grafana's Traffic variable
+shows or hides it. On an instance that is not a lab, `make loadtest-seed LOADTEST_PEOPLE=1` seeds
+people (`loadtest+001@example.test` …, password `LOADTEST_PASSWORD`, `finuance seed-demo -users`);
+their traffic counts as real.
 
 The sandbox numbers and the bottleneck found with these scripts are in
 [docs/perf.md](../docs/perf.md) "Phase 17"; the homelab run is in "Phase 18".

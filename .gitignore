@@ -44,6 +44,9 @@ blob-report/
 # tools/rehearsal.sh work directory (kubeconfig, throwaway CA and keys, k6 output)
 /.rehearsal/
 loadtest/results/
+# the animals' seed and passwords for k6 (make loadtest-seed)
+loadtest/.sim-seed
+loadtest/users.json
 zap-reports/
 
 # written by scripts/query-smoke.sh (an export to open in a spreadsheet)

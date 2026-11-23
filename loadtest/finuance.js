@@ -2,12 +2,16 @@
 // with random filters, sorts and scrolling, the six insight charts, the overview — plus imports of
 // a 5,000-row file. Thresholds follow docs/SLO.md. Run with `make loadtest` (k6 in Docker).
 //
-// Users: `finuance seed-demo -email=loadtest@example.test -users=N -rows=20000 -password-stdin`
-// (make loadtest-seed). Every virtual user signs in as one of them in setup().
+// Users: on a lab, the simulator's animals (ADR 0044): `finuance-sim seed` gives them their
+// history and `finuance-sim users` writes their e-mail addresses and passwords to USERS_FILE (make
+// loadtest-seed). On an instance that is not a lab, people made by `finuance seed-demo -users=N
+// -password-stdin`, numbered after EMAIL with one PASSWORD (make loadtest-seed LOADTEST_PEOPLE=1).
+// Every virtual user signs in as one of them in setup().
 //
 // Environment:
 //   BASE_URL   the app (default http://localhost:8000; the web container proxies /api)
-//   USERS      how many seeded users to use (default 50), EMAIL their base address, PASSWORD
+//   USERS_FILE the animals' credentials (JSON, from finuance-sim users); else
+//   USERS      how many seeded people to use (default 50), EMAIL their base address, PASSWORD
 //   PROFILE    load (default: steady load for 5 minutes), smoke (1 minute, a few users, for the
 //              weekly workflow) or ramp (more and more browsing until it breaks)
 import http from 'k6/http';
@@ -21,6 +25,8 @@ const EMAIL = __ENV.EMAIL || 'loadtest@example.test';
 const PASSWORD = __ENV.PASSWORD || 'load test password';
 const PROFILE = __ENV.PROFILE || 'load';
 const ORIGIN = __ENV.BASE_URL || 'http://localhost:8000';
+// [{email, password}, …] in the init stage, the only one where k6 reads files
+const CREDENTIALS = __ENV.USERS_FILE ? JSON.parse(open(__ENV.USERS_FILE)) : null;
 
 const imported = new Counter('finuance_rows_imported');
 
@@ -70,12 +76,15 @@ const headers = (session) => ({
 // address) and reads their account and data range.
 export function setup() {
   const users = [];
-  for (let i = 1; i <= USERS; i++) {
-    const [local, domain] = EMAIL.split('@');
-    const email = `${local}+${String(i).padStart(3, '0')}@${domain}`;
+  const [local, domain] = EMAIL.split('@');
+  const people = Array.from({ length: USERS }, (_, i) => ({
+    email: `${local}+${String(i + 1).padStart(3, '0')}@${domain}`,
+    password: PASSWORD,
+  }));
+  for (const { email, password } of CREDENTIALS || people) {
     // A jar of its own: a sign-in rotates (revokes) the session cookie the client sends along,
     // which would be the previous user's in a shared jar.
-    const res = http.post(`${BASE}/auth/login`, JSON.stringify({ email, password: PASSWORD }), {
+    const res = http.post(`${BASE}/auth/login`, JSON.stringify({ email, password }), {
       headers: { 'Content-Type': 'application/json', 'X-Finuance-Client': 'web', Origin: ORIGIN },
       jar: new http.CookieJar(),
     });
@@ -86,7 +95,9 @@ export function setup() {
     const session = `${name}=${cookie[0].value}`;
     const accounts = http.get(`${BASE}/accounts`, { headers: headers(session) }).json();
     if (!accounts.length) fail(`${email} has no account; run make loadtest-seed`);
-    users.push({ session, accountId: accounts[0].id, lastOn: accounts[0].lastOn });
+    // the account with the most rows (an animal also has a cash account)
+    const account = accounts.reduce((a, b) => (b.txCount > a.txCount ? b : a));
+    users.push({ session, accountId: account.id, lastOn: account.lastOn });
     sleep(2.1);
   }
   return { users };

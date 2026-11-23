@@ -98,6 +98,11 @@ type Engine struct {
 	rampFrom     time.Time
 	rampFromRate float64
 	signIns      pacer // every persona's sign-in, paced below the instance's limit per address
+
+	// history rebuilds: the generation asked for, the action that does it and the turns at once
+	rebuildGen int64
+	rebuildAct *Action
+	rebuilds   chan struct{}
 }
 
 // Every reports whether at least d has passed since it last said yes for this key, across every
@@ -168,7 +173,12 @@ func New(o Options) (*Engine, error) {
 	}
 	e := &Engine{o: o, target: u, origin: origin, cfg: withRunSeed(o.Config.Clamp()), actors: map[string]*Actor{},
 		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]string{}, every: map[string]time.Time{},
-		logs: map[string]*personaLog{}, subs: map[chan Event]*pacer{}}
+		logs: map[string]*personaLog{}, subs: map[chan Event]*pacer{}, rebuilds: make(chan struct{}, MaxRebuilds)}
+	for i := range o.Actions {
+		if o.Actions[i].Name == RebuildAction {
+			e.rebuildAct = &o.Actions[i]
+		}
+	}
 	if e.cfg.Mode == ModeLoad {
 		e.loadSince, e.rampFrom = o.Clock.Now(), o.Clock.Now()
 	}
@@ -284,6 +294,54 @@ func (e *Engine) Actor(ctx context.Context, p identity.Persona) (*Actor, error) 
 		}
 	}
 	return a, nil
+}
+
+// RebuildAction is the on-demand action that rebuilds a persona's history (internal/sim/actions).
+const RebuildAction = "history.rebuild"
+
+// RequestRebuild asks every persona that plays to rebuild its history with the configured profile
+// at its next turn, MaxRebuilds at a time; it returns the request's generation.
+func (e *Engine) RequestRebuild() int64 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.rebuildGen++
+	return e.rebuildGen
+}
+
+// Rebuilds is the last rebuild asked for and how many personas that play have yet to do it.
+func (e *Engine) Rebuilds() (generation int64, pending int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for i := range e.cfg.Personas {
+		p := identity.Nth(i)
+		if !e.cfg.personaOn(p) {
+			continue
+		}
+		if a := e.actors[p.Slug]; a == nil || a.rebuiltGen() < e.rebuildGen {
+			pending++
+		}
+	}
+	return e.rebuildGen, pending
+}
+
+// rebuildTurn reports whether the persona rebuilds its history now: a rebuild it hasn't done is
+// asked for and fewer than MaxRebuilds are running. The caller releases the turn (<-e.rebuilds).
+func (e *Engine) rebuildTurn(a *Actor) (Action, bool) {
+	e.mu.Lock()
+	gen, act := e.rebuildGen, e.rebuildAct
+	e.mu.Unlock()
+	if act == nil || a.rebuiltGen() >= gen {
+		return Action{}, false
+	}
+	select {
+	case e.rebuilds <- struct{}{}:
+	default:
+		return Action{}, false
+	}
+	a.mu.Lock()
+	a.rebuilt = gen // once per request, also when it fails (the feed says so)
+	a.mu.Unlock()
+	return *act, true
 }
 
 // waitForChange marks the persona missing until the configuration changes (or ctx ends).
@@ -406,11 +464,18 @@ func (e *Engine) play(ctx context.Context, p identity.Persona) {
 			continue // the configuration changed, or ctx ended: look again
 		}
 		cfg, _ = e.Config()
-		act, ok := e.draw(a, &cfg)
+		act, rebuild := e.rebuildTurn(a)
+		ok := rebuild
+		if !rebuild {
+			act, ok = e.draw(a, &cfg)
+		}
 		if !ok {
 			continue
 		}
 		ev := e.Do(ctx, a, act)
+		if rebuild {
+			<-e.rebuilds
+		}
 		if ev.Result == ResultError {
 			log.InfoContext(ctx, "action failed", slog.String("action", act.Name), slog.Int("status", ev.Status),
 				slog.String("request_id", ev.RequestID), slog.String("error", ev.Error))
@@ -498,7 +563,7 @@ func (e *Engine) draw(a *Actor, cfg *Config) (Action, bool) {
 	var weights []int
 	total := 0
 	for _, act := range e.o.Actions {
-		if !cfg.areaOn(act.Area) || !a.has(act.Needs) || (act.Recomputes && act.Name == last) {
+		if act.OnDemand || !cfg.areaOn(act.Area) || !a.has(act.Needs) || (act.Recomputes && act.Name == last) {
 			continue
 		}
 		w := cfg.weight(a.Persona.Slug, act.Name, a.Character.Weights[act.Name])

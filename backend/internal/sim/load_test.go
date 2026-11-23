@@ -342,3 +342,57 @@ func TestPace(t *testing.T) {
 		t.Errorf("after a pause it waited: %v", clock.sleeps()[before:])
 	}
 }
+
+// TestRebuildRequests: a rebuild request reaches every persona that plays once, at most
+// MaxRebuilds at a time, and the state counts those still to do it.
+func TestRebuildRequests(t *testing.T) {
+	ran := 0
+	acts := []Action{{Name: RebuildAction, Area: "imports", OnDemand: true, Run: func(context.Context, *Actor) error { ran++; return nil }}}
+	e, _ := newTestEngine(t, &fakeLab{simulation: true}, acts)
+	cfg, _ := e.Config()
+	cfg.Mode, cfg.Personas = ModeLoad, MaxRebuilds+2
+	e.SetConfig(cfg)
+	var actors []*Actor
+	for i := range cfg.Personas {
+		a := testActor(e, Character{})
+		a.Persona = identity.Nth(i)
+		e.actors[a.Persona.Slug] = a
+		actors = append(actors, a)
+	}
+	if _, ok := e.rebuildTurn(actors[0]); ok {
+		t.Fatal("a rebuild nobody asked for")
+	}
+	if g, pending := e.Rebuilds(); g != 0 || pending != 0 {
+		t.Errorf("before a request: %d, %d pending", g, pending)
+	}
+	e.RequestRebuild()
+	if _, pending := e.Rebuilds(); pending != len(actors) {
+		t.Errorf("%d pending, want %d", pending, len(actors))
+	}
+	got := 0
+	for _, a := range actors {
+		if _, ok := e.rebuildTurn(a); ok {
+			got++
+		}
+	}
+	if got != MaxRebuilds {
+		t.Errorf("%d rebuilds at once, want %d", got, MaxRebuilds)
+	}
+	for range got {
+		<-e.rebuilds
+	}
+	for _, a := range actors {
+		if _, ok := e.rebuildTurn(a); ok {
+			<-e.rebuilds
+		}
+	}
+	if _, pending := e.Rebuilds(); pending != 0 {
+		t.Errorf("%d still pending", pending)
+	}
+	if _, ok := e.rebuildTurn(actors[0]); ok {
+		t.Error("a persona rebuilt twice for one request")
+	}
+	if act, ok := e.draw(actors[0], &cfg); ok {
+		t.Errorf("an on-demand action was drawn: %s", act.Name)
+	}
+}

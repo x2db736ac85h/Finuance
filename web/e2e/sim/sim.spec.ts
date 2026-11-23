@@ -85,3 +85,13 @@ test('load mode: a target, shown in the header, and back to realistic mode', asy
   await page.getByRole('button', { name: 'Back to the defaults' }).click();
   await expect(page.getByLabel('Intensity')).toBeVisible();
 });
+
+test('history: a profile with its estimate, and a rebuild asked for', async ({ page }) => {
+  await open(page);
+  const history = page.getByRole('region', { name: 'History' });
+  await expect(history).toContainText('transactions per animal');
+  await history.getByRole('spinbutton', { name: /^Years back/ }).fill('1');
+  await history.getByRole('button', { name: 'Rebuild history' }).click();
+  await expect(history.getByRole('status')).toContainText('still to rebuild', { timeout: 10_000 });
+  await check(page, 'simulator history');
+});

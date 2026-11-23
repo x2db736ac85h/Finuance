@@ -165,16 +165,19 @@ type CatalogueActionCost string
 
 // Ceilings defines model for Ceilings.
 type Ceilings struct {
-	ActionsPerMinute     int `json:"actionsPerMinute"`
-	AssistantPerDay      int `json:"assistantPerDay"`
-	ClockRate            int `json:"clockRate"`
-	Intensity            int `json:"intensity"`
-	LoadActionsPerSecond int `json:"loadActionsPerSecond"`
-	LoadMinutes          int `json:"loadMinutes"`
-	LoadPersonas         int `json:"loadPersonas"`
-	Personas             int `json:"personas"`
-	RampSeconds          int `json:"rampSeconds"`
-	Rate                 int `json:"rate"`
+	ActionsPerMinute int `json:"actionsPerMinute"`
+	AssistantPerDay  int `json:"assistantPerDay"`
+	ClockRate        int `json:"clockRate"`
+
+	// History How much a new or rebuilt history holds (ADR 0044).
+	History              History `json:"history"`
+	Intensity            int     `json:"intensity"`
+	LoadActionsPerSecond int     `json:"loadActionsPerSecond"`
+	LoadMinutes          int     `json:"loadMinutes"`
+	LoadPersonas         int     `json:"loadPersonas"`
+	Personas             int     `json:"personas"`
+	RampSeconds          int     `json:"rampSeconds"`
+	Rate                 int     `json:"rate"`
 }
 
 // Character defines model for Character.
@@ -195,6 +198,9 @@ type Config struct {
 
 	// ClockRate Data days per real day (1 is real time).
 	ClockRate int `json:"clockRate"`
+
+	// History How much a new or rebuilt history holds (ADR 0044).
+	History History `json:"history"`
 
 	// Intensity The pace in per mille of the characters' own (1000 is 1×).
 	Intensity int `json:"intensity"`
@@ -274,13 +280,31 @@ type Event struct {
 // EventResult defines model for Event.Result.
 type EventResult string
 
+// History How much a new or rebuilt history holds (ADR 0044).
+type History struct {
+	// Density The day's spending drawn this many times (1 … 20; about 1.7 rows each).
+	Density int `json:"density"`
+
+	// Spread The amounts' range in percent of the default (50 … 300).
+	Spread int `json:"spread"`
+
+	// Variety How many shops of each merchant (1 … 5).
+	Variety int `json:"variety"`
+
+	// Years How far back a rebuilt history starts (1 … 10).
+	Years int `json:"years"`
+}
+
 // PersonaState defines model for PersonaState.
 type PersonaState struct {
 	// Action The action it is doing now.
 	Action *string `json:"action,omitempty"`
 	Animal string  `json:"animal"`
 	Counts Counts  `json:"counts"`
-	Last   *Event  `json:"last,omitempty"`
+
+	// History Its history profile's label (empty for the default), read from its accounts' names.
+	History *string `json:"history,omitempty"`
+	Last    *Event  `json:"last,omitempty"`
 
 	// Missing Its sign-in was refused, so the lab has no such animal (or another seed); it waits for the next change.
 	Missing  bool   `json:"missing"`
@@ -300,12 +324,24 @@ type Problem struct {
 	Title  string  `json:"title"`
 }
 
+// RebuildStatus defines model for RebuildStatus.
+type RebuildStatus struct {
+	// Generation The last rebuild asked for (0 for none).
+	Generation int64 `json:"generation"`
+
+	// Pending Personas that play and have yet to rebuild.
+	Pending int `json:"pending"`
+}
+
 // State defines model for State.
 type State struct {
 	Generation int64 `json:"generation"`
 
 	// Grafana Grafana's address for the feed's links, when the simulator was given one.
 	Grafana *string `json:"grafana,omitempty"`
+
+	// HistoryEstimate About how many transactions a history of the configured profile holds per persona.
+	HistoryEstimate int `json:"historyEstimate"`
 
 	// LoadEndsAt When load mode returns to realistic mode by itself.
 	LoadEndsAt *time.Time     `json:"loadEndsAt,omitempty"`
@@ -314,7 +350,8 @@ type State struct {
 	Personas   []PersonaState `json:"personas"`
 
 	// Rate Load mode's target now, on its ramp, in actions a second (0 in realistic mode).
-	Rate float64 `json:"rate"`
+	Rate    float64       `json:"rate"`
+	Rebuild RebuildStatus `json:"rebuild"`
 
 	// Target The lab's address.
 	Target  string `json:"target"`
@@ -354,6 +391,9 @@ type ServerInterface interface {
 	// StreamEvents The actions as they run
 	// (GET /events)
 	StreamEvents(w http.ResponseWriter, r *http.Request)
+	// RebuildHistory Every persona that plays rebuilds its history with the configured profile
+	// (POST /history/rebuild)
+	RebuildHistory(w http.ResponseWriter, r *http.Request)
 	// Pause Stop every persona after its current action
 	// (POST /pause)
 	Pause(w http.ResponseWriter, r *http.Request)
@@ -452,6 +492,20 @@ func (siw *ServerInterfaceWrapper) StreamEvents(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.StreamEvents(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RebuildHistory operation middleware
+func (siw *ServerInterfaceWrapper) RebuildHistory(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RebuildHistory(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -658,6 +712,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/pause", wrapper.Pause)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/resume", wrapper.Resume)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/act", wrapper.ActNow)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/history/rebuild", wrapper.RebuildHistory)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/events", wrapper.StreamEvents)
 
 	return m
@@ -938,6 +993,44 @@ func (response StreamEventsdefaultJSONResponse) VisitStreamEventsResponse(w http
 	return err
 }
 
+type RebuildHistoryRequestObject struct {
+}
+
+type RebuildHistoryResponseObject interface {
+	VisitRebuildHistoryResponse(w http.ResponseWriter) error
+}
+
+type RebuildHistory200JSONResponse RebuildStatus
+
+func (response RebuildHistory200JSONResponse) VisitRebuildHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RebuildHistorydefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RebuildHistorydefaultJSONResponse) VisitRebuildHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PauseRequestObject struct {
 }
 
@@ -1111,6 +1204,9 @@ type StrictServerInterface interface {
 	// StreamEvents The actions as they run
 	// (GET /events)
 	StreamEvents(ctx context.Context, request StreamEventsRequestObject) (StreamEventsResponseObject, error)
+	// RebuildHistory Every persona that plays rebuilds its history with the configured profile
+	// (POST /history/rebuild)
+	RebuildHistory(ctx context.Context, request RebuildHistoryRequestObject) (RebuildHistoryResponseObject, error)
 	// Pause Stop every persona after its current action
 	// (POST /pause)
 	Pause(ctx context.Context, request PauseRequestObject) (PauseResponseObject, error)
@@ -1322,6 +1418,30 @@ func (sh *strictHandler) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// RebuildHistory operation middleware
+func (sh *strictHandler) RebuildHistory(w http.ResponseWriter, r *http.Request) {
+	var request RebuildHistoryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RebuildHistory(ctx, request.(RebuildHistoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RebuildHistory")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RebuildHistoryResponseObject); ok {
+		if err := validResponse.VisitRebuildHistoryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Pause operation middleware
 func (sh *strictHandler) Pause(w http.ResponseWriter, r *http.Request) {
 	var request PauseRequestObject
@@ -1425,61 +1545,70 @@ func (sh *strictHandler) GetState(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"jNOGMFDpPDqLHEwaPXx6+P8BAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -217,7 +217,7 @@ func restart(ctx context.Context, a *sim.Actor) error {
 		if err := sim.Expect("delete an account", d.HTTPResponse, http.StatusNoContent); err != nil {
 			return err
 		}
-		made, err := a.API.CreateAccountWithResponse(ctx, gen.CreateAccountJSONRequestBody{Name: statements.AccountName(n)})
+		made, err := a.API.CreateAccountWithResponse(ctx, gen.CreateAccountJSONRequestBody{Name: statements.AccountNameFor(n, a.History())})
 		if err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ func upload(ctx context.Context, a *sim.Actor, account int, from, to platform.Da
 		return nil, false, err
 	}
 	stamp := fmt.Sprintf("sim-%s-%d", a.Persona.Slug, a.Now().UnixNano())
-	name, content := statements.File(a.Persona, account, from, to, stamp)
+	name, content := statements.FileWith(a.Persona, account, from, to, stamp, a.History())
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	_ = mw.WriteField("accountId", a.Account(account).String())

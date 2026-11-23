@@ -150,6 +150,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/history/rebuild': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Every persona that plays rebuilds its history with the configured profile
+     * @description Each persona deletes its two bank accounts at its next turn, makes them again under the configuration's history profile and imports that history up to yesterday (ADR 0044), a few personas at a time. The feed shows each rebuild as `history.rebuild`.
+     */
+    post: operations['rebuildHistory'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/events': {
     parameters: {
       query?: never;
@@ -229,6 +249,27 @@ export interface components {
       jitter: number;
       /** @description The chance in per mille that an action starts a burst of quick ones; in load mode, the depth of the pacer's bucket. */
       bursts: number;
+      history: components['schemas']['History'];
+    };
+    /** @description How much a new or rebuilt history holds (ADR 0044). */
+    History: {
+      /** @description The day's spending drawn this many times (1 … 20; about 1.7 rows each). */
+      density: number;
+      /** @description The amounts' range in percent of the default (50 … 300). */
+      spread: number;
+      /** @description How many shops of each merchant (1 … 5). */
+      variety: number;
+      /** @description How far back a rebuilt history starts (1 … 10). */
+      years: number;
+    };
+    RebuildStatus: {
+      /**
+       * Format: int64
+       * @description The last rebuild asked for (0 for none).
+       */
+      generation: number;
+      /** @description Personas that play and have yet to rebuild. */
+      pending: number;
     };
     ConfigDoc: {
       /** Format: int64 */
@@ -250,6 +291,9 @@ export interface components {
        * @description When load mode returns to realistic mode by itself.
        */
       loadEndsAt?: string;
+      rebuild: components['schemas']['RebuildStatus'];
+      /** @description About how many transactions a history of the configured profile holds per persona. */
+      historyEstimate: number;
       version: string;
       paused: boolean;
       /** Format: int64 */
@@ -268,6 +312,8 @@ export interface components {
       signedIn: boolean;
       /** @description Its sign-in was refused, so the lab has no such animal (or another seed); it waits for the next change. */
       missing: boolean;
+      /** @description Its history profile's label (empty for the default), read from its accounts' names. */
+      history?: string;
       /** @description The action it is doing now. */
       action?: string;
       counts: components['schemas']['Counts'];
@@ -309,6 +355,7 @@ export interface components {
       rampSeconds: number;
       loadMinutes: number;
       loadActionsPerSecond: number;
+      history: components['schemas']['History'];
       intensity: number;
       clockRate: number;
       assistantPerDay: number;
@@ -557,6 +604,27 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Event'];
+        };
+      };
+      default: components['responses']['Problem'];
+    };
+  };
+  rebuildHistory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request is taken. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RebuildStatus'];
         };
       };
       default: components['responses']['Problem'];

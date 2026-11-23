@@ -37,7 +37,7 @@ func TestCharactersNameRealActions(t *testing.T) {
 		}
 	}
 	for name, a := range names {
-		if !drawn[name] && !a.Mistake {
+		if !drawn[name] && !a.Mistake && !a.OnDemand {
 			t.Errorf("no character draws %s", name)
 		}
 	}
