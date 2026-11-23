@@ -72,9 +72,11 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
   # Alloy also measures what the lab's containers cost (observability/metrics.alloy): cAdvisor
-  # reads the host's cgroups and asks containerd about the containers, like the Docker socket
-  # already mounted, a machine's root, for a development machine only (CONTAINERD_SOCKET names
-  # another socket); the PostgreSQL exporter signs in as the application role.
+  # reads the host's cgroups, asks containerd about the containers and, with Docker's classic
+  # storage (overlay2, as on CI's runners), reads each container's layer id under Docker's root;
+  # like the Docker socket already mounted, a machine's root, for a development machine only
+  # (CONTAINERD_SOCKET and DOCKER_ROOT name other places); the PostgreSQL exporter signs in as the
+  # application role.
   alloy:
     cgroup: host
     environment:
@@ -82,3 +84,4 @@ services:
     volumes:
       - ./observability/metrics.alloy:/etc/finuance-alloy/metrics.alloy:ro
       - ${CONTAINERD_SOCKET:-/run/containerd/containerd.sock}:/run/containerd/containerd.sock:ro
+      - ${DOCKER_ROOT:-/var/lib/docker}:/var/lib/docker:ro

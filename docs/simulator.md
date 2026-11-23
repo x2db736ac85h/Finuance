@@ -123,8 +123,9 @@ that profile. `make loadtest-seed` uses both on a lab, so k6 signs in as the ani
 - **In Grafana:** the dashboard "Finuance · Lab resources": CPU, memory and disk per container,
   the database's transactions, cache hits and connections, the pool's waits, and the animals'
   actions next to the API's requests and latency.
-- **Where the figures come from:** on the Compose lab, Alloy's own cAdvisor (the host's cgroups and
-  containerd's socket, like the Docker socket it already reads: a development machine only) and
+- **Where the figures come from:** on the Compose lab, Alloy's own cAdvisor (the host's cgroups,
+  containerd's socket and, read only, Docker's root for its classic storage; like the Docker socket
+  it already reads, a development machine only) and
   its PostgreSQL exporter as the application role (`deploy/compose/observability/metrics.alloy`);
   on a cluster, the kubelet's cAdvisor and CloudNativePG's metrics, with the simulator chart's
   `simulator.prometheus` and an egress entry for Prometheus.
