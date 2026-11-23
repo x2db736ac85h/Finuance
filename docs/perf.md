@@ -585,3 +585,45 @@ expenses 35 ms, splits 46–70 ms, members and links under 5 ms. The policies ca
 before that matters. The lever if it does: a set-returning "my groups" function evaluated once per
 statement (`group_id IN (SELECT …)`). Within the table SLO (95 % of table and chart requests under
 300 ms, [SLO.md](SLO.md)) at 5,000 expenses.
+
+## Phase 25: a day in the lab (task 25.12)
+
+Ten animals for 24 hours on the Compose lab (`make sim-up`, the development machine), from
+2026-11-21 20:00 to 2026-11-22 20:00 UTC, at the characters' own pace (intensity 1×, active hours,
+real-time data calendar). Numbers from the lab's Prometheus and Loki.
+
+| | |
+|---|---|
+| Actions | 2,001: 1,734 ok, 266 skipped (nothing to do), 2 failed ¹ |
+| API requests of the animals | 4,449 `2xx`, 30 `4xx`, 0 `5xx` (plus 17,080 health checks) |
+| Panics, failed jobs | 0, 0 (713 jobs: 320 reclassifications, 199 commits) |
+| Memory (resident) | simulator 41–46 MiB, api 73–122 MiB, worker 50–64 MiB |
+| Largest animal | the squirrel: 2,979 transactions in 76 imports; the others 314–1,198; Mole none (it visits once a week) |
+
+¹ The squirrel's savings statement for one week of its data calendar had no row, and the server
+rightly refused to commit it (`409 import_not_committable`); the simulator now deletes such a
+preview (`TestEmptyStatementIsNotCommitted`).
+
+Every `4xx` was meant: the deliberate mistakes (an unknown path `404` and a mistyped password `401`,
+29 each, counted as real traffic because nobody is signed in yet), broken files (`415`, `422`) and a
+group name already taken (`409`).
+
+| Route | Requests | p50 | p95 | max |
+|---|---|---|---|---|
+| `POST /overview` | 168 | 15.6 ms | 61.9 ms | 77.9 ms |
+| `GET /duplicates` | 64 | 23.5 ms | 44.0 ms | 50.8 ms |
+| `POST /transactions/query` | 586 | 8.7 ms | 14.9 ms | 139 ms |
+| `POST /imports/{id}/commit` | 201 | 4.2 ms | 7.2 ms | 14.6 ms |
+
+Found and fixed besides the empty statement: the lab's Grafana and Alloy had no restart policy (the
+machine restarted after 26 hours and only the lab came back), and Alloy kept its read positions on
+a tmpfs, so a restarted Alloy read every log again and Loki stored part of the worker's lines twice
+in new stream shards (positions now on a volume; Loki's stream sharding off in the cluster's chart).
+The mock model's memory was not measured: Prometheus doesn't scrape it (container metrics come with
+task 25.16).
+
+**Decisions.** At these sizes the overview needs no cache of the month aggregates (p95 62 ms). But the
+animals are small next to Phase 17's load-test users (20,000 transactions each, overview p95 1.2 s
+under load), and the day put almost no load on the lab (about three requests a minute). So both
+backlog items ("cache the month aggregates", "the duplicates window's first render") are decided on
+the load run of task 25.17, with load-mode animals of that size.
