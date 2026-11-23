@@ -11,9 +11,36 @@ import (
 var Areas = []string{"table", "insights", "imports", "labels", "groups", "rules", "budgets", "duplicates", "cash",
 	"assistant", "sharing", "account"}
 
+// The modes (ADR 0044): realistic plays the characters at their own pace; load paces every persona
+// by one lab-wide target.
+const (
+	ModeRealistic = "realistic"
+	ModeLoad      = "load"
+)
+
 // Config is what the tuning page changes. It lives in memory; its defaults come from flags or the
 // chart's values. Clamp holds every value to the ceilings.
 type Config struct {
+	// Mode is ModeRealistic or ModeLoad.
+	Mode string `json:"mode"`
+	// Rate is load mode's lab-wide target, in actions a second.
+	Rate int `json:"rate"`
+	// RampSeconds is how long load mode takes to move from one target to the next (from nothing
+	// when it starts).
+	RampSeconds int `json:"rampSeconds"`
+	// LoadMinutes is how long load mode runs before it returns to realistic mode by itself.
+	LoadMinutes int `json:"loadMinutes"`
+	// PushThrough keeps load mode going through 5xx answers instead of backing off, to find a
+	// breaking point. Realistic mode always backs off.
+	PushThrough bool `json:"pushThrough"`
+	// RunSeed enters every persona's random stream, so a run can be repeated; 0 draws a new one.
+	RunSeed int64 `json:"runSeed"`
+	// Jitter is how much think times vary around the character's mean, in percent (100 is the
+	// character's own range, 0 always the mean); in load mode, around the pacer's interval.
+	Jitter int `json:"jitter"`
+	// Bursts is the chance, in per mille, that an action starts a burst of a few quick ones; in load
+	// mode it deepens the pacer's bucket (1000: one second's worth).
+	Bursts int `json:"bursts"`
 	// Personas is how many personas play: the first N (identity.First).
 	Personas int `json:"personas"`
 	// Off lists personas (by slug) that sit this out.
@@ -40,14 +67,27 @@ type Config struct {
 
 // Defaults is the configuration a simulator starts with when nothing else is given.
 func Defaults() Config {
-	return Config{Personas: len(identity.Animals), Intensity: 1000, ActiveHours: true, ClockRate: 1, Mistakes: 20,
-		AssistantPerDay: 100}
+	return Config{Mode: ModeRealistic, Personas: len(identity.Animals), Intensity: 1000, ActiveHours: true, ClockRate: 1,
+		Mistakes: 20, AssistantPerDay: 100, Rate: 50, RampSeconds: 60, LoadMinutes: 30, Jitter: 100}
 }
 
 // Clamp returns c held to the ceilings: every number within its range, unknown areas, personas
 // and weights below zero dropped. The page can send anything; the engine runs only this.
 func (c Config) Clamp() Config {
-	c.Personas = clamp(c.Personas, 1, MaxPersonas)
+	if c.Mode != ModeLoad {
+		c.Mode, c.PushThrough = ModeRealistic, false
+		c.Personas = clamp(c.Personas, 1, MaxPersonas)
+	} else {
+		c.Personas = clamp(c.Personas, 1, MaxLoadPersonas)
+	}
+	c.Rate = clamp(c.Rate, 1, MaxRate)
+	c.RampSeconds = clamp(c.RampSeconds, 0, MaxRampSeconds)
+	c.LoadMinutes = clamp(c.LoadMinutes, 1, MaxLoadMinutes)
+	c.Jitter = clamp(c.Jitter, 0, 100)
+	c.Bursts = clamp(c.Bursts, 0, 1000)
+	if c.RunSeed < 0 || c.RunSeed > MaxRunSeed {
+		c.RunSeed = 0 // the engine draws one
+	}
 	c.Intensity = clamp(c.Intensity, 0, MaxIntensity)
 	c.ClockRate = clamp(c.ClockRate, 1, MaxClockRate)
 	c.Mistakes = clamp(c.Mistakes, 0, 1000)

@@ -184,14 +184,17 @@ func (s *server) GetState(context.Context, gen.GetStateRequestObject) (gen.GetSt
 	cfg, generation := e.Config()
 	personas, totals := e.State()
 	out := gen.GetState200JSONResponse{Target: e.Target(), Version: s.o.Version, Paused: cfg.Paused, Generation: generation,
-		Totals: counts(totals), Personas: make([]gen.PersonaState, 0, len(personas))}
+		Mode: gen.StateMode(cfg.Mode), Rate: e.Rate(), Totals: counts(totals), Personas: make([]gen.PersonaState, 0, len(personas))}
 	if s.o.Grafana != "" {
 		out.Grafana = &s.o.Grafana
+	}
+	if ends := e.LoadEndsAt(); !ends.IsZero() {
+		out.LoadEndsAt = &ends
 	}
 	for i := range personas {
 		p := &personas[i]
 		ps := gen.PersonaState{Slug: p.Persona.Slug, Name: p.Persona.Name, Animal: p.Persona.Animal, Says: p.Character.Says,
-			On: p.On, SignedIn: p.SignedIn, Counts: counts(p.Counts)}
+			On: p.On, SignedIn: p.SignedIn, Missing: p.Missing, Counts: counts(p.Counts)}
 		if p.Action != "" {
 			ps.Action = &p.Action
 		}
@@ -206,7 +209,9 @@ func (s *server) GetState(context.Context, gen.GetStateRequestObject) (gen.GetSt
 
 func (s *server) GetCatalogue(context.Context, gen.GetCatalogueRequestObject) (gen.GetCatalogueResponseObject, error) {
 	out := gen.GetCatalogue200JSONResponse{Areas: sim.Areas, Ceilings: gen.Ceilings{Personas: sim.MaxPersonas, Intensity: sim.MaxIntensity,
-		ClockRate: sim.MaxClockRate, AssistantPerDay: sim.MaxAssistantPerDay, ActionsPerMinute: int(time.Minute / sim.MinGap)}}
+		ClockRate: sim.MaxClockRate, AssistantPerDay: sim.MaxAssistantPerDay, ActionsPerMinute: int(time.Minute / sim.MinGap),
+		LoadPersonas: sim.MaxLoadPersonas, Rate: sim.MaxRate, RampSeconds: sim.MaxRampSeconds, LoadMinutes: sim.MaxLoadMinutes,
+		LoadActionsPerSecond: int(time.Second / sim.MinLoadGap)}}
 	costs := map[sim.Cost]gen.CatalogueActionCost{sim.Light: gen.Light, sim.Heavy: gen.Heavy, sim.Model: gen.Model}
 	for _, a := range s.o.Engine.Actions() {
 		out.Actions = append(out.Actions, gen.CatalogueAction{Name: a.Name, Area: a.Area, Cost: costs[a.Cost], Mistake: a.Mistake})
@@ -360,8 +365,10 @@ func event(ev sim.Event) gen.Event {
 }
 
 func doc(c sim.Config, generation int64) gen.ConfigDoc {
-	out := gen.ConfigDoc{Generation: generation, Config: gen.Config{Personas: c.Personas, Paused: c.Paused, Intensity: c.Intensity,
-		ActiveHours: c.ActiveHours, ClockRate: c.ClockRate, Mistakes: c.Mistakes, AssistantPerDay: c.AssistantPerDay}}
+	out := gen.ConfigDoc{Generation: generation, Config: gen.Config{Mode: gen.ConfigMode(c.Mode), Personas: c.Personas,
+		Paused: c.Paused, Intensity: c.Intensity, ActiveHours: c.ActiveHours, ClockRate: c.ClockRate, Mistakes: c.Mistakes,
+		AssistantPerDay: c.AssistantPerDay, Rate: c.Rate, RampSeconds: c.RampSeconds, LoadMinutes: c.LoadMinutes,
+		PushThrough: c.PushThrough, RunSeed: c.RunSeed, Jitter: c.Jitter, Bursts: c.Bursts}}
 	if len(c.Off) > 0 {
 		out.Config.Off = &c.Off
 	}
@@ -378,8 +385,10 @@ func doc(c sim.Config, generation int64) gen.ConfigDoc {
 }
 
 func fromAPI(c gen.Config) sim.Config {
-	out := sim.Config{Personas: c.Personas, Paused: c.Paused, Intensity: c.Intensity, ActiveHours: c.ActiveHours,
-		ClockRate: c.ClockRate, Mistakes: c.Mistakes, AssistantPerDay: c.AssistantPerDay}
+	out := sim.Config{Mode: string(c.Mode), Personas: c.Personas, Paused: c.Paused, Intensity: c.Intensity,
+		ActiveHours: c.ActiveHours, ClockRate: c.ClockRate, Mistakes: c.Mistakes, AssistantPerDay: c.AssistantPerDay,
+		Rate: c.Rate, RampSeconds: c.RampSeconds, LoadMinutes: c.LoadMinutes, PushThrough: c.PushThrough, RunSeed: c.RunSeed,
+		Jitter: c.Jitter, Bursts: c.Bursts}
 	if c.Off != nil {
 		out.Off = *c.Off
 	}

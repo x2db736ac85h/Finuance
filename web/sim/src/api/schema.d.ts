@@ -183,6 +183,11 @@ export interface components {
     };
     /** @description The tuning page's settings (`internal/sim` Config); see Catalogue for the ceilings. */
     Config: {
+      /**
+       * @description Realistic plays the characters at their own pace; load paces every persona by one lab-wide target (ADR 0044).
+       * @enum {string}
+       */
+      mode: 'realistic' | 'load';
       /** @description How many personas play, the first N. */
       personas: number;
       /** @description Personas (by slug) that sit this out. */
@@ -207,6 +212,23 @@ export interface components {
       /** @description The share of deliberate mistakes, in per mille. */
       mistakes: number;
       assistantPerDay: number;
+      /** @description Load mode's lab-wide target, in actions a second. */
+      rate: number;
+      /** @description How long load mode takes to move to a new target (from nothing when it starts). */
+      rampSeconds: number;
+      /** @description How long load mode runs before it returns to realistic mode by itself. */
+      loadMinutes: number;
+      /** @description Load mode keeps going through 5xx answers instead of backing off. */
+      pushThrough: boolean;
+      /**
+       * Format: int64
+       * @description Enters every persona's random stream, so a run can be repeated; 0 draws a new one (at most 2^53 − 1).
+       */
+      runSeed: number;
+      /** @description How much think times vary (in load mode, the pacer's intervals), in percent; 100 is the characters' own range. */
+      jitter: number;
+      /** @description The chance in per mille that an action starts a burst of quick ones; in load mode, the depth of the pacer's bucket. */
+      bursts: number;
     };
     ConfigDoc: {
       /** Format: int64 */
@@ -216,6 +238,18 @@ export interface components {
     State: {
       /** @description The lab's address. */
       target: string;
+      /** @enum {string} */
+      mode: 'realistic' | 'load';
+      /**
+       * Format: double
+       * @description Load mode's target now, on its ramp, in actions a second (0 in realistic mode).
+       */
+      rate: number;
+      /**
+       * Format: date-time
+       * @description When load mode returns to realistic mode by itself.
+       */
+      loadEndsAt?: string;
       version: string;
       paused: boolean;
       /** Format: int64 */
@@ -232,6 +266,8 @@ export interface components {
       says: string;
       on: boolean;
       signedIn: boolean;
+      /** @description Its sign-in was refused, so the lab has no such animal (or another seed); it waits for the next change. */
+      missing: boolean;
       /** @description The action it is doing now. */
       action?: string;
       counts: components['schemas']['Counts'];
@@ -268,6 +304,11 @@ export interface components {
     };
     Ceilings: {
       personas: number;
+      loadPersonas: number;
+      rate: number;
+      rampSeconds: number;
+      loadMinutes: number;
+      loadActionsPerSecond: number;
       intensity: number;
       clockRate: number;
       assistantPerDay: number;
@@ -435,7 +476,8 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        name: 'quiet-day' | 'month-end' | 'assistant-heavy' | 'import-flood' | 'error-storm';
+        name:
+          'quiet-day' | 'month-end' | 'assistant-heavy' | 'import-flood' | 'error-storm' | 'ramp' | 'soak' | 'spike';
       };
       cookie?: never;
     };

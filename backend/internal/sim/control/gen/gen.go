@@ -44,6 +44,24 @@ func (e CatalogueActionCost) Valid() bool {
 	}
 }
 
+// Defines values for ConfigMode.
+const (
+	ConfigModeLoad      ConfigMode = "load"
+	ConfigModeRealistic ConfigMode = "realistic"
+)
+
+// Valid indicates whether the value is a known member of the ConfigMode enum.
+func (e ConfigMode) Valid() bool {
+	switch e {
+	case ConfigModeLoad:
+		return true
+	case ConfigModeRealistic:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EventResult.
 const (
 	Error   EventResult = "error"
@@ -65,6 +83,24 @@ func (e EventResult) Valid() bool {
 	}
 }
 
+// Defines values for StateMode.
+const (
+	StateModeLoad      StateMode = "load"
+	StateModeRealistic StateMode = "realistic"
+)
+
+// Valid indicates whether the value is a known member of the StateMode enum.
+func (e StateMode) Valid() bool {
+	switch e {
+	case StateModeLoad:
+		return true
+	case StateModeRealistic:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyPresetParamsName.
 const (
 	AssistantHeavy ApplyPresetParamsName = "assistant-heavy"
@@ -72,6 +108,9 @@ const (
 	ImportFlood    ApplyPresetParamsName = "import-flood"
 	MonthEnd       ApplyPresetParamsName = "month-end"
 	QuietDay       ApplyPresetParamsName = "quiet-day"
+	Ramp           ApplyPresetParamsName = "ramp"
+	Soak           ApplyPresetParamsName = "soak"
+	Spike          ApplyPresetParamsName = "spike"
 )
 
 // Valid indicates whether the value is a known member of the ApplyPresetParamsName enum.
@@ -86,6 +125,12 @@ func (e ApplyPresetParamsName) Valid() bool {
 	case MonthEnd:
 		return true
 	case QuietDay:
+		return true
+	case Ramp:
+		return true
+	case Soak:
+		return true
+	case Spike:
 		return true
 	default:
 		return false
@@ -120,11 +165,16 @@ type CatalogueActionCost string
 
 // Ceilings defines model for Ceilings.
 type Ceilings struct {
-	ActionsPerMinute int `json:"actionsPerMinute"`
-	AssistantPerDay  int `json:"assistantPerDay"`
-	ClockRate        int `json:"clockRate"`
-	Intensity        int `json:"intensity"`
-	Personas         int `json:"personas"`
+	ActionsPerMinute     int `json:"actionsPerMinute"`
+	AssistantPerDay      int `json:"assistantPerDay"`
+	ClockRate            int `json:"clockRate"`
+	Intensity            int `json:"intensity"`
+	LoadActionsPerSecond int `json:"loadActionsPerSecond"`
+	LoadMinutes          int `json:"loadMinutes"`
+	LoadPersonas         int `json:"loadPersonas"`
+	Personas             int `json:"personas"`
+	RampSeconds          int `json:"rampSeconds"`
+	Rate                 int `json:"rate"`
 }
 
 // Character defines model for Character.
@@ -140,14 +190,26 @@ type Config struct {
 	AreasOff        *[]string `json:"areasOff,omitempty"`
 	AssistantPerDay int       `json:"assistantPerDay"`
 
+	// Bursts The chance in per mille that an action starts a burst of quick ones; in load mode, the depth of the pacer's bucket.
+	Bursts int `json:"bursts"`
+
 	// ClockRate Data days per real day (1 is real time).
 	ClockRate int `json:"clockRate"`
 
 	// Intensity The pace in per mille of the characters' own (1000 is 1×).
 	Intensity int `json:"intensity"`
 
+	// Jitter How much think times vary (in load mode, the pacer's intervals), in percent; 100 is the characters' own range.
+	Jitter int `json:"jitter"`
+
+	// LoadMinutes How long load mode runs before it returns to realistic mode by itself.
+	LoadMinutes int `json:"loadMinutes"`
+
 	// Mistakes The share of deliberate mistakes, in per mille.
 	Mistakes int `json:"mistakes"`
+
+	// Mode Realistic plays the characters at their own pace; load paces every persona by one lab-wide target (ADR 0044).
+	Mode ConfigMode `json:"mode"`
 
 	// Off Personas (by slug) that sit this out.
 	Off    *[]string `json:"off,omitempty"`
@@ -159,9 +221,24 @@ type Config struct {
 	// Personas How many personas play, the first N.
 	Personas int `json:"personas"`
 
+	// PushThrough Load mode keeps going through 5xx answers instead of backing off.
+	PushThrough bool `json:"pushThrough"`
+
+	// RampSeconds How long load mode takes to move to a new target (from nothing when it starts).
+	RampSeconds int `json:"rampSeconds"`
+
+	// Rate Load mode's lab-wide target, in actions a second.
+	Rate int `json:"rate"`
+
+	// RunSeed Enters every persona's random stream, so a run can be repeated; 0 draws a new one (at most 2^53 − 1).
+	RunSeed int64 `json:"runSeed"`
+
 	// Weights An action's weight for every persona (0 switches it off).
 	Weights *map[string]int `json:"weights,omitempty"`
 }
+
+// ConfigMode Realistic plays the characters at their own pace; load paces every persona by one lab-wide target (ADR 0044).
+type ConfigMode string
 
 // ConfigDoc defines model for ConfigDoc.
 type ConfigDoc struct {
@@ -200,15 +277,18 @@ type EventResult string
 // PersonaState defines model for PersonaState.
 type PersonaState struct {
 	// Action The action it is doing now.
-	Action   *string `json:"action,omitempty"`
-	Animal   string  `json:"animal"`
-	Counts   Counts  `json:"counts"`
-	Last     *Event  `json:"last,omitempty"`
-	Name     string  `json:"name"`
-	On       bool    `json:"on"`
-	Says     string  `json:"says"`
-	SignedIn bool    `json:"signedIn"`
-	Slug     string  `json:"slug"`
+	Action *string `json:"action,omitempty"`
+	Animal string  `json:"animal"`
+	Counts Counts  `json:"counts"`
+	Last   *Event  `json:"last,omitempty"`
+
+	// Missing Its sign-in was refused, so the lab has no such animal (or another seed); it waits for the next change.
+	Missing  bool   `json:"missing"`
+	Name     string `json:"name"`
+	On       bool   `json:"on"`
+	Says     string `json:"says"`
+	SignedIn bool   `json:"signedIn"`
+	Slug     string `json:"slug"`
 }
 
 // Problem defines model for Problem.
@@ -225,15 +305,25 @@ type State struct {
 	Generation int64 `json:"generation"`
 
 	// Grafana Grafana's address for the feed's links, when the simulator was given one.
-	Grafana  *string        `json:"grafana,omitempty"`
-	Paused   bool           `json:"paused"`
-	Personas []PersonaState `json:"personas"`
+	Grafana *string `json:"grafana,omitempty"`
+
+	// LoadEndsAt When load mode returns to realistic mode by itself.
+	LoadEndsAt *time.Time     `json:"loadEndsAt,omitempty"`
+	Mode       StateMode      `json:"mode"`
+	Paused     bool           `json:"paused"`
+	Personas   []PersonaState `json:"personas"`
+
+	// Rate Load mode's target now, on its ramp, in actions a second (0 in realistic mode).
+	Rate float64 `json:"rate"`
 
 	// Target The lab's address.
 	Target  string `json:"target"`
 	Totals  Counts `json:"totals"`
 	Version string `json:"version"`
 }
+
+// StateMode defines model for State.Mode.
+type StateMode string
 
 // ApplyPresetParamsName defines parameters for ApplyPreset.
 type ApplyPresetParamsName string
@@ -1335,52 +1425,61 @@ func (sh *strictHandler) GetState(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"llXR8v3yfwMA",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

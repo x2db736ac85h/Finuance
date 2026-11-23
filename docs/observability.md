@@ -253,7 +253,7 @@ things to know when reading it:
   and a path parameter in the wrong format (the router refuses it before the session is known). So
   a lab shows some real traffic even when only the animals use it. The rehearsal's `lab` stage
   checks that nothing else of theirs is counted as real.
-- **Its own view:** `finuance_sim_actions_total{persona,action,result}`,
+- **Its own view:** `finuance_sim_actions_total{animal,action,result}` (otter-2 counts as otter, ADR 0044),
   `finuance_sim_action_duration_seconds{action}`, `finuance_sim_active_personas`,
   `finuance_sim_paused` and `finuance_sim_config_generation`, on the dashboard "Finuance ·
   Simulator", next to the latency the lab itself measured.

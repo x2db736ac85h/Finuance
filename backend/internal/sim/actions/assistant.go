@@ -91,6 +91,9 @@ var errAnswerFailed = errors.New("the assistant could not answer")
 // ask sends a question in a new chat and reads the answer's events to the end; onContent runs
 // after the first piece of the answer (to stop the run).
 func ask(ctx context.Context, a *sim.Actor, question string, onContent func(chat openapi_types.UUID) error) (openapi_types.UUID, answer, error) {
+	if !a.Allow(sim.Questions) { // the instance's limit per user and hour
+		return openapi_types.UUID{}, answer{}, sim.ErrNothingToDo
+	}
 	chat, err := newChat(ctx, a)
 	if err != nil {
 		return chat, answer{}, err

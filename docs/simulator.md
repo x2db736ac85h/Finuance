@@ -55,21 +55,31 @@ namespace of its own). The rehearsal runs it (`tools/rehearsal.sh lab`). The hom
 The page (port 8090, behind the control token) shows the target, the state and the totals, a card per
 animal, and the live feed. You can change:
 
-- **intensity**: 0 to 3×;
-- **which animals play**: how many, and each one on or off;
+- **mode**: *realistic*, the characters at their own pace, or *load* (ADR 0044), one target for
+  the whole lab in actions a second, with a ramp, a duration after which it returns to realistic
+  mode by itself, and "push through server errors" to find a breaking point;
+- **intensity** (realistic mode): 0 to 3×;
+- **which animals play**: how many, and each one on or off (beyond twenty, one card per animal);
+- **randomness**: the run seed (the same seed makes the same choices again; *New seed* draws one),
+  timing jitter, bursts of quick actions, and the share of deliberate mistakes;
 - **feature areas**: each one on or off;
 - **weights**: per action, for everyone or for one animal;
-- **pacing**: active hours, the data calendar's speed (up to a data day a minute), the share of deliberate mistakes, and the daily cap on questions to the assistant;
-- **presets**: quiet day, month end, assistant heavy, import flood, error storm.
+- **pacing**: active hours, the data calendar's speed (up to a data day a minute), and the daily cap on questions to the assistant;
+- **presets**: quiet day (back to realistic mode), month end, assistant heavy, import flood, error storm, and the load presets ramp (20 minutes up to 200 a second, through errors), soak (50 a second for an hour) and spike (bursts of a second's worth for ten minutes).
 
 **Act now** makes one animal do one action at once.
 
 A change reaches the animals within five seconds. Whatever is sent is held to the ceilings in the
 code:
-- 50 personas, 3× intensity;
-- 30 actions a minute per persona;
+- realistic mode: 50 personas, 3× intensity, 30 actions a minute per persona;
+- load mode: 500 personas, 2 actions a second per persona, 1,000 a second for the lab, and a
+  duration of a day at most;
 - one assistant question at a time, and a daily cap;
-- `Retry-After` on `429`, and a back-off after five `5xx` in a row.
+- `Retry-After` on `429`, and a back-off after five `5xx` in a row (unless load mode pushes through);
+- sign-ins paced under the instance's limit per address (25 at once, then one every 2.5 seconds).
+
+Load mode can only play the animals the lab made: `make sim-up` makes 100 (`SIM_ANIMALS`, at most
+500). An animal the lab doesn't have shows as "not in the lab" and waits for the next change.
 
 The control API is [`api/sim.openapi.yaml`](../api/sim.openapi.yaml).
 

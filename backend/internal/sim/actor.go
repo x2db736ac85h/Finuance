@@ -30,7 +30,8 @@ type Actor struct {
 	// API calls with the persona's access token; Web with its session cookie (for the routes no
 	// token reaches); Anon with neither (a failed sign-in, the public routes).
 	API, Web, Anon *gen.ClientWithResponses
-	// Rand is the persona's own stream, seeded from its name: a run can be repeated.
+	// Rand is the persona's own stream, seeded from its name and the run seed: a run with the same
+	// seed can be repeated.
 	Rand *mrand.Rand
 
 	engine   *Engine
@@ -40,8 +41,10 @@ type Actor struct {
 	token         string
 	accounts      map[int]uuid.UUID // statements.Current / Savings → the account's id
 	hasData       bool
-	serverErrors  int // 5xx answers in a row
-	backoffs      int // back-offs in a row
+	serverErrors  int               // 5xx answers in a row
+	backoffs      int               // back-offs in a row
+	burst         int               // quick actions left in a burst (Config.Bursts)
+	limits        map[string]*pacer // the instance's limits per user (Allow, Pace)
 	lastAction    string
 	lastStart     time.Time
 	every         map[string]time.Time
@@ -57,10 +60,8 @@ func newActor(e *Engine, p identity.Persona) (*Actor, error) {
 	if err != nil {
 		return nil, err
 	}
-	sum := sha256.Sum256([]byte("finuance-sim/v1 rand " + p.Slug))
 	a := &Actor{Persona: p, Character: Characters[p.Animal], engine: e, password: password, accounts: map[int]uuid.UUID{},
-		every: map[string]time.Time{}, imported: map[int]platform.Date{},
-		Rand: mrand.New(mrand.NewPCG(binary.LittleEndian.Uint64(sum[:8]), binary.LittleEndian.Uint64(sum[8:16])))} //nolint:gosec // a simulation's stream, not a secret
+		every: map[string]time.Time{}, imported: map[int]platform.Date{}, Rand: streamOf(p.Slug, e.cfg.RunSeed)} // the caller holds e.mu
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
@@ -86,6 +87,22 @@ func newActor(e *Engine, p identity.Persona) (*Actor, error) {
 	return a, nil
 }
 
+// streamOf is a persona's random stream for a run seed.
+func streamOf(slug string, runSeed int64) *mrand.Rand {
+	sum := sha256.Sum256(fmt.Appendf(nil, "finuance-sim/v1 rand %s %d", slug, runSeed))
+	return mrand.New(mrand.NewPCG(binary.LittleEndian.Uint64(sum[:8]), binary.LittleEndian.Uint64(sum[8:16]))) //nolint:gosec // a simulation's stream, not a secret
+}
+
+// withRunSeed draws a run seed when c has none (1 … MaxRunSeed).
+func withRunSeed(c Config) Config {
+	for c.RunSeed == 0 {
+		var b [8]byte
+		_, _ = rand.Read(b[:])
+		c.RunSeed = int64(binary.LittleEndian.Uint64(b[:]) & MaxRunSeed) //nolint:gosec // masked to 53 bits
+	}
+	return c
+}
+
 // IntN draws from the persona's stream: a number in [0, n).
 func (a *Actor) IntN(n int) int {
 	a.mu.Lock()
@@ -108,6 +125,55 @@ func (a *Actor) Every(key string, d time.Duration) bool {
 	}
 	a.every[key] = now
 	return true
+}
+
+// Limit is one of the instance's limits per user that a persona could pass: a token bucket like
+// the instance's own (internal/httpapi/middleware), one turn every Every with up to Burst at once.
+type Limit struct {
+	Key   string
+	Every time.Duration
+	Burst int
+}
+
+// The instance's limits per user at their defaults (the middleware's policies and
+// FINUANCE_AI_RATE_PER_HOUR, each 30 with a burst of 30): every persona is a user of its own, so it
+// keeps below them itself, at the same rate with a smaller burst.
+var (
+	Questions = Limit{"assistant.question", 2 * time.Minute, 20} // 30 questions an hour
+	Uploads   = Limit{"upload", 2500 * time.Millisecond, 20}     // 30 uploads a minute
+	Invites   = Limit{"shared.invite", 150 * time.Second, 10}    // 30 invitations an hour
+)
+
+// Allow takes a turn of the limit if one is free now (a question: skipped otherwise).
+func (a *Actor) Allow(l Limit) bool {
+	now := a.engine.o.Clock.Now()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.limitLocked(l.Key).allow(now, l.Every, float64(l.Burst))
+}
+
+// Pace waits for a turn of the limit (an upload: waiting is what a person would do).
+func (a *Actor) Pace(ctx context.Context, l Limit) error {
+	now := a.engine.o.Clock.Now()
+	a.mu.Lock()
+	t := a.limitLocked(l.Key).reserve(now, l.Every, l.Every, float64(l.Burst))
+	a.mu.Unlock()
+	if w := t.Sub(now); w > 0 {
+		return a.engine.o.Clock.Sleep(ctx, w)
+	}
+	return nil
+}
+
+func (a *Actor) limitLocked(key string) *pacer {
+	p := a.limits[key]
+	if p == nil {
+		p = &pacer{}
+		if a.limits == nil {
+			a.limits = map[string]*pacer{}
+		}
+		a.limits[key] = p
+	}
+	return p
 }
 
 // Engine is the engine the persona plays in (its configuration, the notice board).

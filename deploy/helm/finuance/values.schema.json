@@ -43,7 +43,7 @@
           "additionalProperties": false,
           "required": ["count", "seedSecret"],
           "properties": {
-            "count": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "count": { "type": "integer", "minimum": 1, "maximum": 500 },
             "seedSecret": {
               "type": "object",
               "additionalProperties": false,

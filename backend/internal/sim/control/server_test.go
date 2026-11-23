@@ -265,8 +265,9 @@ func TestActNowAndTheFeed(t *testing.T) {
 	}
 	var cat gen.Catalogue
 	_, body = call(t, srv, http.MethodGet, "/api/catalogue", nil, nil)
-	if json.Unmarshal(body, &cat) != nil || len(cat.Actions) != 1 || len(cat.Characters) != 10 || len(cat.Presets) != 5 ||
-		cat.Ceilings.ActionsPerMinute != 30 {
+	if json.Unmarshal(body, &cat) != nil || len(cat.Actions) != 1 || len(cat.Characters) != 10 || len(cat.Presets) != 8 ||
+		cat.Ceilings.ActionsPerMinute != 30 || cat.Ceilings.LoadPersonas != 500 || cat.Ceilings.LoadActionsPerSecond != 2 ||
+		cat.Ceilings.Rate != 1000 {
 		t.Errorf("catalogue: %s", body)
 	}
 }

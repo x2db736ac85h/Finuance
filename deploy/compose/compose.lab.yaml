@@ -34,7 +34,8 @@ services:
   # The animals, made (or their passwords set again) from the seed; safe on every start.
   animals:
     image: finuance-backend:dev
-    command: ["admin", "synthetic-users", "-count=10", "-seed-env=FINUANCE_SIM_SEED"]
+    # as many animals as load mode may play: 100 unless SIM_ANIMALS says otherwise (at most 500, ADR 0044)
+    command: ["admin", "synthetic-users", "-count=${SIM_ANIMALS:-100}", "-seed-env=FINUANCE_SIM_SEED"]
     environment:
       FINUANCE_ENV: dev
       FINUANCE_SIMULATION: "true"

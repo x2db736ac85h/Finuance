@@ -175,6 +175,9 @@ var broken = []struct {
 // importBroken uploads a file that is not a statement; the answer refuses it or shows a preview
 // with nothing to import, which the persona leaves (and deletes).
 func importBroken(ctx context.Context, a *sim.Actor) error {
+	if err := a.Pace(ctx, sim.Uploads); err != nil {
+		return err
+	}
 	b := sim.Pick(a, broken...)
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
@@ -247,6 +250,9 @@ func daysBetween(from, to platform.Date) int {
 // upload sends one of the persona's statements to the upload route, as the import window does,
 // and returns the preview (201) or the import the fast path already committed (202).
 func upload(ctx context.Context, a *sim.Actor, account int, from, to platform.Date) (*gen.ImportPreview, bool, error) {
+	if err := a.Pace(ctx, sim.Uploads); err != nil { // the instance's limit per user
+		return nil, false, err
+	}
 	stamp := fmt.Sprintf("sim-%s-%d", a.Persona.Slug, a.Now().UnixNano())
 	name, content := statements.File(a.Persona, account, from, to, stamp)
 	var body bytes.Buffer

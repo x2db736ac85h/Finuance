@@ -13,12 +13,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-// Max is the most personas the simulator plays (PLAN Phase 25, decision 7).
-const Max = 50
+// Max is the most personas the simulator plays: load mode's ceiling (ADR 0044); realistic mode
+// plays at most 50 (sim.MaxPersonas).
+const Max = 500
 
 // Domain is the e-mail domain of every persona; .invalid is reserved and never delivers.
 const Domain = "sim.invalid"
@@ -67,12 +69,20 @@ func First(n int) ([]Persona, error) {
 
 // BySlug finds a persona by its slug (fox, otter-2).
 func BySlug(slug string) (Persona, bool) {
-	for i := range Max {
-		if p := Nth(i); p.Slug == slug {
-			return p, true
+	animal, round := slug, 1
+	if i := strings.LastIndexByte(slug, '-'); i > 0 {
+		n, err := strconv.Atoi(slug[i+1:])
+		if err != nil || n < 2 {
+			return Persona{}, false
 		}
+		animal, round = slug[:i], n
 	}
-	return Persona{}, false
+	k := slices.Index(Animals[:], animal)
+	if k < 0 || round > Max/len(Animals) {
+		return Persona{}, false
+	}
+	p := Nth((round-1)*len(Animals) + k)
+	return p, p.Slug == slug // otter-02 is not otter-2
 }
 
 // ErrShortSeed is the error for a seed shorter than MinSeedBytes.
