@@ -100,7 +100,8 @@ test('what the load costs: the lab’s containers, the figures and the flow', as
   await open(page);
   const cost = page.getByRole('region', { name: 'What the load costs' });
   await expect(cost.getByRole('cell', { name: 'api', exact: true })).toBeVisible({ timeout: 30_000 });
-  await expect(cost.getByRole('group', { name: 'API p95' })).toContainText('ms');
+  // the request count is never empty (the probes count); a p95 needs requests in the last minute
+  await expect(cost.getByRole('group', { name: 'API requests a second' })).toContainText(/\d/);
   await expect(page.getByRole('region', { name: 'Flow' }).getByRole('img')).toHaveAttribute(
     'aria-label',
     /In the last minute/,
