@@ -17,7 +17,9 @@ import {
   useRebuildHistory,
   useSimState,
 } from './hooks';
-import { logsLink, useFeed } from './useFeed';
+import { Flow } from './Flow';
+import { Resources } from './Resources';
+import { type Event, logsLink, useFeed } from './useFeed';
 
 type Props = { client: Client; token: string };
 
@@ -27,6 +29,7 @@ export function Dashboard({ client, token }: Props) {
   const config = useConfig(client);
   const change = useChangeConfig(client);
   const action = useConfigAction(client);
+  const feed = useFeed(token);
   const error = change.error ?? action.error;
   if (!state.data || !catalogue.data || !config.data) {
     return (
@@ -116,6 +119,11 @@ export function Dashboard({ client, token }: Props) {
       <Load catalogue={cat} cfg={cfg} set={set} />
       <History client={client} catalogue={cat} cfg={cfg} state={st} set={set} />
 
+      <div className="sim-cols">
+        <Resources client={client} />
+        <Flow events={feed.events} />
+      </div>
+
       <section aria-label="Personas" className="sim-personas">
         <h2>Personas</h2>
         <div className="sim-cards">
@@ -134,7 +142,7 @@ export function Dashboard({ client, token }: Props) {
         </div>
       </div>
 
-      <Feed token={token} grafana={st.grafana} />
+      <Feed events={feed.events} live={feed.live} grafana={st.grafana} />
     </div>
   );
 }
@@ -668,8 +676,7 @@ function RequestId({ id, grafana }: { id: string; grafana: string | undefined })
   );
 }
 
-function Feed({ token, grafana }: { token: string; grafana: string | undefined }) {
-  const { events, live } = useFeed(token);
+function Feed({ events, live, grafana }: { events: Event[]; live: boolean; grafana: string | undefined }) {
   return (
     <section aria-label="Feed" className="sim-feed">
       <h2>

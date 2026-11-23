@@ -1,0 +1,89 @@
+// What the lab's containers cost (PLAN 25.16, ADR 0044), for the dashboard "Finuance · Lab
+// resources" and the simulator's page: CPU, memory and disk per container from Alloy's own
+// cAdvisor, labelled as the cluster's kubelet labels them (container = the Compose service,
+// namespace = finuance), and the database's statistics from Alloy's PostgreSQL exporter as the
+// application role. Both go to the Prometheus in the observability container. Mounted by
+// compose.lab.yaml only: cAdvisor needs the host's cgroups and containerd's socket.
+prometheus.exporter.cadvisor "compose" {
+	docker_host                  = "unix:///var/run/docker.sock"
+	docker_only                  = true
+	store_container_labels       = false
+	allowlisted_container_labels = [
+		"com.docker.compose.project",
+		"com.docker.compose.service",
+	]
+	// what the dashboard draws; per-process, per-socket and network counters would need the
+	// host's process namespace
+	enabled_metrics  = ["cpu", "memory", "diskIO"]
+	storage_duration = "2m"
+}
+
+prometheus.scrape "cadvisor" {
+	targets         = prometheus.exporter.cadvisor.compose.targets
+	forward_to      = [prometheus.relabel.cadvisor.receiver]
+	scrape_interval = "15s"
+	job_name        = "cadvisor"
+}
+
+prometheus.relabel "cadvisor" {
+	forward_to = [prometheus.remote_write.lgtm.receiver]
+
+	// this project's containers only
+	rule {
+		source_labels = ["container_label_com_docker_compose_project"]
+		regex         = sys.env("COMPOSE_PROJECT")
+		action        = "keep"
+	}
+
+	rule {
+		source_labels = ["container_label_com_docker_compose_service"]
+		target_label  = "container"
+	}
+
+	rule {
+		target_label = "namespace"
+		replacement  = "finuance"
+	}
+
+	rule {
+		regex  = "container_label_.*|id|image|name"
+		action = "labeldrop"
+	}
+}
+
+prometheus.exporter.postgres "db" {
+	// the application role's address, built by compose.lab.yaml like the api's own
+	data_source_names = [sys.env("PG_DSN")]
+	// pg_stat_database and the exporter's few defaults (connections by state, pg_up); not the
+	// hundreds of settings, no statements, no table list
+	disable_settings_metrics = true
+	enabled_collectors       = ["database", "stat_database"]
+}
+
+prometheus.scrape "postgres" {
+	targets         = prometheus.exporter.postgres.db.targets
+	forward_to      = [prometheus.relabel.postgres.receiver]
+	scrape_interval = "15s"
+	job_name        = "finuance-db"
+}
+
+prometheus.relabel "postgres" {
+	forward_to = [prometheus.remote_write.lgtm.receiver]
+
+	// the exporter names its job integrations/postgres; the dashboards read the cluster's
+	rule {
+		target_label = "job"
+		replacement  = "finuance-db"
+	}
+
+	rule {
+		target_label = "namespace"
+		replacement  = "finuance"
+	}
+}
+
+prometheus.remote_write "lgtm" {
+	endpoint {
+		url = "http://observability:9090/api/v1/write"
+	}
+}

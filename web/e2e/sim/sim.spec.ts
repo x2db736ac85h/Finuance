@@ -95,3 +95,15 @@ test('history: a profile with its estimate, and a rebuild asked for', async ({ p
   await expect(history.getByRole('status')).toContainText('still to rebuild', { timeout: 10_000 });
   await check(page, 'simulator history');
 });
+
+test('what the load costs: the lab’s containers, the figures and the flow', async ({ page }) => {
+  await open(page);
+  const cost = page.getByRole('region', { name: 'What the load costs' });
+  await expect(cost.getByRole('cell', { name: 'api', exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(cost.getByRole('group', { name: 'API p95' })).toContainText('ms');
+  await expect(page.getByRole('region', { name: 'Flow' }).getByRole('img')).toHaveAttribute(
+    'aria-label',
+    /In the last minute/,
+  );
+  await check(page, 'simulator, what the load costs');
+});

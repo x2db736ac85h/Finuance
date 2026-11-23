@@ -42,12 +42,16 @@ const csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 's
 
 // Options configure the server.
 type Options struct {
-	Engine   *sim.Engine
-	Token    string // FINUANCE_SIM_CONTROL_TOKEN
-	Version  string
-	Grafana  string // Grafana's address for the feed's links ("" for none)
-	Registry *prometheus.Registry
-	Log      *slog.Logger
+	Engine  *sim.Engine
+	Token   string // FINUANCE_SIM_CONTROL_TOKEN
+	Version string
+	Grafana string // Grafana's address for the feed's links ("" for none)
+	// Prometheus is the lab's Prometheus, for the page's live strip ("" for none); Namespace is
+	// the lab's namespace there (finuance on Compose).
+	Prometheus string
+	Namespace  string
+	Registry   *prometheus.Registry
+	Log        *slog.Logger
 }
 
 // Handler returns the server's handler: /api/ (the control API), /metrics, /healthz and the page.
@@ -73,7 +77,11 @@ func Handler(o Options) (http.Handler, error) {
 			problem(w, status, "invalid_request", "The request does not fit the control API.", err.Error())
 		},
 	})
-	s := &server{o: o}
+	res, err := newResources(o.Prometheus, o.Namespace, time.Now)
+	if err != nil {
+		return nil, err
+	}
+	s := &server{o: o, res: res}
 	strict := gen.NewStrictHandlerWithOptions(s, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, _ *http.Request, err error) {
 			problem(w, http.StatusUnprocessableEntity, "invalid_request", "The request does not fit the control API.", err.Error())
@@ -174,8 +182,9 @@ func (r *statusRecorder) WriteHeader(code int) {
 func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 
 type server struct {
-	o  Options
-	mu sync.Mutex // makes "compare the generation, then store" one step
+	o   Options
+	mu  sync.Mutex // makes "compare the generation, then store" one step
+	res *resources
 }
 
 var _ gen.StrictServerInterface = (*server)(nil)
@@ -265,6 +274,11 @@ func (s *server) ApplyPreset(_ context.Context, req gen.ApplyPresetRequestObject
 	}
 	cfg, g := s.change(preset)
 	return gen.ApplyPreset200JSONResponse(doc(cfg, g)), nil
+}
+
+// GetResources answers what the lab costs, from its Prometheus (ADR 0044).
+func (s *server) GetResources(ctx context.Context, _ gen.GetResourcesRequestObject) (gen.GetResourcesResponseObject, error) {
+	return gen.GetResources200JSONResponse(s.res.get(ctx)), nil
 }
 
 // RebuildHistory asks every persona that plays to rebuild its history (ADR 0044).

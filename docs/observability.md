@@ -45,7 +45,9 @@ flowchart LR
 On Compose, `make up-observability` runs the same dashboards in Grafana's `otel-lgtm` image: the
 api and the worker send their traces to it, its Prometheus scrapes their admin ports, and an Alloy
 container reads the containers' logs through the Docker socket and applies the same stages as on
-Kubernetes. The links between the signals described below (a log line's `trace_id` opens the
+Kubernetes. In the lab (`make sim-up`) the same Alloy also measures each container's CPU, memory
+and disk with its own cAdvisor and the database's statistics with its PostgreSQL exporter, for the
+dashboard "Finuance · Lab resources" (ADR 0044, [simulator.md](simulator.md#what-the-load-costs)). The links between the signals described below (a log line's `trace_id` opens the
 trace, a span's "Logs for this span" lists its lines, an exemplar on a latency panel opens one
 request's trace) are configured for the Kubernetes install: the Loki data source comes with
 `deploy/k8s/telemetry`, the Tempo and Prometheus ones with the monitoring values. `otel-lgtm`

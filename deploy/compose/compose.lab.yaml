@@ -17,6 +17,10 @@ services:
       FINUANCE_ALLOW_SIGNUP: "false"
       FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
       FINUANCE_AI_DEFAULT_MODEL: mock-tools
+      # Settings → Developer links the synthetic users console and the lab's dashboards (ADR 0044),
+      # for the lab administrator make sim-up creates
+      FINUANCE_DEVELOPER_MODE: "true"
+      FINUANCE_DEVELOPER_LINKS_FILE: /etc/finuance/developer/links.lab.json
     ports: !reset []
     depends_on:
       ai-mock: { condition: service_started }
@@ -54,7 +58,7 @@ services:
       dockerfile: deploy/docker/Dockerfile.sim
     # the front door is the web server; the lab's public origin is what its browser pages send
     command: ["run", "-target=http://web:8080", "-origin=http://localhost:${FINUANCE_LAB_PORT:-8020}", "-tz=Europe/Warsaw",
-      "-grafana=http://localhost:3000"]
+      "-grafana=http://localhost:3000", "-prometheus=http://observability:9090"]
     environment:
       FINUANCE_SIM_SEED: ${FINUANCE_SIM_SEED:?the lab needs .env.lab, run make sim-up}
       FINUANCE_SIM_CONTROL_TOKEN: ${FINUANCE_SIM_CONTROL_TOKEN:?the lab needs .env.lab, run make sim-up}
@@ -67,3 +71,14 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+  # Alloy also measures what the lab's containers cost (observability/metrics.alloy): cAdvisor
+  # reads the host's cgroups and asks containerd about the containers, like the Docker socket
+  # already mounted, a machine's root, for a development machine only (CONTAINERD_SOCKET names
+  # another socket); the PostgreSQL exporter signs in as the application role.
+  alloy:
+    cgroup: host
+    environment:
+      PG_DSN: postgres://finuance_app:${FINUANCE_APP_PASSWORD}@db:5432/finuance?sslmode=disable
+    volumes:
+      - ./observability/metrics.alloy:/etc/finuance-alloy/metrics.alloy:ro
+      - ${CONTAINERD_SOCKET:-/run/containerd/containerd.sock}:/run/containerd/containerd.sock:ro

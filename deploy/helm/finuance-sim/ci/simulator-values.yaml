@@ -9,6 +9,7 @@ simulator:
   activeHours: true
   seedSecret: { name: finuance-sim-seed, key: seed }
   controlTokenSecret: { name: finuance-sim-control, key: token }
+  prometheus: { url: "http://kube-prometheus-stack-prometheus.monitoring:9090", namespace: finuance-lab }
 mock:
   enabled: false
 podMonitor:

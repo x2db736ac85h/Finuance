@@ -167,6 +167,23 @@ paths:
                 $ref: "#/components/schemas/Event"
         default:
           $ref: "#/components/responses/Problem"
+  /resources:
+    get:
+      operationId: getResources
+      summary: What the lab costs, from its Prometheus, over the last 15 minutes
+      description: >-
+        CPU and memory of every container of the lab and of the simulator, the animals' actions and
+        the API's requests a second, its p95 and its server errors, every 15 seconds (ADR 0044). Fixed
+        queries; `available` is false when the simulator was given no Prometheus or it doesn't answer.
+      responses:
+        "200":
+          description: The figures.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resources"
+        default:
+          $ref: "#/components/responses/Problem"
   /history/rebuild:
     post:
       operationId: rebuildHistory
@@ -326,6 +343,65 @@ components:
         years:
           type: integer
           description: How far back a rebuilt history starts (1 … 10).
+    Resources:
+      type: object
+      additionalProperties: false
+      required: [available, containers, series]
+      properties:
+        available:
+          type: boolean
+        error:
+          type: string
+          description: Why the figures are missing.
+        containers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContainerUsage"
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceSeries"
+    ContainerUsage:
+      type: object
+      additionalProperties: false
+      required: [name, cpu, memoryBytes]
+      properties:
+        name:
+          type: string
+        cpu:
+          type: array
+          description: Cores busy.
+          items:
+            $ref: "#/components/schemas/Point"
+        memoryBytes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Point"
+    ResourceSeries:
+      type: object
+      additionalProperties: false
+      required: [name, points]
+      properties:
+        name:
+          type: string
+          enum: [actions, requests, p95, serverErrors]
+          description: The animals' actions a second, the API's requests a second, its p95 in seconds, its 5xx a second.
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/Point"
+    Point:
+      type: object
+      additionalProperties: false
+      required: [t, v]
+      properties:
+        t:
+          type: integer
+          format: int64
+          description: Unix time in seconds.
+        v:
+          type: number
+          format: double
     RebuildStatus:
       type: object
       additionalProperties: false

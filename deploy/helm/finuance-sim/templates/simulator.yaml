@@ -52,6 +52,10 @@ spec:
             {{- with $s.grafana }}
             - -grafana={{ . }}
             {{- end }}
+            {{- with $s.prometheus.url }}
+            - -prometheus={{ . }}
+            - -namespace={{ $s.prometheus.namespace }}
+            {{- end }}
             {{- if $s.caSecret.name }}
             - -ca-file=/etc/finuance-sim-ca/{{ $s.caSecret.key }}
             {{- end }}

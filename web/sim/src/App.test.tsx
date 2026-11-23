@@ -22,6 +22,8 @@ const event: Schemas['Event'] = {
 
 let config: Schemas['ConfigDoc'];
 let state: Partial<Schemas['State']>;
+let resources: Schemas['Resources'];
+let reducedMotion: boolean;
 let puts: Schemas['ConfigDoc'][];
 let posts: string[];
 let seenHeaders: Headers[];
@@ -49,6 +51,21 @@ const reset = () => {
     },
   };
   state = {};
+  const pts = (...vs: number[]) => vs.map((v, i) => ({ t: 1795400000 + 15 * i, v }));
+  resources = {
+    available: true,
+    containers: [
+      { name: 'db', cpu: pts(0.2, 0.4), memoryBytes: pts(500 * 2 ** 20, 512 * 2 ** 20) },
+      { name: 'api', cpu: pts(0.1, 0.15), memoryBytes: pts(100 * 2 ** 20, 110 * 2 ** 20) },
+    ],
+    series: [
+      { name: 'actions', points: pts(10, 12.5) },
+      { name: 'requests', points: pts(30, 37) },
+      { name: 'p95', points: pts(0.04, 0.062) },
+      { name: 'serverErrors', points: pts(0, 0) },
+    ],
+  };
+  reducedMotion = false;
   puts = [];
   posts = [];
   seenHeaders = [];
@@ -151,6 +168,7 @@ const server = setupServer(
       return HttpResponse.json(config);
     }),
   ),
+  http.get(`${API}/resources`, ({ request }) => authed(request, () => HttpResponse.json(resources))),
   http.post(`${API}/history/rebuild`, ({ request }) =>
     authed(request, () => {
       posts.push('rebuild');
@@ -189,9 +207,10 @@ beforeEach(() => {
   reset();
   window.sessionStorage.clear();
   window.matchMedia = ((q: string) => ({
-    matches: false,
+    matches: q.includes('reduced-motion') ? reducedMotion : false,
     media: q,
     addEventListener: () => undefined,
+    removeEventListener: () => undefined,
   })) as unknown as typeof window.matchMedia;
 });
 afterEach(() => {
@@ -373,6 +392,39 @@ describe('the tuning page', () => {
       expect(posts).toContain('rebuild');
     });
     expect(await within(section).findByRole('status')).toHaveProperty('textContent', '2 animals still to rebuild');
+  });
+
+  it('shows what the load costs: the figures and every container', async () => {
+    await openWithToken();
+    const section = await screen.findByRole('region', { name: 'What the load costs' });
+    expect(await within(section).findByText('12.5')).toBeTruthy();
+    expect(within(section).getByRole('group', { name: 'API p95' }).textContent).toContain('62 ms');
+    const rows = within(section).getAllByRole('row');
+    expect(rows[1]?.textContent).toContain('db');
+    expect(rows[1]?.textContent).toContain('512 MiB');
+    expect(rows[2]?.textContent).toContain('0.15');
+  });
+
+  it('says why there are no figures', async () => {
+    resources = {
+      available: false,
+      error: 'the simulator was started without -prometheus',
+      containers: [],
+      series: [],
+    };
+    await openWithToken();
+    const section = await screen.findByRole('region', { name: 'What the load costs' });
+    expect(await within(section).findByText(/started without -prometheus/)).toBeTruthy();
+  });
+
+  it('draws the flow, and only counts with reduced motion', async () => {
+    reducedMotion = true;
+    await openWithToken();
+    const flow = await screen.findByRole('region', { name: 'Flow' });
+    await waitFor(() => {
+      expect(within(flow).getByRole('img').getAttribute('aria-label')).toContain('1 questions to the mock model');
+    });
+    expect(flow.querySelectorAll('.sim-dot')).toHaveLength(0);
   });
 
   it('shows the feed', async () => {

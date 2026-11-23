@@ -1,0 +1,26 @@
+{
+  "source": "https://github.com/x2db736ac85h/finuance",
+  "links": [
+    {
+      "group": "Lab",
+      "name": "Synthetic users console",
+      "url": "http://localhost:8090/",
+      "note": "The simulator's page (ADR 0044): the animals, load mode, their history, what the load costs. It asks for the control token, FINUANCE_SIM_CONTROL_TOKEN in .env.lab; make sim-up prints the address with it.",
+      "commands": [
+        "grep FINUANCE_SIM_CONTROL_TOKEN .env.lab"
+      ]
+    },
+    {
+      "group": "Lab",
+      "name": "Lab resources",
+      "url": "http://localhost:3000/d/finuance-lab-resources",
+      "note": "CPU, memory and disk of every container, the database's work and the API's answers, with the animals' actions over them. Grafana of the lab, no sign-in."
+    },
+    {
+      "group": "Lab",
+      "name": "Simulator",
+      "url": "http://localhost:3000/d/finuance-simulator",
+      "note": "What the animals do, their errors and the latency they see."
+    }
+  ]
+}
