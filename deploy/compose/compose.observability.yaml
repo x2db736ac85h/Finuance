@@ -17,6 +17,10 @@ services:
       - ./observability/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/finuance.yaml:ro
       - ../k8s/observability/files/dashboards:/finuance/dashboards:ro
     restart: unless-stopped # back after a reboot like the stack it watches (found in 25.12)
+    environment:
+      # one Loki: stream shards spread nothing, and a shard would store the few lines a restarted
+      # Alloy sends again a second time (as the cluster's chart, found in 25.12)
+      LOKI_EXTRA_ARGS: -shard-streams.enabled=false
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:9090/-/ready"]
       interval: 5s
@@ -29,8 +33,9 @@ services:
     # as root for the socket, without capabilities: the image's own data folder is closed to it
     # a folder of its own: the image's /etc/alloy holds a default configuration Alloy would load too
     # where each container's log was read up to lives on a volume: with it on the tmpfs, a restarted
-    # Alloy read every log again from the start and Loki stored part of it twice (found in 25.12)
-    command: [run, /etc/finuance-alloy, --storage.path=/var/lib/alloy, --disable-reporting]
+    # Alloy read every log again from the start and Loki stored part of it twice (found in 25.12). The
+    # volume is mounted at a folder the image doesn't have, so Docker makes it root's.
+    command: [run, /etc/finuance-alloy, --storage.path=/var/lib/finuance-alloy, --disable-reporting]
     restart: unless-stopped
     environment:
       COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME}
@@ -38,7 +43,7 @@ services:
       - ./observability/alloy.alloy:/etc/finuance-alloy/compose.alloy:ro
       - ../k8s/telemetry/files/stages.alloy:/etc/finuance-alloy/stages.alloy:ro
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
-      - alloy-data:/var/lib/alloy
+      - alloy-data:/var/lib/finuance-alloy
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
