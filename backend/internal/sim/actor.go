@@ -6,10 +6,12 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	mrand "math/rand/v2"
 	"net/http"
 	"net/http/cookiejar"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -206,6 +208,53 @@ func (a *Actor) Engine() *Engine { return a.engine }
 
 // Now is the engine's clock.
 func (a *Actor) Now() time.Time { return a.engine.o.Clock.Now() }
+
+// How WhileBusy tries again: BusyTries times in all, BusyWait apart unless the answer says how
+// long (Retry-After), at most MaxBusyWait.
+const (
+	BusyTries   = 5
+	BusyWait    = 2 * time.Second
+	MaxBusyWait = 30 * time.Second
+)
+
+// Answer is what WhileBusy reads of an answer: its status, headers and body.
+type Answer struct {
+	Status int
+	Header http.Header
+	Body   []byte
+}
+
+// AnswerOf is a generated client's answer as WhileBusy reads it.
+func AnswerOf(r *http.Response, body []byte) Answer {
+	return Answer{Status: r.StatusCode, Header: r.Header, Body: body}
+}
+
+// WhileBusy sends a request again while the instance answers 409 account_busy: the account's lock
+// is held by a commit or a reclassification of the same user (ADR 0038), and a person tries again
+// a moment later. Any other answer, a 409 of another kind included (a file already imported),
+// ends it at once; so does the last try. send keeps its typed answer itself (the generated
+// client's, with the body read) and tells WhileBusy what it needs of it.
+func (a *Actor) WhileBusy(ctx context.Context, send func() (Answer, error)) error {
+	for try := 1; ; try++ {
+		ans, err := send()
+		if err != nil || ans.Status != http.StatusConflict || try == BusyTries {
+			return err
+		}
+		var problem struct {
+			Code string `json:"code"`
+		}
+		if json.Unmarshal(ans.Body, &problem) != nil || problem.Code != "account_busy" {
+			return nil
+		}
+		wait := BusyWait
+		if secs, err := strconv.Atoi(ans.Header.Get("Retry-After")); err == nil && secs >= 0 {
+			wait = time.Duration(secs) * time.Second
+		}
+		if err := a.engine.o.Clock.Sleep(ctx, min(wait, MaxBusyWait)); err != nil {
+			return err
+		}
+	}
+}
 
 // Raw sends a request the contract has no operation for (an unknown path), with the persona's
 // token and headers; path is below /api/v1.

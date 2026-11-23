@@ -362,6 +362,52 @@ func TestLimits(t *testing.T) {
 	}
 }
 
+// TestWhileBusy: a 409 account_busy (the account's lock is held) is sent again after BusyWait or
+// its Retry-After, at most BusyTries times in all; a 409 of another kind (a file already imported)
+// and other answers return at once.
+func TestWhileBusy(t *testing.T) {
+	e, clock := newTestEngine(t, &fakeLab{simulation: true}, nil)
+	a := testActor(e, Character{})
+	busy := `{"status":409,"code":"account_busy","title":"Account busy"}`
+	type answer struct {
+		status     int
+		body       string
+		retryAfter string
+	}
+	var last int
+	answers := func(as ...answer) func() (Answer, error) {
+		return func() (Answer, error) {
+			x := as[0]
+			if len(as) > 1 {
+				as = as[1:]
+			}
+			h := http.Header{}
+			if x.retryAfter != "" {
+				h.Set("Retry-After", x.retryAfter)
+			}
+			last = x.status
+			return Answer{Status: x.status, Header: h, Body: []byte(x.body)}, nil
+		}
+	}
+	for _, c := range []struct {
+		name    string
+		answers []answer
+		want    int
+		slept   []time.Duration
+	}{
+		{"busy twice, then taken", []answer{{409, busy, ""}, {409, busy, "7"}, {201, "{}", ""}}, 201, []time.Duration{BusyWait, 7 * time.Second}},
+		{"busy every time", []answer{{409, busy, ""}}, 409, []time.Duration{BusyWait, BusyWait, BusyWait, BusyWait}},
+		{"a file already imported", []answer{{409, `{"code":"duplicate_file"}`, ""}}, 409, nil},
+		{"taken at once", []answer{{201, "{}", ""}}, 201, nil},
+	} {
+		before := len(clock.sleeps())
+		err := a.WhileBusy(context.Background(), answers(c.answers...))
+		if slept := clock.sleeps()[before:]; err != nil || last != c.want || !slices.Equal(slept, c.slept) {
+			t.Errorf("%s: %v %v, slept %v", c.name, last, err, slept)
+		}
+	}
+}
+
 // TestRebuildRequests: a rebuild request reaches every persona that plays once, at most
 // MaxRebuilds at a time, and the state counts those still to do it.
 func TestRebuildRequests(t *testing.T) {
