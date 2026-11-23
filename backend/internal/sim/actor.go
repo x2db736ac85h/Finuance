@@ -41,9 +41,10 @@ type Actor struct {
 	token         string
 	accounts      map[int]uuid.UUID // statements.Current / Savings → the account's id
 	hasData       bool
-	serverErrors  int // 5xx answers in a row
-	backoffs      int // back-offs in a row
-	burst         int // quick actions left in a burst (Config.Bursts)
+	serverErrors  int               // 5xx answers in a row
+	backoffs      int               // back-offs in a row
+	burst         int               // quick actions left in a burst (Config.Bursts)
+	limits        map[string]*pacer // the instance's limits per user (Allow, Pace)
 	lastAction    string
 	lastStart     time.Time
 	every         map[string]time.Time
@@ -126,40 +127,54 @@ func (a *Actor) Every(key string, d time.Duration) bool {
 	return true
 }
 
-// Pace waits until at least d has passed since the last time for this key, then counts this time:
-// for the instance's limits per user that a persona in load mode could pass (uploads), where
-// waiting is what a person would do.
-func (a *Actor) Pace(ctx context.Context, key string, d time.Duration) error {
+// Limit is one of the instance's limits per user that a persona could pass: a token bucket like
+// the instance's own (internal/httpapi/middleware), one turn every Every with up to Burst at once.
+type Limit struct {
+	Key   string
+	Every time.Duration
+	Burst int
+}
+
+// The instance's limits per user at their defaults (the middleware's policies and
+// FINUANCE_AI_RATE_PER_HOUR, each 30 with a burst of 30): every persona is a user of its own, so it
+// keeps below them itself, at the same rate with a smaller burst.
+var (
+	Questions = Limit{"assistant.question", 2 * time.Minute, 20} // 30 questions an hour
+	Uploads   = Limit{"upload", 2500 * time.Millisecond, 20}     // 30 uploads a minute
+	Invites   = Limit{"shared.invite", 150 * time.Second, 10}    // 30 invitations an hour
+)
+
+// Allow takes a turn of the limit if one is free now (a question: skipped otherwise).
+func (a *Actor) Allow(l Limit) bool {
 	now := a.engine.o.Clock.Now()
 	a.mu.Lock()
-	next := a.every[key].Add(d)
-	if next.Before(now) {
-		next = now
-	}
-	a.every[key] = next
+	defer a.mu.Unlock()
+	return a.limitLocked(l.Key).allow(now, l.Every, float64(l.Burst))
+}
+
+// Pace waits for a turn of the limit (an upload: waiting is what a person would do).
+func (a *Actor) Pace(ctx context.Context, l Limit) error {
+	now := a.engine.o.Clock.Now()
+	a.mu.Lock()
+	t := a.limitLocked(l.Key).reserve(now, l.Every, l.Every, float64(l.Burst))
 	a.mu.Unlock()
-	if w := next.Sub(now); w > 0 {
+	if w := t.Sub(now); w > 0 {
 		return a.engine.o.Clock.Sleep(ctx, w)
 	}
 	return nil
 }
 
-// ForgetPaces forgets when the persona last did anything paced (Every, Pace): a script that runs
-// actions back to back (the coverage test) starts each one fresh.
-func (a *Actor) ForgetPaces() {
-	a.mu.Lock()
-	clear(a.every)
-	a.mu.Unlock()
+func (a *Actor) limitLocked(key string) *pacer {
+	p := a.limits[key]
+	if p == nil {
+		p = &pacer{}
+		if a.limits == nil {
+			a.limits = map[string]*pacer{}
+		}
+		a.limits[key] = p
+	}
+	return p
 }
-
-// The instance's limits per user that load mode's pace could pass (internal/httpapi/middleware
-// and FINUANCE_AI_RATE_PER_HOUR, at their defaults): every persona is a user of its own, so it
-// keeps below them itself.
-const (
-	QuestionEvery = 2 * time.Minute         // 30 questions an hour
-	UploadEvery   = 2500 * time.Millisecond // 30 uploads a minute
-	InviteEvery   = 150 * time.Second       // 30 invitations an hour
-)
 
 // Engine is the engine the persona plays in (its configuration, the notice board).
 func (a *Actor) Engine() *Engine { return a.engine }
