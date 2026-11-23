@@ -81,9 +81,9 @@ code:
 Load mode can only play the animals the lab made: `make sim-up` makes 100 (`SIM_ANIMALS`, at most
 500). An animal the lab doesn't have shows as "not in the lab" and waits for the next change.
 
-Each animal is a user of its own, so it keeps below the instance's limits per user: a question to
-the assistant every two minutes at most, an upload every 2.5 seconds (it waits), an invitation every
-2.5 minutes.
+Each animal is a user of its own, so it keeps below the instance's limits per user, with token
+buckets like the instance's: a question to the assistant every two minutes, an upload every 2.5
+seconds (it waits), an invitation every 2.5 minutes, each with a burst below the instance's 30.
 
 The control API is [`api/sim.openapi.yaml`](../api/sim.openapi.yaml).
 
