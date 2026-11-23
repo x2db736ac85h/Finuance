@@ -100,8 +100,9 @@ test('what the load costs: the lab’s containers, the figures and the flow', as
   await open(page);
   const cost = page.getByRole('region', { name: 'What the load costs' });
   await expect(cost.getByRole('cell', { name: 'api', exact: true })).toBeVisible({ timeout: 30_000 });
-  // the request count is never empty (the probes count); a p95 needs requests in the last minute
-  await expect(cost.getByRole('group', { name: 'API requests a second' })).toContainText(/\d/);
+  // the request count is never empty (the probes count), but a rate needs two of Prometheus's
+  // scrapes (15 s apart) and the lab may have just started; the page asks again every 5 s
+  await expect(cost.getByRole('group', { name: 'API requests a second' })).toContainText(/\d/, { timeout: 60_000 });
   await expect(page.getByRole('region', { name: 'Flow' }).getByRole('img')).toHaveAttribute(
     'aria-label',
     /In the last minute/,
