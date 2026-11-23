@@ -627,3 +627,100 @@ animals are small next to Phase 17's load-test users (20,000 transactions each, 
 under load), and the day put almost no load on the lab (about three requests a minute). So both
 backlog items ("cache the month aggregates", "the duplicates window's first render") are decided on
 the load run of task 25.17, with load-mode animals of that size.
+
+## Phase 25: the animals load the lab (task 25.17)
+
+The Compose lab on the development machine (8 cores, 46 GB; it also ran k3s and other work), with
+the simulator in load mode (ADR 0044) and PostgreSQL at its Compose defaults (`shared_buffers`
+128 MB). The lab made 200 animals; the first 50 were given the load test's size through the normal
+upload (`finuance-sim seed -count=50 -rows=20000 -years=3`, 7 minutes): 1,015,482 transactions,
+14,546 to 26,072 each (median 20,127). Figures from the lab's Prometheus, which since 25.16 has
+each container's CPU and memory too. The run found a locking bug, fixed in the middle of it.
+
+### The first ramp and soak: a lock that blocked edits
+
+A ramp from nothing to 100 actions a second over 20 minutes with the 50 animals (2026-11-23
+03:30–03:55 UTC), then an hour at 24 actions a second (04:15–05:16):
+
+| Minute of the ramp | Actions/s | API requests/s | API p95 (all routes) | 5xx | CPU: database / all containers |
+|---|---|---|---|---|---|
+| 7 | 30 | 49 | 0.21 s | 0 | 2.5 / 3.1 |
+| 9 | 40 | 61 | 0.34 s | 0 | 3.7 / 4.5 |
+| 11 | 43 | 60 | 2.1 s | 0 | 4.1 / 4.9 |
+| 17 | 19 | 24 | 6.3 s | 0 | 2.0 / 2.5 |
+
+It seemed to break at about 40 actions and 60 requests a second: the api's pool (10 connections)
+was full, with 87 acquisitions a second finding it empty, while the database had CPU to spare. The
+soak at 24 actions a second held 33–37 requests a second with p95 2.2–3.1 s and the overview at a
+median of 1.39 s, which takes 70 ms for an animal of this size on the quiet lab.
+
+The cause was a lock. 87 label edits an hour answered `409 account_busy`, the database logged
+exactly 87 lock timeouts, most "while locking tuple … in relation accounts", and two edits deadlocked
+with the reclassification (`500`, SQLSTATE 40P01). The reclassification locked all of a user's
+accounts `FOR UPDATE`, where every other writer lock is `FOR NO KEY UPDATE` (ADR 0013), and that
+also blocked the foreign-key check of every annotation, insert and update that refers to the
+account. With 130 reclassifications a minute, requests held their connections while they waited,
+and the pool ran dry. Fixed by pull request 84 (`TestReclassifyLetsLabelEditsThrough`).
+
+### With the fix
+
+The same 50 animals, the same soak rate for 15 minutes (05:49–06:05): 24 actions and 37 requests a
+second, **p50 5 ms, p95 30 ms**, the overview at a median of 18 ms, no failed action, no lock
+timeout, no deadlock. Then the ramp again (06:06–06:31):
+
+| Minute | Actions/s | API requests/s | API p95 (all routes) | 5xx | CPU: database / all |
+|---|---|---|---|---|---|
+| 7 | 32 | 49 | 0.05 s | 0 | 1.0 / 2.0 |
+| 13 | 62 | 94 | 0.12 s | 0 | 2.4 / 4.3 |
+| 19 | 91 | 135 | 0.21 s | 0 | 2.9 / 4.9 |
+| 23 | 96 | 137 | 0.23 s | 0 | 2.8 / 5.0 |
+
+**It didn't break:** 96 actions a second, nearly all 50 animals can make (2 a second each), at 137
+requests a second within the latency objective (p95 under 300 ms) and without a `5xx`, with three of
+the machine's eight cores to spare. Phase 18's k6 run, which only browsed the table, stayed within the
+objective up to about 77 requests a second on the reference machine and saturated at about 104.
+
+### 100 animals: the lab's database settings
+
+With 50 more animals of the same size (2,040,556 transactions, an 8.3 GB database; seeding 50
+more took 27 minutes, the first 50 took 7), a ramp to 200 actions a second (07:00–07:26) saturated
+from the start: 55 actions and 70 requests a second at p95 about 4 s, the pool empty 170 times a
+second, the database at 3.5 cores. The share of pages PostgreSQL found in its 128 MB of buffers fell
+from 88 % in the ramp before to 66 % (141,000 blocks a second read from the operating system's
+cache), and autovacuum worked through 300,000 dead rows of `transactions` during the run. The
+overview still takes 13–24 ms on the quiet lab. This measures the Compose lab's PostgreSQL defaults
+more than the app, as Phase 18's first run did: the homelab runs 1 GB of shared buffers since then. 43 label edits waited past the lock timeout, now on rows of `transactions` that a long
+commit was updating (commits into accounts of 20,000 rows: p95 25 s at the top), none on the account
+and no deadlock.
+
+### The duplicates window
+
+As the squirrel, whose overlapping statements left 26,403 duplicates, on the quiet lab
+(`tools/perf/duplicates.mjs`, Chromium at 1440×900): `GET /duplicates` p50 1.14 s, p95 1.27 s; the
+window's first render, from the click on "26,403 duplicates skipped" to the first group drawn,
+p50 3.16 s, p95 3.31 s, of which about 2 s is the browser drawing the first 60 groups. Under the
+ramp with the fix its p95 grew from 0.24 s to 2.4 s.
+
+### Errors
+
+Every failed action is understood: `401`s after `finuance-sim seed` replaced the tokens of animals
+the paused simulator had signed in (one each, then they sign in again); `409 account_busy` on label
+edits and an invitation (the lock above; after the fix, row waits behind long commits); the two
+deadlocks above. Found while seeding on CI's smaller runner: an upload or a commit now tries again
+while the account is busy (`TestWhileBusy`).
+
+### Proposed decisions
+
+For the maintainer, who decides at the gate:
+
+- **The overview: cache the month aggregates?** Not now. With the lock fixed the overview took 18 ms
+  at the soak's rate and stayed within the objective up to 137 requests a second; at rest it takes
+  13–70 ms for an animal of 20,000 transactions.
+- **The duplicates window:** 26,403 duplicates take 1.1–1.3 s to list and about 2 s to draw their
+  first 60 groups. Both halves need work: the list paged on the server, and a cheaper first render
+  (already planned for Phase 28).
+- **Commits into large accounts:** a statement into an account of 20,000 rows takes 4 s at the
+  median and up to 25 s under load, and an edit of a row the commit updates waits for it (past 5 s:
+  `409 account_busy`).
+- **A lab for heavier runs:** at 2 million transactions the Compose lab's PostgreSQL defaults are the
+  limit; a lab that should go further wants the homelab's database settings.

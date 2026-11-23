@@ -17,10 +17,28 @@ notes of their version.
   overlapping ones de-duplicate like real exports. The simulator refuses an instance whose
   `/meta` does not report `simulation: true`. Ceilings in the code: 50 personas, 3× intensity,
   30 actions a minute per persona, one assistant question at a time, back-off on `429` and on
-  `5xx`.
+  `5xx`. Each animal keeps below the instance's limits per user and paces its sign-ins under the
+  limit per address that all of them share.
+- **Load mode** (ADR 0044): the animals load a lab by one target for the whole lab, in actions a
+  second, on a ramp, for a duration after which the simulator returns to realistic mode by itself.
+  Its own ceilings in the code: 500 animals, 2 actions a second each, 1,000 a second in all, a day at
+  most. Presets ramp, soak and spike; "push through server errors" to find a breaking point.
+- **Randomness on the page:** a run seed (the same seed makes the same choices again), timing
+  jitter, bursts of quick actions, and the share of deliberate mistakes.
+- **History profiles** (ADR 0044): how much the animals' bank history holds (the day's spending up
+  to 20 times, the amounts' spread, shops per merchant, years back), kept in their accounts' names.
+  *Rebuild history* on the page, `finuance-sim seed` without it, and `finuance-sim users`, the
+  animals' credentials for k6.
+- **What the load costs:** the dashboard "Finuance · Lab resources" (CPU, memory and disk per
+  container, the database's work, the API's answers, the animals' actions over them; on the Compose
+  lab from Alloy's own cAdvisor and PostgreSQL exporter), and on the simulator's page a live strip
+  of the same figures and *Flow*, each action drawn along its request's path. The lab's
+  Settings → Developer links the console and the dashboards for the lab administrator `make sim-up`
+  makes.
 - **The simulator's tuning page and control API** (`api/sim.openapi.yaml`, port 8090, behind a
   control token):
-  - a card per animal, the feature areas and weights, schedule and limits, five presets;
+  - a card per animal (one per kind beyond twenty), the feature areas and weights, schedule and
+    limits, load mode, randomness, history, presets;
   - "act now", and a live feed whose request ids lead to the logs and from there to the trace.
 
   The simulator's own metrics (`finuance_sim_*`) and the dashboard "Finuance · Simulator".
@@ -36,12 +54,25 @@ notes of their version.
 
 - The image admission policy admits exact repositories per namespace: `finuance` runs only the
   api and web images, a lab's namespace also the mock, the simulator's namespace the simulator.
-- The load test's users are synthetic (`finuance seed-demo -users=N -synthetic`, on a lab), so
-  a load test stays out of the instance's service-level numbers; k6 2.4.0.
+- The load test signs in as the simulator's animals on a lab (`make loadtest-seed` gives them their
+  history and writes their credentials), so a load test stays out of the instance's service-level
+  numbers; `finuance seed-demo -users` seeds people for an instance that is not a lab. k6 2.4.0.
 - On Docker Compose, nginx looks the api's name up again while it runs, so a recreated api
   container is found without restarting the web container.
 - `tools/check-private.sh FILE…` reads relative paths from the caller's directory and fails on a
   file it can't read.
+
+### Fixed
+
+- A label edit (a category or a note) made while the same user's transactions were being
+  reclassified waited for the whole reclassification: past the 5 s lock timeout it answered
+  `409 account_busy`, and when the edit had already changed a row the job was about to change, the
+  two deadlocked (`500`). The reclassification now locks the user's accounts as every other writer
+  does (`FOR NO KEY UPDATE`, ADR 0013). Found by the simulator's load run.
+- The Compose observability profile: its Grafana and Alloy come back after a reboot, and a
+  restarted Alloy no longer reads every container's log again from the start (its read positions
+  were on a tmpfs). Loki doesn't shard streams, on Compose and in the cluster's chart, so the few
+  seconds a restarted Alloy sends again are dropped as duplicates.
 
 ## [0.5.1] - 2026-11-21
 

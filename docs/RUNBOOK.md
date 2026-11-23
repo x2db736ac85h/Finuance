@@ -427,7 +427,7 @@ day's numbers are recorded below.
 
 | Measured | Memory (max) | CPU (max) | Volume | Decision |
 |---|---|---|---|---|
-| (after the first day) | | | | |
+| 2026-11-23, over the day before | 317 MiB | 0.012 of a CPU | not read (it needs root on the node) | stay on: under a third of the memory and 6 % of the CPU the rule allows |
 
 **Test alert** (an e-mail now and a *resolved* one after about 5 minutes; Alertmanager's `alertmanager_notifications_total{integration="email"}` counts the sent ones, `…_failed_total` the failures by reason):
 
