@@ -488,3 +488,32 @@ func TestOrigin(t *testing.T) {
 		}
 	}
 }
+
+// TestBoardDropsNotesThatRunOut: a friend code left on the board is taken only while it is still
+// good for NoteMargin; one that ran out on the board is dropped, not handed to a persona whose
+// redemption the lab would refuse (422; found walking the gate of Phase 25).
+func TestBoardDropsNotesThatRunOut(t *testing.T) {
+	e, clock := newTestEngine(t, &fakeLab{simulation: true}, nil)
+	ctx := context.Background()
+	all := func(string) bool { return true }
+	start := clock.Now()
+	e.Post("friend-code/fox", "A", start.Add(10*time.Minute))
+	e.Post("friend-code/owl", "B", start.Add(70*time.Minute))
+	e.Post("note/forever", "C", time.Time{})
+
+	if k, v, ok := e.Take("friend-code/", all); !ok || k != "friend-code/fox" || v != "A" {
+		t.Fatalf("a good code: %q %q %v", k, v, ok)
+	}
+	e.Post("friend-code/fox", "A2", start.Add(10*time.Minute))
+	_ = clock.Sleep(ctx, 10*time.Minute-NoteMargin) // fox's code is no use any more, owl's is
+	if k, v, ok := e.Take("friend-code/", all); !ok || k != "friend-code/owl" || v != "B" {
+		t.Fatalf("after fox's code ran out: %q %q %v, want owl's", k, v, ok)
+	}
+	if k, _, ok := e.Take("friend-code/", all); ok {
+		t.Fatalf("fox's code that ran out was handed out: %q", k)
+	}
+	_ = clock.Sleep(ctx, 48*time.Hour)
+	if _, v, ok := e.Take("note/", all); !ok || v != "C" {
+		t.Fatalf("a note without an end: %q %v", v, ok)
+	}
+}
