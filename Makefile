@@ -52,7 +52,7 @@ help: ## List targets
 ##@ Quality
 
 .PHONY: check
-check: lint typecheck test gen-check fixtures-check check-private check-env-details check-sealed check-toolchain check-no-float check-compose-prod check-db-bootstrap check-port-forwards check-pins check-workflows ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, sealed-secret, toolchain, float, prod-Compose, k8s bootstrap, port-forward, pin and workflow checks
+check: lint typecheck test gen-check fixtures-check check-private check-env-details check-sealed check-toolchain check-no-float check-compose-prod check-db-bootstrap check-port-forwards check-pins check-workflows check-zap-hooks ## Lint, typecheck, unit tests, codegen drift, fixture drift, private-data, environment-details, sealed-secret, toolchain, float, prod-Compose, k8s bootstrap, port-forward, pin, workflow and ZAP hook checks
 	@echo "check: ok"
 
 .PHONY: check-compose-prod
@@ -67,6 +67,10 @@ check-db-bootstrap: ## The CloudNativePG bootstrap SQL (deploy/k8s/db) matches d
 check-pins: ## Every action by commit SHA and every image the repository doesn't build by digest
 	@tools/check-pins.sh
 	@tools/check-pins-test.sh
+
+.PHONY: check-zap-hooks
+check-zap-hooks: ## The ZAP baseline's hook drops the report-uri notice and keeps every other CSP finding
+	@out=$$(python3 -I -B .zap/baseline_hooks_test.py 2>&1) || { echo "$$out"; exit 1; }; echo "check-zap-hooks: ok"
 
 .PHONY: check-workflows
 check-workflows: ## actionlint and zizmor (offline) over the workflows, when tools/bin-tools.sh installed them; CI always runs them, actionlint with shellcheck (have shellcheck on PATH to match)
@@ -284,7 +288,7 @@ ANIMAL ?= fox
 	  echo "FINUANCE_LAB_ADMIN_PASSWORD=$$(openssl rand -hex 16)"; } > .env.lab
 	@echo "Created .env.lab (the simulator's seed and control token, the lab administrator's password)."
 
-# The lab's administrator (a person, not an animal): sees Settings → Developer, which links the
+# The lab's administrator (a person, not an animal): sees Administration → Developer, which links the
 # synthetic users console (ADR 0044). Its password is in .env.lab.
 LAB_ADMIN_EMAIL := admin@lab.invalid
 
@@ -296,7 +300,7 @@ sim-up: $(ENV_FILE) .env.lab web-dist ## The lab: a simulation instance, the moc
 	@set -a; . ./.env.lab; set +a; printf '%s\n' "$$FINUANCE_LAB_ADMIN_PASSWORD" | $(LAB_COMPOSE) exec -T api /finuance admin create-user \
 	  -admin -email=$(LAB_ADMIN_EMAIL) -display-name="Lab administrator" -password-stdin >/dev/null 2>&1 || true # there already
 	@set -a; . ./.env.lab; set +a; echo "Lab: http://localhost:8020 · simulator: http://localhost:8090/#token=$$FINUANCE_SIM_CONTROL_TOKEN · Grafana: http://localhost:3000"
-	@echo "Lab administrator (Settings → Developer links the console): $(LAB_ADMIN_EMAIL), make sim-password ANIMAL=admin"
+	@echo "Lab administrator (Administration → Developer links the console): $(LAB_ADMIN_EMAIL), make sim-password ANIMAL=admin"
 
 .PHONY: sim-down
 sim-down: ## Stop the lab and keep its database (SIM_RESET=1 drops the database volume as well)

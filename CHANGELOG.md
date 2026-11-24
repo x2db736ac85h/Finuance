@@ -33,7 +33,7 @@ notes of their version.
   container, the database's work, the API's answers, the animals' actions over them; on the Compose
   lab from Alloy's own cAdvisor and PostgreSQL exporter), and on the simulator's page a live strip
   of the same figures and *Flow*, each action drawn along its request's path. The lab's
-  Settings → Developer links the console and the dashboards for the lab administrator `make sim-up`
+  Administration → Developer links the console and the dashboards for the lab administrator `make sim-up`
   makes.
 - **The simulator's tuning page and control API** (`api/sim.openapi.yaml`, port 8090, behind a
   control token):

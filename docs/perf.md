@@ -709,18 +709,18 @@ edits and an invitation (the lock above; after the fix, row waits behind long co
 deadlocks above. Found while seeding on CI's smaller runner: an upload or a commit now tries again
 while the account is busy (`TestWhileBusy`).
 
-### Proposed decisions
+### Decisions
 
-For the maintainer, who decides at the gate:
+Proposed with these numbers and taken by the maintainer at the gate (2026-11-24):
 
-- **The overview: cache the month aggregates?** Not now. With the lock fixed the overview took 18 ms
+- **The overview: cache the month aggregates?** No. With the lock fixed the overview took 18 ms
   at the soak's rate and stayed within the objective up to 137 requests a second; at rest it takes
   13–70 ms for an animal of 20,000 transactions.
 - **The duplicates window:** 26,403 duplicates take 1.1–1.3 s to list and about 2 s to draw their
-  first 60 groups. Both halves need work: the list paged on the server, and a cheaper first render
-  (already planned for Phase 28).
+  first 60 groups. Both halves need work, in Phase 28: the list paged on the server, and a cheaper
+  first render.
 - **Commits into large accounts:** a statement into an account of 20,000 rows takes 4 s at the
   median and up to 25 s under load, and an edit of a row the commit updates waits for it (past 5 s:
-  `409 account_busy`).
+  `409 account_busy`). In the Backlog.
 - **A lab for heavier runs:** at 2 million transactions the Compose lab's PostgreSQL defaults are the
-  limit; a lab that should go further wants the homelab's database settings.
+  limit; a lab that should go further wants the homelab's database settings. In the Backlog.

@@ -43,6 +43,9 @@ jobs:
       - name: Private-data check
         run: tools/check-private.sh && tools/check-private-test.sh
 
+      - name: ZAP baseline hook
+        run: python3 -I -B .zap/baseline_hooks_test.py
+
       # The patterns of the private environment (tools/check-env-details.sh) can't be in this
       # repository, so they come from a repository secret (PLAN task 22.9). Pull requests from
       # forks get no secrets: the check says so and passes.

@@ -82,5 +82,5 @@ jq -cn '{email: "admin@lab.invalid", password: env.FINUANCE_LAB_ADMIN_PASSWORD}'
 curl -fsS -b "$jar" -H 'X-Finuance-Client: web' -H "Origin: $web" "$web/api/v1/admin/developer" |
   jq -e '.links | map(.name) | index("Synthetic users console") != null' >/dev/null ||
   fail "the Developer section has no link to the synthetic users console"
-echo "   Settings → Developer links the synthetic users console"
+echo "   Administration → Developer links the synthetic users console"
 echo "check-lab: ok"

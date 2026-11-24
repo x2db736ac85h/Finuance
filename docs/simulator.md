@@ -129,7 +129,7 @@ that profile. `make loadtest-seed` uses both on a lab, so k6 signs in as the ani
   its PostgreSQL exporter as the application role (`deploy/compose/observability/metrics.alloy`);
   on a cluster, the kubelet's cAdvisor and CloudNativePG's metrics, with the simulator chart's
   `simulator.prometheus` and an egress entry for Prometheus.
-- **From the lab itself:** Settings → Developer links the console and the two dashboards. `make
+- **From the lab itself:** Administration → Developer links the console and the two dashboards. `make
   sim-up` makes the lab's administrator (`admin@lab.invalid`, a person; `make sim-password
   ANIMAL=admin`), who sees that section.
 

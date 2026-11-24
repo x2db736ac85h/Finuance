@@ -85,7 +85,7 @@ type Engine struct {
 	model   chan struct{} // one assistant run at a time, across every persona
 	askDay  string        // the day AskedToday counts, in the instance's time zone
 	asked   int
-	board   map[string]string // what one persona leaves for another (a friend code)
+	board   map[string]note // what one persona leaves for another (a friend code), until it runs out
 	every   map[string]time.Time
 	logs    map[string]*personaLog
 	recent  []Event
@@ -119,20 +119,38 @@ func (e *Engine) Every(key string, d time.Duration) bool {
 	return true
 }
 
-// Post leaves a note for other personas under key (a friend code under "friend-code/<slug>").
-func (e *Engine) Post(key, value string) {
+// note is what Post leaves on the board: a value, and the moment it is no use any more (zero:
+// never).
+type note struct {
+	value string
+	until time.Time
+}
+
+// NoteMargin is how long before its end a note is dropped: the time between taking a friend code
+// and redeeming it, and any difference between the simulator's clock and the lab's.
+const NoteMargin = time.Minute
+
+// Post leaves a note for other personas under key (a friend code under "friend-code/<slug>") until
+// the moment it runs out (a code's expiry; zero: never). A note under the same key replaces it.
+func (e *Engine) Post(key, value string, until time.Time) {
 	e.mu.Lock()
-	e.board[key] = value
+	e.board[key] = note{value: value, until: until}
 	e.mu.Unlock()
 }
 
 // Take removes and returns the first note whose key starts with prefix and for which keep says
-// yes, in key order.
+// yes, in key order. Notes within NoteMargin of their end are dropped on the way: the lab refuses
+// an expired friend code (422), and that would be the simulator's mistake, not the lab's.
 func (e *Engine) Take(prefix string, keep func(key string) bool) (string, string, bool) {
+	now := e.o.Clock.Now()
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	keys := make([]string, 0, len(e.board))
-	for k := range e.board {
+	for k, n := range e.board {
+		if !n.until.IsZero() && !now.Add(NoteMargin).Before(n.until) {
+			delete(e.board, k)
+			continue
+		}
 		if strings.HasPrefix(k, prefix) && keep(k) {
 			keys = append(keys, k)
 		}
@@ -141,9 +159,9 @@ func (e *Engine) Take(prefix string, keep func(key string) bool) (string, string
 		return "", "", false
 	}
 	slices.Sort(keys)
-	v := e.board[keys[0]]
+	n := e.board[keys[0]]
 	delete(e.board, keys[0])
-	return keys[0], v, true
+	return keys[0], n.value, true
 }
 
 // New checks the options and makes an engine; Run starts it.
@@ -172,7 +190,7 @@ func New(o Options) (*Engine, error) {
 		origin = strings.TrimRight(o.Origin, "/")
 	}
 	e := &Engine{o: o, target: u, origin: origin, cfg: withRunSeed(o.Config.Clamp()), actors: map[string]*Actor{},
-		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]string{}, every: map[string]time.Time{},
+		running: map[string]bool{}, model: make(chan struct{}, 1), board: map[string]note{}, every: map[string]time.Time{},
 		logs: map[string]*personaLog{}, subs: map[chan Event]*pacer{}, rebuilds: make(chan struct{}, MaxRebuilds)}
 	for i := range o.Actions {
 		if o.Actions[i].Name == RebuildAction {

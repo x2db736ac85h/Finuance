@@ -3,7 +3,8 @@
 #   1. the baseline scan of the web app (passive: headers, cookies, CSP, information leaks);
 #   2. the API scan from api/openapi.yaml (active attacks on every operation), signed in as a
 #      fresh user through .zap/hooks.py.
-# Rules and the reason for each ignored one are in .zap/rules.tsv. Fails when either scan reports
+# Rules and the reason for each ignored one are in .zap/rules.tsv; .zap/baseline_hooks.py drops the
+# one CSP notice the rules can't single out (report-uri, kept on purpose). Fails when either scan reports
 # a WARN or FAIL that the rules don't ignore. Reports: $ZAP_OUT/baseline.{json,html}, $ZAP_OUT/api.json
 # (ZAP's HTML report of the much larger API scan sometimes fails to render).
 # Needs Docker and a stack with sign-ups at $BASE_URL (make up, or compose.ci.yaml in CI).
@@ -46,7 +47,8 @@ yaml.safe_dump(spec, open("/zap/wrk/openapi-scan.yaml", "w"))
 '
 status=0
 echo "== baseline scan of $BASE_URL"
-zap zap-baseline.py -t "$BASE_URL" -c /zap/config/rules.tsv -J baseline.json -r baseline.html || status=$?
+zap zap-baseline.py -t "$BASE_URL" -c /zap/config/rules.tsv --hook /zap/config/baseline_hooks.py \
+  -J baseline.json -r baseline.html || status=$?
 echo "== API scan from api/openapi.yaml"
 zap zap-api-scan.py -t /zap/wrk/openapi-scan.yaml -f openapi -O "$BASE_URL" -c /zap/config/rules.tsv \
   --hook /zap/config/hooks.py -J api.json || status=$((status | $?))

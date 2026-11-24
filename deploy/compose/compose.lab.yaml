@@ -17,7 +17,7 @@ services:
       FINUANCE_ALLOW_SIGNUP: "false"
       FINUANCE_AI_BASE_URL: http://ai-mock:11434/v1
       FINUANCE_AI_DEFAULT_MODEL: mock-tools
-      # Settings → Developer links the synthetic users console and the lab's dashboards (ADR 0044),
+      # Administration → Developer links the synthetic users console and the lab's dashboards (ADR 0044),
       # for the lab administrator make sim-up creates
       FINUANCE_DEVELOPER_MODE: "true"
       FINUANCE_DEVELOPER_LINKS_FILE: /etc/finuance/developer/links.lab.json

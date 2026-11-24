@@ -37,7 +37,8 @@ const maxSharedGroups = 4
 
 const codePrefix = "friend-code/"
 
-// sharingCode makes a friend code and leaves it for another persona, every half hour at most.
+// sharingCode makes a friend code and leaves it for another persona until it expires (the end of
+// its clock hour and a grace), every half hour at most.
 func sharingCode(ctx context.Context, a *sim.Actor) error {
 	if !a.Every("sharing.code", 30*time.Minute) {
 		return sim.ErrNothingToDo
@@ -49,7 +50,7 @@ func sharingCode(ctx context.Context, a *sim.Actor) error {
 	if err := sim.Expect("make a friend code", r.HTTPResponse, http.StatusCreated); err != nil {
 		return err
 	}
-	a.Engine().Post(codePrefix+a.Persona.Slug, r.JSON201.Code)
+	a.Engine().Post(codePrefix+a.Persona.Slug, r.JSON201.Code, r.JSON201.ExpiresAt)
 	return nil
 }
 
