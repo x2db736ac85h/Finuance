@@ -4,7 +4,7 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
-## [0.6.0] - unreleased
+## [0.6.0] - 2026-11-24
 
 ### Added
 
