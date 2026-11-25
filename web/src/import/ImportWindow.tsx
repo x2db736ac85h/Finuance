@@ -35,6 +35,7 @@ import { PreviewTable } from './PreviewTable';
 import { committedMessage, settle, stepOf, useImportQueue, waitForCommit } from './queue';
 import { RawLines } from './RawLines';
 import { requiredChecks } from './roles';
+import { txPath } from '../lib/paths';
 
 /** /imports/:importId: the window over the transactions view. */
 export function ImportRoute() {
@@ -66,7 +67,7 @@ export function ImportWindow({ id }: { id: string }) {
   const failed = status === 'failed' || failure !== null;
 
   const leave = (accountId?: string) => {
-    void navigate(`/t/${accountId ?? 'all'}`);
+    void navigate(txPath(accountId ?? 'all'));
   };
 
   const finish = (imp: ImportDetail | null, verb: 'Imported' | 'Reprocessed') => {

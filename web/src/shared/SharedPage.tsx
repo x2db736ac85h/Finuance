@@ -17,6 +17,7 @@ import { Select } from '../ui/inputs';
 import { ShareDialog } from './dialogs';
 import { GroupPage } from './GroupPage';
 import { hintText, TIMELINE_KIND_LABEL } from './text';
+import { sharedPath } from '../lib/paths';
 
 export function SharedPage() {
   const { groupId } = useParams();
@@ -44,7 +45,7 @@ function Timeline() {
   const kinds = [...new Set((data?.groups ?? []).map((g) => g.kind))];
   const byId = new Map((data?.groups ?? []).map((g) => [g.id, g]));
   const open = (g: TimelineGroup) => {
-    if (g.source === 'shared') void navigate(`/s/${g.id}`);
+    if (g.source === 'shared') void navigate(sharedPath(g.id));
   };
   return (
     <div className="sh-page">
@@ -76,7 +77,7 @@ function Timeline() {
                 <Button
                   size="sm"
                   onClick={() => {
-                    void navigate(`/s/${g.id}`);
+                    void navigate(sharedPath(g.id));
                   }}
                 >
                   Open

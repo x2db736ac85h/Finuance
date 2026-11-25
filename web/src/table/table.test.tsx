@@ -44,7 +44,7 @@ describe('table', () => {
   it('marks the rows the assistant changed and can show only those (ADR 0030)', async () => {
     db.transactions = [txRow(1, { payee: 'KINO POD GWIAZDAMI', ai: true }), txRow(2), txRow(3)];
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const marks = await screen.findAllByTitle(/Changed by the assistant/);
     expect(marks).toHaveLength(1);
     expect(marks[0]?.closest('tr')?.textContent).toContain('KINO POD GWIAZDAMI');
@@ -62,7 +62,7 @@ describe('table', () => {
   });
 
   it('renders the rows with formatted cells and the toolbar meta', async () => {
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     expect(await screen.findByText('KINO POD GWIAZDAMI')).toBeTruthy();
     const row = screen.getByText('Sklep Żabka').closest('tr');
     expect(row?.querySelector('td.number')?.textContent).toBe(fmtMoney({ amountMinor: 250000, currency: 'PLN' }));
@@ -76,7 +76,7 @@ describe('table', () => {
 
   it('Clear all also empties the search box', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     const search = screen.getByRole<HTMLInputElement>('textbox', { name: 'Search all columns' });
     await user.type(search, 'kino');
@@ -98,7 +98,7 @@ describe('table', () => {
 
   it('cycles the sort on header clicks: ascending, descending, off', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     const th = screen.getByRole('columnheader', { name: /Payee/ });
     await user.click(th);
@@ -129,7 +129,7 @@ describe('table', () => {
       }),
     );
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     await user.click(screen.getByRole('button', { name: 'Filter and sort Payee' }));
     const menu = await screen.findByRole('dialog', { name: 'Payee column' });
@@ -155,7 +155,7 @@ describe('table', () => {
 
   it('applies the condition on Enter and closes the menu; the chip removes it', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     await user.click(screen.getByRole('button', { name: 'Filter and sort Amount' }));
     const menu = await screen.findByRole('dialog', { name: 'Amount column' });
@@ -172,7 +172,7 @@ describe('table', () => {
 
   it('shows the empty result with Clear all', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     db.transactions = [];
     await user.click(screen.getByRole('button', { name: 'Filter and sort Payee' }));
@@ -187,7 +187,7 @@ describe('table', () => {
 
   it('selects a row on click and moves the selection with the arrow keys', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await user.click(await screen.findByText('KINO POD GWIAZDAMI'));
     const rows = () =>
       within(grid())
@@ -212,7 +212,7 @@ describe('table', () => {
 
   it('hides a column from the column menu and restores it from the hidden chip', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     await user.click(screen.getByRole('button', { name: 'Filter and sort Description' }));
     const menu = await screen.findByRole('dialog', { name: 'Description column' });

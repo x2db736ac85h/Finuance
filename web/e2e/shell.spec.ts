@@ -8,7 +8,7 @@ test('sign up, load demo data, see the demo account in the sidebar', async ({ pa
   await signUp(page);
   await page.getByRole('button', { name: 'Load demo data' }).click();
   await expect(page.getByRole('status')).toContainText(/Loaded demo data: [\d\s,.  ]+ transactions/);
-  await expect(page).toHaveURL(/\/t\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}$/);
 
   // The sidebar is hidden by default (v7); the toggle shows it.
   await page.getByRole('button', { name: 'Toggle sidebar' }).click();
@@ -21,9 +21,14 @@ test('sign up, load demo data, see the demo account in the sidebar', async ({ pa
 });
 
 test('theme, size and sidebar persist across a reload', async ({ page }) => {
+  // the computer is in dark mode: the switch shows that, and turning it off chooses light for good
+  await page.emulateMedia({ colorScheme: 'dark' });
   await signUp(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: 'Light' }).click();
+  const dark = page.getByRole('switch', { name: 'Dark mode' });
+  await expect(dark).toHaveAttribute('aria-checked', 'true');
+  await dark.click();
+  await expect(dark).toHaveAttribute('aria-checked', 'false');
   // the size slider one step right of Auto: 10 % above the auto size (1.12 at a pixel ratio of 1)
   await page.getByRole('slider', { name: 'Interface size' }).focus();
   await page.keyboard.press('ArrowRight');
@@ -46,8 +51,8 @@ test('sign out and sign back in', async ({ page }) => {
   await page.getByRole('button', { name: 'Account menu' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await page.goto('/settings/sessions');
-  await expect(page).toHaveURL(/\/login\?next=%2Fsettings%2Fsessions$/);
+  await page.goto('/settings/security');
+  await expect(page).toHaveURL(/\/login\?next=%2Fsettings%2Fsecurity$/);
   await page.getByRole('textbox', { name: 'Email' }).fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
@@ -72,7 +77,8 @@ test('no CSP violations on the main screens', async ({ page }) => {
   await signUp(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.keyboard.press('Escape');
-  await page.goto('/settings/appearance');
-  await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+  await page.goto('/settings/general');
+  await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Colour theme' })).toBeVisible();
   expect(violations).toEqual([]);
 });

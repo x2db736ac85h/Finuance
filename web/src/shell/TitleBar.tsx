@@ -26,18 +26,19 @@ type Props = {
   viewId: string;
   hasData: boolean;
   searchRef: RefObject<HTMLInputElement | null>;
+  /** Table or overview, from the address. */
+  mode: 'table' | 'ov';
   onToggleMode: (mode: 'table' | 'ov') => void;
-  /** On the Shared tab (/s…). */
+  /** On the Shared page (/shared…). */
   inShared: boolean;
   onToggleShared: () => void;
 };
 
-export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inShared, onToggleShared }: Props) {
-  const mode = useUi((s) => s.mode);
+export function TitleBar({ user, viewId, hasData, searchRef, mode, onToggleMode, inShared, onToggleShared }: Props) {
   const vizOpen = useUi((s) => s.vizOpen);
   const sbShown = useUi(sidebarShown);
   const aiOpen = useUi((s) => s.ai.open);
-  const { toggleSidebar, toggleViz, setAiOpen } = useUi.getState();
+  const { toggleSidebar, toggleViz, showViz, setAiOpen } = useUi.getState();
   const settings = usePopover();
   const account = usePopover();
   const signOut = useSignOut();
@@ -62,8 +63,11 @@ export function TitleBar({ user, viewId, hasData, searchRef, onToggleMode, inSha
         on={mode !== 'ov' && vizOpen && !inShared}
         aria-pressed={mode !== 'ov' && vizOpen && !inShared}
         onClick={() => {
-          if (mode === 'ov' || inShared) onToggleMode('table');
-          toggleViz();
+          // from the overview or the Shared page: back to the table with the pane shown
+          if (mode === 'ov' || inShared) {
+            onToggleMode('table');
+            showViz();
+          } else toggleViz();
         }}
       />
       {features?.overview !== false && (

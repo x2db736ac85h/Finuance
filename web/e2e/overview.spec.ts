@@ -32,7 +32,7 @@ const TITLES: Record<string, string> = {
 async function setup(page: Page): Promise<string> {
   await signUp(page);
   const { accountId } = await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
-  await page.goto(`/o/${accountId}`);
+  await page.goto(`/overview/${accountId}`);
   await expect(page.getByRole('img', { name: 'Account balance over time' })).toBeVisible();
   return accountId;
 }
@@ -122,7 +122,7 @@ test('a Sankey category lands in the filtered table', async ({ page }) => {
     })
   ).json()) as Schemas['TransactionPage'];
   await card(page, 'Money flow').locator('rect[data-cat="Transport"]').click();
-  await expect(page).toHaveURL(new RegExp(`/t/${accountId}$`));
+  await expect(page).toHaveURL(new RegExp(`/transactions/${accountId}$`));
   await expect(page.getByRole('button', { name: /^Remove Category/ })).toBeVisible();
   await expect(page.locator('footer.statusbar .st').first()).toHaveText(`${String(expected.total ?? 0)} of 917 rows`);
 });

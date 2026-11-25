@@ -234,7 +234,6 @@ function env(over: Partial<ChartEnv> = {}): ChartEnv {
 
 beforeEach(() => {
   resetDb();
-  useUi.setState({ mode: 'ov' });
   useUi.getState().setCfg({ ovMonths: 12 });
   useViews.getState().reset();
   db.accounts = [account({ txCount: 3, firstOn: '2024-12-01', lastOn: '2025-03-17' })];
@@ -246,7 +245,7 @@ const card = (title: string) => screen.getByRole('region', { name: title });
 
 describe('overview page', () => {
   it('asks for the view without its period and shows the KPIs and the thirteen cards', async () => {
-    renderApp('/o/all');
+    renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     expect(db.overviewRequests.at(-1)).toEqual({ context: { includeTransfers: false }, months: 12 });
     act(() => {
@@ -297,7 +296,7 @@ describe('overview page', () => {
       currency: 'PLN',
       data: overviewData({ month: '2025-02', prevMonth: '2025-01', partial: false, elapsedDays: 28, daysInMonth: 28 }),
     };
-    renderApp('/o/all');
+    renderApp('/overview/all');
     expect((await screen.findByRole('group', { name: 'Avg / day · PLN' })).textContent).toContain('over 28 days');
     const sel = screen.getByRole('combobox', { name: 'Month' });
     expect([...sel.querySelectorAll('option')].map((o) => o.value)).toEqual([
@@ -315,7 +314,7 @@ describe('overview page', () => {
   });
 
   it('a cash-flow or savings bar selects its month', async () => {
-    renderApp('/o/all');
+    renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     fireEvent.click(card('Cash flow').querySelector('rect[data-month="2025-01"]') as Element);
     expect(viewOf(useViews.getState().views, 'all').ovMonth).toBe('2025-01');
@@ -324,7 +323,7 @@ describe('overview page', () => {
   });
 
   it('a Sankey category filters the list and opens the table; Saved does nothing', async () => {
-    const { router } = renderApp('/o/all');
+    const { router } = renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     const sankey = card('Money flow');
     expect(sankey.querySelector('[data-cat="Saved"]')).toBeNull();
@@ -333,19 +332,19 @@ describe('overview page', () => {
       category: { cond: '=Transport', excluded: [] },
     });
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/t/all');
+      expect(router.state.location.pathname).toBe('/transactions/all');
     });
   });
 
   it('uncategorised spending filters with "="', async () => {
-    renderApp('/o/all');
+    renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     fireEvent.click(card('Money flow').querySelector('rect[data-cat="(uncategorized)"]') as Element);
     expect(viewOf(useViews.getState().views, 'all').filters).toEqual({ category: { cond: '=', excluded: [] } });
   });
 
   it('a largest expense opens the table at its row, leaving a period that hides it', async () => {
-    const { router } = renderApp('/o/all');
+    const { router } = renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     act(() => {
       useViews.getState().patch('all', { period: 'm:2024-01' });
@@ -368,11 +367,11 @@ describe('overview page', () => {
     });
     expect(n).toBeGreaterThanOrEqual(2);
     expect(viewOf(useViews.getState().views, 'all').period).toBe('all');
-    expect(router.state.location.pathname).toBe('/t/all');
+    expect(router.state.location.pathname).toBe('/transactions/all');
   });
 
   it('a budget is changed in place; emptying it goes back to the default; uncategorised is read-only', async () => {
-    renderApp('/o/all');
+    renderApp('/overview/all');
     const input = await screen.findByRole('textbox', { name: 'Budget for Transport' });
     expect((input as HTMLInputElement).value).toBe('500');
     await userEvent.clear(input);
@@ -398,7 +397,7 @@ describe('overview page', () => {
   });
 
   it('the opening balance is an input in an account view and the read-only sum in all accounts', async () => {
-    renderApp('/o/all');
+    renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     expect(within(card('Account balance')).queryByRole('textbox')).toBeNull();
     expect(within(card('Account balance')).getByText('Opening 1,250')).toBeTruthy();
@@ -406,7 +405,7 @@ describe('overview page', () => {
 
   it('saves a new opening balance with the account’s other fields', async () => {
     db.accounts = [account({ txCount: 3, numberHint: '1234' })];
-    renderApp(`/o/${ACC}`);
+    renderApp(`/overview/${ACC}`);
     const input = await screen.findByRole('textbox', { name: 'Opening balance' });
     expect((input as HTMLInputElement).value).toBe('1250');
     await userEvent.clear(input);
@@ -423,7 +422,7 @@ describe('overview page', () => {
   });
 
   it('edits investments in the larger view and saves them after a pause', async () => {
-    renderApp('/o/all');
+    renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     await userEvent.click(within(card('Investment')).getByTitle(/Open larger/));
     const dialog = await screen.findByRole('dialog');
@@ -457,7 +456,7 @@ describe('overview page', () => {
 
   it('a stale save shows the stored document', async () => {
     db.investments = { ...db.investments, version: 3, swrBp: 350 };
-    renderApp('/o/all');
+    renderApp('/overview/all');
     await screen.findByText('Projected spend · PLN');
     await userEvent.click(within(card('FI/RE number')).getByTitle(/Open larger/));
     const dialog = await screen.findByRole('dialog');
@@ -479,7 +478,7 @@ describe('overview page', () => {
 
   it('without dated rows: the filters message with Clear', async () => {
     db.overview = { currency: 'PLN' };
-    renderApp('/o/all');
+    renderApp('/overview/all');
     await screen.findByText(/needs transactions with a date/);
     act(() => {
       useViews.getState().patch('all', { filters: { payee: { cond: 'nothing', excluded: [] } } });

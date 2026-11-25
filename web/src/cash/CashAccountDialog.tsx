@@ -11,6 +11,7 @@ import { Select, TextInput } from '../ui/inputs';
 import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
 import { useCashDialogs } from './store';
+import { txPath } from '../lib/paths';
 
 const CURRENCIES = ['PLN', 'EUR', 'USD', 'GBP', 'CHF', 'CZK', 'SEK', 'NOK', 'DKK', 'HUF'] as const;
 
@@ -35,7 +36,7 @@ function Form({ onClose }: { onClose: () => void }) {
         onSuccess: (a) => {
           toast(`Created the cash account ${a.name}`);
           onClose();
-          void navigate(`/t/${a.id}`);
+          void navigate(txPath(a.id));
         },
         onError: (e) => {
           setError(errorMessage(e));

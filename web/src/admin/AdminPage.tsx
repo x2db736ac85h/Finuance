@@ -53,10 +53,6 @@ export function AdminPage() {
           <Icon name="cog" />
           Settings
         </NavLink>
-        <NavLink to="/" className="mi">
-          <Icon name="left" />
-          Back to transactions
-        </NavLink>
       </nav>
       <div className="set-body">
         <h1>{current.label}</h1>

@@ -1,13 +1,13 @@
 // /settings/:section (PLAN §7.3, task 8.9): a section list on the left, the section on the right.
 
-import { Navigate, NavLink, useOutletContext, useParams } from 'react-router';
+import { useEffect } from 'react';
+import { Navigate, NavLink, useLocation, useOutletContext, useParams } from 'react-router';
 
 import { useMeta } from '../api/hooks/me';
 import type { ShellContext } from '../shell/AppShell';
 import { Icon } from '../ui/Icon';
 import { RulesSettings } from '../rules/RulesSettings';
 import { ActivitySettings } from './Activity';
-import { AppearanceControls } from './Appearance';
 import { CategoriesSettings } from './Categories';
 import { DataSettings } from './Data';
 import { FriendsSettings } from './Friends';
@@ -20,21 +20,33 @@ import { TokensSettings } from './Tokens';
 
 const BODY: Record<SectionId, () => React.JSX.Element> = {
   general: GeneralSettings,
-  appearance: () => (
-    <div className="set-card">
-      <div className="lbl">Appearance</div>
-      <AppearanceControls />
-    </div>
-  ),
   profile: ProfileSettings,
-  security: SecuritySettings,
-  sessions: SessionsSettings,
-  tokens: TokensSettings,
+  // everything about who can get into the account, on one page (Phase 26, U3)
+  security: () => (
+    <>
+      <SecuritySettings />
+      <section id="sessions" className="set-part" aria-label="Sessions">
+        <h2>Sessions</h2>
+        <SessionsSettings />
+      </section>
+      <section id="tokens" className="set-part" aria-label="Access tokens">
+        <h2>Access tokens</h2>
+        <TokensSettings />
+      </section>
+    </>
+  ),
   activity: ActivitySettings,
   friends: FriendsSettings,
   categories: CategoriesSettings,
   rules: RulesSettings,
   data: DataSettings,
+};
+
+/** Sections that became part of another page in Phase 26; their old addresses still lead there. */
+const MOVED: Record<string, { section: SectionId; hash: string }> = {
+  appearance: { section: 'general', hash: '#appearance' },
+  sessions: { section: 'security', hash: '#sessions' },
+  tokens: { section: 'security', hash: '#tokens' },
 };
 
 export function SettingsPage() {
@@ -44,6 +56,15 @@ export function SettingsPage() {
   // Friends only where the instance has them: switched on, and not a demo (ADR 0027)
   const sections = SECTIONS.filter((s) => s.id !== 'friends' || (meta?.features.friends !== false && !meta?.demoMode));
   const current = sections.find((s) => s.id === section);
+  // a link to a part of a page (#sessions) brings that part into view once it is drawn
+  const { hash } = useLocation();
+  useEffect(() => {
+    const part = hash.length > 1 ? document.getElementById(hash.slice(1)) : null;
+    // (the test environment's elements can't scroll)
+    if (part && typeof part.scrollIntoView === 'function') part.scrollIntoView({ block: 'start' });
+  }, [hash, section]);
+  const moved = section ? MOVED[section] : undefined;
+  if (moved) return <Navigate to={{ pathname: `/settings/${moved.section}`, hash: moved.hash }} replace />;
   if (!current) return <Navigate to="/settings/general" replace />;
   const Body = BODY[current.id];
   return (
@@ -63,10 +84,6 @@ export function SettingsPage() {
             Administration
           </NavLink>
         )}
-        <NavLink to="/" className="mi">
-          <Icon name="left" />
-          Back to transactions
-        </NavLink>
       </nav>
       <div className="set-body">
         <h1>{current.label}</h1>

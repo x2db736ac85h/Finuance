@@ -79,7 +79,7 @@ afterEach(() => {
 });
 
 async function openMenu(user: ReturnType<typeof userEvent.setup>) {
-  renderApp('/t/all');
+  renderApp('/transactions/all');
   await screen.findByText('Apteka');
   await user.click(screen.getByRole('button', { name: /Groups/ }));
   return screen.findByRole('dialog', { name: 'Groups' });

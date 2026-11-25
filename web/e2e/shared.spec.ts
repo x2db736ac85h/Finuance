@@ -49,7 +49,7 @@ test('two friends share a trip, add expenses and settle up', async ({ browser })
   expect(tx.status()).toBe(201);
 
   // Share… from the group menu, inviting Bo
-  await alex.goto('/t/all');
+  await alex.goto('/transactions/all');
   // "Groups", then "Groups 1" once the count has loaded; a regex, because "Shared with friends"
   // must not match either
   await alex.getByRole('button', { name: /^Groups(?: \d+)?$/ }).click();
@@ -59,11 +59,11 @@ test('two friends share a trip, add expenses and settle up', async ({ browser })
   await share.getByRole('button', { name: 'Share' }).click();
   await expect(alex.getByRole('heading', { name: /Kraków/ })).toBeVisible();
   const url = alex.url();
-  expect(url).toMatch(/\/s\/[0-9a-f-]{36}$/);
+  expect(url).toMatch(/\/shared\/[0-9a-f-]{36}$/);
   await expect(alex.getByRole('region', { name: 'Expenses', exact: true })).toContainText('Obwarzanki');
 
   // Bo: the bell, then the invitation in the Shared tab
-  await bo.goto('/t/all');
+  await bo.goto('/transactions/all');
   await bo.getByRole('button', { name: /^Notifications, 1 unread/ }).click();
   await bo
     .getByRole('dialog', { name: 'Notifications' })
@@ -99,7 +99,7 @@ test('two friends share a trip, add expenses and settle up', async ({ browser })
   await expect(alex.getByRole('region', { name: 'Expenses', exact: true })).toContainText('Muzeum');
 
   // neither sees the other's accounts: Bo's sidebar and API show only Bo's own
-  await bo.goto('/t/all');
+  await bo.goto('/transactions/all');
   await expect(bo.getByText('Portfel Alexa')).toHaveCount(0);
   const boAccounts = (await (await bo.request.get('/api/v1/accounts')).json()) as { name: string }[];
   expect(boAccounts.map((a) => a.name)).not.toContain('Portfel Alexa');
@@ -108,7 +108,7 @@ test('two friends share a trip, add expenses and settle up', async ({ browser })
   expect(detail).not.toContain('@');
 
   // the timeline lists the trip once, as the shared group
-  await alex.goto('/s');
+  await alex.goto('/shared');
   const timeline = alex.getByRole('region', { name: 'Timeline' });
   await expect(timeline.getByRole('button', { name: 'Kraków' })).toBeVisible();
   await expect(timeline.locator('tbody tr')).toHaveCount(1);

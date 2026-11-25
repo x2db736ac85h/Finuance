@@ -37,7 +37,7 @@ test('a rule saved from the table filters categorises the table and the overview
   const cat = await page.request.post('/api/v1/categories', { headers: API_HEADERS, data: { name: 'Internet' } });
   expect(cat.status()).toBe(201);
 
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   await page.getByRole('textbox', { name: 'Search all columns' }).fill('operator internetu');
   await expect(shown(page)).toHaveText('14 of 917 rows');
@@ -59,7 +59,7 @@ test('a rule saved from the table filters categorises the table and the overview
   );
 
   // the overview's categories follow
-  await page.goto('/o/all');
+  await page.goto('/overview/all');
   await expect(page.getByText('Recurring payments').first()).toBeVisible();
   await expect(page.getByText('Internet').first()).toBeVisible();
 
@@ -92,7 +92,7 @@ test('a transfer between two accounts is badged, hidden on request, left out of 
   await uploadCsv(page, idb, 'oszczednosci.csv', `${head}03.01.2025;PRZELEW WLASNY;Z konta;500,00\n`);
   await expect.poll(() => total(page, {}), { timeout: 20_000 }).toBe(1); // the pair is left out by default
 
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(shown(page)).toHaveText('3 of 3 rows');
   await expect(page.locator('tr[data-i] .tag.xfer')).toHaveCount(2);
   // the summary card counts only the purchase
@@ -133,7 +133,7 @@ test('three manual categorisations suggest a rule; creating it categorises the w
   });
   expect(b.status()).toBe(200);
 
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   const card = page.getByRole('region', { name: 'Rule suggestion' });
   await expect(card).toContainText('You put 3 transactions of OPERATOR INTERNETU in Internet by hand.');
   await card.getByRole('button', { name: 'Create rule…' }).click();

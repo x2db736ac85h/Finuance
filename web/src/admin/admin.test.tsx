@@ -797,7 +797,7 @@ describe('one-time passwords and switched-off features', () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     expect(await screen.findByRole('heading', { name: 'Choose a new password' })).toBeTruthy();
     await userEvent.type(screen.getByLabelText('One-time password'), 'abcd-efgh-jkmn-pqrs');
     await userEvent.type(screen.getByLabelText('New password'), 'my own password now');
@@ -812,9 +812,9 @@ describe('one-time passwords and switched-off features', () => {
   it('hides the overview and the assistant when they are off', async () => {
     db.user.isAdmin = false;
     db.features = { overview: false, assistant: false, assistantDigests: false, friends: true, sharedGroups: true };
-    const { router } = renderApp('/o/all');
+    const { router } = renderApp('/overview/all');
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/t/all');
+      expect(router.state.location.pathname).toBe('/transactions/all');
     });
     expect(screen.queryByRole('button', { name: 'Personal finance overview' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Assistant/ })).toBeNull();
@@ -823,7 +823,7 @@ describe('one-time passwords and switched-off features', () => {
   it('starts a new user from the instance defaults', async () => {
     db.user.isAdmin = false;
     db.defaults = { themeId: 'grove', noViz: true };
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await waitFor(() => {
       expect(document.documentElement.dataset['themeId']).toBe('grove');
     });

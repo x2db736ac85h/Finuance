@@ -6,7 +6,7 @@
 export type ClientEventKind = 'error' | 'unhandled_rejection' | 'render';
 
 /** The first path segments the app defines; anything else in a URL is somebody's typing. */
-const SCREENS = new Set(['login', 'signup', 't', 'o', 'imports', 's', 'settings', 'admin']);
+const SCREENS = new Set(['login', 'signup', 'transactions', 'overview', 'imports', 'shared', 'settings', 'admin']);
 
 /**
  * The screen's route pattern for a path: the app's own first segment, every later segment as

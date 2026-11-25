@@ -63,7 +63,7 @@ const lastQuery = () => db.queries.at(-1);
 
 describe('multi-selection and the quick bar', () => {
   it('⌘/Ctrl-click toggles rows; the bar shows the count and Σ; Esc clears', async () => {
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Pizzeria');
     fireEvent.mouseDown(row('Pizzeria'), { ctrlKey: true });
     fireEvent.mouseDown(row('Prom'), { metaKey: true });
@@ -88,7 +88,7 @@ describe('multi-selection and the quick bar', () => {
   it('Shift-click selects a range from the anchor; ranges past the loaded rows come from the server', async () => {
     db.transactions = [...db.transactions, ...Array.from({ length: 500 }, (_, i) => txRow(10 + i))];
     db.accounts = [account({ txCount: 504 })];
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Pizzeria');
     fireEvent.mouseDown(row('Hotel')); // a plain press sets the anchor
     fireEvent.mouseUp(window);
@@ -119,7 +119,7 @@ describe('multi-selection and the quick bar', () => {
 
   it('a plain click ends the multi-selection and opens the row', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Pizzeria');
     fireEvent.mouseDown(row('Pizzeria'), { ctrlKey: true });
     await screen.findByRole('toolbar', { name: 'Selected transactions' });
@@ -132,7 +132,7 @@ describe('multi-selection and the quick bar', () => {
 
   it('creates a group from the bar and adds the selection; Ungroup removes it', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Pizzeria');
     fireEvent.mouseDown(row('Pizzeria'), { ctrlKey: true });
     fireEvent.mouseDown(row('Hotel'), { ctrlKey: true });
@@ -172,7 +172,7 @@ describe('multi-selection and the quick bar', () => {
   it('adds the selection to an existing group with its dot', async () => {
     db.groups = [{ id: '00000000-0000-4000-8000-0000000000e1', name: 'Wesele', color: 4 }];
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Pizzeria');
     fireEvent.mouseDown(row('Prom'), { ctrlKey: true });
     const bar = await screen.findByRole('toolbar', { name: 'Selected transactions' });
@@ -198,7 +198,7 @@ describe('groups menu', () => {
 
   it('lists groups with stats and toggles the group filter', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Pizzeria');
     const btn = screen.getByRole('button', { name: /Groups/ });
     expect(within(btn).getByText('2')).toBeTruthy();
@@ -223,7 +223,7 @@ describe('groups menu', () => {
 
   it('renames a group and the active filter follows; delete asks first and clears it', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Pizzeria');
     await user.click(screen.getByRole('button', { name: /Groups/ }));
     await user.click(
@@ -265,7 +265,7 @@ describe('groups menu', () => {
 
   it('the inspector pills set and remove the group of one transaction', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await user.click(await screen.findByText('Apteka'));
     const ins = within(await screen.findByRole('complementary', { name: 'Transaction details' }));
     const pills = within(await ins.findByRole('group', { name: 'Group' }));

@@ -15,7 +15,7 @@ const ONCE = [
 ];
 
 test('each security header is sent once, on pages and on API responses', async ({ request }) => {
-  for (const path of ['/t/all', '/api/v1/meta', '/api/v1/nowhere']) {
+  for (const path of ['/transactions/all', '/api/v1/meta', '/api/v1/nowhere']) {
     const res = await request.get(path);
     const names = res.headersArray().map((h) => h.name.toLowerCase());
     for (const h of ONCE) {
@@ -53,7 +53,7 @@ test("the request id is the web server's own", async ({ request }) => {
 // The policy names what the app needs and closes the rest (register WEB-3): no plugins, no
 // frames, workers from here only, and Trusted Types for anything that turns text into script.
 test('the content security policy closes plugins, frames and DOM script sinks', async ({ request }) => {
-  const csp = (await request.get('/t/all')).headers()['content-security-policy'] ?? '';
+  const csp = (await request.get('/transactions/all')).headers()['content-security-policy'] ?? '';
   const directives = csp.split(';').map((d) => d.trim());
   for (const d of [
     "default-src 'self'",
@@ -67,14 +67,14 @@ test('the content security policy closes plugins, frames and DOM script sinks', 
   ]) {
     expect(directives, d).toContain(d);
   }
-  expect((await request.get('/t/all')).headers()['permissions-policy']).not.toContain('interest-cohort');
+  expect((await request.get('/transactions/all')).headers()['permissions-policy']).not.toContain('interest-cohort');
 });
 
 // The browser's errors reach the server (PLAN 24.8): the policy names where violations are reported,
 // that route takes a browser's report (no client header, the browser's own content type) through
 // the web server, and the web app's own reports are accepted without a session.
 test('policy violations and the app’s errors have somewhere to go', async ({ request }) => {
-  const page = await request.get('/t/all');
+  const page = await request.get('/transactions/all');
   const csp = page.headers()['content-security-policy'] ?? '';
   expect(csp).toContain('report-uri /api/v1/csp-reports');
   expect(csp).toContain('report-to csp');
@@ -88,12 +88,12 @@ test('policy violations and the app’s errors have somewhere to go', async ({ r
 
   const event = await request.post('/api/v1/client-events', {
     headers: { 'X-Finuance-Client': 'web' },
-    data: { kind: 'error', name: 'TypeError', route: '/t/:id' },
+    data: { kind: 'error', name: 'TypeError', route: '/transactions/:id' },
   });
   expect(event.status()).toBe(204);
   const withText = await request.post('/api/v1/client-events', {
     headers: { 'X-Finuance-Client': 'web' },
-    data: { kind: 'error', name: 'what the person typed', route: '/t/all?q=private' },
+    data: { kind: 'error', name: 'what the person typed', route: '/transactions/all?q=private' },
   });
   expect(withText.status(), 'free text is refused').toBeGreaterThanOrEqual(400);
 });

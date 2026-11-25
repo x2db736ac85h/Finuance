@@ -40,6 +40,7 @@ import { CategoriesCard, DailyCard, LargestCard, PaidShareCard, PayeesCard, Summ
 import { GroupSettingsDialog, SettleDialog } from './dialogs';
 import { ExpenseDialog } from './ExpenseDialog';
 import { KIND_LABEL } from './text';
+import { sharedPath } from '../lib/paths';
 
 const fail = (e: unknown) => {
   toast(errorMessage(e), { kind: 'error' });
@@ -129,7 +130,7 @@ function Header({ d }: { d: SharedGroupDetail }) {
           variant="ghost"
           icon="left"
           onClick={() => {
-            void navigate('/s');
+            void navigate(sharedPath());
           }}
         >
           Shared
@@ -325,7 +326,7 @@ function Header({ d }: { d: SharedGroupDetail }) {
                   onSuccess: () => {
                     toast(confirm === 'leave' ? `You left ${g.name}` : `${g.name} deleted`);
                     setConfirm(null);
-                    void navigate('/s');
+                    void navigate(sharedPath());
                   },
                   onError: (e: unknown) => {
                     setConfirm(null);
@@ -362,7 +363,7 @@ function Invitation({ d }: { d: SharedGroupDetail }) {
             decline.mutate(d.group.id, {
               onSuccess: () => {
                 toast('Invitation declined');
-                void navigate('/s');
+                void navigate(sharedPath());
               },
               onError: fail,
             });

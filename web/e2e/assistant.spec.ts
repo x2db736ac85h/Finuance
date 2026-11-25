@@ -27,7 +27,7 @@ function watch(page: Page, base: string): { foreign: string[]; errors: string[] 
 async function setup(page: Page) {
   await signUp(page);
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   await page.keyboard.press('ControlOrMeta+j');
   const panel = page.getByRole('complementary', { name: 'Assistant' });

@@ -71,7 +71,7 @@ describe('activity', () => {
     expect(db.aiChanges[0]?.revertedAt).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Show what the assistant changed' }));
-    expect(router.state.location.pathname).toBe('/t/all');
+    expect(router.state.location.pathname).toBe('/transactions/all');
     expect(viewOf(useViews.getState().views, 'all').aiOnly).toBe(true);
     expect(await screen.findByRole('button', { name: 'Remove ✦ AI assisted' })).toBeTruthy();
     expect(db.queries.at(-1)?.context.aiAssisted).toBe(true);

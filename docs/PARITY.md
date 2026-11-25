@@ -148,7 +148,8 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Sidebar (Explorer) hidden by default (`sbOpen`), auto-collapse < 900 px and restore | §11, §31.4 | 8 | ported (8.6; e2e `quality.spec.ts` 720 px) |
 | Sidebar file list with counts, remove ×, mini drop zone | §11 | 8, 9 | ported (accounts with counts + import history with Delete, mini drop zone; 9.5) |
 | Sidebar parsing options (encoding, delimiter, strip `'`) | §11 | 9 | retired: options are per import, in the import window (9.3) |
-| Settings → Appearance: theme System/Dark/Light, interface size incl. Auto | §32.2 | 8 | ported (Settings → Appearance, 8.9; e2e `quality.spec.ts`) |
+| Settings → Appearance: theme System/Dark/Light, interface size incl. Auto | §32.2 | 8, 26 | ported (8.9; e2e `quality.spec.ts`); **deliberately different** since Phase 26 (U3, U4, the maintainer): the controls are a card on Settings → General, and the quick settings have a dark-mode switch (two states; "System" is chosen on Settings → General) and a plain slider |
+| The mode opened last (table or overview, `S.mode`) is where the app opens | §11 | 26 | **retired** (U1, U2, the maintainer, 2026-11-25): the app always opens the transactions; table or overview is read from the address (`/transactions/:view`, `/overview/:view`), not from the preferences |
 | Dark/light design tokens, chart palette, status tokens | §19 | 8 | ported (`styles/tokens.css`; contrast raised to WCAG AA in Phase 14, `docs/a11y.md`) |
 | Interface scaling: rem-based, `S.ui`, Auto zoom compensation | §20 | 8 | ported (`styles/scale.ts`; e2e UI scale at 2× and 2.5×) |
 | Responsiveness: inspector overlay < 1100 px, labels hidden ≤ 860 px | §21 | 8, 10 | ported |

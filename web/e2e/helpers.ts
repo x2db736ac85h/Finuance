@@ -65,7 +65,7 @@ export async function sharedGroupViaApi(page: Page): Promise<string> {
     });
     expect(r.status()).toBe(201);
   }
-  return `/s/${id}`;
+  return `/shared/${id}`;
 }
 
 /** Imports fixture files into an existing account and waits until they are committed. */
@@ -130,4 +130,25 @@ export async function letPeoplePickModels(
   baseURL: string,
 ): Promise<void> {
   await setModelChoice(playwright, baseURL, (a) => ({ ...a, modelChoice: 'people' }));
+}
+
+/**
+ * The open dialog's controls keep a distance from its edge (Phase 26, U5): the smallest gap between
+ * any field, label, button or paragraph of the dialog's body and the card's left, right and bottom
+ * edge, in px. A form put into a dialog without the dialog's inset measures 0.
+ */
+export async function dialogInset(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const card = document.querySelector('.modal-card');
+    if (!card) return -1;
+    const c = card.getBoundingClientRect();
+    let min = Number.POSITIVE_INFINITY;
+    for (const e of card.querySelectorAll('input, select, textarea, label, .btn, p, fieldset, .seg')) {
+      if (e.closest('.modal-h')) continue;
+      const b = e.getBoundingClientRect();
+      if (b.width === 0) continue;
+      min = Math.min(min, b.left - c.left, c.right - b.right, c.bottom - b.bottom);
+    }
+    return Math.round(min);
+  });
 }

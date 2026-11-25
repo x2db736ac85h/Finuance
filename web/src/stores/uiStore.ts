@@ -14,7 +14,6 @@ import {
   type AiPrefs,
   type CatMode,
   type ChartCfg,
-  type Mode,
   type ParsedPrefs,
   type PrefsDoc,
 } from './prefs';
@@ -29,7 +28,6 @@ export type UiState = {
   uiScalePref: UiScalePref;
   /** The size slider's step around the auto size (used while uiScalePref is auto). */
   uiStep: SizeStep;
-  mode: Mode;
   /** The user's choice (persisted as sbOpen). Hidden by default (v7). */
   sidebarOpen: boolean;
   /** Hidden because the window is narrow; restored when it widens again. Not persisted. */
@@ -55,8 +53,8 @@ export type UiState = {
   toggleSidebar: () => void;
   /** Called when the window crosses NARROW_PX (legacy resize handler). */
   setNarrow: (narrow: boolean) => void;
-  setMode: (m: Mode) => void;
   toggleViz: () => void;
+  showViz: () => void;
   setAiOpen: (open: boolean) => void;
   /** Merges assistant settings (panel width, connection, model, mode, thinking, …). */
   setAi: (change: Partial<AiPrefs>) => void;
@@ -78,7 +76,6 @@ export const uiDefaults = {
   themeId: '',
   uiScalePref: 'auto',
   uiStep: 0,
-  mode: 'table',
   sidebarOpen: false,
   sidebarAutoCollapsed: false,
   vizOpen: true,
@@ -120,12 +117,12 @@ export const useUi = create<UiState>()((set) => ({
       return {};
     });
   },
-  setMode: (mode) => {
-    set({ mode });
-  },
-  // Legacy toggleViz: from the overview it returns to the table with the pane shown.
   toggleViz: () => {
-    set((s) => (s.mode === 'ov' ? { mode: 'table', vizOpen: true } : { vizOpen: !s.vizOpen }));
+    set((s) => ({ vizOpen: !s.vizOpen }));
+  },
+  // Legacy toggleViz from the overview: back at the table the pane is shown.
+  showViz: () => {
+    set({ vizOpen: true });
   },
   setAiOpen: (open) => {
     set((s) => ({ ai: { ...s.ai, open } }));
@@ -163,7 +160,6 @@ export const useUi = create<UiState>()((set) => ({
       themeId: p.themeId ?? s.themeId,
       uiScalePref: p.ui ?? s.uiScalePref,
       uiStep: p.uiStep ?? s.uiStep,
-      mode: p.mode ?? s.mode,
       sidebarOpen: p.sbOpen ?? s.sidebarOpen,
       // legacy applyPrefs: a saved open sidebar on a narrow window starts auto-collapsed
       sidebarAutoCollapsed: (p.sbOpen ?? s.sidebarOpen) && narrow,
@@ -189,7 +185,6 @@ export function collectUi(s: UiState): Omit<PrefsDoc, 'v' | 'views'> {
     uiStep: s.uiStep,
     vizH: s.paneHeight,
     noViz: !s.vizOpen,
-    mode: s.mode,
     cards: s.cards,
     cardOrder: s.cardOrder,
     catMode: s.catMode,

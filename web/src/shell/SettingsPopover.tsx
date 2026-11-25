@@ -1,11 +1,11 @@
-// Quick settings, the title bar's ⚙ (the legacy `#setBtn` popover, slimmed down in Phase 20, 20.15):
-// the colour theme (the current one, unfolding the others), System/Dark/Light, the interface size,
-// then Keyboard shortcuts and All settings. Everything else lives on the settings pages; the account
-// menu has Profile and Sign out.
+// Quick settings, the title bar's ⚙ (the legacy `#setBtn` popover; slimmed down in Phase 20, laid out
+// again in Phase 26, U4): "All settings" in the header, the colour theme with the dark-mode switch
+// on one line, the interface size as a plain slider, then Keyboard shortcuts. Everything else lives
+// on the settings pages; the account menu has Profile and Sign out.
 
 import { useNavigate } from 'react-router';
 
-import { AppearanceControls } from '../settings/Appearance';
+import { QuickAppearance } from '../settings/Appearance';
 import { useUi } from '../stores/uiStore';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
@@ -20,30 +20,33 @@ export function SettingsPopover({ open, anchor, onClose }: Props) {
       <div className="pop-h">
         <Icon name="cog" />
         <b>Quick settings</b>
-      </div>
-      <div className="pop-scroll">
-        <div className="pop-s">
-          <AppearanceControls compact />
-        </div>
-      </div>
-      <div className="pop-f">
         <Button
-          icon="type"
-          onClick={() => {
-            onClose();
-            useUi.getState().setKeysOpen(true);
-          }}
-        >
-          Keyboard shortcuts<kbd>?</kbd>
-        </Button>
-        <Button
-          variant="primary"
+          size="sm"
+          variant="outline"
           onClick={() => {
             onClose();
             void navigate('/settings/general');
           }}
         >
           All settings
+        </Button>
+      </div>
+      <div className="pop-scroll">
+        <div className="pop-s qs">
+          <QuickAppearance />
+        </div>
+      </div>
+      <div className="pop-f">
+        <Button
+          variant="ghost"
+          icon="cmd"
+          className="qs-keys"
+          onClick={() => {
+            onClose();
+            useUi.getState().setKeysOpen(true);
+          }}
+        >
+          Keyboard shortcuts<kbd>?</kbd>
         </Button>
       </div>
     </Popover>

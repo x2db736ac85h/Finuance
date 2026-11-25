@@ -12,6 +12,7 @@ import { modKey } from '../ui/Kbd';
 import { toast } from '../ui/toastStore';
 import { useCashDialogs } from '../cash/store';
 import { openFilePicker } from './files';
+import { txPath } from '../lib/paths';
 
 export function EmptyState() {
   const demo = useLoadDemo();
@@ -20,7 +21,7 @@ export function EmptyState() {
     demo.mutate(undefined, {
       onSuccess: (d) => {
         toast(`Loaded demo data: ${plural(d.transactions, 'transaction')}`);
-        void navigate(`/t/${d.accountId}`);
+        void navigate(txPath(d.accountId));
       },
       onError: (e) => {
         toast(errorMessage(e), { kind: 'error' });

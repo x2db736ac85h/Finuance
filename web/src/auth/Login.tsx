@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { TextInput } from '../ui/inputs';
 import { AuthCard } from './AuthCard';
 import { safeNext } from './next';
+import { txPath } from '../lib/paths';
 
 export function Login() {
   const [params] = useSearchParams();
@@ -68,7 +69,7 @@ export function Login() {
   const tryDemo = () => {
     setError('');
     demo.mutate(undefined, {
-      onSuccess: () => void navigate('/t/all', { replace: true }),
+      onSuccess: () => void navigate(txPath(), { replace: true }),
       onError: (e) => {
         setError(errorMessage(e));
       },

@@ -73,7 +73,7 @@ test('set up two-step sign-in, sign in with a code and with a recovery code, swi
   await password(page, email);
   await expect(page.getByRole('heading', { name: 'Enter your code' })).toBeVisible();
   await check(page, 'two-step: the code at sign-in');
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page).toHaveURL(/\/login/); // still signed out
   await password(page, email);
   // a wrong code, then the app's (one step ahead: the code that confirmed the setup is spent)

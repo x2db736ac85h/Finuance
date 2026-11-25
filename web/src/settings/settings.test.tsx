@@ -54,8 +54,9 @@ describe('settings', () => {
       }),
     );
     const user = userEvent.setup();
-    renderApp('/settings/sessions');
-    const list = await screen.findByRole('list');
+    renderApp('/settings/security');
+    // Sessions is a part of Security since Phase 26 (U3)
+    const list = await within(await screen.findByRole('region', { name: 'Sessions' })).findByRole('list');
     await within(list).findByText('Chrome on Linux');
     expect(within(list).getByText('this browser')).toBeTruthy();
     expect(within(list).getAllByRole('button', { name: 'Sign out' })).toHaveLength(1);
@@ -148,7 +149,7 @@ describe('colour themes', () => {
       light: { bg: '#ffffff' },
     };
     db.themes = [{ id: 'sea', name: 'Sea', tokens }];
-    renderApp('/settings/appearance');
+    renderApp('/settings/general');
     const group = await screen.findByRole('radiogroup', { name: 'Colour theme' });
     await waitFor(() => {
       const names = within(group)
@@ -172,7 +173,7 @@ describe('colour themes', () => {
 
   it('starts from the instance default theme', async () => {
     db.defaults = { themeId: 'ember' };
-    renderApp('/settings/appearance');
+    renderApp('/settings/general');
     const group = await screen.findByRole('radiogroup', { name: 'Colour theme' });
     await waitFor(() => {
       expect(within(group).getByRole('radio', { name: /Ember/ }).getAttribute('aria-checked')).toBe('true');
@@ -187,5 +188,27 @@ describe('browserName', () => {
     expect(browserName(CHROME)).toBe('Chrome on Linux');
     expect(browserName('')).toBe('Unknown browser');
     expect(browserName('curl/8.0')).toBe('curl/8.0');
+  });
+
+  it('the sections that moved in Phase 26 still open from their old addresses, without a way "back"', async () => {
+    for (const [old, now, hash] of [
+      ['/settings/appearance', '/settings/general', '#appearance'],
+      ['/settings/sessions', '/settings/security', '#sessions'],
+      ['/settings/tokens', '/settings/security', '#tokens'],
+    ] as const) {
+      const { router, unmount } = renderApp(old);
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe(now);
+      });
+      expect(router.state.location.hash).toBe(hash);
+      const nav = await screen.findByRole('navigation', { name: 'Settings' });
+      expect(within(nav).queryByRole('link', { name: 'Back to transactions' })).toBeNull();
+      for (const gone of ['Appearance', 'Sessions', 'Access tokens'])
+        expect(within(nav).queryByRole('link', { name: gone })).toBeNull();
+      unmount();
+    }
+    renderApp('/settings/general');
+    expect(await screen.findByText('Appearance')).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Import known layouts without review' })).toBeTruthy();
   });
 });

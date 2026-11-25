@@ -62,14 +62,14 @@ made or received (Finuance doesn't move money); the other side is notified.
 
 ## The Shared tab
 
-`/s` is a timeline of your personal groups and the shared groups you are in, newest first: dates,
+`/shared` is a timeline of your personal groups and the shared groups you are in, newest first: dates,
 days, total, per day and the largest category. Below it are sums per year, and **next time** hints
 that compare a group with your other groups of the same kind (insights/trips.go): spending per day
 at least 1.5× the median of the others, a category at least 1.5× its usual per day (when it is at
 least 10 % of the group and at least two other groups have it), or a group over its budget. A
 shared group's totals are everyone's expenses in it.
 
-`/s/:groupId` is one group: members, dates and budget; balances with *Settle up*; cards (summary,
+`/shared/:groupId` is one group: members, dates and budget; balances with *Settle up*; cards (summary,
 paid vs share, spending per day, categories, top payees, largest expenses), each with a table twin;
 the expenses with search, *Add expense* and the split editor; CSV export (one column per member
 with their share).

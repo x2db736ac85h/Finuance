@@ -168,7 +168,7 @@ describe('import window', () => {
     await user.click(importBtn);
     expect(await screen.findByText('Imported 2 transactions · 1 duplicate skipped')).toBeTruthy();
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/t/00000000-0000-4000-8000-0000000000a9');
+      expect(router.state.location.pathname).toBe('/transactions/00000000-0000-4000-8000-0000000000a9');
     });
     expect(commits).toBe(1);
   });
@@ -259,7 +259,7 @@ describe('import window', () => {
     const { user, dlg, router } = await openUpload();
     await user.click(within(dlg).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/t/all');
+      expect(router.state.location.pathname).toBe('/transactions/all');
     });
     expect(deleted).toEqual([IMPORT_ID]);
   });
@@ -274,7 +274,7 @@ describe('import window', () => {
     await user.click(within(err).getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('Imported 2 transactions · 1 duplicate skipped')).toBeTruthy();
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe(`/t/${db.accounts[0]?.id ?? ''}`);
+      expect(router.state.location.pathname).toBe(`/transactions/${db.accounts[0]?.id ?? ''}`);
     });
     expect(commits).toBe(2);
   });
@@ -353,7 +353,7 @@ describe('upload target', () => {
         return HttpResponse.json(cur, { status: 201 });
       }),
     );
-    renderApp(`/t/${db.accounts[0]?.id ?? ''}`);
+    renderApp(`/transactions/${db.accounts[0]?.id ?? ''}`);
     await waitFor(() => {
       expect(document.querySelector('.toolbar')).not.toBeNull();
     });

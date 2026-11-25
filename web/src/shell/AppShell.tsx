@@ -4,7 +4,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { lazy, Suspense, useEffect, useRef } from 'react';
-import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { invalidateData, useAccounts } from '../api/hooks/accounts';
 import { DuplicatesDialog } from '../duplicates/DuplicatesDialog';
@@ -29,6 +29,7 @@ import { loadOverview } from '../overview/Overview';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
+import { inSharedPath, isViewPath, modeOf, sharedPath, txPath, viewIdOf, viewPath } from '../lib/paths';
 
 export type ShellContext = { hasData: boolean; user: User };
 
@@ -40,10 +41,10 @@ export function AppShell({ user }: { user: User }) {
   useSidebarAutoCollapse();
   const navigate = useNavigate();
   const location = useLocation();
-  const view = useMatch('/:mode/:viewId');
-  const viewId = view && (view.params.mode === 't' || view.params.mode === 'o') ? (view.params.viewId ?? 'all') : 'all';
+  const viewId = viewIdOf(location.pathname);
   const sbShown = useUi(sidebarShown);
-  const mode = useUi((s) => s.mode);
+  // table or overview comes from the address alone, so the shell and the page change together (U2)
+  const mode = modeOf(location.pathname);
   const vizOpen = useUi((s) => s.vizOpen);
   // an assistant an administrator switched off (Phase 19) never opens
   const assistantOn = useMeta().data?.features.assistant !== false;
@@ -87,14 +88,14 @@ export function AppShell({ user }: { user: User }) {
   // settings and the admin panel share the settings layout
   const inSettings = location.pathname.startsWith('/settings') || location.pathname.startsWith('/admin');
   // the Shared tab (Phase 19): a page of its own, like the overview, without the table's parts
-  const inShared = location.pathname === '/s' || location.pathname.startsWith('/s/');
+  const inShared = inSharedPath(location.pathname);
   const sharedOn = useMeta().data?.features.sharedGroups !== false && !user.isDemo;
-  const lastView = useRef('/t/all');
+  const lastView = useRef(txPath());
   useEffect(() => {
-    if (!inShared && !inSettings && /^\/[to]\//.test(location.pathname)) lastView.current = location.pathname;
+    if (!inShared && !inSettings && isViewPath(location.pathname)) lastView.current = location.pathname;
   }, [inShared, inSettings, location.pathname]);
   const toggleShared = () => {
-    void navigate(inShared ? lastView.current : '/s');
+    void navigate(inShared ? lastView.current : sharedPath());
   };
   // The table's inspector and status bar, for a view that exists (Views redirects the others).
   const tableShown =
@@ -102,8 +103,7 @@ export function AppShell({ user }: { user: User }) {
   const selected = useViews((s) => viewOf(s.views, viewId).selectedId);
 
   const setMode = (m: 'table' | 'ov') => {
-    useUi.getState().setMode(m);
-    void navigate(`/${m === 'ov' ? 'o' : 't'}/${viewId}`);
+    void navigate(viewPath(m, viewId));
   };
 
   useGlobalKeys({
@@ -165,6 +165,7 @@ export function AppShell({ user }: { user: User }) {
         viewId={viewId}
         hasData={hasData}
         searchRef={searchRef}
+        mode={mode}
         onToggleMode={setMode}
         inShared={inShared}
         onToggleShared={toggleShared}

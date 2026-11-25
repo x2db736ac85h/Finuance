@@ -52,7 +52,7 @@ export function setup() {
 export default function (data) {
   const params = { headers: { ...JSON_HEADERS, Cookie: data.cookie } };
   const [page, me, query] = http.batch([
-    ['GET', `${BASE}/t/all`, null, {}],
+    ['GET', `${BASE}/transactions/all`, null, {}],
     ['GET', `${BASE}/api/v1/me`, null, params],
     ['POST', `${BASE}/api/v1/transactions/query`, JSON.stringify({ context: {}, limit: 50 }), params],
   ]);

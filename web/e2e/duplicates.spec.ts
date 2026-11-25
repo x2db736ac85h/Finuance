@@ -12,7 +12,7 @@ test('status-bar link, Use this version, Keep both / Merge again, filter', async
     'synthetic/dup-versions/v1_jan-feb.csv',
     'synthetic/dup-versions/v2_jan-mar.csv',
   );
-  await page.goto(`/t/${accountId}`);
+  await page.goto(`/transactions/${accountId}`);
   const status = page.locator('footer.statusbar');
   await expect(status).toContainText('7 of 7 rows');
   const alfa = page.locator('tr[data-i]', { hasText: 'Zakupy luty' });

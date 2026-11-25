@@ -58,7 +58,7 @@ const open = [];
 let groups = 0;
 let skipped = '';
 for (let i = 0; i < 6; i++) {
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await page.waitForSelector('tr[data-i]');
   const link = page.locator('footer.statusbar').getByRole('button', { name: /duplicates? skipped/ });
   await link.waitFor({ timeout: 30_000 });

@@ -45,6 +45,27 @@ describe('shell', () => {
     expect(chip.title).toMatch(/synthetic users/);
   });
 
+  it('opens the transactions first, and the addresses used before Phase 26 lead to the new ones', async () => {
+    db.accounts = [account({ txCount: 3 })];
+    const first = renderApp('/');
+    await waitFor(() => {
+      expect(first.router.state.location.pathname).toBe('/transactions/all');
+    });
+    first.unmount();
+    for (const [old, now] of [
+      ['/t/all?x=1', '/transactions/all?x=1'],
+      ['/o/all', '/overview/all'],
+      ['/s', '/shared'],
+      ['/s/00000000-0000-4000-8000-0000000000aa', '/shared/00000000-0000-4000-8000-0000000000aa'],
+    ] as const) {
+      const { router, unmount } = renderApp(old);
+      await waitFor(() => {
+        expect(router.state.location.pathname + router.state.location.search).toBe(now);
+      });
+      unmount();
+    }
+  });
+
   it('loads demo data: toast, demo account in the sidebar, navigation to it', async () => {
     const demo = account({
       id: '00000000-0000-4000-8000-0000000000d1',
@@ -63,7 +84,7 @@ describe('shell', () => {
     await user.click(await screen.findByRole('button', { name: 'Load demo data' }));
     expect(await screen.findByText('Loaded demo data: 412 transactions')).toBeTruthy();
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe(`/t/${demo.id}`);
+      expect(router.state.location.pathname).toBe(`/transactions/${demo.id}`);
     });
     await user.click(screen.getByRole('button', { name: 'Toggle sidebar' }));
     const nav = screen.getByRole('navigation', { name: 'Explorer' });
@@ -98,7 +119,8 @@ describe('shell', () => {
     const user = userEvent.setup();
     renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Light' }));
+    // the switch shows dark (the test browser's system mode) and turns it off
+    await user.click(screen.getByRole('switch', { name: 'Dark mode' }));
     expect(document.documentElement.dataset['theme']).toBe('light');
     await waitFor(
       () => {
@@ -114,7 +136,7 @@ describe('shell', () => {
     const { router } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Settings' }));
     const pop = screen.getByRole('dialog', { name: 'Quick settings' });
-    // the theme as one button, Mode and the size slider; no import option, account pages or sign-out
+    // the theme as one button, the dark-mode switch and the size slider; no import option, account pages or sign-out
     expect(
       within(pop)
         .getByRole('button', { name: /Indigo/ })
@@ -122,6 +144,22 @@ describe('shell', () => {
     ).toBe('false');
     expect(within(pop).queryByRole('radiogroup')).toBeNull();
     expect(within(pop).getByRole('slider', { name: 'Interface size' })).toBeTruthy();
+    // dark or light is one switch here (Phase 26, U4); System, Dark and Light are on Settings → General
+    expect(within(pop).queryByRole('button', { name: 'System' })).toBeNull();
+    const dark = within(pop).getByRole('switch', { name: 'Dark mode' });
+    const was = dark.getAttribute('aria-checked');
+    await user.click(dark);
+    expect(dark.getAttribute('aria-checked')).toBe(was === 'true' ? 'false' : 'true');
+    expect(document.documentElement.dataset['theme']).toBe(was === 'true' ? 'light' : 'dark');
+    await user.click(dark);
+    expect(document.documentElement.dataset['theme']).toBe(was === 'true' ? 'dark' : 'light');
+    // "All settings" sits in the header, outlined; the shortcuts keep their key
+    expect(within(pop).getByRole('button', { name: 'All settings' }).className).toContain('outline');
+    expect(
+      within(pop)
+        .getByRole('button', { name: /Keyboard shortcuts/ })
+        .querySelector('kbd')?.textContent,
+    ).toBe('?');
     expect(within(pop).queryByRole('checkbox')).toBeNull();
     expect(within(pop).queryByRole('menuitem')).toBeNull();
     expect(within(pop).queryByRole('button', { name: 'Sign out' })).toBeNull();

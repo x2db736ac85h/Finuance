@@ -106,7 +106,7 @@ const lastQuery = () => db.queries.at(-1);
 describe('insights pane', () => {
   it('shows the cards in their saved order and asks each endpoint with the view context', async () => {
     db.prefs = { version: 1, prefs: { cardOrder: ['heat', 'sum'] } };
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Spent · PLN');
     const titles = [...document.querySelectorAll('.card-h > span:first-child')].map((s) => s.textContent);
     expect(titles).toEqual([
@@ -129,7 +129,7 @@ describe('insights pane', () => {
   });
 
   it('filters the list from a category and clears it on a second click', async () => {
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const legend = await within(await findCard('Spending by category')).findByText('Mieszkanie');
     fireEvent.click(legend);
     await waitFor(() => {
@@ -147,7 +147,7 @@ describe('insights pane', () => {
   });
 
   it('focuses a month from the cash flow and a day from the calendar', async () => {
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Spent · PLN');
     const month = await waitFor(() => {
       const r = card('Cash flow by month').querySelector('rect[data-month="2025-01"]');
@@ -191,7 +191,7 @@ describe('insights pane', () => {
         });
       }),
     );
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const big = await within(await findCard('Summary')).findByRole('button', { name: /500/ });
     fireEvent.click(big);
     await waitFor(() => {
@@ -205,7 +205,7 @@ describe('insights pane', () => {
 describe('period picker', () => {
   it('lists months and years of the data and steps through them', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const sel = await screen.findByRole<HTMLSelectElement>('combobox', { name: 'Period' });
     const months = [...sel.querySelectorAll('optgroup[label="Month"] option')].map((o) => o.textContent);
     expect(months).toEqual(['2025-02', '2025-01', '2024-12', '2024-11'].map(fmtMonthLong));
@@ -233,7 +233,7 @@ describe('period picker', () => {
 
   it('starts a custom range from the data and keeps it inclusive', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const sel = await screen.findByRole<HTMLSelectElement>('combobox', { name: 'Period' });
     await user.selectOptions(sel, 'custom');
     const from = screen.getByLabelText<HTMLInputElement>('From');
@@ -263,7 +263,7 @@ describe('period picker', () => {
 describe('charts menu, collapse and resize', () => {
   it('hides and reorders cards, saved in the preferences', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Spent · PLN');
     await user.click(screen.getByRole('button', { name: 'Charts' }));
     const menu = await screen.findByRole('dialog', { name: 'Charts' });
@@ -279,7 +279,7 @@ describe('charts menu, collapse and resize', () => {
 
   it('collapses the pane and resizes it within limits', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Spent · PLN');
     const edge = screen.getByRole('separator', { name: 'Resize insights' });
     fireEvent.pointerDown(edge, { button: 0, clientY: 300 });
@@ -301,7 +301,7 @@ describe('charts menu, collapse and resize', () => {
 describe('chart window', () => {
   it('opens a card larger, switches to the table, steps with the arrows and saves range settings', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Spent · PLN');
     await user.click(within(card('Top payees')).getByRole('button', { name: /Open larger/ }));
     let dlg = await screen.findByRole('dialog', { name: 'Top payees' });

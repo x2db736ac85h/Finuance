@@ -44,7 +44,7 @@ export async function warmUpApp(): Promise<void> {
   db.transactions = [txRow(1, { payee: 'Warm-up row' })];
   // the shared handlers leave the category list to the files that use it
   server.use(http.get(`${API}/categories`, () => HttpResponse.json([])));
-  renderApp('/t/all');
+  renderApp('/transactions/all');
   // the toolbar's "rows × columns" comes from the list request, whatever the file's layout stubs
   await screen.findByText(/^1 × \d+$/, undefined, { timeout: 10_000 });
   cleanup();
