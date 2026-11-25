@@ -125,7 +125,8 @@ the same in every theme.
 - **Connections**: the model servers people pick from (ADR 0035). The configuration file's are
   listed read only; *Add a connection* stores another one. It starts with the **provider**:
   Anthropic or OpenAI (their own address, so only a label and an API key are asked for), Google
-  (Vertex AI, with the cloud AI part of 0.7), a local server (Ollama, LM Studio: its address on
+  (Vertex AI: a project, a location you choose and the model ids to offer; no key, see
+  `docs/assistant.md` "Using a cloud model"), a local server (Ollama, LM Studio: its address on
   your network), or *Other* for any OpenAI- or Anthropic-compatible address (name, label, API,
   address, cloud or not, default model, the models offered, a context size, an API key). After a
   save the new connection's **Models** open. One thing is open at a time: a connection's models
@@ -137,6 +138,8 @@ the same in every theme.
   every question and digest runs on the **default connection** (the first one that is on, unless
   you choose one) and its default model; people see which one in the assistant's settings but
   can't change it, and their own earlier choices come back if you let them pick again.
+- **What a cloud provider keeps**: one paragraph of yours, shown where a person agrees to a cloud
+  connection (retention, logging, what you switched off). Finuance can't know it; you can.
 - **Models** (a button on each connection, the configuration file's included): **On** (a
   connection switched off disappears for people within a minute, its chats and digests use the
   default connection, and its loaded models are unloaded); the **default model** (over the
@@ -146,6 +149,9 @@ the same in every theme.
   **Test** checks the server (its kind, the models, the time it took); for Ollama the models it has
   loaded are listed with their memory and unload time, with **Load** and **Unload**. Saving,
   switching and loading are in your Activity (ADR 0035 addendum).
+  A **daily token budget** per connection counts every user's tokens together, from what the
+  server reports; once used up, questions on that connection are refused until the next UTC day
+  (ADR 0045). Loading and unloading don't apply to a provider's endpoint.
 - **Tuning per model**: for one model, the temperature, thinking level and tool set used when a
   question doesn't set them, the context size, and a short note for that model.
 - **Instructions for the assistant**: up to 2,000 characters added to the instructions of every

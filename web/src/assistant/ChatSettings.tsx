@@ -25,6 +25,7 @@ import { Icon } from '../ui/Icon';
 import { Select, type Option } from '../ui/inputs';
 import { fixFor } from './errors';
 import { AUTO_APPLY_MAX_ROWS } from './Proposal';
+import { cloudWhere } from './cloud';
 
 /**
  * The connection and model the panel uses: the saved choice when offered, else the defaults. When
@@ -442,7 +443,8 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
           <Icon name="lock" />
           {consented ? (
             <>
-              You agreed to send your questions and the transactions the model looks up to <b>{conn.label}</b>.{' '}
+              You agreed to send your questions and the transactions the model looks up to <b>{conn.label}</b>
+              {cloudWhere(conn) ? ` (${cloudWhere(conn)})` : ''}.{' '}
               <button
                 type="button"
                 className="link"
@@ -459,7 +461,8 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
             </>
           ) : (
             <>
-              <b>{conn.label}</b> is a cloud service; it needs your agreement before it gets any data.
+              <b>{conn.label}</b> is a cloud service{cloudWhere(conn) ? ` (${cloudWhere(conn)})` : ''}; it needs your
+              agreement before it gets any data.
             </>
           )}
         </p>

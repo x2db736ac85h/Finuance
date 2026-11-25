@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"path"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
+	"github.com/x2db736ac85h/finuance/backend/internal/llm/googleauth"
 	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
@@ -50,8 +52,12 @@ type Controls struct {
 	UnloadAfter  time.Duration // 0 = the server's own setting
 	DefaultModel string        // "" = the connection's own default
 	PhotoModel   string        // "" = none
-	Version      int32         // 0 = never saved
-	UpdatedAt    *time.Time
+	// DailyTokens is the connection's budget of tokens per UTC day, across all users (ADR 0045);
+	// 0 = none. TokensToday is what it has used today, when asked for.
+	DailyTokens int64
+	TokensToday int64
+	Version     int32 // 0 = never saved
+	UpdatedAt   *time.Time
 }
 
 // DefaultUnloadAfter is the idle time of a connection whose controls were never saved.
@@ -110,6 +116,11 @@ type Connections struct {
 	timeout   time.Duration
 	idle      time.Duration
 
+	// Google is the token source of the connections that authenticate with Google's credentials
+	// (nil: Application Default Credentials). Set before the first connection is made (tests).
+	Google     llm.TokenSource
+	googleOnce sync.Once
+
 	lmu      sync.RWMutex
 	file     []*Connection
 	stored   []*Connection
@@ -150,10 +161,45 @@ func NewConnections(cfgs []config.AIConnection, timeout, idle time.Duration, clo
 	return cs
 }
 
+// Provider names who runs a cloud connection's endpoint, and where when the connection says:
+// Google Cloud with its location, Anthropic and OpenAI by their own hosts, any other service by its
+// host name. A local connection has no provider: it is the instance's own.
+func Provider(c *config.AIConnection) (provider, location string) {
+	switch host := strings.ToLower(c.BaseURL.Hostname()); {
+	case !c.Cloud:
+		return "", ""
+	case c.Google():
+		return "Google Cloud (Vertex AI)", c.Location
+	case host == "api.anthropic.com":
+		return "Anthropic", ""
+	case host == "api.openai.com":
+		return "OpenAI", ""
+	default:
+		return host, ""
+	}
+}
+
+// googleTokens is the one token source every Google connection of this process shares: they all
+// use the process's own credentials, so one cached token serves them.
+func (cs *Connections) googleTokens() llm.TokenSource {
+	cs.googleOnce.Do(func() {
+		if cs.Google == nil {
+			cs.Google = googleauth.New()
+		}
+	})
+	return cs.Google
+}
+
 func (cs *Connections) connect(c config.AIConnection) *Connection {
-	cl := cs.newClient(llm.Config{API: c.API, BaseURL: c.BaseURL.String(), APIKey: c.APIKey, AllowRemote: c.Cloud,
-		Timeout: cs.timeout, IdleTimeout: min(cs.timeout, cs.idle)})
-	return &Connection{AIConnection: c, Client: cl}
+	cfg := llm.Config{API: c.API, BaseURL: c.BaseURL.String(), APIKey: c.APIKey, AllowRemote: c.Cloud,
+		Timeout: cs.timeout, IdleTimeout: min(cs.timeout, cs.idle)}
+	if c.Google() {
+		// short-lived tokens instead of a key, sent to Vertex AI's hosts only; and a provider's
+		// endpoint is not a model server to probe or to manage (PLAN 26.1–26.3, ADR 0045)
+		cfg.APIKey, cfg.Auth, cfg.TokenHost = "", cs.googleTokens(), llm.GoogleAPIHost
+		cfg.Hosted, cfg.StaticModels = true, c.Models
+	}
+	return &Connection{AIConnection: c, Client: cs.newClient(cfg)}
 }
 
 // all is every connection: the file's, then the stored ones.
@@ -266,7 +312,8 @@ func (cs *Connections) SetStored(conns []config.AIConnection, tuning []Tuning, c
 
 func sameConnection(a, b config.AIConnection) bool {
 	return a.Name == b.Name && a.Label == b.Label && a.API == b.API && a.BaseURL.String() == b.BaseURL.String() && a.APIKey == b.APIKey &&
-		a.Cloud == b.Cloud && a.DefaultModel == b.DefaultModel && slices.Equal(a.Models, b.Models) && a.ContextTokens == b.ContextTokens
+		a.Cloud == b.Cloud && a.DefaultModel == b.DefaultModel && slices.Equal(a.Models, b.Models) && a.ContextTokens == b.ContextTokens &&
+		a.Auth == b.Auth && a.Project == b.Project && a.Location == b.Location && reflect.DeepEqual(a.Caps, b.Caps)
 }
 
 func (cs *Connections) tuningOf(conn, model string) *Tuning {

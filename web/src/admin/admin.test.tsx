@@ -524,7 +524,14 @@ describe('administration', () => {
   });
 
   it('decides who picks the model, and switches a connection, its models and idle time; loads and unloads on Ollama', async () => {
-    const ctl = { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0 };
+    const ctl = {
+      enabled: true,
+      unloadAfterMinutes: 30,
+      defaultModel: '',
+      photoModel: '',
+      version: 0,
+      tokensToday: 48200,
+    };
     const conns: Schemas['AdminConnection'][] = [
       {
         name: 'homelab',
@@ -532,6 +539,7 @@ describe('administration', () => {
         api: 'openai',
         baseUrl: 'http://10.0.0.5:11434/v1',
         cloud: false,
+        auth: 'key',
         defaultModel: 'qwen3:4b',
         models: ['qwen3*'],
         contextTokens: 8192,
@@ -585,7 +593,7 @@ describe('administration', () => {
       http.put(`${API}/admin/assistant/connections/homelab/controls`, async ({ request }) => {
         const body = (await request.json()) as Schemas['AdminConnectionControlsInput'];
         controlPuts.push(body);
-        if (conns[0]) conns[0] = { ...conns[0], controls: { ...body, version: body.version + 1 } };
+        if (conns[0]) conns[0] = { ...conns[0], controls: { ...body, version: body.version + 1, tokensToday: 48200 } };
         return HttpResponse.json(conns[0]);
       }),
       http.post(`${API}/admin/assistant/connections/homelab/unload`, async ({ request }) => {
@@ -624,6 +632,12 @@ describe('administration', () => {
     expect(await within(form).findAllByRole('button', { name: 'Load' })).toHaveLength(2);
     fireEvent.change(within(form).getByLabelText('Model for photos'), { target: { value: 'qwen3-vl:4b' } });
     fireEvent.change(within(form).getByLabelText('Unload a model after'), { target: { value: '10' } });
+    // the budget for everyone together (26.4): what was used today, and a number that makes sense
+    expect(within(form).getByText(/Used today \(UTC\): 48,200 tokens/)).toBeTruthy();
+    const budget = within(form).getByLabelText(/^Daily token budget/);
+    fireEvent.change(budget, { target: { value: '500' } });
+    expect(within(form).getByRole<HTMLButtonElement>('button', { name: 'Save' }).disabled).toBe(true);
+    fireEvent.change(budget, { target: { value: '2,000,000' } });
     await userEvent.click(within(form).getByRole('checkbox', { name: /^On/ }));
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
     await waitFor(() => {
@@ -632,6 +646,7 @@ describe('administration', () => {
         unloadAfterMinutes: 10,
         defaultModel: '',
         photoModel: 'qwen3-vl:4b',
+        dailyTokens: 2000000,
         version: 0,
       });
     });
@@ -644,7 +659,14 @@ describe('administration', () => {
   });
 
   it('adds a connection for a provider with its key alone, and keeps models and the dialog apart (U12)', async () => {
-    const ctl = { enabled: true, unloadAfterMinutes: null, defaultModel: '', photoModel: '', version: 0 };
+    const ctl = {
+      enabled: true,
+      unloadAfterMinutes: null,
+      defaultModel: '',
+      photoModel: '',
+      version: 0,
+      tokensToday: 0,
+    };
     let conns: Schemas['AdminConnection'][] = [
       {
         name: 'anthropic',
@@ -652,6 +674,7 @@ describe('administration', () => {
         api: 'anthropic',
         baseUrl: 'https://api.anthropic.com',
         cloud: true,
+        auth: 'key',
         defaultModel: '',
         models: [],
         contextTokens: 0,
@@ -689,7 +712,15 @@ describe('administration', () => {
         const { apiKey, ...rest } = body;
         conns = [
           ...conns,
-          { ...rest, source: 'panel', hasKey: !!apiKey, keyUnreadable: false, version: 1, controls: ctl },
+          {
+            ...rest,
+            auth: rest.auth ?? 'key',
+            source: 'panel',
+            hasKey: !!apiKey,
+            keyUnreadable: false,
+            version: 1,
+            controls: ctl,
+          },
         ];
         return HttpResponse.json(conns.at(-1), { status: 201 });
       }),
@@ -713,23 +744,59 @@ describe('administration', () => {
         .getAllByRole('radio')
         .map((b) => b.querySelector('b')?.textContent),
     ).toEqual(['Anthropic', 'OpenAI', 'Google', 'Local server', 'Other']);
-    // Google comes with the cloud AI tasks: shown, not yet to be chosen
-    const google = within(providers).getByRole('radio', { name: /^Google/ });
-    expect(google.getAttribute('aria-disabled')).toBe('true');
-    await user.click(google);
-    expect(within(dlg).queryByRole('form', { name: 'Connection' })).toBeNull();
+    // Google: a project, a chosen location and the models to offer; no key anywhere (26.2)
+    await user.click(within(providers).getByRole('radio', { name: /^Google/ }));
+    const g = await within(dlg).findByRole('form', { name: 'Connection' });
+    expect(within(g).queryByLabelText(/API key/)).toBeNull();
+    const gSave = within(g).getByRole<HTMLButtonElement>('button', { name: 'Save' });
+    expect(gSave.disabled).toBe(true);
+    fireEvent.change(within(g).getByLabelText('Google Cloud project'), { target: { value: 'demo-project' } });
+    fireEvent.change(within(g).getByLabelText(/^Models offered/), {
+      target: { value: 'google/gemini-3.5-flash-lite' },
+    });
+    // no location, no connection: there is no default
+    expect(gSave.disabled).toBe(true);
+    fireEvent.change(within(g).getByLabelText('Location'), { target: { value: 'global' } });
+    expect(within(g).getByRole('status').textContent).toContain('Google chooses where');
+    fireEvent.change(within(g).getByLabelText('Location'), { target: { value: 'europe-west4' } });
+    expect(within(g).queryByRole('status')).toBeNull();
+    expect(g.textContent).toContain(
+      'https://europe-west4-aiplatform.googleapis.com/v1/projects/demo-project/locations/europe-west4/endpoints/openapi',
+    );
+    expect(gSave.disabled).toBe(false);
+    await user.click(gSave);
+    await waitFor(() => {
+      expect(posted[0]).toEqual({
+        name: 'vertex',
+        label: 'Gemini',
+        api: 'openai',
+        baseUrl: '',
+        cloud: true,
+        defaultModel: '',
+        models: ['google/gemini-3.5-flash-lite'],
+        contextTokens: 0,
+        auth: 'google',
+        project: 'demo-project',
+        location: 'europe-west4',
+      });
+    });
+    expect(await within(list).findByText('Google')).toBeTruthy();
+    expect(within(list).getByText(/Google credentials, no key · demo-project · europe-west4/)).toBeTruthy();
+    await user.click(await screen.findByRole('button', { name: 'Add a connection' }));
+    const dlg2 = await screen.findByRole('dialog', { name: 'Add a connection' });
+    const providers2 = within(dlg2).getByRole('radiogroup', { name: 'Provider' });
 
     // OpenAI, then back, then Anthropic: the form starts from the provider chosen last
-    await user.click(within(providers).getByRole('radio', { name: /^OpenAI/ }));
+    await user.click(within(providers2).getByRole('radio', { name: /^OpenAI/ }));
     expect(
-      within(await within(dlg).findByRole('form', { name: 'Connection' })).getByLabelText<HTMLInputElement>('Address')
+      within(await within(dlg2).findByRole('form', { name: 'Connection' })).getByLabelText<HTMLInputElement>('Address')
         .value,
     ).toBe('https://api.openai.com/v1');
-    await user.click(within(dlg).getByRole('button', { name: 'Provider' }));
+    await user.click(within(dlg2).getByRole('button', { name: 'Provider' }));
     await user.click(
-      within(within(dlg).getByRole('radiogroup', { name: 'Provider' })).getByRole('radio', { name: /^Anthropic/ }),
+      within(within(dlg2).getByRole('radiogroup', { name: 'Provider' })).getByRole('radio', { name: /^Anthropic/ }),
     );
-    const form = await within(dlg).findByRole('form', { name: 'Connection' });
+    const form = await within(dlg2).findByRole('form', { name: 'Connection' });
     // its key is all it asks for; without one there is nothing to save
     const save = within(form).getByRole<HTMLButtonElement>('button', { name: 'Save' });
     expect(save.disabled).toBe(true);
@@ -745,7 +812,7 @@ describe('administration', () => {
     expect(within(form).queryByRole('alert')).toBeNull();
     await user.click(save);
     await waitFor(() => {
-      expect(posted[0]).toEqual({
+      expect(posted[1]).toEqual({
         name: 'anthropic-2',
         label: 'Claude',
         api: 'anthropic',
@@ -754,6 +821,7 @@ describe('administration', () => {
         defaultModel: 'claude-sonnet-5-5',
         models: ['claude-*'],
         contextTokens: 0,
+        auth: 'key',
         apiKey: 'sk-ant-1',
       });
     });
@@ -770,6 +838,7 @@ describe('administration', () => {
       api: 'openai',
       baseUrl: 'http://10.0.0.5:1234/v1',
       cloud: false,
+      auth: 'key',
       defaultModel: '',
       models: [],
       contextTokens: 8192,
@@ -777,7 +846,7 @@ describe('administration', () => {
       hasKey: false,
       keyUnreadable: false,
       version: 0,
-      controls: { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0 },
+      controls: { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0, tokensToday: 0 },
       ...over,
     });
     let conns = [conn({})];
@@ -798,7 +867,7 @@ describe('administration', () => {
       http.post(`${API}/admin/assistant/connections`, async ({ request }) => {
         const body = (await request.json()) as Schemas['AdminConnectionInput'];
         posted.push(body);
-        const c = conn({ ...body, source: 'panel', hasKey: !!body.apiKey, version: 1 });
+        const c = conn({ ...body, auth: body.auth ?? 'key', source: 'panel', hasKey: !!body.apiKey, version: 1 });
         conns = [...conns, c];
         return HttpResponse.json(c, { status: 201 });
       }),
@@ -861,6 +930,7 @@ describe('administration', () => {
         defaultModel: '',
         models: ['qwen3*', 'gemma3*'],
         contextTokens: 0,
+        auth: 'key',
         apiKey: 'sk-1',
       });
     });

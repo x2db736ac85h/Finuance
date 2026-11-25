@@ -267,7 +267,11 @@ func choice(adm *admin.Service) func(context.Context) assistant.Choice {
 		if err != nil {
 			return assistant.Choice{}
 		}
-		return assistant.Choice{People: s.Assistant.PeopleChoose(), Connection: s.Assistant.Connection()}
+		c := assistant.Choice{People: s.Assistant.PeopleChoose(), Connection: s.Assistant.Connection()}
+		if s.Assistant != nil {
+			c.CloudNote = s.Assistant.CloudNote
+		}
+		return c
 	}
 }
 

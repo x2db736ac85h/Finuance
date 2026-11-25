@@ -54,6 +54,9 @@ const (
 	persistGrace = 10 * time.Second
 )
 
+// LimitConnectionTokens names the limit of a connection whose daily budget is used up.
+const LimitConnectionTokens = "connectionTokensPerDay"
+
 // Request is one question.
 type Request struct {
 	ChatID      uuid.UUID
@@ -136,6 +139,9 @@ type RunnerConfig struct {
 type Choice struct {
 	People     bool
 	Connection string // the administrator's default connection; "" or one switched off: the first one on
+	// CloudNote is the administrator's sentence on what a cloud provider keeps, for the consent
+	// dialog (PLAN 26.5); it travels with the other instance settings of the assistant.
+	CloudNote string
 }
 
 // Runner runs questions: one at a time per user, at most MaxConcurrent per process.
@@ -273,6 +279,17 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 	conn, info, err := r.cfg.Connections.Resolve(ctx, connName, model)
 	if err != nil {
 		return nil, err
+	}
+	// the connection's own budget, across all users (ADR 0045): whoever runs the instance pays for
+	// a cloud model, so the day's tokens have an end
+	if limit := r.cfg.Connections.ControlsOf(conn.Name).DailyTokens; limit > 0 {
+		used, err := r.cfg.Chats.ConnectionTokensToday(ctx, conn.Name)
+		if err != nil {
+			return nil, err
+		}
+		if used >= limit {
+			return nil, &instance.LimitError{Limit: LimitConnectionTokens, Value: limit}
+		}
 	}
 	if len(req.AttachmentIDs) > 0 && !info.Caps.Vision {
 		// photos go to the connection's model for photos when the chosen model can't read images
@@ -701,7 +718,7 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 	if toolset == "" {
 		toolset = ToolsetFull
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset) + instructionsBlock(run.extra)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset, run.conn.Cloud) + instructionsBlock(run.extra)
 	defs := ToolDefs(toolset)
 	var conv []llm.Message // this turn's assistant and tool messages
 	for range maxRounds {
@@ -821,7 +838,7 @@ func (run *Run) runPlan(ctx context.Context, emit func(Event), sc Scope, facts *
 	if toolset == "" {
 		toolset = ToolsetCompact
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset) + instructionsBlock(run.extra)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset, run.conn.Cloud) + instructionsBlock(run.extra)
 	hist := trimHistory(history, true, run.noThink(), system, run.budget())
 	zero := 0.0
 	plan, err := run.complete(ctx, emit, t, llm.Request{System: system + planInstructions(ToolDefs(toolset)), Messages: hist, Temperature: &zero, KeepAlive: run.keepAlive()}, false)

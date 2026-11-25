@@ -8,15 +8,18 @@ SELECT * FROM assistant_connections ORDER BY name;
 SELECT * FROM assistant_connections WHERE name = @name;
 
 -- name: InsertStoredConnection :one
-INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, created_at, updated_at)
-VALUES (@name, @label, @api, @base_url, @cloud, @default_model, @models, @context_tokens, @api_key, @now, @now)
+INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key,
+                                   auth, project, location, caps, created_at, updated_at)
+VALUES (@name, @label, @api, @base_url, @cloud, @default_model, @models, @context_tokens, @api_key,
+        @auth, @project, @location, @caps, @now, @now)
 RETURNING *;
 
 -- name: UpdateStoredConnection :one
 -- Versioned: no row when the version read is no longer the stored one.
 UPDATE assistant_connections
 SET label = @label, api = @api, base_url = @base_url, cloud = @cloud, default_model = @default_model, models = @models,
-    context_tokens = @context_tokens, api_key = @api_key, version = version + 1, updated_at = @now
+    context_tokens = @context_tokens, api_key = @api_key, auth = @auth, project = @project, location = @location,
+    caps = @caps, version = version + 1, updated_at = @now
 WHERE name = @name AND version = @version
 RETURNING *;
 
@@ -45,8 +48,8 @@ SELECT * FROM assistant_connection_controls ORDER BY name;
 
 -- name: InsertConnectionControls :one
 -- The first save; no row when another one was saved first (the caller answers stale_version).
-INSERT INTO assistant_connection_controls (name, enabled, unload_after_minutes, default_model, photo_model, updated_at)
-VALUES (@name, @enabled, sqlc.narg(unload_after_minutes), @default_model, @photo_model, @now)
+INSERT INTO assistant_connection_controls (name, enabled, unload_after_minutes, default_model, photo_model, daily_tokens, updated_at)
+VALUES (@name, @enabled, sqlc.narg(unload_after_minutes), @default_model, @photo_model, sqlc.narg(daily_tokens), @now)
 ON CONFLICT (name) DO NOTHING
 RETURNING *;
 
@@ -54,6 +57,24 @@ RETURNING *;
 -- Versioned: no row when the version read is no longer the stored one.
 UPDATE assistant_connection_controls
 SET enabled = @enabled, unload_after_minutes = sqlc.narg(unload_after_minutes), default_model = @default_model,
-    photo_model = @photo_model, version = version + 1, updated_at = @now
+    photo_model = @photo_model, daily_tokens = sqlc.narg(daily_tokens), version = version + 1, updated_at = @now
 WHERE name = @name AND version = @version
 RETURNING *;
+
+-- Connection budgets (migration 00032): what a connection used on a UTC day, across all users.
+
+-- name: AddConnectionUsage :exec
+-- One finished run's tokens on its connection and UTC day.
+INSERT INTO assistant_connection_usage (connection, day, tokens, runs) VALUES (@connection, @day, @tokens, 1)
+ON CONFLICT (connection, day) DO UPDATE
+SET tokens = assistant_connection_usage.tokens + excluded.tokens, runs = assistant_connection_usage.runs + 1;
+
+-- name: GetConnectionUsage :one
+SELECT coalesce(sum(tokens), 0)::bigint AS tokens FROM assistant_connection_usage WHERE connection = @connection AND day = @day;
+
+-- name: ListConnectionUsage :many
+-- Every connection's tokens and runs of one day (Administration → Assistant).
+SELECT connection, tokens, runs FROM assistant_connection_usage WHERE day = @day ORDER BY connection;
+
+-- name: DeleteOldConnectionUsage :execrows
+DELETE FROM assistant_connection_usage WHERE day < @before;

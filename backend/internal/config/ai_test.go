@@ -134,3 +134,52 @@ func TestAIConnectionsExample(t *testing.T) {
 		t.Fatalf("example: %v", err)
 	}
 }
+
+// TestAIConnectionsFileGoogle (PLAN 26.2): a connection of the file with `"auth": "google"` has a
+// project and a chosen location, no key, and Vertex AI's address for them.
+func TestAIConnectionsFileGoogle(t *testing.T) {
+	f := writeFile(t, `{"connections": [
+	  {"name": "vertex", "label": "Gemini", "api": "openai", "auth": "google", "project": "demo-project",
+	   "location": "europe-west4", "cloud": true, "models": ["google/gemini-3.5-flash-lite"]},
+	  {"name": "local", "api": "openai", "baseUrl": "http://127.0.0.1:11434/v1"}
+	]}`)
+	c, err := Load(env(map[string]string{"FINUANCE_AI_CONNECTIONS_FILE": f}), ForHealthcheck)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, local := c.AIConnections[0], c.AIConnections[1]
+	want := "https://europe-west4-aiplatform.googleapis.com/v1/projects/demo-project/locations/europe-west4/endpoints/openapi"
+	if !v.Google() || v.BaseURL.String() != want || v.APIKey != "" || !v.Cloud || v.Project != "demo-project" || v.Location != "europe-west4" {
+		t.Errorf("the Google connection = %+v", v)
+	}
+	if local.Google() || local.Auth != AuthKey {
+		t.Errorf("the local connection = %+v", local)
+	}
+
+	for name, entry := range map[string]string{
+		"no location":         `{"name": "v", "api": "openai", "auth": "google", "project": "demo-project", "cloud": true}`,
+		"not cloud":           `{"name": "v", "api": "openai", "auth": "google", "project": "demo-project", "location": "eu"}`,
+		"a key":               `{"name": "v", "api": "openai", "auth": "google", "project": "demo-project", "location": "eu", "cloud": true, "apiKeyEnv": "K"}`,
+		"another host":        `{"name": "v", "api": "openai", "auth": "google", "project": "demo-project", "location": "eu", "cloud": true, "baseUrl": "https://example.test/v1"}`,
+		"an unknown auth":     `{"name": "v", "api": "openai", "auth": "azure", "baseUrl": "https://example.test/v1", "cloud": true}`,
+		"a project for a key": `{"name": "v", "api": "openai", "baseUrl": "http://127.0.0.1:1/v1", "project": "demo-project"}`,
+	} {
+		bad := writeFile(t, `{"connections": [`+entry+`]}`)
+		if _, err := Load(env(map[string]string{"FINUANCE_AI_CONNECTIONS_FILE": bad, "K": "sk"}), ForHealthcheck); err == nil {
+			t.Errorf("%s: the file was accepted", name)
+		}
+	}
+}
+
+// TestVertexExampleFile: the example in deploy/assistant for a Google connection is a file the
+// server accepts as it is.
+func TestVertexExampleFile(t *testing.T) {
+	c, err := Load(env(map[string]string{"FINUANCE_AI_CONNECTIONS_FILE": "../../../deploy/assistant/connections.vertex.example.json"}), ForHealthcheck)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := c.AIConnections[0]
+	if !v.Google() || v.Location != "europe-west4" || v.DefaultModel != "google/gemini-3.5-flash-lite" || len(v.Caps) != 1 {
+		t.Errorf("connection = %+v", v)
+	}
+}

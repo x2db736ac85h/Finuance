@@ -48,3 +48,4 @@ One file per decision, numbered in the order they were taken. A record is not re
 | [0042](0042-log-and-trace-pipeline.md) | The log and trace pipeline: Alloy in front of Loki and Tempo, the log stages, one switch | accepted | 2026-11-21 |
 | [0043](0043-traffic-simulator.md) | The traffic simulator: a separate client that plays synthetic users on a lab, passwords from one seed, ceilings in the code | accepted; decision 7 changed by 0044 | 2026-11-21 |
 | [0044](0044-load-mode.md) | Load mode: the animals load a lab within ceilings of their own and replace the load-test users | accepted | 2026-11-23 |
+| [0045](0045-cloud-model-providers.md) | Cloud model providers: a connection that authenticates with Google's credentials, where its token may go, a budget per connection | accepted | 2026-11-25 |

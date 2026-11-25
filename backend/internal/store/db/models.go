@@ -113,6 +113,10 @@ type AssistantConnection struct {
 	Version       int32
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	Auth          string
+	Project       string
+	Location      string
+	Caps          []byte
 }
 
 type AssistantConnectionControl struct {
@@ -123,6 +127,14 @@ type AssistantConnectionControl struct {
 	PhotoModel         string
 	Version            int32
 	UpdatedAt          time.Time
+	DailyTokens        *int64
+}
+
+type AssistantConnectionUsage struct {
+	Connection string
+	Day        platform.Date
+	Tokens     int64
+	Runs       int32
 }
 
 type AssistantMessage struct {

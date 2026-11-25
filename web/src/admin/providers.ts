@@ -36,9 +36,8 @@ export const PROVIDERS: readonly Provider[] = [
     id: 'google',
     label: 'Google',
     about: 'Gemini models on Vertex AI, without a stored key',
-    preset: { api: 'openai', baseUrl: '', cloud: true, name: 'google', label: 'Gemini' },
+    preset: { api: 'openai', baseUrl: '', cloud: true, name: 'vertex', label: 'Gemini' },
     fixedAddress: true,
-    later: 'Arrives with the cloud AI part of this release (short-lived Google credentials).',
   },
   {
     id: 'local',
@@ -76,7 +75,9 @@ function hostOf(url: string): string {
 }
 
 /** The provider a connection belongs to, from its address and kind. */
-export function providerOf(c: { api: string; baseUrl: string; cloud: boolean }): ProviderId {
+export function providerOf(c: { api: string; baseUrl: string; cloud: boolean; auth?: string }): ProviderId {
+  // a connection that authenticates with Google's credentials is Google's, whatever else it says
+  if (c.auth === 'google') return 'google';
   const host = hostOf(c.baseUrl);
   if (host === 'api.anthropic.com') return 'anthropic';
   if (host === 'api.openai.com') return 'openai';
@@ -85,7 +86,7 @@ export function providerOf(c: { api: string; baseUrl: string; cloud: boolean }):
 }
 
 /** The words for a connection's provider in the list ("Other" says which wire format). */
-export function providerTag(c: { api: string; baseUrl: string; cloud: boolean }): string {
+export function providerTag(c: { api: string; baseUrl: string; cloud: boolean; auth?: string }): string {
   const id = providerOf(c);
   if (id === 'other') return c.api === 'anthropic' ? 'Anthropic-compatible' : 'OpenAI-compatible';
   return providerById(id).label;
@@ -117,3 +118,30 @@ export function mayOffer(patterns: readonly string[], model: string): boolean {
     return re.test(model);
   });
 }
+
+/**
+ * Vertex AI locations offered first when adding a Google connection: the ones inside the EU, where
+ * the data is then processed. Any other location can be typed; "global" gives no say over where.
+ */
+export const GOOGLE_LOCATIONS: readonly { value: string; label: string }[] = [
+  { value: 'eu', label: 'eu — European Union (multi-region)' },
+  { value: 'europe-west4', label: 'europe-west4 — Netherlands' },
+  { value: 'europe-west1', label: 'europe-west1 — Belgium' },
+  { value: 'europe-west3', label: 'europe-west3 — Frankfurt' },
+  { value: 'europe-central2', label: 'europe-central2 — Warsaw' },
+  { value: 'europe-north1', label: 'europe-north1 — Finland' },
+];
+
+/** Vertex AI's OpenAI-compatible address for a project and a location, as the server derives it. */
+export function googleBaseUrl(project: string, location: string): string {
+  const host =
+    location === 'global'
+      ? 'aiplatform.googleapis.com'
+      : /[-0-9]/.test(location)
+        ? `${location}-aiplatform.googleapis.com`
+        : `aiplatform.${location}.rep.googleapis.com`;
+  return `https://${host}/v1/projects/${project}/locations/${location}/endpoints/openapi`;
+}
+
+export const GOOGLE_PROJECT = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
+export const GOOGLE_LOCATION = /^(global|[a-z]{2,12}|[a-z]+(-[a-z]+)*[0-9]+)$/;

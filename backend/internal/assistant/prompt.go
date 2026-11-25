@@ -107,11 +107,19 @@ func sample(s string) string {
 // data. The legacy text is kept word for word except: the app is self-hosted (the legacy ran on
 // the user's computer), the columns are the canonical ones, and extra rules name the new tools and
 // say that the data is data (testdata/oracle/ALLOWED_DIFFS.md row 14).
-func SystemPrompt(now time.Time, f *Facts, sc Scope, toolset string) string {
+//
+// cloud says the model runs at a provider: the opening line then makes no claim about where the
+// conversation stays (PLAN 26.5; "a private, self-hosted app" is true of the app, not of a model
+// in somebody else's data centre).
+func SystemPrompt(now time.Time, f *Facts, sc Scope, toolset string, cloud bool) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, `You are the personal-finance assistant inside "Finuance", a private, self-hosted app.
+	app := `"Finuance", a private, self-hosted app`
+	if cloud {
+		app = `"Finuance", a personal-finance app`
+	}
+	fmt.Fprintf(&b, `You are the personal-finance assistant inside %s.
 Today is %s (%s). Weeks start on Monday: "last week" = the previous Monday–Sunday, "this week" = Monday to today, "last month" = the previous calendar month, "this month" = the 1st to today. Always turn relative dates into explicit YYYY-MM-DD ranges before calling a tool.
-`, now.Format("2006-01-02"), now.Weekday())
+`, app, now.Format("2006-01-02"), now.Weekday())
 	if f == nil {
 		b.WriteString("No transaction data is loaded yet. Tell the user to import their CSV files first.")
 		return b.String()

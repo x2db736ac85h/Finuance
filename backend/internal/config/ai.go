@@ -24,6 +24,12 @@ type AIConnection struct {
 	// BaseURL is the API root: …/v1 for OpenAI-compatible servers, the host for Anthropic.
 	BaseURL *url.URL
 	APIKey  string
+	// Auth is how the connection proves who it is: AuthKey (a stored key, or none) or AuthGoogle
+	// (short-lived tokens from Google's credentials; PLAN 26.2, ADR 0045). A Google connection
+	// names its Project and Location; its address is Vertex AI's for them unless given.
+	Auth     string
+	Project  string
+	Location string
 	// Cloud lets the connection reach public addresses. Users must agree once before their data
 	// is sent to it, and long digit runs in tool results are masked.
 	Cloud        bool
@@ -33,6 +39,66 @@ type AIConnection struct {
 	// ContextTokens is the context size assumed when the server doesn't report one.
 	ContextTokens int
 	Caps          []llm.CapsOverride
+}
+
+// How a connection authenticates.
+const (
+	AuthKey    = "key"
+	AuthGoogle = "google"
+)
+
+// Google reports whether the connection authenticates with Google's credentials.
+func (c *AIConnection) Google() bool { return c.Auth == AuthGoogle }
+
+// googleConnection checks what `auth: google` asks for and returns the address to use. baseURL is
+// the address as written ("" derives Vertex AI's from project and location). Problems are keyed by
+// field (auth, project, location, baseUrl, cloud, apiKey).
+//
+// The rules (PLAN 26.2): a Google connection is a cloud connection over https; its host is one of
+// Vertex AI's, so its token can't be sent anywhere else; and its location is chosen, never
+// defaulted: "global" gives no say over where data is processed, so it has to be asked for by name.
+func googleConnection(api llm.API, project, location, baseURL string, cloud, hasKey bool) (*url.URL, map[string]string) {
+	problems := map[string]string{}
+	if api != llm.OpenAI {
+		problems["api"] = "a Google connection uses the openai format (Vertex AI's OpenAI-compatible endpoint)"
+	}
+	if !cloud {
+		problems["cloud"] = "a Google connection is a cloud service: it must be marked as one"
+	}
+	if hasKey {
+		problems["apiKey"] = "a Google connection has no key: it gets short-lived tokens from Google's credentials"
+	}
+	if !llm.GoogleProject(project) {
+		problems["project"] = "must be a Google Cloud project id (6–30 characters: a-z, 0-9 and -)"
+	}
+	switch {
+	case location == "":
+		problems["location"] = "choose a location (europe-west4, eu, …); there is no default, and global is only used when named"
+	case !llm.GoogleLocation(location):
+		problems["location"] = "must be a Vertex AI location such as europe-west4, eu or global"
+	}
+	if len(problems) > 0 && strings.TrimSpace(baseURL) == "" {
+		return nil, problems
+	}
+	raw := strings.TrimSpace(baseURL)
+	if raw == "" {
+		raw = llm.GoogleBaseURL(project, location)
+	}
+	u, err := url.Parse(raw)
+	switch {
+	case err != nil || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil:
+		problems["baseUrl"] = "must be an absolute https URL without a query or credentials"
+	case u.Scheme != "https":
+		problems["baseUrl"] = "a Google connection must use https"
+	case u.Port() != "" && u.Port() != "443":
+		problems["baseUrl"] = "a Google connection uses the standard https port"
+	case !llm.GoogleAPIHost(u.Hostname()):
+		problems["baseUrl"] = fmt.Sprintf("%s is not one of Vertex AI's hosts ({location}-aiplatform.googleapis.com, aiplatform.googleapis.com, aiplatform.{multi-region}.rep.googleapis.com): a Google token is sent nowhere else", u.Hostname())
+	}
+	if len(problems) > 0 {
+		return nil, problems
+	}
+	return u, nil
 }
 
 // maxConnectionsFile bounds the connections file; it holds a handful of entries.
@@ -48,6 +114,9 @@ type connectionsFile struct {
 		API           llm.API            `json:"api"`
 		BaseURL       string             `json:"baseUrl"`
 		APIKeyEnv     string             `json:"apiKeyEnv"`
+		Auth          string             `json:"auth"`
+		Project       string             `json:"project"`
+		Location      string             `json:"location"`
 		Cloud         bool               `json:"cloud"`
 		DefaultModel  string             `json:"defaultModel"`
 		Models        []string           `json:"models"`
@@ -76,7 +145,7 @@ func (p *parser) aiConnections(defaultContext int) []AIConnection {
 		if u == nil {
 			return nil
 		}
-		c := AIConnection{Name: "default", Label: u.Hostname(), API: api, BaseURL: u, APIKey: p.str("FINUANCE_AI_API_KEY", ""),
+		c := AIConnection{Name: "default", Label: u.Hostname(), API: api, BaseURL: u, APIKey: p.str("FINUANCE_AI_API_KEY", ""), Auth: AuthKey,
 			Cloud: cloud, DefaultModel: p.str("FINUANCE_AI_DEFAULT_MODEL", ""), ContextTokens: defaultContext}
 		if msg := checkAddress(u, cloud); msg != "" {
 			if !cloud {
@@ -128,8 +197,26 @@ func (p *parser) aiConnections(defaultContext int) []AIConnection {
 		if fc.API != llm.OpenAI && fc.API != llm.Anthropic {
 			bad(fmt.Sprintf("api must be openai or anthropic, got %q", fc.API))
 		}
-		u, err := url.Parse(fc.BaseURL)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
+		if fc.Auth != "" && fc.Auth != AuthKey && fc.Auth != AuthGoogle {
+			bad(fmt.Sprintf("auth must be key or google, got %q", fc.Auth))
+			continue
+		}
+		if fc.Auth != AuthGoogle && (fc.Project != "" || fc.Location != "") {
+			bad(`project and location belong to "auth": "google"`)
+		}
+		var u *url.URL
+		var err error
+		if fc.Auth == AuthGoogle {
+			var gp map[string]string
+			if u, gp = googleConnection(fc.API, fc.Project, fc.Location, fc.BaseURL, fc.Cloud, fc.APIKeyEnv != ""); len(gp) > 0 {
+				for _, field := range []string{"api", "cloud", "apiKey", "project", "location", "baseUrl"} {
+					if m := gp[field]; m != "" {
+						bad(field + ": " + m)
+					}
+				}
+				continue
+			}
+		} else if u, err = url.Parse(fc.BaseURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
 			bad(fmt.Sprintf("baseUrl must be an absolute http(s) URL without a query, got %q", fc.BaseURL))
 			continue
 		}
@@ -177,7 +264,12 @@ func (p *parser) aiConnections(defaultContext int) []AIConnection {
 		if ctx == 0 {
 			ctx = defaultContext
 		}
-		out = append(out, AIConnection{Name: fc.Name, Label: label, API: fc.API, BaseURL: u, APIKey: key, Cloud: fc.Cloud,
+		auth := fc.Auth
+		if auth == "" {
+			auth = AuthKey
+		}
+		out = append(out, AIConnection{Name: fc.Name, Label: label, API: fc.API, BaseURL: u, APIKey: key, Auth: auth,
+			Project: fc.Project, Location: fc.Location, Cloud: fc.Cloud,
 			DefaultModel: fc.DefaultModel, Models: fc.Models, ContextTokens: ctx, Caps: fc.Caps})
 	}
 	if len(problems) > 0 {
@@ -229,9 +321,14 @@ func readLimitedFile(name string, limit int, what string) ([]byte, error) {
 // ConnectionSpec is a connection an administrator enters in the panel (ADR 0035).
 type ConnectionSpec struct {
 	Name, Label, API, BaseURL, DefaultModel, APIKey string
-	Cloud                                           bool
-	Models                                          []string
-	ContextTokens                                   int
+	// Auth is "" or "key" (a key, or none) or "google", with Project and Location (PLAN 26.2).
+	Auth, Project, Location string
+	Cloud                   bool
+	Models                  []string
+	ContextTokens           int
+	// Caps correct what is detected about the connection's models (PLAN 26.3): a hosted endpoint
+	// reports nothing about them.
+	Caps []llm.CapsOverride
 }
 
 // NewConnection checks a connection entered in the panel by the connections file's rules (a
@@ -253,8 +350,30 @@ func NewConnection(s ConnectionSpec, defaultContext int) (AIConnection, map[stri
 	if len([]rune(label)) > 80 {
 		problems["label"] = "must be at most 80 characters"
 	}
-	u, err := url.Parse(strings.TrimSpace(s.BaseURL))
+	auth := s.Auth
+	if auth == "" {
+		auth = AuthKey
+	}
+	var u *url.URL
+	var err error
 	switch {
+	case auth != AuthKey && auth != AuthGoogle:
+		problems["auth"] = "must be key or google"
+	case auth == AuthGoogle:
+		var gp map[string]string
+		u, gp = googleConnection(api, s.Project, s.Location, s.BaseURL, s.Cloud, s.APIKey != "")
+		for k, v := range gp {
+			problems[k] = v
+		}
+	case s.Project != "" || s.Location != "":
+		problems["project"] = "project and location belong to a Google connection"
+	}
+	if auth != AuthGoogle {
+		u, err = url.Parse(strings.TrimSpace(s.BaseURL))
+	}
+	switch {
+	case auth == AuthGoogle || problems["auth"] != "":
+		// checked above
 	case err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil ||
 		len(s.BaseURL) > 500:
 		problems["baseUrl"] = "must be an absolute http(s) URL without a query or credentials"
@@ -277,6 +396,24 @@ func NewConnection(s ConnectionSpec, defaultContext int) (AIConnection, map[stri
 	if s.ContextTokens < 0 || s.ContextTokens > 10_000_000 {
 		problems["contextTokens"] = "must be between 0 and 10000000"
 	}
+	if len(s.Caps) > 50 {
+		problems["caps"] = "at most 50 entries"
+	}
+	for _, o := range s.Caps {
+		if _, err := path.Match(o.Pattern, ""); err != nil || o.Pattern == "" || len(o.Pattern) > 200 {
+			problems["caps"] = fmt.Sprintf("%q is not a valid pattern", o.Pattern)
+		}
+		if o.Reasoning != nil {
+			switch *o.Reasoning {
+			case llm.ReasonNone, llm.ReasonEffort, llm.ReasonBudget, llm.ReasonSwitch:
+			default:
+				problems["caps"] = "reasoning must be none, effort, budget or switch"
+			}
+		}
+		if o.ContextTokens != nil && (*o.ContextTokens < 0 || *o.ContextTokens > 10_000_000) {
+			problems["caps"] = "contextTokens must be between 0 and 10000000"
+		}
+	}
 	if len(s.DefaultModel) > 200 {
 		problems["defaultModel"] = "must be at most 200 characters"
 	}
@@ -290,6 +427,6 @@ func NewConnection(s ConnectionSpec, defaultContext int) (AIConnection, map[stri
 	if len(problems) > 0 {
 		return AIConnection{}, problems
 	}
-	return AIConnection{Name: s.Name, Label: label, API: api, BaseURL: u, APIKey: s.APIKey, Cloud: s.Cloud, DefaultModel: s.DefaultModel,
-		Models: s.Models, ContextTokens: ctx}, nil
+	return AIConnection{Name: s.Name, Label: label, API: api, BaseURL: u, APIKey: s.APIKey, Auth: auth, Project: s.Project,
+		Location: s.Location, Cloud: s.Cloud, DefaultModel: s.DefaultModel, Models: s.Models, ContextTokens: ctx, Caps: s.Caps}, nil
 }

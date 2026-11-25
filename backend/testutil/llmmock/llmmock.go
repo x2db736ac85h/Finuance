@@ -59,6 +59,9 @@ type Server struct {
 	modelLists atomic.Int64
 	// Models lists the ids GET /models answers.
 	Models []string
+	// Vertex, when set, makes the mock Vertex AI's endpoint and Google's metadata server instead
+	// of a local model server (vertex.go).
+	Vertex *Vertex
 }
 
 // ModelLists is how many times the model list was asked for.
@@ -107,6 +110,12 @@ func (s *Server) next() (Reply, bool) {
 
 // ServeHTTP routes /v1/models, /v1/chat/completions and /v1/messages (with or without /v1).
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.Vertex != nil {
+		if !s.serveVertex(w, r) {
+			http.NotFound(w, r) // no model list, no Ollama, no LM Studio
+		}
+		return
+	}
 	p := strings.TrimPrefix(r.URL.Path, "/v1")
 	switch {
 	case r.Method == http.MethodGet && p == "/models":
@@ -175,6 +184,10 @@ type request struct {
 	Messages []json.RawMessage `json:"messages"`
 	Tools    []json.RawMessage `json:"tools"`
 	Stream   bool              `json:"stream"`
+	// like the real servers, usage is part of a stream only when it is asked for
+	StreamOptions struct {
+		IncludeUsage bool `json:"include_usage"`
+	} `json:"stream_options"`
 }
 
 func (s *Server) chat(w http.ResponseWriter, r *http.Request, anthropic bool) {
@@ -206,7 +219,7 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request, anthropic bool) {
 		streamAnthropic(w, r, reply)
 		return
 	}
-	streamOpenAI(w, r, reply)
+	streamOpenAI(w, r, reply, req.StreamOptions.IncludeUsage)
 }
 
 // conversation is what the brain needs from a request.
@@ -461,7 +474,7 @@ func (s *sse) send(event string, v any) bool {
 	return s.r.Context().Err() == nil
 }
 
-func streamOpenAI(w http.ResponseWriter, r *http.Request, rep Reply) {
+func streamOpenAI(w http.ResponseWriter, r *http.Request, rep Reply, usage bool) {
 	s := newSSE(w, r, rep.Delay)
 	delta := func(d map[string]any, finish any) map[string]any {
 		return map[string]any{"object": "chat.completion.chunk", "choices": []any{map[string]any{"index": 0, "delta": d, "finish_reason": finish}}}
@@ -506,7 +519,9 @@ func streamOpenAI(w http.ResponseWriter, r *http.Request, rep Reply) {
 		}
 	}
 	s.send("", delta(map[string]any{}, finish))
-	s.send("", map[string]any{"object": "chat.completion.chunk", "choices": []any{}, "usage": map[string]int{"prompt_tokens": 100, "completion_tokens": 20}})
+	if usage {
+		s.send("", map[string]any{"object": "chat.completion.chunk", "choices": []any{}, "usage": map[string]int{"prompt_tokens": 100, "completion_tokens": 20}})
+	}
 	_, _ = io.WriteString(w, "data: [DONE]\n\n")
 }
 

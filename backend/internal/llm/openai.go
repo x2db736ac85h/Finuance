@@ -76,14 +76,21 @@ type oaRequest struct {
 	ReasoningEffort string      `json:"reasoning_effort,omitempty"`
 	MaxTokens       int         `json:"max_tokens,omitempty"`
 	Stream          bool        `json:"stream"`
+	// StreamOptions asks for the usage of a streamed answer (PLAN 26.4): without it a stream
+	// reports no token counts, and budgets ran on an estimate.
+	StreamOptions *oaStreamOptions `json:"stream_options,omitempty"`
 	// TTL is LM Studio's idle time in seconds for a model it loads for this request.
 	TTL int `json:"ttl,omitempty"`
+}
+
+type oaStreamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
 }
 
 func strp(s string) *string { return &s }
 
 func (o *openAIClient) body(req Request) ([]byte, error) {
-	r := oaRequest{Model: req.Model, Temperature: req.Temperature, Stream: true}
+	r := oaRequest{Model: req.Model, Temperature: req.Temperature, Stream: true, StreamOptions: &oaStreamOptions{IncludeUsage: true}}
 	if req.KeepAlive > 0 && o.Server() == ServerLMStudio {
 		r.TTL = int(req.KeepAlive / time.Second)
 	}
@@ -305,6 +312,11 @@ func (o *openAIClient) Models(ctx context.Context) ([]Model, error) {
 	}
 	defer done()
 	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode == http.StatusNotFound && len(o.c.StaticModels) > 0 {
+		// an endpoint without a model list (Vertex AI): the connection's own list is the list
+		o.setServer(ServerOther)
+		return o.staticModels(), nil
+	}
 	if res.StatusCode/100 != 2 {
 		return nil, readError(res)
 	}
@@ -322,7 +334,13 @@ func (o *openAIClient) Models(ctx context.Context) ([]Model, error) {
 			out = append(out, Model{ID: m.ID})
 		}
 	}
+	if len(out) == 0 && len(o.c.StaticModels) > 0 {
+		out = o.staticModels()
+	}
 	switch {
+	case o.c.Hosted:
+		// a provider's endpoint: nothing next to it to ask (PLAN 26.3)
+		o.setServer(ServerOther)
 	case o.lmStudioDetails(ctx, out):
 		o.setServer(ServerLMStudio)
 	case o.ollamaDetails(ctx, out) || o.ollamaVersion(ctx):
@@ -331,6 +349,17 @@ func (o *openAIClient) Models(ctx context.Context) ([]Model, error) {
 		o.setServer(ServerOther)
 	}
 	return out, nil
+}
+
+func (o *openAIClient) staticModels() []Model {
+	out := make([]Model, 0, len(o.c.StaticModels))
+	for _, id := range o.c.StaticModels {
+		// a pattern is not a model: only the ids written out can be listed
+		if id != "" && !strings.ContainsAny(id, "*?[") {
+			out = append(out, Model{ID: id})
+		}
+	}
+	return out
 }
 
 // ollamaShowMax caps the /api/show requests of one model list.

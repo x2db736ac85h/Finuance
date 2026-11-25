@@ -1,0 +1,16 @@
+{
+  "connections": [
+    {
+      "name": "vertex",
+      "label": "Gemini (Google Cloud)",
+      "api": "openai",
+      "auth": "google",
+      "project": "my-project-123",
+      "location": "europe-west4",
+      "cloud": true,
+      "defaultModel": "google/gemini-3.5-flash-lite",
+      "models": ["google/gemini-3.5-flash-lite", "google/gemini-3.8-flash"],
+      "caps": [{"pattern": "google/*", "contextTokens": 1000000}]
+    }
+  ]
+}

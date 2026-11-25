@@ -166,6 +166,7 @@ var outsideRLS = map[string]string{
 	"advice_articles":               "the instance's advice library, written by administrators (ADR 0034)",
 	"assistant_connections":         "the instance's model servers, with sealed keys, managed by administrators (ADR 0035)",
 	"assistant_connection_controls": "the instance's switches per model server (ADR 0035)",
+	"assistant_connection_usage":    "tokens and runs per model server and day, across all users, for its budget (ADR 0045)",
 	"assistant_model_settings":      "the instance's tuning per model (ADR 0035)",
 	"goose_db_version":              "the migration tool's own table",
 }

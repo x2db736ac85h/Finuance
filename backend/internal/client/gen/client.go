@@ -866,6 +866,24 @@ func (e ColumnStatsColumn) Valid() bool {
 	}
 }
 
+// Defines values for ConnectionAuth.
+const (
+	Google ConnectionAuth = "google"
+	Key    ConnectionAuth = "key"
+)
+
+// Valid indicates whether the value is a known member of the ConnectionAuth enum.
+func (e ConnectionAuth) Valid() bool {
+	switch e {
+	case Google:
+		return true
+	case Key:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DailyRequestRange.
 const (
 	DailyRequestRangeAll    DailyRequestRange = "all"
@@ -1397,6 +1415,30 @@ func (e LegacyImportStatus) Valid() bool {
 	case LegacyImportStatusQueued:
 		return true
 	case LegacyImportStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ModelCapsOverrideReasoning.
+const (
+	ModelCapsOverrideReasoningBudget ModelCapsOverrideReasoning = "budget"
+	ModelCapsOverrideReasoningEffort ModelCapsOverrideReasoning = "effort"
+	ModelCapsOverrideReasoningNone   ModelCapsOverrideReasoning = "none"
+	ModelCapsOverrideReasoningSwitch ModelCapsOverrideReasoning = "switch"
+)
+
+// Valid indicates whether the value is a known member of the ModelCapsOverrideReasoning enum.
+func (e ModelCapsOverrideReasoning) Valid() bool {
+	switch e {
+	case ModelCapsOverrideReasoningBudget:
+		return true
+	case ModelCapsOverrideReasoningEffort:
+		return true
+	case ModelCapsOverrideReasoningNone:
+		return true
+	case ModelCapsOverrideReasoningSwitch:
 		return true
 	default:
 		return false
@@ -2611,10 +2653,14 @@ type ActivityPage struct {
 
 // AdminConnection defines model for AdminConnection.
 type AdminConnection struct {
-	Api           AdminConnectionApi `json:"api"`
-	BaseUrl       string             `json:"baseUrl"`
-	Cloud         bool               `json:"cloud"`
-	ContextTokens int                `json:"contextTokens"`
+	Api AdminConnectionApi `json:"api"`
+
+	// Auth How the connection proves who it is. `key`: a stored API key, or none. `google`: short-lived tokens from Google's credentials (workload identity, a developer's login or an external-account file; ADR 0045); it has a project and a location, no key, and reaches only Vertex AI's hosts.
+	Auth          ConnectionAuth       `json:"auth"`
+	BaseUrl       string               `json:"baseUrl"`
+	Caps          *[]ModelCapsOverride `json:"caps,omitempty"`
+	Cloud         bool                 `json:"cloud"`
+	ContextTokens int                  `json:"contextTokens"`
 
 	// Controls An administrator's controls for one connection; the defaults until they are first saved.
 	Controls     AdminConnectionControls `json:"controls"`
@@ -2625,9 +2671,15 @@ type AdminConnection struct {
 	KeyUnreadable bool   `json:"keyUnreadable"`
 	Label         string `json:"label"`
 
+	// Location The Vertex AI location of a `google` connection.
+	Location *string `json:"location,omitempty"`
+
 	// Models Model id patterns offered (globs); empty offers every chat model.
 	Models []string `json:"models"`
 	Name   string   `json:"name"`
+
+	// Project The Google Cloud project of a `google` connection.
+	Project *string `json:"project,omitempty"`
 
 	// Source The connections file's (read only) or added here.
 	Source    AdminConnectionSource `json:"source"`
@@ -2645,12 +2697,18 @@ type AdminConnectionSource string
 
 // AdminConnectionControls An administrator's controls for one connection; the defaults until they are first saved.
 type AdminConnectionControls struct {
+	// DailyTokens The connection's budget: tokens per UTC day across all users (ADR 0045); absent or null = none. Once used up, questions on this connection answer `limit_reached` until the next day.
+	DailyTokens *int64 `json:"dailyTokens,omitempty"`
+
 	// DefaultModel The model questions use, over the connection's own default; '' = that default.
 	DefaultModel string `json:"defaultModel"`
 	Enabled      bool   `json:"enabled"`
 
 	// PhotoModel The model for a question with photos when the chosen one can't read images; '' = none.
 	PhotoModel string `json:"photoModel"`
+
+	// TokensToday What the connection has used today (UTC), from the usage its server reported.
+	TokensToday int64 `json:"tokensToday"`
 
 	// UnloadAfterMinutes Minutes the server keeps a model after the last question: 10, 15, 30, 45, 60, 120 or 240; null = the server's own setting.
 	UnloadAfterMinutes *int       `json:"unloadAfterMinutes"`
@@ -2662,6 +2720,8 @@ type AdminConnectionControls struct {
 
 // AdminConnectionControlsInput defines model for AdminConnectionControlsInput.
 type AdminConnectionControlsInput struct {
+	// DailyTokens Tokens per UTC day across all users; null or absent = no budget.
+	DailyTokens        *int64 `json:"dailyTokens,omitempty"`
 	DefaultModel       string `json:"defaultModel"`
 	Enabled            bool   `json:"enabled"`
 	PhotoModel         string `json:"photoModel"`
@@ -2671,15 +2731,23 @@ type AdminConnectionControlsInput struct {
 
 // AdminConnectionInput defines model for AdminConnectionInput.
 type AdminConnectionInput struct {
-	Api           AdminConnectionInputApi `json:"api"`
-	ApiKey        *string                 `json:"apiKey,omitempty"`
-	BaseUrl       string                  `json:"baseUrl"`
-	Cloud         bool                    `json:"cloud"`
-	ContextTokens int                     `json:"contextTokens"`
-	DefaultModel  string                  `json:"defaultModel"`
-	Label         string                  `json:"label"`
-	Models        []string                `json:"models"`
-	Name          string                  `json:"name"`
+	Api    AdminConnectionInputApi `json:"api"`
+	ApiKey *string                 `json:"apiKey,omitempty"`
+
+	// Auth How the connection proves who it is. `key`: a stored API key, or none. `google`: short-lived tokens from Google's credentials (workload identity, a developer's login or an external-account file; ADR 0045); it has a project and a location, no key, and reaches only Vertex AI's hosts.
+	Auth *ConnectionAuth `json:"auth,omitempty"`
+
+	// BaseUrl Empty for a `google` connection derives Vertex AI's address from project and location.
+	BaseUrl       string               `json:"baseUrl"`
+	Caps          *[]ModelCapsOverride `json:"caps,omitempty"`
+	Cloud         bool                 `json:"cloud"`
+	ContextTokens int                  `json:"contextTokens"`
+	DefaultModel  string               `json:"defaultModel"`
+	Label         string               `json:"label"`
+	Location      *string              `json:"location,omitempty"`
+	Models        []string             `json:"models"`
+	Name          string               `json:"name"`
+	Project       *string              `json:"project,omitempty"`
 }
 
 // AdminConnectionInputApi defines model for AdminConnectionInput.Api.
@@ -2690,14 +2758,22 @@ type AdminConnectionUpdate struct {
 	Api AdminConnectionUpdateApi `json:"api"`
 
 	// ApiKey The new key with `replace`.
-	ApiKey        *string                        `json:"apiKey,omitempty"`
+	ApiKey *string `json:"apiKey,omitempty"`
+
+	// Auth How the connection proves who it is. `key`: a stored API key, or none. `google`: short-lived tokens from Google's credentials (workload identity, a developer's login or an external-account file; ADR 0045); it has a project and a location, no key, and reaches only Vertex AI's hosts.
+	Auth *ConnectionAuth `json:"auth,omitempty"`
+
+	// BaseUrl Empty for a `google` connection derives Vertex AI's address from project and location.
 	BaseUrl       string                         `json:"baseUrl"`
+	Caps          *[]ModelCapsOverride           `json:"caps,omitempty"`
 	Cloud         bool                           `json:"cloud"`
 	ContextTokens int                            `json:"contextTokens"`
 	DefaultModel  string                         `json:"defaultModel"`
 	KeyAction     AdminConnectionUpdateKeyAction `json:"keyAction"`
 	Label         string                         `json:"label"`
+	Location      *string                        `json:"location,omitempty"`
 	Models        []string                       `json:"models"`
+	Project       *string                        `json:"project,omitempty"`
 	Version       int32                          `json:"version"`
 }
 
@@ -2941,15 +3017,25 @@ type AssistantConnection struct {
 	Label string `json:"label"`
 
 	// LatencyMs How long the last check of the model list took.
-	LatencyMs *int             `json:"latencyMs,omitempty"`
-	Models    []AssistantModel `json:"models"`
+	LatencyMs *int `json:"latencyMs,omitempty"`
+
+	// Location Where a cloud connection processes the data, when it says (a Google connection's location).
+	//
+	// Example: europe-west4
+	Location *string          `json:"location,omitempty"`
+	Models   []AssistantModel `json:"models"`
 
 	// Name Example: lmstudio
 	Name string `json:"name"`
 
 	// PhotoModel The model a question with photos uses when the chosen one can't read images.
 	PhotoModel *string `json:"photoModel,omitempty"`
-	Reachable  bool    `json:"reachable"`
+
+	// Provider Who runs a cloud connection's endpoint: `Google Cloud (Vertex AI)`, `Anthropic`, `OpenAI`, or another service's host name. Absent for a local connection.
+	//
+	// Example: Google Cloud (Vertex AI)
+	Provider  *string `json:"provider,omitempty"`
+	Reachable bool    `json:"reachable"`
 }
 
 // AssistantConnectionApi defines model for AssistantConnection.Api.
@@ -3127,6 +3213,9 @@ type AssistantSettingsAutoApply string
 type AssistantStatus struct {
 	// Choice Who picks the connection and model: the administrator (questions use the default connection and its default model, whatever they ask for) or each person.
 	Choice AssistantStatusChoice `json:"choice"`
+
+	// CloudNote The administrator's sentence on what a cloud provider keeps, shown where a person agrees.
+	CloudNote *string `json:"cloudNote,omitempty"`
 
 	// Connections The connections switched on; with `choice` admin only the default one.
 	Connections []AssistantConnection `json:"connections"`
@@ -3381,6 +3470,9 @@ type CommitRequest struct {
 	// RememberMapping Save the mapping and options for files with the same layout.
 	RememberMapping *bool `json:"rememberMapping,omitempty"`
 }
+
+// ConnectionAuth How the connection proves who it is. `key`: a stored API key, or none. `google`: short-lived tokens from Google's credentials (workload identity, a developer's login or an external-account file; ADR 0045); it has a project and a location, no key, and reaches only Vertex AI's hosts.
+type ConnectionAuth string
 
 // ContrastFailure defines model for ContrastFailure.
 type ContrastFailure struct {
@@ -4108,6 +4200,9 @@ type InsightSummary struct {
 
 // InstanceAssistant The instance's settings for the assistant; left out of a PUT, the stored ones stay.
 type InstanceAssistant struct {
+	// CloudNote One paragraph on what a cloud provider keeps (retention, logging), shown where a person agrees to a cloud connection.
+	CloudNote *string `json:"cloudNote,omitempty"`
+
 	// DefaultConnection The connection questions use when the administrator picks; '' = the first one switched on.
 	DefaultConnection *string `json:"defaultConnection,omitempty"`
 
@@ -4382,6 +4477,18 @@ type Meta struct {
 	// Example: v0.1.0
 	Version string `json:"version"`
 }
+
+// ModelCapsOverride A correction of what is detected about the models matching `pattern` (a glob on the id).
+type ModelCapsOverride struct {
+	ContextTokens *int                        `json:"contextTokens,omitempty"`
+	Pattern       string                      `json:"pattern"`
+	Reasoning     *ModelCapsOverrideReasoning `json:"reasoning,omitempty"`
+	Tools         *bool                       `json:"tools,omitempty"`
+	Vision        *bool                       `json:"vision,omitempty"`
+}
+
+// ModelCapsOverrideReasoning defines model for ModelCapsOverride.Reasoning.
+type ModelCapsOverrideReasoning string
 
 // ModelTuning An administrator's defaults for one model (ADR 0035), used when a question doesn't set them; the context size replaces the detected one and the note follows the instructions in the prompt.
 type ModelTuning struct {

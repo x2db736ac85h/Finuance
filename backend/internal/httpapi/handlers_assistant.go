@@ -54,6 +54,11 @@ func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusReques
 	refresh := req.Params.Refresh != nil && *req.Params.Refresh &&
 		a.limits.statusRefresh.Allow(identity(ctx).User.ID.String()) == nil
 	var list []assistant.ConnectionStatus
+	if a.ai != nil {
+		if note := a.ai.Runner.Choice(ctx).CloudNote; note != "" {
+			out.CloudNote = &note
+		}
+	}
 	if a.ai != nil && !a.ai.Runner.Choice(ctx).People {
 		out.Choice = gen.AssistantStatusChoiceAdmin
 		c, err := a.conns().Get(a.ai.Runner.Choice(ctx).Connection)
@@ -72,6 +77,15 @@ func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusReques
 		st := &list[i]
 		c := gen.AssistantConnection{Name: st.Name, Label: st.Label, Api: gen.AssistantConnectionApi(st.API), Cloud: st.Cloud,
 			Reachable: st.Reachable, Models: make([]gen.AssistantModel, 0, len(st.Models)), Error: publicAssistantError(st.Err)}
+		// who gets the data of a cloud connection, and where: what a person agrees to (PLAN 26.5)
+		if conn, err := a.conns().GetAny(st.Name); err == nil {
+			if provider, location := assistant.Provider(&conn.AIConnection); provider != "" {
+				c.Provider = &provider
+				if location != "" {
+					c.Location = &location
+				}
+			}
+		}
 		if st.DefaultModel != "" {
 			c.DefaultModel = &st.DefaultModel
 		}

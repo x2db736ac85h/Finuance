@@ -8,7 +8,29 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
+
+const addConnectionUsage = `-- name: AddConnectionUsage :exec
+
+INSERT INTO assistant_connection_usage (connection, day, tokens, runs) VALUES ($1, $2, $3, 1)
+ON CONFLICT (connection, day) DO UPDATE
+SET tokens = assistant_connection_usage.tokens + excluded.tokens, runs = assistant_connection_usage.runs + 1
+`
+
+type AddConnectionUsageParams struct {
+	Connection string
+	Day        platform.Date
+	Tokens     int64
+}
+
+// Connection budgets (migration 00032): what a connection used on a UTC day, across all users.
+// One finished run's tokens on its connection and UTC day.
+func (q *Queries) AddConnectionUsage(ctx context.Context, arg AddConnectionUsageParams) error {
+	_, err := q.db.Exec(ctx, addConnectionUsage, arg.Connection, arg.Day, arg.Tokens)
+	return err
+}
 
 const deleteModelSettings = `-- name: DeleteModelSettings :execrows
 DELETE FROM assistant_model_settings WHERE connection = $1 AND model = $2
@@ -27,6 +49,18 @@ func (q *Queries) DeleteModelSettings(ctx context.Context, arg DeleteModelSettin
 	return result.RowsAffected(), nil
 }
 
+const deleteOldConnectionUsage = `-- name: DeleteOldConnectionUsage :execrows
+DELETE FROM assistant_connection_usage WHERE day < $1
+`
+
+func (q *Queries) DeleteOldConnectionUsage(ctx context.Context, before platform.Date) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteOldConnectionUsage, before)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteStoredConnection = `-- name: DeleteStoredConnection :execrows
 DELETE FROM assistant_connections WHERE name = $1
 `
@@ -39,8 +73,24 @@ func (q *Queries) DeleteStoredConnection(ctx context.Context, name string) (int6
 	return result.RowsAffected(), nil
 }
 
+const getConnectionUsage = `-- name: GetConnectionUsage :one
+SELECT coalesce(sum(tokens), 0)::bigint AS tokens FROM assistant_connection_usage WHERE connection = $1 AND day = $2
+`
+
+type GetConnectionUsageParams struct {
+	Connection string
+	Day        platform.Date
+}
+
+func (q *Queries) GetConnectionUsage(ctx context.Context, arg GetConnectionUsageParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getConnectionUsage, arg.Connection, arg.Day)
+	var tokens int64
+	err := row.Scan(&tokens)
+	return tokens, err
+}
+
 const getStoredConnection = `-- name: GetStoredConnection :one
-SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at FROM assistant_connections WHERE name = $1
+SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps FROM assistant_connections WHERE name = $1
 `
 
 func (q *Queries) GetStoredConnection(ctx context.Context, name string) (AssistantConnection, error) {
@@ -59,15 +109,19 @@ func (q *Queries) GetStoredConnection(ctx context.Context, name string) (Assista
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Auth,
+		&i.Project,
+		&i.Location,
+		&i.Caps,
 	)
 	return i, err
 }
 
 const insertConnectionControls = `-- name: InsertConnectionControls :one
-INSERT INTO assistant_connection_controls (name, enabled, unload_after_minutes, default_model, photo_model, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO assistant_connection_controls (name, enabled, unload_after_minutes, default_model, photo_model, daily_tokens, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (name) DO NOTHING
-RETURNING name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at
+RETURNING name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at, daily_tokens
 `
 
 type InsertConnectionControlsParams struct {
@@ -76,6 +130,7 @@ type InsertConnectionControlsParams struct {
 	UnloadAfterMinutes *int32
 	DefaultModel       string
 	PhotoModel         string
+	DailyTokens        *int64
 	Now                time.Time
 }
 
@@ -87,6 +142,7 @@ func (q *Queries) InsertConnectionControls(ctx context.Context, arg InsertConnec
 		arg.UnloadAfterMinutes,
 		arg.DefaultModel,
 		arg.PhotoModel,
+		arg.DailyTokens,
 		arg.Now,
 	)
 	var i AssistantConnectionControl
@@ -98,14 +154,17 @@ func (q *Queries) InsertConnectionControls(ctx context.Context, arg InsertConnec
 		&i.PhotoModel,
 		&i.Version,
 		&i.UpdatedAt,
+		&i.DailyTokens,
 	)
 	return i, err
 }
 
 const insertStoredConnection = `-- name: InsertStoredConnection :one
-INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at
+INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key,
+                                   auth, project, location, caps, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $10, $11, $12, $13, $14, $14)
+RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps
 `
 
 type InsertStoredConnectionParams struct {
@@ -118,6 +177,10 @@ type InsertStoredConnectionParams struct {
 	Models        []string
 	ContextTokens int32
 	ApiKey        []byte
+	Auth          string
+	Project       string
+	Location      string
+	Caps          []byte
 	Now           time.Time
 }
 
@@ -132,6 +195,10 @@ func (q *Queries) InsertStoredConnection(ctx context.Context, arg InsertStoredCo
 		arg.Models,
 		arg.ContextTokens,
 		arg.ApiKey,
+		arg.Auth,
+		arg.Project,
+		arg.Location,
+		arg.Caps,
 		arg.Now,
 	)
 	var i AssistantConnection
@@ -148,13 +215,17 @@ func (q *Queries) InsertStoredConnection(ctx context.Context, arg InsertStoredCo
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Auth,
+		&i.Project,
+		&i.Location,
+		&i.Caps,
 	)
 	return i, err
 }
 
 const listConnectionControls = `-- name: ListConnectionControls :many
 
-SELECT name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at FROM assistant_connection_controls ORDER BY name
+SELECT name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at, daily_tokens FROM assistant_connection_controls ORDER BY name
 `
 
 // Connection controls (migration 00024): on or off, unload after idle, the default model and the
@@ -176,7 +247,39 @@ func (q *Queries) ListConnectionControls(ctx context.Context) ([]AssistantConnec
 			&i.PhotoModel,
 			&i.Version,
 			&i.UpdatedAt,
+			&i.DailyTokens,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listConnectionUsage = `-- name: ListConnectionUsage :many
+SELECT connection, tokens, runs FROM assistant_connection_usage WHERE day = $1 ORDER BY connection
+`
+
+type ListConnectionUsageRow struct {
+	Connection string
+	Tokens     int64
+	Runs       int32
+}
+
+// Every connection's tokens and runs of one day (Administration → Assistant).
+func (q *Queries) ListConnectionUsage(ctx context.Context, day platform.Date) ([]ListConnectionUsageRow, error) {
+	rows, err := q.db.Query(ctx, listConnectionUsage, day)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConnectionUsageRow
+	for rows.Next() {
+		var i ListConnectionUsageRow
+		if err := rows.Scan(&i.Connection, &i.Tokens, &i.Runs); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -222,7 +325,7 @@ func (q *Queries) ListModelSettings(ctx context.Context) ([]AssistantModelSettin
 
 const listStoredConnections = `-- name: ListStoredConnections :many
 
-SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at FROM assistant_connections ORDER BY name
+SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps FROM assistant_connections ORDER BY name
 `
 
 // Administration → Assistant (ADR 0035; migration 00022): stored connections and per-model tuning.
@@ -249,6 +352,10 @@ func (q *Queries) ListStoredConnections(ctx context.Context) ([]AssistantConnect
 			&i.Version,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Auth,
+			&i.Project,
+			&i.Location,
+			&i.Caps,
 		); err != nil {
 			return nil, err
 		}
@@ -263,9 +370,9 @@ func (q *Queries) ListStoredConnections(ctx context.Context) ([]AssistantConnect
 const updateConnectionControls = `-- name: UpdateConnectionControls :one
 UPDATE assistant_connection_controls
 SET enabled = $1, unload_after_minutes = $2, default_model = $3,
-    photo_model = $4, version = version + 1, updated_at = $5
-WHERE name = $6 AND version = $7
-RETURNING name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at
+    photo_model = $4, daily_tokens = $5, version = version + 1, updated_at = $6
+WHERE name = $7 AND version = $8
+RETURNING name, enabled, unload_after_minutes, default_model, photo_model, version, updated_at, daily_tokens
 `
 
 type UpdateConnectionControlsParams struct {
@@ -273,6 +380,7 @@ type UpdateConnectionControlsParams struct {
 	UnloadAfterMinutes *int32
 	DefaultModel       string
 	PhotoModel         string
+	DailyTokens        *int64
 	Now                time.Time
 	Name               string
 	Version            int32
@@ -285,6 +393,7 @@ func (q *Queries) UpdateConnectionControls(ctx context.Context, arg UpdateConnec
 		arg.UnloadAfterMinutes,
 		arg.DefaultModel,
 		arg.PhotoModel,
+		arg.DailyTokens,
 		arg.Now,
 		arg.Name,
 		arg.Version,
@@ -298,6 +407,7 @@ func (q *Queries) UpdateConnectionControls(ctx context.Context, arg UpdateConnec
 		&i.PhotoModel,
 		&i.Version,
 		&i.UpdatedAt,
+		&i.DailyTokens,
 	)
 	return i, err
 }
@@ -305,9 +415,10 @@ func (q *Queries) UpdateConnectionControls(ctx context.Context, arg UpdateConnec
 const updateStoredConnection = `-- name: UpdateStoredConnection :one
 UPDATE assistant_connections
 SET label = $1, api = $2, base_url = $3, cloud = $4, default_model = $5, models = $6,
-    context_tokens = $7, api_key = $8, version = version + 1, updated_at = $9
-WHERE name = $10 AND version = $11
-RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at
+    context_tokens = $7, api_key = $8, auth = $9, project = $10, location = $11,
+    caps = $12, version = version + 1, updated_at = $13
+WHERE name = $14 AND version = $15
+RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps
 `
 
 type UpdateStoredConnectionParams struct {
@@ -319,6 +430,10 @@ type UpdateStoredConnectionParams struct {
 	Models        []string
 	ContextTokens int32
 	ApiKey        []byte
+	Auth          string
+	Project       string
+	Location      string
+	Caps          []byte
 	Now           time.Time
 	Name          string
 	Version       int32
@@ -335,6 +450,10 @@ func (q *Queries) UpdateStoredConnection(ctx context.Context, arg UpdateStoredCo
 		arg.Models,
 		arg.ContextTokens,
 		arg.ApiKey,
+		arg.Auth,
+		arg.Project,
+		arg.Location,
+		arg.Caps,
 		arg.Now,
 		arg.Name,
 		arg.Version,
@@ -353,6 +472,10 @@ func (q *Queries) UpdateStoredConnection(ctx context.Context, arg UpdateStoredCo
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Auth,
+		&i.Project,
+		&i.Location,
+		&i.Caps,
 	)
 	return i, err
 }

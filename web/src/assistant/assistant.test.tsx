@@ -914,6 +914,44 @@ describe('ChatSettings', () => {
     expect(within(p).getByText(/You agreed to send your questions/)).toBeTruthy();
   });
 
+  it('says who gets the data and where, with the administrator’s note on what is kept (26.5)', async () => {
+    st.status = {
+      ...status([
+        {},
+        {
+          cloud: true,
+          label: 'Gemini',
+          name: 'vertex',
+          provider: 'Google Cloud (Vertex AI)',
+          location: 'europe-west4',
+        },
+      ]),
+      cloudNote: 'Google keeps prompts for up to 30 days for abuse monitoring.',
+    };
+    renderApp('/transactions/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByTitle('Assistant settings'));
+    const conn = await within(p).findByLabelText('Connection');
+    await waitFor(() => {
+      expect(within(conn).getAllByRole('option')).toHaveLength(2);
+    });
+    fireEvent.change(conn, { target: { value: 'vertex' } });
+    const dialog = await screen.findByRole('dialog', { name: 'Send data to a cloud service?' });
+    expect(dialog.textContent).toContain(
+      'Gemini is a cloud service run by Google Cloud (Vertex AI), in europe-west4. It runs outside this server.',
+    );
+    expect(dialog.textContent).toContain(
+      'What it keeps, from your administrator: Google keeps prompts for up to 30 days for abuse monitoring.',
+    );
+    fireEvent.click(within(dialog).getByText('Allow Gemini'));
+    // the badge names the place, and its title the provider
+    const badge = await within(p).findByText('cloud · europe-west4');
+    expect(badge.getAttribute('title')).toBe('Google Cloud (Vertex AI), europe-west4');
+    expect(within(p).getByText(/You agreed to send your questions/).textContent).toContain(
+      '(Google Cloud (Vertex AI), europe-west4)',
+    );
+  });
+
   it('switches the digest on with the model in use, and writes one now (ADR 0033)', async () => {
     let asked = 0;
     server.use(

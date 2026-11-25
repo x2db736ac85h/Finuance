@@ -1331,6 +1331,13 @@ body.dragging .overlay {
   z-index: 60;
   pointer-events: none;
 }
+.cloud-note {
+  padding: 0.5rem 0.625rem;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
 .toast .ico {
   width: 0.875rem;
   height: 0.875rem;

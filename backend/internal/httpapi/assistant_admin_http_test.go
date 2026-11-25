@@ -113,3 +113,82 @@ func TestAssistantAdminHTTP(t *testing.T) {
 		t.Errorf("usage by day = %s", days.raw)
 	}
 }
+
+// TestGoogleConnectionHTTP (PLAN 26.2): an administrator adds a connection that authenticates with
+// Google's credentials: a project, a chosen location, no key; its address is Vertex AI's for them,
+// and nothing that could send its token elsewhere is accepted.
+func TestGoogleConnectionHTTP(t *testing.T) {
+	e := newTestEnv(t, func(c *config.Config) { c.InstanceKey = bytes.Repeat([]byte{9}, 32) }, false)
+	reset := func() {
+		if _, err := tu.Require(t, testDB).Owner.Exec(context.Background(), `DELETE FROM assistant_connections`); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reset()
+	t.Cleanup(reset)
+	boss, _ := e.adminBrowser(t, "boss-"+testEmail(t))
+	in := func(mod func(map[string]any)) map[string]any {
+		m := map[string]any{"name": "vertex", "label": "Gemini", "api": "openai", "baseUrl": "", "cloud": true, "auth": "google",
+			"project": "demo-project", "location": "europe-west4", "defaultModel": "", "contextTokens": 0,
+			"models": []string{"google/gemini-3.5-flash-lite"},
+			"caps":   []map[string]any{{"pattern": "google/*", "contextTokens": 1000000, "vision": true}}}
+		if mod != nil {
+			mod(m)
+		}
+		return m
+	}
+	for name, mod := range map[string]func(map[string]any){
+		"no location":         func(m map[string]any) { m["location"] = "" },
+		"no project":          func(m map[string]any) { m["project"] = "" },
+		"with a key":          func(m map[string]any) { m["apiKey"] = "sk-1" },
+		"not a cloud service": func(m map[string]any) { m["cloud"] = false },
+		"another host":        func(m map[string]any) { m["baseUrl"] = "https://example.test/v1" },
+		"a look-alike host": func(m map[string]any) {
+			m["baseUrl"] = "https://europe-west4-aiplatform.googleapis.com.example.test/v1"
+		},
+		"plain http":      func(m map[string]any) { m["baseUrl"] = "http://europe-west4-aiplatform.googleapis.com/v1" },
+		"an unknown auth": func(m map[string]any) { m["auth"] = "azure" },
+	} {
+		if r := boss.do("POST", "/admin/assistant/connections", in(mod)); r.code != 422 {
+			t.Errorf("%s: %d %s, want 422", name, r.code, r.raw)
+		}
+	}
+	created := boss.do("POST", "/admin/assistant/connections", in(nil))
+	expect(t, created, 201, "")
+	const address = "https://europe-west4-aiplatform.googleapis.com/v1/projects/demo-project/locations/europe-west4/endpoints/openapi"
+	if created.body["auth"] != "google" || created.body["baseUrl"] != address || created.body["hasKey"] != false ||
+		created.body["project"] != "demo-project" || created.body["location"] != "europe-west4" || !strings.Contains(created.raw, `"pattern":"google/*"`) {
+		t.Errorf("created = %s", created.raw)
+	}
+	// stored without a key, whatever a change asks to keep
+	up := in(func(m map[string]any) {
+		delete(m, "name")
+		m["version"], m["keyAction"], m["location"] = 1, "keep", "eu"
+	})
+	r := boss.do("PUT", "/admin/assistant/connections/vertex", up)
+	expect(t, r, 200, "")
+	if r.body["hasKey"] != false || !strings.Contains(r.raw, "https://aiplatform.eu.rep.googleapis.com/v1/projects/demo-project/locations/eu/endpoints/openapi") {
+		t.Errorf("moved to the eu multi-region = %s", r.raw)
+	}
+	var key []byte
+	var auth string
+	if err := tu.Require(t, testDB).Owner.QueryRow(context.Background(),
+		`SELECT api_key, auth FROM assistant_connections WHERE name = 'vertex'`).Scan(&key, &auth); err != nil || key != nil || auth != "google" {
+		t.Errorf("stored key = %v, auth = %q, %v", key, auth, err)
+	}
+	// a key connection says so, and carries no project
+	list := boss.do("GET", "/admin/assistant/connections", nil)
+	if rows := list.body2(t); len(rows) != 1 || rows[0]["auth"] != "google" {
+		t.Errorf("list = %s", list.raw)
+	}
+	// the table itself refuses a Google connection with a key or without a location
+	for _, sql := range []string{
+		`UPDATE assistant_connections SET api_key = '\x01' WHERE name = 'vertex'`,
+		`UPDATE assistant_connections SET location = '' WHERE name = 'vertex'`,
+		`UPDATE assistant_connections SET cloud = false WHERE name = 'vertex'`,
+	} {
+		if _, err := tu.Require(t, testDB).Owner.Exec(context.Background(), sql); err == nil {
+			t.Errorf("the table accepted: %s", sql)
+		}
+	}
+}

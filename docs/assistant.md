@@ -75,6 +75,8 @@ To offer several servers, point `FINUANCE_AI_CONNECTIONS_FILE` at a JSON file in
 | `api` | `openai` (Chat Completions) or `anthropic` (Messages) |
 | `baseUrl` | The API root: `…/v1` for OpenAI-compatible servers; the host for Anthropic (with or without `/v1`) |
 | `apiKeyEnv` | Name of the environment variable that holds the key. The key itself never goes in the file, so the file can live in a GitOps repository. |
+| `auth` | `key` (the default: `apiKeyEnv`, or no key) or `google`: short-lived tokens from Google's credentials instead of a key (see [Using a cloud model](#using-a-cloud-model-google-cloud)). |
+| `project`, `location` | For `"auth": "google"`: the Google Cloud project and the Vertex AI location. The address follows from them, so `baseUrl` is left out. |
 | `cloud` | Allows public addresses (https only). Users must agree once before their data goes there, and long digit runs in tool results are masked. |
 | `defaultModel` | Used when the user picks none |
 | `models` | Allowlist of model ids (globs, case-insensitive). If omitted, every chat model is offered; embedding models are never offered. |
@@ -131,6 +133,92 @@ Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 to
 - **`gemma3:4b`** has no tool calling on Ollama (its capabilities say so), so it runs in plan mode and wrote ```` ```tool_code ```` instead of the plan's JSON; not usable for questions. On receipts it took the cash given or a subtotal for the total.
 - Receipts misread by the Qwen models: a UK date read as a US one (both), and by the instruct model a French total and a cash receipt's amount given.
 
+## Using a cloud model (Google Cloud)
+
+Since 0.7 a connection can use the models on Google Cloud's Vertex AI (Gemini, and the open models
+behind the same endpoint) **without a stored key** (ADR 0045). The instance asks Google for a token
+that lives about an hour, with credentials it already has, and sends it to Vertex AI's hosts only.
+
+> **Synthetic data only, for now.** The project's own decision (2026-11-16) is that a cloud model
+> sees synthetic data until the questions below are settled for the instance with real data.
+> Nothing changes for an instance without a cloud connection.
+
+### What leaves the instance
+
+Exactly what leaves for any cloud connection: the question, the photos attached to it, and the
+transactions the model looks up through its tools (payees, amounts, dates, titles, categories).
+Runs of digits of account-number length are shortened first; photos go as they are. Each person
+agrees once per connection, and the dialog names the provider and the location
+("Google Cloud (Vertex AI), in europe-west4") with the administrator's note on what is kept.
+
+### What Google may keep (read this before the first question)
+
+These are Google Cloud's terms as checked on 2026-11-16; they change, so check them again:
+
+- **Abuse monitoring.** On an account without invoiced billing, prompts and answers may be logged
+  for abuse monitoring (for up to about 30 to 90 days) unless an exception is granted. Google's
+  documentation on abuse monitoring for Vertex AI says how to ask for it.
+- **Caching.** A 24-hour in-memory cache of prompts is on by default at project level, and can be
+  switched off for the project (Google's documentation on data governance for Vertex AI says how).
+- **Where it is processed.** A regional location (`europe-west4`) or the `eu` multi-region keeps
+  processing there. `global` gives no say over where: Google chooses per request. That is why the
+  connection has **no default location**: you pick one, and `global` only if you name it.
+
+What Google does with customer data beyond that is in its own terms for Vertex AI; read them for
+your kind of account. This document only lists what was found to need a decision.
+
+Write what applies to your project into **Administration → Assistant → What a cloud provider
+keeps**: that paragraph is shown to every person where they agree.
+
+### Setting it up
+
+1. **A project** with the Vertex AI API enabled (`aiplatform.googleapis.com`) and billing.
+2. **Credentials for the instance**, one of:
+   - *on Google Kubernetes Engine:* workload identity. Give the api's and the worker's Kubernetes
+     service account a Google service account with the role **`roles/aiplatform.user`** on the
+     project, and nothing else. No key, no Secret.
+   - *on your own machine* (evals, local work): `gcloud auth application-default login`, with your
+     own account holding the same role.
+   - *on a cluster outside Google:* an external-account file (workload identity federation) named
+     by `GOOGLE_APPLICATION_CREDENTIALS`. Not a service-account key.
+3. **The connection**, in Administration → Assistant → *Add a connection* → **Google** (project,
+   location, the model ids to offer), or in the connections file
+   (`deploy/assistant/connections.vertex.example.json`):
+
+   ```json
+   {"name": "vertex", "label": "Gemini (Google Cloud)", "api": "openai", "auth": "google",
+    "project": "my-project-123", "location": "europe-west4", "cloud": true,
+    "models": ["google/gemini-3.5-flash-lite"]}
+   ```
+
+   Gemini models are named `google/<id>`; open models `<publisher>/<model>-maas`. Vertex AI's
+   endpoint has no model list, so the ids you write are the list (a pattern such as `google/*`
+   offers nothing by itself; it only allows ids).
+4. **A budget.** Under the connection's *Models*, set a **daily token budget**: tokens per UTC day
+   for everyone together, counted from what Google reports. When it is used up, questions on the
+   connection answer `limit_reached` until the next day. Google Cloud's own budgets *alert* but do
+   not stop spending, so set one there too (Billing → Budgets & alerts) and treat this limit as the
+   stop.
+5. **Egress.** The api and the worker need `443` to Google's API hosts, and on GKE the metadata
+   server. The client itself refuses to send a Google token to any host that is not Vertex AI's
+   (`aiplatform.googleapis.com`, `{location}-aiplatform.googleapis.com`,
+   `aiplatform.{multi-region}.rep.googleapis.com`), and follows no redirect to another host.
+
+### What is different from a local server
+
+- No key is stored, shown or asked for. *Test* under Models asks Google for a token and the
+  endpoint for nothing more (it has no model list).
+- Loading and unloading models and the idle timer don't apply.
+- What a model can do (tools, images, thinking) comes from its name; correct it with `caps`.
+- Token counts are Google's own (the request asks for the stream's usage), so the dashboard's
+  "Tokens reported by the model servers" and both budgets are exact.
+
+### Trying it without Google
+
+`llmmock -vertex demo-project/europe-west4` answers like the endpoint and like the metadata server
+(tokens that run out, `401` for a stale one, no model list). The tests use it
+(`TestGoogleConnection`); with `GCE_METADATA_HOST` pointing at it, a local stack can too.
+
 ## Limits and retention
 
 | Variable | Default | |
@@ -142,6 +230,8 @@ Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 to
 | `FINUANCE_INSTANCE_KEY` | (none) | Seals the API keys of connections added in the admin panel (32 bytes, base64; ADR 0035) |
 | `FINUANCE_AI_TOKENS_PER_DAY` | `200000` | Tokens per user per UTC day, questions and digests together: the outer bound of the `assistantTokensPerDay` limit (`422 limit_reached` once used; a digest is skipped) |
 | `FINUANCE_AI_MAX_CHATS` | `25` | Chats kept per user; the oldest go first |
+
+A connection can have a **daily token budget** for everyone together (Administration → Assistant → Models; ADR 0045): `422 limit_reached` with the limit `connectionTokensPerDay` once it is used up, until the next UTC day.
 
 Each user can only have one answer in progress at a time (`409 run_in_progress`). A run's tokens are what the model server reported, or the length of what was sent and written / 4 where it reports none; a run that started under the budget finishes even if it goes over. The worker writes digests one at a time, so on a small GPU a question asked while a digest is written waits for the digest's current model request. Chats are deleted 48 hours after their last message unless the user picks 1–7 days or *forever* in the assistant settings. An hourly worker job applies the setting, and expired chats are never shown even before it runs. Chats are part of *Download my data* and are deleted with the account.
 
@@ -157,6 +247,16 @@ It lists each connection's chat models with their detected capabilities. Then it
 ## Measuring quality: `make eval-assistant`
 
 `make eval-assistant CONNECTION=… MODEL=… [THINK=…]` runs the 46 golden questions in `evals/assistant/` against a real model and rebuilds `docs/evals.md`. See `evals/assistant/README.md`.
+
+Against Vertex AI (synthetic demo data, your own Google login, no key anywhere):
+
+```sh
+gcloud auth application-default login
+FINUANCE_AI_CONNECTIONS_FILE=deploy/assistant/connections.vertex.example.json \
+  make eval-assistant CONNECTION=vertex MODEL=google/gemini-3.5-flash-lite
+```
+
+(with your project and location in a copy of the file). The run's cost shows in Google Cloud's billing report under Vertex AI a few hours later.
 
 ## Local work without a model
 

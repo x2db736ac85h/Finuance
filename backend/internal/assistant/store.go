@@ -191,6 +191,17 @@ func (c *Chats) TokensToday(ctx context.Context, userID uuid.UUID) (int64, error
 	return n, err
 }
 
+// ConnectionTokensToday is what a connection has used on this UTC day, across all users.
+func (c *Chats) ConnectionTokensToday(ctx context.Context, connection string) (int64, error) {
+	var n int64
+	err := c.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		var err error
+		n, err = q.GetConnectionUsage(ctx, db.GetConnectionUsageParams{Connection: connection, Day: utcDay(c.clock.Now())})
+		return err
+	})
+	return n, err
+}
+
 func settings(ctx context.Context, q *db.Queries, userID uuid.UUID) (Settings, error) {
 	row, err := q.GetAssistantSettings(ctx, userID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -488,6 +499,13 @@ func (c *Chats) Append(ctx context.Context, userID, chatID uuid.UUID, msgs []Mes
 			if err := q.AddAssistantUsage(ctx, db.AddAssistantUsageParams{UserID: userID, Day: utcDay(now), Digest: u.Digest,
 				Tokens: max(u.Tokens, 0)}); err != nil {
 				return err
+			}
+			// the same tokens count against the connection's budget (ADR 0045)
+			if up.Connection != "" {
+				if err := q.AddConnectionUsage(ctx, db.AddConnectionUsageParams{Connection: up.Connection, Day: utcDay(now),
+					Tokens: max(u.Tokens, 0)}); err != nil {
+					return err
+				}
 			}
 		}
 		return q.UpdateAssistantChat(ctx, db.UpdateAssistantChatParams{UserID: userID, ID: chatID, Now: now, Connection: up.Connection,
