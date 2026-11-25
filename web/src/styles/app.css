@@ -2164,7 +2164,10 @@ body.has-qbar .toast {
 .gr.on {
   background: var(--accent-soft);
 }
-.gr .gdot-i {
+/* a group's colour dot, wherever a group is named (the menu, the report, the Shared page): it was
+   sized only inside the groups menu, so elsewhere it had no size and didn't show (Phase 26, U9) */
+.gdot-i {
+  display: inline-block;
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 50%;

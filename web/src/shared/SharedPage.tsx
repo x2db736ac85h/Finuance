@@ -20,7 +20,8 @@ import { ShareDialog } from './dialogs';
 import { FriendsPanel } from './Friends';
 import { GroupPage } from './GroupPage';
 import { hintText, TIMELINE_KIND_LABEL } from './text';
-import { sharedPath } from '../lib/paths';
+import { sharedPath, txPath } from '../lib/paths';
+import { useViews, viewOf } from '../stores/viewStore';
 
 export function SharedPage() {
   const { groupId } = useParams();
@@ -68,8 +69,23 @@ function Timeline({ friends }: { friends: boolean }) {
   const groups = (data?.groups ?? []).filter((g) => kind === 'all' || g.kind === kind);
   const kinds = [...new Set((data?.groups ?? []).map((g) => g.kind))];
   const byId = new Map((data?.groups ?? []).map((g) => [g.id, g]));
+  // A shared group opens its page; a personal group opens the table showing exactly its
+  // transactions, whenever they were (Phase 26, U9: it used to be a name with nothing behind it).
   const open = (g: TimelineGroup) => {
-    if (g.source === 'shared') void navigate(sharedPath(g.id));
+    if (g.source === 'shared') {
+      void navigate(sharedPath(g.id));
+      return;
+    }
+    const { patch, views } = useViews.getState();
+    patch('all', {
+      filters: { group: { cond: `=${g.name}`, excluded: [] } },
+      hidden: viewOf(views, 'all').hidden.filter((c) => c !== 'group'),
+      period: 'all',
+      custom: null,
+      search: '',
+      toolFilter: null,
+    });
+    void navigate(txPath());
   };
   return (
     <div className="sh-page">
@@ -195,19 +211,16 @@ function Timeline({ friends }: { friends: boolean }) {
                 <tr key={g.id} className={g.source === 'shared' ? 'sh-row' : undefined}>
                   <td>
                     <i className="gdot-i" style={{ background: groupColor(g.color) }} />{' '}
-                    {g.source === 'shared' ? (
-                      <button
-                        type="button"
-                        className="adm-link"
-                        onClick={() => {
-                          open(g);
-                        }}
-                      >
-                        {g.name}
-                      </button>
-                    ) : (
-                      g.name
-                    )}{' '}
+                    <button
+                      type="button"
+                      className="adm-link"
+                      title={g.source === 'shared' ? 'Open the shared group' : "Show this group's transactions"}
+                      onClick={() => {
+                        open(g);
+                      }}
+                    >
+                      {g.name}
+                    </button>{' '}
                     <span className="sh-badge">{g.source === 'shared' ? 'shared' : TIMELINE_KIND_LABEL[g.kind]}</span>
                   </td>
                   <td>{span(g)}</td>
