@@ -4,7 +4,13 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
-## [Unreleased]
+## [0.7.0] - 2026-11-25
+
+Cloud AI: the assistant can use Google Cloud's models with short-lived credentials and no stored
+key, on synthetic data only for now. Three migrations (00031–00033), all additive. An instance
+without a cloud connection behaves as before, except that OpenAI-format requests now ask the
+model server for the usage of a streamed answer (`stream_options.include_usage`).
+
 
 ### Added
 
