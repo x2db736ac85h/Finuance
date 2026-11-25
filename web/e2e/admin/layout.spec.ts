@@ -8,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 const ADMIN_EMAIL = process.env['E2E_ADMIN_EMAIL'] ?? 'admin@example.test';
 const ADMIN_PASSWORD = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e admin password long enough';
 
-const SETTINGS = ['general', 'profile', 'security', 'activity', 'friends', 'categories', 'rules', 'data'];
+const SETTINGS = ['general', 'profile', 'security', 'activity', 'categories', 'rules', 'data'];
 const ADMIN = ['users', 'instance', 'themes', 'assistant', 'usage', 'developer'];
 
 type Layout = { body: { x: number; width: number }; fields: number; rows: number; problems: string[] };
