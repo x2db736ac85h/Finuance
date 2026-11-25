@@ -88,7 +88,7 @@ Decisions of 2026-11-25 (the maintainer, later that day): everything in this pha
 - [x] 26.5 consent says who and where — 2026-11-25 (pull request 3): the status names a cloud connection's provider and location (`assistant.Provider`: Google Cloud with its location, Anthropic and OpenAI by their hosts, another service by its host name); the consent dialog, the "cloud" badge and the settings say them ("global" is said as what it means); the administrator's paragraph on what the provider keeps (`assistant.cloudNote` in the instance settings) is shown in the dialog; the system prompt's opening line makes no claim of a private, self-hosted app to a model at a provider. `TestProvider`, `TestSystemPromptForACloudModel`, `cloud.test.ts`, an assistant panel test
 - [ ] 26.7 evals on synthetic data (the maintainer's Google login)
 - [ ] 26.8 documents, `v0.7.0`
-- [ ] 26.9 (stretch) Claude on Vertex
+- [x] 26.9 (stretch) Claude on Vertex — 2026-11-25 (pull request 4): a Google connection in the `anthropic` format (`llm.Config.Vertex`): the model in the address (`…/publishers/anthropic/models/{model}:streamRawPredict`), `anthropic_version: vertex-2023-10-16` in the body and no `model`, the bearer token from the same source, the connection's own model ids as the list; the address derived per format; migration 00033 lets the table hold it; the mock's Vertex mode answers that path and refuses a body with the wrong shape; the Google form chooses the family. `TestClaudeOnVertex`, `providers.test.ts`. Not run against Google (no credentials here): the same eval command with a Claude id is the first real run
 - [ ] Gate (the maintainer)
 
 Phase 25 — The traffic simulator: ten animals on a lab instance (closed; PLAN §9). Confirmed with `/phase-start 25` on 2026-11-21.

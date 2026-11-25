@@ -203,7 +203,6 @@ func TestGoogleConnectionRules(t *testing.T) {
 		"no project":                          {func(s *config.ConnectionSpec) { s.Project = "" }, "project"},
 		"not marked as cloud":                 {func(s *config.ConnectionSpec) { s.Cloud = false }, "cloud"},
 		"with a key":                          {func(s *config.ConnectionSpec) { s.APIKey = "sk-1" }, "apiKey"},
-		"the anthropic format":                {func(s *config.ConnectionSpec) { s.API = "anthropic" }, "api"},
 		"another host":                        {func(s *config.ConnectionSpec) { s.BaseURL = "https://example.test/v1" }, "baseUrl"},
 		"a host that only ends like Google's": {func(s *config.ConnectionSpec) { s.BaseURL = "https://evil-aiplatform.googleapis.com.example.test/v1" }, "baseUrl"},
 		"a host with Google's name in front":  {func(s *config.ConnectionSpec) { s.BaseURL = "https://aiplatform.googleapis.com.example.test/v1" }, "baseUrl"},
@@ -394,5 +393,52 @@ func TestProvider(t *testing.T) {
 		if p, l := Provider(&tc.c); p != tc.provider || l != tc.location {
 			t.Errorf("%s: provider %q, location %q; want %q, %q", tc.c.Name, p, l, tc.provider, tc.location)
 		}
+	}
+}
+
+// TestClaudeOnVertex (PLAN 26.9): a Google connection in the anthropic format speaks Vertex AI's
+// variant of the Messages API: the model in the address, the version in the body, the bearer token
+// from Google's credentials, the connection's own model ids as the list.
+func TestClaudeOnVertex(t *testing.T) {
+	l := newVertexLab(t)
+	c, problems := config.NewConnection(config.ConnectionSpec{Name: "claude-vertex", Label: "Claude", API: "anthropic", Auth: config.AuthGoogle,
+		Project: "demo-project", Location: "europe-west4", Cloud: true, Models: []string{"claude-sonnet-5-5"}}, 8192)
+	if len(problems) > 0 {
+		t.Fatalf("the connection is refused: %v", problems)
+	}
+	if got, want := c.BaseURL.String(), "https://europe-west4-aiplatform.googleapis.com/v1/projects/demo-project/locations/europe-west4"; got != want {
+		t.Fatalf("derived address = %s, want %s", got, want)
+	}
+	gemini, _ := l.cs.Get("vertex")
+	l.cs.SetStored([]config.AIConnection{gemini.AIConnection, c}, nil, nil)
+	st, err := l.cs.StatusOf(context.Background(), "claude-vertex", true)
+	if err != nil || !st.Reachable || len(st.Models) != 1 || st.Models[0].ID != "claude-sonnet-5-5" || st.Models[0].Caps.Reasoning != llm.ReasonBudget {
+		t.Fatalf("status = %+v, %v", st, err)
+	}
+	conn, _ := l.cs.Get("claude-vertex")
+	l.mu.Lock()
+	l.paths = nil
+	l.mu.Unlock()
+	res, err := conn.Client.Chat(context.Background(), llm.Request{Model: "claude-sonnet-5-5", System: "Be brief.",
+		Messages: []llm.Message{{Role: llm.RoleUser, Content: "How much did I spend on coffee?"}}}, nil)
+	if err != nil || (res.Content == "" && len(res.ToolCalls) == 0) {
+		t.Fatalf("a question to Claude on Vertex: %+v, %v", res, err)
+	}
+	if want := l.mock.Vertex.Claude() + "claude-sonnet-5-5:streamRawPredict"; len(l.paths) == 0 || l.paths[len(l.paths)-1] != want {
+		t.Errorf("the question went to %q, want %s", l.paths, want)
+	}
+	reqs, hdrs := l.mock.Requests(), l.mock.Headers()
+	body, hdr := string(reqs[len(reqs)-1]), hdrs[len(hdrs)-1]
+	if !strings.Contains(body, `"anthropic_version":"vertex-2023-10-16"`) || strings.Contains(body, `"model"`) {
+		t.Errorf("the body must carry the version and no model: %s", body)
+	}
+	if !strings.HasPrefix(hdr.Get("Authorization"), "Bearer ya29.mock-") || hdr.Get("X-Api-Key") != "" || hdr.Get("Anthropic-Version") != "" {
+		t.Errorf("headers = %v", hdr)
+	}
+	// a revoked token is renewed once here too
+	l.mock.Vertex.Revoke()
+	if _, err := conn.Client.Chat(context.Background(), llm.Request{Model: "claude-sonnet-5-5",
+		Messages: []llm.Message{{Role: llm.RoleUser, Content: "And on books?"}}}, nil); err != nil {
+		t.Errorf("after a revoked token: %v", err)
 	}
 }

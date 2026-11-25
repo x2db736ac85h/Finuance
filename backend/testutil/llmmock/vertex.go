@@ -12,7 +12,9 @@ import (
 // server next to it (PLAN 26.6), so a connection with `auth: google` can be tested without Google:
 //
 //   - chat lives at the long path only,
-//     /v1/projects/{project}/locations/{location}/endpoints/openapi/chat/completions;
+//     /v1/projects/{project}/locations/{location}/endpoints/openapi/chat/completions, and Claude at
+//     …/locations/{location}/publishers/anthropic/models/{model}:streamRawPredict (the Messages API
+//     with `anthropic_version` in the body and no `model`);
 //   - there is no model list (GET …/models is 404), and nothing of Ollama or LM Studio;
 //   - every request needs a bearer token this mock issued and that hasn't run out: anything else
 //     is 401, as a token that expired or was revoked is;
@@ -44,6 +46,11 @@ func (v *Vertex) now() time.Time {
 // Base is the path of the endpoint, to append to the mock's address.
 func (v *Vertex) Base() string {
 	return fmt.Sprintf("/v1/projects/%s/locations/%s/endpoints/openapi", v.Project, v.Location)
+}
+
+// Claude is the path Claude's models live under: {Claude()}{model}:streamRawPredict.
+func (v *Vertex) Claude() string {
+	return fmt.Sprintf("/v1/projects/%s/locations/%s/publishers/anthropic/models/", v.Project, v.Location)
 }
 
 // Issued is how many tokens were handed out; Denied how many requests were refused with 401.
@@ -118,6 +125,12 @@ func (s *Server) serveVertex(w http.ResponseWriter, r *http.Request) bool {
 	case r.Method == http.MethodPost && r.URL.Path == v.Base()+"/chat/completions":
 		if v.authorized(w, r) {
 			s.chat(w, r, false)
+		}
+		return true
+	case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, v.Claude()) && strings.HasSuffix(r.URL.Path, ":streamRawPredict"):
+		// Claude on Vertex AI: the Messages API with the model in the path and the version in the body
+		if v.authorized(w, r) {
+			s.chat(w, r, true)
 		}
 		return true
 	}

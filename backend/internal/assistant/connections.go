@@ -198,6 +198,7 @@ func (cs *Connections) connect(c config.AIConnection) *Connection {
 		// endpoint is not a model server to probe or to manage (PLAN 26.1–26.3, ADR 0045)
 		cfg.APIKey, cfg.Auth, cfg.TokenHost = "", cs.googleTokens(), llm.GoogleAPIHost
 		cfg.Hosted, cfg.StaticModels = true, c.Models
+		cfg.Vertex = c.API == llm.Anthropic // Claude on Vertex AI: the Messages API in Vertex's variant
 	}
 	return &Connection{AIConnection: c, Client: cs.newClient(cfg)}
 }

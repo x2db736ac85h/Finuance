@@ -59,9 +59,8 @@ func (c *AIConnection) Google() bool { return c.Auth == AuthGoogle }
 // defaulted: "global" gives no say over where data is processed, so it has to be asked for by name.
 func googleConnection(api llm.API, project, location, baseURL string, cloud, hasKey bool) (*url.URL, map[string]string) {
 	problems := map[string]string{}
-	if api != llm.OpenAI {
-		problems["api"] = "a Google connection uses the openai format (Vertex AI's OpenAI-compatible endpoint)"
-	}
+	// both formats exist on Vertex AI: openai for Gemini and the open models, anthropic for Claude
+	// (PLAN 26.9); any other value was refused before this is reached
 	if !cloud {
 		problems["cloud"] = "a Google connection is a cloud service: it must be marked as one"
 	}
@@ -82,7 +81,7 @@ func googleConnection(api llm.API, project, location, baseURL string, cloud, has
 	}
 	raw := strings.TrimSpace(baseURL)
 	if raw == "" {
-		raw = llm.GoogleBaseURL(project, location)
+		raw = llm.GoogleBaseURL(api, project, location)
 	}
 	u, err := url.Parse(raw)
 	switch {

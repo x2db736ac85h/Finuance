@@ -26,7 +26,9 @@ here changes a default, and an instance without a cloud connection behaves exact
 1. **A connection says how it authenticates:** `auth: key` (the default: a key, or none) or
    `auth: google`. A Google connection names a **project** and a **location**, has **no key**, is a
    **cloud** connection (so each person agrees before their data is sent, and long numbers are
-   masked), and uses the `openai` format. The connections file, the panel and the table
+   masked). It uses the `openai` format for Gemini and the open models, or the `anthropic` format
+   for Claude on Vertex AI, which is the Messages API with the model in the address and
+   `anthropic_version` in the body (migration 00033). The connections file, the panel and the table
    (`assistant_connections`, migration 00031) all refuse anything else.
 2. **Tokens come from Google's standard credentials**, found at the first request
    (`internal/llm/googleauth`, on `golang.org/x/oauth2`, approved 2026-11-17):
@@ -82,8 +84,8 @@ here changes a default, and an instance without a cloud connection behaves exact
 - The model list of a Google connection is typed by hand and goes stale when Google renames models.
   The eval suite (`docs/evals.md`) is where a new id is tried first.
 - New module: `golang.org/x/oauth2`, with `cloud.google.com/go/compute/metadata`.
-- Not done here, each a decision of its own: a cloud model for the instance with real data;
-  Claude on Vertex (its own wire variant, PLAN 26.9); keys per user.
+- Not done here, each a decision of its own: a cloud model for the instance with real data; keys
+  per user.
 
 ## Alternatives considered
 

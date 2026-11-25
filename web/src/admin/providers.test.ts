@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { freeName, mayOffer, providerOf, PROVIDERS, providerTag } from './providers';
+import { freeName, googleBaseUrl, mayOffer, providerOf, PROVIDERS, providerTag } from './providers';
 
 describe('providers', () => {
   it('offers Anthropic, OpenAI and Google by name, then a local server and other', () => {
@@ -50,5 +50,23 @@ describe('providers', () => {
     expect(mayOffer(['qwen?'], 'llama4')).toBe(true);
     expect(mayOffer(['[a-c]*'], 'llama4')).toBe(true);
     expect(mayOffer(['google/*'], 'google/gemini-3.8-flash')).toBe(true);
+  });
+  it('derives Vertex AI’s address like the server, per model family', () => {
+    expect(googleBaseUrl('demo-project', 'europe-west4')).toBe(
+      'https://europe-west4-aiplatform.googleapis.com/v1/projects/demo-project/locations/europe-west4/endpoints/openapi',
+    );
+    expect(googleBaseUrl('demo-project', 'eu')).toBe(
+      'https://aiplatform.eu.rep.googleapis.com/v1/projects/demo-project/locations/eu/endpoints/openapi',
+    );
+    expect(googleBaseUrl('demo-project', 'global')).toBe(
+      'https://aiplatform.googleapis.com/v1/projects/demo-project/locations/global/endpoints/openapi',
+    );
+    expect(googleBaseUrl('demo-project', 'europe-west4', 'anthropic')).toBe(
+      'https://europe-west4-aiplatform.googleapis.com/v1/projects/demo-project/locations/europe-west4',
+    );
+    // a connection that authenticates with Google is Google's, whatever its address says
+    expect(providerOf({ api: 'anthropic', baseUrl: 'https://example.test', cloud: true, auth: 'google' })).toBe(
+      'google',
+    );
   });
 });

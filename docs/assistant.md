@@ -204,6 +204,15 @@ keeps**: that paragraph is shown to every person where they agree.
    (`aiplatform.googleapis.com`, `{location}-aiplatform.googleapis.com`,
    `aiplatform.{multi-region}.rep.googleapis.com`), and follows no redirect to another host.
 
+### Claude on Vertex AI
+
+The same connection kind reaches Anthropic's Claude models on Vertex AI: choose *Claude (Anthropic
+on Vertex AI)* in the form, or write `"api": "anthropic"` with `"auth": "google"` in the file. The
+address is then the location itself (`…/v1/projects/{project}/locations/{location}`), the model is
+part of the request's address, and `models` lists Claude's ids as your project has them enabled
+(Vertex AI's Model Garden). Everything else is the same: no key, the host allowlist, the budget,
+consent. Not tried against Google yet (the tests use the mock); the eval is the first real run.
+
 ### What is different from a local server
 
 - No key is stored, shown or asked for. *Test* under Models asks Google for a token and the

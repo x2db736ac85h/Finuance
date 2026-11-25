@@ -35,7 +35,7 @@ export const PROVIDERS: readonly Provider[] = [
   {
     id: 'google',
     label: 'Google',
-    about: 'Gemini models on Vertex AI, without a stored key',
+    about: 'Gemini, or Claude, on Vertex AI, without a stored key',
     preset: { api: 'openai', baseUrl: '', cloud: true, name: 'vertex', label: 'Gemini' },
     fixedAddress: true,
   },
@@ -132,15 +132,19 @@ export const GOOGLE_LOCATIONS: readonly { value: string; label: string }[] = [
   { value: 'europe-north1', label: 'europe-north1 — Finland' },
 ];
 
-/** Vertex AI's OpenAI-compatible address for a project and a location, as the server derives it. */
-export function googleBaseUrl(project: string, location: string): string {
+/**
+ * Vertex AI's address for a project and a location, as the server derives it: the OpenAI-compatible
+ * endpoint for Gemini and the open models, the location itself for Claude (the anthropic format).
+ */
+export function googleBaseUrl(project: string, location: string, api: 'openai' | 'anthropic' = 'openai'): string {
   const host =
     location === 'global'
       ? 'aiplatform.googleapis.com'
       : /[-0-9]/.test(location)
         ? `${location}-aiplatform.googleapis.com`
         : `aiplatform.${location}.rep.googleapis.com`;
-  return `https://${host}/v1/projects/${project}/locations/${location}/endpoints/openapi`;
+  const base = `https://${host}/v1/projects/${project}/locations/${location}`;
+  return api === 'anthropic' ? base : `${base}/endpoints/openapi`;
 }
 
 export const GOOGLE_PROJECT = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
