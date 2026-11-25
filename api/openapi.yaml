@@ -7908,7 +7908,7 @@ components:
     AdminConnection:
       type: object
       additionalProperties: false
-      required: [name, label, api, baseUrl, cloud, defaultModel, models, contextTokens, source, hasKey, keyUnreadable, version, controls]
+      required: [name, label, api, baseUrl, cloud, auth, defaultModel, models, contextTokens, source, hasKey, keyUnreadable, version, controls]
       properties:
         name:
           type: string
@@ -7921,6 +7921,18 @@ components:
           type: string
         cloud:
           type: boolean
+        auth:
+          $ref: "#/components/schemas/ConnectionAuth"
+        project:
+          type: string
+          description: The Google Cloud project of a `google` connection.
+        location:
+          type: string
+          description: The Vertex AI location of a `google` connection.
+        caps:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModelCapsOverride"
         defaultModel:
           type: string
         models:
@@ -7948,6 +7960,35 @@ components:
         updatedAt:
           type: string
           format: date-time
+    ConnectionAuth:
+      type: string
+      enum: [key, google]
+      description: >-
+        How the connection proves who it is. `key`: a stored API key, or none. `google`: short-lived
+        tokens from Google's credentials (workload identity, a developer's login or an
+        external-account file; ADR 0045); it has a project and a location, no key, and reaches only
+        Vertex AI's hosts.
+    ModelCapsOverride:
+      type: object
+      additionalProperties: false
+      required: [pattern]
+      description: A correction of what is detected about the models matching `pattern` (a glob on the id).
+      properties:
+        pattern:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tools:
+          type: boolean
+        reasoning:
+          type: string
+          enum: [none, effort, budget, switch]
+        contextTokens:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        vision:
+          type: boolean
     AdminConnectionInput:
       type: object
       additionalProperties: false
@@ -7965,8 +8006,24 @@ components:
         baseUrl:
           type: string
           maxLength: 500
+          description: Empty for a `google` connection derives Vertex AI's address from project and location.
         cloud:
           type: boolean
+        auth:
+          $ref: "#/components/schemas/ConnectionAuth"
+        project:
+          type: string
+          maxLength: 30
+          pattern: "^([a-z][a-z0-9-]{4,28}[a-z0-9])?$"
+        location:
+          type: string
+          maxLength: 40
+          pattern: "^[a-z0-9-]{0,40}$"
+        caps:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/ModelCapsOverride"
         defaultModel:
           type: string
           maxLength: 200
@@ -8002,8 +8059,24 @@ components:
         baseUrl:
           type: string
           maxLength: 500
+          description: Empty for a `google` connection derives Vertex AI's address from project and location.
         cloud:
           type: boolean
+        auth:
+          $ref: "#/components/schemas/ConnectionAuth"
+        project:
+          type: string
+          maxLength: 30
+          pattern: "^([a-z][a-z0-9-]{4,28}[a-z0-9])?$"
+        location:
+          type: string
+          maxLength: 40
+          pattern: "^[a-z0-9-]{0,40}$"
+        caps:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/ModelCapsOverride"
         defaultModel:
           type: string
           maxLength: 200

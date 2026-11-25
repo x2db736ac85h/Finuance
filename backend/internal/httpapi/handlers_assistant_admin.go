@@ -24,9 +24,51 @@ func (a *api) connectionStore() (*assistant.ConnectionStore, error) {
 }
 
 func connectionDTO(c *assistant.StoredConnection) gen.AdminConnection {
-	return gen.AdminConnection{Name: c.Name, Label: c.Label, Api: gen.AdminConnectionApi(c.API), BaseUrl: c.BaseURL, Cloud: c.Cloud,
+	out := gen.AdminConnection{Name: c.Name, Label: c.Label, Api: gen.AdminConnectionApi(c.API), BaseUrl: c.BaseURL, Cloud: c.Cloud,
 		DefaultModel: c.DefaultModel, Models: c.Models, ContextTokens: c.ContextTokens, Source: gen.AdminConnectionSource(c.Source),
-		HasKey: c.HasKey, KeyUnreadable: c.KeyUnreadable, Version: c.Version, UpdatedAt: c.UpdatedAt, Controls: controlsDTO(c.Controls)}
+		HasKey: c.HasKey, KeyUnreadable: c.KeyUnreadable, Version: c.Version, UpdatedAt: c.UpdatedAt, Controls: controlsDTO(c.Controls),
+		Auth: gen.ConnectionAuth(c.Auth)}
+	if c.Auth == "" {
+		out.Auth = gen.ConnectionAuth(config.AuthKey)
+	}
+	if c.Auth == config.AuthGoogle {
+		out.Project, out.Location = &c.Project, &c.Location
+	}
+	if len(c.Caps) > 0 {
+		caps := make([]gen.ModelCapsOverride, len(c.Caps))
+		for i, o := range c.Caps {
+			caps[i] = gen.ModelCapsOverride{Pattern: o.Pattern, Tools: o.Tools, ContextTokens: o.ContextTokens, Vision: o.Vision}
+			if o.Reasoning != nil {
+				v := gen.ModelCapsOverrideReasoning(*o.Reasoning)
+				caps[i].Reasoning = &v
+			}
+		}
+		out.Caps = &caps
+	}
+	return out
+}
+
+// capsIn reads the corrections of a request.
+func capsIn(in *[]gen.ModelCapsOverride) []llm.CapsOverride {
+	if in == nil {
+		return nil
+	}
+	out := make([]llm.CapsOverride, len(*in))
+	for i, o := range *in {
+		out[i] = llm.CapsOverride{Pattern: o.Pattern, Tools: o.Tools, ContextTokens: o.ContextTokens, Vision: o.Vision}
+		if o.Reasoning != nil {
+			v := llm.Reasoning(*o.Reasoning)
+			out[i].Reasoning = &v
+		}
+	}
+	return out
+}
+
+func authIn(a *gen.ConnectionAuth) string {
+	if a == nil {
+		return ""
+	}
+	return string(*a)
 }
 
 func controlsDTO(c assistant.Controls) gen.AdminConnectionControls {
@@ -102,6 +144,10 @@ func (a *api) modelAction(ctx context.Context, name, model, action string, do fu
 	err := do(ctx, name, model)
 	switch {
 	case errors.Is(err, llm.ErrCannotManage):
+		if c, gerr := a.conns().GetAny(name); gerr == nil && c.Google() {
+			// not a failure of the server: a provider's endpoint keeps no model in memory for us (PLAN 26.3)
+			return gen.AdminModelServer{}, modelProblem("doesn't apply to a provider's endpoint: there is nothing to load or unload")
+		}
 		return gen.AdminModelServer{}, modelProblem("this server doesn't load or unload models from here (Ollama does)")
 	case errors.Is(err, assistant.ErrUnknownModel):
 		return gen.AdminModelServer{}, modelProblem("isn't a model this connection offers")
@@ -208,11 +254,12 @@ func (a *api) AdminCreateConnection(ctx context.Context, req gen.AdminCreateConn
 	}
 	b := req.Body
 	c, err := s.Create(ctx, config.ConnectionSpec{Name: b.Name, Label: b.Label, API: string(b.Api), BaseURL: b.BaseUrl, Cloud: b.Cloud,
-		DefaultModel: b.DefaultModel, Models: b.Models, ContextTokens: b.ContextTokens, APIKey: deref(b.ApiKey)})
+		DefaultModel: b.DefaultModel, Models: b.Models, ContextTokens: b.ContextTokens, APIKey: deref(b.ApiKey),
+		Auth: authIn(b.Auth), Project: deref(b.Project), Location: deref(b.Location), Caps: capsIn(b.Caps)})
 	if err != nil {
 		return nil, err
 	}
-	a.auditAssistant(ctx, map[string]any{"connection": c.Name, "change": "added", "cloud": c.Cloud, "key": c.HasKey})
+	a.auditAssistant(ctx, map[string]any{"connection": c.Name, "change": "added", "cloud": c.Cloud, "key": c.HasKey, "auth": c.Auth})
 	return gen.AdminCreateConnection201JSONResponse(connectionDTO(&c)), nil
 }
 
@@ -237,7 +284,8 @@ func (a *api) AdminUpdateConnection(ctx context.Context, req gen.AdminUpdateConn
 	case gen.Keep:
 	}
 	c, err := s.Update(ctx, req.Name, b.Version, config.ConnectionSpec{Label: b.Label, API: string(b.Api), BaseURL: b.BaseUrl, Cloud: b.Cloud,
-		DefaultModel: b.DefaultModel, Models: b.Models, ContextTokens: b.ContextTokens}, key)
+		DefaultModel: b.DefaultModel, Models: b.Models, ContextTokens: b.ContextTokens,
+		Auth: authIn(b.Auth), Project: deref(b.Project), Location: deref(b.Location), Caps: capsIn(b.Caps)}, key)
 	if err != nil {
 		return nil, err
 	}

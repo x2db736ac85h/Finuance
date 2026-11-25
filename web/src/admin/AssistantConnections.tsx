@@ -31,13 +31,26 @@ import { Button } from '../ui/Button';
 import { Checkbox, Select, TextInput, type Option } from '../ui/inputs';
 import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
-import { freeName, mayOffer, providerById, providerOf, PROVIDERS, providerTag, type ProviderId } from './providers';
+import {
+  freeName,
+  GOOGLE_LOCATION,
+  GOOGLE_LOCATIONS,
+  GOOGLE_PROJECT,
+  googleBaseUrl,
+  mayOffer,
+  providerById,
+  providerOf,
+  PROVIDERS,
+  providerTag,
+  type ProviderId,
+} from './providers';
 
 const fail = (e: unknown) => {
   toast(errorMessage(e), { kind: 'error' });
 };
 
 function keyState(c: AdminConnection): string {
+  if (c.auth === 'google') return `Google credentials, no key · ${c.project ?? ''} · ${c.location ?? ''}`;
   if (c.keyUnreadable) return 'API key unreadable (another instance key): enter it again';
   return c.hasKey ? 'API key stored' : 'no API key';
 }
@@ -165,10 +178,15 @@ const SERVER: Record<ModelServer['server'], string> = {
 };
 
 /** What the last check of a connection's server found. */
-export function serverLine(s: ModelServer): { ok: boolean; text: string } {
-  if (!s.reachable) return { ok: false, text: `Can't reach the server: ${s.error?.message ?? 'no answer'}` };
+/** `service` names a provider's own endpoint (Anthropic, OpenAI, Vertex AI), which is not a server somebody runs. */
+export function serverLine(s: ModelServer, service?: string): { ok: boolean; text: string } {
+  if (!s.reachable)
+    return { ok: false, text: `Can't reach ${service ?? 'the server'}: ${s.error?.message ?? 'no answer'}` };
   const offered = s.models.filter((m) => m.offered).length;
-  const parts = [`Connected to ${SERVER[s.server]}`, `${String(offered)} ${offered === 1 ? 'model' : 'models'}`];
+  const parts = [
+    `Connected to ${service ?? SERVER[s.server]}`,
+    `${String(offered)} ${offered === 1 ? 'model' : 'models'}`,
+  ];
   if (s.latencyMs !== undefined) parts.push(`${String(s.latencyMs)} ms`);
   return { ok: true, text: parts.join(' · ') };
 }
@@ -196,7 +214,14 @@ function ConnectionControls({ connection, onDone }: { connection: AdminConnectio
     ...[...new Set([...list, ...(current ? [current] : [])])].map((id) => ({ value: id, label: id })),
   ];
   const timed = s?.server === 'ollama' || s?.server === 'lmstudio';
-  const line = s ? serverLine(s) : undefined;
+  const provider = providerOf(connection);
+  const service =
+    provider === 'google'
+      ? 'Vertex AI'
+      : provider === 'anthropic' || provider === 'openai'
+        ? providerById(provider).label
+        : undefined;
+  const line = s ? serverLine(s, service) : undefined;
   const save = () => {
     put.mutate(
       {
@@ -438,7 +463,10 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
     defaultModel: connection?.defaultModel ?? '',
     models: (connection?.models ?? []).join(', '),
     contextTokens: connection?.contextTokens ? String(connection.contextTokens) : '',
+    project: connection?.project ?? '',
+    location: connection?.location ?? '',
   });
+  const google = provider === 'google';
   const [keyAction, setKeyAction] = useState<'keep' | 'replace' | 'remove'>(connection ? 'keep' : 'replace');
   const [apiKey, setApiKey] = useState('');
   const busy = create.isPending || update.isPending;
@@ -448,17 +476,28 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
     .filter(Boolean);
   // a default model the patterns leave out would be a connection whose own default nobody may use
   const defaultLeftOut = c.defaultModel.trim() !== '' && !mayOffer(patterns, c.defaultModel.trim());
-  // a provider's own service needs its key; a local server usually has none
-  const needsKey = !connection && prov.fixedAddress && !apiKey.trim();
+  // a provider's own service needs its key (Google has none: its credentials are the instance's
+  // own); a local server usually has none
+  const needsKey = !connection && prov.fixedAddress && !google && !apiKey.trim();
+  // a Google connection is a project, a chosen location and the models to offer: Vertex AI's
+  // endpoint has no model list of its own
+  const projectOk = GOOGLE_PROJECT.test(c.project.trim());
+  const locationOk = GOOGLE_LOCATION.test(c.location.trim());
+  const modelIds = patterns.filter((m) => !/[*?[]/.test(m));
+  const googleMissing = google && (!projectOk || !locationOk || modelIds.length === 0);
   const save = () => {
     const body = {
       label: c.label.trim(),
       api: c.api,
-      baseUrl: c.baseUrl.trim(),
+      // a Google connection's address follows from its project and location (the server derives it)
+      baseUrl: google ? '' : c.baseUrl.trim(),
       cloud: c.cloud,
       defaultModel: c.defaultModel.trim(),
       models: patterns,
       contextTokens: Number(c.contextTokens) || 0,
+      ...(google
+        ? { auth: 'google' as const, project: c.project.trim(), location: c.location.trim() }
+        : { auth: 'key' as const }),
     };
     if (connection) {
       update.mutate(
@@ -466,8 +505,8 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
           name: connection.name,
           version: connection.version,
           ...body,
-          keyAction,
-          ...(keyAction === 'replace' ? { apiKey } : {}),
+          keyAction: google ? 'remove' : keyAction,
+          ...(!google && keyAction === 'replace' ? { apiKey } : {}),
         },
         {
           onSuccess: () => {
@@ -480,7 +519,7 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
     } else {
       const name = c.name.trim();
       create.mutate(
-        { name, ...body, ...(apiKey ? { apiKey } : {}) },
+        { name, ...body, ...(apiKey && !google ? { apiKey } : {}) },
         {
           onSuccess: () => {
             toast(`Added the connection ${body.label || name}. Now choose its model.`);
@@ -624,10 +663,120 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
       autoComplete="off"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!defaultLeftOut && !needsKey) save();
+        if (!defaultLeftOut && !needsKey && !googleMissing) save();
       }}
     >
-      {provider === 'other' || provider === 'google' ? (
+      {google ? (
+        // Vertex AI: which project pays, where the data is processed, which models; no key
+        <>
+          {labelField}
+          <div className="form-row">
+            <label className="st-col">
+              Google Cloud project
+              <TextInput
+                autoComplete="off"
+                mono
+                value={c.project}
+                maxLength={30}
+                placeholder="my-project-123"
+                aria-invalid={(c.project.trim() !== '' && !projectOk) || undefined}
+                onChange={(e) => {
+                  setC({ ...c, project: e.target.value });
+                }}
+              />
+            </label>
+            <label className="st-col">
+              Location
+              <TextInput
+                autoComplete="off"
+                mono
+                list="google-locations"
+                value={c.location}
+                maxLength={40}
+                placeholder="choose one: europe-west4, eu, …"
+                aria-invalid={(c.location.trim() !== '' && !locationOk) || undefined}
+                onChange={(e) => {
+                  setC({ ...c, location: e.target.value });
+                }}
+              />
+            </label>
+          </div>
+
+          <datalist id="google-locations">
+            {GOOGLE_LOCATIONS.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </datalist>
+          <p className="hint">
+            The location decides where questions are processed; there is no default. Inside the EU: <code>eu</code> or a
+            region such as <code>europe-west4</code>. <code>global</code> gives no say over where.
+          </p>
+          {c.location.trim() === 'global' && (
+            <p className="set-err" role="status">
+              With “global” Google chooses where each request is processed. Pick a region or <code>eu</code> to keep it
+              in one place.
+            </p>
+          )}
+          <label className="st-col">
+            Models offered{' '}
+            <span className="hint">(their ids, comma-separated; Vertex AI has no list to read them from)</span>
+            <TextInput
+              autoComplete="off"
+              value={c.models}
+              placeholder="google/gemini-3.5-flash-lite, google/gemini-3.8-flash"
+              onChange={(e) => {
+                setC({ ...c, models: e.target.value });
+              }}
+            />
+          </label>
+          <p className="hint">
+            No key is stored: this instance asks Google for a short-lived token with its own credentials (workload
+            identity on Google Cloud, or the credentials file its environment names), which need the role{' '}
+            <code>roles/aiplatform.user</code> on the project. Each person agrees before their data is sent.
+          </p>
+          {projectOk && locationOk && (
+            <p className="hint">
+              Address: <code>{googleBaseUrl(c.project.trim(), c.location.trim())}</code>
+            </p>
+          )}
+          <details className="conn-more">
+            <summary>More options</summary>
+            {!connection && nameField}
+            <div className="form-row">
+              <label className="st-col">
+                Default model
+                <TextInput
+                  autoComplete="off"
+                  value={c.defaultModel}
+                  maxLength={200}
+                  aria-invalid={defaultLeftOut || undefined}
+                  onChange={(e) => {
+                    setC({ ...c, defaultModel: e.target.value });
+                  }}
+                />
+              </label>
+              <label className="st-col">
+                Context tokens <span className="hint">(empty: 8,192)</span>
+                <TextInput
+                  autoComplete="off"
+                  inputMode="numeric"
+                  value={c.contextTokens}
+                  onChange={(e) => {
+                    setC({ ...c, contextTokens: e.target.value });
+                  }}
+                />
+              </label>
+            </div>
+            {defaultLeftOut && (
+              <p className="set-err" role="alert">
+                The default model “{c.defaultModel.trim()}” fits none of the models offered.
+              </p>
+            )}
+          </details>
+        </>
+      ) : provider === 'other' ? (
         // everything, as typed: nothing about the server is known
         <>
           <div className="form-row">
@@ -699,7 +848,14 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
         <Button
           type="submit"
           variant="primary"
-          disabled={busy || !c.baseUrl.trim() || (!connection && !c.name.trim()) || defaultLeftOut || needsKey}
+          disabled={
+            busy ||
+            (!google && !c.baseUrl.trim()) ||
+            (!connection && !c.name.trim()) ||
+            defaultLeftOut ||
+            needsKey ||
+            googleMissing
+          }
         >
           Save
         </Button>

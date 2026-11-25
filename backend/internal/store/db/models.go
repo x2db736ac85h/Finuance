@@ -113,6 +113,10 @@ type AssistantConnection struct {
 	Version       int32
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	Auth          string
+	Project       string
+	Location      string
+	Caps          []byte
 }
 
 type AssistantConnectionControl struct {

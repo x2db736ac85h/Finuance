@@ -40,7 +40,7 @@ func (q *Queries) DeleteStoredConnection(ctx context.Context, name string) (int6
 }
 
 const getStoredConnection = `-- name: GetStoredConnection :one
-SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at FROM assistant_connections WHERE name = $1
+SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps FROM assistant_connections WHERE name = $1
 `
 
 func (q *Queries) GetStoredConnection(ctx context.Context, name string) (AssistantConnection, error) {
@@ -59,6 +59,10 @@ func (q *Queries) GetStoredConnection(ctx context.Context, name string) (Assista
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Auth,
+		&i.Project,
+		&i.Location,
+		&i.Caps,
 	)
 	return i, err
 }
@@ -103,9 +107,11 @@ func (q *Queries) InsertConnectionControls(ctx context.Context, arg InsertConnec
 }
 
 const insertStoredConnection = `-- name: InsertStoredConnection :one
-INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at
+INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key,
+                                   auth, project, location, caps, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $10, $11, $12, $13, $14, $14)
+RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps
 `
 
 type InsertStoredConnectionParams struct {
@@ -118,6 +124,10 @@ type InsertStoredConnectionParams struct {
 	Models        []string
 	ContextTokens int32
 	ApiKey        []byte
+	Auth          string
+	Project       string
+	Location      string
+	Caps          []byte
 	Now           time.Time
 }
 
@@ -132,6 +142,10 @@ func (q *Queries) InsertStoredConnection(ctx context.Context, arg InsertStoredCo
 		arg.Models,
 		arg.ContextTokens,
 		arg.ApiKey,
+		arg.Auth,
+		arg.Project,
+		arg.Location,
+		arg.Caps,
 		arg.Now,
 	)
 	var i AssistantConnection
@@ -148,6 +162,10 @@ func (q *Queries) InsertStoredConnection(ctx context.Context, arg InsertStoredCo
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Auth,
+		&i.Project,
+		&i.Location,
+		&i.Caps,
 	)
 	return i, err
 }
@@ -222,7 +240,7 @@ func (q *Queries) ListModelSettings(ctx context.Context) ([]AssistantModelSettin
 
 const listStoredConnections = `-- name: ListStoredConnections :many
 
-SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at FROM assistant_connections ORDER BY name
+SELECT name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps FROM assistant_connections ORDER BY name
 `
 
 // Administration → Assistant (ADR 0035; migration 00022): stored connections and per-model tuning.
@@ -249,6 +267,10 @@ func (q *Queries) ListStoredConnections(ctx context.Context) ([]AssistantConnect
 			&i.Version,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Auth,
+			&i.Project,
+			&i.Location,
+			&i.Caps,
 		); err != nil {
 			return nil, err
 		}
@@ -305,9 +327,10 @@ func (q *Queries) UpdateConnectionControls(ctx context.Context, arg UpdateConnec
 const updateStoredConnection = `-- name: UpdateStoredConnection :one
 UPDATE assistant_connections
 SET label = $1, api = $2, base_url = $3, cloud = $4, default_model = $5, models = $6,
-    context_tokens = $7, api_key = $8, version = version + 1, updated_at = $9
-WHERE name = $10 AND version = $11
-RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at
+    context_tokens = $7, api_key = $8, auth = $9, project = $10, location = $11,
+    caps = $12, version = version + 1, updated_at = $13
+WHERE name = $14 AND version = $15
+RETURNING name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, version, created_at, updated_at, auth, project, location, caps
 `
 
 type UpdateStoredConnectionParams struct {
@@ -319,6 +342,10 @@ type UpdateStoredConnectionParams struct {
 	Models        []string
 	ContextTokens int32
 	ApiKey        []byte
+	Auth          string
+	Project       string
+	Location      string
+	Caps          []byte
 	Now           time.Time
 	Name          string
 	Version       int32
@@ -335,6 +362,10 @@ func (q *Queries) UpdateStoredConnection(ctx context.Context, arg UpdateStoredCo
 		arg.Models,
 		arg.ContextTokens,
 		arg.ApiKey,
+		arg.Auth,
+		arg.Project,
+		arg.Location,
+		arg.Caps,
 		arg.Now,
 		arg.Name,
 		arg.Version,
@@ -353,6 +384,10 @@ func (q *Queries) UpdateStoredConnection(ctx context.Context, arg UpdateStoredCo
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Auth,
+		&i.Project,
+		&i.Location,
+		&i.Caps,
 	)
 	return i, err
 }

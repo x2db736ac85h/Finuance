@@ -59,6 +59,9 @@ type Server struct {
 	modelLists atomic.Int64
 	// Models lists the ids GET /models answers.
 	Models []string
+	// Vertex, when set, makes the mock Vertex AI's endpoint and Google's metadata server instead
+	// of a local model server (vertex.go).
+	Vertex *Vertex
 }
 
 // ModelLists is how many times the model list was asked for.
@@ -107,6 +110,12 @@ func (s *Server) next() (Reply, bool) {
 
 // ServeHTTP routes /v1/models, /v1/chat/completions and /v1/messages (with or without /v1).
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.Vertex != nil {
+		if !s.serveVertex(w, r) {
+			http.NotFound(w, r) // no model list, no Ollama, no LM Studio
+		}
+		return
+	}
 	p := strings.TrimPrefix(r.URL.Path, "/v1")
 	switch {
 	case r.Method == http.MethodGet && p == "/models":

@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	neturl "net/url"
 	"strings"
 	"syscall"
 	"time"
@@ -21,6 +22,19 @@ type Config struct {
 	API     API
 	BaseURL string // e.g. http://localhost:1234/v1 (OpenAI) or https://api.anthropic.com (Anthropic)
 	APIKey  string
+	// Auth replaces the key with a short-lived bearer token asked for before every request
+	// (PLAN 26.1). A 401 drops the cached token and the request is sent once more with a new one.
+	Auth TokenSource
+	// TokenHost says which hosts may receive Auth's token (nil: the base address's own). A request
+	// to another host is refused before a token is asked for.
+	TokenHost func(host string) bool
+	// Hosted marks a provider's own endpoint, which is not a model server somebody runs (PLAN
+	// 26.3): nothing beside the base address is probed for LM Studio or Ollama, and there is
+	// nothing to load or unload.
+	Hosted bool
+	// StaticModels is the model list of an endpoint that has none of its own (GET {base}/models
+	// answers 404, as Vertex AI's OpenAI-compatible endpoint does): the connection's own list.
+	StaticModels []string
 	// AllowRemote marks a cloud connection. Every dial is checked, either way, against the address
 	// the name resolved to at that moment (PLAN 23.5):
 	//   - a local connection (false) reaches only loopback, private and CGNAT/tailnet addresses, so a
@@ -197,8 +211,44 @@ func CheckHost(ctx context.Context, r *net.Resolver, host string) (bool, error) 
 
 // call sends one request. The returned body is closed by the caller; reads from it fail with
 // errIdle when the server stays silent for longer than IdleTimeout, and the whole call ends after
-// Timeout.
+// Timeout. With a token source the request carries its token, and a 401 is answered by one more
+// try with a new token: a token can be revoked or run out between the cache's check and the server's.
 func (c *Config) call(ctx context.Context, method, url string, header http.Header, body []byte) (*http.Response, func(), error) {
+	if c.Auth == nil {
+		return c.callOnce(ctx, method, url, header, body)
+	}
+	if u, err := neturl.Parse(url); err != nil || u.Scheme != "https" && c.TokenHost != nil || c.TokenHost != nil && !c.TokenHost(u.Hostname()) {
+		return nil, nil, &Error{Kind: KindUnreachable, Message: "this connection's credentials are not sent to that address"}
+	}
+	for attempt := 0; ; attempt++ {
+		tok, err := c.Auth.Token(ctx)
+		if err != nil {
+			return nil, nil, tokenError(ctx, err)
+		}
+		h := header.Clone()
+		h.Set("Authorization", "Bearer "+tok)
+		res, done, err := c.callOnce(ctx, method, url, h, body)
+		if err != nil || res.StatusCode != http.StatusUnauthorized || attempt > 0 {
+			return res, done, err
+		}
+		_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 8<<10))
+		_ = res.Body.Close()
+		done()
+		c.Auth.Invalidate()
+	}
+}
+
+// tokenError is the error of a token that couldn't be had. The source's own words may name the
+// credentials' kind or the metadata server, never a token; they are shortened like a server's.
+func tokenError(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return transportError(ctx, err)
+	}
+	return &Error{Kind: KindAuth, Message: "no credentials for this connection: " + clip(err.Error(), 200)}
+}
+
+// callOnce sends one request with the header as given.
+func (c *Config) callOnce(ctx context.Context, method, url string, header http.Header, body []byte) (*http.Response, func(), error) {
 	ctx, cancelTotal := context.WithTimeout(ctx, c.Timeout)
 	ctx, cancel := context.WithCancelCause(ctx)
 	idle := time.AfterFunc(c.IdleTimeout, func() { cancel(errIdle) })

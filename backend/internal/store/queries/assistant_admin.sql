@@ -8,15 +8,18 @@ SELECT * FROM assistant_connections ORDER BY name;
 SELECT * FROM assistant_connections WHERE name = @name;
 
 -- name: InsertStoredConnection :one
-INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key, created_at, updated_at)
-VALUES (@name, @label, @api, @base_url, @cloud, @default_model, @models, @context_tokens, @api_key, @now, @now)
+INSERT INTO assistant_connections (name, label, api, base_url, cloud, default_model, models, context_tokens, api_key,
+                                   auth, project, location, caps, created_at, updated_at)
+VALUES (@name, @label, @api, @base_url, @cloud, @default_model, @models, @context_tokens, @api_key,
+        @auth, @project, @location, @caps, @now, @now)
 RETURNING *;
 
 -- name: UpdateStoredConnection :one
 -- Versioned: no row when the version read is no longer the stored one.
 UPDATE assistant_connections
 SET label = @label, api = @api, base_url = @base_url, cloud = @cloud, default_model = @default_model, models = @models,
-    context_tokens = @context_tokens, api_key = @api_key, version = version + 1, updated_at = @now
+    context_tokens = @context_tokens, api_key = @api_key, auth = @auth, project = @project, location = @location,
+    caps = @caps, version = version + 1, updated_at = @now
 WHERE name = @name AND version = @version
 RETURNING *;
 

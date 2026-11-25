@@ -2,6 +2,7 @@ package assistant
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -39,15 +40,18 @@ const (
 // StoredConnection is a connection as the panel shows it: never its key.
 type StoredConnection struct {
 	Name, Label, API, BaseURL, DefaultModel string
-	Cloud                                   bool
-	Models                                  []string
-	ContextTokens                           int
-	Source                                  string // file or panel
-	HasKey                                  bool
-	KeyUnreadable                           bool  // sealed under another instance key
-	Version                                 int32 // 0 for the file's
-	UpdatedAt                               *time.Time
-	Controls                                Controls // the administrator's controls, for the file's too
+	// Auth is config.AuthKey or config.AuthGoogle, with Project and Location for the latter.
+	Auth, Project, Location string
+	Caps                    []llm.CapsOverride
+	Cloud                   bool
+	Models                  []string
+	ContextTokens           int
+	Source                  string // file or panel
+	HasKey                  bool
+	KeyUnreadable           bool  // sealed under another instance key
+	Version                 int32 // 0 for the file's
+	UpdatedAt               *time.Time
+	Controls                Controls // the administrator's controls, for the file's too
 }
 
 // ControlsInput is what an administrator saves for a connection; UnloadAfterMinutes nil leaves
@@ -167,7 +171,12 @@ func (s *ConnectionStore) connectionOf(r *db.AssistantConnection) (config.AIConn
 		return config.AIConnection{}, err
 	}
 	c := config.AIConnection{Name: r.Name, Label: r.Label, API: llm.API(r.Api), BaseURL: u, Cloud: r.Cloud, DefaultModel: r.DefaultModel,
-		Models: r.Models, ContextTokens: int(r.ContextTokens)}
+		Models: r.Models, ContextTokens: int(r.ContextTokens), Auth: r.Auth, Project: r.Project, Location: r.Location, Caps: capsOf(r.Caps)}
+	// the address was checked when it was saved; the host is checked again here, so a row changed
+	// by hand can't send a Google token elsewhere
+	if c.Google() && !llm.GoogleAPIHost(u.Hostname()) {
+		return config.AIConnection{}, fmt.Errorf("connection %q: %s is not one of Vertex AI's hosts", r.Name, u.Hostname())
+	}
 	if c.ContextTokens == 0 {
 		c.ContextTokens = s.context
 	}
@@ -177,6 +186,27 @@ func (s *ConnectionStore) connectionOf(r *db.AssistantConnection) (config.AIConn
 		}
 	}
 	return c, nil
+}
+
+// capsOf reads the stored corrections; a value that can't be read counts as none.
+func capsOf(b []byte) []llm.CapsOverride {
+	var out []llm.CapsOverride
+	if len(b) == 0 || json.Unmarshal(b, &out) != nil {
+		return nil
+	}
+	return out
+}
+
+// capsJSON is the corrections as stored: always an array.
+func capsJSON(c []llm.CapsOverride) []byte {
+	if len(c) == 0 {
+		return []byte("[]")
+	}
+	b, err := json.Marshal(c)
+	if err != nil {
+		return []byte("[]")
+	}
+	return b
 }
 
 func tuningOf(r *db.AssistantModelSetting) Tuning {
@@ -204,7 +234,8 @@ func (s *ConnectionStore) List(ctx context.Context) ([]StoredConnection, error) 
 	for i := range s.file {
 		f := &s.file[i]
 		out = append(out, StoredConnection{Name: f.Name, Label: f.Label, API: string(f.API), BaseURL: f.BaseURL.String(), DefaultModel: f.DefaultModel,
-			Cloud: f.Cloud, Models: nonNil(f.Models), ContextTokens: f.ContextTokens, Source: SourceFile, HasKey: f.APIKey != ""})
+			Cloud: f.Cloud, Models: nonNil(f.Models), ContextTokens: f.ContextTokens, Source: SourceFile, HasKey: f.APIKey != "",
+			Auth: f.Auth, Project: f.Project, Location: f.Location, Caps: f.Caps})
 	}
 	err := s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		rows, err := q.ListStoredConnections(ctx)
@@ -306,6 +337,7 @@ func nonNil(s []string) []string {
 
 func (s *ConnectionStore) storedOf(r *db.AssistantConnection) StoredConnection {
 	sc := StoredConnection{Name: r.Name, Label: r.Label, API: r.Api, BaseURL: r.BaseUrl, DefaultModel: r.DefaultModel, Cloud: r.Cloud,
+		Auth: r.Auth, Project: r.Project, Location: r.Location, Caps: capsOf(r.Caps),
 		Models: nonNil(r.Models), ContextTokens: int(r.ContextTokens), Source: SourcePanel, HasKey: r.ApiKey != nil, Version: r.Version,
 		UpdatedAt: &r.UpdatedAt}
 	if r.ApiKey != nil {
@@ -381,7 +413,8 @@ func (s *ConnectionStore) Create(ctx context.Context, spec config.ConnectionSpec
 	err = s.st.WithoutUser(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		r, err := q.InsertStoredConnection(ctx, db.InsertStoredConnectionParams{Name: c.Name, Label: c.Label, Api: string(c.API),
 			BaseUrl: c.BaseURL.String(), Cloud: c.Cloud, DefaultModel: c.DefaultModel, Models: nonNil(c.Models),
-			ContextTokens: int32(spec.ContextTokens), ApiKey: key, Now: s.clock.Now()}) //nolint:gosec // ≤ 10,000,000
+			ContextTokens: int32(spec.ContextTokens), ApiKey: key, Auth: c.Auth, Project: c.Project, Location: c.Location, //nolint:gosec // ≤ 10,000,000
+			Caps: capsJSON(c.Caps), Now: s.clock.Now()})
 		if err == nil {
 			out = s.storedOf(&r)
 		}
@@ -419,13 +452,17 @@ func (s *ConnectionStore) Update(ctx context.Context, name string, version int32
 			if sealed, err = s.seal(name, key.Value); err != nil {
 				return err
 			}
+		case c.Google():
+			// a Google connection keeps no key, whatever was stored before
+			sealed = nil
 		case c.Cloud != cur.Cloud || c.BaseURL.String() != cur.BaseUrl:
 			// a kept key goes only where it went before: a new address needs the key again
 			sealed = nil
 		}
 		r, err := q.UpdateStoredConnection(ctx, db.UpdateStoredConnectionParams{Name: name, Version: version, Label: c.Label, Api: string(c.API),
 			BaseUrl: c.BaseURL.String(), Cloud: c.Cloud, DefaultModel: c.DefaultModel, Models: nonNil(c.Models),
-			ContextTokens: int32(spec.ContextTokens), ApiKey: sealed, Now: s.clock.Now()}) //nolint:gosec // ≤ 10,000,000
+			ContextTokens: int32(spec.ContextTokens), ApiKey: sealed, Auth: c.Auth, Project: c.Project, Location: c.Location, //nolint:gosec // ≤ 10,000,000
+			Caps: capsJSON(c.Caps), Now: s.clock.Now()})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("connection %q: %w", name, platform.ErrStaleVersion)
 		}

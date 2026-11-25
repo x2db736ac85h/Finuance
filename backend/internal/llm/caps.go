@@ -38,13 +38,15 @@ type CapsOverride struct {
 }
 
 var (
-	qwen3Re   = regexp.MustCompile(`(?i)qwen-?3`)
-	effortRe  = regexp.MustCompile(`(?i)gpt-oss|(^|/)o[1-9](-|$)|gpt-5|reasoner|magistral`)
+	qwen3Re = regexp.MustCompile(`(?i)qwen-?3`)
+	// Gemini from 2.5 on takes reasoning_effort through the OpenAI format (PLAN 26.3); Vertex AI
+	// names its models google/gemini-…
+	effortRe  = regexp.MustCompile(`(?i)gpt-oss|(^|/)o[1-9](-|$)|gpt-5|reasoner|magistral|gemini-(2\.5|[3-9])`)
 	oldClaude = regexp.MustCompile(`(?i)claude-(instant|2|3-(opus|sonnet|haiku|5))`)
 	embedRe   = regexp.MustCompile(`(?i)embed`)
 	// models that read images when the server doesn't say (Ollama and LM Studio do); Gemma 3 1B
 	// and Gemma 3n read text only on today's servers
-	visionRe   = regexp.MustCompile(`(?i)(^|[-_/:.])vl([-_/:.]|$)|qwen2\.5-?vl|vision|llava|pixtral|minicpm-v|moondream|gemma-?3|gpt-4o|gpt-4\.1|gpt-5|claude-(3|sonnet|opus|haiku)`)
+	visionRe   = regexp.MustCompile(`(?i)(^|[-_/:.])vl([-_/:.]|$)|qwen2\.5-?vl|vision|llava|pixtral|minicpm-v|moondream|gemma-?3|gemini|gpt-4o|gpt-4\.1|gpt-5|claude-(3|sonnet|opus|haiku)`)
 	textOnlyRe = regexp.MustCompile(`(?i)gemma-?3n|gemma-?3[^/]*[:-]1b`)
 )
 

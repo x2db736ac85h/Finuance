@@ -4985,6 +4985,12 @@ export interface components {
             api: "openai" | "anthropic";
             baseUrl: string;
             cloud: boolean;
+            auth: components["schemas"]["ConnectionAuth"];
+            /** @description The Google Cloud project of a `google` connection. */
+            project?: string;
+            /** @description The Vertex AI location of a `google` connection. */
+            location?: string;
+            caps?: components["schemas"]["ModelCapsOverride"][];
             defaultModel: string;
             /** @description Model id patterns offered (globs); empty offers every chat model. */
             models: string[];
@@ -5006,13 +5012,32 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        /**
+         * @description How the connection proves who it is. `key`: a stored API key, or none. `google`: short-lived tokens from Google's credentials (workload identity, a developer's login or an external-account file; ADR 0045); it has a project and a location, no key, and reaches only Vertex AI's hosts.
+         * @enum {string}
+         */
+        ConnectionAuth: "key" | "google";
+        /** @description A correction of what is detected about the models matching `pattern` (a glob on the id). */
+        ModelCapsOverride: {
+            pattern: string;
+            tools?: boolean;
+            /** @enum {string} */
+            reasoning?: "none" | "effort" | "budget" | "switch";
+            contextTokens?: number;
+            vision?: boolean;
+        };
         AdminConnectionInput: {
             name: string;
             label: string;
             /** @enum {string} */
             api: "openai" | "anthropic";
+            /** @description Empty for a `google` connection derives Vertex AI's address from project and location. */
             baseUrl: string;
             cloud: boolean;
+            auth?: components["schemas"]["ConnectionAuth"];
+            project?: string;
+            location?: string;
+            caps?: components["schemas"]["ModelCapsOverride"][];
             defaultModel: string;
             models: string[];
             contextTokens: number;
@@ -5024,8 +5049,13 @@ export interface components {
             label: string;
             /** @enum {string} */
             api: "openai" | "anthropic";
+            /** @description Empty for a `google` connection derives Vertex AI's address from project and location. */
             baseUrl: string;
             cloud: boolean;
+            auth?: components["schemas"]["ConnectionAuth"];
+            project?: string;
+            location?: string;
+            caps?: components["schemas"]["ModelCapsOverride"][];
             defaultModel: string;
             models: string[];
             contextTokens: number;
