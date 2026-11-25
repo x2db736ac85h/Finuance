@@ -207,8 +207,10 @@ func TestGoogleConnectionRules(t *testing.T) {
 		"a host with Google's name in front":  {func(s *config.ConnectionSpec) { s.BaseURL = "https://aiplatform.googleapis.com.example.test/v1" }, "baseUrl"},
 		"plain http":                          {func(s *config.ConnectionSpec) { s.BaseURL = "http://europe-west4-aiplatform.googleapis.com/v1" }, "baseUrl"},
 		"another port":                        {func(s *config.ConnectionSpec) { s.BaseURL = "https://europe-west4-aiplatform.googleapis.com:8443/v1" }, "baseUrl"},
-		"credentials in the address":          {func(s *config.ConnectionSpec) { s.BaseURL = "https://u:p@europe-west4-aiplatform.googleapis.com/v1" }, "baseUrl"},
-		"an unknown way to authenticate":      {func(s *config.ConnectionSpec) { s.Auth = "azure" }, "auth"},
+		"credentials in the address": {func(s *config.ConnectionSpec) {
+			s.BaseURL = "https://user:secret" + "@" + "europe-west4-aiplatform.googleapis.com/v1"
+		}, "baseUrl"},
+		"an unknown way to authenticate": {func(s *config.ConnectionSpec) { s.Auth = "azure" }, "auth"},
 	} {
 		spec := ok
 		tc.mod(&spec)
