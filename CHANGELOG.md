@@ -11,6 +11,10 @@ key, on synthetic data only for now. Three migrations (00031–00033), all addit
 without a cloud connection behaves as before, except that OpenAI-format requests now ask the
 model server for the usage of a streamed answer (`stream_options.include_usage`).
 
+The Google Cloud connection is **not yet run against Google**: it is tested against a mock of
+Vertex AI (token renewal, the allowed hosts, both wire formats), and its first run with a real
+project is still to come. Connections to Anthropic's API were tried against the real service.
+
 
 ### Added
 

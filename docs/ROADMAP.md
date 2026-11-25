@@ -20,7 +20,7 @@ The repository became public in November 2026 with synthetic test data only and 
 
 ## Now
 
-**A cloud model for the assistant (0.7.0).** Google's Vertex AI with short-lived credentials, tried on synthetic data only (the simulator's animals ask it); a local model stays the default.
+**A cloud model for the assistant (0.7.0).** Anthropic, OpenAI and Google's Vertex AI (short-lived credentials, no stored key) as connections an administrator picks from a list; a local model stays the default. The Vertex AI path is tested against a mock only so far: its first run against Google is in the backlog.
 
 ## Next
 

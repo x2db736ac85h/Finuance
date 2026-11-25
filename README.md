@@ -72,7 +72,7 @@ The full list, with the filter language and how duplicates are recognised: [docs
 
 | | |
 |---|---|
-| Vertex AI (0.7.0) | Gemini through the OpenAI-compatible endpoint and Claude through `streamRawPredict`, with short-lived tokens from Application Default Credentials (the metadata server, workload identity, a developer's login). No Google key is stored; a token is sent only to Vertex AI's own hosts. On synthetic data only for now ([ADR 0045](docs/adr/0045-cloud-model-providers.md)) |
+| Vertex AI (0.7.0, not yet run against Google: tested against a mock) | Gemini through the OpenAI-compatible endpoint and Claude through `streamRawPredict`, with short-lived tokens from Application Default Credentials (the metadata server, workload identity, a developer's login). No Google key is stored; a token is sent only to Vertex AI's own hosts. On synthetic data only for now ([ADR 0045](docs/adr/0045-cloud-model-providers.md)) |
 | Google Cloud lab (planned) | An on-demand lab created and destroyed with Terraform: GKE Autopilot, Gateway API with Certificate Manager and Cloud Armor, Secret Manager, workload identity, Private Google Access, CloudNativePG with backups to Cloud Storage, Argo CD. Synthetic data only |
 | Today | A single-node k3s cluster at home; the public demo is planned on a small VPS |
 

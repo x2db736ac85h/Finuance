@@ -144,6 +144,10 @@ that lives about an hour, with credentials it already has, and sends it to Verte
 > sees synthetic data until the questions below are settled for the instance with real data.
 > Nothing changes for an instance without a cloud connection.
 
+> **Not yet run against Google.** As of 0.7.0 this path is tested against a mock of Vertex AI only
+> (token renewal, the allowed hosts, both wire formats). Nobody has used it with a real project yet,
+> so expect first-contact problems (an API not enabled, a model id, a quota) and please report them.
+
 ### What leaves the instance
 
 Exactly what leaves for any cloud connection: the question, the photos attached to it, and the
