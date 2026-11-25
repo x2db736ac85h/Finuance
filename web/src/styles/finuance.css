@@ -1294,7 +1294,11 @@ textarea.inp.ins-note {
   right: 0.5rem;
 }
 /* a long address breaks inside the dialog instead of running past its edge */
-.conn-addr code,
+/* (code inside a hint doesn't wrap by itself: an address has to) */
+.conn-addr code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .set-li-main .hint {
   overflow-wrap: anywhere;
 }
