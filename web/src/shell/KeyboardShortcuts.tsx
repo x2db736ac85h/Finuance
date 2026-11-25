@@ -56,7 +56,9 @@ export function KeyboardShortcuts() {
       title="Keyboard shortcuts"
       size="sm"
     >
-      <div className="keys-b">
+      {/* the list scrolls in a short window: focusable, so the arrow keys scroll it (found at half a
+          screen, Phase 26 U11) */}
+      <div className="keys-b" tabIndex={0} role="group" aria-label="Shortcuts">
         {KEYS.map(([section, rows]) => (
           <div className="ks" key={section}>
             <div className="lbl">{section}</div>

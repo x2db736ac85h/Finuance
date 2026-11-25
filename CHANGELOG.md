@@ -46,6 +46,8 @@ notes of their version.
 
 ### Fixed
 
+- The Keyboard shortcuts list can be scrolled with the keyboard when the window is too short to show
+  it whole.
 - A group's colour dot shows on the Shared page, on a shared group's page and in the group report
   (it had no size outside the groups menu).
 - A rule suggestion (or a transfer suggestion) no longer shows over the overview for a moment when
