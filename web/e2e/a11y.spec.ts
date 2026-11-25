@@ -19,7 +19,7 @@ test('table, import preview, overview, settings, assistant', async ({ page }) =>
   await check(page, 'empty');
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
 
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   await expect(page.locator('.card').first()).toBeVisible();
   await check(page, 'table');
@@ -29,7 +29,7 @@ test('table, import preview, overview, settings, assistant', async ({ page }) =>
   await check(page, 'import preview');
   await page.keyboard.press('Escape');
 
-  await page.goto('/o/all');
+  await page.goto('/overview/all');
   await expect(page.getByText('Recurring payments').first()).toBeVisible();
   await check(page, 'overview');
 
@@ -39,7 +39,7 @@ test('table, import preview, overview, settings, assistant', async ({ page }) =>
     await check(page, `settings ${s}`);
   }
 
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   await page.getByRole('button', { name: /^Notifications/ }).click();
   await expect(page.getByRole('dialog', { name: 'Notifications' })).toBeVisible();
@@ -63,18 +63,18 @@ test('every colour theme: table, overview, the Shared tab and appearance setting
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
   const sharedUrl = await sharedGroupViaApi(page);
   for (const theme of ['Fjord', 'Grove', 'Ember']) {
-    await page.goto('/settings/appearance');
+    await page.goto('/settings/general');
     await page
       .getByRole('radiogroup', { name: 'Colour theme' })
       .getByRole('radio', { name: new RegExp(theme) })
       .click();
     await expect(page.locator('html')).toHaveAttribute('data-theme-id', theme.toLowerCase());
     await check(page, `${theme} settings`);
-    await page.goto('/t/all');
+    await page.goto('/transactions/all');
     await expect(page.locator('tr[data-i]').first()).toBeVisible();
     await expect(page.locator('.card').first()).toBeVisible();
     await check(page, `${theme} table`);
-    await page.goto('/o/all');
+    await page.goto('/overview/all');
     await expect(page.getByText('Recurring payments').first()).toBeVisible();
     await check(page, `${theme} overview`);
     await page.goto(sharedUrl);

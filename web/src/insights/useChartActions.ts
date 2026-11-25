@@ -17,6 +17,7 @@ import { scrollToRow } from '../table/controller';
 import type { QueryContext, Sort } from '../table/context';
 import { WINDOW } from '../table/data';
 import { hideTip } from '../ui/Tooltip';
+import { txPath } from '../lib/paths';
 
 /**
  * The filters after a chart click (legacy toggleFilter): an identical condition is cleared (the
@@ -82,7 +83,7 @@ export function useChartActions(viewId: string): ChartActions {
       },
       showTable: () => {
         hideTip();
-        void navigate(`/t/${viewId}`);
+        void navigate(txPath(viewId));
       },
     };
   }, [viewId, navigate]);

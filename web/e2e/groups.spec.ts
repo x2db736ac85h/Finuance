@@ -14,7 +14,7 @@ const money = (minor: number) =>
 async function setup(page: Page) {
   await signUp(page);
   const r = await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
-  await page.goto(`/t/${r.accountId}`);
+  await page.goto(`/transactions/${r.accountId}`);
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   // the drags below need the grid's full height (the 720 px test window halves it with the pane)
   await page.getByRole('button', { name: 'Hide insights' }).click();
@@ -133,7 +133,7 @@ test('a label survives deleting and re-importing its file', async ({ page }) => 
   expect((await page.request.delete(`/api/v1/imports/${importIds[0] ?? ''}`, { headers: H })).status()).toBe(204);
   await importInto(page, accountId, 'demo/demo-legacy.csv');
 
-  await page.goto(`/t/${accountId}`);
+  await page.goto(`/transactions/${accountId}`);
   await page.getByRole('button', { name: /Groups/ }).click();
   await page
     .getByRole('dialog', { name: 'Groups' })

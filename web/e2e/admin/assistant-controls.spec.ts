@@ -15,7 +15,7 @@ async function signInAdmin(page: Page): Promise<void> {
 }
 
 async function openSettings(user: Page) {
-  await user.goto('/t/all');
+  await user.goto('/transactions/all');
   await expect(user.getByRole('heading', { name: 'Drop CSV files here' })).toBeVisible();
   const panel = user.getByRole('complementary', { name: 'Assistant' });
   if (!(await panel.isVisible())) await user.locator('.aibtn').click();

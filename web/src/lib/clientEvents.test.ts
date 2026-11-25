@@ -5,10 +5,10 @@ import { errorName, installClientEventHandlers, reportClientEvent, resetClientEv
 describe('screenOf', () => {
   it('keeps the app’s own first segment and hides every value', () => {
     expect(screenOf('/')).toBe('/');
-    expect(screenOf('/t/all')).toBe('/t/:id');
+    expect(screenOf('/transactions/all')).toBe('/transactions/:id');
     expect(screenOf('/imports/01a1fa08-83f5-7af9-a0f2-46f412659b52')).toBe('/imports/:id');
     expect(screenOf('/settings/security')).toBe('/settings/:id');
-    expect(screenOf('/s')).toBe('/s');
+    expect(screenOf('/shared')).toBe('/shared');
   });
   it('sends nothing of a path the app does not define', () => {
     expect(screenOf('/my-secret-search-words/more')).toBe('/*');

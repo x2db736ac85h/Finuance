@@ -41,7 +41,7 @@ describe('access tokens (ADR 0036)', () => {
         return HttpResponse.json({ token, secret: 'fin_ZzZz9999secret' }, { status: 201 });
       }),
     );
-    renderApp('/settings/tokens');
+    renderApp('/settings/security');
     const form = await screen.findByRole('form', { name: 'New access token' });
     const submit = within(form).getByRole<HTMLButtonElement>('button', { name: 'Make a token' });
     fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'cli' } });
@@ -86,7 +86,7 @@ describe('access tokens (ADR 0036)', () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderApp('/settings/tokens');
+    renderApp('/settings/security');
     const form = await screen.findByRole('form', { name: 'New access token' });
     expect(await screen.findByText('None yet.')).toBeTruthy();
     fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'laptop CLI' } });

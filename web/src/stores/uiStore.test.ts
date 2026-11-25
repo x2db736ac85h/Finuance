@@ -82,18 +82,20 @@ describe('hydrate', () => {
       theme: 'dark',
       ui: 'auto',
       uiStep: 1,
-      mode: 'ov',
       cardOrder: ['heat'],
       importFastPath: false,
     });
+    // table or overview is the address's since Phase 26: an older document's value is not kept
+    expect(doc).not.toHaveProperty('mode');
     expect(doc).not.toHaveProperty('keysOpen');
     expect(doc).not.toHaveProperty('sidebarAutoCollapsed');
   });
 
-  it('toggleViz from the overview returns to the table with the pane shown (legacy)', () => {
-    ui().hydrate({ mode: 'ov', noViz: true }, false);
-    ui().toggleViz();
-    expect(ui().mode).toBe('table');
+  it('showViz shows a hidden pane (the charts button from the overview, legacy), toggleViz flips it', () => {
+    ui().hydrate({ noViz: true }, false);
+    ui().showViz();
+    expect(ui().vizOpen).toBe(true);
+    ui().showViz();
     expect(ui().vizOpen).toBe(true);
     ui().toggleViz();
     expect(ui().vizOpen).toBe(false);

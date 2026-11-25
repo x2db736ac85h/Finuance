@@ -232,7 +232,7 @@ describe('hint sentences', () => {
 describe('the Shared tab', () => {
   it('lists the timeline with years and hints, and opens a shared group', async () => {
     const user = userEvent.setup();
-    renderApp('/s');
+    renderApp('/shared');
     const timeline = await screen.findByRole('region', { name: 'Timeline' });
     expect(await within(timeline).findByText(/Gdańsk/)).toBeTruthy();
     expect(screen.getByText(/2,5× your usual per day on Kultura/)).toBeTruthy();
@@ -245,7 +245,7 @@ describe('the Shared tab', () => {
 
   it('shows balances, who owes whom and records a payment with Settle up', async () => {
     const user = userEvent.setup();
-    renderApp(`/s/${GID}`);
+    renderApp(`/shared/${GID}`);
     const bal = await screen.findByRole('region', { name: 'Balances' });
     expect(within(bal).getByText(/You → Bo/).textContent).toMatch(/15[.,]00/);
     await user.click(within(bal).getByRole('button', { name: 'Settle up' }));
@@ -261,7 +261,7 @@ describe('the Shared tab', () => {
 
   it('adds an expense for someone else with an exact split', async () => {
     const user = userEvent.setup();
-    renderApp(`/s/${GID}`);
+    renderApp(`/shared/${GID}`);
     await user.click(await screen.findByRole('button', { name: 'Add expense' }));
     const dlg = await screen.findByRole('dialog', { name: 'Add an expense' });
     await user.type(within(dlg).getByLabelText(/Amount/), '60');
@@ -289,7 +289,7 @@ describe('the Shared tab', () => {
 
   it('every card has a table twin', async () => {
     const user = userEvent.setup();
-    renderApp(`/s/${GID}`);
+    renderApp(`/shared/${GID}`);
     const card = await screen.findByRole('region', { name: 'Paid vs share' });
     await user.click(within(card).getByRole('button', { name: 'Show Paid vs share as a table' }));
     const twin = within(card).getByRole('region', { name: 'Paid vs share, table' });
@@ -310,7 +310,7 @@ describe('the Shared tab', () => {
       balances: [],
       transfers: [],
     };
-    renderApp(`/s/${GID}`);
+    renderApp(`/shared/${GID}`);
     const inv = await screen.findByRole('region', { name: 'Invitation' });
     expect(inv.textContent).toMatch(/Bo invited you to Kraków/);
     expect(screen.queryByRole('region', { name: 'Expenses' })).toBeNull();
@@ -321,7 +321,7 @@ describe('the Shared tab', () => {
 
   it('shares a new group with friends from the timeline', async () => {
     const user = userEvent.setup();
-    renderApp('/s');
+    renderApp('/shared');
     await user.click(await screen.findByRole('button', { name: 'New shared group' }));
     const dlg = await screen.findByRole('dialog', { name: 'New shared group' });
     await user.type(within(dlg).getByLabelText('Name'), 'Trip');
@@ -336,7 +336,7 @@ describe('the Shared tab', () => {
 
   it('is gone when the instance switches shared groups off', async () => {
     db.features = { ...db.features, sharedGroups: false };
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByRole('button', { name: 'Toggle sidebar' });
     expect(screen.queryByRole('button', { name: /^Shared/ })).toBeNull();
   });

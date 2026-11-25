@@ -14,7 +14,7 @@ const TOTAL = 917;
 async function setup(page: Page): Promise<string> {
   await signUp(page);
   const { accountId } = await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
-  await page.goto(`/t/${accountId}`);
+  await page.goto(`/transactions/${accountId}`);
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   return accountId;
 }

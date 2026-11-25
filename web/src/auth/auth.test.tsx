@@ -124,7 +124,7 @@ describe('demo', () => {
     expect(screen.queryByRole('link', { name: 'Create an account' })).toBeNull();
     await user.click(await screen.findByRole('button', { name: 'Try the demo' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/t/all');
+      expect(router.state.location.pathname).toBe('/transactions/all');
     });
     expect((await screen.findByText('Demo — your data is deleted after 24 hours.')).getAttribute('role')).toBe(
       'status',
@@ -170,7 +170,7 @@ describe('signup', () => {
     await user.type(screen.getByLabelText('Password'), ' but longer now');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/t/all');
+      expect(router.state.location.pathname).toBe('/transactions/all');
     });
     expect(body).toEqual({ email: 'new@example.com', password: 'short but longer now' });
     expect(await screen.findByRole('heading', { name: 'Drop CSV files here' })).toBeTruthy();
@@ -187,7 +187,7 @@ describe('signup', () => {
 describe('safeNext', () => {
   it('only follows same-origin app paths', () => {
     expect(safeNext('/settings/profile')).toBe('/settings/profile');
-    expect(safeNext('/t/all?x=1')).toBe('/t/all?x=1');
+    expect(safeNext('/transactions/all?x=1')).toBe('/transactions/all?x=1');
     expect(safeNext(null)).toBe('/');
     expect(safeNext('https://evil.example')).toBe('/');
     expect(safeNext('//evil.example')).toBe('/');

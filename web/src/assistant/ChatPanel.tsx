@@ -38,6 +38,7 @@ import { ChatSettings, pick, readsPhotos } from './ChatSettings';
 import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';
 import { reencodePhoto } from './photos';
 import { TurnView } from './Turn';
+import { txPath } from '../lib/paths';
 
 const SUGGEST = [
   'How much did I spend last month, by category?',
@@ -189,8 +190,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     if (!s.toolFilter) return;
     const target = t.scope.view ? t.scope.viewId : 'all';
     useViews.getState().patch(target, { toolFilter: s.toolFilter, period: 'all', custom: null, search: '' });
-    useUi.getState().setMode('table');
-    void navigate(`/t/${target}`);
+    void navigate(txPath(target));
     if (s.matched !== undefined) toast(`Showing ${plural(s.matched, 'matching row')}`);
   };
 

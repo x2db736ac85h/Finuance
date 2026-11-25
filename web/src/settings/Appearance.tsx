@@ -1,13 +1,14 @@
 // Appearance controls (legacy appearanceHtml): the colour theme (Phase 19), System/Dark/Light and
-// the interface size, in the quick settings (compact: the current theme, unfolding the others) and
-// on Settings → Appearance (every theme as a card). The size is a slider around Auto (Phase 20, 20.15).
+// the interface size, on Settings → General (every theme as a card) and in the quick settings
+// (`QuickAppearance`, Phase 26: the current theme with a dark-mode switch on its line, and a plain
+// slider). The size is a slider around Auto (Phase 20, 20.15).
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useMeta } from '../api/hooks/me';
 import { fmtPct } from '../lib/format';
 import { SIZE_STEPS, sliderStep, uiScale, type SizeStep } from '../styles/scale';
-import { resolveLook, type ThemePref } from '../styles/theme';
+import { LIGHT_QUERY, resolveLook, resolveTheme, type ThemePref } from '../styles/theme';
 import { BUILTIN_THEMES, type ThemeTokens } from '../styles/themes';
 import { useUi } from '../stores/uiStore';
 import { Icon } from '../ui/Icon';
@@ -61,7 +62,7 @@ function Swatch({ tokens }: { tokens: ThemeTokens }) {
  * The built-in themes and the ones an administrator approved; each shows both variants. Compact (the
  * quick settings): one button with the current theme, which unfolds the others as small cards.
  */
-export function ThemePicker({ compact = false }: { compact?: boolean }) {
+export function ThemePicker({ compact = false, aside }: { compact?: boolean; aside?: ReactNode }) {
   const labelId = useId();
   const [open, setOpen] = useState(false);
   const themeId = useUi((s) => s.themeId);
@@ -108,20 +109,25 @@ export function ThemePicker({ compact = false }: { compact?: boolean }) {
   const shown = choices.find((t) => t.id === current) ?? choices[0];
   return (
     <div className="st-col">
-      <span id={labelId}>Colour theme</span>
-      <button
-        type="button"
-        className="theme-current"
-        aria-expanded={open}
-        aria-describedby={labelId}
-        onClick={() => {
-          setOpen(!open);
-        }}
-      >
-        {shown && <Swatch tokens={shown.tokens} />}
-        <span className="theme-name">{shown?.name}</span>
-        <Icon name={open ? 'chevup' : 'chev'} />
-      </button>
+      <span id={labelId} className="sr-only">
+        Colour theme
+      </span>
+      <div className="qs-look">
+        <button
+          type="button"
+          className="theme-current"
+          aria-expanded={open}
+          aria-describedby={labelId}
+          onClick={() => {
+            setOpen(!open);
+          }}
+        >
+          {shown && <Swatch tokens={shown.tokens} />}
+          <span className="theme-name">{shown?.name}</span>
+          <Icon name={open ? 'chevup' : 'chev'} />
+        </button>
+        {aside}
+      </div>
       {open && cards}
     </div>
   );
@@ -139,31 +145,43 @@ function sizeWord(fixed: boolean, step: SizeStep): string {
  * steps of 10 % to each side. A fixed size from an older document shows at its nearest step until
  * the slider is moved.
  */
-export function SizeSlider() {
+export function SizeSlider({ minimal = false }: { minimal?: boolean }) {
   const pref = useUi((s) => s.uiScalePref);
   const step = useUi((s) => s.uiStep);
   const now = useCurrentScale();
   const id = useId();
   const at = sliderStep(pref, step, window.devicePixelRatio);
   const shown = `${sizeWord(pref !== 'auto', at)} · ${fmtPct(now)}`;
+  const range = (
+    <input
+      id={id}
+      type="range"
+      min={SIZE_STEPS[0]}
+      max={SIZE_STEPS[SIZE_STEPS.length - 1]}
+      step={1}
+      value={at}
+      aria-valuetext={shown}
+      onChange={(e) => {
+        useUi.getState().setUiStep(Number(e.target.value) as SizeStep);
+      }}
+    />
+  );
+  // the quick settings: one line, a thin track, the word for the position at its end
+  if (minimal)
+    return (
+      <div className="size-slider minimal">
+        <label htmlFor={id}>Interface size</label>
+        {range}
+        <span className="hint">{sizeWord(pref !== 'auto', at)}</span>
+      </div>
+    );
   return (
     <div className="st-col size-slider">
       <span className="size-h">
         <label htmlFor={id}>Interface size</label>
         <span className="hint">{shown}</span>
       </span>
-      <input
-        id={id}
-        type="range"
-        min={SIZE_STEPS[0]}
-        max={SIZE_STEPS[SIZE_STEPS.length - 1]}
-        step={1}
-        value={at}
-        aria-valuetext={shown}
-        onChange={(e) => {
-          useUi.getState().setUiStep(Number(e.target.value) as SizeStep);
-        }}
-      />
+      {range}
       <span className="size-ticks" aria-hidden="true">
         <span>Smaller</span>
         <span>Auto</span>
@@ -173,13 +191,60 @@ export function SizeSlider() {
   );
 }
 
-export function AppearanceControls({ compact = false }: { compact?: boolean }) {
+function watchLight(onChange: () => void): () => void {
+  const mq = window.matchMedia(LIGHT_QUERY);
+  mq.addEventListener('change', onChange);
+  return () => {
+    mq.removeEventListener('change', onChange);
+  };
+}
+
+/**
+ * Dark or light as one switch (the quick settings). It shows the mode in effect: with "System"
+ * chosen that is the computer's, and the app keeps following it until the switch is used.
+ * "System" itself is chosen on Settings → General.
+ */
+export function DarkSwitch() {
+  const pref = useUi((s) => s.themePref);
+  const prefersLight = useSyncExternalStore(watchLight, () => window.matchMedia(LIGHT_QUERY).matches);
+  const dark = resolveTheme(pref, prefersLight) === 'dark';
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={dark}
+      aria-label="Dark mode"
+      title={dark ? 'Dark mode is on' : 'Dark mode is off'}
+      className={dark ? 'mode-switch on' : 'mode-switch'}
+      onClick={() => {
+        useUi.getState().setTheme(dark ? 'light' : 'dark');
+      }}
+    >
+      <Icon name="sun" />
+      <Icon name="moon" />
+      <span className="mode-switch-thumb" aria-hidden="true" />
+    </button>
+  );
+}
+
+/** The quick settings' two lines: the theme with the dark-mode switch, and the size. */
+export function QuickAppearance() {
+  return (
+    <>
+      <ThemePicker compact aside={<DarkSwitch />} />
+      <SizeSlider minimal />
+    </>
+  );
+}
+
+/** Settings → General: every theme, System/Dark/Light and the labelled slider. */
+export function AppearanceControls() {
   const theme = useUi((s) => s.themePref);
   const { setTheme } = useUi.getState();
   const modeId = useId();
   return (
     <>
-      <ThemePicker compact={compact} />
+      <ThemePicker />
       <div className="st-line">
         <span id={modeId}>Mode</span>
         <span className="seg seg-l" role="group" aria-labelledby={modeId}>

@@ -73,7 +73,8 @@ export type PrefsDoc = {
   /** Insights pane height, a CSS length ('' = default, half the window). */
   vizH: string;
   noViz: boolean;
-  mode: Mode;
+  /** Table or overview. Read from older documents, not used since Phase 26: the address says which. */
+  mode?: Mode;
   cards: string[];
   cardOrder: string[] | null;
   catMode: CatMode;

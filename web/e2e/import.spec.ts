@@ -62,7 +62,7 @@ test('overlapping files: counts match the oracle, delete, duplicate file', async
   const aRows = Number((await importA.textContent())?.match(/\d+/)?.[0]);
   await importA.click();
   await expect(page.getByRole('status')).toContainText(`Imported ${String(aRows)} transactions`);
-  await expect(page).toHaveURL(/\/t\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}$/);
 
   // B: same layout, account in view → the fast path imports it at once.
   await openFiles(page, B);
@@ -161,7 +161,7 @@ test('fast path: a known layout is imported at once and Undo removes it', async 
   await win(page)
     .getByRole('button', { name: /^Import \d+ transactions$/ })
     .click();
-  await expect(page).toHaveURL(/\/t\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}$/);
   const before = await (await sidebarCount(page, 'Fast')).textContent();
 
   await openFiles(page, B);

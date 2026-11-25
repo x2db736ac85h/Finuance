@@ -101,7 +101,7 @@ if (args.email) {
 
 if (args.trace) await ctx.tracing.start({ screenshots: true, snapshots: false });
 let t0 = Date.now();
-await p.goto('/t/all');
+await p.goto('/transactions/all');
 await p.locator('tr[data-i]').first().waitFor();
 result.firstPaintMs = Date.now() - t0;
 result.rows = await p.locator('.vt-meta').innerText();

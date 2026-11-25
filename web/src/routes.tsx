@@ -1,21 +1,27 @@
 // Routes (PLAN §7.3). /__ui is the dev-only primitives gallery; import.meta.env.DEV is false in
 // production builds, so Vite drops the route and its chunk.
 
-import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from 'react-router';
 
 import { loginPath, setUnauthenticatedHandler } from './api/client';
 import { Login } from './auth/Login';
 import { ImportRoute } from './import/ImportWindow';
+import { overviewPath, sharedPath, txPath } from './lib/paths';
 import { RequireAuth } from './auth/RequireAuth';
 import { Signup } from './auth/Signup';
 import { SettingsPage } from './settings/SettingsPage';
 import { AppShell } from './shell/AppShell';
 import { ScreenError } from './shell/ScreenError';
 import { OverviewView, TableView } from './shell/Views';
-import { useUi } from './stores/uiStore';
 
-function Start() {
-  return <Navigate to={useUi.getState().mode === 'ov' ? '/o/all' : '/t/all'} replace />;
+/**
+ * An address the app used before Phase 26 (`/t/…`, `/o/…`, `/s…`, a Settings section that moved):
+ * old bookmarks and links keep working. The query string stays; `hash` names a part of the new page.
+ */
+function Moved({ to, hash }: { to: (id?: string) => string; hash?: string }) {
+  const { id } = useParams();
+  const location = useLocation();
+  return <Navigate to={{ pathname: to(id), search: location.search, hash: hash ?? location.hash }} replace />;
 }
 
 export const routes: RouteObject[] = [
@@ -31,13 +37,21 @@ export const routes: RouteObject[] = [
       {
         element: <RequireAuth>{(user) => <AppShell user={user} />}</RequireAuth>,
         children: [
-          { index: true, element: <Start /> },
-          { path: '/t/:viewId', element: <TableView /> },
-          { path: '/o/:viewId', element: <OverviewView /> },
+          // the transactions are the first page, whatever was open last (the maintainer, 2026-11-25)
+          { index: true, element: <Navigate to={txPath()} replace /> },
+          { path: '/transactions/:viewId', element: <TableView /> },
+          { path: '/overview/:viewId', element: <OverviewView /> },
+          { path: '/t/:id', element: <Moved to={txPath} /> },
+          { path: '/o/:id', element: <Moved to={overviewPath} /> },
+          { path: '/s', element: <Moved to={sharedPath} /> },
+          { path: '/s/:id', element: <Moved to={sharedPath} /> },
           { path: '/imports/:importId', element: <ImportRoute /> },
           // the Shared tab is its own chunk (Phase 19, ADR 0028)
-          { path: '/s', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
-          { path: '/s/:groupId', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
+          { path: '/shared', lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }) },
+          {
+            path: '/shared/:groupId',
+            lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }),
+          },
           { path: '/settings', element: <Navigate to="/settings/general" replace /> },
           { path: '/settings/:section', element: <SettingsPage /> },
           { path: '/admin', element: <Navigate to="/admin/users" replace /> },

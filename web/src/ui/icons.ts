@@ -147,6 +147,15 @@ export const ICONS = {
  * 1.75 stroke, round caps. Kept apart so ICONS stays the exact legacy set (Icon.test.tsx).
  */
 export const APP_ICONS = {
+  // the command key's looped square: keyboard shortcuts (Phase 26, U4)
+  cmd: [
+    [
+      'path',
+      {
+        d: 'M9 9h6v6H9zM9 9V6.5A2.5 2.5 0 1 0 6.5 9zM15 9h2.5A2.5 2.5 0 1 0 15 6.5zM15 15v2.5a2.5 2.5 0 1 0 2.5-2.5zM9 15H6.5A2.5 2.5 0 1 0 9 17.5z',
+      },
+    ],
+  ],
   // friends
   users: [
     ['circle', { cx: '9', cy: '8', r: '3.5' }],

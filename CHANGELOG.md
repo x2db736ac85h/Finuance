@@ -4,6 +4,27 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
+## [Unreleased]
+
+### Changed
+
+- **Addresses:** the table is `/transactions/<view>`, the overview `/overview/<view>` and the
+  Shared page `/shared`; the old `/t/…`, `/o/…` and `/s…` redirect. The app always opens the
+  transactions, whatever was open last.
+- **Settings:** Appearance is part of General, and Sessions and Access tokens are parts of
+  Security; their old addresses lead there. "Back to transactions" is gone from Settings and
+  Administration (the title bar's buttons do that).
+- **Quick settings:** "All settings" sits in the header, the colour theme shares a line with a
+  dark-mode switch (System, Dark and Light stay on Settings → General), the interface size is a
+  plain slider, and the shortcuts have a command-key icon.
+
+### Fixed
+
+- A rule suggestion (or a transfer suggestion) no longer shows over the overview for a moment when
+  switching from the table: the page's mode is read from the address alone.
+- Forms inside dialogs (group settings, sharing a group, a cash account, a typed-in transaction, a
+  shared expense, settling up, creating an account) no longer touch the dialog's edge.
+
 ## [0.6.0] - 2026-11-24
 
 ### Added

@@ -12,6 +12,7 @@ import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
 import { fmtInt, plural } from '../lib/format';
 import { Button } from '../ui/Button';
+import { txPath } from '../lib/paths';
 
 type Meta = NonNullable<ActivityEvent['meta']>;
 
@@ -192,7 +193,7 @@ function AssistantChanges() {
           variant="ghost"
           onClick={() => {
             patch('all', { aiOnly: true });
-            void navigate('/t/all');
+            void navigate(txPath());
           }}
         >
           Show what the assistant changed

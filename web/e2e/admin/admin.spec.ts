@@ -110,7 +110,7 @@ test('an administrator runs the instance; a new user follows it', async ({ page,
   expect(((await second.json()) as { code: string }).code).toBe('limit_reached');
 
   // the approved theme is offered and applies its colours
-  await user.goto('/settings/appearance');
+  await user.goto('/settings/general');
   const themes = user.getByRole('radiogroup', { name: 'Colour theme' });
   await themes.getByRole('radio', { name: /E2E Sea/ }).click();
   await expect.poll(() => user.evaluate(() => document.documentElement.style.getPropertyValue('--bg'))).not.toBe('');

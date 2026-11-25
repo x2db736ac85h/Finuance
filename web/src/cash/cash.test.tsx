@@ -103,7 +103,7 @@ afterEach(() => {
 describe('cash accounts', () => {
   it('creates a cash account from the sidebar and opens it', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await user.click(await screen.findByRole('button', { name: 'New cash account' }));
     const dialog = await screen.findByRole('dialog', { name: 'New cash account' });
     await user.clear(within(dialog).getByLabelText('Name'));
@@ -119,7 +119,7 @@ describe('cash accounts', () => {
     db.accounts = [account(), account({ id: WALLET, name: 'Portfel', kind: 'cash', txCount: 0 })];
     db.transactions = [];
     const user = userEvent.setup();
-    renderApp(`/t/${WALLET}`);
+    renderApp(`/transactions/${WALLET}`);
     await user.click(await screen.findByRole('button', { name: 'Add' }));
     const dialog = await screen.findByRole('dialog', { name: 'Add a transaction' });
     await user.type(within(dialog).getByLabelText('Amount (PLN)'), '24,50');
@@ -161,7 +161,7 @@ describe('cash accounts', () => {
   it('asks for the amount and the payee, and N opens the form only in a cash account', async () => {
     db.accounts = [account({ txCount: 1 }), account({ id: WALLET, name: 'Portfel', kind: 'cash', txCount: 0 })];
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Sklep Żabka');
     await user.keyboard('n');
     expect(screen.queryByRole('dialog', { name: 'Add a transaction' })).toBeNull();

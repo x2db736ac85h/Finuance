@@ -24,6 +24,7 @@ import { Checkbox, Select, TextInput } from '../ui/inputs';
 import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
 import { KIND_LABEL } from './text';
+import { sharedPath } from '../lib/paths';
 
 const KINDS = (Object.keys(KIND_LABEL) as SharedKind[]).map((k) => ({ value: k, label: KIND_LABEL[k] }));
 
@@ -201,7 +202,7 @@ export function ShareDialog({ from, onClose }: ShareProps) {
     }
     toast(invited ? `Shared ${g.name} with ${String(invited)} friend${invited === 1 ? '' : 's'}` : `Created ${g.name}`);
     onClose();
-    void navigate(`/s/${g.id}`);
+    void navigate(sharedPath(g.id));
   };
   return (
     <Modal

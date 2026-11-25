@@ -38,7 +38,7 @@ beforeEach(() => {
 
 describe('merge suggestions (ADR 0032)', () => {
   it('offers to merge a typed card payment into the bank row, one at a time', async () => {
-    renderApp(`/t/${ACC}`);
+    renderApp(`/transactions/${ACC}`);
     const card = await screen.findByRole('region', { name: 'Merge suggestion' });
     expect(card.textContent).toContain('You typed Kiosk t1 (04.11.2026, 12.00');
     expect(card.textContent).toContain('KIOSK RUCH');
@@ -60,7 +60,7 @@ describe('merge suggestions (ADR 0032)', () => {
   it('shows nothing in another account', async () => {
     const other = '00000000-0000-4000-8000-0000000000b2';
     db.accounts = [...db.accounts, account({ id: other, name: 'Karta', txCount: 1 })];
-    renderApp(`/t/${other}`);
+    renderApp(`/transactions/${other}`);
     await screen.findByRole('region', { name: 'Transactions' });
     expect(screen.queryByRole('region', { name: 'Merge suggestion' })).toBeNull();
   });

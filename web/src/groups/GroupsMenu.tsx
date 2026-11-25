@@ -24,6 +24,7 @@ import { groupColor } from './colors';
 import { activeGroup, renameGroupFilters, toggleGroupFilter } from './filters';
 import { GroupForm } from './GroupForm';
 import { BudgetBar, GroupReportWindow } from './GroupReport';
+import { sharedPath } from '../lib/paths';
 
 export function GroupsButton({ viewId }: { viewId: string }) {
   const [btn, setBtn] = useState<HTMLButtonElement | null>(null);
@@ -116,7 +117,7 @@ export function GroupsButton({ viewId }: { viewId: string }) {
                       onClick={(e) => {
                         e.stopPropagation();
                         setOpen(false);
-                        if (g.sharedGroupId) void navigate(`/s/${g.sharedGroupId}`);
+                        if (g.sharedGroupId) void navigate(sharedPath(g.sharedGroupId));
                         else setShare(g);
                       }}
                     />

@@ -10,7 +10,7 @@ test('a visitor tries the demo and gets their own demo year', async ({ page, bro
   await page.goto('/login');
   await expect(page.getByRole('link', { name: 'Create an account' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Try the demo' }).click();
-  await expect(page).toHaveURL(/\/t\/all$/);
+  await expect(page).toHaveURL(/\/transactions\/all$/);
   await expect(page.getByText('Demo — your data is deleted after 24 hours.')).toBeVisible();
   await page.getByRole('button', { name: 'Toggle sidebar' }).click();
   const explorer = page.getByRole('navigation', { name: 'Explorer' });

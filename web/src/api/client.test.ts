@@ -57,7 +57,7 @@ describe('api client', () => {
   });
 
   it('builds the login path with next, except on the auth pages', () => {
-    expect(loginPath('/t/all?x=1')).toBe('/login?next=%2Ft%2Fall%3Fx%3D1');
+    expect(loginPath('/transactions/all?x=1')).toBe('/login?next=%2Ftransactions%2Fall%3Fx%3D1');
     expect(loginPath('/login?next=%2F')).toBeNull();
     expect(loginPath('/signup')).toBeNull();
   });

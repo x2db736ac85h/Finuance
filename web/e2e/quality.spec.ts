@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { API_HEADERS, importViaApi, signUp } from './helpers';
+import { API_HEADERS, dialogInset, importViaApi, signUp } from './helpers';
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 test('settings: appearance, profile, sessions, data export', async ({ page }) => {
   await signUp(page);
-  await page.goto('/settings/appearance');
+  await page.goto('/settings/general');
   await page.getByRole('button', { name: 'Light', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Dark', exact: true }).click();
@@ -31,7 +31,7 @@ test('settings: appearance, profile, sessions, data export', async ({ page }) =>
     .poll(async () => ((await (await page.request.get('/api/v1/me')).json()) as { displayName?: string }).displayName)
     .toBe('Alex');
 
-  await page.goto('/settings/sessions');
+  await page.goto('/settings/security');
   await expect(page.getByText('this browser')).toBeVisible();
 
   await page.goto('/settings/data');
@@ -44,7 +44,7 @@ test('settings: appearance, profile, sessions, data export', async ({ page }) =>
 test('keyboard map: search, open, assistant, shortcuts, Esc', async ({ page }) => {
   await signUp(page);
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   const search = page.getByLabel('Search all columns');
 
@@ -78,7 +78,7 @@ test('a 720 px window: the sidebar folds away and popovers stay on screen', asyn
   await signUp(page);
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   const sidebar = page.getByRole('complementary', { name: 'Accounts' });
   await page.getByRole('button', { name: 'Toggle sidebar' }).click();
@@ -103,6 +103,34 @@ test('a 720 px window: the sidebar folds away and popovers stay on screen', asyn
   // wide again: the sidebar comes back as it was
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect(sidebar).toBeVisible();
+});
+
+test("a form in a dialog keeps away from the dialog's edge", async ({ page }) => {
+  await signUp(page);
+  await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
+  await page.goto('/transactions/all');
+  await expect(page.locator('tr[data-i]').first()).toBeVisible();
+  const sidebar = page.getByRole('complementary', { name: 'Accounts' });
+  if (!(await sidebar.isVisible())) await page.getByRole('button', { name: 'Toggle sidebar' }).click();
+
+  // a cash account, then a transaction typed into it
+  await sidebar.getByText('New cash account').click();
+  const account = page.getByRole('dialog', { name: 'New cash account' });
+  await expect(account).toBeVisible();
+  expect(await dialogInset(page)).toBeGreaterThanOrEqual(12);
+  await account.getByRole('textbox').first().fill('Wallet');
+  await account.getByRole('button', { name: /^(Create|Add)/ }).click();
+  await expect(account).toBeHidden();
+  await page.keyboard.press('n');
+  await expect(page.getByRole('dialog', { name: 'Add a transaction' })).toBeVisible();
+  expect(await dialogInset(page)).toBeGreaterThanOrEqual(12);
+  await page.keyboard.press('Escape');
+
+  // sharing: a new shared group
+  await page.goto('/shared');
+  await page.getByRole('button', { name: 'New shared group' }).click();
+  await expect(page.getByRole('dialog', { name: 'New shared group' })).toBeVisible();
+  expect(await dialogInset(page)).toBeGreaterThanOrEqual(12);
 });
 
 test('interface size Auto follows the screen density', async ({ browser }) => {

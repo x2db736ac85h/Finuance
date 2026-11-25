@@ -101,7 +101,7 @@ async function openRow(user: ReturnType<typeof userEvent.setup>, payee: string) 
 describe('inspector', () => {
   it('shows every field, the original row and the source; prev/next and close', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const ins = await openRow(user, 'KINO POD GWIAZDAMI');
     expect(await ins.findByText('Data księgowania')).toBeTruthy();
     expect(ins.getByText('-10,01')).toBeTruthy();
@@ -129,7 +129,7 @@ describe('inspector', () => {
 
   it('copies the transaction as JSON', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const ins = await openRow(user, 'Apteka');
     await ins.findByText('Data księgowania');
     await user.click(ins.getByRole('button', { name: 'Copy as JSON' }));
@@ -141,7 +141,7 @@ describe('inspector', () => {
 
   it('picks an existing category and creates a new one from the combobox', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const ins = await openRow(user, 'Apteka');
     const box = await ins.findByRole('combobox', { name: 'Category' });
     await user.click(box);
@@ -187,7 +187,7 @@ describe('inspector', () => {
 
   it('Esc in the category box drops the text without saving', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const ins = await openRow(user, 'KINO POD GWIAZDAMI');
     const box = await ins.findByRole<HTMLInputElement>('combobox', { name: 'Category' });
     await user.click(box);
@@ -201,7 +201,7 @@ describe('inspector', () => {
 
   it('saves the note when the field is left', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const ins = await openRow(user, 'Apteka');
     const note = await ins.findByRole('textbox', { name: 'Note' });
     await user.type(note, 'zwrot do firmy');
@@ -216,7 +216,7 @@ describe('inspector', () => {
 describe('status bar', () => {
   it('shows shown of total, columns and the totals of the rows shown', async () => {
     db.accounts = [account({ txCount: 5 })];
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     const st = within(status());
     await waitFor(() => {
@@ -238,7 +238,7 @@ describe('status bar', () => {
     }));
     db.duplicatesSkipped = 2;
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('Apteka');
     const st = within(status());
     expect(st.getByText('2 duplicates skipped')).toBeTruthy();

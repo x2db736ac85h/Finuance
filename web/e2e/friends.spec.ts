@@ -36,7 +36,7 @@ test('two people become friends by code, and one removes the other', async ({ br
   await expect(bo.getByRole('alert')).toContainText(/wrong or has expired/);
 
   // Alex's bell
-  await alex.goto('/t/all');
+  await alex.goto('/transactions/all');
   await alex.getByRole('button', { name: 'Notifications, 1 unread' }).click();
   await expect(alex.getByRole('dialog', { name: 'Notifications' })).toContainText('Bo entered your code');
   await alex.goto('/settings/friends');
@@ -47,6 +47,6 @@ test('two people become friends by code, and one removes the other', async ({ br
   await list.getByRole('button', { name: 'Remove' }).click();
   await alex.getByRole('dialog', { name: 'Remove Bo?' }).getByRole('button', { name: 'Remove' }).click();
   await expect(alex.getByText('No friends yet.')).toBeVisible();
-  await bo.goto('/t/all');
+  await bo.goto('/transactions/all');
   await expect(bo.getByRole('button', { name: 'Notifications, 1 unread' })).toBeVisible();
 });

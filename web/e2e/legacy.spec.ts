@@ -43,7 +43,7 @@ test('migrates the plain backup: accounts, labelled transactions, budgets, chats
   ]);
 
   // the group filter shows the five transactions labelled in the legacy app
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await page.getByRole('button', { name: 'Groups' }).click();
   await page.getByRole('button', { name: /^Wakacje nad morzem 5 ·/ }).click();
   await expect(page.locator('tr[data-i]')).toHaveCount(5);

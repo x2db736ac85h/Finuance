@@ -12,6 +12,7 @@ import { IconButton } from '../ui/IconButton';
 import { useCashDialogs } from '../cash/store';
 import { openFilePicker } from './files';
 import { ImportHistory } from './ImportHistory';
+import { txPath } from '../lib/paths';
 
 type Props = { accounts: readonly Account[]; total: number; email: string };
 
@@ -31,7 +32,7 @@ export function Sidebar({ accounts, total, email }: Props) {
         <div className="sec-h">Explorer</div>
         {accounts.length || pending.length ? (
           <>
-            <NavLink to="/t/all" className={item} title="Every account combined">
+            <NavLink to={txPath()} className={item} title="Every account combined">
               <Icon name="layers" />
               <span className="fn">All accounts</span>
               <span className="fc">{fmtInt(total)}</span>
@@ -81,7 +82,7 @@ function accountTitle(a: Account): string {
 }
 
 function AccountItem({ account: a, imports }: { account: Account; imports: ImportSummary[] }) {
-  const active = useMatch(`/t/${a.id}`) !== null;
+  const active = useMatch(txPath(a.id)) !== null;
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -96,7 +97,7 @@ function AccountItem({ account: a, imports }: { account: Account; imports: Impor
             setOpen(!open);
           }}
         />
-        <NavLink to={`/t/${a.id}`} className="fi-link" title={accountTitle(a)}>
+        <NavLink to={txPath(a.id)} className="fi-link" title={accountTitle(a)}>
           <Icon name="folder" />
           <span className="fn">{a.name}</span>
           {a.kind === 'cash' && (

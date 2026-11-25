@@ -69,7 +69,7 @@ const requestStart = [];
 const step = [];
 const draw = [];
 for (let i = 0; i < 6; i++) {
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await page.waitForSelector('tr[data-i]');
   await page.waitForTimeout(2000); // the pane's requests are done, the overview chunk is loaded
   const t0 = await page.evaluate(() => performance.now());

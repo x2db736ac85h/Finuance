@@ -1,8 +1,8 @@
 # Progress
 
-**Current phase:** 25 — The traffic simulator: ten animals on a lab instance · **Branch:** `phase/25-close` (the phase close; then `v0.6.0`) · **Status:** started on 2026-11-21 (`/phase-start 25`). Phase 24 is closed: `v0.5.1` released and on the homelab by digest (pull request 70), the gate walked by the agent at the maintainer's request; Loki and Alloy's cost on the homelab, over a day: 317 MiB of memory and 0.012 of a CPU at most (2026-11-23, RUNBOOK "Logs"), so they stay on.
+**Current phase:** 26 — Cloud AI, with the interface corrections first · **Branch:** `phase/26-ui-shell` (pull request 1) · **Status:** started on 2026-11-25 (`/phase-start 26`; the plan approved by the maintainer). Phase 25 is closed: `v0.6.0` released (2026-11-24, approved by the maintainer), verified from outside (four images, provenance from the tag at `4088da0`) and on the homelab by digest (pull request 89): every application synced and healthy, no alert besides `Watchdog`, no `5xx`.
 
-**Released:** `v0.5.1` (2026-11-21). Phases 0–24 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
+**Released:** `v0.6.0` (2026-11-24). Phases 0–25 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
 
 **The plan from here:** `docs/PLAN.md` §9, "Rev 5 — the plan after going public" and Phases 22–29. A map of the system as built: [COMPONENTS.md](COMPONENTS.md).
 
@@ -47,7 +47,33 @@ Deployment
 
 ## Current phase tasks
 
-Phase 25 — The traffic simulator: ten animals on a lab instance (PLAN §9). Confirmed with `/phase-start 25` on 2026-11-21.
+Phase 26 — Cloud AI, with the interface corrections first (PLAN §9, "26.U" and 26.0–26.9). Confirmed on 2026-11-25.
+
+Pull requests (each merged on the maintainer's OK):
+- **1** `phase/26-ui-shell`: U1–U6.
+- **2** `phase/26-ui-shared`: U7–U12.
+- **Releases:** `v0.6.1-rc.1`, then `v0.6.1`, the homelab by digest.
+- **Then** the Vertex pull requests (26.0–26.9, broken down after `v0.6.1`) and `v0.7.0`.
+
+Decisions at the phase start (the maintainer, 2026-11-25): the corrections of the maintainer's list of 2026-11-25 come before the Vertex tasks and ship on their own as `v0.6.1`; an archived category behaves as removed and unarchiving restores what the archive changed and nothing changed since; the assistant's answer reaches the bell in the browser only (answers that outlive the tab: Backlog); Quick settings gets a two-state dark/light switch and "System" stays in Settings → General; item 12 of the list is dropped; connections get a provider choice (Anthropic, OpenAI, Google, a local server, other), with Google working from 26.2. No new dependency besides the approved `golang.org/x/oauth2` (26.0).
+
+- [x] 26.0a `.trivyignore` read (the standing first task) — 2026-11-25: empty, nothing to revisit
+- [x] U1 routes: `/transactions/:view`, `/overview/:view`, `/shared`; `/` opens the transactions; the old addresses redirect — 2026-11-25 (pull request 1): `web/src/lib/paths.ts` builds every address (no path is written by hand in the sources any more); `/t/…`, `/o/…`, `/s…` redirect with their query string; the browser-error report's screen names follow; the E2E specs, `tools/perf/*.mjs` and the rehearsal's pod-kill script use the new addresses. A shell test covers the first page and the four old addresses
+- [x] U2 the table/overview mode comes from the address (the rule suggestion no longer flashes over the overview) — 2026-11-25 (pull request 1): the cause was two copies of the mode: the store's changed a render before the page did, and the overview's styles hide only the toolbar, the grid, the charts and the inspector. The store's `mode` is gone (an older preferences document's value is read and dropped); the shell and the title bar read it from the location. A test watches every change of the document during the switch and finds the card and the overview's shell together zero times
+- [x] U3 Settings: no "Back to transactions"; Appearance inside General; Sessions and Access tokens inside Security — 2026-11-25 (pull request 1): seven sections left (Friends moves in U8); `/settings/appearance`, `/settings/sessions` and `/settings/tokens` redirect to their page with `#appearance`, `#sessions`, `#tokens`, which scrolls the part into view; the link is gone from Administration too
+- [x] U4 Quick settings: theme and dark-mode switch on one line, a plain size slider, the shortcuts' icon, "All settings" on top — 2026-11-25 (pull request 1): `Button variant="outline"` (the input's grey with the accent as border, from tokens, so every theme has it); `DarkSwitch` (`role="switch"`, shows the mode in effect, follows the system until used); `SizeSlider minimal`; the `cmd` icon among the app's own icons
+- [x] U5 dialog spacing: every form in a dialog has the dialog's inset, with a guard test — 2026-11-25 (pull request 1): one rule (`.modal-card > .adm-form`) for the seven dialogs whose body is a Settings-style form; measured in a browser at 23 px where it was 0; `dialogInset` in the E2E helpers and a case in `quality.spec.ts` (cash account, typed-in transaction, new shared group); U11 walks the rest
+- [x] U6 screenshots in dark and light — 2026-11-25: taken against the Compose lab as Fox (the quick settings, Settings → General and Security, the dialogs, 960 and 720 px), kept with the session
+- [ ] U7 archive a category (migration 00030, `archive` / `unarchive`, the archived list)
+- [ ] U8 friends live on the Shared page ("Shared")
+- [ ] U9 group colours on the Shared page, a colour choice for shared groups, personal groups link to their transactions
+- [ ] U10 the assistant in the bell, the sparkle icon on every assistant message
+- [ ] U11 the half-window check (960 and 720 px, both themes)
+- [ ] U12 connections and models: one thing open at a time, a provider choice
+- [ ] 26.0–26.9 Vertex AI (PLAN §9), broken down after `v0.6.1`
+- [ ] Gate (the maintainer)
+
+Phase 25 — The traffic simulator: ten animals on a lab instance (closed; PLAN §9). Confirmed with `/phase-start 25` on 2026-11-21.
 
 Pull requests:
 - **1** `phase/25-lab-instance`: 25.1.
@@ -135,7 +161,7 @@ Decisions of 2026-11-23 (the maintainer, after the day in the lab): the animals 
   - **k6 2.4.0** in the Makefile, the rehearsal and the homelab drill, after a check against what 2.x removed: the scripts use only constant and arrival-rate executors, `k6/http`, `k6/execution` and `k6/metrics`. Against the Compose lab the smoke profile passed (171 of 171 checks, p95 41 ms, nothing failed), and the lab counted the run as synthetic.
   - **The homelab drill's k6 user stays a person:** the homelab is not a lab.
   - **`loadtest/README.md`** says which tool is for what (k6 for load and breaking points, its pod-kill script for rollouts, the simulator for every feature all day).
-- [ ] 25.11 documents (`docs/simulator.md` and the rest), `CHANGELOG.md`, `v0.6.0` — so far (2026-11-23): `docs/simulator.md`, ADRs 0043 and 0044, THREAT-MODEL B10 and D14, `docs/observability.md`, `docs/COMPONENTS.md` and `loadtest/README.md` written with the pull requests; `CHANGELOG.md` `[0.6.0]` complete for `v0.6.0-rc.2` (pull request 13); the close (pull request 14) corrects "Settings → Developer" to "Administration → Developer" in five places, where the lab's links are (`/admin/developer`). Left: `v0.6.0`
+- [x] 25.11 documents (`docs/simulator.md` and the rest), `CHANGELOG.md`, `v0.6.0` — so far (2026-11-23): `docs/simulator.md`, ADRs 0043 and 0044, THREAT-MODEL B10 and D14, `docs/observability.md`, `docs/COMPONENTS.md` and `loadtest/README.md` written with the pull requests; `CHANGELOG.md` `[0.6.0]` complete for `v0.6.0-rc.2` (pull request 13); the close (pull request 14) corrects "Settings → Developer" to "Administration → Developer" in five places, where the lab's links are (`/admin/developer`). `v0.6.0` released on 2026-11-24 (pull requests 88 and 89)
 - [x] 25.12 a day in the lab: ten animals for 24 hours, every `5xx` and unexpected `4xx` a finding, the overview and the duplicates window measured — 2026-11-21 20:00 to 2026-11-22 20:00 UTC on the Compose lab (`docs/perf.md` "Phase 25: a day in the lab"): 2,001 actions, 0 `5xx`, no panic, no failed job, every `4xx` meant but two; overview p95 62 ms, duplicates p95 44 ms. Found and fixed (pull request 9):
   - **an empty statement:** the squirrel's savings account had a week without a row, and the server rightly refused to commit it; the simulator now deletes the preview and counts the days as imported (`TestEmptyStatementIsNotCommitted`);
   - **after a reboot:** the lab's Grafana and Alloy had no restart policy, so the machine's restart after 26 hours left the animals running unobserved;
@@ -388,6 +414,7 @@ Still ideas
 
 ## Session log
 
+- 2026-11-25 — `v0.6.0` released and on the homelab (pull requests 88 and 89); Phase 25 closed. The maintainer listed thirteen interface corrections and asked for them first in Phase 26; planned as U1–U12 in two pull requests with three decisions (archive, the assistant's bell, the theme switch), then a fourteenth (connections and models). Next: pull request 1.
 - 2026-11-24 — The maintainer approved `v0.6.0-rc.2`'s release; verified from outside (all four digests' provenance from the tag at `4b8b758`) and on the homelab (pull request 86: every application synced and healthy, the new pods admitted, no migration, no `5xx`; the api, the worker and the migration restarted once at start, 27.10; one refused push from Prometheus to Alertmanager during the rollout, gone a few minutes later). The maintainer took the three decisions and asked the agent to walk the gate: walked, and its one finding (expired friend codes on the simulator's board) fixed. `report-uri` kept, with a ZAP hook for its notice. Next: pull request 14, `v0.6.0`.
 - 2026-11-23 (later) — Pull requests 9–12 (80–83: the day in the lab's record and fixes, load mode and randomness, history profiles, what the load costs) merged on the phase's rules. The load run (25.17) found the reclassification's `FOR UPDATE` lock behind its breaking point (pull request 84); with it fixed the same lab carried 96 actions a second within the objective. CI's runner needed Docker's root mounted for cAdvisor (classic storage) and a longer wait for the live strip's first rate. Next: pull request 13, `v0.6.0-rc.2`, the gate.
 - 2026-11-23 — The machine restarted on 2026-11-22 after 26 hours of the day in the lab; its Grafana didn't come back. Started again, the day's numbers read (`docs/perf.md`): no `5xx`, two failed actions (an empty statement), doubled worker lines in Loki (Alloy's positions on a tmpfs, Loki's stream shards); the three fixed. The maintainer asked for the animals to load the system, replace the load-test users and get resource views; planned as 25.13–25.17 and approved. Next: pull request 9, then the load mode.

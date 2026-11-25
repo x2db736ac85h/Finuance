@@ -24,16 +24,16 @@ test('screenshots of the main screens in both themes', async ({ page }) => {
   await shoot(page, 'empty');
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
 
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   await expect(page.locator('.card').first()).toBeVisible();
   await shoot(page, 'table');
 
-  await page.goto('/o/all');
+  await page.goto('/overview/all');
   await expect(page.getByText('Recurring payments').first()).toBeVisible();
   await shoot(page, 'overview');
 
-  await page.goto('/t/all');
+  await page.goto('/transactions/all');
   await expect(page.locator('tr[data-i]').first()).toBeVisible();
   await page.locator('input[type=file]').first().setInputFiles(fixture('synthetic/banks/mbank-like.csv'));
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -46,13 +46,13 @@ test('screenshots of the main screens in both themes', async ({ page }) => {
   await shoot(page, 'migration');
   await page.keyboard.press('Escape');
 
-  await page.goto('/settings/appearance');
+  await page.goto('/settings/general');
   await shoot(page, 'settings');
 
   await page.goto(await sharedGroupViaApi(page));
   await expect(page.getByRole('region', { name: 'Paid vs share' })).toBeVisible();
   await shoot(page, 'shared-group');
-  await page.goto('/s');
+  await page.goto('/shared');
   await expect(page.getByRole('region', { name: 'Timeline' }).getByRole('button', { name: 'Mazury' })).toBeVisible();
   await shoot(page, 'shared');
 });
@@ -65,12 +65,12 @@ test('screenshots of every colour theme', async ({ page }) => {
   await signUp(page);
   await importViaApi(page, 'Demo', 'demo/demo-legacy.csv');
   for (const theme of ['Indigo', 'Fjord', 'Grove', 'Ember']) {
-    await page.goto('/settings/appearance');
+    await page.goto('/settings/general');
     await page
       .getByRole('radiogroup', { name: 'Colour theme' })
       .getByRole('radio', { name: new RegExp(theme) })
       .click();
-    await page.goto('/t/all');
+    await page.goto('/transactions/all');
     await expect(page.locator('tr[data-i]').first()).toBeVisible();
     await expect(page.locator('.card').first()).toBeVisible();
     await shoot(page, `theme-${theme.toLowerCase()}`);

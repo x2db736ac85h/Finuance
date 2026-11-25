@@ -185,7 +185,7 @@ const panel = async () => screen.findByRole('complementary', { name: 'Assistant'
 
 describe('ChatPanel', () => {
   it('streams an answer with its reasoning, lookup and meta, and shows the lookup in the table', async () => {
-    const { router } = renderApp('/t/all');
+    const { router } = renderApp('/transactions/all');
     const p = await panel();
     expect(await within(p).findByText('Ask about your money')).toBeTruthy();
     expect(within(p).getByText(/917 transactions/)).toBeTruthy();
@@ -217,7 +217,7 @@ describe('ChatPanel', () => {
 
     fireEvent.click(within(p).getByText('Show in table'));
     expect(viewOf(useViews.getState().views, 'all').toolFilter).toEqual(step.toolFilter);
-    expect(router.state.location.pathname).toBe('/t/all');
+    expect(router.state.location.pathname).toBe('/transactions/all');
     expect(await screen.findByText('Showing 10 matching rows')).toBeTruthy();
   });
 
@@ -233,7 +233,7 @@ describe('ChatPanel', () => {
       }),
       http.get(`${API}/assistant/chats/:id/attachments/:aid`, () => new HttpResponse(new Uint8Array([0xff, 0xd8]))),
     );
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     const camera = await within(p).findByRole('button', { name: 'Attach a photo of a receipt' });
     expect(camera).toBeTruthy();
@@ -318,7 +318,7 @@ describe('ChatPanel', () => {
       }),
     );
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     await user.type(
       await within(p).findByRole('textbox', { name: 'Question' }),
@@ -394,7 +394,7 @@ describe('ChatPanel', () => {
       }),
     );
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     await user.type(await within(p).findByRole('textbox', { name: 'Question' }), 'Make a rule for the gym{Enter}');
     const card = await within(p).findByRole('group', { name: 'Proposed change' });
@@ -421,7 +421,7 @@ describe('ChatPanel', () => {
 
   it('asks about the table view with its context', async () => {
     db.prefs = { version: 1, prefs: { ai: { open: true, scope: 'view' } } };
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     useViews.getState().patch('all', { filters: { payee: { cond: 'kino', excluded: [] } } });
     const box = await within(p).findByRole('textbox', { name: 'Question' });
@@ -435,7 +435,7 @@ describe('ChatPanel', () => {
 
   it('explains how to fix an error', async () => {
     st.answer = streamed([['error', { code: 'tools_rejected', message: 'The model does not support tools.' }]]);
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByText('What were my 5 biggest expenses this year?'));
     const alert = await within(p).findByRole('alert');
@@ -445,7 +445,7 @@ describe('ChatPanel', () => {
 
   it('shows a problem that keeps the question from starting', async () => {
     st.answer = () => problem(409, 'run_in_progress', 'A reply is still being written in another chat or tab');
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByText('What were my 5 biggest expenses this year?'));
     expect((await within(p).findByRole('alert')).textContent).toContain('A reply is still being written');
@@ -480,7 +480,7 @@ describe('ChatPanel', () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByText('What were my 5 biggest expenses this year?'));
     expect(await within(p).findByText(/Still thinking/)).toBeTruthy();
@@ -522,7 +522,7 @@ describe('ChatPanel', () => {
         updatedAt: '2025-03-19T10:00:05Z',
       },
     ];
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Earlier question'));
     const cards = await within(p).findAllByRole('group', { name: 'Proposed change' });
@@ -573,7 +573,7 @@ describe('ChatPanel', () => {
         updatedAt: '2025-03-19T10:00:05Z',
       },
     ];
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Earlier question'));
     expect(await within(p).findByText(/Searched the advice library/)).toBeTruthy();
@@ -596,7 +596,7 @@ describe('ChatPanel', () => {
         updatedAt: '2025-03-19T10:00:05Z',
       },
     ];
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Earlier question'));
     expect(await within(p).findByText('answer', { selector: 'b' })).toBeTruthy();
@@ -667,7 +667,7 @@ describe('ChatPanel', () => {
       }),
     );
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     await user.type(await within(p).findByRole('textbox', { name: 'Question' }), 'Categorise my bills{Enter}');
     const cards = await within(p).findAllByRole('group', { name: 'Proposed change' });
@@ -709,7 +709,7 @@ describe('ChatPanel', () => {
       }),
     );
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     await user.type(await within(p).findByRole('textbox', { name: 'Question' }), 'Categorise{Enter}');
     const card = await within(p).findByRole('group', { name: 'Proposed change' });
@@ -719,7 +719,7 @@ describe('ChatPanel', () => {
 
   it('says when the assistant is not set up', async () => {
     st.status = status([]);
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     expect(await within(p).findByText('The assistant isn’t available')).toBeTruthy();
     expect(within(p).queryByRole('textbox', { name: 'Question' })).toBeNull();
@@ -756,7 +756,7 @@ describe('digests', () => {
         readAt: '2026-11-08T07:00:00Z',
       },
     ];
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
     expect(await screen.findByText(/Your daily digest couldn't be written/)).toBeTruthy();
     fireEvent.click(screen.getByText('Your weekly digest is ready · 2 proposals waiting'));
@@ -771,7 +771,7 @@ describe('digests', () => {
 
 describe('ChatSettings', () => {
   it('saves the retention and warns about keeping chats forever', async () => {
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Assistant settings'));
     const keep = await within(p).findByLabelText('Keep chats');
@@ -795,7 +795,7 @@ describe('ChatSettings', () => {
 
   it('asks for consent before a cloud connection gets data', async () => {
     st.status = status([{}, { cloud: true, label: 'Claude (cloud)', name: 'claude' }]);
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Assistant settings'));
     const conn = await within(p).findByLabelText('Connection');
@@ -828,7 +828,7 @@ describe('ChatSettings', () => {
       }),
     );
     st.settings = { retentionDays: 2, cloudConsent: [], tokensToday: 12_000 };
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Assistant settings'));
     const often = await within(p).findByLabelText('How often');
@@ -864,7 +864,7 @@ describe('ChatSettings', () => {
 
   it('has no digest where the instance switched digests off', async () => {
     db.features = { ...db.features, assistantDigests: false };
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Assistant settings'));
     expect(await within(p).findByLabelText('Keep chats')).toBeTruthy();
@@ -872,7 +872,7 @@ describe('ChatSettings', () => {
   });
 
   it('switches the model and the thinking level', async () => {
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Assistant settings'));
     const model = await within(p).findByLabelText('Model');
@@ -890,7 +890,7 @@ describe('ChatSettings', () => {
 describe("connection checks and the administrator's choice (Phase 20 follow-ups)", () => {
   it("says what Test found: connected with the models and the time, or why the server can't be reached", async () => {
     st.status = status([{ latencyMs: 85 }]);
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Assistant settings'));
     fireEvent.click(await within(p).findByRole('button', { name: 'Test' }));
@@ -915,7 +915,7 @@ describe("connection checks and the administrator's choice (Phase 20 follow-ups)
       choice: 'admin',
     };
     useUi.getState().setAi({ connection: 'lmstudio', model: 'gemma-3-12b' }); // a saved pick, unused while locked
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     fireEvent.click(await within(p).findByTitle('Assistant settings'));
     expect(await within(p).findByText('The connection and model are set by your administrator.')).toBeTruthy();
@@ -928,7 +928,7 @@ describe("connection checks and the administrator's choice (Phase 20 follow-ups)
 
   it('offers the camera when the connection has a model for photos, though the model in use reads none', async () => {
     st.status = status([{ photoModel: 'gemma-3-12b' }]); // qwen3-14b is chosen and can't read images
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const p = await panel();
     expect(await within(p).findByRole('button', { name: 'Attach a photo of a receipt' })).toBeTruthy();
   });

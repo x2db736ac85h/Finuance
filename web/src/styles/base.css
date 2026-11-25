@@ -122,6 +122,14 @@ kbd {
 .btn.primary:hover {
   filter: brightness(1.08);
 }
+.btn.outline {
+  background: var(--input);
+  border-color: var(--accent);
+}
+.btn.outline:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
 .btn.ghost {
   background: transparent;
 }

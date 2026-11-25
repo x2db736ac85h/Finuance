@@ -115,7 +115,7 @@ describe('notifications', () => {
       },
     ];
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const bell = await screen.findByRole('button', { name: 'Notifications, 1 unread' });
     await user.click(bell);
     const pop = await screen.findByRole('dialog', { name: 'Notifications' });

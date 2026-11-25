@@ -12,6 +12,7 @@ import { useUi } from '../stores/uiStore';
 import { IconButton } from '../ui/IconButton';
 import { Popover, usePopover } from '../ui/Popover';
 import { toast } from '../ui/toastStore';
+import { sharedPath } from '../lib/paths';
 
 /** A digest's notification: which one, and how many proposals wait in it (ADR 0033). */
 function sayDigest(d: Record<string, string>): string {
@@ -40,12 +41,12 @@ const SAY: Record<Notification['kind'], (d: Record<string, string>) => string> =
 const LINK: Record<Notification['kind'], string> = {
   'friend.added': '/settings/friends',
   'friend.removed': '/settings/friends',
-  'shared.invited': '/s',
-  'shared.joined': '/s',
-  'shared.left': '/s',
-  'shared.expense_added': '/s',
-  'shared.settled': '/s',
-  'shared.settlement_removed': '/s',
+  'shared.invited': sharedPath(),
+  'shared.joined': sharedPath(),
+  'shared.left': sharedPath(),
+  'shared.expense_added': sharedPath(),
+  'shared.settled': sharedPath(),
+  'shared.settlement_removed': sharedPath(),
   'assistant.digest': '',
 };
 
@@ -65,7 +66,7 @@ function openDigest(n: Notification) {
 /** Where a notification leads: a shared-group notification opens its group. */
 function linkOf(n: Notification): string {
   const g = n.data['groupId'];
-  return n.kind.startsWith('shared.') && g && n.kind !== 'shared.left' ? `/s/${g}` : LINK[n.kind];
+  return n.kind.startsWith('shared.') && g && n.kind !== 'shared.left' ? sharedPath(g) : LINK[n.kind];
 }
 
 export function describeNotification(n: Notification): string {

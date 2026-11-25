@@ -246,7 +246,7 @@ describe('Settings → Rules', () => {
 describe('the table', () => {
   it('turns the view filters into a rule', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await screen.findByText('ZABKA');
     expect(screen.queryByRole('button', { name: 'Save filters as rule…' })).toBeNull();
     act(() => {
@@ -272,7 +272,7 @@ describe('the table', () => {
       suggestion('KAWIARNIA ZIARNO', { id: C1, name: 'Kawa' }),
     ];
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     let card = await screen.findByRole('region', { name: 'Rule suggestion' });
     expect(card.textContent).toBe(
       'You put 3 transactions of ZABKA in Zakupy by hand. A rule can do it for all 9 transactions and future imports.Create rule…',
@@ -304,6 +304,36 @@ describe('the table', () => {
     });
   });
 
+  it('a suggestion never shows over the overview while the page changes (Phase 26, U2)', async () => {
+    db.ruleSuggestions = [
+      {
+        payeeGroup: 'ZABKA',
+        category: { id: C2, name: 'Zakupy' },
+        manualCount: 3,
+        txCount: 9,
+        match: { filters: [{ column: 'payee', cond: 'ZABKA' }] },
+      },
+    ];
+    const user = userEvent.setup();
+    const { router } = renderApp('/transactions/all');
+    await screen.findByRole('region', { name: 'Rule suggestion' });
+    // every change of the document on the way: the shell is never the overview's while the card is there
+    const app = document.getElementById('app') as HTMLElement;
+    let together = 0;
+    const seen = new MutationObserver(() => {
+      if (app.classList.contains('mode-ov') && screen.queryByRole('region', { name: 'Rule suggestion' })) together++;
+    });
+    seen.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    await user.click(screen.getByRole('button', { name: 'Personal finance overview' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/overview/all');
+      expect(app.classList.contains('mode-ov')).toBe(true);
+    });
+    seen.disconnect();
+    expect(together).toBe(0);
+    expect(screen.queryByRole('region', { name: 'Rule suggestion' })).toBeNull();
+  });
+
   it('a cancelled suggestion comes back; dismissed ones survive in the preferences', async () => {
     db.ruleSuggestions = [
       {
@@ -315,7 +345,7 @@ describe('the table', () => {
       },
     ];
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     const card = await screen.findByRole('region', { name: 'Rule suggestion' });
     await user.click(within(card).getByRole('button', { name: 'Create rule…' }));
     await user.click(
@@ -330,7 +360,7 @@ describe('the table', () => {
 
   it('marks transfers and hides them from the Columns menu, with a chip to show them again', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     expect((await screen.findAllByText('Transfer')).length).toBeGreaterThan(0);
     expect(db.queries.at(-1)?.context.includeTransfers).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Columns' }));
@@ -347,7 +377,7 @@ describe('the table', () => {
 
   it('Shift+↓ selects a range, and the quick bar sets its category or transfer state', async () => {
     const user = userEvent.setup();
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await user.click(await screen.findByText('PRZELEW WLASNY'));
     await user.keyboard('{Shift>}{ArrowDown}{ArrowDown}{/Shift}');
     const bar = within(await screen.findByRole('toolbar', { name: 'Selected transactions' }));
@@ -402,7 +432,7 @@ describe('the table', () => {
         return HttpResponse.json(unpaired);
       }),
     );
-    renderApp('/t/all');
+    renderApp('/transactions/all');
     await user.click(await screen.findByText('PRZELEW WLASNY'));
     const xfer = within(await screen.findByRole('group', { name: 'Transfer' }));
     expect(xfer.getByText(/Transfer · paired with Oszczędności, 06\.01\.2025/)).toBeTruthy();
