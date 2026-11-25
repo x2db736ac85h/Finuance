@@ -6,6 +6,25 @@ notes of their version.
 
 ## [Unreleased]
 
+### Added
+
+- **Archive a category** instead of deleting it (Settings → Categories). An archived category
+  behaves as removed: its transactions become uncategorised, rules that set it lose that action, its
+  budget goes, and its name is free. *Unarchive* brings it back with the labels you set by hand, its
+  rules, bank names, budget and goals, wherever nothing has taken their place since; transactions
+  you categorised differently in between stay as they are. *Delete for good* is in the archived
+  list. API: `POST /categories/{id}/archive`, `POST /categories/{id}/unarchive`,
+  `GET /categories/archived`; `DELETE /categories/{id}` still deletes for good. Migration 00030.
+- **The assistant in the bell:** an answer that finishes while the panel is closed or the tab is in
+  the background leaves an entry that opens its chat (kept in the browser only). Everything of the
+  assistant's (its notifications and its toasts) carries the sparkle icon.
+- **A provider choice when adding a connection** (Administration → Assistant): Anthropic, OpenAI,
+  Google (with the cloud AI part of this release), a local server, or any compatible address. The
+  choice fills in the format and the address and asks only for what that provider needs; the new
+  connection's models open right after. A default model its own patterns leave out is refused in
+  the form.
+- A shared group's colour can be changed in its settings.
+
 ### Changed
 
 - **Addresses:** the table is `/transactions/<view>`, the overview `/overview/<view>` and the
@@ -18,8 +37,17 @@ notes of their version.
   dark-mode switch (System, Dark and Light stay on Settings → General), the interface size is a
   plain slider, and the shortcuts have a command-key icon.
 
+- **Friends are on the Shared page** (the code, adding a friend, the list), under *Friends*;
+  `/settings/friends` leads there. The page is called "Shared" and exists while shared groups or
+  friends are switched on.
+- Administration → Assistant shows one thing at a time: a connection's models under the list, or
+  the dialog that adds or changes a connection. The list names the provider.
+- A personal group on the Shared page opens the table filtered to its transactions.
+
 ### Fixed
 
+- A group's colour dot shows on the Shared page, on a shared group's page and in the group report
+  (it had no size outside the groups menu).
 - A rule suggestion (or a transfer suggestion) no longer shows over the overview for a moment when
   switching from the table: the page's mode is read from the address alone.
 - Forms inside dialogs (group settings, sharing a group, a cash account, a typed-in transaction, a

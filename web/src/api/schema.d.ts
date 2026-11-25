@@ -928,7 +928,7 @@ export interface paths {
         put?: never;
         /**
          * Bring an archived category back
-         * @description Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+         * @description Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions that are still uncategorised get the category back; the others are left as they are. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
          */
         post: operations["unarchiveCategory"];
         delete?: never;

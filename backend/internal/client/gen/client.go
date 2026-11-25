@@ -6928,7 +6928,7 @@ type ClientInterface interface {
 
 	// UnarchiveCategory Bring an archived category back
 	//
-	// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+	// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions that are still uncategorised get the category back; the others are left as they are. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
 	//
 	// Corresponds with POST /categories/{id}/unarchive (the `UnarchiveCategory` operationId).
 	UnarchiveCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9763,7 +9763,7 @@ func (c *Client) MergeCategory(ctx context.Context, id Id, body MergeCategoryJSO
 
 // UnarchiveCategory Bring an archived category back
 //
-// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions that are still uncategorised get the category back; the others are left as they are. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
 //
 // Corresponds with POST /categories/{id}/unarchive (the `UnarchiveCategory` operationId).
 func (c *Client) UnarchiveCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -20065,7 +20065,7 @@ type ClientWithResponsesInterface interface {
 
 	// UnarchiveCategoryWithResponse Bring an archived category back
 	//
-	// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+	// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions that are still uncategorised get the category back; the others are left as they are. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -30699,7 +30699,7 @@ func (c *ClientWithResponses) MergeCategoryWithResponse(ctx context.Context, id 
 
 // UnarchiveCategoryWithResponse Bring an archived category back
 //
-// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions that are still uncategorised get the category back; the others are left as they are. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
 //
 // Returns a wrapper object for the known response body format(s).
 //
