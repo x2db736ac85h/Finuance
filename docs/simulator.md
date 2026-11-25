@@ -43,7 +43,7 @@ tools/check-lab.sh             # actions, Prometheus and Loki checked from outsi
 make sim-down                  # stop it (SIM_RESET=1 drops the lab's database too)
 ```
 
-`make sim-up` writes `.env.lab` once (the seed and the control token, random) and prints the page's
+`make sim-up` writes `.env.lab` once (the seed, the control token and the lab administrator's password, random; and an instance key, which seals what an administrator enters such as a connection's API key, unless `.env` or `.env.lab` already sets one) and prints the page's
 address with the token in its fragment.
 
 **On Kubernetes**: [`deploy/environments/lab`](../deploy/environments/lab) (a second release of the

@@ -412,7 +412,7 @@ func TestClaudeOnVertex(t *testing.T) {
 	gemini, _ := l.cs.Get("vertex")
 	l.cs.SetStored([]config.AIConnection{gemini.AIConnection, c}, nil, nil)
 	st, err := l.cs.StatusOf(context.Background(), "claude-vertex", true)
-	if err != nil || !st.Reachable || len(st.Models) != 1 || st.Models[0].ID != "claude-sonnet-5-5" || st.Models[0].Caps.Reasoning != llm.ReasonBudget {
+	if err != nil || !st.Reachable || len(st.Models) != 1 || st.Models[0].ID != "claude-sonnet-5-5" || st.Models[0].Caps.Reasoning != llm.ReasonAdaptive {
 		t.Fatalf("status = %+v, %v", st, err)
 	}
 	conn, _ := l.cs.Get("claude-vertex")

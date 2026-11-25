@@ -4495,7 +4495,7 @@ export interface components {
              * @description How thinking is controlled (none = no control; the model may still reason).
              * @enum {string}
              */
-            reasoning: "none" | "effort" | "budget" | "switch";
+            reasoning: "none" | "effort" | "budget" | "switch" | "adaptive";
             contextTokens: number;
             /** @description Whether the model reads images (photos of receipts can be attached). */
             vision: boolean;
@@ -5034,7 +5034,7 @@ export interface components {
             pattern: string;
             tools?: boolean;
             /** @enum {string} */
-            reasoning?: "none" | "effort" | "budget" | "switch";
+            reasoning?: "none" | "effort" | "budget" | "switch" | "adaptive";
             contextTokens?: number;
             vision?: boolean;
         };

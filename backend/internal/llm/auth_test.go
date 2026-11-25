@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -189,5 +190,112 @@ func TestTokenGoesOnlyToItsHosts(t *testing.T) {
 	}
 	if hits.Load() != 0 {
 		t.Errorf("the other host got %d requests", hits.Load())
+	}
+}
+
+// TestClaudeGenerations (issue 97): which request shape a Claude id takes. The list of models that
+// think with a token budget is closed; any other id that is not old, an unknown newer one
+// included, is a current model.
+func TestClaudeGenerations(t *testing.T) {
+	for id, want := range map[string]string{
+		"claude-haiku-5-5":           ClaudeCurrent,
+		"claude-sonnet-5-5":          ClaudeCurrent,
+		"claude-sonnet-5":            ClaudeCurrent,
+		"claude-opus-5-5":            ClaudeCurrent,
+		"claude-opus-5":              ClaudeCurrent,
+		"claude-opus-4-8":            ClaudeCurrent,
+		"claude-opus-4-7":            ClaudeCurrent,
+		"claude-opus-4-6":            ClaudeCurrent,
+		"claude-sonnet-4-6":          ClaudeCurrent,
+		"claude-fable-5-2":           ClaudeCurrent,
+		"claude-mythos-5-1":          ClaudeCurrent,
+		"claude-opus-6":              ClaudeCurrent, // not released: newer, so current
+		"claude-haiku-4-5":           ClaudeBudget,
+		"claude-haiku-4-5-20251001":  ClaudeBudget,
+		"claude-sonnet-4-5":          ClaudeBudget,
+		"claude-opus-4-5-20251101":   ClaudeBudget,
+		"claude-opus-4-5@20251101":   ClaudeBudget, // as Vertex AI names it
+		"claude-opus-4-1":            ClaudeBudget,
+		"claude-opus-4-1-20250805":   ClaudeBudget,
+		"claude-sonnet-4-20250514":   ClaudeBudget,
+		"claude-opus-4":              ClaudeBudget,
+		"claude-3-7-sonnet-20250219": ClaudeBudget,
+		"claude-3-5-sonnet-20241022": ClaudeOld,
+		"claude-3-haiku-20240307":    ClaudeOld,
+		"claude-2.1":                 ClaudeOld,
+		"qwen3:4b":                   "",
+		"google/gemini-3.5-flash":    "",
+	} {
+		if got := ClaudeGeneration(id); got != want {
+			t.Errorf("ClaudeGeneration(%q) = %q, want %q", id, got, want)
+		}
+		wantReasoning := map[string]Reasoning{ClaudeCurrent: ReasonAdaptive, ClaudeBudget: ReasonBudget, ClaudeOld: ReasonNone}[want]
+		if want != "" {
+			if c := DetectCaps(Anthropic, Model{ID: id}, 8192, nil); c.Reasoning != wantReasoning {
+				t.Errorf("DetectCaps(%q).Reasoning = %q, want %q", id, c.Reasoning, wantReasoning)
+			}
+		}
+	}
+}
+
+// TestAnthropicBodyForCurrentModels (issue 97): a current Claude model gets adaptive thinking with
+// the level as an effort, no token budget and no temperature; "off" is the lowest effort, never
+// "disabled"; and a model of the budget generations keeps its budget.
+func TestAnthropicBodyForCurrentModels(t *testing.T) {
+	srv, bodies := serve(t, 200, "application/json", "anthropic-nonstream.json")
+	temp := 0.2
+	ask := func(model string, think Thinking, caps Caps) map[string]any {
+		t.Helper()
+		*bodies = nil
+		req := Request{Model: model, Temperature: &temp, Thinking: think, Caps: caps,
+			Tools:    []Tool{{Name: "a", Parameters: json.RawMessage(`{"type":"object"}`)}},
+			Messages: []Message{{Role: RoleUser, Content: "Q"}}}
+		if _, _, err := run(t, client(Anthropic, srv.URL+"/v1"), req); err != nil {
+			t.Fatal(err)
+		}
+		return (*bodies)[0]
+	}
+	adaptive := Caps{Reasoning: ReasonAdaptive}
+	for think, effort := range map[Thinking]any{ThinkOff: "low", ThinkLow: "low", ThinkMedium: "medium", ThinkHigh: "high", ThinkAuto: nil} {
+		b := ask("claude-haiku-5-5", think, adaptive)
+		th, _ := b["thinking"].(map[string]any)
+		if th["type"] != "adaptive" || th["display"] != "summarized" {
+			t.Errorf("thinking %s: thinking = %v, want adaptive with a summary", think, b["thinking"])
+		}
+		if _, ok := th["budget_tokens"]; ok {
+			t.Errorf("thinking %s: a token budget was sent", think)
+		}
+		var got any
+		if oc, ok := b["output_config"].(map[string]any); ok {
+			got = oc["effort"]
+		}
+		if got != effort {
+			t.Errorf("thinking %s: effort = %v, want %v", think, got, effort)
+		}
+		if _, ok := b["temperature"]; ok {
+			t.Errorf("thinking %s: a temperature was sent", think)
+		}
+		if _, ok := b["tool_choice"]; ok {
+			t.Errorf("thinking %s: a tool choice was sent (the default, auto, is the only one every model takes)", think)
+		}
+		if b["max_tokens"] != float64(adaptiveMaxTokens) {
+			t.Errorf("thinking %s: max_tokens = %v", think, b["max_tokens"])
+		}
+	}
+	// a current model whose capabilities say "budget" or "none" (an administrator's correction)
+	// still gets no budget and no temperature
+	for _, caps := range []Caps{{Reasoning: ReasonBudget}, {Reasoning: ReasonNone}} {
+		b := ask("claude-opus-5-5", ThinkHigh, caps)
+		if b["thinking"] != nil || b["temperature"] != nil {
+			t.Errorf("caps %s on a current model: thinking = %v, temperature = %v", caps.Reasoning, b["thinking"], b["temperature"])
+		}
+	}
+	// the budget generations are unchanged: a budget when thinking, the temperature when not
+	b := ask("claude-haiku-4-5", ThinkMedium, Caps{Reasoning: ReasonBudget})
+	if th := b["thinking"].(map[string]any); th["type"] != "enabled" || th["budget_tokens"] != float64(4096) || b["output_config"] != nil {
+		t.Errorf("claude-haiku-4-5 thinking: %v", b)
+	}
+	if b := ask("claude-haiku-4-5", ThinkOff, Caps{Reasoning: ReasonBudget}); b["thinking"] != nil || b["temperature"] != 0.2 {
+		t.Errorf("claude-haiku-4-5 without thinking: thinking = %v, temperature = %v", b["thinking"], b["temperature"])
 	}
 }

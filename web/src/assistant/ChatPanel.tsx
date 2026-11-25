@@ -65,6 +65,8 @@ export function ChatPanel({ viewId }: { viewId: string }) {
   const apply = useApplyProposal();
   const [showCfg, setShowCfg] = useState(false);
   const [consentFor, setConsentFor] = useState<AssistantConnection | null>(null);
+  // the question that was refused for want of agreement: asked again once the person agrees
+  const refused = useRef<{ text: string; photos: Attachment[] } | null>(null);
   const [text, setText] = useState('');
   // photos waiting for the next question (uploaded into the chat already)
   const [photos, setPhotos] = useState<Attachment[]>([]);
@@ -102,9 +104,9 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     .sort()
     .at(-1);
 
-  const ask = (typed: string) => {
+  const ask = (typed: string, withPhotos: Attachment[] = photos) => {
     // a photo alone asks about the receipt
-    const q = typed.trim() || (vision && photos.length > 0 ? 'Here is a receipt.' : '');
+    const q = typed.trim() || (vision && withPhotos.length > 0 ? 'Here is a receipt.' : '');
     if (!q || busy) return;
     if (!conn) {
       setShowCfg(true);
@@ -112,7 +114,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     }
     const view = ai.scope === 'view';
     const v = viewOf(useViews.getState().views, viewId);
-    const sent = vision ? photos : [];
+    const sent = vision ? withPhotos : [];
     setText('');
     setPhotos([]);
     near.current = true;
@@ -134,6 +136,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
       { view, viewId: view ? viewId : 'all' },
       {
         onConsent: () => {
+          refused.current = { text: q, photos: sent };
           setConsentFor(conn);
         },
         onChanged: () => void qc.invalidateQueries({ queryKey: keys.chats }),
@@ -438,7 +441,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         }}
       >
         {consentFor && (
-          <div className="conn">
+          <div className="modal-form conn">
             <p>
               <b>{consentFor.label}</b> {cloudWho(consentFor)} Your questions, the photos you attach (receipts) and the
               transactions the model looks up (payees, amounts, dates, titles) will be sent there. Long numbers such as
@@ -462,6 +465,11 @@ export function ChatPanel({ viewId }: { viewId: string }) {
                     {
                       onSuccess: () => {
                         setConsentFor(null);
+                        // the question that asked for this goes out again, so nobody types it twice
+                        const again = refused.current;
+                        refused.current = null;
+                        // (only while that refusal is still the last thing in the chat)
+                        if (again && useChat.getState().dropRefused()) ask(again.text, again.photos);
                       },
                     },
                   );

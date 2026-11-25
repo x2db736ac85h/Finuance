@@ -295,6 +295,11 @@ LAB_ADMIN_EMAIL := admin@lab.invalid
 .PHONY: sim-up
 sim-up: $(ENV_FILE) .env.lab web-dist ## The lab: a simulation instance, the mock model, the simulator and Grafana (http://localhost:8020, :8090, :3000)
 	@grep -q '^FINUANCE_LAB_ADMIN_PASSWORD=' .env.lab || { umask 077; echo "FINUANCE_LAB_ADMIN_PASSWORD=$$(openssl rand -hex 16)" >> .env.lab; }
+	@# The instance key seals what an administrator enters in the lab (a connection's API key, two-step
+	@# secrets): without one, saving a connection with a key is refused (issue 97). Written once, and only
+	@# when neither env file sets one: .env.lab is read last, so a second key there would hide the first
+	@# and make what was sealed with it unreadable.
+	@grep -qs '^FINUANCE_INSTANCE_KEY=..*' $(ENV_FILE) .env.lab || { umask 077; echo "FINUANCE_INSTANCE_KEY=$$(openssl rand -base64 32)" >> .env.lab; }
 	cd web && npm run --silent build:sim
 	VERSION=$(VERSION) $(LAB_COMPOSE) up -d --build --wait
 	@set -a; . ./.env.lab; set +a; printf '%s\n' "$$FINUANCE_LAB_ADMIN_PASSWORD" | $(LAB_COMPOSE) exec -T api /finuance admin create-user \

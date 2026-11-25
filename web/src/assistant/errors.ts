@@ -17,6 +17,19 @@ const FIXES: Record<string, string> = {
   interrupted: 'The connection dropped. Ask again.',
 };
 
+/**
+ * An error's message with the advice for its code, as sentences. The server's own words can be a
+ * fragment ("this cloud connection needs your agreement first"): it gets its capital and its full
+ * stop, so the two don't run together (issue 97).
+ */
+export function errorText(message: string, code: string): string {
+  const fix = FIXES[code];
+  const m = message.trim();
+  if (!m) return fix ?? '';
+  const sentence = m.charAt(0).toUpperCase() + m.slice(1) + (/[.!?…:]$/.test(m) ? '' : '.');
+  return fix && fix !== m && fix !== sentence ? `${sentence} ${fix}` : sentence;
+}
+
 /** The advice for an error code, or undefined when the message says it all. */
 export function fixFor(code: string): string | undefined {
   return FIXES[code];

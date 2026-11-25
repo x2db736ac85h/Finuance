@@ -46,6 +46,22 @@ model server for the usage of a streamed answer (`stream_options.include_usage`)
   private and self-hosted.
 - New module: `golang.org/x/oauth2` (with `cloud.google.com/go/compute/metadata`).
 
+### Fixed
+
+- **Current Claude models answered `400`** ("The model server reported an error", issue 97): the
+  Anthropic client sent every Claude model a thinking token budget and the run's temperature, which
+  Claude 4.6 and later refuse (Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.x among them). They now get
+  adaptive thinking with the level as an effort, and no sampling parameter; "thinking off" is the
+  lowest effort, never `disabled`. Haiku 4.5, Sonnet 4.5 and older keep their budget. An id the app
+  doesn't know yet counts as current. The same body goes to Claude on Vertex AI.
+- **Agreeing to a cloud connection** (issue 97): the question that asked for the agreement is sent
+  again by itself; the dialog's content no longer touches its border; and the refusal reads as two
+  sentences.
+- `make sim-up` gives the lab an instance key (when neither `.env` nor `.env.lab` has one), so a
+  connection with an API key can be saved there.
+- RUNBOOK: the pod firewall is reloaded with `nft -f`, which replaces its table in one transaction;
+  `systemctl restart k3s-lan` left a moment without it.
+
 ## [0.6.1] - 2026-11-25
 
 Interface corrections from daily use, ahead of the cloud AI work of 0.7. One migration (00030,

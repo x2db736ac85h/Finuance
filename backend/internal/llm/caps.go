@@ -13,8 +13,11 @@ type Reasoning string
 const (
 	ReasonNone   Reasoning = "none"   // no control (the model may still reason; its output is shown)
 	ReasonEffort Reasoning = "effort" // reasoning_effort low/medium/high (OpenAI reasoning models, gpt-oss)
-	ReasonBudget Reasoning = "budget" // Anthropic thinking with a token budget
-	ReasonSwitch Reasoning = "switch" // Qwen3: /no_think in the last user message turns it off
+	ReasonBudget Reasoning = "budget" // Anthropic thinking with a token budget (Claude up to 4.5)
+	// ReasonAdaptive is current Claude (4.6 and later): the model decides when and how much to
+	// think, and the level is an effort (output_config.effort). These models refuse a token budget.
+	ReasonAdaptive Reasoning = "adaptive"
+	ReasonSwitch   Reasoning = "switch" // Qwen3: /no_think in the last user message turns it off
 )
 
 // Caps are what a model can do. They start from the server's own report and the model id, can be
@@ -43,7 +46,12 @@ var (
 	// names its models google/gemini-…
 	effortRe  = regexp.MustCompile(`(?i)gpt-oss|(^|/)o[1-9](-|$)|gpt-5|reasoner|magistral|gemini-(2\.5|[3-9])`)
 	oldClaude = regexp.MustCompile(`(?i)claude-(instant|2|3-(opus|sonnet|haiku|5))`)
-	embedRe   = regexp.MustCompile(`(?i)embed`)
+	// The Claude models that think with a token budget: 3.7, and the 4, 4.1 and 4.5 generations
+	// (claude-sonnet-4-20250514, claude-opus-4-1, claude-haiku-4-5-20251001, claude-opus-4-5@20251101
+	// on Vertex AI). Every other id that is not old, an unknown newer one included, is a current
+	// model: the list of old models is finished, the list of new ones is not (issue 97).
+	budgetClaude = regexp.MustCompile(`(?i)claude-(3-7|(opus|sonnet|haiku)-4(-[015])?($|[-@]\d{8}|@))`)
+	embedRe      = regexp.MustCompile(`(?i)embed`)
 	// models that read images when the server doesn't say (Ollama and LM Studio do); Gemma 3 1B
 	// and Gemma 3n read text only on today's servers
 	visionRe   = regexp.MustCompile(`(?i)(^|[-_/:.])vl([-_/:.]|$)|qwen2\.5-?vl|vision|llava|pixtral|minicpm-v|moondream|gemma-?3|gemini|gpt-4o|gpt-4\.1|gpt-5|claude-(3|sonnet|opus|haiku)`)
@@ -68,8 +76,11 @@ func DetectCaps(api API, m Model, defaultContext int, overrides []CapsOverride) 
 	}
 	switch {
 	case api == Anthropic && strings.Contains(strings.ToLower(id), "claude"):
-		if !oldClaude.MatchString(id) {
+		switch ClaudeGeneration(id) {
+		case ClaudeBudget:
 			c.Reasoning = ReasonBudget
+		case ClaudeCurrent:
+			c.Reasoning = ReasonAdaptive
 		}
 	case qwen3Re.MatchString(id):
 		c.Reasoning = ReasonSwitch
@@ -94,6 +105,28 @@ func DetectCaps(api API, m Model, defaultContext int, overrides []CapsOverride) 
 		}
 	}
 	return c
+}
+
+// The generations of Claude models, by how a request to them has to look.
+const (
+	ClaudeOld     = "old"     // no thinking (up to 3.5)
+	ClaudeBudget  = "budget"  // thinking with budget_tokens; a temperature is accepted (3.7, 4, 4.1, 4.5)
+	ClaudeCurrent = "current" // adaptive thinking with an effort; no sampling parameters (4.6 and later)
+)
+
+// ClaudeGeneration says which request shape a Claude model takes, from its id. "" for an id that is
+// not Claude's.
+func ClaudeGeneration(id string) string {
+	switch {
+	case !strings.Contains(strings.ToLower(id), "claude"):
+		return ""
+	case oldClaude.MatchString(id):
+		return ClaudeOld
+	case budgetClaude.MatchString(id):
+		return ClaudeBudget
+	default:
+		return ClaudeCurrent
+	}
 }
 
 // IsEmbedding reports whether a model only makes embeddings (never offered for chat).

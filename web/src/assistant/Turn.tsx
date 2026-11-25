@@ -8,7 +8,7 @@ import { Icon } from '../ui/Icon';
 import { attachmentUrl, type Step } from '../api/hooks/assistant';
 import { AdviceWindow, adviceRefs, type AdviceRef } from './Advice';
 import type { AiTurn, UiTurn } from './chatStore';
-import { fixFor } from './errors';
+import { errorText } from './errors';
 import { Markdown } from './md';
 import { ProposalCard } from './Proposal';
 
@@ -140,7 +140,6 @@ export function TurnView({
     );
   }
   const thinking = turn.reasoning.trim();
-  const fix = turn.error && fixFor(turn.error.code);
   return (
     <div className="msg ai">
       {thinking && (
@@ -185,8 +184,7 @@ export function TurnView({
       </div>
       {turn.error && (
         <div className="conn-err" role="alert">
-          {turn.error.message}
-          {fix && turn.error.message !== fix ? ` ${fix}` : ''}
+          {errorText(turn.error.message, turn.error.code)}
         </div>
       )}
       {turn.meta && <div className="meta">{metaLine(turn)}</div>}

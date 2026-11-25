@@ -59,6 +59,12 @@ type ChatStore = {
   ensureChat: (hooks?: SendHooks) => Promise<string>;
   /** A proposal of this chat was applied. */
   markApplied: (key: string) => void;
+  /**
+   * Takes back a question that was refused for want of the person's agreement to a cloud connection
+   * (and its refusal), so that it can be asked again once they agreed. The server stored neither.
+   * False when the chat doesn't end with such a refusal (the person went on to something else).
+   */
+  dropRefused: () => boolean;
   stop: () => Promise<void>;
 };
 
@@ -211,6 +217,21 @@ export const useChat = create<ChatStore>()((set, get) => ({
       set({ busy: false, ctrl: null });
       hooks.onChanged?.();
     }
+  },
+
+  dropRefused: () => {
+    const s = get();
+    const answer = s.turns.at(-1);
+    const question = s.turns.at(-2);
+    if (
+      s.busy ||
+      answer?.role !== 'assistant' ||
+      answer.error?.code !== 'consent_required' ||
+      question?.role !== 'user'
+    )
+      return false;
+    set({ turns: s.turns.slice(0, -2) });
+    return true;
   },
 
   stop: async () => {
