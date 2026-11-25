@@ -50,10 +50,13 @@ Deployment
 Phase 26 — Cloud AI, with the interface corrections first (PLAN §9, "26.U" and 26.0–26.9). Confirmed on 2026-11-25.
 
 Pull requests (each merged on the maintainer's OK):
-- **1** `phase/26-ui-shell`: U1–U6.
-- **2** `phase/26-ui-shared`: U7–U12.
-- **Releases:** `v0.6.1-rc.1`, then `v0.6.1`, the homelab by digest.
-- **Then** the Vertex pull requests (26.0–26.9, broken down after `v0.6.1`) and `v0.7.0`.
+- **1** `phase/26-ui-shell` (90): U1–U6.
+- **2** `phase/26-ui-shared` (91): U7–U12.
+- **Releases:** `v0.6.1-rc.1` (tagged 2026-11-25 at `16920c3`, after pull request 92 gave the changelog its heading), then `v0.6.1`, the homelab by digest.
+- **3** `phase/26-token-source` (93): 26.0–26.6 and the documents of 26.8.
+- **4** `phase/26-claude-vertex` (94): 26.9.
+- **Releases:** `v0.7.0-rc.1`, then `v0.7.0`.
+- **5** `phase/26-close`: the gate's record, the phase close.
 
 Decisions at the phase start (the maintainer, 2026-11-25): the corrections of the maintainer's list of 2026-11-25 come before the Vertex tasks and ship on their own as `v0.6.1`; an archived category behaves as removed and unarchiving restores what the archive changed and nothing changed since; the assistant's answer reaches the bell in the browser only (answers that outlive the tab: Backlog); Quick settings gets a two-state dark/light switch and "System" stays in Settings → General; item 12 of the list is dropped; connections get a provider choice (Anthropic, OpenAI, Google, a local server, other), with Google working from 26.2. No new dependency besides the approved `golang.org/x/oauth2` (26.0).
 
