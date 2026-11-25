@@ -1220,6 +1220,25 @@ paths:
                   $ref: "#/components/schemas/CategoryStat"
         default:
           $ref: "#/components/responses/Problem"
+  /categories/archived:
+    get:
+      operationId: archivedCategories
+      summary: The archived categories (Settings → Categories)
+      description: >-
+        Newest first, each with what unarchiving would put back: labels set by hand, rules, bank
+        names, its budget and goals.
+      tags: [categories]
+      responses:
+        "200":
+          description: Archived categories.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchivedCategory"
+        default:
+          $ref: "#/components/responses/Problem"
   /categories/{id}:
     parameters:
       - $ref: "#/components/parameters/Id"
@@ -1247,14 +1266,55 @@ paths:
           $ref: "#/components/responses/Problem"
     delete:
       operationId: deleteCategory
-      summary: Delete a category (its transactions become uncategorised)
+      summary: Delete a category for good (its transactions become uncategorised)
       description: >-
         Its transactions become uncategorised however they were categorised, its budget goes, rules
-        that set it lose that action, and its bank name stays uncategorised on later imports.
+        that set it lose that action, and its bank name stays uncategorised on later imports. Works
+        on a category in use and on an archived one; the web app archives first
+        (`POST /categories/{id}/archive`) and deletes from the archived list.
       tags: [categories]
       responses:
         "204":
           description: Deleted.
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/{id}/archive:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: archiveCategory
+      summary: Archive a category (it behaves as deleted, and can be brought back)
+      description: >-
+        Its transactions become uncategorised, rules that set it lose that action, its budget goes,
+        goals about it lose it, its bank names stay uncategorised on later imports, and its name is
+        free for a new category. No list offers it and nothing can refer to it. What it took away is
+        kept for `unarchive`. `404` for a category that is not in use.
+      tags: [categories]
+      responses:
+        "204":
+          description: Archived.
+        default:
+          $ref: "#/components/responses/Problem"
+  /categories/{id}/unarchive:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: unarchiveCategory
+      summary: Bring an archived category back
+      description: >-
+        Restores what archiving took away where nothing has taken its place since: a label set by
+        hand where the transaction has none now, a rule's action where the rule has none, the
+        budget where none was set, its goals and its bank names. Transactions that are still
+        uncategorised get the category back; the others are left as they are. `409 conflict` when a category in use has
+        the same name (rename or merge that one first); `404` for a category that is not archived.
+      tags: [categories]
+      responses:
+        "200":
+          description: The category, in use again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NamedRef"
         default:
           $ref: "#/components/responses/Problem"
   /categories/{id}/merge:
@@ -5508,6 +5568,36 @@ components:
           description: Other bank category names (normalised) that map to this category.
           items:
             type: string
+    ArchivedCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, archivedAt, labels, rules, bankNames, hasBudget, goals]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        archivedAt:
+          type: string
+          format: date-time
+        labels:
+          type: integer
+          format: int64
+          description: Labels set by hand that unarchiving puts back (where the transaction has none now).
+        rules:
+          type: integer
+          format: int64
+          description: Rules whose action was this category.
+        bankNames:
+          type: integer
+          format: int64
+          description: Other bank category names that meant this category.
+        hasBudget:
+          type: boolean
+        goals:
+          type: integer
+          format: int64
     RuleMatch:
       type: object
       additionalProperties: false

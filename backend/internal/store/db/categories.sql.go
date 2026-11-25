@@ -7,12 +7,187 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
 
+const archiveCategoryAliases = `-- name: ArchiveCategoryAliases :exec
+WITH taken AS (
+  UPDATE category_aliases a SET category_id = NULL WHERE a.user_id = $1 AND a.category_id = $2::uuid RETURNING a.name_n
+)
+INSERT INTO category_archive_items (user_id, category_id, kind, name_n)
+SELECT $1, $2::uuid, 'alias', name_n FROM taken
+`
+
+type ArchiveCategoryAliasesParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// The bank names that meant this category now mean "uncategorised", as after a delete.
+func (q *Queries) ArchiveCategoryAliases(ctx context.Context, arg ArchiveCategoryAliasesParams) error {
+	_, err := q.db.Exec(ctx, archiveCategoryAliases, arg.UserID, arg.ID)
+	return err
+}
+
+const archiveCategoryAnnotations = `-- name: ArchiveCategoryAnnotations :exec
+
+WITH taken AS (
+  UPDATE tx_annotations a SET category_id = NULL, updated_at = $3
+  WHERE a.user_id = $1 AND a.category_id = $2::uuid
+  RETURNING a.account_id, a.fingerprint, a.occurrence, a.split_scope
+)
+INSERT INTO category_archive_items (user_id, category_id, kind, account_id, fingerprint, occurrence, split_scope)
+SELECT $1, $2::uuid, 'annotation', account_id, fingerprint, occurrence, split_scope FROM taken
+`
+
+type ArchiveCategoryAnnotationsParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+	Now    time.Time
+}
+
+// Archiving (ledger.ArchiveCategory): each source of the category is written down, then taken
+// away. One statement per kind, so a category with many labels costs no loop.
+func (q *Queries) ArchiveCategoryAnnotations(ctx context.Context, arg ArchiveCategoryAnnotationsParams) error {
+	_, err := q.db.Exec(ctx, archiveCategoryAnnotations, arg.UserID, arg.ID, arg.Now)
+	return err
+}
+
+const archiveCategoryBudget = `-- name: ArchiveCategoryBudget :exec
+WITH taken AS (
+  DELETE FROM budgets b WHERE b.user_id = $1 AND b.category_id = $2::uuid RETURNING b.amount_minor
+)
+INSERT INTO category_archive_items (user_id, category_id, kind, amount_minor)
+SELECT $1, $2::uuid, 'budget', amount_minor FROM taken
+`
+
+type ArchiveCategoryBudgetParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) ArchiveCategoryBudget(ctx context.Context, arg ArchiveCategoryBudgetParams) error {
+	_, err := q.db.Exec(ctx, archiveCategoryBudget, arg.UserID, arg.ID)
+	return err
+}
+
+const archiveCategoryGoals = `-- name: ArchiveCategoryGoals :exec
+WITH taken AS (
+  UPDATE goals g SET category_id = NULL WHERE g.user_id = $1 AND g.category_id = $2::uuid RETURNING g.id
+)
+INSERT INTO category_archive_items (user_id, category_id, kind, ref_id)
+SELECT $1, $2::uuid, 'goal', id FROM taken
+`
+
+type ArchiveCategoryGoalsParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) ArchiveCategoryGoals(ctx context.Context, arg ArchiveCategoryGoalsParams) error {
+	_, err := q.db.Exec(ctx, archiveCategoryGoals, arg.UserID, arg.ID)
+	return err
+}
+
+const archiveCategoryOwnName = `-- name: ArchiveCategoryOwnName :exec
+WITH added AS (
+  INSERT INTO category_aliases (user_id, name_n, category_id) VALUES ($1, $3, NULL)
+  ON CONFLICT (user_id, name_n) DO NOTHING RETURNING name_n
+)
+INSERT INTO category_archive_items (user_id, category_id, kind, name_n)
+SELECT $1, $2::uuid, 'own_name', name_n FROM added
+`
+
+type ArchiveCategoryOwnNameParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+	NameN  string
+}
+
+// Its own name gets an alias to nothing, so the bank's rows of that name stay uncategorised. Written
+// down only when the alias is new: unarchiving removes exactly what this added.
+func (q *Queries) ArchiveCategoryOwnName(ctx context.Context, arg ArchiveCategoryOwnNameParams) error {
+	_, err := q.db.Exec(ctx, archiveCategoryOwnName, arg.UserID, arg.ID, arg.NameN)
+	return err
+}
+
+const archiveCategoryRules = `-- name: ArchiveCategoryRules :exec
+WITH taken AS (
+  UPDATE rules r SET set_category_id = NULL WHERE r.user_id = $1 AND r.set_category_id = $2::uuid RETURNING r.id
+)
+INSERT INTO category_archive_items (user_id, category_id, kind, ref_id)
+SELECT $1, $2::uuid, 'rule', id FROM taken
+`
+
+type ArchiveCategoryRulesParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) ArchiveCategoryRules(ctx context.Context, arg ArchiveCategoryRulesParams) error {
+	_, err := q.db.Exec(ctx, archiveCategoryRules, arg.UserID, arg.ID)
+	return err
+}
+
+const archivedCategories = `-- name: ArchivedCategories :many
+SELECT c.id, c.name, c.archived_at,
+       count(i.id) FILTER (WHERE i.kind = 'annotation')::bigint AS labels,
+       count(i.id) FILTER (WHERE i.kind = 'rule')::bigint AS rules,
+       count(i.id) FILTER (WHERE i.kind = 'alias')::bigint AS bank_names,
+       count(i.id) FILTER (WHERE i.kind = 'budget')::bigint AS budgets,
+       count(i.id) FILTER (WHERE i.kind = 'goal')::bigint AS goals
+FROM categories c
+LEFT JOIN category_archive_items i ON i.category_id = c.id AND i.user_id = c.user_id
+WHERE c.user_id = $1 AND c.archived_at IS NOT NULL
+GROUP BY c.id
+ORDER BY c.archived_at DESC, c.id
+`
+
+type ArchivedCategoriesRow struct {
+	ID         uuid.UUID
+	Name       string
+	ArchivedAt *time.Time
+	Labels     int64
+	Rules      int64
+	BankNames  int64
+	Budgets    int64
+	Goals      int64
+}
+
+// Settings → Categories, the archived list: what unarchiving would put back, by kind.
+func (q *Queries) ArchivedCategories(ctx context.Context, userID uuid.UUID) ([]ArchivedCategoriesRow, error) {
+	rows, err := q.db.Query(ctx, archivedCategories, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ArchivedCategoriesRow
+	for rows.Next() {
+		var i ArchivedCategoriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ArchivedAt,
+			&i.Labels,
+			&i.Rules,
+			&i.BankNames,
+			&i.Budgets,
+			&i.Goals,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const categoryNameTaken = `-- name: CategoryNameTaken :one
-SELECT EXISTS (SELECT 1 FROM categories WHERE user_id = $1 AND name_n = $2 AND id <> $3)
+SELECT EXISTS (SELECT 1 FROM categories WHERE user_id = $1 AND name_n = $2 AND id <> $3 AND archived_at IS NULL)
 `
 
 type CategoryNameTakenParams struct {
@@ -21,6 +196,7 @@ type CategoryNameTakenParams struct {
 	ID     uuid.UUID
 }
 
+// Among the categories in use: an archived category's name is free (migration 00030).
 func (q *Queries) CategoryNameTaken(ctx context.Context, arg CategoryNameTakenParams) (bool, error) {
 	row := q.db.QueryRow(ctx, categoryNameTaken, arg.UserID, arg.NameN, arg.ID)
 	var exists bool
@@ -37,7 +213,7 @@ SELECT c.id, c.name,
                  WHERE a.user_id = c.user_id AND a.category_id = c.id), '{}')::text[] AS aliases
 FROM categories c
 LEFT JOIN transactions t ON t.user_id = c.user_id AND t.category_id = c.id
-WHERE c.user_id = $1
+WHERE c.user_id = $1 AND c.archived_at IS NULL
 GROUP BY c.id
 ORDER BY c.name COLLATE pl_natural, c.id
 `
@@ -80,8 +256,22 @@ func (q *Queries) CategoryStats(ctx context.Context, userID uuid.UUID) ([]Catego
 	return items, nil
 }
 
+const clearCategoryArchive = `-- name: ClearCategoryArchive :exec
+DELETE FROM category_archive_items WHERE user_id = $1 AND category_id = $2::uuid
+`
+
+type ClearCategoryArchiveParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) ClearCategoryArchive(ctx context.Context, arg ClearCategoryArchiveParams) error {
+	_, err := q.db.Exec(ctx, clearCategoryArchive, arg.UserID, arg.ID)
+	return err
+}
+
 const createCategory = `-- name: CreateCategory :one
-INSERT INTO categories (id, user_id, name, name_n) VALUES ($1, $2, $3, $4) RETURNING id, user_id, name, name_n, created_at
+INSERT INTO categories (id, user_id, name, name_n) VALUES ($1, $2, $3, $4) RETURNING id, user_id, name, name_n, created_at, archived_at
 `
 
 type CreateCategoryParams struct {
@@ -105,6 +295,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		&i.Name,
 		&i.NameN,
 		&i.CreatedAt,
+		&i.ArchivedAt,
 	)
 	return i, err
 }
@@ -142,7 +333,7 @@ func (q *Queries) DeleteCategoryAlias(ctx context.Context, arg DeleteCategoryAli
 }
 
 const getCategory = `-- name: GetCategory :one
-SELECT id, user_id, name, name_n, created_at FROM categories WHERE user_id = $1 AND id = $2
+SELECT id, user_id, name, name_n, created_at, archived_at FROM categories WHERE user_id = $1 AND id = $2 AND archived_at IS NULL
 `
 
 type GetCategoryParams struct {
@@ -150,6 +341,7 @@ type GetCategoryParams struct {
 	ID     uuid.UUID
 }
 
+// A category in use. An archived one is not found, like a deleted one.
 func (q *Queries) GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error) {
 	row := q.db.QueryRow(ctx, getCategory, arg.UserID, arg.ID)
 	var i Category
@@ -159,6 +351,7 @@ func (q *Queries) GetCategory(ctx context.Context, arg GetCategoryParams) (Categ
 		&i.Name,
 		&i.NameN,
 		&i.CreatedAt,
+		&i.ArchivedAt,
 	)
 	return i, err
 }
@@ -179,8 +372,32 @@ func (q *Queries) GetCategoryAlias(ctx context.Context, arg GetCategoryAliasPara
 	return category_id, err
 }
 
+const getCategoryForArchive = `-- name: GetCategoryForArchive :one
+SELECT id, user_id, name, name_n, created_at, archived_at FROM categories WHERE user_id = $1 AND id = $2 FOR UPDATE
+`
+
+type GetCategoryForArchiveParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// In use or archived, locked: archiving, unarchiving and deleting for good each look at archived_at.
+func (q *Queries) GetCategoryForArchive(ctx context.Context, arg GetCategoryForArchiveParams) (Category, error) {
+	row := q.db.QueryRow(ctx, getCategoryForArchive, arg.UserID, arg.ID)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.NameN,
+		&i.CreatedAt,
+		&i.ArchivedAt,
+	)
+	return i, err
+}
+
 const listCategories = `-- name: ListCategories :many
-SELECT id, user_id, name, name_n, created_at FROM categories WHERE user_id = $1 ORDER BY name COLLATE pl_natural, id
+SELECT id, user_id, name, name_n, created_at, archived_at FROM categories WHERE user_id = $1 AND archived_at IS NULL ORDER BY name COLLATE pl_natural, id
 `
 
 func (q *Queries) ListCategories(ctx context.Context, userID uuid.UUID) ([]Category, error) {
@@ -198,6 +415,7 @@ func (q *Queries) ListCategories(ctx context.Context, userID uuid.UUID) ([]Categ
 			&i.Name,
 			&i.NameN,
 			&i.CreatedAt,
+			&i.ArchivedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -325,7 +543,7 @@ func (q *Queries) MoveCategoryAliases(ctx context.Context, arg MoveCategoryAlias
 }
 
 const renameCategory = `-- name: RenameCategory :one
-UPDATE categories SET name = $1, name_n = $2 WHERE user_id = $3 AND id = $4 RETURNING id, user_id, name, name_n, created_at
+UPDATE categories SET name = $1, name_n = $2 WHERE user_id = $3 AND id = $4 AND archived_at IS NULL RETURNING id, user_id, name, name_n, created_at, archived_at
 `
 
 type RenameCategoryParams struct {
@@ -349,8 +567,189 @@ func (q *Queries) RenameCategory(ctx context.Context, arg RenameCategoryParams) 
 		&i.Name,
 		&i.NameN,
 		&i.CreatedAt,
+		&i.ArchivedAt,
 	)
 	return i, err
+}
+
+const restoreCategoryAliases = `-- name: RestoreCategoryAliases :execrows
+UPDATE category_aliases a SET category_id = i.category_id
+FROM category_archive_items i
+WHERE i.user_id = $1 AND i.category_id = $2::uuid AND i.kind = 'alias'
+  AND a.user_id = i.user_id AND a.name_n = i.name_n AND a.category_id IS NULL
+`
+
+type RestoreCategoryAliasesParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// A bank name means the category again while it still means "uncategorised".
+func (q *Queries) RestoreCategoryAliases(ctx context.Context, arg RestoreCategoryAliasesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreCategoryAliases, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreCategoryAnnotations = `-- name: RestoreCategoryAnnotations :execrows
+
+INSERT INTO tx_annotations (account_id, fingerprint, occurrence, split_scope, user_id, category_id, updated_at)
+SELECT i.account_id, i.fingerprint, i.occurrence, i.split_scope, i.user_id, i.category_id, $1
+FROM category_archive_items i JOIN accounts acc ON acc.id = i.account_id AND acc.user_id = i.user_id
+WHERE i.user_id = $2 AND i.category_id = $3::uuid AND i.kind = 'annotation'
+ON CONFLICT (account_id, fingerprint, occurrence, split_scope) DO UPDATE
+  SET category_id = excluded.category_id, updated_at = excluded.updated_at
+  WHERE tx_annotations.category_id IS NULL
+`
+
+type RestoreCategoryAnnotationsParams struct {
+	Now    time.Time
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// Unarchiving (ledger.UnarchiveCategory): each recorded source comes back where nothing has taken
+// its place since.
+// A label comes back where the transaction has no label set by hand now (the annotation may have
+// been deleted as empty in between) and its account still exists.
+func (q *Queries) RestoreCategoryAnnotations(ctx context.Context, arg RestoreCategoryAnnotationsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreCategoryAnnotations, arg.Now, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreCategoryBankTransactions = `-- name: RestoreCategoryBankTransactions :execrows
+UPDATE transactions t
+SET category_id = m.category_id, category_source = 'bank', category_rule_id = NULL, updated_at = $1
+FROM bank_category_map m
+WHERE t.user_id = $2 AND t.category_source = 'none' AND t.bank_category_n <> ''
+  AND m.user_id = t.user_id AND m.name_n = t.bank_category_n AND m.category_id = $3::uuid
+`
+
+type RestoreCategoryBankTransactionsParams struct {
+	Now    time.Time
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// Uncategorised transactions whose bank category name means this category again get it, as an
+// import would give it to them.
+func (q *Queries) RestoreCategoryBankTransactions(ctx context.Context, arg RestoreCategoryBankTransactionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreCategoryBankTransactions, arg.Now, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreCategoryBudget = `-- name: RestoreCategoryBudget :execrows
+INSERT INTO budgets (user_id, category_id, amount_minor, updated_at)
+SELECT i.user_id, i.category_id, i.amount_minor, $1
+FROM category_archive_items i
+WHERE i.user_id = $2 AND i.category_id = $3::uuid AND i.kind = 'budget'
+ON CONFLICT (user_id, category_id) DO NOTHING
+`
+
+type RestoreCategoryBudgetParams struct {
+	Now    time.Time
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) RestoreCategoryBudget(ctx context.Context, arg RestoreCategoryBudgetParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreCategoryBudget, arg.Now, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreCategoryGoals = `-- name: RestoreCategoryGoals :execrows
+UPDATE goals g SET category_id = i.category_id
+FROM category_archive_items i
+WHERE i.user_id = $1 AND i.category_id = $2::uuid AND i.kind = 'goal'
+  AND g.user_id = i.user_id AND g.id = i.ref_id AND g.category_id IS NULL
+`
+
+type RestoreCategoryGoalsParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) RestoreCategoryGoals(ctx context.Context, arg RestoreCategoryGoalsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreCategoryGoals, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreCategoryManualTransactions = `-- name: RestoreCategoryManualTransactions :execrows
+UPDATE transactions t
+SET category_id = a.category_id, category_source = 'manual', category_rule_id = NULL, updated_at = $1
+FROM category_archive_items i
+JOIN tx_annotations a ON a.account_id = i.account_id AND a.fingerprint = i.fingerprint
+  AND a.occurrence = i.occurrence AND a.split_scope = i.split_scope AND a.category_id = i.category_id
+WHERE i.user_id = $2 AND i.category_id = $3::uuid AND i.kind = 'annotation'
+  AND t.user_id = i.user_id AND t.account_id = i.account_id AND t.fingerprint = i.fingerprint
+  AND t.occurrence = i.occurrence AND t.split_scope = i.split_scope AND t.category_source = 'none'
+`
+
+type RestoreCategoryManualTransactionsParams struct {
+	Now    time.Time
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// Transactions whose label came back and that are still uncategorised carry it again. (A
+// reclassification recomputes only what rules set, so labels and bank names are put back here.)
+func (q *Queries) RestoreCategoryManualTransactions(ctx context.Context, arg RestoreCategoryManualTransactionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreCategoryManualTransactions, arg.Now, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreCategoryOwnName = `-- name: RestoreCategoryOwnName :exec
+DELETE FROM category_aliases a USING category_archive_items i
+WHERE i.user_id = $1 AND i.category_id = $2::uuid AND i.kind = 'own_name'
+  AND a.user_id = i.user_id AND a.name_n = i.name_n AND a.category_id IS NULL
+`
+
+type RestoreCategoryOwnNameParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+// The alias to nothing that archiving added for its own name goes, so the name means it again.
+func (q *Queries) RestoreCategoryOwnName(ctx context.Context, arg RestoreCategoryOwnNameParams) error {
+	_, err := q.db.Exec(ctx, restoreCategoryOwnName, arg.UserID, arg.ID)
+	return err
+}
+
+const restoreCategoryRules = `-- name: RestoreCategoryRules :execrows
+UPDATE rules r SET set_category_id = i.category_id
+FROM category_archive_items i
+WHERE i.user_id = $1 AND i.category_id = $2::uuid AND i.kind = 'rule'
+  AND r.user_id = i.user_id AND r.id = i.ref_id AND r.set_category_id IS NULL
+`
+
+type RestoreCategoryRulesParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) RestoreCategoryRules(ctx context.Context, arg RestoreCategoryRulesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreCategoryRules, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setCategoryAlias = `-- name: SetCategoryAlias :exec
@@ -367,6 +766,21 @@ type SetCategoryAliasParams struct {
 // name_n now means category_id (NULL: uncategorised).
 func (q *Queries) SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error {
 	_, err := q.db.Exec(ctx, setCategoryAlias, arg.UserID, arg.NameN, arg.CategoryID)
+	return err
+}
+
+const setCategoryArchived = `-- name: SetCategoryArchived :exec
+UPDATE categories SET archived_at = $1 WHERE user_id = $2 AND id = $3
+`
+
+type SetCategoryArchivedParams struct {
+	ArchivedAt *time.Time
+	UserID     uuid.UUID
+	ID         uuid.UUID
+}
+
+func (q *Queries) SetCategoryArchived(ctx context.Context, arg SetCategoryArchivedParams) error {
+	_, err := q.db.Exec(ctx, setCategoryArchived, arg.ArchivedAt, arg.UserID, arg.ID)
 	return err
 }
 
@@ -393,7 +807,7 @@ const upsertBankCategory = `-- name: UpsertBankCategory :exec
 INSERT INTO categories (id, user_id, name, name_n)
 SELECT $1, $2, $3, $4
 WHERE NOT EXISTS (SELECT 1 FROM category_aliases a WHERE a.user_id = $2 AND a.name_n = $4)
-ON CONFLICT (user_id, name_n) DO NOTHING
+ON CONFLICT (user_id, name_n) WHERE archived_at IS NULL DO NOTHING
 `
 
 type UpsertBankCategoryParams struct {
@@ -417,7 +831,7 @@ func (q *Queries) UpsertBankCategory(ctx context.Context, arg UpsertBankCategory
 
 const upsertCategory = `-- name: UpsertCategory :one
 INSERT INTO categories AS c (id, user_id, name, name_n) VALUES ($1, $2, $3, $4)
-ON CONFLICT (user_id, name_n) DO UPDATE SET name = c.name
+ON CONFLICT (user_id, name_n) WHERE archived_at IS NULL DO UPDATE SET name = c.name
 RETURNING id
 `
 

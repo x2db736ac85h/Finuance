@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -201,23 +202,26 @@ func (l *Ledger) MergeCategory(ctx context.Context, userID, from, into uuid.UUID
 	return moved, dbErr("merge category", err)
 }
 
-// DeleteCategory deletes a category: its transactions become uncategorised, however they were
-// categorised, and its budget goes. Its bank names stay uncategorised on later imports (an alias to
-// nothing), until a category of that name is created again.
+// DeleteCategory deletes a category for good, archived or in use: its transactions become
+// uncategorised, however they were categorised, and its budget goes. Its bank names stay
+// uncategorised on later imports (an alias to nothing), until a category of that name is created
+// again. The web app archives instead (ArchiveCategory) and deletes only from the archived list.
 func (l *Ledger) DeleteCategory(ctx context.Context, userID, id uuid.UUID) error {
 	var n int64
 	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
-		c, err := q.GetCategory(ctx, db.GetCategoryParams{UserID: userID, ID: id})
+		c, err := q.GetCategoryForArchive(ctx, db.GetCategoryForArchiveParams{UserID: userID, ID: id})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil // n stays 0: not found
 		} else if err != nil {
 			return err
 		}
-		if _, err = q.UncategoriseCategoryTransactions(ctx, db.UncategoriseCategoryTransactionsParams{UserID: userID, ID: id}); err != nil {
-			return err
-		}
-		if err := q.SetCategoryAlias(ctx, db.SetCategoryAliasParams{UserID: userID, NameN: c.NameN}); err != nil {
-			return err
+		if c.ArchivedAt == nil { // an archived category has nothing left to take away
+			if _, err = q.UncategoriseCategoryTransactions(ctx, db.UncategoriseCategoryTransactionsParams{UserID: userID, ID: id}); err != nil {
+				return err
+			}
+			if err := q.SetCategoryAlias(ctx, db.SetCategoryAliasParams{UserID: userID, NameN: c.NameN}); err != nil {
+				return err
+			}
 		}
 		if n, err = q.DeleteCategory(ctx, db.DeleteCategoryParams{UserID: userID, ID: id}); err != nil {
 			return err
@@ -226,4 +230,158 @@ func (l *Ledger) DeleteCategory(ctx context.Context, userID, id uuid.UUID) error
 		return err
 	})
 	return notFound("delete category", n, err)
+}
+
+// ArchiveCategory archives a category (Phase 26, U7). From then on it behaves as deleted: its
+// transactions are uncategorised, rules that set it lose that action, its budget goes, goals about
+// it lose it, its bank names stay uncategorised on later imports, and its name is free. What it
+// took away is written down, so UnarchiveCategory can put it back. A category that is not in use
+// (unknown, another user's, already archived) is ErrNotFound.
+func (l *Ledger) ArchiveCategory(ctx context.Context, userID, id uuid.UUID) error {
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		c, err := q.GetCategoryForArchive(ctx, db.GetCategoryForArchiveParams{UserID: userID, ID: id})
+		if err != nil {
+			return err
+		}
+		if c.ArchivedAt != nil {
+			return pgx.ErrNoRows
+		}
+		now := l.clock.Now()
+		steps := []func() error{
+			func() error {
+				return q.ArchiveCategoryAnnotations(ctx, db.ArchiveCategoryAnnotationsParams{UserID: userID, ID: id, Now: now})
+			},
+			func() error {
+				return q.ArchiveCategoryRules(ctx, db.ArchiveCategoryRulesParams{UserID: userID, ID: id})
+			},
+			func() error {
+				return q.ArchiveCategoryGoals(ctx, db.ArchiveCategoryGoalsParams{UserID: userID, ID: id})
+			},
+			func() error {
+				return q.ArchiveCategoryBudget(ctx, db.ArchiveCategoryBudgetParams{UserID: userID, ID: id})
+			},
+			func() error {
+				return q.ArchiveCategoryAliases(ctx, db.ArchiveCategoryAliasesParams{UserID: userID, ID: id})
+			},
+			func() error {
+				return q.ArchiveCategoryOwnName(ctx, db.ArchiveCategoryOwnNameParams{UserID: userID, ID: id, NameN: c.NameN})
+			},
+			func() error {
+				_, err := q.UncategoriseCategoryTransactions(ctx, db.UncategoriseCategoryTransactionsParams{UserID: userID, ID: id})
+				return err
+			},
+			func() error {
+				return q.SetCategoryArchived(ctx, db.SetCategoryArchivedParams{UserID: userID, ID: id, ArchivedAt: &now})
+			},
+			func() error {
+				_, err := q.DeleteEmptyAnnotations(ctx, userID)
+				return err
+			},
+		}
+		for _, step := range steps {
+			if err := step(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return dbErr("archive category", err)
+}
+
+// UnarchiveCategory brings an archived category back into use and restores what archiving took
+// away where nothing has taken its place since: a label set by hand where the transaction has none
+// now, a rule's action where the rule has none, the budget, goals, and its bank names while they
+// still mean "uncategorised". Transactions that are still uncategorised get the category back from
+// their label or bank name here; the caller reclassifies afterwards for the ones a rule sets. A
+// category in use with the same name is ErrConflict: rename or merge that one first.
+func (l *Ledger) UnarchiveCategory(ctx context.Context, userID, id uuid.UUID) (Category, error) {
+	var out Category
+	err := l.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		c, err := q.GetCategoryForArchive(ctx, db.GetCategoryForArchiveParams{UserID: userID, ID: id})
+		if err != nil {
+			return err
+		}
+		if c.ArchivedAt == nil {
+			return pgx.ErrNoRows
+		}
+		if taken, err := q.CategoryNameTaken(ctx, db.CategoryNameTakenParams{UserID: userID, NameN: c.NameN, ID: id}); err != nil {
+			return err
+		} else if taken {
+			return fmt.Errorf("a category called %q is in use; rename or merge it first: %w", c.Name, ErrConflict)
+		}
+		now := l.clock.Now()
+		// in use again first: nothing may point at an archived category (migration 00030)
+		if err := q.SetCategoryArchived(ctx, db.SetCategoryArchivedParams{UserID: userID, ID: id}); err != nil {
+			return err
+		}
+		steps := []func() error{
+			func() error {
+				return q.RestoreCategoryOwnName(ctx, db.RestoreCategoryOwnNameParams{UserID: userID, ID: id})
+			},
+			func() error {
+				_, err := q.RestoreCategoryAliases(ctx, db.RestoreCategoryAliasesParams{UserID: userID, ID: id})
+				return err
+			},
+			func() error {
+				_, err := q.RestoreCategoryAnnotations(ctx, db.RestoreCategoryAnnotationsParams{UserID: userID, ID: id, Now: now})
+				return err
+			},
+			func() error {
+				_, err := q.RestoreCategoryManualTransactions(ctx, db.RestoreCategoryManualTransactionsParams{UserID: userID, ID: id, Now: now})
+				return err
+			},
+			func() error {
+				_, err := q.RestoreCategoryBankTransactions(ctx, db.RestoreCategoryBankTransactionsParams{UserID: userID, ID: id, Now: now})
+				return err
+			},
+			func() error {
+				_, err := q.RestoreCategoryRules(ctx, db.RestoreCategoryRulesParams{UserID: userID, ID: id})
+				return err
+			},
+			func() error {
+				_, err := q.RestoreCategoryGoals(ctx, db.RestoreCategoryGoalsParams{UserID: userID, ID: id})
+				return err
+			},
+			func() error {
+				_, err := q.RestoreCategoryBudget(ctx, db.RestoreCategoryBudgetParams{UserID: userID, ID: id, Now: now})
+				return err
+			},
+			func() error {
+				return q.ClearCategoryArchive(ctx, db.ClearCategoryArchiveParams{UserID: userID, ID: id})
+			},
+		}
+		for _, step := range steps {
+			if err := step(); err != nil {
+				return err
+			}
+		}
+		out = Category{ID: c.ID, Name: c.Name}
+		return nil
+	})
+	return out, dbErr("unarchive category", err)
+}
+
+// ArchivedCategory is an archived category with what unarchiving would put back.
+type ArchivedCategory struct {
+	Category
+	ArchivedAt                               time.Time
+	Labels, Rules, BankNames, Budgets, Goals int64
+}
+
+// ArchivedCategories lists the archived categories, the newest first.
+func (l *Ledger) ArchivedCategories(ctx context.Context, userID uuid.UUID) ([]ArchivedCategory, error) {
+	out := []ArchivedCategory{}
+	err := l.st.WithUserReadOnly(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		rows, err := q.ArchivedCategories(ctx, userID)
+		for _, r := range rows {
+			a := ArchivedCategory{Category: Category{ID: r.ID, Name: r.Name}, Labels: r.Labels, Rules: r.Rules,
+				BankNames: r.BankNames, Budgets: r.Budgets, Goals: r.Goals}
+			if r.ArchivedAt != nil {
+				a.ArchivedAt = *r.ArchivedAt
+			}
+			out = append(out, a)
+		}
+		return err
+	})
+	return out, dbErr("archived categories", err)
 }

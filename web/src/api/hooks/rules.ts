@@ -8,6 +8,7 @@ import { api, data, type Schemas } from '../client';
 import { keys } from '../keys';
 
 export type CategoryStat = Schemas['CategoryStat'];
+export type ArchivedCategory = Schemas['ArchivedCategory'];
 export type Rule = Schemas['Rule'];
 export type RuleInput = Schemas['RuleInput'];
 export type RuleMatch = Schemas['RuleMatch'];
@@ -84,6 +85,40 @@ export function useDeleteCategory() {
     onSuccess: () => {
       invalidateClassified(qc);
       void qc.invalidateQueries({ queryKey: keys.rules });
+      void qc.invalidateQueries({ queryKey: keys.archivedCategories });
+    },
+  });
+}
+
+export function useArchivedCategories() {
+  return useQuery({
+    queryKey: keys.archivedCategories,
+    queryFn: async () => data(await api.GET('/categories/archived')),
+  });
+}
+
+/** Archiving and unarchiving change what rules, budgets and goals show, besides the transactions. */
+function invalidateArchive(qc: QueryClient): void {
+  invalidateClassified(qc);
+  for (const k of [keys.archivedCategories, keys.rules, keys.goals]) void qc.invalidateQueries({ queryKey: k });
+}
+
+export function useArchiveCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => data(await api.POST('/categories/{id}/archive', { params: { path: { id } } })),
+    onSuccess: () => {
+      invalidateArchive(qc);
+    },
+  });
+}
+
+export function useUnarchiveCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => data(await api.POST('/categories/{id}/unarchive', { params: { path: { id } } })),
+    onSuccess: () => {
+      invalidateArchive(qc);
     },
   });
 }

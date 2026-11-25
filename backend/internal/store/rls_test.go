@@ -153,6 +153,17 @@ func seed(t *testing.T, s *store.Store, u uuid.UUID) tenantData {
 		if err := q.SetCategoryAlias(ctx, db.SetCategoryAliasParams{UserID: u, NameN: "jedzenie", CategoryID: &cat.ID}); err != nil {
 			return fmt.Errorf("category alias: %w", err)
 		}
+		// an archived category with one thing it took away (migration 00030)
+		arch, err := q.CreateCategory(ctx, db.CreateCategoryParams{ID: platform.NewID(), UserID: u, Name: "Archiwum", NameN: "archiwum"})
+		if err != nil {
+			return fmt.Errorf("archived category: %w", err)
+		}
+		if err := q.ArchiveCategoryOwnName(ctx, db.ArchiveCategoryOwnNameParams{UserID: u, ID: arch.ID, NameN: arch.NameN}); err != nil {
+			return fmt.Errorf("archived category: %w", err)
+		}
+		if err := q.SetCategoryArchived(ctx, db.SetCategoryArchivedParams{UserID: u, ID: arch.ID, ArchivedAt: &now}); err != nil {
+			return fmt.Errorf("archived category: %w", err)
+		}
 		if err := q.CreateRule(ctx, db.CreateRuleParams{ID: platform.NewID(), UserID: u, Name: "Kawa", Enabled: true,
 			Match: []byte(`{"search":"kawa"}`), SetCategoryID: &cat.ID, Now: now}); err != nil {
 			return fmt.Errorf("rule: %w", err)

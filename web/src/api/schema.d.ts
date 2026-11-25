@@ -847,6 +847,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/categories/archived": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The archived categories (Settings → Categories)
+         * @description Newest first, each with what unarchiving would put back: labels set by hand, rules, bank names, its budget and goals.
+         */
+        get: operations["archivedCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/categories/{id}": {
         parameters: {
             query?: never;
@@ -860,8 +880,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Delete a category (its transactions become uncategorised)
-         * @description Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports.
+         * Delete a category for good (its transactions become uncategorised)
+         * @description Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports. Works on a category in use and on an archived one; the web app archives first (`POST /categories/{id}/archive`) and deletes from the archived list.
          */
         delete: operations["deleteCategory"];
         options?: never;
@@ -871,6 +891,50 @@ export interface paths {
          * @description The bank's rows of the old name keep coming to it. A name another category has is `409 conflict`: merge the two instead.
          */
         patch: operations["renameCategory"];
+        trace?: never;
+    };
+    "/categories/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a category (it behaves as deleted, and can be brought back)
+         * @description Its transactions become uncategorised, rules that set it lose that action, its budget goes, goals about it lose it, its bank names stay uncategorised on later imports, and its name is free for a new category. No list offers it and nothing can refer to it. What it took away is kept for `unarchive`. `404` for a category that is not in use.
+         */
+        post: operations["archiveCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring an archived category back
+         * @description Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+         */
+        post: operations["unarchiveCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/categories/{id}/merge": {
@@ -3581,6 +3645,31 @@ export interface components {
             ruleCount: number;
             /** @description Other bank category names (normalised) that map to this category. */
             aliases: string[];
+        };
+        ArchivedCategory: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            archivedAt: string;
+            /**
+             * Format: int64
+             * @description Labels set by hand that unarchiving puts back (where the transaction has none now).
+             */
+            labels: number;
+            /**
+             * Format: int64
+             * @description Rules whose action was this category.
+             */
+            rules: number;
+            /**
+             * Format: int64
+             * @description Other bank category names that meant this category.
+             */
+            bankNames: number;
+            hasBudget: boolean;
+            /** Format: int64 */
+            goals: number;
         };
         RuleMatch: {
             search?: string;
@@ -6826,6 +6915,27 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    archivedCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived categories. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchivedCategory"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     deleteCategory: {
         parameters: {
             query?: never;
@@ -6863,6 +6973,50 @@ export interface operations {
         };
         responses: {
             /** @description The category. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedRef"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unarchiveCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The category, in use again. */
             200: {
                 headers: {
                     [name: string]: unknown;

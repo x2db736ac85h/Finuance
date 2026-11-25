@@ -101,6 +101,73 @@ func TestCategoriesHTTP(t *testing.T) {
 	expect(t, e.browser().do("GET", "/categories/stats", nil), 401, "unauthenticated")
 }
 
+// TestCategoryArchiveHTTP (Phase 26, U7): archive, the archived list, unarchive and delete for good
+// through the API, and nobody else's.
+func TestCategoryArchiveHTTP(t *testing.T) {
+	e := newTestEnv(t, nil, true)
+	b := signedIn(t, e, testEmail(t))
+	demoAccount(t, b)
+	var id string
+	var before int
+	for _, s := range list(t, b.do("GET", "/categories/stats", nil)) {
+		if s["name"] == "Rachunki" {
+			id, before = s["id"].(string), num(s["txCount"])
+		}
+	}
+	if id == "" || before == 0 {
+		t.Fatal("the demo data has no Rachunki rows")
+	}
+	inUse := func() int { return totalWhere(t, b, map[string]any{"column": "category", "cond": "=Rachunki"}) }
+
+	other := signedIn(t, e, testEmail(t)+".other")
+	expect(t, other.do("POST", "/categories/"+id+"/archive", nil), 404, "not_found")
+	expect(t, e.browser().do("POST", "/categories/"+id+"/archive", nil), 401, "unauthenticated")
+
+	expect(t, b.do("POST", "/categories/"+id+"/archive", nil), 204, "")
+	if n := inUse(); n != 0 {
+		t.Errorf("%d rows still in the archived category", n)
+	}
+	for _, s := range list(t, b.do("GET", "/categories/stats", nil)) {
+		if s["id"] == id {
+			t.Error("the archived category is still in the statistics")
+		}
+	}
+	for _, c := range list(t, b.do("GET", "/categories", nil)) {
+		if c["id"] == id {
+			t.Error("the archived category is still offered")
+		}
+	}
+	arch := list(t, b.do("GET", "/categories/archived", nil))
+	if len(arch) != 1 || arch[0]["id"] != id || arch[0]["name"] != "Rachunki" || arch[0]["archivedAt"] == nil {
+		t.Fatalf("archived = %v", arch)
+	}
+	expect(t, b.do("POST", "/categories/"+id+"/archive", nil), 404, "not_found")
+	expect(t, b.do("PATCH", "/categories/"+id, map[string]any{"name": "x"}), 404, "not_found")
+	if a := list(t, other.do("GET", "/categories/archived", nil)); len(a) != 0 {
+		t.Errorf("another user sees %v", a)
+	}
+	expect(t, other.do("POST", "/categories/"+id+"/unarchive", nil), 404, "not_found")
+
+	un := b.do("POST", "/categories/"+id+"/unarchive", nil)
+	expect(t, un, 200, "")
+	if un.body["name"] != "Rachunki" {
+		t.Errorf("unarchived = %s", un.raw)
+	}
+	if n := inUse(); n != before {
+		t.Errorf("%d rows back in the category, want %d", n, before)
+	}
+	expect(t, b.do("POST", "/categories/"+id+"/unarchive", nil), 404, "not_found")
+
+	// archived again, its name taken by a new category: it can't come back, and goes for good
+	expect(t, b.do("POST", "/categories/"+id+"/archive", nil), 204, "")
+	expect(t, b.do("POST", "/categories", map[string]any{"name": "rachunki"}), 201, "")
+	expect(t, b.do("POST", "/categories/"+id+"/unarchive", nil), 409, "conflict")
+	expect(t, b.do("DELETE", "/categories/"+id, nil), 204, "")
+	if a := list(t, b.do("GET", "/categories/archived", nil)); len(a) != 0 {
+		t.Errorf("archived after the delete = %v", a)
+	}
+}
+
 func TestRulesHTTP(t *testing.T) {
 	e := newTestEnv(t, nil, true)
 	b := signedIn(t, e, testEmail(t))

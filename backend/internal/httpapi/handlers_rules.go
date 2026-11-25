@@ -83,6 +83,41 @@ func (a *api) DeleteCategory(ctx context.Context, req gen.DeleteCategoryRequestO
 	return gen.DeleteCategory204Response{}, nil
 }
 
+// ArchiveCategory archives a category: it behaves as deleted until it is unarchived.
+func (a *api) ArchiveCategory(ctx context.Context, req gen.ArchiveCategoryRequestObject) (gen.ArchiveCategoryResponseObject, error) {
+	u := identity(ctx).User.ID
+	if err := a.ledger.ArchiveCategory(ctx, u, req.Id); err != nil {
+		return nil, err
+	}
+	a.reclassifyAfter(ctx, u) // rules that set it lost their action
+	return gen.ArchiveCategory204Response{}, nil
+}
+
+// UnarchiveCategory brings an archived category back with what archiving took away.
+func (a *api) UnarchiveCategory(ctx context.Context, req gen.UnarchiveCategoryRequestObject) (gen.UnarchiveCategoryResponseObject, error) {
+	u := identity(ctx).User.ID
+	c, err := a.ledger.UnarchiveCategory(ctx, u, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	a.reclassifyAfter(ctx, u) // labels, rules and bank names are back: the transactions follow
+	return gen.UnarchiveCategory200JSONResponse{Id: c.ID, Name: c.Name}, nil
+}
+
+// ArchivedCategories lists the archived categories (Settings → Categories).
+func (a *api) ArchivedCategories(ctx context.Context, _ gen.ArchivedCategoriesRequestObject) (gen.ArchivedCategoriesResponseObject, error) {
+	list, err := a.ledger.ArchivedCategories(ctx, identity(ctx).User.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := make(gen.ArchivedCategories200JSONResponse, len(list))
+	for i, c := range list {
+		out[i] = gen.ArchivedCategory{Id: c.ID, Name: c.Name, ArchivedAt: c.ArchivedAt, Labels: c.Labels, Rules: c.Rules,
+			BankNames: c.BankNames, HasBudget: c.Budgets > 0, Goals: c.Goals}
+	}
+	return out, nil
+}
+
 // MergeCategory merges a category into another one.
 func (a *api) MergeCategory(ctx context.Context, req gen.MergeCategoryRequestObject) (gen.MergeCategoryResponseObject, error) {
 	u := identity(ctx).User.ID

@@ -37,12 +37,27 @@ type Querier interface {
 	// Commit step 1b: re-apply user annotations (group, manual category, note, manual transfer mark)
 	// to freshly inserted transactions, so labels survive delete + re-import.
 	ApplyAnnotations(ctx context.Context, arg ApplyAnnotationsParams) (int64, error)
+	// The bank names that meant this category now mean "uncategorised", as after a delete.
+	ArchiveCategoryAliases(ctx context.Context, arg ArchiveCategoryAliasesParams) error
+	// Archiving (ledger.ArchiveCategory): each source of the category is written down, then taken
+	// away. One statement per kind, so a category with many labels costs no loop.
+	ArchiveCategoryAnnotations(ctx context.Context, arg ArchiveCategoryAnnotationsParams) error
+	ArchiveCategoryBudget(ctx context.Context, arg ArchiveCategoryBudgetParams) error
+	ArchiveCategoryGoals(ctx context.Context, arg ArchiveCategoryGoalsParams) error
+	// Its own name gets an alias to nothing, so the bank's rows of that name stay uncategorised. Written
+	// down only when the alias is new: unarchiving removes exactly what this added.
+	ArchiveCategoryOwnName(ctx context.Context, arg ArchiveCategoryOwnNameParams) error
+	ArchiveCategoryRules(ctx context.Context, arg ArchiveCategoryRulesParams) error
+	// Settings → Categories, the archived list: what unarchiving would put back, by kind.
+	ArchivedCategories(ctx context.Context, userID uuid.UUID) ([]ArchivedCategoriesRow, error)
 	// A category's budget before an assistant change sets it (ADR 0030).
 	BudgetAmountForUpdate(ctx context.Context, arg BudgetAmountForUpdateParams) (int64, error)
+	// Among the categories in use: an archived category's name is free (migration 00030).
 	CategoryNameTaken(ctx context.Context, arg CategoryNameTakenParams) (bool, error)
 	// Settings → Categories: every category with its transaction count, how many were set by hand and
 	// by rules, and the bank names that map to it (its own name excluded).
 	CategoryStats(ctx context.Context, userID uuid.UUID) ([]CategoryStatsRow, error)
+	ClearCategoryArchive(ctx context.Context, arg ClearCategoryArchiveParams) error
 	ClearDedupeOverride(ctx context.Context, arg ClearDedupeOverrideParams) (int64, error)
 	ConfirmSecondFactor(ctx context.Context, arg ConfirmSecondFactorParams) (int64, error)
 	CountAIChanges(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -225,8 +240,11 @@ type Querier interface {
 	// The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
 	GetAssistantSettings(ctx context.Context, userID uuid.UUID) (AssistantSetting, error)
 	GetAssistantUsage(ctx context.Context, arg GetAssistantUsageParams) (GetAssistantUsageRow, error)
+	// A category in use. An archived one is not found, like a deleted one.
 	GetCategory(ctx context.Context, arg GetCategoryParams) (Category, error)
 	GetCategoryAlias(ctx context.Context, arg GetCategoryAliasParams) (*uuid.UUID, error)
+	// In use or archived, locked: archiving, unarchiving and deleting for good each look at archived_at.
+	GetCategoryForArchive(ctx context.Context, arg GetCategoryForArchiveParams) (Category, error)
 	// Duplicate review (PLAN §4.4, "Duplicate review and overrides"). ledger.Rematerialize uses these to
 	// rebuild the transactions of one (account, fingerprint) from its staged rows and override.
 	GetDedupeOverride(ctx context.Context, arg GetDedupeOverrideParams) (DedupeOverride, error)
@@ -452,6 +470,24 @@ type Querier interface {
 	ResetRuleCategories(ctx context.Context, userID uuid.UUID) (int64, error)
 	// A live token and its user: not revoked, not expired, and the account not disabled.
 	ResolveAccessToken(ctx context.Context, arg ResolveAccessTokenParams) (ResolveAccessTokenRow, error)
+	// A bank name means the category again while it still means "uncategorised".
+	RestoreCategoryAliases(ctx context.Context, arg RestoreCategoryAliasesParams) (int64, error)
+	// Unarchiving (ledger.UnarchiveCategory): each recorded source comes back where nothing has taken
+	// its place since.
+	// A label comes back where the transaction has no label set by hand now (the annotation may have
+	// been deleted as empty in between) and its account still exists.
+	RestoreCategoryAnnotations(ctx context.Context, arg RestoreCategoryAnnotationsParams) (int64, error)
+	// Uncategorised transactions whose bank category name means this category again get it, as an
+	// import would give it to them.
+	RestoreCategoryBankTransactions(ctx context.Context, arg RestoreCategoryBankTransactionsParams) (int64, error)
+	RestoreCategoryBudget(ctx context.Context, arg RestoreCategoryBudgetParams) (int64, error)
+	RestoreCategoryGoals(ctx context.Context, arg RestoreCategoryGoalsParams) (int64, error)
+	// Transactions whose label came back and that are still uncategorised carry it again. (A
+	// reclassification recomputes only what rules set, so labels and bank names are put back here.)
+	RestoreCategoryManualTransactions(ctx context.Context, arg RestoreCategoryManualTransactionsParams) (int64, error)
+	// The alias to nothing that archiving added for its own name goes, so the name means it again.
+	RestoreCategoryOwnName(ctx context.Context, arg RestoreCategoryOwnNameParams) error
+	RestoreCategoryRules(ctx context.Context, arg RestoreCategoryRulesParams) (int64, error)
 	RevokeAccessToken(ctx context.Context, arg RevokeAccessTokenParams) (AccessToken, error)
 	// A new password, or an administrator signing the account out everywhere, ends its tokens too.
 	RevokeUserAccessTokens(ctx context.Context, arg RevokeUserAccessTokensParams) (int64, error)
@@ -475,6 +511,7 @@ type Querier interface {
 	SetBudget(ctx context.Context, arg SetBudgetParams) error
 	// name_n now means category_id (NULL: uncategorised).
 	SetCategoryAlias(ctx context.Context, arg SetCategoryAliasParams) error
+	SetCategoryArchived(ctx context.Context, arg SetCategoryArchivedParams) error
 	// Duplicate review overrides (PLAN §4.4, legacy §32.3). Re-materialisation comes in Phase 6.
 	SetDedupeOverride(ctx context.Context, arg SetDedupeOverrideParams) (DedupeOverride, error)
 	// When the user's next digest is due (NULL: none; ADR 0033). users is not under RLS.

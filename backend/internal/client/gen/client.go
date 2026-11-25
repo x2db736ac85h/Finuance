@@ -2862,6 +2862,24 @@ type AdviceUpdate struct {
 // AdviceUpdateStatus defines model for AdviceUpdate.Status.
 type AdviceUpdateStatus string
 
+// ArchivedCategory defines model for ArchivedCategory.
+type ArchivedCategory struct {
+	ArchivedAt time.Time `json:"archivedAt"`
+
+	// BankNames Other bank category names that meant this category.
+	BankNames int64              `json:"bankNames"`
+	Goals     int64              `json:"goals"`
+	HasBudget bool               `json:"hasBudget"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Labels Labels set by hand that unarchiving puts back (where the transaction has none now).
+	Labels int64  `json:"labels"`
+	Name   string `json:"name"`
+
+	// Rules Rules whose action was this category.
+	Rules int64 `json:"rules"`
+}
+
 // AssistantAttachment defines model for AssistantAttachment.
 type AssistantAttachment struct {
 	Height int                `json:"height"`
@@ -6844,6 +6862,13 @@ type ClientInterface interface {
 	// Corresponds with POST /categories (the `CreateCategory` operationId).
 	CreateCategory(ctx context.Context, params *CreateCategoryParams, body CreateCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ArchivedCategories The archived categories (Settings → Categories)
+	//
+	// Newest first, each with what unarchiving would put back: labels set by hand, rules, bank names, its budget and goals.
+	//
+	// Corresponds with GET /categories/archived (the `ArchivedCategories` operationId).
+	ArchivedCategories(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CategoryStats Every category with its counts (Settings → Categories)
 	//
 	// Transactions over all accounts, how many were categorised by hand and by rules, and the other bank category names that map to the category (left by renames and merges).
@@ -6851,9 +6876,9 @@ type ClientInterface interface {
 	// Corresponds with GET /categories/stats (the `CategoryStats` operationId).
 	CategoryStats(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteCategory Delete a category (its transactions become uncategorised)
+	// DeleteCategory Delete a category for good (its transactions become uncategorised)
 	//
-	// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports.
+	// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports. Works on a category in use and on an archived one; the web app archives first (`POST /categories/{id}/archive`) and deletes from the archived list.
 	//
 	// Corresponds with DELETE /categories/{id} (the `DeleteCategory` operationId).
 	DeleteCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -6876,6 +6901,13 @@ type ClientInterface interface {
 	// Corresponds with PATCH /categories/{id} (the `RenameCategory` operationId).
 	RenameCategory(ctx context.Context, id Id, body RenameCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ArchiveCategory Archive a category (it behaves as deleted, and can be brought back)
+	//
+	// Its transactions become uncategorised, rules that set it lose that action, its budget goes, goals about it lose it, its bank names stay uncategorised on later imports, and its name is free for a new category. No list offers it and nothing can refer to it. What it took away is kept for `unarchive`. `404` for a category that is not in use.
+	//
+	// Corresponds with POST /categories/{id}/archive (the `ArchiveCategory` operationId).
+	ArchiveCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// MergeCategoryWithBody Merge a category into another one and delete it
 	//
 	// Its transactions, manual categories, rules, bank names and (when the target has none) its budget move to `intoId`.
@@ -6893,6 +6925,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /categories/{id}/merge (the `MergeCategory` operationId).
 	MergeCategory(ctx context.Context, id Id, body MergeCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UnarchiveCategory Bring an archived category back
+	//
+	// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+	//
+	// Corresponds with POST /categories/{id}/unarchive (the `UnarchiveCategory` operationId).
+	UnarchiveCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReportClientEventWithBody Report an error of the web app
 	//
@@ -9578,6 +9617,23 @@ func (c *Client) CreateCategory(ctx context.Context, params *CreateCategoryParam
 	return c.Client.Do(req)
 }
 
+// ArchivedCategories The archived categories (Settings → Categories)
+//
+// Newest first, each with what unarchiving would put back: labels set by hand, rules, bank names, its budget and goals.
+//
+// Corresponds with GET /categories/archived (the `ArchivedCategories` operationId).
+func (c *Client) ArchivedCategories(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewArchivedCategoriesRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // CategoryStats Every category with its counts (Settings → Categories)
 //
 // Transactions over all accounts, how many were categorised by hand and by rules, and the other bank category names that map to the category (left by renames and merges).
@@ -9595,9 +9651,9 @@ func (c *Client) CategoryStats(ctx context.Context, reqEditors ...RequestEditorF
 	return c.Client.Do(req)
 }
 
-// DeleteCategory Delete a category (its transactions become uncategorised)
+// DeleteCategory Delete a category for good (its transactions become uncategorised)
 //
-// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports.
+// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports. Works on a category in use and on an archived one; the web app archives first (`POST /categories/{id}/archive`) and deletes from the archived list.
 //
 // Corresponds with DELETE /categories/{id} (the `DeleteCategory` operationId).
 func (c *Client) DeleteCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -9650,6 +9706,23 @@ func (c *Client) RenameCategory(ctx context.Context, id Id, body RenameCategoryJ
 	return c.Client.Do(req)
 }
 
+// ArchiveCategory Archive a category (it behaves as deleted, and can be brought back)
+//
+// Its transactions become uncategorised, rules that set it lose that action, its budget goes, goals about it lose it, its bank names stay uncategorised on later imports, and its name is free for a new category. No list offers it and nothing can refer to it. What it took away is kept for `unarchive`. `404` for a category that is not in use.
+//
+// Corresponds with POST /categories/{id}/archive (the `ArchiveCategory` operationId).
+func (c *Client) ArchiveCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewArchiveCategoryRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // MergeCategoryWithBody Merge a category into another one and delete it
 //
 // Its transactions, manual categories, rules, bank names and (when the target has none) its budget move to `intoId`.
@@ -9678,6 +9751,23 @@ func (c *Client) MergeCategoryWithBody(ctx context.Context, id Id, contentType s
 // Corresponds with POST /categories/{id}/merge (the `MergeCategory` operationId).
 func (c *Client) MergeCategory(ctx context.Context, id Id, body MergeCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewMergeCategoryRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UnarchiveCategory Bring an archived category back
+//
+// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+//
+// Corresponds with POST /categories/{id}/unarchive (the `UnarchiveCategory` operationId).
+func (c *Client) UnarchiveCategory(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnarchiveCategoryRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -14743,6 +14833,33 @@ func NewCreateCategoryRequestWithBody(server string, params *CreateCategoryParam
 	return req, nil
 }
 
+// NewArchivedCategoriesRequest constructs an http.Request for the ArchivedCategories method
+func NewArchivedCategoriesRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/categories/archived")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewCategoryStatsRequest constructs an http.Request for the CategoryStats method
 func NewCategoryStatsRequest(server string) (*http.Request, error) {
 	var err error
@@ -14851,6 +14968,40 @@ func NewRenameCategoryRequestWithBody(server string, id Id, contentType string, 
 	return req, nil
 }
 
+// NewArchiveCategoryRequest constructs an http.Request for the ArchiveCategory method
+func NewArchiveCategoryRequest(server string, id Id) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/categories/%s/archive", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewMergeCategoryRequest calls the generic MergeCategory builder with application/json body
 func NewMergeCategoryRequest(server string, id Id, body MergeCategoryJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -14894,6 +15045,40 @@ func NewMergeCategoryRequestWithBody(server string, id Id, contentType string, b
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewUnarchiveCategoryRequest constructs an http.Request for the UnarchiveCategory method
+func NewUnarchiveCategoryRequest(server string, id Id) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/categories/%s/unarchive", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -19806,6 +19991,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /categories (the `CreateCategory` operationId).
 	CreateCategoryWithResponse(ctx context.Context, params *CreateCategoryParams, body CreateCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateCategoryResponse, error)
 
+	// ArchivedCategoriesWithResponse The archived categories (Settings → Categories)
+	//
+	// Newest first, each with what unarchiving would put back: labels set by hand, rules, bank names, its budget and goals.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /categories/archived (the `ArchivedCategories` operationId).
+	ArchivedCategoriesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ArchivedCategoriesResponse, error)
+
 	// CategoryStatsWithResponse Every category with its counts (Settings → Categories)
 	//
 	// Transactions over all accounts, how many were categorised by hand and by rules, and the other bank category names that map to the category (left by renames and merges).
@@ -19815,9 +20009,9 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /categories/stats (the `CategoryStats` operationId).
 	CategoryStatsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*CategoryStatsResponse, error)
 
-	// DeleteCategoryWithResponse Delete a category (its transactions become uncategorised)
+	// DeleteCategoryWithResponse Delete a category for good (its transactions become uncategorised)
 	//
-	// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports.
+	// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports. Works on a category in use and on an archived one; the web app archives first (`POST /categories/{id}/archive`) and deletes from the archived list.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -19842,6 +20036,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PATCH /categories/{id} (the `RenameCategory` operationId).
 	RenameCategoryWithResponse(ctx context.Context, id Id, body RenameCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameCategoryResponse, error)
 
+	// ArchiveCategoryWithResponse Archive a category (it behaves as deleted, and can be brought back)
+	//
+	// Its transactions become uncategorised, rules that set it lose that action, its budget goes, goals about it lose it, its bank names stay uncategorised on later imports, and its name is free for a new category. No list offers it and nothing can refer to it. What it took away is kept for `unarchive`. `404` for a category that is not in use.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /categories/{id}/archive (the `ArchiveCategory` operationId).
+	ArchiveCategoryWithResponse(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*ArchiveCategoryResponse, error)
+
 	// MergeCategoryWithBodyWithResponse Merge a category into another one and delete it
 	//
 	// Its transactions, manual categories, rules, bank names and (when the target has none) its budget move to `intoId`.
@@ -19859,6 +20062,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /categories/{id}/merge (the `MergeCategory` operationId).
 	MergeCategoryWithResponse(ctx context.Context, id Id, body MergeCategoryJSONRequestBody, reqEditors ...RequestEditorFn) (*MergeCategoryResponse, error)
+
+	// UnarchiveCategoryWithResponse Bring an archived category back
+	//
+	// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /categories/{id}/unarchive (the `UnarchiveCategory` operationId).
+	UnarchiveCategoryWithResponse(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*UnarchiveCategoryResponse, error)
 
 	// ReportClientEventWithBodyWithResponse Report an error of the web app
 	//
@@ -24071,6 +24283,54 @@ func (r CreateCategoryResponse) ContentType() string {
 	return ""
 }
 
+type ArchivedCategoriesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ArchivedCategory
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ArchivedCategoriesResponse) GetJSON200() *[]ArchivedCategory {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r ArchivedCategoriesResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r ArchivedCategoriesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ArchivedCategoriesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ArchivedCategoriesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ArchivedCategoriesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type CategoryStatsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -24208,6 +24468,47 @@ func (r RenameCategoryResponse) ContentType() string {
 	return ""
 }
 
+type ArchiveCategoryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r ArchiveCategoryResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r ArchiveCategoryResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ArchiveCategoryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ArchiveCategoryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ArchiveCategoryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type MergeCategoryResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -24254,6 +24555,54 @@ func (r MergeCategoryResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r MergeCategoryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UnarchiveCategoryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NamedRef
+	// ApplicationproblemJSONDefault the response for an HTTP default `application/problem+json` response
+	ApplicationproblemJSONDefault *Problem
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UnarchiveCategoryResponse) GetJSON200() *NamedRef {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSONDefault returns the response for an HTTP default `application/problem+json` response
+func (r UnarchiveCategoryResponse) GetApplicationproblemJSONDefault() *Problem {
+	return r.ApplicationproblemJSONDefault
+}
+
+// GetBody returns the raw response body bytes
+func (r UnarchiveCategoryResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UnarchiveCategoryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UnarchiveCategoryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UnarchiveCategoryResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -30228,6 +30577,21 @@ func (c *ClientWithResponses) CreateCategoryWithResponse(ctx context.Context, pa
 	return ParseCreateCategoryResponse(rsp)
 }
 
+// ArchivedCategoriesWithResponse The archived categories (Settings → Categories)
+//
+// Newest first, each with what unarchiving would put back: labels set by hand, rules, bank names, its budget and goals.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /categories/archived (the `ArchivedCategories` operationId).
+func (c *ClientWithResponses) ArchivedCategoriesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ArchivedCategoriesResponse, error) {
+	rsp, err := c.ArchivedCategories(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseArchivedCategoriesResponse(rsp)
+}
+
 // CategoryStatsWithResponse Every category with its counts (Settings → Categories)
 //
 // Transactions over all accounts, how many were categorised by hand and by rules, and the other bank category names that map to the category (left by renames and merges).
@@ -30243,9 +30607,9 @@ func (c *ClientWithResponses) CategoryStatsWithResponse(ctx context.Context, req
 	return ParseCategoryStatsResponse(rsp)
 }
 
-// DeleteCategoryWithResponse Delete a category (its transactions become uncategorised)
+// DeleteCategoryWithResponse Delete a category for good (its transactions become uncategorised)
 //
-// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports.
+// Its transactions become uncategorised however they were categorised, its budget goes, rules that set it lose that action, and its bank name stays uncategorised on later imports. Works on a category in use and on an archived one; the web app archives first (`POST /categories/{id}/archive`) and deletes from the archived list.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -30288,6 +30652,21 @@ func (c *ClientWithResponses) RenameCategoryWithResponse(ctx context.Context, id
 	return ParseRenameCategoryResponse(rsp)
 }
 
+// ArchiveCategoryWithResponse Archive a category (it behaves as deleted, and can be brought back)
+//
+// Its transactions become uncategorised, rules that set it lose that action, its budget goes, goals about it lose it, its bank names stay uncategorised on later imports, and its name is free for a new category. No list offers it and nothing can refer to it. What it took away is kept for `unarchive`. `404` for a category that is not in use.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /categories/{id}/archive (the `ArchiveCategory` operationId).
+func (c *ClientWithResponses) ArchiveCategoryWithResponse(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*ArchiveCategoryResponse, error) {
+	rsp, err := c.ArchiveCategory(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseArchiveCategoryResponse(rsp)
+}
+
 // MergeCategoryWithBodyWithResponse Merge a category into another one and delete it
 //
 // Its transactions, manual categories, rules, bank names and (when the target has none) its budget move to `intoId`.
@@ -30316,6 +30695,21 @@ func (c *ClientWithResponses) MergeCategoryWithResponse(ctx context.Context, id 
 		return nil, err
 	}
 	return ParseMergeCategoryResponse(rsp)
+}
+
+// UnarchiveCategoryWithResponse Bring an archived category back
+//
+// Restores what archiving took away where nothing has taken its place since: a label set by hand where the transaction has none now, a rule's action where the rule has none, the budget where none was set, its goals and its bank names. Transactions get their category back through the reclassification that follows. `409 conflict` when a category in use has the same name (rename or merge that one first); `404` for a category that is not archived.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /categories/{id}/unarchive (the `UnarchiveCategory` operationId).
+func (c *ClientWithResponses) UnarchiveCategoryWithResponse(ctx context.Context, id Id, reqEditors ...RequestEditorFn) (*UnarchiveCategoryResponse, error) {
+	rsp, err := c.UnarchiveCategory(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnarchiveCategoryResponse(rsp)
 }
 
 // ReportClientEventWithBodyWithResponse Report an error of the web app
@@ -34550,6 +34944,39 @@ func ParseCreateCategoryResponse(rsp *http.Response) (*CreateCategoryResponse, e
 	return response, nil
 }
 
+// ParseArchivedCategoriesResponse parses an HTTP response from a ArchivedCategoriesWithResponse call
+func ParseArchivedCategoriesResponse(rsp *http.Response) (*ArchivedCategoriesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ArchivedCategoriesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ArchivedCategory
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseCategoryStatsResponse parses an HTTP response from a CategoryStatsWithResponse call
 func ParseCategoryStatsResponse(rsp *http.Response) (*CategoryStatsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -34645,6 +35072,35 @@ func ParseRenameCategoryResponse(rsp *http.Response) (*RenameCategoryResponse, e
 	return response, nil
 }
 
+// ParseArchiveCategoryResponse parses an HTTP response from a ArchiveCategoryWithResponse call
+func ParseArchiveCategoryResponse(rsp *http.Response) (*ArchiveCategoryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ArchiveCategoryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseMergeCategoryResponse parses an HTTP response from a MergeCategoryWithResponse call
 func ParseMergeCategoryResponse(rsp *http.Response) (*MergeCategoryResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -34663,6 +35119,39 @@ func ParseMergeCategoryResponse(rsp *http.Response) (*MergeCategoryResponse, err
 		var dest struct {
 			Moved int64 `json:"moved"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUnarchiveCategoryResponse parses an HTTP response from a UnarchiveCategoryWithResponse call
+func ParseUnarchiveCategoryResponse(rsp *http.Response) (*UnarchiveCategoryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UnarchiveCategoryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NamedRef
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
