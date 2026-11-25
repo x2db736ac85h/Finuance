@@ -24,6 +24,9 @@ see `docs/evals.md`.
   provider's models by name (Claude Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2; Gemini on Vertex
   AI), ticked, with a field for any other id and a default chosen among them, instead of typed
   patterns.
+- **What a cloud provider keeps**, in `docs/assistant.md`: what leaves the instance, and what to
+  look at for Anthropic, OpenAI, a router such as OpenRouter, and Google Cloud, each with the date
+  it was checked.
 - **Google Cloud's models without a stored key** (ADR 0045,
   [docs/assistant.md](docs/assistant.md) "Using a cloud model"). A connection with `auth: google`
   names a project and a location and gets short-lived tokens from the instance's own Google

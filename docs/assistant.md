@@ -149,6 +149,92 @@ comparison, the best local model on the reference machine reached 83 % at a medi
 runs used synthetic demo data; the decision that a cloud model sees synthetic data only still
 stands.
 
+## Cloud providers: what leaves and what they keep
+
+A connection marked *cloud* sends data to somebody else's computers. This section says what is
+sent and, per provider, what was found to need a decision. Read the part for your provider before
+the first question, then write what applies to your account into **Administration → Assistant →
+What a cloud provider keeps**: that paragraph is shown to every person where they agree.
+
+The providers' terms change. Each part carries the date it was checked; check again, and trust your
+own contract and your account's settings over this page.
+
+### What leaves the instance
+
+Exactly what leaves for any cloud connection: the question, the photos attached to it, and the
+transactions the model looks up through its tools (payees, amounts, dates, titles, categories).
+Runs of digits of account-number length are shortened first; photos go as they are. Each person
+agrees once per connection, and the dialog names the provider (and for Google Cloud the location:
+"Google Cloud (Vertex AI), in europe-west4") with the administrator's note on what is kept. A
+service the app doesn't know by name is named by its host ("openrouter.ai").
+
+### What is the same everywhere
+
+- **A key or a credential identifies your account, not the person asking.** The provider sees one
+  customer; the app sends no user id.
+- **Not used for training by default** on the paid API of each provider below, as checked on the
+  dates given. Free tiers and consumer apps are a different matter, and so are routers (below).
+- **Kept for a while anyway.** "Not trained on" is not "not stored": each provider may keep
+  requests for a time to look for abuse, and longer if the law requires it. Storing nothing ("zero
+  data retention") is an arrangement you ask the provider for, not a switch in this app.
+- **This app's own limits apply before anything leaves:** the consent per person, the shortening of
+  long digit runs and e-mail addresses, the daily token budget per connection, https only.
+
+### Anthropic and OpenAI (their own APIs, with a key)
+
+Both are a model maker's own service: one company gets the data, under one set of terms.
+
+**Anthropic** (`api.anthropic.com`), checked on 2026-11-26:
+
+- Under the commercial terms, API content is not used to train models unless you agree to it.
+- **Retention:** Anthropic's pages did not say the same thing on that day. The console's data
+  controls describe 30 days by default, readable by Anthropic for safety and security; the API
+  documentation says prompts and answers are not retained by default, except for its *Covered
+  Models* (the Fable and Mythos class), which always keep 30 days and are assessed by automated
+  safety systems. Your organisation's **Console → Settings → Privacy** shows what applies to you.
+- **Zero data retention** is granted per organisation by Anthropic's sales team, and is not
+  available for the Covered Models.
+- **Where it is processed** is not something this connection chooses.
+
+**OpenAI** (`api.openai.com`), checked on 2026-11-26:
+
+- API data is not used for training unless you opt in.
+- **Retention:** abuse-monitoring logs keep requests for up to 30 days by default, longer where the
+  law requires it. *Modified abuse monitoring* and *zero data retention* need OpenAI's approval.
+- **Where it is processed:** European data residency is set per project, for new projects, and
+  usually has to be enabled by OpenAI's sales team. This connection does not choose it.
+- The app uses the Chat Completions endpoint only, which stores nothing for later use by itself
+  (no assistants, threads or files).
+
+### OpenRouter and other routers
+
+A router is **not** a model maker: it passes each request on to one of several companies, so two
+parties see the data, and which second party can differ from request to request. It works here as
+an *Other* connection (OpenAI format, `https://openrouter.ai/api/v1`, marked as a cloud service,
+with its key); the consent dialog then names it by its host. It has not been tried with this app.
+
+OpenRouter, checked on 2026-11-26:
+
+- **OpenRouter itself** logs request metadata (time, model, token counts) and, by default, not the
+  prompts or answers. Prompt logging is something you can opt into for a discount: leave it off.
+- **The provider behind it** has its own policy. Your OpenRouter account settings decide which
+  providers a request may reach: one setting keeps requests away from providers that may train on
+  them, another (or `provider.zdr` per request, which this app does not send) allows only
+  endpoints that store nothing. They are separate: "no training" is not "nothing stored". Set both
+  in the account if you need both.
+- **Where it is processed:** in-region routing (EU or US) is a feature of its business plans, on a
+  different address; account and billing data may still be handled in the US.
+- With your own provider key behind OpenRouter, the provider's terms above apply as well.
+
+Because the party that finally answers is chosen by the router, say so in the paragraph people read
+before they agree, and prefer a provider's own API when you can't pin the route down.
+
+### Google Cloud (Vertex AI)
+
+Vertex AI is a platform, not one model maker: Google runs Gemini, open models and Claude there
+under Google Cloud's terms, with a location you choose and no stored key. It has its own section
+with its own list: [What Google may keep](#what-google-may-keep-read-this-before-the-first-question).
+
 ## Using a cloud model (Google Cloud)
 
 Since 0.7 a connection can use the models on Google Cloud's Vertex AI (Gemini, and the open models
@@ -163,13 +249,7 @@ that lives about an hour, with credentials it already has, and sends it to Verte
 > (token renewal, the allowed hosts, both wire formats). Nobody has used it with a real project yet,
 > so expect first-contact problems (an API not enabled, a model id, a quota) and please report them.
 
-### What leaves the instance
-
-Exactly what leaves for any cloud connection: the question, the photos attached to it, and the
-transactions the model looks up through its tools (payees, amounts, dates, titles, categories).
-Runs of digits of account-number length are shortened first; photos go as they are. Each person
-agrees once per connection, and the dialog names the provider and the location
-("Google Cloud (Vertex AI), in europe-west4") with the administrator's note on what is kept.
+What leaves the instance is the same for every cloud connection: see [Cloud providers](#cloud-providers-what-leaves-and-what-they-keep) above. What follows is Google's side.
 
 ### What Google may keep (read this before the first question)
 
@@ -186,6 +266,9 @@ These are Google Cloud's terms as checked on 2026-11-16; they change, so check t
 
 What Google does with customer data beyond that is in its own terms for Vertex AI; read them for
 your kind of account. This document only lists what was found to need a decision.
+
+Claude on Vertex AI is under Google Cloud's terms for the platform, and the retention rules of
+Anthropic's Covered Models apply there too (see Anthropic above).
 
 Write what applies to your project into **Administration → Assistant → What a cloud provider
 keeps**: that paragraph is shown to every person where they agree.
