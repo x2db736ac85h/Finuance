@@ -4557,6 +4557,37 @@ needs `cloud: true`, and with it each user's consent and the masking of long num
   step up (`gemini-3.8-flash`). Model ids are configuration, never code.
 - Budgets in Google Cloud alert; they do not stop spending.
 
+**26.U Interface corrections first (the maintainer, 2026-11-25).** A list of corrections found in
+daily use goes before the Vertex tasks and ships on its own as `v0.6.1`, in two pull requests.
+Deliberate differences from the legacy app are recorded in `docs/PARITY.md`.
+
+- U1 **Routes:** `/transactions/:view`, `/overview/:view`, `/shared` and `/shared/:group` replace
+  `/t/`, `/o/` and `/s`; `/` opens the transactions; the old addresses redirect. Paths are built in
+  one place (`web/src/lib/paths.ts`).
+- U2 **The mode comes from the address:** the shell reads table or overview from the location, not
+  from a store that changes a render earlier (a rule suggestion flashed over the overview).
+- U3 **Settings:** no "Back to transactions"; Appearance inside General; Sessions and Access tokens
+  inside Security. The old section addresses redirect.
+- U4 **Quick settings:** "All settings" on top as an outlined button, the theme and a dark-mode
+  switch on one line ("System" stays in Settings → General), a plain size slider, a command icon
+  for the shortcuts.
+- U5 **Dialog spacing:** a form inside a dialog always has the dialog's inset, with a guard test
+  over every dialog.
+- U6 Screenshots in dark and light.
+- U7 **Archive a category** instead of deleting it: it behaves as removed, the archive records what
+  it changed (transactions, annotations, rules, the budget, bank names), and unarchiving restores
+  what has not been changed since. An archived category can be deleted for good.
+- U8 **Friends on the Shared page** (the code, adding, the list); the page is called "Shared".
+- U9 **Groups on the Shared page:** the colour dot shows, a shared group's colour can be changed,
+  a personal group links to its transactions.
+- U10 **The assistant in the bell:** an answer that finishes while the panel is closed or the tab
+  hidden becomes an entry (in the browser only); every assistant message carries the sparkle icon.
+- U11 **Half-window check:** an E2E walk at 960 and 720 px in both themes (no horizontal scroll,
+  dialogs and popovers inside the window).
+- U12 **Connections and models:** one thing open at a time in Administration → Assistant, and a
+  provider choice when adding a connection (Anthropic, OpenAI, Google, a local server, other);
+  Google works from 26.2.
+
 **Tasks**
 
 26.0 **The dependency** (approved by the maintainer on 2026-11-17): `golang.org/x/oauth2`, with its
