@@ -4,7 +4,11 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
-## [Unreleased]
+## [0.6.1] - 2026-11-25
+
+Interface corrections from daily use, ahead of the cloud AI work of 0.7. One migration (00030,
+the category archive); it adds a column, a table and five triggers and changes no existing row.
+
 
 ### Added
 
