@@ -8,6 +8,43 @@ notes of their version.
 
 ### Added
 
+- **Google Cloud's models without a stored key** (ADR 0045,
+  [docs/assistant.md](docs/assistant.md) "Using a cloud model"). A connection with `auth: google`
+  names a project and a location and gets short-lived tokens from the instance's own Google
+  credentials (workload identity, a developer's login, or an external-account file). The token is
+  renewed before it runs out, once more after a `401`, and is sent to Vertex AI's hosts only. The
+  location is always chosen; there is no default. Add one under Administration → Assistant →
+  *Add a connection* → **Google**, or in the connections file (`auth`, `project`, `location`).
+  A cloud model sees synthetic data only for now: nothing changes for an instance without such a
+  connection.
+- **A daily token budget per connection**, for everyone together (Administration → Assistant →
+  Models): once used up, questions on that connection answer `limit_reached` until the next UTC
+  day. The count is the provider's own: requests now ask for the usage of a streamed answer.
+- **Consent names the provider and the place:** the dialog, the "cloud" badge and the assistant
+  settings say who gets the data and where ("Google Cloud (Vertex AI), in europe-west4"), with a
+  paragraph the administrator writes on what the provider keeps.
+- `llmmock -vertex project/location`: the mock as Vertex AI's endpoint and Google's metadata
+  server, with tokens that run out.
+- API: `auth`, `project`, `location` and `caps` on an administrator's connection; `dailyTokens` and
+  `tokensToday` on its controls; `provider`, `location` and `cloudNote` in the assistant's status;
+  `assistant.cloudNote` in the instance settings. Migrations 00031 and 00032.
+
+### Changed
+
+- A provider's endpoint is not treated as a local model server: nothing beside its address is
+  probed, its model list is the connection's own, and loading and unloading "don't apply".
+- The system prompt's opening line no longer tells a model at a cloud provider that the app is
+  private and self-hosted.
+- New module: `golang.org/x/oauth2` (with `cloud.google.com/go/compute/metadata`).
+
+## [0.6.1] - 2026-11-25
+
+Interface corrections from daily use, ahead of the cloud AI work of 0.7. One migration (00030,
+the category archive); it adds a column, a table and five triggers and changes no existing row.
+
+
+### Added
+
 - **Archive a category** instead of deleting it (Settings → Categories). An archived category
   behaves as removed: its transactions become uncategorised, rules that set it lose that action, its
   budget goes, and its name is free. *Unarchive* brings it back with the labels you set by hand, its
