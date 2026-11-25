@@ -24,7 +24,7 @@
    - Phases 0–21: done ([overview](#overview))
    - [Rev 5: the plan after going public](#rev-5--the-plan-after-going-public-2026-11-16)
    - [22 Security I](#phase-22--security-i-patches-pins-and-scanners--size-m) · [23 Security II](#phase-23--security-ii-runtime-cluster-and-privacy-hardening--size-l) · [24 Observability](#phase-24--observability-correlated-logs-complete-traces-the-synthetic-marker--size-m) · [25 Simulator](#phase-25--the-traffic-simulator-ten-animals-on-a-lab-instance--size-l)
-   - [26 Cloud AI](#phase-26--cloud-ai-a-vertex-ai-connection-for-the-assistant--size-m) · [27 Google Cloud lab](#phase-27--google-cloud-lab-terraform-and-gke-autopilot-on-demand--size-l) · [28 New interface and phone](#phase-28--new-interface-and-phone--size-xl-was-phase-22-phone-and-touch) · [29 Release 1.0](#phase-29--release-10--size-m-was-phase-23)
+   - [26 Cloud AI](#phase-26--cloud-ai-a-vertex-ai-connection-for-the-assistant--size-m) · [27 Google Cloud lab](#phase-27--google-cloud-lab-terraform-and-gke-autopilot-on-demand--size-xl) · [28 New interface and phone](#phase-28--new-interface-and-phone--size-xl-was-phase-22-phone-and-touch) · [29 Release 1.0](#phase-29--release-10--size-m-was-phase-23)
 10. [Appendices](#10-appendices)
 
 ---
@@ -45,7 +45,7 @@ new interface gets its own design-led phase, and the release is last:
 | **24** (new) | Observability: panics counted, logs correlated with traces and collected (Loki + Alloy), complete traces, the missing metrics, and a trusted marker for synthetic traffic |
 | **25** (new) | The traffic simulator: ten animal-named synthetic users on a lab instance, a separate service with its own tuning page; `v0.6.0` |
 | **26** (new) | Cloud AI: a Vertex AI connection for the assistant (short-lived tokens, no keys), on synthetic data only; `v0.7.0` |
-| **27** (new) | Google Cloud lab: Terraform and GKE Autopilot, brought up and destroyed on demand, synthetic data only |
+| **27** (new) | Google Cloud lab: Terraform and GKE Autopilot, brought up and destroyed on demand, synthetic data only; a cloud model sees only what a question needs, with personal values as reversible placeholders (part B, added 2026-11-25) |
 | **28** (was 22) | New interface and phone: design exploration with several directions and prototypes first, then the build; `v0.8.0` |
 | **29** (was 23) | Release 1.0: the public demo host, write-ups, screenshots, `v1.0.0` (its security tasks moved to Phases 22 and 23) |
 
@@ -2111,7 +2111,7 @@ Write `docs/THREAT-MODEL.md` in Phase 5 and update it in Phase 16. Baseline cont
 | **M6 Sharing and agents** | 19 Admin, themes, friends, shared groups · 20 Agentic assistant, advice library, CLI | Several people share expenses; the assistant can act (with consent and undo); agents use the app |
 | **M7 Going public** | 21 Synthetic test data, neutral wording, fail-closed defaults, README | The repository is public |
 | **M8 Secure and observable** (Rev 5) | 22 Security I: patches, pins, scanners · 23 Security II: runtime, cluster, privacy, two-step sign-in · 24 Observability and the synthetic marker | Every known finding closed; signed images enforced; one request can be followed through logs, traces and jobs (`v0.5.0`) |
-| **M9 Lab and cloud** (Rev 5) | 25 Traffic simulator · 26 Cloud AI (Vertex AI) · 27 Google Cloud lab (Terraform, GKE) | A lab instance with ten synthetic users, also on GKE on demand, with a cloud model on synthetic data (`v0.7.0`) |
+| **M9 Lab and cloud** (Rev 5) | 25 Traffic simulator · 26 Cloud AI (Vertex AI) · 27 Google Cloud lab (Terraform, GKE) and de-identification for cloud models | A lab instance with ten synthetic users, also on GKE on demand, with a cloud model on synthetic data that sees only what a question needs (`v0.7.0`) |
 | **M10 Interface and release** (Rev 5) | 28 New interface and phone · 29 Release 1.0 | A redesigned interface that works on a phone (`v0.8.0`), then `v1.0.0` with a public demo |
 
 Each phase below lists: **Goal · Size · Read first · Tasks · Acceptance criteria · Gate**. Tasks are ordered. Each numbered task should be its own commit, or a few commits.
@@ -4637,21 +4637,29 @@ at the cost in Google Cloud's billing report.
 
 **Later, as separate decisions:** a cloud model for the instance with real data (needs a token
 source from a cluster outside Google: a workload identity pool that trusts the cluster's service
-account issuer, with the key set uploaded); stronger masking than long numbers; keys per user
-(in the backlog, and more interesting once a cloud model exists).
+account issuer, with the key set uploaded); stronger masking than long numbers (planned since
+2026-11-25: Phase 27, part B); keys per user (in the backlog, and more interesting once a cloud
+model exists).
 
 ---
 
-### Phase 27 — Google Cloud lab: Terraform and GKE Autopilot on demand · Size L
+### Phase 27 — Google Cloud lab: Terraform and GKE Autopilot on demand · Size XL
 
 **Goal:** `make gcp-up` builds a complete lab on Google Cloud from nothing (network, cluster,
 identities, the lab instance, the simulator, monitoring, the Vertex AI connection),
 `make gcp-down` removes all of it, and nothing with a cost is left behind. Synthetic data only.
+**Part B** (added 2026-11-25, the maintainer; it made the phase XL): a cloud model sees only what a
+question needs, and the personal values in it as placeholders that it can use but not read,
+measured for what leaks and for what it costs in accuracy.
 
 **Read first:** Phase 16, `docs/RUNBOOK.md`, ADR 0022, ADR 0023, ADR 0024, Phases 25 and 26,
 `deploy/helm/finuance/` (every template), `deploy/k8s/db/`, `deploy/k8s/argocd/`,
 `deploy/environments/homelab/`, `tools/rehearsal.sh`, `tools/seal-secrets.sh`,
-`tools/check-env-details.sh`.
+`tools/check-env-details.sh`. For part B also: ADR 0015, ADR 0030, `docs/assistant.md`,
+`docs/evals.md`, `backend/internal/assistant/` (`mask.go`, `prompt.go`, `tools.go`, `args.go`,
+`run.go`, `tooldefs.go`, `eval/`), `backend/testutil/llmmock/`, `backend/cmd/anonymize/README.md`
+(its keyed, consistent mapping is the idea reused; the tool itself is not), `tools/check-private.sh`
+(the card rule), THREAT-MODEL I7, I18 and B11, register row `AI-2`.
 
 **Decisions** (a new ADR; the facts are of 2026-11-16 and *re-check*)
 
@@ -4752,14 +4760,186 @@ hand once: a project, billing, the state bucket, the identity pool for CI; up an
 cost, taken from the billing report of the gate session), the ADR, the RUNBOOK, THREAT-MODEL (the
 cloud environment and its identities), `docs/COMPONENTS.md`.
 
+**Part B — what a cloud model sees** (added 2026-11-25, the maintainer)
+
+Today a cloud connection gets the one-way mask of `AI-2` (`mask.go`: digit runs of six or more,
+grouped numbers and e-mail addresses cut to a hint) over tool results, earlier answers and the
+names in the prompt; the question goes as typed. What is left: the system prompt carries the 40
+most frequent payees, the top 60 categories, the group names and an example value per column on
+every question, whatever it asks; a search returns every field of up to 25 rows; nothing finds a
+person's name, an address or a number the patterns miss; and a masked value is lost to the model
+(it can't search for `12…`). Part B sends less (minimisation) and replaces what still has to go
+with placeholders that come back as the real values (pseudonymisation). 27.13–27.16 need neither
+Google nor the cluster and go first, on the Compose lab, in pull requests of their own; 27.17
+follows 27.12's approval; 27.18 needs Phase 26 and 27.6.
+
+**Decisions (part B)** (a second new ADR, 27.19)
+
+| Question | Decision | Why |
+|---|---|---|
+| Less first, then hidden | Minimisation (27.13, 27.14) before detection: a value that isn't sent needs no placeholder | "How much did I spend last month" already gets totals only (`aggregate_transactions`); it should not carry forty payee names in the prompt either |
+| Where the mapping lives | In the memory of the process that runs the question (the api, or the worker for a digest), for that run only; rebuilt from the chat at every run and numbered by first appearance, so a chat's placeholders stay the same from turn to turn. Never stored, logged, put in a span or sent to a detector | One place for every detector; nothing to delete afterwards; a wrong placeholder can only name the user's own value |
+| What a detector does | Finds, never replaces: it returns spans (start, end, kind, score), never text | One contract for the Go rules, Presidio and Sensitive Data Protection; the reversal is written once |
+| What is replaced | Text only: payees, titles, categories, groups, account names, group keys, notes, earlier answers, the question. Never amounts, dates or ids | Answers need amounts and dates; proposals send ids back (`maskJSONStrings` keeps them today) |
+| The user's own words | Replaced with the same mapping: a change to `AI-2`'s rule that the question goes as typed | A name in the question must meet the same placeholder as the rows it means; with reversible placeholders the model loses nothing |
+| A detector that fails | The run is refused before anything is sent (`503 deid_unavailable`) | The project fails closed |
+| The one-way mask | Stays, as the last pass over whatever no detector claimed | A floor that doesn't depend on how good detection is |
+| Which detector where | The Go rules on every cloud connection (they can't be switched off there); Presidio by choice per connection; Sensitive Data Protection on a lab only | Presidio runs inside the cluster, so it could serve real data later; Sensitive Data Protection reads the text it inspects, so it is for synthetic data, like the cloud model itself |
+| Receipt photos | Sent as the user's own input, as today (I18), and the consent dialog says so | Finding text in an image needs a model of its own; reading a receipt locally first is not part B |
+
+**Tasks (part B)**
+
+27.12 **The dependencies** (to approve at the phase start, like 26.0): `presidio-analyzer` and spaCy
+for 27.17, with a Polish and an English pipeline, and the Python packages they bring (listed in the
+pull request; osv-scanner and dependency review on the lock file). A licence decision for the
+maintainer (*re-check*): spaCy's Polish pipelines are published under GPL-3.0, which the dependency
+review's allowlist doesn't have and which would ship inside a public image; the alternatives are a
+model under a permissive licence that finds Polish names well enough (27.16 measures it) or no
+Polish model. No other new Go module: 27.18 calls a REST API with 26.1's token source
+(`golang.org/x/oauth2`, approved).
+
+27.13 **Less in the prompt.** Connections gain `privacy.minimise` (on by default for a cloud
+connection, off for a local one; in the configuration file and the stored connection, with a
+migration). With it the system prompt's facts (`prompt.go`) leave out the payee list and the column
+examples (the columns and their roles stay), and the prompt says to use `find_values` when a
+spelling matters, the path the model already has for it. Categories and group names stay: they are
+the user's own words, and 27.15 replaces what a detector finds in them. Counted for 27.16: the
+prompt's characters and the distinct payees in it, before and after.
+
+27.14 **Only the fields a question needs.** `search_transactions` gains `fields` (any of `date`,
+`amount`, `category`, `payee`, `title`, `kind`, `group`, `account`) in both toolsets. With
+`minimise`: by default `date`, `amount` and `category`, plus each field the call's filter or sort
+uses; the others only when named; 10 rows by default instead of 25 (the user's `maxRows` still caps
+it). The receipt tool's candidates likewise. A search result stored by an earlier turn on a local
+connection is cut to the same fields before it goes to a cloud model. Without `minimise` nothing
+changes unless the model names `fields`. `aggregate_transactions` is unchanged: it returns sums
+only.
+
+27.15 **Placeholders that go both ways** (`internal/assistant/deid`, no dependency):
+* **Detectors** behind one interface (`Detect(ctx, texts, lang)` → spans with UTF-8 byte offsets,
+  one batch per model round); of overlapping spans the longest wins, then the higher score.
+* **The Go rules** (`rules`): IBANs of any country with the mod-97 check, and the Polish 26-digit
+  account number with its check digits, spaced or not; payment card numbers by network prefix,
+  length and Luhn (the rule of `check-private.sh`, with shared test vectors); PESEL and NIP with
+  their checksums; Polish phone numbers; e-mail addresses; postcodes. A number that fails its check
+  is left to the one-way mask.
+* **The vault:** placeholders `KIND_n` (`PERSON_1`, `IBAN_2`, `CARD_1`, `PESEL_1`, `NIP_1`,
+  `PHONE_1`, `EMAIL_1`, `ADDRESS_1`, `POSTCODE_1`). One value, normalised as search normalises it
+  (digits without spaces), gets one placeholder, numbered by first appearance over the chat in
+  order; at most 2,000 values a run, beyond them the one-way mask. 27.16 chooses the format between
+  `PERSON_1` and a bracketed form (*re-check* which one small models copy exactly).
+* **A dictionary pass:** every value in the vault is also replaced where it appears again,
+  case- and accent-insensitive, so a name a detector missed in one place gets its placeholder from
+  another.
+* **Outgoing:** the history, the question, the prompt's facts and each tool result before it is
+  sent: detect, replace, then `MaskDigits` over the rest. In a tool's JSON, string values only and
+  never ids, as `maskJSONStrings` does today.
+* **Incoming:** a tool call's arguments are resolved after `parseArgs`, string values only, before
+  validation (a filter "payee contains PERSON_1" works; a placeholder the vault doesn't hold is a
+  tool error the model reads). A proposal's values are resolved before it is stored, so the card
+  shows, and the user applies, the real values. The streamed answer and the reasoning are turned
+  back before they reach the browser, holding back a tail that could still become a placeholder
+  (at most the longest one) and flushing it at the end; a stored answer keeps the real values
+  (what the user saw). Digests (the worker) take the same path.
+* **Settings:** `privacy.detectors` on a connection (`rules`, `presidio`, `sdp`; a cloud
+  connection always has `rules`). Administration → Assistant shows both privacy settings, and
+  26.5's consent dialog names them.
+* **Never written down:** values and the vault are in no log line and no span. Counts only:
+  `finuance_deid_entities_total{kind,detector}`, `finuance_deid_detect_duration_seconds{detector}`,
+  `finuance_deid_failures_total{detector}`, and the run's span carries the counts per kind. 23.4's
+  canary test gains a planted name and IBAN.
+* **Tests:** `FuzzVaultRoundTrip` (replace, then restore, gives the input back); a stream split at
+  every position equals the whole; amounts with thousands separators and dates are never touched;
+  each rule's valid and invalid checksums; a run on `llmmock` in which the model calls a tool with a
+  placeholder and answers with one: the tool reads the real value, the browser gets the real answer,
+  a proposal is applied with the real value, and no planted value is in the mock's `Requests()`; a
+  failing detector refuses the run with nothing sent.
+
+27.16 **Two measurements in the eval harness:** `make eval-assistant … PRIVACY=off|minimise|deid|both
+DETECTORS=…`.
+* **A sensitive variant of the eval's demo year:** the same data with planted synthetic
+  identifiers in payees, titles and notes (people's names from a fixed invented list, IBANs with
+  valid checks under a bank code no bank uses, the card networks' test numbers, PESEL and NIP with
+  valid checksums, phone numbers, street addresses, e-mail addresses at reserved domains), each
+  recorded with its kind. Every file passes `check-private.sh` (its allowlist gains the reserved
+  forms if it must). New questions that need them ("how much did I send to <name> in February",
+  "which payments went to account …").
+* **Leakage:** the harness keeps every request body sent to the model in memory (never written)
+  and looks for each planted value in it (normalised, digits without spaces; a surname alone
+  counts) → leaks per kind and detector.
+* **Exposure:** per question, the rows, the fields and the distinct payee names sent, and the
+  prompt's characters.
+* **Accuracy:** the 65 questions and the new ones under each setting, by category as today, with
+  latency and, on Vertex (26.7), the cost of a run.
+* `docs/evals.md` gains the tables. A deterministic version runs on `llmmock` in
+  `make test-integration`: leakage 0 for every structured kind with `rules`.
+
+27.17 **Names: a Presidio detector, in the lab first** (`deid/`, Python, after 27.12's approval):
+* **A small service:** `POST /v1/analyze` (texts and a language → spans with UTF-8 byte offsets,
+  converted from Presidio's character offsets, kinds and scores) and `GET /healthz`, nothing else.
+  Presidio's analyzer as a library with spaCy for Polish and English, its labels mapped (*re-check*
+  the model's label names); organisations are not personal and are not returned (merchants are
+  organisations). Recognizers of its own only where the Go rules can't help (street addresses).
+  Presidio's anonymizer is not used: the vault is 27.15's.
+* **Quiet by construction:** no request body or text in any log (Presidio's loggers at warning; a
+  canary test), a bounded request size, a timeout per batch.
+* **The image** `finuance-deid` (`deploy/docker/Dockerfile.deid`: Python by digest, wheels
+  installed with `--require-hashes`, the model as a checksummed file, non-root, a read-only file
+  system), built, scanned (Trivy, osv-scanner), signed and attested like the other four. The
+  admission policy admits it in `finuance-lab` only, and the rehearsal's probes check that it is
+  refused elsewhere.
+* **Deployment:** `deid.presidio.enabled` in the chart (a Deployment and a Service, one replica in
+  the lab; ingress from the api and the worker only, no egress at all); `compose.lab.yaml` on
+  Compose.
+* **Tests:** the standard library's `unittest` for the service (offsets around Polish letters, the
+  canary); the Go client against a fake; `check-lab.sh` asks one question whose rows hold a planted
+  name and finds its placeholder, not the name, in the mock's history.
+* **Measured with 27.16:** names found and missed, merchants taken for people, the accuracy cost,
+  the latency of a batch and the service's memory.
+
+27.18 **Sensitive Data Protection in the Google Cloud lab:**
+* **A detector in Go** over the REST API (`projects/{project}/locations/{location}/content:inspect`,
+  plain JSON with 26.1's token source): the info types matching the rules' kinds plus person names
+  and street addresses (*re-check* the names, the Polish ones among them, and the unit of a
+  finding's offsets), `includeQuote: false` so the answer carries no text, a minimum likelihood as
+  a setting.
+* **Where it may run:** the configuration refuses `sdp` on an instance that is not a lab
+  (`FINUANCE_SIMULATION`): the service reads the text it inspects, so it is for synthetic data,
+  like the cloud model.
+* **Access:** 26.2's host allowlist gains the service's host for the connection's location
+  (*re-check* the regional endpoints for an EU location); 27.3's identities module gives the lab's
+  api and worker `roles/dlp.user` by workload identity; egress through 27.1's Google API range;
+  27.3's budget alerts cover its cost.
+* **Measured with 27.16:** leakage and accuracy next to the rules alone and Presidio, and the cost
+  of an eval run from the billing report.
+* *Stretch:* the service's own reversible de-identification (deterministic encryption with a
+  Cloud KMS–wrapped key and a surrogate info type, then re-identification) run once against the same
+  eval, and recorded with why the vault stays in the api.
+
+27.19 **Documents (part B):** a new ADR (minimisation, the vault, the detectors and what each one
+sees, failing closed, the change to `AI-2`); `docs/assistant.md` "What a cloud model sees", with one
+request before and after; `docs/features.md`; THREAT-MODEL (I7 rewritten, the detector service as a
+boundary inside the lab, Sensitive Data Protection inside B11, a wrong placeholder names only the
+user's own values); `docs/evals.md`; `docs/COMPONENTS.md` (the detector service);
+`CHANGELOG.md`. Whether the instance with real data may then use a cloud model stays the separate
+decision of Phase 26's "Later".
+
 **Acceptance criteria**
 - [ ] From nothing to green smoke tests with `make gcp-up`, in a measured and recorded time.
 - [ ] Ten animals run for an hour on GKE; one of them gets an answer from a model on Vertex AI; dashboards, logs and traces show it.
 - [ ] The restore from the bucket passes.
 - [ ] After `make gcp-down`, `make gcp-verify-empty` finds nothing; the session's cost is recorded.
 - [ ] No project id, key or address of the environment is in the repository (`check-env-details`); no service account key exists.
+- [ ] Part B: with `minimise`, "how much did I spend last month" reaches a cloud model without a single payee name.
+- [ ] Part B: with `rules`, no planted structured identifier reaches the model in the eval (0 per kind); for names, each detector's leakage and its cost in accuracy are measured and in `docs/evals.md`.
+- [ ] Part B: every placeholder in a tool call, a proposal and a streamed answer is turned back into its value; none reaches the browser or the database.
+- [ ] Part B: a cloud run whose detector is down is refused with nothing sent.
+- [ ] Part B: no value, mapping or text in any log line, span or output of the detector service (the canary tests).
 
-**Gate (the maintainer):** up, look around, down, alone with `docs/gcp.md`.
+**Gate (the maintainer):** up, look around, down, alone with `docs/gcp.md`. Part B: read the request
+before and after in `docs/assistant.md` and the leakage table in `docs/evals.md`; on the GKE lab, ask
+about a planted name with Sensitive Data Protection on: the answer names the person, and the run's
+trace counts one `PERSON`.
 
 ---
 

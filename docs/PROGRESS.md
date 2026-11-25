@@ -283,7 +283,7 @@ Phase 21 — Going public (closed)
 In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance criteria and gate.
 
 - **Phase 26 — Cloud AI**: a Vertex AI connection with short-lived tokens, on synthetic data; `v0.7.0`.
-- **Phase 27 — Google Cloud lab**: Terraform and GKE Autopilot, up and down on demand.
+- **Phase 27 — Google Cloud lab**: Terraform and GKE Autopilot, up and down on demand. Part B (added 2026-11-25): a cloud model sees only what a question needs, and personal values as reversible placeholders (Go rules, a Presidio detector in the lab, Sensitive Data Protection in the Google Cloud lab), measured for leakage and accuracy.
 - **Phase 28 — New interface and phone**: several design directions and prototypes first, then the build; `v0.8.0`.
 - **Phase 29 — Release 1.0**: the demo host, write-ups, screenshots, `v1.0.0`.
 
@@ -388,6 +388,7 @@ Still ideas
 
 ## Session log
 
+- 2026-11-25 — Planning, no code changed. The maintainer added part B to Phase 27 (PLAN 27.12–27.19): less in a cloud model's prompt and search results, reversible placeholders for personal values found by three detectors (Go rules, Presidio in the lab, Sensitive Data Protection in the Google Cloud lab), and the eval harness measuring leakage, exposure and accuracy. Open for the phase start: the Python dependencies, and the licence of spaCy's Polish pipelines (GPL-3.0).
 - 2026-11-24 — The maintainer approved `v0.6.0-rc.2`'s release; verified from outside (all four digests' provenance from the tag at `4b8b758`) and on the homelab (pull request 86: every application synced and healthy, the new pods admitted, no migration, no `5xx`; the api, the worker and the migration restarted once at start, 27.10; one refused push from Prometheus to Alertmanager during the rollout, gone a few minutes later). The maintainer took the three decisions and asked the agent to walk the gate: walked, and its one finding (expired friend codes on the simulator's board) fixed. `report-uri` kept, with a ZAP hook for its notice. Next: pull request 14, `v0.6.0`.
 - 2026-11-23 (later) — Pull requests 9–12 (80–83: the day in the lab's record and fixes, load mode and randomness, history profiles, what the load costs) merged on the phase's rules. The load run (25.17) found the reclassification's `FOR UPDATE` lock behind its breaking point (pull request 84); with it fixed the same lab carried 96 actions a second within the objective. CI's runner needed Docker's root mounted for cAdvisor (classic storage) and a longer wait for the live strip's first rate. Next: pull request 13, `v0.6.0-rc.2`, the gate.
 - 2026-11-23 — The machine restarted on 2026-11-22 after 26 hours of the day in the lab; its Grafana didn't come back. Started again, the day's numbers read (`docs/perf.md`): no `5xx`, two failed actions (an empty statement), doubled worker lines in Loki (Alloy's positions on a tmpfs, Loki's stream shards); the three fixed. The maintainer asked for the animals to load the system, replace the load-test users and get resource views; planned as 25.13–25.17 and approved. Next: pull request 9, then the load mode.
