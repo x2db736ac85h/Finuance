@@ -122,7 +122,61 @@ function Instructions() {
   const settings = useInstanceSettings();
   if (!settings.data)
     return <div className="set-card">{settings.isError ? errorMessage(settings.error) : 'Loading…'}</div>;
-  return <InstructionsForm key={settings.data.version} doc={settings.data} />;
+  return (
+    <>
+      <InstructionsForm key={settings.data.version} doc={settings.data} />
+      <CloudNoteForm key={`note-${String(settings.data.version)}`} doc={settings.data} />
+    </>
+  );
+}
+
+const MAX_CLOUD_NOTE = 400;
+
+/** What a cloud provider keeps, in the administrator's words: shown where a person agrees (26.5). */
+function CloudNoteForm({ doc }: { doc: InstanceSettings }) {
+  const put = usePutInstanceSettings();
+  const [text, setText] = useState(doc.assistant?.cloudNote ?? '');
+  return (
+    <div className="set-card">
+      <div className="lbl">What a cloud provider keeps</div>
+      <p className="hint">
+        One paragraph shown where a person agrees to a cloud connection: how long the provider keeps questions, whether
+        it logs them, what you switched off. Finuance can't know this; you can. Empty: nothing is shown.
+      </p>
+      <textarea
+        className="adm-text"
+        aria-label="What a cloud provider keeps"
+        rows={3}
+        maxLength={MAX_CLOUD_NOTE}
+        value={text}
+        placeholder="e.g. Google keeps prompts for up to 30 days for abuse monitoring; caching is switched off."
+        onChange={(e) => {
+          setText(e.target.value.replace(/[\r\n]+/g, ' '));
+        }}
+      />
+      <div className="set-actions">
+        <span className="hint">
+          {text.length} / {MAX_CLOUD_NOTE}
+        </span>
+        <Button
+          variant="primary"
+          disabled={put.isPending || text === (doc.assistant?.cloudNote ?? '')}
+          onClick={() => {
+            void put.mutateAsync({ ...doc, assistant: { ...doc.assistant, cloudNote: text.trim() } }).then(
+              () => {
+                toast('Saved the note');
+              },
+              (e: unknown) => {
+                toast(errorMessage(e), { kind: 'error' });
+              },
+            );
+          }}
+        >
+          Save
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function InstructionsForm({ doc }: { doc: InstanceSettings }) {

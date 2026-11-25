@@ -39,6 +39,7 @@ import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';
 import { reencodePhoto } from './photos';
 import { TurnView } from './Turn';
 import { txPath } from '../lib/paths';
+import { cloudWhere, cloudWho } from './cloud';
 
 const SUGGEST = [
   'How much did I spend last month, by category?',
@@ -246,7 +247,11 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         />
         <span className="chat-model">
           {conn ? model || conn.label : enabled ? '' : 'not configured'}
-          {conn?.cloud && <span className="badge cloud">cloud</span>}
+          {conn?.cloud && (
+            <span className="badge cloud" title={cloudWhere(conn) || 'A cloud service'}>
+              cloud{conn.location ? ` · ${conn.location}` : ''}
+            </span>
+          )}
         </span>
         <span className="spacer" />
         <IconButton
@@ -435,10 +440,15 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         {consentFor && (
           <div className="conn">
             <p>
-              <b>{consentFor.label}</b> runs outside this server. Your questions, the photos you attach (receipts) and
-              the transactions the model looks up (payees, amounts, dates, titles) will be sent there. Long numbers such
-              as account numbers are shortened first; photos are sent as they are.
+              <b>{consentFor.label}</b> {cloudWho(consentFor)} Your questions, the photos you attach (receipts) and the
+              transactions the model looks up (payees, amounts, dates, titles) will be sent there. Long numbers such as
+              account numbers are shortened first; photos are sent as they are.
             </p>
+            {status.data?.cloudNote && (
+              <p className="cloud-note">
+                <b>What it keeps, from your administrator:</b> {status.data.cloudNote}
+              </p>
+            )}
             <p className="hint">You can withdraw this in the assistant settings at any time.</p>
             <div className="row2">
               <Button

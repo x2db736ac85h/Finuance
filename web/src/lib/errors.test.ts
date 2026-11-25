@@ -41,4 +41,21 @@ describe('errorMessage', () => {
   it('explains a request that never reached the server', () => {
     expect(errorMessage(new TypeError('Failed to fetch'))).toMatch(/Can't reach the Finuance server/);
   });
+  it('says whose limit it is: the account’s, or a connection’s budget for everyone (26.4)', () => {
+    const limit = (name: string, value: number) =>
+      errorMessage(
+        new ApiError(
+          problem({
+            status: 422,
+            code: 'limit_reached',
+            title: 'A limit of your account was reached',
+            limit: { name, value },
+          }),
+        ),
+      );
+    expect(limit('maxAccounts', 3)).toBe('Your account allows 3 accounts. Ask an administrator if you need more.');
+    expect(limit('connectionTokensPerDay', 2000000)).toBe(
+      "This connection's budget for today (2,000,000 tokens, for everyone) is used up. It starts again tomorrow (UTC); another connection may still answer.",
+    );
+  });
 });

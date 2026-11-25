@@ -76,14 +76,21 @@ type oaRequest struct {
 	ReasoningEffort string      `json:"reasoning_effort,omitempty"`
 	MaxTokens       int         `json:"max_tokens,omitempty"`
 	Stream          bool        `json:"stream"`
+	// StreamOptions asks for the usage of a streamed answer (PLAN 26.4): without it a stream
+	// reports no token counts, and budgets ran on an estimate.
+	StreamOptions *oaStreamOptions `json:"stream_options,omitempty"`
 	// TTL is LM Studio's idle time in seconds for a model it loads for this request.
 	TTL int `json:"ttl,omitempty"`
+}
+
+type oaStreamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
 }
 
 func strp(s string) *string { return &s }
 
 func (o *openAIClient) body(req Request) ([]byte, error) {
-	r := oaRequest{Model: req.Model, Temperature: req.Temperature, Stream: true}
+	r := oaRequest{Model: req.Model, Temperature: req.Temperature, Stream: true, StreamOptions: &oaStreamOptions{IncludeUsage: true}}
 	if req.KeepAlive > 0 && o.Server() == ServerLMStudio {
 		r.TTL = int(req.KeepAlive / time.Second)
 	}

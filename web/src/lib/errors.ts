@@ -11,10 +11,19 @@ const LIMIT_TEXT: Record<string, (v: number) => string> = {
   assistantPerHour: (v) => `${fmtInt(v)} assistant questions an hour`,
 };
 
+/** Limits that are not the account's own: the whole sentence. */
+const LIMIT_SENTENCE: Record<string, (v: number) => string> = {
+  // a connection's budget, across everyone (ADR 0045)
+  connectionTokensPerDay: (v) =>
+    `This connection's budget for today (${fmtInt(v)} tokens, for everyone) is used up. It starts again tomorrow (UTC); another connection may still answer.`,
+};
+
 /** A sentence for the user: the server's explanation, or what to do about a network failure. */
 export function errorMessage(e: unknown): string {
   if (e instanceof ApiError) {
     const limit = e.problem.limit;
+    const sentence = limit && LIMIT_SENTENCE[limit.name];
+    if (limit && sentence) return sentence(limit.value);
     const text = limit && LIMIT_TEXT[limit.name];
     if (limit && text) return `Your account allows ${text(limit.value)}. Ask an administrator if you need more.`;
     const field = e.problem.errors?.[0];

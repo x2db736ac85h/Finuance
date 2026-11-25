@@ -73,7 +73,10 @@ func authIn(a *gen.ConnectionAuth) string {
 
 func controlsDTO(c assistant.Controls) gen.AdminConnectionControls {
 	out := gen.AdminConnectionControls{Enabled: c.Enabled, DefaultModel: c.DefaultModel, PhotoModel: c.PhotoModel, Version: c.Version,
-		UpdatedAt: c.UpdatedAt}
+		UpdatedAt: c.UpdatedAt, TokensToday: c.TokensToday}
+	if c.DailyTokens > 0 {
+		out.DailyTokens = &c.DailyTokens
+	}
 	if c.UnloadAfter > 0 {
 		m := int(c.UnloadAfter / time.Minute)
 		out.UnloadAfterMinutes = &m
@@ -91,11 +94,11 @@ func (a *api) AdminPutConnectionControls(ctx context.Context, req gen.AdminPutCo
 	b := req.Body
 	was := a.conns().ControlsOf(req.Name).Enabled
 	c, err := s.SetControls(ctx, req.Name, assistant.ControlsInput{Enabled: b.Enabled, UnloadAfterMinutes: b.UnloadAfterMinutes,
-		DefaultModel: b.DefaultModel, PhotoModel: b.PhotoModel, Version: b.Version})
+		DefaultModel: b.DefaultModel, PhotoModel: b.PhotoModel, DailyTokens: b.DailyTokens, Version: b.Version})
 	if err != nil {
 		return nil, err
 	}
-	meta := map[string]any{"connection": c.Name, "change": "controls", "enabled": b.Enabled, "unloadAfterMinutes": b.UnloadAfterMinutes,
+	meta := map[string]any{"connection": c.Name, "change": "controls", "enabled": b.Enabled, "unloadAfterMinutes": b.UnloadAfterMinutes, "dailyTokens": b.DailyTokens,
 		"defaultModel": b.DefaultModel, "photoModel": b.PhotoModel}
 	if was && !b.Enabled {
 		meta["unloaded"] = a.conns().UnloadAll(ctx, c.Name) == nil

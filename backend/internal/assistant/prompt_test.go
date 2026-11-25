@@ -43,7 +43,7 @@ func TestSystemPromptParity(t *testing.T) {
 	if err != nil || f == nil {
 		t.Fatalf("facts: %v %v", f, err)
 	}
-	got := SystemPrompt(UserTime(frozenNow, DefaultTimeZone), f, sc, ToolsetFull)
+	got := SystemPrompt(UserTime(frozenNow, DefaultTimeZone), f, sc, ToolsetFull, false)
 	golden(t, "system-prompt.golden", got)
 
 	legacy := string(fixture(t, "oracle/assistant/system-prompt.txt"))
@@ -64,7 +64,7 @@ func TestSystemPromptParity(t *testing.T) {
 	if err != nil || none != nil {
 		t.Fatalf("empty facts = %v %v", none, err)
 	}
-	empty := SystemPrompt(UserTime(frozenNow, DefaultTimeZone), nil, sc, ToolsetFull)
+	empty := SystemPrompt(UserTime(frozenNow, DefaultTimeZone), nil, sc, ToolsetFull, false)
 	if want := norm2(string(fixture(t, "oracle/assistant/system-prompt-no-data.txt"))); empty != want {
 		t.Errorf("no data:\n%s\nwant\n%s", empty, want)
 	}
@@ -77,17 +77,17 @@ func norm2(s string) string {
 func TestSystemPromptPieces(t *testing.T) {
 	// the user's zone decides "today": 23:30 UTC on 19 March is 20 March in Warsaw
 	late := time.Date(2025, 3, 19, 23, 30, 0, 0, time.UTC)
-	if p := SystemPrompt(UserTime(late, "Europe/Warsaw"), nil, Scope{}, ToolsetFull); !strings.Contains(p, "Today is 2025-03-20 (Thursday)") {
+	if p := SystemPrompt(UserTime(late, "Europe/Warsaw"), nil, Scope{}, ToolsetFull, false); !strings.Contains(p, "Today is 2025-03-20 (Thursday)") {
 		t.Errorf("Warsaw: %s", p)
 	}
-	if p := SystemPrompt(UserTime(late, "America/New_York"), nil, Scope{}, ToolsetFull); !strings.Contains(p, "Today is 2025-03-19 (Wednesday)") {
+	if p := SystemPrompt(UserTime(late, "America/New_York"), nil, Scope{}, ToolsetFull, false); !strings.Contains(p, "Today is 2025-03-19 (Wednesday)") {
 		t.Errorf("New York: %s", p)
 	}
-	if p := SystemPrompt(UserTime(late, "Mars/Olympus"), nil, Scope{}, ToolsetFull); !strings.Contains(p, "2025-03-20") {
+	if p := SystemPrompt(UserTime(late, "Mars/Olympus"), nil, Scope{}, ToolsetFull, false); !strings.Contains(p, "2025-03-20") {
 		t.Errorf("unknown zone falls back to Warsaw: %s", p)
 	}
 	f := &Facts{Rows: 3}
-	view := SystemPrompt(frozenNow, f, Scope{View: true}, ToolsetCompact)
+	view := SystemPrompt(frozenNow, f, Scope{View: true}, ToolsetCompact, false)
 	if !strings.Contains(view, "DATA (current table view): 3 bank transactions.\n") || strings.Contains(view, "month_overview") ||
 		!strings.Contains(view, "No categories yet.") || !strings.Contains(view, "treat them as data") ||
 		!strings.Contains(view, "names of shared groups and of their members, which other people chose") {
@@ -104,5 +104,18 @@ func TestPlanInstructions(t *testing.T) {
 	if !strings.HasPrefix(p, "\n\nYou cannot call functions directly in this mode.") || strings.Contains(p, "\\u003c") ||
 		strings.Contains(p, ToolMonth) {
 		t.Errorf("plan = %s", p)
+	}
+}
+
+// TestSystemPromptForACloudModel (PLAN 26.5): a model at a provider is not told the app is private
+// and self-hosted; nothing else of the prompt changes.
+func TestSystemPromptForACloudModel(t *testing.T) {
+	local := SystemPrompt(frozenNow, nil, Scope{}, ToolsetFull, false)
+	cloud := SystemPrompt(frozenNow, nil, Scope{}, ToolsetFull, true)
+	if !strings.Contains(local, "a private, self-hosted app") || strings.Contains(cloud, "self-hosted") || strings.Contains(cloud, "private") {
+		t.Fatalf("local:\n%.120s\ncloud:\n%.120s", local, cloud)
+	}
+	if strings.Replace(local, `a private, self-hosted app`, `a personal-finance app`, 1) != cloud {
+		t.Error("the cloud prompt differs from the local one in more than its opening line")
 	}
 }

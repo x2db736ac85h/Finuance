@@ -524,7 +524,14 @@ describe('administration', () => {
   });
 
   it('decides who picks the model, and switches a connection, its models and idle time; loads and unloads on Ollama', async () => {
-    const ctl = { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0 };
+    const ctl = {
+      enabled: true,
+      unloadAfterMinutes: 30,
+      defaultModel: '',
+      photoModel: '',
+      version: 0,
+      tokensToday: 48200,
+    };
     const conns: Schemas['AdminConnection'][] = [
       {
         name: 'homelab',
@@ -586,7 +593,7 @@ describe('administration', () => {
       http.put(`${API}/admin/assistant/connections/homelab/controls`, async ({ request }) => {
         const body = (await request.json()) as Schemas['AdminConnectionControlsInput'];
         controlPuts.push(body);
-        if (conns[0]) conns[0] = { ...conns[0], controls: { ...body, version: body.version + 1 } };
+        if (conns[0]) conns[0] = { ...conns[0], controls: { ...body, version: body.version + 1, tokensToday: 48200 } };
         return HttpResponse.json(conns[0]);
       }),
       http.post(`${API}/admin/assistant/connections/homelab/unload`, async ({ request }) => {
@@ -625,6 +632,12 @@ describe('administration', () => {
     expect(await within(form).findAllByRole('button', { name: 'Load' })).toHaveLength(2);
     fireEvent.change(within(form).getByLabelText('Model for photos'), { target: { value: 'qwen3-vl:4b' } });
     fireEvent.change(within(form).getByLabelText('Unload a model after'), { target: { value: '10' } });
+    // the budget for everyone together (26.4): what was used today, and a number that makes sense
+    expect(within(form).getByText(/Used today \(UTC\): 48,200 tokens/)).toBeTruthy();
+    const budget = within(form).getByLabelText(/^Daily token budget/);
+    fireEvent.change(budget, { target: { value: '500' } });
+    expect(within(form).getByRole<HTMLButtonElement>('button', { name: 'Save' }).disabled).toBe(true);
+    fireEvent.change(budget, { target: { value: '2,000,000' } });
     await userEvent.click(within(form).getByRole('checkbox', { name: /^On/ }));
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
     await waitFor(() => {
@@ -633,6 +646,7 @@ describe('administration', () => {
         unloadAfterMinutes: 10,
         defaultModel: '',
         photoModel: 'qwen3-vl:4b',
+        dailyTokens: 2000000,
         version: 0,
       });
     });
@@ -645,7 +659,14 @@ describe('administration', () => {
   });
 
   it('adds a connection for a provider with its key alone, and keeps models and the dialog apart (U12)', async () => {
-    const ctl = { enabled: true, unloadAfterMinutes: null, defaultModel: '', photoModel: '', version: 0 };
+    const ctl = {
+      enabled: true,
+      unloadAfterMinutes: null,
+      defaultModel: '',
+      photoModel: '',
+      version: 0,
+      tokensToday: 0,
+    };
     let conns: Schemas['AdminConnection'][] = [
       {
         name: 'anthropic',
@@ -825,7 +846,7 @@ describe('administration', () => {
       hasKey: false,
       keyUnreadable: false,
       version: 0,
-      controls: { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0 },
+      controls: { enabled: true, unloadAfterMinutes: 30, defaultModel: '', photoModel: '', version: 0, tokensToday: 0 },
       ...over,
     });
     let conns = [conn({})];

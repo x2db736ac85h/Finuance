@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 )
 
 type Querier interface {
@@ -20,6 +21,9 @@ type Querier interface {
 	ActiveSharedMemberIDs(ctx context.Context, groupID uuid.UUID) ([]uuid.UUID, error)
 	// One finished run's tokens on its UTC day (ADR 0033).
 	AddAssistantUsage(ctx context.Context, arg AddAssistantUsageParams) error
+	// Connection budgets (migration 00032): what a connection used on a UTC day, across all users.
+	// One finished run's tokens on its connection and UTC day.
+	AddConnectionUsage(ctx context.Context, arg AddConnectionUsageParams) error
 	AddFriendship(ctx context.Context, arg AddFriendshipParams) (int64, error)
 	AddLegacyImportFile(ctx context.Context, arg AddLegacyImportFileParams) error
 	AdminCountUsers(ctx context.Context, arg AdminCountUsersParams) (AdminCountUsersRow, error)
@@ -158,6 +162,7 @@ type Querier interface {
 	DeleteModelSettings(ctx context.Context, arg DeleteModelSettingsParams) (int64, error)
 	// Expired or revoked more than 30 days ago (the hourly session cleanup).
 	DeleteOldAccessTokens(ctx context.Context, cutoff time.Time) (int64, error)
+	DeleteOldConnectionUsage(ctx context.Context, before platform.Date) (int64, error)
 	DeleteOldNotifications(ctx context.Context, arg DeleteOldNotificationsParams) (int64, error)
 	// Delete-import step 2 (PLAN §4.4): import-origin transactions of the account that no staged row
 	// references any more. Transactions another import also contains stay.
@@ -245,6 +250,7 @@ type Querier interface {
 	GetCategoryAlias(ctx context.Context, arg GetCategoryAliasParams) (*uuid.UUID, error)
 	// In use or archived, locked: archiving, unarchiving and deleting for good each look at archived_at.
 	GetCategoryForArchive(ctx context.Context, arg GetCategoryForArchiveParams) (Category, error)
+	GetConnectionUsage(ctx context.Context, arg GetConnectionUsageParams) (int64, error)
 	// Duplicate review (PLAN §4.4, "Duplicate review and overrides"). ledger.Rematerialize uses these to
 	// rebuild the transactions of one (account, fingerprint) from its staged rows and override.
 	GetDedupeOverride(ctx context.Context, arg GetDedupeOverrideParams) (DedupeOverride, error)
@@ -370,6 +376,8 @@ type Querier interface {
 	// Connection controls (migration 00024): on or off, unload after idle, the default model and the
 	// model for photos, for the file's connections and those added in the panel.
 	ListConnectionControls(ctx context.Context) ([]AssistantConnectionControl, error)
+	// Every connection's tokens and runs of one day (Administration → Assistant).
+	ListConnectionUsage(ctx context.Context, day platform.Date) ([]ListConnectionUsageRow, error)
 	ListDedupeOverrides(ctx context.Context, arg ListDedupeOverridesParams) ([]DedupeOverride, error)
 	// The overrides of the given (account, fingerprint) pairs.
 	ListDedupeOverridesFor(ctx context.Context, arg ListDedupeOverridesForParams) ([]DedupeOverride, error)

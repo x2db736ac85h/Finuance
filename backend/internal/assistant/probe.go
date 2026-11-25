@@ -51,7 +51,7 @@ const probeResult = `{"currency":"PLN","group_by":"category","matched":58,"total
 // a tool call with the full tool set, the answer after a tool result, plan mode and, when the model
 // has a reasoning control, high thinking. It is for checking a new model or server by hand.
 func Probe(ctx context.Context, c *Connection, m ModelInfo, now time.Time, report func(ProbeResult)) {
-	system := SystemPrompt(now, probeFacts(), Scope{}, ToolsetFull)
+	system := SystemPrompt(now, probeFacts(), Scope{}, ToolsetFull, false)
 	question := "How much did I spend on groceries in February 2025?"
 	run := func(name string, req llm.Request) ProbeResult {
 		req.Model, req.Caps = m.ID, m.Caps

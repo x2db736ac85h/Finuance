@@ -60,8 +60,16 @@ type ControlsInput struct {
 	Enabled                  bool
 	UnloadAfterMinutes       *int
 	DefaultModel, PhotoModel string
-	Version                  int32 // 0: the first save
+	// DailyTokens is the connection's budget per UTC day; nil for none.
+	DailyTokens *int64
+	Version     int32 // 0: the first save
 }
+
+// The range of a connection's daily budget: below a thousand tokens no question fits.
+const (
+	MinDailyTokens = 1000
+	MaxDailyTokens = 1_000_000_000_000
+)
 
 // KeyChange is what an edit does to the API key: keep it, remove it or set a new one.
 type KeyChange struct {
@@ -143,6 +151,9 @@ func (s *ConnectionStore) Load(ctx context.Context) error {
 
 func controlsOf(r *db.AssistantConnectionControl) Controls {
 	c := Controls{Enabled: r.Enabled, DefaultModel: r.DefaultModel, PhotoModel: r.PhotoModel, Version: r.Version, UpdatedAt: &r.UpdatedAt}
+	if r.DailyTokens != nil {
+		c.DailyTokens = *r.DailyTokens
+	}
 	if r.UnloadAfterMinutes != nil {
 		c.UnloadAfter = time.Duration(*r.UnloadAfterMinutes) * time.Minute
 	}
@@ -253,11 +264,20 @@ func (s *ConnectionStore) List(ctx context.Context) ([]StoredConnection, error) 
 		for i := range ctl {
 			byName[ctl[i].Name] = controlsOf(&ctl[i])
 		}
+		used, err := q.ListConnectionUsage(ctx, utcDay(s.clock.Now()))
+		if err != nil {
+			return err
+		}
+		today := map[string]int64{}
+		for _, u := range used {
+			today[u.Connection] = u.Tokens
+		}
 		for i := range out {
 			out[i].Controls = DefaultControls
 			if c, ok := byName[out[i].Name]; ok {
 				out[i].Controls = c
 			}
+			out[i].Controls.TokensToday = today[out[i].Name]
 		}
 		return nil
 	})
@@ -297,6 +317,9 @@ func (s *ConnectionStore) SetControls(ctx context.Context, name string, in Contr
 			bad[field] = "isn't a model this connection offers"
 		}
 	}
+	if t := in.DailyTokens; t != nil && (*t < MinDailyTokens || *t > MaxDailyTokens) {
+		bad["dailyTokens"] = fmt.Sprintf("must be between %d and %d tokens a day, or null for no budget", MinDailyTokens, MaxDailyTokens)
+	}
 	if err := problems(bad); err != nil {
 		return StoredConnection{}, err
 	}
@@ -309,10 +332,10 @@ func (s *ConnectionStore) SetControls(ctx context.Context, name string, in Contr
 		var err error
 		if in.Version == 0 {
 			_, err = q.InsertConnectionControls(ctx, db.InsertConnectionControlsParams{Name: name, Enabled: in.Enabled,
-				UnloadAfterMinutes: minutes, DefaultModel: in.DefaultModel, PhotoModel: in.PhotoModel, Now: s.clock.Now()})
+				UnloadAfterMinutes: minutes, DefaultModel: in.DefaultModel, PhotoModel: in.PhotoModel, DailyTokens: in.DailyTokens, Now: s.clock.Now()})
 		} else {
 			_, err = q.UpdateConnectionControls(ctx, db.UpdateConnectionControlsParams{Name: name, Version: in.Version, Enabled: in.Enabled,
-				UnloadAfterMinutes: minutes, DefaultModel: in.DefaultModel, PhotoModel: in.PhotoModel, Now: s.clock.Now()})
+				UnloadAfterMinutes: minutes, DefaultModel: in.DefaultModel, PhotoModel: in.PhotoModel, DailyTokens: in.DailyTokens, Now: s.clock.Now()})
 		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("connection %q controls: %w", name, platform.ErrStaleVersion)

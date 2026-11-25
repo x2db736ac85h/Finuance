@@ -4454,6 +4454,8 @@ export interface components {
              * @example 50
              */
             maxRowsLimit: number;
+            /** @description The administrator's sentence on what a cloud provider keeps, shown where a person agrees. */
+            cloudNote?: string;
         };
         AssistantConnection: {
             /** @example lmstudio */
@@ -4464,6 +4466,16 @@ export interface components {
             api: "openai" | "anthropic";
             /** @description A cloud service; the user must agree once before their data is sent to it. */
             cloud: boolean;
+            /**
+             * @description Who runs a cloud connection's endpoint: `Google Cloud (Vertex AI)`, `Anthropic`, `OpenAI`, or another service's host name. Absent for a local connection.
+             * @example Google Cloud (Vertex AI)
+             */
+            provider?: string;
+            /**
+             * @description Where a cloud connection processes the data, when it says (a Google connection's location).
+             * @example europe-west4
+             */
+            location?: string;
             reachable: boolean;
             /** @description The model used when none is chosen; absent when the server offers none. */
             defaultModel?: string;
@@ -5112,6 +5124,16 @@ export interface components {
         /** @description An administrator's controls for one connection; the defaults until they are first saved. */
         AdminConnectionControls: {
             enabled: boolean;
+            /**
+             * Format: int64
+             * @description The connection's budget: tokens per UTC day across all users (ADR 0045); absent or null = none. Once used up, questions on this connection answer `limit_reached` until the next day.
+             */
+            dailyTokens?: number | null;
+            /**
+             * Format: int64
+             * @description What the connection has used today (UTC), from the usage its server reported.
+             */
+            tokensToday: number;
             /** @description Minutes the server keeps a model after the last question: 10, 15, 30, 45, 60, 120 or 240; null = the server's own setting. */
             unloadAfterMinutes: number | null;
             /** @description The model questions use, over the connection's own default; '' = that default. */
@@ -5127,6 +5149,11 @@ export interface components {
             updatedAt?: string;
         };
         AdminConnectionControlsInput: {
+            /**
+             * Format: int64
+             * @description Tokens per UTC day across all users; null or absent = no budget.
+             */
+            dailyTokens?: number | null;
             enabled: boolean;
             unloadAfterMinutes: number | null;
             defaultModel: string;
@@ -5188,6 +5215,8 @@ export interface components {
             modelChoice?: "admin" | "people";
             /** @description The connection questions use when the administrator picks; '' = the first one switched on. */
             defaultConnection?: string;
+            /** @description One paragraph on what a cloud provider keeps (retention, logging), shown where a person agrees to a cloud connection. */
+            cloudNote?: string;
         };
         AdviceInput: {
             slug: string;

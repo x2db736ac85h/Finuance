@@ -52,8 +52,12 @@ type Controls struct {
 	UnloadAfter  time.Duration // 0 = the server's own setting
 	DefaultModel string        // "" = the connection's own default
 	PhotoModel   string        // "" = none
-	Version      int32         // 0 = never saved
-	UpdatedAt    *time.Time
+	// DailyTokens is the connection's budget of tokens per UTC day, across all users (ADR 0045);
+	// 0 = none. TokensToday is what it has used today, when asked for.
+	DailyTokens int64
+	TokensToday int64
+	Version     int32 // 0 = never saved
+	UpdatedAt   *time.Time
 }
 
 // DefaultUnloadAfter is the idle time of a connection whose controls were never saved.
@@ -155,6 +159,24 @@ func NewConnections(cfgs []config.AIConnection, timeout, idle time.Duration, clo
 		cs.file = append(cs.file, cs.connect(cfgs[i]))
 	}
 	return cs
+}
+
+// Provider names who runs a cloud connection's endpoint, and where when the connection says:
+// Google Cloud with its location, Anthropic and OpenAI by their own hosts, any other service by its
+// host name. A local connection has no provider: it is the instance's own.
+func Provider(c *config.AIConnection) (provider, location string) {
+	switch host := strings.ToLower(c.BaseURL.Hostname()); {
+	case !c.Cloud:
+		return "", ""
+	case c.Google():
+		return "Google Cloud (Vertex AI)", c.Location
+	case host == "api.anthropic.com":
+		return "Anthropic", ""
+	case host == "api.openai.com":
+		return "OpenAI", ""
+	default:
+		return host, ""
+	}
 }
 
 // googleTokens is the one token source every Google connection of this process shares: they all

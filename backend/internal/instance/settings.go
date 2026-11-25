@@ -51,7 +51,13 @@ type Assistant struct {
 	// DefaultConnection is the connection questions use when the administrator picks; "" = the
 	// first one switched on.
 	DefaultConnection string `json:"defaultConnection,omitempty"`
+	// CloudNote is the administrator's sentence on what a cloud provider keeps (retention, logging),
+	// shown where a person agrees to a cloud connection (PLAN 26.5).
+	CloudNote string `json:"cloudNote,omitempty"`
 }
+
+// MaxCloudNote is the longest note on a cloud provider's retention.
+const MaxCloudNote = 400
 
 // Who picks the assistant's connection and model.
 const (
@@ -163,6 +169,9 @@ func (s Settings) Validate() error {
 	if a := s.Assistant; a != nil {
 		if utf8.RuneCountInString(a.Instructions) > MaxInstructions || strings.ContainsRune(a.Instructions, 0) {
 			ve.Add("assistant.instructions", fmt.Sprintf("must be at most %d characters", MaxInstructions))
+		}
+		if utf8.RuneCountInString(a.CloudNote) > MaxCloudNote || strings.ContainsAny(a.CloudNote, "\x00\n\r") {
+			ve.Add("assistant.cloudNote", fmt.Sprintf("must be one paragraph of at most %d characters", MaxCloudNote))
 		}
 		if a.ModelChoice != "" && a.ModelChoice != ModelChoiceAdmin && a.ModelChoice != ModelChoicePeople {
 			ve.Add("assistant.modelChoice", "must be admin or people")

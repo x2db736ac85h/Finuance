@@ -19,9 +19,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/config"
+	"github.com/x2db736ac85h/finuance/backend/internal/instance"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm"
 	"github.com/x2db736ac85h/finuance/backend/internal/llm/googleauth"
 	"github.com/x2db736ac85h/finuance/backend/internal/observability"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
 	"github.com/x2db736ac85h/finuance/backend/testutil/llmmock"
 )
 
@@ -299,6 +301,98 @@ func TestCanaryATokenIsNeverLoggedOrTraced(t *testing.T) {
 		}
 		if strings.Contains(traced.String(), marker) {
 			t.Errorf("a span carries %q:\n%s", marker, traced.String())
+		}
+	}
+}
+
+// TestConnectionBudget (PLAN 26.4): a connection with a budget of tokens per day stops taking
+// questions once the tokens its server reported reach it, for every user, until the next UTC day;
+// other connections go on. The count is the provider's own: the request asks for the usage of the
+// stream (stream_options.include_usage), which a server reports only when asked.
+func TestConnectionBudget(t *testing.T) {
+	re := newRunEnv(t, 2)
+	if _, err := testDB.Owner.Exec(re.ctx, `DELETE FROM assistant_connection_usage`); err != nil {
+		t.Fatal(err)
+	}
+	re.conns.SetStored(nil, nil, map[string]Controls{"mock": {Enabled: true, DailyTokens: 1000}})
+	ask := func(mod func(*Request)) (string, error) {
+		req := Request{ChatID: re.newChat(), Text: "How much did I spend on coffee?", Connection: "mock", Model: "mock-tools"}
+		if mod != nil {
+			mod(&req)
+		}
+		run, err := re.runner.Prepare(re.ctx, re.user, req)
+		if err != nil {
+			return "", err
+		}
+		var evs []Event
+		run.Execute(re.ctx, func(e Event) { evs = append(evs, e) })
+		return last(evs).Name, nil
+	}
+	if name, err := ask(nil); err != nil || name != "done" {
+		t.Fatalf("the first question: %s, %v", name, err)
+	}
+	// the request asked for the stream's usage, and what came back is what was counted
+	reqs := re.mock.Requests()
+	if !strings.Contains(string(reqs[len(reqs)-1]), `"stream_options":{"include_usage":true}`) {
+		t.Fatalf("the request does not ask for usage: %s", reqs[len(reqs)-1])
+	}
+	used, err := re.chats.ConnectionTokensToday(re.ctx, "mock")
+	if err != nil || used == 0 || used%120 != 0 {
+		t.Fatalf("tokens counted for the connection = %d, %v; want the mock's 120 a request", used, err)
+	}
+	// more questions, until the day's budget is gone
+	for i := 0; used < 1000 && i < 20; i++ {
+		if _, err := ask(nil); err != nil {
+			t.Fatalf("question %d with %d of 1000 tokens used: %v", i, used, err)
+		}
+		used, _ = re.chats.ConnectionTokensToday(re.ctx, "mock")
+	}
+	var le *instance.LimitError
+	if _, err := ask(nil); !errors.As(err, &le) || le.Limit != LimitConnectionTokens || le.Value != 1000 || !errors.Is(err, platform.ErrLimitReached) {
+		t.Fatalf("with the budget used up (%d): %v, want limit_reached for the connection", used, err)
+	}
+	// it holds for everyone, not for the person who used it up
+	mine := re.user
+	re.user = re.env.user()
+	re.importFile(re.user, "Demo", fixture(t, "fixtures/demo/demo-legacy.csv"))
+	if _, err := ask(nil); !errors.As(err, &le) {
+		t.Errorf("another user on the same connection: %v", err)
+	}
+	re.user = mine
+	// another connection has its own count
+	if name, err := ask(func(r *Request) { r.Connection, r.Model = "claude", "" }); err != nil || name != "done" {
+		t.Errorf("another connection: %s, %v", name, err)
+	}
+	// the next UTC day starts at nothing
+	re.clock.add(24 * time.Hour)
+	if name, err := ask(nil); err != nil || name != "done" {
+		t.Errorf("the next day: %s, %v", name, err)
+	}
+	// and without a budget nothing is refused
+	re.conns.SetStored(nil, nil, nil)
+	for range 3 {
+		if _, err := ask(nil); err != nil {
+			t.Fatalf("without a budget: %v", err)
+		}
+	}
+}
+
+// TestProvider (PLAN 26.5): who a person is told gets their data, and where.
+func TestProvider(t *testing.T) {
+	google, _ := config.NewConnection(config.ConnectionSpec{Name: "vertex", API: "openai", Auth: config.AuthGoogle, Project: "demo-project",
+		Location: "europe-west4", Cloud: true}, 8192)
+	for _, tc := range []struct {
+		c                  config.AIConnection
+		provider, location string
+	}{
+		{google, "Google Cloud (Vertex AI)", "europe-west4"},
+		{conn("a", "https://api.anthropic.com", func(c *config.AIConnection) { c.Cloud = true }), "Anthropic", ""},
+		{conn("o", "https://api.openai.com/v1", func(c *config.AIConnection) { c.Cloud = true }), "OpenAI", ""},
+		{conn("r", "https://openrouter.ai/api/v1", func(c *config.AIConnection) { c.Cloud = true }), "openrouter.ai", ""},
+		{conn("l", "http://10.0.0.5:11434/v1", nil), "", ""},
+	} {
+		if p, l := Provider(&tc.c); p != tc.provider || l != tc.location {
+			t.Errorf("%s: provider %q, location %q; want %q, %q", tc.c.Name, p, l, tc.provider, tc.location)
 		}
 	}
 }

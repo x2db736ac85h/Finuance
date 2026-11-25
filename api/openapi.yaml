@@ -6965,6 +6965,9 @@ components:
           type: integer
           description: The highest number of rows one lookup may return (legacy maxRows).
           example: 50
+        cloudNote:
+          type: string
+          description: The administrator's sentence on what a cloud provider keeps, shown where a person agrees.
     AssistantConnection:
       type: object
       additionalProperties: false
@@ -6982,6 +6985,16 @@ components:
         cloud:
           type: boolean
           description: A cloud service; the user must agree once before their data is sent to it.
+        provider:
+          type: string
+          description: >-
+            Who runs a cloud connection's endpoint: `Google Cloud (Vertex AI)`, `Anthropic`, `OpenAI`, or
+            another service's host name. Absent for a local connection.
+          example: Google Cloud (Vertex AI)
+        location:
+          type: string
+          description: Where a cloud connection processes the data, when it says (a Google connection's location).
+          example: europe-west4
         reachable:
           type: boolean
         defaultModel:
@@ -8196,11 +8209,22 @@ components:
     AdminConnectionControls:
       type: object
       additionalProperties: false
-      required: [enabled, unloadAfterMinutes, defaultModel, photoModel, version]
+      required: [enabled, unloadAfterMinutes, defaultModel, photoModel, version, tokensToday]
       description: An administrator's controls for one connection; the defaults until they are first saved.
       properties:
         enabled:
           type: boolean
+        dailyTokens:
+          type: integer
+          format: int64
+          nullable: true
+          description: >-
+            The connection's budget: tokens per UTC day across all users (ADR 0045); absent or null = none.
+            Once used up, questions on this connection answer `limit_reached` until the next day.
+        tokensToday:
+          type: integer
+          format: int64
+          description: What the connection has used today (UTC), from the usage its server reported.
         unloadAfterMinutes:
           type: integer
           nullable: true
@@ -8225,6 +8249,13 @@ components:
       additionalProperties: false
       required: [enabled, unloadAfterMinutes, defaultModel, photoModel, version]
       properties:
+        dailyTokens:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 1000
+          maximum: 1000000000000
+          description: Tokens per UTC day across all users; null or absent = no budget.
         enabled:
           type: boolean
         unloadAfterMinutes:
@@ -8326,6 +8357,12 @@ components:
           type: string
           maxLength: 40
           description: The connection questions use when the administrator picks; '' = the first one switched on.
+        cloudNote:
+          type: string
+          maxLength: 400
+          description: >-
+            One paragraph on what a cloud provider keeps (retention, logging), shown where a person agrees to a
+            cloud connection.
     AdviceInput:
       type: object
       additionalProperties: false

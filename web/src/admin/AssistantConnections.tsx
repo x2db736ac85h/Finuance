@@ -26,7 +26,7 @@ import {
 } from '../api/hooks/admin';
 import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
-import { fmtBytes } from '../lib/format';
+import { fmtBytes, fmtInt } from '../lib/format';
 import { Button } from '../ui/Button';
 import { Checkbox, Select, TextInput, type Option } from '../ui/inputs';
 import { Modal } from '../ui/Modal';
@@ -206,6 +206,9 @@ function ConnectionControls({ connection, onDone }: { connection: AdminConnectio
   const [model, setModel] = useState(ctl.defaultModel);
   const [photo, setPhoto] = useState(ctl.photoModel);
   const [unload, setUnload] = useState(ctl.unloadAfterMinutes == null ? '' : String(ctl.unloadAfterMinutes));
+  const [budget, setBudget] = useState(ctl.dailyTokens == null ? '' : String(ctl.dailyTokens));
+  const budgetNumber = Number(budget.replace(/[\s,._]/g, ''));
+  const budgetBad = budget.trim() !== '' && !(Number.isInteger(budgetNumber) && budgetNumber >= 1000);
   const s = server.data;
   const offered = s?.models.filter((m) => m.offered) ?? [];
   // a saved choice the server doesn't list now (unreachable, model removed) stays selectable
@@ -230,6 +233,7 @@ function ConnectionControls({ connection, onDone }: { connection: AdminConnectio
         unloadAfterMinutes: unload === '' ? null : Number(unload),
         defaultModel: model,
         photoModel: photo,
+        dailyTokens: budget.trim() === '' ? null : budgetNumber,
         version: ctl.version,
       },
       {
@@ -295,6 +299,25 @@ function ConnectionControls({ connection, onDone }: { connection: AdminConnectio
           </label>
         )}
       </div>
+      <label className="st-col">
+        Daily token budget <span className="hint">(for everyone together; empty: none)</span>
+        <TextInput
+          autoComplete="off"
+          inputMode="numeric"
+          value={budget}
+          placeholder="e.g. 2,000,000"
+          aria-invalid={budgetBad || undefined}
+          onChange={(e) => {
+            setBudget(e.target.value);
+          }}
+        />
+      </label>
+      <p className="hint">
+        Used today (UTC): {fmtInt(ctl.tokensToday)} tokens
+        {ctl.dailyTokens ? ` of ${fmtInt(ctl.dailyTokens)}` : ''}. Once a budget is used up, questions on this
+        connection are refused until the next day; a cloud service bills whoever runs the instance.
+        {budgetBad && ' A budget is a whole number of at least 1,000 tokens.'}
+      </p>
       <p className="hint">
         Questions with photos go to the model for photos when the model in use can't read images.
         {timed &&
@@ -349,7 +372,7 @@ function ConnectionControls({ connection, onDone }: { connection: AdminConnectio
           Test
         </Button>
         <Button onClick={onDone}>Close</Button>
-        <Button type="submit" variant="primary" disabled={put.isPending}>
+        <Button type="submit" variant="primary" disabled={put.isPending || budgetBad}>
           Save
         </Button>
       </div>
