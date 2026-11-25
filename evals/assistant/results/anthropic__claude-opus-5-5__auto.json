@@ -1,0 +1,1192 @@
+{
+  "connection": "anthropic",
+  "model": "claude-opus-5-5",
+  "think": "auto",
+  "ranAt": "2026-11-25T22:50:03.581848117Z",
+  "cases": [
+    {
+      "id": "rel-last-month-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "month_overview"
+      ],
+      "mode": "tools",
+      "ms": 5862,
+      "approxTokens": 2829,
+      "answer": "Last month = 2025-02-01 to 2025-02-28.\n\nYou spent **5,569.62 PLN** last month (February 1–28, 2025). That's down from 6,675.15 PLN in January. Your income was 9,580 PLN, so you kept **4,010.38 PLN**, or 41.9% of what you earned.\n\n**Where it went:**\n\n| Category | Spent (PLN) | Budget (PLN) |\n|---|---|---|\n| Housing (Mieszkanie) | 2,850.00 | 2,850 |\n| Groceries (Artykuły spożywcze) | 1,284.94 | 1,260 ⚠️ over |\n| Transport | 649.77 | 450 ⚠️ over |\n| Bills (Rachunki) | 340.28 | 320 ⚠️ over |\n| Restaurants \u0026 cafés | 227.49 | 450 |\n| Entertainment (Rozrywka) | 85.65 | 120 |\n| Online shopping | 55.02 | 470 |\n| Health \u0026 beauty | 44.63 | 90 |\n| Sport | 31.84 | 80 |\n\n**What stood out:**\n- **Over budget:** You went over in transport (about 200 PLN over), bills and groceries. These budgets are set automatically from what you usually spend, not by you.\n- **Well under:** Online shopping was 55.02 PLN, compared with 719.94 PLN in January. Restaurants and cafés came in at about half of their 450 PLN budget.\n- **Biggest single payment:** Your housing payment of 2,850 PLN on February 2."
+    },
+    {
+      "id": "rel-last-month-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "month_overview"
+      ],
+      "mode": "tools",
+      "ms": 6205,
+      "approxTokens": 2829,
+      "answer": "Last month = 2025-02-01 to 2025-02-28.\n\nW lutym 2025 (01.02–28.02) wydałeś **5 569,62 PLN**. To o 1 105,53 PLN mniej niż w styczniu (6 675,15 PLN).\n\n| Kategoria | Wydatki | Budżet | Status |\n|---|---|---|---|\n| Mieszkanie | 2 850,00 PLN | 2 850 PLN | w normie |\n| Artykuły spożywcze | 1 284,94 PLN | 1 260 PLN | ⚠️ przekroczony |\n| Transport | 649,77 PLN | 450 PLN | ⚠️ przekroczony |\n| Rachunki | 340,28 PLN | 320 PLN | ⚠️ przekroczony |\n| Restauracje i kawiarnie | 227,49 PLN | 450 PLN | w normie |\n| Rozrywka | 85,65 PLN | 120 PLN | w normie |\n| Zakupy przez internet | 55,02 PLN | 470 PLN | w normie |\n| Zdrowie i uroda | 44,63 PLN | 90 PLN | w normie |\n| Sport | 31,84 PLN | 80 PLN | w normie |\n\nBudżety ustawiono domyślnie na podstawie średnich wydatków z poprzednich miesięcy.\n\n- **Przychody:** 9 580,00 PLN z wynagrodzenia.\n- **Oszczędności:** 4 010,38 PLN, czyli 41,9% przychodów.\n- **Największy wydatek:** czynsz dla Wspólnoty Mieszkaniowej, 2 850,00 PLN."
+    },
+    {
+      "id": "rel-last-week-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4151,
+      "approxTokens": 2604,
+      "answer": "Last week (Monday 2025-03-10 to Sunday 2025-03-16), you spent **932.95 PLN** across 13 transactions.\n\n| Category | Transactions | Spent |\n|---|---|---|\n| Artykuły spożywcze (groceries) | 6 | 317.54 PLN |\n| Rachunki (bills) | 1 | 216.32 PLN |\n| Zakupy przez internet (online shopping) | 1 | 185.41 PLN |\n| Transport | 2 | 143.23 PLN |\n| Zdrowie i uroda (health \u0026 beauty) | 2 | 57.53 PLN |\n| Bez kategorii (uncategorised) | 1 | 12.92 PLN |\n\nGroceries were the biggest share, about a third of the total."
+    },
+    {
+      "id": "rel-last-week-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4721,
+      "approxTokens": 2625,
+      "answer": "W zeszłym tygodniu (**10–16 marca 2025**) wydałeś łącznie **932,95 PLN** w 13 transakcjach.\n\n| Kategoria | Transakcje | Kwota |\n|---|---|---|\n| Artykuły spożywcze | 6 | 317,54 PLN |\n| Rachunki | 1 | 216,32 PLN |\n| Zakupy przez internet | 1 | 185,41 PLN |\n| Transport | 2 | 143,23 PLN |\n| Zdrowie i uroda | 2 | 57,53 PLN |\n| Bez kategorii | 1 | 12,92 PLN |\n\nNajwięcej poszło na zakupy spożywcze, czyli około jednej trzeciej wydatków."
+    },
+    {
+      "id": "rel-this-month-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "month_overview"
+      ],
+      "mode": "tools",
+      "ms": 6135,
+      "approxTokens": 2816,
+      "answer": "So far this month you've spent **5,151.82 PLN**. That covers 1–17 March 2025, because your data ends on 2025-03-17.\n\n**Main categories:**\n| Category | Spent |\n|---|---|\n| Housing (Mieszkanie) | 2,850.00 PLN |\n| Groceries (Artykuły spożywcze) | 1,095.05 PLN |\n| Transport | 429.32 PLN |\n| Online shopping (Zakupy przez internet) | 343.49 PLN |\n| Bills (Rachunki) | 216.32 PLN |\n| Sport | 74.56 PLN |\n| Restaurants and cafés (Restauracje i kawiarnie) | 72.63 PLN |\n| Health and beauty (Zdrowie i uroda) | 57.53 PLN |\n| Uncategorized (Bez kategorii) | 12.92 PLN |\n\n**How it compares:**\n- By the same day in February you had spent 4,209.46 PLN, so you're about 940 PLN higher this time.\n- If you keep spending at this rate, March would end at about **9,394.50 PLN**. All of February came to 5,569.62 PLN. The projection is probably too high, though, because 2,850 PLN of this month's spending is the housing payment, which comes once a month.\n- Health and beauty is already over its 45 PLN budget, at 57.53 PLN.\n- Income this month is 9,323 PLN, so you've saved 44.7% of it so far."
+    },
+    {
+      "id": "rel-this-week-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 5618,
+      "approxTokens": 2648,
+      "answer": "W tym tygodniu (od poniedziałku 17.03 do dziś, 20.03.2025) wydałeś **98,07 PLN**. Była to jedna płatność:\n\n- **17.03.2025**, PIEKARNIA ZIARNO WARSZAWA: 98,07 PLN (Artykuły spożywcze)\n\nTa płatność ma etykietę grupy „Wakacje nad morzem”. Jeśli to pomyłka, mogę zaproponować jej przeniesienie.\n\nTa kwota może nie obejmować wszystkiego, bo dane kończą się na 17.03.2025. Płatności z 18–20.03 nie są jeszcze zaimportowane."
+    },
+    {
+      "id": "rel-january-income-pl",
+      "category": "relative dates",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 3925,
+      "approxTokens": 2240,
+      "answer": "January 2025 presumably (latest). Use aggregate income for 2025-01.\n\nW **styczniu 2025** (01.01–31.01.2025) Twoje wpływy wyniosły **9 213,00 PLN**. To jeden przelew od **PRACODAWCA PRZYKŁADOWY SP. Z O.O.**, czyli wynagrodzenie. Innych wpływów w tym miesiącu nie było."
+    },
+    {
+      "id": "rel-mar-2-en",
+      "category": "relative dates",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 3626,
+      "approxTokens": 2333,
+      "answer": "On 2 March 2025 you spent **2,974.11 PLN** across 3 transactions:\n\n| Payee | Category | Amount |\n|---|---|---|\n| WSPÓLNOTA MIESZKANIOWA | Mieszkanie (Housing) | 2,850.00 PLN |\n| DELIKATESY POD LIPĄ WARSZAWA | Artykuły spożywcze (Groceries) | 75.29 PLN |\n| MARKETPLACE OMEGA | Zakupy przez internet (Online shopping) | 48.82 PLN |\n\nMost of it was the payment of 2,850.00 PLN to your housing association (Wspólnota Mieszkaniowa)."
+    },
+    {
+      "id": "out-yesterday-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 5217,
+      "approxTokens": 2617,
+      "answer": "Yesterday was 2025-03-19, but your data only goes up to 2025-03-17. I'll check that last day for you.\n\nI can't tell you what you spent yesterday (2025-03-19) because your data only goes up to **2025-03-17**. Transactions from the 18th onwards haven't been imported yet.\n\nOn **2025-03-17**, the last day with data, you spent **98.07 PLN** in one purchase:\n\n| Date | Payee | Category | Amount |\n|---|---|---|---|\n| 2025-03-17 | PIEKARNIA ZIARNO WARSZAWA | Artykuły spożywcze (groceries) | 98.07 PLN |\n\nThis purchase is in your \"Wakacje nad morzem\" (seaside holiday) group. If you import a newer bank statement, I can check yesterday's spending."
+    },
+    {
+      "id": "out-dec-2023-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [],
+      "mode": "tools",
+      "ms": 1822,
+      "approxTokens": 1044,
+      "answer": "I can't tell you that. Your imported data covers **2024-01-01 to 2025-03-17**, so there are no transactions from December 2023.\n\nI can show you your spending for **December 2024** instead, or for January 2024, which is the earliest month I have."
+    },
+    {
+      "id": "out-april-pl",
+      "category": "out of range",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [],
+      "mode": "tools",
+      "ms": 2964,
+      "approxTokens": 1042,
+      "answer": "Nie mogę tego podać, bo kwiecień 2025 (2025-04-01 – 2025-04-30) jeszcze się nie zaczął. Dziś jest 2025-03-20, a Twoje dane kończą się na **2025-03-17**.\n\nMogę za to sprawdzić:\n- **marzec 2025**: ile wydałeś od 1 do 17 marca i ile wyjdzie do końca miesiąca, jeśli utrzymasz obecne tempo,\n- **kwiecień 2024**: ile wydałeś w kwietniu rok temu.\n\nKtórą z tych opcji pokazać?"
+    },
+    {
+      "id": "out-2026-en",
+      "category": "out of range",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 5562,
+      "approxTokens": 2625,
+      "answer": "I can't show income for 2026 because that year is still in the future. Today is 2025-03-20, and your data runs from 2024-01-01 to **2025-03-17**.\n\nHere's your income so far in 2025 (2025-01-01 to 2025-03-17):\n\n| Month | Income |\n|---|---|\n| January 2025 | 9,213 PLN |\n| February 2025 | 9,580 PLN |\n| March 2025 (to 17 March) | 9,323 PLN |\n| **Total** | **28,116 PLN** |\n\nThere was one payment into your account each month. I can also show your income for all of 2024 if that would help."
+    },
+    {
+      "id": "merch-kawiarnia-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 3598,
+      "approxTokens": 2239,
+      "answer": "You spent **2,021.48 PLN** at Kawiarnia Podwórko in total, over **39 payments**. This covers all your data, from 2024-01-01 to 2025-03-17."
+    },
+    {
+      "id": "merch-kino-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "find_values",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 8418,
+      "approxTokens": 4716,
+      "answer": "W kinie wydałeś łącznie **813,72 PLN**. To 10 płatności w **KINO POD GWIAZDAMI**, czyli średnio około 81 PLN za wizytę. Sprawdziłem wszystkie dane, od 2024-01-01 do 2025-03-17.\n\nNie znalazłem płatności w innych kinach. Cała kategoria Rozrywka to 1 686,94 PLN, a pozostała część to Teatr Mały (873,22 PLN)."
+    },
+    {
+      "id": "merch-taxi-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "find_values",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4595,
+      "approxTokens": 2613,
+      "answer": "You paid for **40 taxi rides**, all with **TAXI MIEJSKIE**. They cost **2,552.51 PLN** in total.\n\nThis covers all your data, from 2024-01-01 to 2025-03-17. Each ride is counted as one card payment, so if you ever paid for two trips at once, they show up as a single ride here."
+    },
+    {
+      "id": "merch-bakery-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "find_values",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 5367,
+      "approxTokens": 4022,
+      "answer": "W całym okresie danych (**2024-01-01 – 2025-03-17**) zapłaciłeś w piekarni **128 razy**. Wszystkie płatności były w **PIEKARNIA ZIARNO**, innej piekarni nie znalazłem w danych.\n\n- Wydałeś tam łącznie: **5 873,29 PLN**\n\nMogę też rozbić te płatności na miesiące."
+    },
+    {
+      "id": "merch-energy-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "find_values"
+      ],
+      "mode": "tools",
+      "ms": 5532,
+      "approxTokens": 4213,
+      "answer": "In 2024 (2024-01-01 to 2024-12-31), you paid **DOSTAWCA ENERGII 3,026.33 PLN** across 12 monthly payments.\n\n| Month | Amount (PLN) |\n|---|---|\n| Jan | 212.47 |\n| Feb | 278.48 |\n| Mar | 280.63 |\n| Apr | 291.51 |\n| May | 263.37 |\n| Jun | 295.99 |\n| Jul | 256.04 |\n| Aug | 190.57 |\n| Sep | 270.89 |\n| Oct | 242.12 |\n| Nov | 204.63 |\n| Dec | 239.63 |\n\nThe highest payment was in June (295.99 PLN) and the lowest was in August (190.57 PLN). DOSTAWCA ENERGII is the only payee in your data with \"energ\" in its name."
+    },
+    {
+      "id": "merch-spelling-en",
+      "category": "merchants",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "find_values"
+      ],
+      "mode": "tools",
+      "ms": 3286,
+      "approxTokens": 2176,
+      "answer": "In your data, the pizzeria is spelled **PIZZERIA SŁONECZNA**, with the Polish letter **Ł**. It's the only payee with \"pizz\" in its name, and it shows up in **62 transactions** between 2024-01-01 and 2025-03-17.\n\nWhen you filter by this payee, typing just \"pizzeria\" or \"słoneczna\" will find it too."
+    },
+    {
+      "id": "merch-pharmacy-pl",
+      "category": "merchants",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 9476,
+      "approxTokens": 2927,
+      "answer": "W sumie wydałeś w aptece **1 098,33 PLN**. To 18 zakupów w **APTEKA ZDROWIE** (innej apteki nie ma w danych) w okresie od 2024-01-01 do 2025-03-17, czyli do ostatniej daty w danych.\n\n| Miesiąc | Zakupy | Kwota |\n|---|---|---|\n| 2024-01 | 1 | 32,67 PLN |\n| 2024-02 | 1 | 122,33 PLN |\n| 2024-03 | 2 | 138,30 PLN |\n| 2024-04 | 1 | 66,46 PLN |\n| 2024-05 | 3 | 147,22 PLN |\n| 2024-06 | 2 | 126,78 PLN |\n| 2024-07 | 1 | 43,65 PLN |\n| 2024-08 | 3 | 160,18 PLN |\n| 2024-09 | 1 | 25,73 PLN |\n| 2024-10 | 1 | 96,34 PLN |\n| 2024-11 | 1 | 108,54 PLN |\n| 2025-03 | 1 | 30,13 PLN |\n\n- **W 2024 roku:** 1 068,20 PLN. Najwięcej wydałeś w sierpniu (160,18 PLN).\n- **W 2025 roku (do 17 marca):** 30,13 PLN. Między grudniem 2024 a lutym 2025 nie ma żadnych zakupów w aptece."
+    },
+    {
+      "id": "cat-groceries-feb-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 2782,
+      "approxTokens": 2240,
+      "answer": "From 2025-02-01 to 2025-02-28, you spent **1,284.94 PLN** on groceries (the \"Artykuły spożywcze\" category). That came from 26 transactions."
+    },
+    {
+      "id": "cat-transport-2024-pl",
+      "category": "categories",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 6245,
+      "approxTokens": 2634,
+      "answer": "W 2024 roku (od 2024-01-01 do 2024-12-31) wydałeś na **transport 5 448,99 PLN**. Złożyło się na to 100 transakcji.\n\n**Według odbiorcy:**\n| Odbiorca | Transakcje | Kwota |\n|---|---|---|\n| TAXI MIEJSKIE | 33 | 1 933,38 PLN |\n| KOMUNIKACJA MIEJSKA | 38 | 1 898,40 PLN |\n| STACJA PALIW POLNA | 29 | 1 617,21 PLN |\n\n**Według miesiąca:**\n- Najwięcej wydałeś w sierpniu (681,29 PLN) i w marcu (639,83 PLN).\n- Najmniej wydałeś w lutym (178,40 PLN) i w lipcu (226,71 PLN).\n- W pozostałych miesiącach wydatki wynosiły od 339,33 PLN do 571,27 PLN."
+    },
+    {
+      "id": "cat-top-feb-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4551,
+      "approxTokens": 2335,
+      "answer": "Last month = 2025-02-01 to 2025-02-28.\n\nLast month (1–28 February 2025), your biggest spending category was **Mieszkanie (Housing)**. It was a single payment of **2,850.00 PLN**, about half of the 5,569.62 PLN you spent that month.\n\n| Category | Transactions | Spent |\n|---|---|---|\n| Mieszkanie (Housing) | 1 | 2,850.00 PLN |\n| Artykuły spożywcze (Groceries) | 26 | 1,284.94 PLN |\n| Transport | 9 | 649.77 PLN |\n| Rachunki (Bills) | 2 | 340.28 PLN |\n| Restauracje i kawiarnie (Restaurants \u0026 cafés) | 7 | 227.49 PLN |\n\nGroceries came second and had the most transactions (26)."
+    },
+    {
+      "id": "cat-restaurants-mar-pl",
+      "category": "categories",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 3953,
+      "approxTokens": 2495,
+      "answer": "W marcu 2025 (od 01.03 do 17.03.2025, bo to ostatni dzień w danych) wydałeś na **restauracje i kawiarnie 72,63 PLN**.\n\n| Miejsce | Liczba płatności | Kwota |\n|---|---|---|\n| BISTRO ZIELONE | 2 | 72,63 PLN |\n\nPłatności z 18–20 marca mogą się jeszcze nie pojawić w danych."
+    },
+    {
+      "id": "cat-top3-en",
+      "category": "categories",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4670,
+      "approxTokens": 2287,
+      "answer": "Your top three spending categories across all your data (2024-01-01 to 2025-03-17) are:\n\n| # | Category | Spent | Transactions | Share of all spending |\n|---|---|---|---|---|\n| 1 | Mieszkanie (Housing) | 42,750.00 PLN | 15 | ~44% |\n| 2 | Artykuły spożywcze (Groceries) | 19,771.41 PLN | 403 | ~20% |\n| 3 | Restauracje i kawiarnie (Restaurants \u0026 cafés) | 7,564.86 PLN | 149 | ~8% |\n\nTogether these three make up about 72% of your total spending of 97,014.46 PLN. Housing costs the most even though it's only 15 payments. Groceries come second because you buy them so often."
+    },
+    {
+      "id": "grp-holiday-en",
+      "category": "groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 5748,
+      "approxTokens": 2534,
+      "answer": "Your **\"Wakacje nad morzem\"** (seaside holiday) group adds up to **3,126.90 PLN** across 54 transactions. There was no income in the group.\n\n| Category | Spent (PLN) | Share |\n|---|---|---|\n| Groceries | 1,390.79 | 44.5% |\n| Transport | 527.09 | 16.9% |\n| Online shopping | 514.89 | 16.5% |\n| Entertainment | 235.72 | 7.5% |\n| Restaurants \u0026 cafés | 224.84 | 7.2% |\n| Health \u0026 beauty | 127.15 | 4.1% |\n| Sport | 62.41 | 2.0% |\n| Garden | 44.01 | 1.4% |\n\n**This total may be too high.** The group's transactions run from **2024-01-08 to 2025-03-17**, which is 435 days. That's far longer than a holiday. Many of the shops also look like your usual Warsaw ones, like PIEKARNIA ZIARNO, DELIKATESY POD LIPĄ, MARKET NA ROGU and a Warsaw hair salon. So some everyday spending has probably been put in this group by mistake.\n\nIf you tell me the dates of the trip, I can work out what you spent in just those days. I can also suggest removing the other transactions from the group."
+    },
+    {
+      "id": "grp-remont-pl",
+      "category": "groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 4416,
+      "approxTokens": 2243,
+      "answer": "Remont (grupa „Remont”) kosztował **758,29 PLN**.\n\n- **Okres:** od 2024-01-10 do 2025-01-28\n- **Liczba płatności:** 15\n- **Gdzie:** wszystkie w **CENTRUM OGRODNICZE**, w kategorii „Ogród”\n\nLiczę tylko transakcje oznaczone etykietą „Remont”. W tej grupie nie ma zakupów np. w sklepach budowlanych. Jeśli płaciłeś też gdzie indziej, a te płatności nie mają tej etykiety, nie ma ich w tej kwocie. Mogę je znaleźć i zaproponować dodanie do grupy."
+    },
+    {
+      "id": "grp-holiday-count-pl",
+      "category": "groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 6994,
+      "approxTokens": 2538,
+      "answer": "W grupie **Wakacje nad morzem** jest **54 transakcje** na łączną kwotę **3 126,90 PLN** wydatków (bez wpływów).\n\nTe transakcje są z okresu od **2024-01-08 do 2025-03-17**, czyli z ponad 14 miesięcy. Jak na wakacje to długo, więc część z nich mogła trafić do tej grupy przez pomyłkę. Jeśli chcesz, mogę je wyświetlić, żebyś mógł to sprawdzić.\n\n**Wydatki według kategorii:**\n| Kategoria | Kwota | Udział |\n|---|---|---|\n| Artykuły spożywcze | 1 390,79 PLN | 44,5% |\n| Transport | 527,09 PLN | 16,9% |\n| Zakupy przez internet | 514,89 PLN | 16,5% |\n| Rozrywka | 235,72 PLN | 7,5% |\n| Restauracje i kawiarnie | 224,84 PLN | 7,2% |\n| Zdrowie i uroda | 127,15 PLN | 4,1% |\n| Sport | 62,41 PLN | 2,0% |\n| Ogród | 44,01 PLN | 1,4% |"
+    },
+    {
+      "id": "grp-holiday-food-en",
+      "category": "groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "group_summary"
+      ],
+      "mode": "tools",
+      "ms": 5873,
+      "approxTokens": 2817,
+      "answer": "You spent **1,390.79 PLN on groceries** (Artykuły spożywcze) during the \"Wakacje nad morzem\" holiday. That's 26 transactions and 44.5% of the trip's total spending of 3,126.90 PLN.\n\nThe main grocery shops on the trip were PIEKARNIA ZIARNO (470.81 PLN), DELIKATESY POD LIPĄ (468.48 PLN) and MARKET NA ROGU (451.50 PLN). Their combined total is the same as the grocery total.\n\n**These numbers may include purchases that weren't on the trip.** The transactions labelled \"Wakacje nad morzem\" run from 2024-01-08 to 2025-03-17, which is 435 days and almost all of your data. They also include shops you use often at home, like a Warsaw hair salon. If you tell me the actual dates of the holiday, I can work out the grocery total for just those days. I can also suggest removing the label from transactions outside those dates."
+    },
+    {
+      "id": "rank-payees-2024-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4713,
+      "approxTokens": 2282,
+      "answer": "These were your top 3 payees by spending from **2024-01-01 to 2024-12-31**:\n\n| # | Payee | Transactions | Spent |\n|---|---|---|---|\n| 1 | WSPÓLNOTA MIESZKANIOWA | 12 | 34,200.00 PLN |\n| 2 | DELIKATESY POD LIPĄ | 117 | 5,631.07 PLN |\n| 3 | MARKET NA ROGU | 102 | 5,412.54 PLN |\n\nYou spent **79,617.87 PLN** in total across 750 transactions in 2024. WSPÓLNOTA MIESZKANIOWA, your housing association, accounts for about 43% of that, with 12 monthly payments. The next two are grocery shops, and their totals are close to each other."
+    },
+    {
+      "id": "rank-month-2024-pl",
+      "category": "rankings and trends",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4878,
+      "approxTokens": 2459,
+      "answer": "W 2024 roku (od 2024-01-01 do 2024-12-31) najwięcej wydałeś w **marcu 2024**: **7 761,02 PLN** w 71 transakcjach.\n\nKolejne miesiące z najwyższymi wydatkami:\n\n| Miesiąc | Wydatki | Liczba transakcji |\n|---|---|---|\n| **Marzec 2024** | **7 761,02 PLN** | 71 |\n| Czerwiec 2024 | 7 168,11 PLN | 63 |\n| Sierpień 2024 | 7 151,89 PLN | 70 |\n| Kwiecień 2024 | 7 119,27 PLN | 69 |\n\nDla porównania najmniej wydałeś w listopadzie 2024: 5 562,04 PLN. Łącznie w 2024 roku wydałeś 79 617,87 PLN."
+    },
+    {
+      "id": "rank-weekday-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 6138,
+      "approxTokens": 2359,
+      "answer": "You spend the most on **Tuesdays**: **16,385.46 PLN** over 132 transactions. Sunday comes second with 15,813.01 PLN. This covers all your expenses from 2024-01-01 to 2025-03-17.\n\n| Day | Spent (PLN) | Transactions |\n|---|---|---|\n| **Tuesday** | **16,385.46** | 132 |\n| Sunday | 15,813.01 | 132 |\n| Friday | 13,738.86 | 129 |\n| Saturday | 13,487.81 | 125 |\n| Thursday | 13,412.75 | 127 |\n| Monday | 12,575.84 | 120 |\n| Wednesday | 11,600.73 | 137 |\n\nWednesday is the opposite case. It has the most transactions (137) but the lowest total, so those are mostly small purchases. A few large one-off payments, like bills or renovation costs, could be pushing Tuesday to the top."
+    },
+    {
+      "id": "rank-largest-feb-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4084,
+      "approxTokens": 2339,
+      "answer": "Your largest single expense in February 2025 (2025-02-01 to 2025-02-28) was **2,850.00 PLN** to **WSPÓLNOTA MIESZKANIOWA**, your housing association. It was paid on 2025-02-02 and is in the Mieszkanie (housing) category.\n\nThat one payment made up just over half of the 5,569.62 PLN you spent across 49 transactions that month.\n\nThe next two largest:\n| Date | Payee | Category | Amount |\n|---|---|---|---|\n| 2025-02-15 | DOSTAWCA ENERGII (electricity supplier) | Rachunki (bills) | 260.29 PLN |\n| 2025-02-21 | STACJA PALIW POLNA WARSZAWA (petrol station) | Transport | 132.60 PLN |"
+    },
+    {
+      "id": "rank-largest-2025-pl",
+      "category": "rankings and trends",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 5437,
+      "approxTokens": 2336,
+      "answer": "Twoje 3 największe wydatki w 2025 roku (od 01.01.2025 do 17.03.2025, ostatniego dnia z danymi):\n\n| # | Data | Odbiorca | Kategoria | Kwota |\n|---|------|----------|-----------|-------|\n| 1 | 02.03.2025 | WSPÓLNOTA MIESZKANIOWA | Mieszkanie | 2 850,00 PLN |\n| 2 | 02.02.2025 | WSPÓLNOTA MIESZKANIOWA | Mieszkanie | 2 850,00 PLN |\n| 3 | 02.01.2025 | WSPÓLNOTA MIESZKANIOWA | Mieszkanie | 2 850,00 PLN |\n\nTo ta sama opłata, płacona co miesiąc. Razem to 8 550,00 PLN. Dla porównania: wszystkie 152 wydatki w tym okresie dały łącznie 17 396,59 PLN, więc te trzy opłaty to prawie połowa.\n\nMogę też pokazać największe wydatki bez opłat dla wspólnoty, jeśli chcesz zobaczyć zakupy jednorazowe."
+    },
+    {
+      "id": "trend-months-2025-en",
+      "category": "rankings and trends",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4154,
+      "approxTokens": 2265,
+      "answer": "Here's your spending for each month of 2025, from 1 January to 17 March 2025 (the latest date in your data):\n\n| Month | Transactions | Spent |\n|---|---|---|\n| January 2025 | 70 | 6,675.15 PLN |\n| February 2025 | 49 | 5,569.62 PLN |\n| March 2025 (to 17 March) | 33 | 5,151.82 PLN |\n| **Total** | **152** | **17,396.59 PLN** |\n\nYour spending went down from January to February. March only covers 17 days so far, and it's already close to February's total."
+    },
+    {
+      "id": "cmp-jan-feb-en",
+      "category": "comparisons",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4210,
+      "approxTokens": 2251,
+      "answer": "You spent more in **January 2025**.\n\n| Month | Expenses | Transactions |\n|---|---|---|\n| January 2025 (01–31 Jan) | **6,675.15 PLN** | 70 |\n| February 2025 (01–28 Feb) | 5,569.62 PLN | 49 |\n\nYou spent **1,105.53 PLN less** in February than in January, which is about 17% less. February also had 21 fewer transactions. These totals include only money spent, not income."
+    },
+    {
+      "id": "cmp-transport-pl",
+      "category": "comparisons",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 8134,
+      "approxTokens": 2621,
+      "answer": "W lutym wydałeś na transport **649,77 PLN**, czyli o **216,06 PLN (+49,8%)** więcej niż w styczniu (433,71 PLN). Porównuję okresy 2025-01-01 – 2025-01-31 i 2025-02-01 – 2025-02-28.\n\n| Odbiorca | Styczeń | Luty | Zmiana |\n|---|---|---|---|\n| TAXI MIEJSKIE | 197,36 PLN (2×) | 231,91 PLN (2×) | +34,55 PLN |\n| KOMUNIKACJA MIEJSKA | 179,08 PLN (4×) | 211,94 PLN (4×) | +32,86 PLN |\n| STACJA PALIW POLNA | 57,27 PLN (2×) | 205,92 PLN (3×) | **+148,65 PLN** |\n| **Razem** | **433,71 PLN (8 transakcji)** | **649,77 PLN (9 transakcji)** | **+216,06 PLN** |\n\nNajbardziej wzrosły wydatki na paliwo. W lutym było jedno tankowanie więcej, a łącznie zapłaciłeś za paliwo ok. 3,6 raza więcej niż w styczniu. Na taksówki i komunikację miejską wydałeś po ok. 33–35 PLN więcej niż w styczniu."
+    },
+    {
+      "id": "cmp-income-q1-en",
+      "category": "comparisons",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 7187,
+      "approxTokens": 2728,
+      "answer": "Your Q1 2025 income was **214 PLN (about 0.8%) lower** than in Q1 2024.\n\n| Month | Q1 2024 | Q1 2025 | Change |\n|---|---|---|---|\n| January | 9,503 PLN | 9,213 PLN | −290 PLN |\n| February | 9,489 PLN | 9,580 PLN | +91 PLN |\n| March | 9,338 PLN | 9,323 PLN | −15 PLN |\n| **Total** | **28,330 PLN** | **28,116 PLN** | **−214 PLN** |\n\n- **Dates used:** 2024-01-01 to 2024-03-31, and 2025-01-01 to 2025-03-17. My data ends on 2025-03-17, so the rest of March 2025 isn't included.\n- **Q1 2025 could still change:** In both quarters you received exactly one payment per month, and March 2025's payment is already in. The total would only change if more money comes in before the end of March.\n- **Each month was close:** Your monthly income stayed at roughly 9,200–9,600 PLN in both years."
+    },
+    {
+      "id": "items-coffee-en",
+      "category": "items vs transactions",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4910,
+      "approxTokens": 2222,
+      "answer": "I can't count the coffees themselves, because your bank data records each payment, not the items in it. What I can tell you is how often you paid at **KAWIARNIA PODWÓRKO** (all data, 2024-01-01 to 2025-03-17):\n\n- **39 payments**\n- **2,021.48 PLN** spent in total\n\nSome of those payments may have covered more than one coffee or other items, so the real number of coffees could be higher than 39."
+    },
+    {
+      "id": "items-bread-pl",
+      "category": "items vs transactions",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4206,
+      "approxTokens": 2530,
+      "answer": "Nie wiem, ile kupiłeś bułek. Wyciąg bankowy pokazuje tylko płatności, a nie to, co było na paragonie. Mogę za to policzyć Twoje zakupy w piekarni.\n\n**PIEKARNIA ZIARNO, od 2024-01-01 do 2025-03-17 (cały okres w danych):**\n- Liczba płatności: **128**\n- Łączna kwota: **5873,29 PLN**\n\nJeśli chcesz, sprawdzę, jak te wydatki rozkładają się na miesiące."
+    },
+    {
+      "id": "inc-2024-en",
+      "category": "income and savings",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4683,
+      "approxTokens": 2223,
+      "answer": "Your **total income in 2024 (2024-01-01 to 2024-12-31) was 113,081 PLN**.\n\nIt all came from one source: **12 salary payments** (category *Wynagrodzenie*), which is about one a month."
+    },
+    {
+      "id": "net-feb-pl",
+      "category": "income and savings",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "month_overview"
+      ],
+      "mode": "tools",
+      "ms": 5420,
+      "approxTokens": 2817,
+      "answer": "W lutym 2025 (01.02–28.02.2025) zaoszczędziłeś **4 010,38 PLN**, czyli **41,9%** dochodów.\n\n| | Kwota |\n|---|---|\n| Dochody (wynagrodzenie) | 9 580,00 PLN |\n| Wydatki | 5 569,62 PLN |\n| **Oszczędności** | **4 010,38 PLN** |\n\n**W porównaniu ze styczniem:** wydałeś mniej (5 569,62 zamiast 6 675,15 PLN), a zarobiłeś więcej (9 580 zamiast 9 213 PLN). Najmniej wydałeś na:\n- zakupy przez internet: 55,02 PLN (w styczniu 719,94 PLN),\n- restauracje i kawiarnie: 227,49 PLN (w styczniu 532,49 PLN).\n\n**Przekroczone budżety:**\n- transport: 649,77 PLN przy budżecie 450 PLN,\n- rachunki: 340,28 PLN przy budżecie 320 PLN,\n- artykuły spożywcze: 1 284,94 PLN przy budżecie 1 260 PLN."
+    },
+    {
+      "id": "inc-salary-mar-en",
+      "category": "income and savings",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 3084,
+      "approxTokens": 2249,
+      "answer": "You got **9,323 PLN** in salary in March 2025, from one payment:\n\n| Date | Payer | Amount |\n|---|---|---|\n| 2025-03-10 | PRACODAWCA PRZYKŁADOWY SP. Z O.O. | 9,323 PLN |\n\nThis covers 2025-03-01 to today. Your bank data only goes up to 2025-03-17, so any salary paid after that isn't counted."
+    },
+    {
+      "id": "rec-list-en",
+      "category": "overview and recurring",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "recurring_payments"
+      ],
+      "mode": "tools",
+      "ms": 5717,
+      "approxTokens": 2320,
+      "answer": "I found **3 recurring payments**, all monthly and all still active. They're based on your data from 2024-01-01 to 2025-03-17.\n\n| Payee | Category | Typical amount | Yearly cost | Last charge | Next expected |\n|---|---|---|---|---|---|\n| WSPÓLNOTA MIESZKANIOWA | Mieszkanie | 2,850.00 PLN | 34,200.00 PLN | 2025-03-02 | 2025-04-02 |\n| DOSTAWCA ENERGII | Rachunki | 260.29 PLN | 3,123.48 PLN | 2025-03-15 | 2025-04-15 |\n| OPERATOR INTERNETU | Rachunki | 79.99 PLN | 959.88 PLN | 2025-02-20 | **2025-03-20 (today)** |\n\n**Total:** about **3,190.28 PLN a month**, or **38,283.36 PLN a year**.\n\nThese are fixed bills: housing, energy and internet. I didn't find any subscriptions like streaming or apps. The internet bill is due today, but it isn't in your data yet because the data ends on 2025-03-17."
+    },
+    {
+      "id": "rec-internet-pl",
+      "category": "overview and recurring",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "recurring_payments",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 4946,
+      "approxTokens": 2698,
+      "answer": "Za internet płacisz około **959,88 PLN rocznie**.\n\n- **Płatność:** OPERATOR INTERNETU pobiera stałą kwotę **79,99 PLN miesięcznie**.\n- **Cały 2024 rok:** było 12 płatności, razem **959,88 PLN**.\n- **Od 2024-01-01 do 2025-03-17:** było 14 płatności, razem **1 119,86 PLN**. Kwota przez cały ten czas się nie zmieniła.\n\nOstatnia płatność była 2025-02-20. Kolejnej można się spodziewać około 2025-03-20, czyli dziś, ale dane kończą się na 2025-03-17, więc jeszcze jej nie widać."
+    },
+    {
+      "id": "month-progress-pl",
+      "category": "overview and recurring",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "month_overview",
+        "month_overview"
+      ],
+      "mode": "tools",
+      "ms": 14837,
+      "approxTokens": 3544,
+      "answer": "# Marzec idzie trochę drożej niż luty\n\nPorównałem 1–17.03.2025 (ostatnie dane są z 17.03) z tym samym okresem lutego i z całym lutym.\n\n| | Marzec (1–17.03) | Luty (1–17.02) | Luty (cały) |\n|---|---|---|---|\n| Wydatki | **5 151,82 PLN** | 4 209,46 PLN | 5 569,62 PLN |\n| Wpływy | 9 323,00 PLN | – | 9 580,00 PLN |\n| Saldo | +4 171,18 PLN | – | +4 010,38 PLN |\n| Stopa oszczędności | 44,7% | – | 41,9% |\n\n**Do tego samego dnia wydałeś w marcu o 942,36 PLN więcej niż w lutym.** Mimo to oszczędzasz na razie więcej, bo stopa oszczędności jest wyższa niż za cały luty.\n\n**Prognoza na cały marzec to 9 394,50 PLN.** Najpewniej jest za wysoka, bo zakłada, że wydajesz każdego dnia tyle samo. Tymczasem największy wydatek, czynsz 2 850 PLN, płacisz tylko raz w miesiącu.\n\n**Kategorie (marzec do 17.03 / cały luty):**\n- 🔺 **Zakupy przez internet:** 343,49 / 55,02 PLN. Już teraz to ponad 6 razy więcej niż w całym lutym. Największy zakup to Sklep Internetowy Alfa, 185,41 PLN.\n- 🔺 **Zdrowie i uroda:** 57,53 / 44,63 PLN. **Budżet 45 PLN jest już przekroczony.**\n- 🔺 **Sport:** 74,56 / 31,84 PLN. Budżet to 80 PLN, więc zostało niewiele.\n- ✅ **Restauracje i kawiarnie:** 72,63 / 227,49 PLN. Wydajesz tu wyraźnie mniej.\n- ✅ **Artykuły spożywcze:** 1 095,05 / 1 284,94 PLN.\n- ✅ **Transport:** 429,32 / 649,77 PLN.\n- ✅ **Rachunki:** 216,32 / 340,28 PLN. Rachunek za energię był niższy: 216,32 PLN w marcu i 260,29 PLN w lutym.\n- ✅ **Rozrywka:** 0 / 85,65 PLN.\n- **Mieszkanie:** 2 850 PLN w obu miesiącach, bez zmian.\n\n**Na co uważać do końca miesiąca:**\n- Zostało Ci 96,51 PLN budżetu na zakupy przez internet (440 PLN).\n- Zostało 264,95 PLN budżetu na żywność (1 360 PLN).\n- Te same dwie kategorie wydajesz też szybciej niż zwykle."
+    },
+    {
+      "id": "month-summary-en",
+      "category": "overview and recurring",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "month_overview"
+      ],
+      "mode": "tools",
+      "ms": 7217,
+      "approxTokens": 2820,
+      "answer": "**February 2025 summary (2025-02-01 to 2025-02-28)**\n\n- **Income:** 9,580.00 PLN, all salary from PRACODAWCA PRZYKŁADOWY SP. Z O.O.\n- **Spent:** 5,569.62 PLN, down from 6,675.15 PLN in January.\n- **Net:** +4,010.38 PLN, so you saved **41.9%** of your income.\n\n**Where the money went**\n| Category | Spent | Budget |\n|---|---|---|\n| Housing (Mieszkanie) | 2,850.00 | 2,850 ✅ |\n| Groceries (Artykuły spożywcze) | 1,284.94 | 1,260 ⚠️ over |\n| Transport | 649.77 | 450 ⚠️ over |\n| Bills (Rachunki) | 340.28 | 320 ⚠️ over |\n| Restaurants \u0026 cafés | 227.49 | 450 ✅ |\n| Entertainment (Rozrywka) | 85.65 | 120 ✅ |\n| Online shopping | 55.02 | 470 ✅ |\n| Health \u0026 beauty | 44.63 | 90 ✅ |\n| Sport | 31.84 | 80 ✅ |\n\nThese budgets are the app's defaults, based on what you spent in earlier months. You haven't set them yourself.\n\n**Highlights**\n- **Spending was lower** because online shopping dropped to 55 PLN (720 PLN in January) and restaurants dropped to 227 PLN (532 PLN in January). You also spent nothing on garden.\n- **Transport was the biggest overspend,** about 200 PLN over budget. It included fuel at STACJA PALIW POLNA (132.60 PLN), a taxi (129.32 PLN) and public transport (127.92 PLN).\n- **Largest payments:** rent to WSPÓLNOTA MIESZKANIOWA (2,850 PLN) and the electricity bill from DOSTAWCA ENERGII (260.29 PLN)."
+    },
+    {
+      "id": "budget-now-pl",
+      "category": "budgets and groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "budget_status"
+      ],
+      "mode": "tools",
+      "ms": 6708,
+      "approxTokens": 2596,
+      "answer": "**Tak, przekraczasz jeden budżet:** **Zdrowie i uroda**. Wydałeś tam 57,53 PLN przy budżecie 45 PLN, czyli o 12,53 PLN za dużo.\n\nSprawdziłem okres od 1 do 17.03.2025, bo dane kończą się na 17 marca. Wszystkie budżety są domyślne: to średnia z ostatnich miesięcy.\n\n**Kategorie, w których wydajesz szybciej niż zakłada tempo miesiąca:**\n\n| Kategoria | Wydano | Budżet | Zostało |\n|---|---|---|---|\n| Mieszkanie | 2 850,00 | 2 850 | 0,00 |\n| Sport | 74,56 | 80 | 5,44 |\n| Transport | 429,32 | 500 | 70,68 |\n| Zakupy przez internet | 343,49 | 440 | 96,51 |\n| Rachunki | 216,32 | 340 | 123,68 |\n| Artykuły spożywcze | 1 095,05 | 1 360 | 264,95 |\n\n- W **Mieszkaniu** budżet jest wykorzystany w całości. Jeśli to jedna stała opłata w miesiącu, to się zgadza.\n- W **Sporcie** zostało już tylko 5,44 PLN.\n\n**Mieszczą się w budżecie:** Restauracje i kawiarnie (zostało 277,37 PLN), Rozrywka (140 PLN), Ogród (85 PLN) i Bez kategorii (17,08 PLN).\n\n**Łącznie:** wydałeś 5 151,82 PLN z 6 220 PLN, więc zostało 1 068,18 PLN.\n\nJeśli chcesz, mogę zaproponować inny budżet dla Zdrowia i urody."
+    },
+    {
+      "id": "budget-feb-en",
+      "category": "budgets and groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "budget_status"
+      ],
+      "mode": "tools",
+      "ms": 5097,
+      "approxTokens": 2598,
+      "answer": "In February 2025 (2025-02-01 to 2025-02-28), 3 categories went over budget:\n\n| Category | Spent | Budget | Over by |\n|---|---|---|---|\n| Transport | 649.77 PLN | 450 PLN | **199.77 PLN** |\n| Artykuły spożywcze (Groceries) | 1,284.94 PLN | 1,260 PLN | **24.94 PLN** |\n| Rachunki (Bills) | 340.28 PLN | 320 PLN | **20.28 PLN** |\n\n**Overall, you stayed under budget.** You spent 5,569.62 PLN against a total budget of 6,210 PLN, so 640.38 PLN was left. Mieszkanie (Housing) used its whole budget, 2,850 PLN, but didn't go over. Every other category came in under budget.\n\nThese budgets are defaults (the average of up to 3 earlier months), not ones you set yourself. I can set your own monthly budgets if you'd like."
+    },
+    {
+      "id": "grp-holiday-days-en",
+      "category": "budgets and groups",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 7030,
+      "approxTokens": 4771,
+      "answer": "I can't give you a reliable trip length from the data, because your \"Wakacje nad morzem\" (seaside holiday) label isn't on a single trip. It's spread across your whole history.\n\n**What the group contains:**\n- **54 transactions**, with **3,126.90 PLN** spent in total\n- **First day:** 2024-01-08. **Last day:** 2025-03-17. That's **435 days**.\n- Averaged over that span, it works out to **7.19 PLN per day**, but that figure doesn't mean much for a holiday.\n\n**Why it doesn't look like one trip:** every month from January 2024 to March 2025 has 2–5 transactions with this label. Most are everyday purchases, like your usual bakery (Piekarnia Ziarno), grocery shops (Delikatesy Pod Lipą, Market Na Rogu) and Warsaw city transport. So the label was probably added to transactions that weren't part of the trip.\n\n**To get the real numbers:** tell me the holiday's start and end dates. I can then add up the spending for just those days and suggest moving that trip's transactions into the group, which you'd review and apply."
+    },
+    {
+      "id": "grp-remont-payee-pl",
+      "category": "budgets and groups",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "group_summary",
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 6442,
+      "approxTokens": 4021,
+      "answer": "Podczas remontu wszystkie wydatki poszły do jednego sklepu: **CENTRUM OGRODNICZE (Częstochowa)**. Wydałeś tam łącznie **758,29 PLN** w 15 płatnościach. Okres to 2024-01-10 – 2025-01-28.\n\nNajwiększe pojedyncze zakupy:\n\n| Data | Kwota |\n|---|---|\n| 2024-02-03 | 137,13 PLN |\n| 2025-01-02 | 105,89 PLN |\n| 2024-04-04 | 85,87 PLN |\n\nWszystkie te wydatki mają kategorię „Ogród”."
+    },
+    {
+      "id": "prop-category-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 4055,
+      "approxTokens": 2391,
+      "answer": "I've set up the change for you to review. It moves **14 OPERATOR INTERNETU payments** out of **Rachunki** and into a new **Internet** category. The category will be created when you apply the change.\n\nThe payments are the monthly 79.99 PLN charges, the most recent on 2025-02-20. Nothing changes until you tap **Apply** on the card.\n\nThis only covers payments already in your data. Future ones will still go into Rachunki unless you add a rule, and I can set one up if you'd like."
+    },
+    {
+      "id": "prop-rule-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 4566,
+      "approxTokens": 2421,
+      "answer": "Przygotowałem regułę **„Klub Fitness Ruch → Sport”**. Wyświetla się jako karta do potwierdzenia. Zacznie działać dopiero, gdy klikniesz **Zastosuj**.\n\n- **Warunek:** odbiorca zawiera „KLUB FITNESS RUCH”\n- **Kategoria:** Sport\n- **Pasujące transakcje:** 19 (np. „KLUB FITNESS RUCH WARSZAWA” z 26.01.2025, 79,06 PLN)\n\nWszystkie transakcje w podglądzie są już w kategorii Sport. Reguła zadba więc głównie o to, żeby nowe płatności w tym klubie też tam trafiały."
+    },
+    {
+      "id": "prop-group-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 4132,
+      "approxTokens": 2377,
+      "answer": "I've set up a change for you to review. It puts all **13 TEATR MAŁY transactions** (1 Jan 2024 to 17 Mar 2025) in the group **Culture**. That's a new group, so applying the change creates it. Nothing changes until you tap **Apply** on the card.\n\nThe 5 most recent payments it covers:\n\n| Date | Amount |\n|---|---|\n| 2025-02-18 | 85.65 PLN |\n| 2024-12-18 | 148.94 PLN |\n| 2024-12-04 | 114.26 PLN |\n| 2024-11-27 | 33.92 PLN |\n| 2024-08-18 | 79.24 PLN |\n\nAll 5 are in the category Rozrywka, and adding the group doesn't change that."
+    },
+    {
+      "id": "prop-budget-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 3038,
+      "approxTokens": 2240,
+      "answer": "I've set up the change for you to review: a **900 PLN monthly budget for Rachunki**. It's on the confirmation card, and it only takes effect when you tap **Apply**."
+    },
+    {
+      "id": "prop-budget-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 3885,
+      "approxTokens": 2262,
+      "answer": "Przygotowałem propozycję: miesięczny budżet na **Artykuły spożywcze** wyniesie **1 500 zł**. Budżet zacznie obowiązywać dopiero po kliknięciu **Zastosuj** na karcie potwierdzenia.\n\nJeśli chcesz, sprawdzę, ile wydajesz na tę kategorię w tym miesiącu (2025-03-01 do 2025-03-17) i czy mieścisz się w nowym limicie."
+    },
+    {
+      "id": "prop-expense-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 4361,
+      "approxTokens": 2619,
+      "answer": "I've set up a cash expense for you to check. It won't be saved until you tap **Apply** on the card:\n\n- **Date:** 2025-03-20\n- **Payee:** KAWIARNIA ZIARNO\n- **Amount:** 18 PLN\n- **Category:** Restauracje i kawiarnie\n- **Account:** Portfel (your cash account)\n- **Note:** Coffee, paid in cash"
+    },
+    {
+      "id": "prop-expense-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 4840,
+      "approxTokens": 2640,
+      "answer": "Przygotowałem wydatek gotówkowy do dodania. Pojawi się dopiero po kliknięciu **Zastosuj** na karcie.\n\n- **Data:** 2025-03-19 (wczoraj)\n- **Kwota:** 42,00 PLN\n- **Odbiorca:** PIEKARNIA ZIARNO\n- **Kategoria:** Artykuły spożywcze\n- **Konto:** Portfel\n\nJeśli wolisz inną kategorię, daj znać, a przygotuję nową kartę."
+    },
+    {
+      "id": "prop-share-en",
+      "category": "action proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 8571,
+      "approxTokens": 5970,
+      "answer": "I've set up a card to share your TEATR MAŁY payments with the **Wyjazd do Pragi** group. They're only shared once you tap **Apply** on the card.\n\n**What's on the card:** all 13 payments to TEATR MAŁY WARSZAWA, made between 2024-01-16 and 2025-02-18, totalling **873.22 PLN**. The largest are:\n\n| Date | Amount |\n|---|---|\n| 2024-12-18 | 148.94 PLN |\n| 2024-12-04 | 114.26 PLN |\n| 2024-03-02 | 103.12 PLN |\n| 2025-02-18 | 85.65 PLN |\n| 2024-08-18 | 79.24 PLN |\n\n**Before you apply:** all these tickets were bought from the Warsaw theatre over more than a year. Two are already labelled with your \"Wakacje nad morzem\" group (2024-06-09 and 2024-12-04). If only some of them are Prague trip costs, tell me which dates and I'll make a new card with just those."
+    },
+    {
+      "id": "prop-share-pl",
+      "category": "action proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 8647,
+      "approxTokens": 5656,
+      "answer": "Przygotowałem propozycję udostępnienia wydatków w grupie **Wyjazd do Pragi**. Pojawi się jako karta, którą musisz zatwierdzić przyciskiem „Zastosuj”. Do tego czasu nic się nie zmieni.\n\nObejmuje **wszystkie 10 płatności** w KINO POD GWIAZDAMI WARSZAWA z okresu od 2024-02-01 do 2025-01-28, razem **813,72 PLN**.\n\n**Zanim zatwierdzisz:** tylko jedna z tych płatności, z 2025-01-28 na 60,58 PLN, ma Twoją etykietę „Praga”. Pozostałe to wizyty w kinie w Warszawie w 2024 roku, a jedna z nich (2024-06-02, 83,05 PLN) ma etykietę „Wakacje nad morzem”. Jeśli chcesz udostępnić tylko wydatek z wyjazdu do Pragi, daj znać, a przygotuję propozycję tylko dla płatności z 2025-01-28."
+    },
+    {
+      "id": "goal-save-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 4395,
+      "approxTokens": 2598,
+      "answer": "I've set up a savings goal for you to confirm. It won't be created until you tap **Apply** on the card.\n\n- **Name:** Oszczędności 10 000 PLN\n- **Target:** 10 000 PLN\n- **Deadline:** 2025-06-30\n\nOnce it's set up, you can ask me any time how you're doing against the pace you need to reach it."
+    },
+    {
+      "id": "goal-save-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 4632,
+      "approxTokens": 2579,
+      "answer": "Przygotowałem propozycję celu. Zostanie utworzony dopiero, gdy klikniesz **Zastosuj** na karcie:\n\n- **Nazwa:** Oszczędności 5000 zł\n- **Rodzaj:** oszczędzanie\n- **Kwota:** 5000 PLN\n- **Termin:** 2025-12-31\n\nJeśli chcesz zmienić nazwę albo odkładać na jedno konkretne konto, daj znać, a przygotuję poprawioną propozycję."
+    },
+    {
+      "id": "goal-reduce-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "goal_status",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 10953,
+      "approxTokens": 5492,
+      "answer": "I set up a goal for you to confirm: **\"Mniej jedzenia na mieście\"**. It aims to spend 20% less on **Restauracje i kawiarnie** until **2025-12-31**. Nothing changes until you tap **Apply** on the card.\n\n**How it works:** your monthly limit will be your average for this category over the last 3 months, minus 20%. Each month, the app compares your spending with that limit.\n\n**Your recent spending (2024-09-01 to 2025-03-17):**\n\n| Month | Payments | Spent |\n|---|---|---|\n| 2024-09 | 8 | 347.56 PLN |\n| 2024-10 | 11 | 516.55 PLN |\n| 2024-11 | 10 | 526.94 PLN |\n| 2024-12 | 6 | 297.47 PLN |\n| 2025-01 | 11 | 532.49 PLN |\n| 2025-02 | 7 | 227.49 PLN |\n| 2025-03 (to the 17th) | 2 | 72.63 PLN |\n\n**Tips:**\n- Your spending swings a lot. You went over 500 PLN in Oct, Nov and Jan, but stayed under 300 PLN in Dec and Feb. Try to keep the higher months closer to your lower ones.\n- You spent 227.49 PLN in February, so you already know you can spend this little.\n- You've spent 72.63 PLN so far in March.\n\nYour other goal, **\"Wakacje\"** (5,000 PLN), is already at 214%."
+    },
+    {
+      "id": "goal-reduce-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 6389,
+      "approxTokens": 2681,
+      "answer": "Przygotowałem propozycję celu. Zacznie działać dopiero, gdy klikniesz **Zastosuj** na karcie:\n\n- **Nazwa:** Transport -15%\n- **Rodzaj:** mniejsze wydatki w kategorii **Transport**\n- **Cel:** wydawać o **15% mniej** niż średnio w ostatnich 3 miesiącach\n- **Termin:** do **30.06.2025**\n\nGdy cel będzie aktywny, możesz mnie zapytać, jak Ci idzie. Pokażę, ile wydałeś na transport w danym miesiącu w porównaniu z miesięcznym limitem z celu."
+    },
+    {
+      "id": "goal-update-en",
+      "category": "goals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "goal_status",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 6277,
+      "approxTokens": 4302,
+      "answer": "I've set up the change for your **Wakacje** goal. Its deadline will move from **2025-08-31** to **2025-09-30**, but only once you tap **Apply** on the card.\n\nYou've already reached the goal: **10,719.41 PLN** saved toward your **5,000 PLN** target (214%). So you could also mark it as done, or raise the target, if you'd like to keep saving toward something bigger."
+    },
+    {
+      "id": "goal-status-pl",
+      "category": "goals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "goal_status"
+      ],
+      "mode": "tools",
+      "ms": 4998,
+      "approxTokens": 2310,
+      "answer": "Cel jest już osiągnięty z dużym zapasem. 🎉\n\n**Cel „Wakacje”** (od 2025-01-01 do 2025-08-31):\n\n| | Kwota |\n|---|---|\n| Cel | 5 000,00 PLN |\n| Zaoszczędzone do dziś | **10 719,41 PLN (214%)** |\n| Plan na dziś przy równym tempie | 1 625,51 PLN |\n| Prognoza na 31.08.2025 | 32 972,36 PLN |\n\nDo terminu zostało 164 dni.\n\nAplikacja liczy oszczędności jako wpływy minus wydatki od 2025-01-01. Kwota 10 719,41 PLN to więc cała nadwyżka z tego okresu, a nie pieniądze odłożone osobno na wakacje.\n\nMogę przygotować jedną z tych zmian:\n- oznaczyć cel jako zrealizowany,\n- podnieść kwotę celu, na przykład do 10 000 PLN."
+    },
+    {
+      "id": "advice-emergency-en",
+      "category": "advice",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_advice",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 9071,
+      "approxTokens": 3782,
+      "answer": "Here's general guidance from the app's article **\"Building an emergency fund\"**. It's general information, not financial advice.\n\n**How big**\n- A common starting point is **1 month of essential spending**: rent, food, transport and bills.\n- Over time, build it up to **3–6 months**.\n- If that feels like too much, even one week's spending is a good first cushion.\n\n**What that means for you**\nYour total spending from 2024-03-01 to 2025-02-28 was **78,655.27 PLN**, about **6,555 PLN a month**. It ranged from 5,562 PLN (Nov 2024) to 7,761 PLN (Mar 2024). On that basis:\n\n| Target | Approx. amount |\n|---|---|\n| 1 month | ~6,555 PLN |\n| 3 months | ~19,660 PLN |\n| 6 months | ~39,330 PLN |\n\nThese figures include everything you spent, including things like restaurants and entertainment. If you only count essentials, the target will be lower.\n\n**Where to keep it**\n- In an account **separate from your everyday account**, so you don't dip into it by accident.\n- Somewhere you can **get the money within a day or two**.\n- **Not invested** in anything whose value can drop just when you need the money.\n\n**How to get there**\n- Move a fixed amount to it right after payday, instead of saving whatever is left at the end of the month.\n- Put windfalls like bonuses or tax refunds towards it.\n\nI can set up a savings goal with a deadline so you can see whether you're on pace. Just tell me the amount and the date."
+    },
+    {
+      "id": "advice-debt-en",
+      "category": "advice",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_advice"
+      ],
+      "mode": "tools",
+      "ms": 7037,
+      "approxTokens": 3126,
+      "answer": "General question; use search_advice.\n\nUsually it's the **credit card first**, but check the interest rates to be sure. Here's how to decide, based on the app's article *\"Paying down debt: highest rate first, or smallest balance first\"*:\n\n**Basic approach:** Pay the minimum on both every month. Then put every extra amount on just one debt until it's gone, rather than spreading it across both.\n\n**Two ways to choose which debt gets the extra money:**\n- **Highest interest rate first (the \"avalanche\"):** You pay the least interest overall. Credit cards usually charge much more interest than car loans, so with this method you'd usually pay off the card first.\n- **Smallest balance first (the \"snowball\"):** The first debt disappears quickly. Then the payment you no longer make goes toward the next one. You may pay a bit more interest, but many people stay motivated by seeing progress.\n\n**Before you start:**\n- List both debts with their balance, interest rate and minimum payment. Your interest rates and balances aren't in your Finuance data, so you'll need to get them from your lender and card statements.\n- Keep a small emergency fund so that a surprise expense doesn't end up on the card again.\n- Check whether the car loan charges a fee for paying it off early. If you're thinking about combining both debts into one lower-rate loan (consolidation), make sure it's really cheaper once the fees are counted.\n\nThis is general information, not financial advice. If you'd like, I can look at your spending to find extra money each month for paying down the card. I can also set up a savings goal to track your progress."
+    },
+    {
+      "id": "advice-subscriptions-pl",
+      "category": "advice",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "recurring_payments",
+        "search_advice",
+        "aggregate_transactions"
+      ],
+      "mode": "tools",
+      "ms": 12702,
+      "approxTokens": 5045,
+      "answer": "Mam dobrą wiadomość: w Twoich danych (2024-01-01 – 2025-03-17) **nie znalazłem typowych subskrypcji**, takich jak serwisy streamingowe, muzyka czy aplikacje. Wykryłem tylko 3 stałe opłaty miesięczne, które są zwykłymi rachunkami:\n\n| Odbiorca | Kategoria | Zwykle miesięcznie | Rocznie |\n|---|---|---|---|\n| WSPÓLNOTA MIESZKANIOWA | Mieszkanie | 2 850,00 PLN | 34 200,00 PLN |\n| DOSTAWCA ENERGII | Rachunki | 260,29 PLN | 3 123,48 PLN |\n| OPERATOR INTERNETU | Rachunki | 79,99 PLN | 959,88 PLN |\n\nPłatności w KLUB FITNESS RUCH nie są abonamentem. W tym okresie było ich 19 na łączną kwotę 912,89 PLN, a kwoty i terminy były nieregularne.\n\n**Co możesz zrobić:**\n- **Internet (959,88 PLN rocznie):** porównaj aktualne oferty albo zapytaj operatora o tańszy pakiet lub rabat za przedłużenie umowy. To najłatwiejsza z tych opłat do obniżenia.\n- **Energia (3 123,48 PLN rocznie):** sprawdź, czy taryfa pasuje do tego, kiedy zużywasz prąd (np. taryfa dzienno-nocna). Zmniejszenie zużycia też obniży rachunek.\n- **Wspólnota mieszkaniowa:** tej kwoty zwykle nie da się negocjować. Warto jednak sprawdzić rozliczenie zaliczek, bo czasem przysługuje zwrot nadpłaty.\n- **Nowe subskrypcje:** zanim się zapiszesz, ustaw sobie przypomnienie przed końcem okresu próbnego. Raz na kwartał przejrzyj, za co płacisz regularnie.\n- **Subskrypcje opłacane z innej karty lub konta:** jeśli takie masz (np. Netflix, Spotify), nie widzę ich w zaimportowanych danych. Po ich zaimportowaniu mogę je przeanalizować.\n\nW bibliotece porad aplikacji nie ma artykułu na ten temat. Powyższe wskazówki to ogólne informacje, a nie porada finansowa."
+    },
+    {
+      "id": "digest-daily-en",
+      "category": "digests",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions",
+        "budget_status",
+        "goal_status",
+        "recurring_payments"
+      ],
+      "mode": "tools",
+      "ms": 13469,
+      "approxTokens": 3676,
+      "answer": "Here's your digest for **Thu 20 Mar 2025**:\n\n- **No data for yesterday (19 Mar):** your bank data only goes up to **2025-03-17**, so I can't check what you spent yesterday or whether anything was unusual. I'll be able to once a newer statement is imported.\n- **Due today (20 Mar): OPERATOR INTERNETU, 79.99 PLN** (monthly). You have 123.68 PLN left in your Rachunki (bills) budget, so it's covered. No other regular payments are due in the next 7 days. The next ones are rent to WSPÓLNOTA MIESZKANIOWA (2,850 PLN on 2 Apr) and DOSTAWCA ENERGII (about 260.29 PLN on 15 Apr).\n- **Over budget: Zdrowie i uroda (health and beauty), 57.53 / 45 PLN** (12.53 PLN over). The 45 PLN limit is just the average of earlier months, not a budget you set, so a single larger purchase was enough to go over.\n- **Almost used up:** Sport has **5.44 PLN** left (74.56 / 80), and Transport has **70.68 PLN** left (429.32 / 500), with 14 days of March to go.\n- **Spending faster than usual:** groceries are at 1,095.05 / 1,360 PLN (264.95 left), and online shopping is at 343.49 / 440 PLN (96.51 left). Mieszkanie (housing) is at 2,850 / 2,850 PLN, but that's just this month's rent.\n- **March overall (1–17 Mar):** you've spent **5,151.82 of 6,220 PLN** in total budgets, with 1,068.18 PLN left.\n- **Goal \"Wakacje\" is already met:** 10,719.41 of 5,000 PLN saved (214%), with the deadline on 31 Aug 2025. The app counts this as all income minus all spending since 1 Jan, not money set aside separately.\n\nI didn't propose any changes, because none of them would clearly help yet. If you'd like, I can propose marking \"Wakacje\" as done, raising its target, or setting your own budget for Zdrowie i uroda."
+    },
+    {
+      "id": "digest-weekly-en",
+      "category": "digests",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "aggregate_transactions",
+        "aggregate_transactions",
+        "aggregate_transactions",
+        "budget_status",
+        "goal_status",
+        "recurring_payments",
+        "search_transactions",
+        "search_transactions"
+      ],
+      "mode": "tools",
+      "ms": 22886,
+      "approxTokens": 8726,
+      "answer": "Here's your digest for last week, 10–16 Mar 2025:\n\n- **Your \"Wakacje\" savings goal is already reached.** You've saved 10,719.41 PLN against your 5,000 PLN target (214%), with 164 days left before 31 Aug. You could raise the target or mark the goal done. Tell me which and I'll set it up for you to apply.\n- **You spent 932.95 PLN last week (13 payments).** That's about the same as the week of 3 Mar (914.89 PLN) and lower than the week of 17 Feb (1,007.04 PLN). The 3,633.93 PLN week of 24 Feb included the 2,850 PLN rent.\n- **One budget is over this month:** \"Zdrowie i uroda\" (health \u0026 beauty) is at 57.53 PLN of 45 PLN, so 12.53 PLN over, from 2 payments last week.\n- **Six budgets are ahead of pace (17 of 31 days gone).** The tightest are \"Sport\" (5.44 PLN left of 80) and \"Transport\" (70.68 PLN left of 500). Next come \"Zakupy przez internet\" (96.51 PLN left of 440) and \"Artykuły spożywcze\" (264.95 PLN left of 1,360). Overall you've spent 5,151.82 PLN of your 6,220 PLN monthly budget, with 1,068.18 PLN left.\n- **Last week by category, compared with the weekly average for 10 Feb – 9 Mar:**\n  - Groceries (\"Artykuły spożywcze\"): 317.54 PLN, down from about 399 PLN\n  - Bills (\"Rachunki\"): 216.32 PLN, the monthly energy bill\n  - Online shopping (\"Zakupy przez internet\"): 185.41 PLN, up from about 53 PLN. It was one payment to SKLEP INTERNETOWY ALFA on 10 Mar.\n  - Transport: 143.23 PLN, down from about 171 PLN\n- **Due in the next 7 days:** OPERATOR INTERNETU, about 79.99 PLN, expected today (20 Mar). Nothing else is due until rent on 2 Apr (2,850 PLN).\n- **The one uncategorised payment is fine to leave:** 12.92 PLN on 14 Mar was a transfer between your own accounts (PRZELEW WŁASNY), so it doesn't need a category or a rule.\n\nI didn't propose any changes this week. Your budgets are averages of earlier months, and going 12.53 PLN over doesn't call for changing one."
+    },
+    {
+      "id": "split-shares-en",
+      "category": "proposals",
+      "lang": "en",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 7497,
+      "approxTokens": 4430,
+      "answer": "I've set up a split for you to review. Nothing changes until you tap **Apply** on the card.\n\n- **Payment:** the cinema \"KINO POD GWIAZDAMI WARSZAWA\" on 2025-01-28, which cost **60.58 PLN**\n- **Shared group:** Wyjazd do Pragi\n- **Split by shares:** you pay 2 shares and Bo pays 1. On the card, your member name in this group shows as **Alex**."
+    },
+    {
+      "id": "split-other-pl",
+      "category": "proposals",
+      "lang": "pl",
+      "ok": true,
+      "toolOk": true,
+      "argsOk": true,
+      "answerOk": true,
+      "tools": [
+        "search_transactions",
+        "propose_action"
+      ],
+      "mode": "tools",
+      "ms": 7216,
+      "approxTokens": 4516,
+      "answer": "Przygotowałem zmianę podziału. Nie wejdzie w życie, dopóki jej nie zatwierdzisz.\n\n- **Wydatek:** KINO POD GWIAZDAMI WARSZAWA, 28.01.2025, 60,58 PLN\n- **Wspólna grupa:** Wyjazd do Pragi\n- **Nowy podział:** cała kwota przypada na Bo (60,58 PLN), na Ciebie 0 PLN\n\nKliknij **Zastosuj** na karcie, żeby zapisać zmianę."
+    }
+  ]
+}

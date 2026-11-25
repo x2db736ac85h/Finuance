@@ -63,7 +63,7 @@ The full list, with the filter language and how duplicates are recognised: [docs
 | Reasoning | Per model family: adaptive thinking with an effort level for current Claude models, a token budget for older ones, `reasoning_effort` for OpenAI-style models, the `/no_think` switch for Qwen3 |
 | Vision | Receipts from photos, on models that read images |
 | Retrieval | None on purpose: no embeddings and no vector store. The model gets a short description of the data and asks for exact figures through tools, so every number in an answer comes from a query |
-| Evals | `make eval-assistant` and `make eval-receipts`: 72 questions on a frozen demo year, scored for the tool chosen, its arguments and the answer, with latency and tokens ([results](docs/evals.md)) |
+| Evals | `make eval-assistant` and `make eval-receipts`: 72 questions on a frozen demo year, scored for the tool chosen, its arguments and the answer, with latency and tokens. Claude Sonnet 5.5 and Opus 5.5 answer 72 of 72, Haiku 5.5 69; the best 4 GB local model 83 % ([results](docs/evals.md)) |
 | Guard rails | Per-user consent that names the provider and location, masking of long digit runs and e-mail addresses for cloud runs, a daily token budget per connection, cloud requests only over https to public addresses, prompts and answers never logged (a canary test checks logs and traces) |
 | Observability | Model request duration, time to first token and reported tokens as metrics; a span per model request following the OpenTelemetry GenAI conventions |
 | Tests without a model | `llmmock`, a mock model server that speaks both formats, has a Vertex AI mode with expiring tokens, and refuses what the real APIs refuse |

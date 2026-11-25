@@ -134,6 +134,21 @@ Measured on the reference machine on 2026-11-06 (Ollama through Vulkan, 8,192 to
 - **`gemma3:4b`** has no tool calling on Ollama (its capabilities say so), so it runs in plan mode and wrote ```` ```tool_code ```` instead of the plan's JSON; not usable for questions. On receipts it took the cash given or a subtotal for the total.
 - Receipts misread by the Qwen models: a UK date read as a US one (both), and by the instruct model a French total and a cash receipt's amount given.
 
+### Model notes (Phase 26): Claude through Anthropic's API
+
+The 72 questions on 2026-11-25, thinking on auto, tools mode (`docs/evals.md`):
+
+| Model | Correct | p50 | p95 |
+|---|---:|---:|---:|
+| `claude-haiku-5-5` | 69 / 72 (96 %) | 2.9 s | 6.2 s |
+| `claude-sonnet-5-5` | 72 / 72 | 3.5 s | 10.1 s |
+| `claude-opus-5-5` | 72 / 72 | 5.2 s | 12.7 s |
+
+Haiku missed one Polish question on a month's income and two on splitting an expense. For
+comparison, the best local model on the reference machine reached 83 % at a median of 143 s. These
+runs used synthetic demo data; the decision that a cloud model sees synthetic data only still
+stands.
+
 ## Using a cloud model (Google Cloud)
 
 Since 0.7 a connection can use the models on Google Cloud's Vertex AI (Gemini, and the open models

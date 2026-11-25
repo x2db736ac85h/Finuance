@@ -13,11 +13,17 @@ model server for the usage of a streamed answer (`stream_options.include_usage`)
 
 The Google Cloud connection is **not yet run against Google**: it is tested against a mock of
 Vertex AI (token renewal, the allowed hosts, both wire formats), and its first run with a real
-project is still to come. Connections to Anthropic's API were tried against the real service.
+project is still to come. Connections to Anthropic's API were tried against the real service, and the assistant's 72 eval
+questions were run on Claude Haiku 5.5 (69 correct), Sonnet 5.5 and Opus 5.5 (72 each);
+see `docs/evals.md`.
 
 
 ### Added
 
+- **A provider's models to tick.** Adding a connection to Anthropic, OpenAI or Google lists the
+  provider's models by name (Claude Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2; Gemini on Vertex
+  AI), ticked, with a field for any other id and a default chosen among them, instead of typed
+  patterns.
 - **Google Cloud's models without a stored key** (ADR 0045,
   [docs/assistant.md](docs/assistant.md) "Using a cloud model"). A connection with `auth: google`
   names a project and a location and gets short-lived tokens from the instance's own Google
