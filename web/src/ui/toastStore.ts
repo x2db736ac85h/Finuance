@@ -3,10 +3,20 @@
 
 import { create } from 'zustand';
 
+import type { IconName } from './icons';
+
 export type ToastKind = 'ok' | 'error';
 export type ToastAction = { label: string; run: () => void };
-export type ToastItem = { id: number; msg: string; kind: ToastKind; ms: number; actions: ToastAction[] };
-export type ToastOptions = { kind?: ToastKind; ms?: number; actions?: ToastAction[] };
+export type ToastItem = {
+  id: number;
+  msg: string;
+  kind: ToastKind;
+  ms: number;
+  actions: ToastAction[];
+  /** Whose message it is, when that matters: the assistant's carry its sparkle (Phase 26, U10). */
+  icon?: IconName;
+};
+export type ToastOptions = { kind?: ToastKind; ms?: number; actions?: ToastAction[]; icon?: IconName };
 
 type ToastStore = {
   queue: ToastItem[];
@@ -27,7 +37,14 @@ export const useToasts = create<ToastStore>()((set) => ({
         : {
             queue: [
               ...s.queue,
-              { id: next++, msg, kind: opts?.kind ?? 'ok', ms: opts?.ms ?? 2200, actions: opts?.actions ?? [] },
+              {
+                id: next++,
+                msg,
+                kind: opts?.kind ?? 'ok',
+                ms: opts?.ms ?? 2200,
+                actions: opts?.actions ?? [],
+                ...(opts?.icon ? { icon: opts.icon } : {}),
+              },
             ],
           },
     );
@@ -36,6 +53,11 @@ export const useToasts = create<ToastStore>()((set) => ({
     set((s) => ({ queue: s.queue.slice(1) }));
   },
 }));
+
+/** A message of the assistant's (an applied proposal, a digest on its way): a toast with its sparkle. */
+export function aiToast(msg: string, opts: ToastOptions = {}): void {
+  toast(msg, { ...opts, icon: 'ai' });
+}
 
 /** Shows a short message at the bottom of the window. Errors and toasts with actions stay longer. */
 export function toast(msg: string, opts: ToastOptions = {}): void {

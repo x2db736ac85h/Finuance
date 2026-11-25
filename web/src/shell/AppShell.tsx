@@ -7,6 +7,7 @@ import { lazy, Suspense, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { invalidateData, useAccounts } from '../api/hooks/accounts';
+import { watchAnswerNotes } from '../assistant/answerNotes';
 import { DuplicatesDialog } from '../duplicates/DuplicatesDialog';
 import { configureImports } from '../import/queue';
 import { escapeSelection, extendSelection, moveSelection } from '../table/controller';
@@ -62,6 +63,9 @@ export function AppShell({ user }: { user: User }) {
     };
   }, []);
 
+  // an answer that ends while nobody looks at it goes to the bell (Phase 26, U10)
+  useEffect(() => watchAnswerNotes(), []);
+
   // Every file entry point (drop, ⌘O, Browse, mini drop zone) feeds the upload queue.
   useEffect(() => {
     configureImports({
@@ -91,7 +95,7 @@ export function AppShell({ user }: { user: User }) {
   const inShared = inSharedPath(location.pathname);
   // the Shared page holds shared groups and, since Phase 26, friends: it exists while either is on
   const features = useMeta().data?.features;
-  const sharedOn = (features?.sharedGroups !== false || features.friends !== false) && !user.isDemo;
+  const sharedOn = (features?.sharedGroups !== false || features.friends) && !user.isDemo;
   const lastView = useRef(txPath());
   useEffect(() => {
     if (!inShared && !inSettings && isViewPath(location.pathname)) lastView.current = location.pathname;

@@ -12,6 +12,7 @@ import { chipsOf, cleared, withoutChip } from '../table/chips';
 import { contextOf } from '../table/context';
 import { renderApp, warmUpApp } from '../test/render';
 import { account, API, db, problem, resetDb, server } from '../test/server';
+import { useAnswerNotes } from './answerNotes';
 import { applyEvent, useChat, type AiTurn } from './chatStore';
 
 // jsdom has no canvas: the browser-side re-encoding is replaced by a fixed JPEG (photos.test.ts
@@ -160,6 +161,7 @@ beforeEach(() => {
   useUi.setState({ ...uiDefaults, ai: { ...uiDefaults.ai, open: true } });
   useViews.getState().reset();
   useChat.setState({ chatId: null, turns: [], busy: false, noTools: false, applied: [], ctrl: null });
+  useAnswerNotes.getState().reset();
   st = {
     status: status(),
     settings: { retentionDays: 2, cloudConsent: [] },
@@ -182,6 +184,105 @@ beforeEach(() => {
 });
 
 const panel = async () => screen.findByRole('complementary', { name: 'Assistant' });
+
+describe('the assistant in the bell (Phase 26, U10)', () => {
+  const QUESTION = 'Which subscriptions or regular bills do I pay?';
+
+  it('leaves no note for an answer that ends in front of the person', async () => {
+    renderApp('/transactions/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByText(QUESTION));
+    await within(p).findByText((_, el) => el?.tagName === 'P' && el.textContent === 'Found 10 visits.');
+    expect(useAnswerNotes.getState().notes).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeTruthy();
+  });
+
+  it('tells in the bell when an answer ended while the panel was closed, and opens its chat', async () => {
+    // the answer waits until the test lets it go
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const answer = st.answer;
+    server.use(
+      http.post(`${API}/assistant/chats/:id/messages`, async () => {
+        await held;
+        return answer();
+      }),
+    );
+    db.notifications = [
+      {
+        id: '00000000-0000-4000-8000-0000000000f7',
+        kind: 'assistant.digest',
+        data: { schedule: 'daily', chatId: 'c-digest' },
+        createdAt: '2026-11-01T10:00:00Z',
+        readAt: '2026-11-01T11:00:00Z',
+      },
+      {
+        id: '00000000-0000-4000-8000-0000000000f8',
+        kind: 'friend.added',
+        data: { name: 'Cy' },
+        createdAt: '2026-10-01T10:00:00Z',
+        readAt: '2026-10-01T11:00:00Z',
+      },
+    ];
+    const user = userEvent.setup();
+    renderApp('/transactions/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByText(QUESTION));
+    await waitFor(() => {
+      expect(useChat.getState().busy).toBe(true);
+    });
+    act(() => {
+      useUi.getState().setAiOpen(false);
+    });
+    release();
+    const bell = await screen.findByRole('button', { name: 'Notifications, 1 unread' });
+    await user.click(bell);
+    const pop = await screen.findByRole('dialog', { name: 'Notifications' });
+    const entry = within(pop).getByText(`The assistant answered “${QUESTION}”`);
+    // the assistant's entries carry its sparkle; other people's don't
+    expect(entry.querySelector('svg')).toBeTruthy();
+    expect(within(pop).getByText('Your daily digest is ready').querySelector('svg')).toBeTruthy();
+    expect(
+      within(pop)
+        .getByText(/Cy entered your code/)
+        .querySelector('svg'),
+    ).toBeNull();
+
+    await user.click(entry);
+    // the panel opens with that chat (loaded again from the server), and the note has done its job
+    const chat = useChat.getState().chatId;
+    expect(await panel()).toBeTruthy();
+    expect(useUi.getState().ai.open).toBe(true);
+    await waitFor(() => {
+      expect(useChat.getState().chatId).toBe(chat);
+      expect(useAnswerNotes.getState().notes).toEqual([]);
+    });
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeTruthy();
+  });
+
+  it('says so when the answer failed, and counts a note as read once the list was looked at', async () => {
+    st.answer = () => new HttpResponse(null, { status: 500 });
+    const user = userEvent.setup();
+    renderApp('/transactions/all');
+    const p = await panel();
+    const ask = await within(p).findByText(QUESTION);
+    // asked, then the tab went to the background
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    fireEvent.click(ask);
+    const bell = await screen.findByRole('button', { name: 'Notifications, 1 unread' });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    await user.click(bell);
+    expect(
+      within(await screen.findByRole('dialog', { name: 'Notifications' })).getByText(/The assistant couldn't answer/),
+    ).toBeTruthy();
+    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('button', { name: 'Notifications' })).toBeTruthy();
+    // still listed until its chat is opened
+    expect(useAnswerNotes.getState().notes).toHaveLength(1);
+  });
+});
 
 describe('ChatPanel', () => {
   it('streams an answer with its reasoning, lookup and meta, and shows the lookup in the table', async () => {

@@ -9,7 +9,7 @@ import { errorMessage } from '../lib/errors';
 import { fmtInt, fmtMoney, plural } from '../lib/format';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
-import { toast } from '../ui/toastStore';
+import { aiToast as toast } from '../ui/toastStore';
 import { useChat } from './chatStore';
 
 /** The panel applies an opted-in proposal by itself only up to this many transactions (ADR 0030). */

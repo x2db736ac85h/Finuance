@@ -1331,6 +1331,13 @@ body.dragging .overlay {
   z-index: 60;
   pointer-events: none;
 }
+.toast .ico {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-right: 0.375rem;
+  vertical-align: -0.125rem;
+  color: var(--accent);
+}
 .toast.on {
   opacity: 1;
   transform: translate(-50%, 0);

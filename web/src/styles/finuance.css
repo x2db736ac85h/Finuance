@@ -1789,6 +1789,14 @@ textarea.inp.ins-note {
 .nt-list button:hover {
   background: var(--hover);
 }
+/* the assistant's entries carry its sparkle (Phase 26, U10) */
+.nt-list .ico {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-right: 0.375rem;
+  vertical-align: -0.125rem;
+  color: var(--accent);
+}
 .nt-list li.new button {
   box-shadow: inset 2px 0 0 var(--accent);
 }

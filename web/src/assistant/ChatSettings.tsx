@@ -17,7 +17,7 @@ import { useMe, useMeta } from '../api/hooks/me';
 import type { Schemas } from '../api/client';
 import { errorMessage } from '../lib/errors';
 import { fmtDateTime } from '../lib/dates';
-import { toast } from '../ui/toastStore';
+import { aiToast as toast } from '../ui/toastStore';
 import { THINKING, type AiPrefs, type Thinking } from '../stores/prefs';
 import { useUi } from '../stores/uiStore';
 import { Button } from '../ui/Button';
