@@ -17,7 +17,7 @@ Finuance is a Go API and worker, PostgreSQL and a React app. I built it to repla
 
 - **Tenant isolation is enforced by the database.** Every user-owned table has forced row-level security, and each request runs in a transaction bound to the signed-in user. A test fails the build if code outside the store layer talks to the database.
 - **It is operated, not only written.** Helm charts, CloudNativePG and Argo CD; SLOs with burn-rate alerts; a restore drill (71 s to restore, measured); pod kills under load with no failed request; weekly ZAP scans and a Kubernetes rehearsal in CI.
-- **An assistant that runs on your own model.** It answers questions through read-only tools, proposes changes you apply with a click, and every applied change can be undone.
+- **An assistant that runs on your own model, or on a provider's if you choose.** It answers questions through read-only tools, proposes changes you apply with a click, and every applied change can be undone. Local servers, Anthropic, OpenAI and Google Cloud's Vertex AI go through one client; a cloud connection needs each user's agreement first.
 
 ## Features
 
@@ -27,7 +27,7 @@ Finuance is a Go API and worker, PostgreSQL and a React app. I built it to repla
 - **Charts and a monthly overview.** Categories, cash flow, pace against last month, budgets, recurring payments, goals.
 - **Rules and transfers.** Categorise by rule; transfers between your own accounts are found and left out of spending.
 - **Share expenses.** Friends by one-time codes, shared groups with splits, balances and settling up. Members see copies of shared expenses, never each other's accounts.
-- **Assistant.** Works with LM Studio, Ollama, or any OpenAI- or Anthropic-compatible server. Reads receipts from photos, writes digests, and shows exactly what it looked up.
+- **Assistant.** Works with LM Studio, Ollama, or any OpenAI- or Anthropic-compatible server, and with Anthropic, OpenAI and Google Cloud (Gemini and Claude on Vertex AI, without a stored key). Reads receipts from photos, writes digests, and shows exactly what it looked up. An administrator picks the provider from a list and can set a daily token budget per connection.
 - **Administration without access to money.** Administrators manage accounts, limits and model servers, and see counts, never financial data.
 - **Scriptable.** Personal access tokens and `fin`, a command-line client.
 
@@ -45,9 +45,38 @@ The full list, with the filter language and how duplicates are recognised: [docs
 | Backend | Go (standard `net/http`), API specified first in [OpenAPI](api/openapi.yaml) with generated server and client code, `pgx` + `sqlc`, `goose` migrations, [River](https://riverqueue.com/) background jobs |
 | Data | PostgreSQL 18 with row-level security; money as integer minor units |
 | Frontend | React, TypeScript, Vite, a typed client generated from the same OpenAPI file |
+| AI / Agent | See [below](#ai-and-cloud) |
 | Deployment | Docker Compose; Helm, CloudNativePG, Argo CD and Sealed Secrets on Kubernetes |
+| Cloud | See [below](#ai-and-cloud) |
 | Observability | Prometheus metrics, OpenTelemetry traces, Grafana dashboards and alert rules as code |
 | Testing and security | Go tests against a real PostgreSQL, fuzzing, Vitest, Playwright, axe, k6, Trivy, gitleaks, govulncheck, OWASP ZAP, OpenVAS |
+
+### AI and cloud
+
+**AI / Agent**
+
+| | |
+|---|---|
+| Model vendors | **Anthropic** (Claude, the Messages API), **OpenAI** (Chat Completions), **Google** (Gemini and Claude through Vertex AI), and **local servers**: Ollama, LM Studio, vLLM, or anything that speaks the OpenAI or Anthropic format |
+| Client | One hand-written Go client for both wire formats, with streaming; no vendor SDK and no agent framework. The only AI-related dependency is `golang.org/x/oauth2`, for Google credentials |
+| Agent loop | Native tool calling, with a fallback "plan mode" for models that can't call tools (the model writes its lookups as JSON, the server runs them). Tools are read-only SQL lookups in a read-only transaction; a change is a proposal the user applies through the normal API and can undo ([ADR 0030](docs/adr/0030-ai-changes-and-undo.md)) |
+| Reasoning | Per model family: adaptive thinking with an effort level for current Claude models, a token budget for older ones, `reasoning_effort` for OpenAI-style models, the `/no_think` switch for Qwen3 |
+| Vision | Receipts from photos, on models that read images |
+| Retrieval | None on purpose: no embeddings and no vector store. The model gets a short description of the data and asks for exact figures through tools, so every number in an answer comes from a query |
+| Evals | `make eval-assistant` and `make eval-receipts`: 72 questions on a frozen demo year, scored for the tool chosen, its arguments and the answer, with latency and tokens ([results](docs/evals.md)) |
+| Guard rails | Per-user consent that names the provider and location, masking of long digit runs and e-mail addresses for cloud runs, a daily token budget per connection, cloud requests only over https to public addresses, prompts and answers never logged (a canary test checks logs and traces) |
+| Observability | Model request duration, time to first token and reported tokens as metrics; a span per model request following the OpenTelemetry GenAI conventions |
+| Tests without a model | `llmmock`, a mock model server that speaks both formats, has a Vertex AI mode with expiring tokens, and refuses what the real APIs refuse |
+
+**Cloud**
+
+| | |
+|---|---|
+| Vertex AI (0.7.0) | Gemini through the OpenAI-compatible endpoint and Claude through `streamRawPredict`, with short-lived tokens from Application Default Credentials (the metadata server, workload identity, a developer's login). No Google key is stored; a token is sent only to Vertex AI's own hosts. On synthetic data only for now ([ADR 0045](docs/adr/0045-cloud-model-providers.md)) |
+| Google Cloud lab (planned) | An on-demand lab created and destroyed with Terraform: GKE Autopilot, Gateway API with Certificate Manager and Cloud Armor, Secret Manager, workload identity, Private Google Access, CloudNativePG with backups to Cloud Storage, Argo CD. Synthetic data only |
+| Today | A single-node k3s cluster at home; the public demo is planned on a small VPS |
+
+More in [docs/assistant.md](docs/assistant.md).
 
 ## Architecture
 
@@ -58,7 +87,7 @@ flowchart LR
     api -->|"SQL, one user per transaction"| db[("PostgreSQL<br/>with row-level security")]
     api -.->|"queues slow work"| db
     worker["worker<br/>Go background jobs"] -->|"commits imports, rebuilds duplicates"| db
-    api -.->|"optional assistant"| llm["LLM server<br/>(LM Studio, Ollama, …)"]
+    api -.->|"optional assistant"| llm["Model server<br/>local (Ollama, LM Studio)<br/>or Anthropic, OpenAI, Vertex AI"]
     worker -.->|"assistant digests"| llm
     cli["fin CLI / scripts"] -->|"access token"| web
 ```
@@ -81,7 +110,7 @@ To run a released version instead of building, or to deploy on Kubernetes, see [
 
 ## Design decisions
 
-Each of the main choices has a short record of the context, the decision and what it costs ([36 so far](docs/adr/)). A few that shaped the code:
+Each of the main choices has a short record of the context, the decision and what it costs ([45 so far](docs/adr/)). A few that shaped the code:
 
 - **Row-level security, forced, as the second line of defence** behind the application's own filters ([ADR 0007](docs/adr/0007-multi-tenancy-rls.md)).
 - **Money is `int64` minor units, never floating point**, and a CI check keeps floats out of the money path ([ADR 0004](docs/adr/0004-money-minor-units.md)).
@@ -126,7 +155,7 @@ All test data is synthetic.
 
 ## Roadmap
 
-Released: **0.6.0** (signed images enforced, two-step sign-in, collected logs and complete traces, the traffic simulator). Next: a cloud model option, an on-demand cloud lab, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
+Released: **0.6.1** (signed images enforced, two-step sign-in, collected logs and complete traces, the traffic simulator, category archive and a round of interface corrections). In release candidate: **0.7.0**, cloud models (Anthropic, OpenAI, Google Cloud's Vertex AI without a stored key, a token budget per connection). Next: an on-demand Google Cloud lab, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
 
 ## How it was built
 
