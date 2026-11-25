@@ -15,12 +15,13 @@ What has shipped, what is being worked on and what comes later. The task list of
 | **0.5.0** | Security II: images deployed by digest and admitted by their build provenance; telemetry that can't carry private data; a guarded transport for cloud models; limits at the ingress; two-step sign-in; a stricter default deny in the cluster; threat model v3 |
 | **0.5.1** | Observability: logs joined to traces and collected (Loki and Alloy), so one request can be followed from the browser to its background jobs; panics, model servers, refused requests and errors in the browser counted; synthetic traffic labelled by the server |
 | **0.6.0** | A traffic simulator: ten animal-named synthetic users with their own characters use every feature of a lab instance all day through its front door, tuned from a page of their own; a lab on one machine (`make sim-up`) and on Kubernetes; the load test's users synthetic too |
+| **0.6.1** | Interface corrections: readable addresses (`/transactions`, `/overview`, `/shared`), Settings regrouped, quick settings with a dark-mode switch, categories archived and unarchived instead of deleted, friends on the Shared page, the assistant's answers in the bell, a half-window layout check; connections added by choosing a provider |
 
 The repository became public in November 2026 with synthetic test data only and a README for people who are new to the project.
 
 ## Now
 
-**A cloud model for the assistant (0.7.0).** Google's Vertex AI with short-lived credentials, tried on synthetic data only (the simulator's animals ask it); a local model stays the default.
+**A cloud model for the assistant (0.7.0).** Anthropic, OpenAI and Google's Vertex AI (short-lived credentials, no stored key) as connections an administrator picks from a list; a local model stays the default. The Vertex AI path is tested against a mock only so far: its first run against Google is in the backlog.
 
 ## Next
 

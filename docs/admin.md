@@ -143,6 +143,8 @@ the same in every theme.
   can't change it, and their own earlier choices come back if you let them pick again.
 - **What a cloud provider keeps**: one paragraph of yours, shown where a person agrees to a cloud
   connection (retention, logging, what you switched off). Finuance can't know it; you can.
+  `docs/assistant.md` "Cloud providers: what leaves and what they keep" lists what to look at for
+  Anthropic, OpenAI, a router such as OpenRouter, and Google Cloud.
 - **Models** (a button on each connection, the configuration file's included): **On** (a
   connection switched off disappears for people within a minute, its chats and digests use the
   default connection, and its loaded models are unloaded); the **default model** (over the

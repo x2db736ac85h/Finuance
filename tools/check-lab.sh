@@ -27,7 +27,15 @@ echo "== the animals act now"
 ev=
 for pair in otter:imports.month owl:imports.month fox:imports.month fox:assistant.ask sloth:account.unknown-path otter:insights.overview; do
   ev=$(call -X POST "$sim/api/act" -d "$(jq -cn --arg p "${pair%%:*}" --arg a "${pair#*:}" '{persona: $p, action: $a}')")
-  [ "$(jq -r .result <<<"$ev")" = ok ] || fail "$pair: $ev"
+  result=$(jq -r .result <<<"$ev")
+  # An animal that already imported this month by itself (they play while this runs) has nothing
+  # left to import: "skipped", and as right an answer as "ok". Seen on 2026-11-25, when the owl was
+  # a moment ahead of this check. Any other action must succeed, and so must a failed import.
+  if [ "$result" = skipped ] && [ "${pair#*:}" = imports.month ] && [ "$(jq -r .error <<<"$ev")" = "nothing to do" ]; then
+    echo "   $pair: nothing left to import (the animal was ahead)"
+    continue
+  fi
+  [ "$result" = ok ] || fail "$pair: $ev"
   echo "   $pair: ok ($(jq -r '.requestId // "-"' <<<"$ev"), $(jq -r .durationMs <<<"$ev") ms)"
 done
 id=$(jq -r .requestId <<<"$ev")
