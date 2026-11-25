@@ -780,7 +780,7 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
             <code>roles/aiplatform.user</code> on the project. Each person agrees before their data is sent.
           </p>
           {projectOk && locationOk && (
-            <p className="hint">
+            <p className="hint conn-addr">
               Address: <code>{googleBaseUrl(c.project.trim(), c.location.trim(), c.api)}</code>
             </p>
           )}
