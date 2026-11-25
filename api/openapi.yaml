@@ -7025,7 +7025,7 @@ components:
           description: Whether the model is sent tool definitions (otherwise plan mode).
         reasoning:
           type: string
-          enum: [none, effort, budget, switch]
+          enum: [none, effort, budget, switch, adaptive]
           description: How thinking is controlled (none = no control; the model may still reason).
         contextTokens:
           type: integer
@@ -7995,7 +7995,7 @@ components:
           type: boolean
         reasoning:
           type: string
-          enum: [none, effort, budget, switch]
+          enum: [none, effort, budget, switch, adaptive]
         contextTokens:
           type: integer
           minimum: 0

@@ -300,7 +300,10 @@ k3s publishes Traefik through its service load balancer (klipper-lb), which forw
 Only the tailnet may connect: the nftables table from step 2 drops connections forwarded into the pod network for ports 80/443 that don't arrive on `tailscale0`. Connections the host makes to itself aren't forwarded, so test from another device.
 
 ```sh
-sudo nft -c -f k3s-lan.nft && sudo install -m 644 k3s-lan.nft /etc/k3s-lan.nft && sudo systemctl restart k3s-lan
+sudo nft -c -f k3s-lan.nft && sudo install -m 644 k3s-lan.nft /etc/k3s-lan.nft && sudo nft -f /etc/k3s-lan.nft
+# Not `systemctl restart k3s-lan`: its ExecStop deletes the table before ExecStart loads it again, and
+# for that moment pods aren't held off the home network. The file replaces its own table in one
+# transaction; with this repository's unit installed, `sudo systemctl reload k3s-lan` does the same.
 kubectl apply -f traefik-config.yaml                     # the filled-in copy
 kubectl -n kube-system get svc traefik -o jsonpath='{.spec.type}'                       # ClusterIP
 kubectl -n finuance get ingress finuance -o jsonpath='{.status.loadBalancer.ingress}'   # [{"ip":"<tailnet-ip>"}]

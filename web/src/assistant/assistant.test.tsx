@@ -914,6 +914,39 @@ describe('ChatSettings', () => {
     expect(within(p).getByText(/You agreed to send your questions/)).toBeTruthy();
   });
 
+  it('sends the refused question again after the person agrees, and words the refusal as sentences (issue 97)', async () => {
+    st.status = status([{ cloud: true, label: 'Claude (cloud)', name: 'claude', provider: 'Anthropic' }]);
+    // the server refuses until the settings carry the agreement
+    const answer = st.answer;
+    st.answer = () =>
+      st.settings.cloudConsent.includes('claude')
+        ? answer()
+        : problem(403, 'consent_required', 'this cloud connection needs your agreement first');
+    renderApp('/transactions/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByText('Which subscriptions or regular bills do I pay?'));
+    const dialog = await screen.findByRole('dialog', { name: 'Send data to a cloud service?' });
+    // its content has the dialog's inset, like every other dialog (U5)
+    expect(dialog.querySelector('.modal-form')).toBeTruthy();
+    // two sentences, not one run-on
+    expect(
+      within(p).getByText(
+        'This cloud connection needs your agreement first. Agree to send data to this cloud connection, or choose a local one.',
+      ),
+    ).toBeTruthy();
+    fireEvent.click(within(dialog).getByText('Allow Claude (cloud)'));
+    // the same question goes out again by itself and is answered; the refusal is gone
+    expect(
+      await within(p).findByText((_, el) => el?.tagName === 'P' && el.textContent === 'Found 10 visits.'),
+    ).toBeTruthy();
+    expect(st.sent).toHaveLength(2);
+    expect(st.sent[1]?.text).toBe('Which subscriptions or regular bills do I pay?');
+    expect(within(p).queryByText(/needs your agreement first/)).toBeNull();
+    expect(
+      within(p).getAllByText('Which subscriptions or regular bills do I pay?', { selector: '.msg.user *' }),
+    ).toHaveLength(1);
+  });
+
   it('says who gets the data and where, with the administrator’s note on what is kept (26.5)', async () => {
     st.status = {
       ...status([

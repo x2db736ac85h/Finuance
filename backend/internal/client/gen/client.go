@@ -625,15 +625,18 @@ func (e AssistantModeEventMode) Valid() bool {
 
 // Defines values for AssistantModelReasoning.
 const (
-	AssistantModelReasoningBudget AssistantModelReasoning = "budget"
-	AssistantModelReasoningEffort AssistantModelReasoning = "effort"
-	AssistantModelReasoningNone   AssistantModelReasoning = "none"
-	AssistantModelReasoningSwitch AssistantModelReasoning = "switch"
+	AssistantModelReasoningAdaptive AssistantModelReasoning = "adaptive"
+	AssistantModelReasoningBudget   AssistantModelReasoning = "budget"
+	AssistantModelReasoningEffort   AssistantModelReasoning = "effort"
+	AssistantModelReasoningNone     AssistantModelReasoning = "none"
+	AssistantModelReasoningSwitch   AssistantModelReasoning = "switch"
 )
 
 // Valid indicates whether the value is a known member of the AssistantModelReasoning enum.
 func (e AssistantModelReasoning) Valid() bool {
 	switch e {
+	case AssistantModelReasoningAdaptive:
+		return true
 	case AssistantModelReasoningBudget:
 		return true
 	case AssistantModelReasoningEffort:
@@ -1423,15 +1426,18 @@ func (e LegacyImportStatus) Valid() bool {
 
 // Defines values for ModelCapsOverrideReasoning.
 const (
-	ModelCapsOverrideReasoningBudget ModelCapsOverrideReasoning = "budget"
-	ModelCapsOverrideReasoningEffort ModelCapsOverrideReasoning = "effort"
-	ModelCapsOverrideReasoningNone   ModelCapsOverrideReasoning = "none"
-	ModelCapsOverrideReasoningSwitch ModelCapsOverrideReasoning = "switch"
+	ModelCapsOverrideReasoningAdaptive ModelCapsOverrideReasoning = "adaptive"
+	ModelCapsOverrideReasoningBudget   ModelCapsOverrideReasoning = "budget"
+	ModelCapsOverrideReasoningEffort   ModelCapsOverrideReasoning = "effort"
+	ModelCapsOverrideReasoningNone     ModelCapsOverrideReasoning = "none"
+	ModelCapsOverrideReasoningSwitch   ModelCapsOverrideReasoning = "switch"
 )
 
 // Valid indicates whether the value is a known member of the ModelCapsOverrideReasoning enum.
 func (e ModelCapsOverrideReasoning) Valid() bool {
 	switch e {
+	case ModelCapsOverrideReasoningAdaptive:
+		return true
 	case ModelCapsOverrideReasoningBudget:
 		return true
 	case ModelCapsOverrideReasoningEffort:
