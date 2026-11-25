@@ -14,7 +14,8 @@ import { Icon } from '../ui/Icon';
 import { TextInput } from '../ui/inputs';
 import { Popover } from '../ui/Popover';
 import { toast } from '../ui/toastStore';
-import { colorVar, GROUP_COLORS, nextColor } from './colors';
+import { nextColor } from './colors';
+import { ColorSwatches } from './ColorSwatches';
 import { renameGroupFilters } from './filters';
 
 type Props = {
@@ -99,23 +100,7 @@ export function GroupForm({ anchor, group, onClose, onDone }: Props) {
             setName(e.target.value);
           }}
         />
-        <div className="gpal" role="radiogroup" aria-label="Colour">
-          {GROUP_COLORS.map((_, k) => (
-            <button
-              key={k}
-              type="button"
-              role="radio"
-              aria-checked={k === color}
-              aria-label={`Colour ${String(k + 1)}`}
-              title={`Colour ${String(k + 1)}`}
-              className={k === color ? 'gsw on' : 'gsw'}
-              style={colorVar(k)}
-              onClick={() => {
-                setColor(k);
-              }}
-            />
-          ))}
-        </div>
+        <ColorSwatches value={color} onChange={setColor} />
         <label className="gbud">
           <span>Budget ({cur})</span>
           <TextInput

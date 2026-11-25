@@ -59,6 +59,7 @@ read	GET /api/v1/assistant/settings
 read	GET /api/v1/assistant/status
 read	GET /api/v1/budgets
 read	GET /api/v1/categories
+read	GET /api/v1/categories/archived
 read	GET /api/v1/categories/stats
 read	GET /api/v1/duplicates
 read	GET /api/v1/friends
@@ -131,7 +132,9 @@ write	POST /api/v1/assistant/chats/{id}/messages
 write	POST /api/v1/assistant/chats/{id}/stop
 write	POST /api/v1/assistant/digest
 write	POST /api/v1/categories
+write	POST /api/v1/categories/{id}/archive
 write	POST /api/v1/categories/{id}/merge
+write	POST /api/v1/categories/{id}/unarchive
 write	POST /api/v1/demo-data
 write	POST /api/v1/friends
 write	POST /api/v1/friends/code

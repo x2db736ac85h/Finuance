@@ -150,6 +150,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Sidebar parsing options (encoding, delimiter, strip `'`) | §11 | 9 | retired: options are per import, in the import window (9.3) |
 | Settings → Appearance: theme System/Dark/Light, interface size incl. Auto | §32.2 | 8, 26 | ported (8.9; e2e `quality.spec.ts`); **deliberately different** since Phase 26 (U3, U4, the maintainer): the controls are a card on Settings → General, and the quick settings have a dark-mode switch (two states; "System" is chosen on Settings → General) and a plain slider |
 | The mode opened last (table or overview, `S.mode`) is where the app opens | §11 | 26 | **retired** (U1, U2, the maintainer, 2026-11-25): the app always opens the transactions; table or overview is read from the address (`/transactions/:view`, `/overview/:view`), not from the preferences |
+| Friends are managed in Settings | — (not in the legacy app; Phase 19) | 26 | moved (U8): the code, adding and the list are a part of the Shared page (`/shared#friends`); `/settings/friends` redirects |
 | Dark/light design tokens, chart palette, status tokens | §19 | 8 | ported (`styles/tokens.css`; contrast raised to WCAG AA in Phase 14, `docs/a11y.md`) |
 | Interface scaling: rem-based, `S.ui`, Auto zoom compensation | §20 | 8 | ported (`styles/scale.ts`; e2e UI scale at 2× and 2.5×) |
 | Responsiveness: inspector overlay < 1100 px, labels hidden ≤ 860 px | §21 | 8, 10 | ported |
@@ -200,5 +201,6 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | `detectRoles().balance` unused | Keep detection; balance reconciliation in the backlog |
 | CSP uses `'unsafe-inline'` | Fix in phase 8: strict CSP, no inline scripts or styles |
 | No undo for removes; no transaction editing or categorisation rules | 15: **fixed** — category management, rules applied from scratch in order (ADR 0017), transfer detection (ADR 0018); `TestRulePrecedence`, `TestTransferDetection`, e2e `rules.spec.ts`. Undo for import delete stays in the backlog |
+| A removed category is gone for good | 26: **deliberately different** (U7, the maintainer, 2026-11-25): Settings → Categories archives instead of deleting. An archived category behaves as removed; unarchiving restores its labels set by hand, rules, bank names, budget and goals where nothing has taken their place (`TestCategoryArchive`); *Delete for good* is in the archived list |
 | Large files (> 100k rows) are memory-heavy | Fix in phases 7 and 17: server-side queries, load tests |
 | Tooltips mouse-only; chart values not keyboard-reachable | Fix in phases 11 and 14: table twins + focusable marks, accessibility pass |

@@ -38,6 +38,7 @@ const R2 = '00000000-0000-4000-8000-0000000000e2';
 let stats: Schemas['CategoryStat'][] = [];
 let rules: Schemas['Rule'][] = [];
 let calls: { method: string; path: string; body: unknown }[] = [];
+let archived: Schemas['ArchivedCategory'][] = [];
 
 const rule = (id: string, name: string, over: Partial<Schemas['Rule']> = {}): Schemas['Rule'] => ({
   id,
@@ -62,6 +63,7 @@ beforeEach(() => {
   useViews.getState().reset();
   useUi.setState(uiDefaults);
   calls = [];
+  archived = [];
   stats = [
     { id: C1, name: 'Kawa', txCount: 12, manualCount: 2, ruleCount: 5, aliases: ['kawiarnie'] },
     { id: C2, name: 'Zakupy', txCount: 30, manualCount: 0, ruleCount: 0, aliases: [] },
@@ -94,7 +96,47 @@ beforeEach(() => {
     }),
     http.delete(`${API}/categories/:id`, async ({ params, request }) => {
       await record('DELETE', `/categories/${String(params['id'])}`, request);
+      archived = archived.filter((a) => a.id !== params['id']);
       return new HttpResponse(null, { status: 204 });
+    }),
+    http.get(`${API}/categories/archived`, () => HttpResponse.json(archived)),
+    http.post(`${API}/categories/:id/archive`, async ({ params, request }) => {
+      await record('POST', `/categories/${String(params['id'])}/archive`, request);
+      const gone = stats.find((c) => c.id === params['id']);
+      stats = stats.filter((c) => c.id !== params['id']);
+      if (gone)
+        archived = [
+          {
+            id: gone.id,
+            name: gone.name,
+            archivedAt: '2026-11-25T10:00:00Z',
+            labels: gone.manualCount,
+            rules: 1,
+            bankNames: gone.aliases.length,
+            hasBudget: true,
+            goals: 0,
+          },
+        ];
+      return new HttpResponse(null, { status: 204 });
+    }),
+    http.post(`${API}/categories/:id/unarchive`, async ({ params, request }) => {
+      await record('POST', `/categories/${String(params['id'])}/unarchive`, request);
+      const back = archived.find((a) => a.id === params['id']);
+      if (back && stats.some((c) => c.name.toLowerCase() === back.name.toLowerCase()))
+        return HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: 'Conflict',
+            status: 409,
+            code: 'conflict',
+            detail: `a category called "${back.name}" is in use; rename or merge it first`,
+          },
+          { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
+        );
+      archived = archived.filter((a) => a.id !== params['id']);
+      if (back)
+        stats = [...stats, { id: back.id, name: back.name, txCount: 12, manualCount: 2, ruleCount: 5, aliases: [] }];
+      return HttpResponse.json({ id: String(params['id']), name: back?.name ?? '' });
     }),
     http.get(`${API}/rules`, () => HttpResponse.json(rules)),
     http.post(`${API}/rules/preview`, async ({ request }) => {
@@ -128,7 +170,7 @@ beforeEach(() => {
 const lastCall = (method: string, path: string) => calls.filter((c) => c.method === method && c.path === path).at(-1);
 
 describe('Settings → Categories', () => {
-  it('lists the counts and creates, renames, merges and deletes categories', async () => {
+  it('lists the counts and creates, renames and merges categories', async () => {
     const user = userEvent.setup();
     renderApp('/settings/categories');
     const list = await screen.findByRole('list', { name: 'Categories' });
@@ -163,14 +205,82 @@ describe('Settings → Categories', () => {
     expect(
       await screen.findByText('Merged “Kawa” into “Zakupy” · 12 transactions moved', {}, { timeout: 5000 }),
     ).toBeTruthy();
+  });
 
-    await user.click(screen.getByRole('button', { name: 'Delete Zakupy' }));
+  it('archives a category instead of deleting it; the archived list unarchives or deletes for good (U7)', async () => {
+    const user = userEvent.setup();
+    renderApp('/settings/categories');
+    const list = await screen.findByRole('list', { name: 'Categories' });
+    await within(list).findByText('Kawa');
+    // nothing archived: no list, and no way to delete a category in use
+    expect(screen.queryByRole('list', { name: 'Archived categories' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Delete / })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Archive Kawa' }));
+    const dlg = await screen.findByRole('dialog', { name: 'Archive category' });
+    expect(dlg.textContent).toContain('12 transactions become uncategorised');
+    expect(dlg.textContent).toContain('you can unarchive it');
+    await user.click(within(dlg).getByRole('button', { name: 'Archive category' }));
+    await waitFor(() => {
+      expect(lastCall('POST', `/categories/${C1}/archive`)).toBeTruthy();
+    });
+    const gone = await screen.findByRole('list', { name: 'Archived categories' });
+    expect(
+      await within(gone).findByText(/Unarchiving restores 2 labels set by hand, 1 rule, 1 bank name, its budget/),
+    ).toBeTruthy();
+    await waitFor(() => {
+      expect(within(screen.getByRole('list', { name: 'Categories' })).queryByText('Kawa')).toBeNull();
+    });
+
+    await user.click(within(gone).getByRole('button', { name: 'Unarchive Kawa' }));
+    await waitFor(() => {
+      expect(lastCall('POST', `/categories/${C1}/unarchive`)).toBeTruthy();
+    });
+    expect(await screen.findByText('Category “Kawa” is back', {}, { timeout: 5000 })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByRole('list', { name: 'Archived categories' })).toBeNull();
+    });
+    expect(within(screen.getByRole('list', { name: 'Categories' })).getByText('Kawa')).toBeTruthy();
+
+    // archived again, then gone for good
+    await user.click(screen.getByRole('button', { name: 'Archive Kawa' }));
+    await user.click(
+      within(await screen.findByRole('dialog', { name: 'Archive category' })).getByRole('button', {
+        name: 'Archive category',
+      }),
+    );
+    await user.click(await screen.findByRole('button', { name: 'Delete Kawa for good' }));
     const del = await screen.findByRole('dialog', { name: 'Delete category' });
-    expect(del.textContent).toContain('30 transactions become uncategorised');
+    expect(del.textContent).toContain("can't be unarchived");
     await user.click(within(del).getByRole('button', { name: 'Delete category' }));
     await waitFor(() => {
-      expect(lastCall('DELETE', `/categories/${C2}`)).toBeTruthy();
+      expect(lastCall('DELETE', `/categories/${C1}`)).toBeTruthy();
     });
+    await waitFor(() => {
+      expect(screen.queryByRole('list', { name: 'Archived categories' })).toBeNull();
+    });
+  });
+
+  it('says why an archived category can not come back while its name is in use', async () => {
+    archived = [
+      {
+        id: '00000000-0000-4000-8000-0000000000c9',
+        name: 'Zakupy',
+        archivedAt: '2026-11-20T10:00:00Z',
+        labels: 0,
+        rules: 0,
+        bankNames: 0,
+        hasBudget: false,
+        goals: 0,
+      },
+    ];
+    const user = userEvent.setup();
+    renderApp('/settings/categories');
+    const gone = await screen.findByRole('list', { name: 'Archived categories' });
+    expect(await within(gone).findByText(/Nothing was attached to it/)).toBeTruthy();
+    await user.click(within(gone).getByRole('button', { name: 'Unarchive Zakupy' }));
+    expect(await screen.findByText(/is in use; rename or merge it first/)).toBeTruthy();
+    expect(within(gone).getByText('Zakupy')).toBeTruthy();
   });
 });
 

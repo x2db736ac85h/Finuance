@@ -143,7 +143,7 @@ func (e *Engine) Categories(ctx context.Context, userID uuid.UUID, accountIDs []
 )
 SELECT c.id, c.name, coalesce(n.n, 0), CASE WHEN rk.r <= `+fmt.Sprint(Slots)+` THEN rk.r END
 FROM categories c LEFT JOIN counts n ON n.category_id = c.id LEFT JOIN ranked rk ON rk.category_id = c.id
-WHERE c.user_id = $1 ORDER BY c.name COLLATE pl_natural, c.id`, comp.Args[:comp.ScopeN]...)
+WHERE c.user_id = $1 AND c.archived_at IS NULL ORDER BY c.name COLLATE pl_natural, c.id`, comp.Args[:comp.ScopeN]...)
 		if err != nil {
 			return err
 		}

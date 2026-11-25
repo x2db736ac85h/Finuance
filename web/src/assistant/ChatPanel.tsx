@@ -32,7 +32,7 @@ import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
 import { Modal } from '../ui/Modal';
-import { toast } from '../ui/toastStore';
+import { aiToast as toast } from '../ui/toastStore';
 import { useChat, type AiTurn } from './chatStore';
 import { ChatSettings, pick, readsPhotos } from './ChatSettings';
 import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';

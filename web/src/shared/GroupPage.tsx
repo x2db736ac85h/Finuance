@@ -222,7 +222,7 @@ function Header({ d }: { d: SharedGroupDetail }) {
             </MenuItem>
           ))
         ) : (
-          <div className="hint gr-empty">Everyone is in already. Add friends in Settings → Friends.</div>
+          <div className="hint gr-empty">Everyone is in already. Add friends under Friends on the Shared page.</div>
         )}
       </Menu>
       <Menu open={menu.open} anchor={menu.anchor} onClose={menu.close} label="Group" width={220}>

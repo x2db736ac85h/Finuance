@@ -8,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 const ADMIN_EMAIL = process.env['E2E_ADMIN_EMAIL'] ?? 'admin@example.test';
 const ADMIN_PASSWORD = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e admin password long enough';
 
-const SETTINGS = ['general', 'profile', 'security', 'activity', 'friends', 'categories', 'rules', 'data'];
+const SETTINGS = ['general', 'profile', 'security', 'activity', 'categories', 'rules', 'data'];
 const ADMIN = ['users', 'instance', 'themes', 'assistant', 'usage', 'developer'];
 
 type Layout = { body: { x: number; width: number }; fields: number; rows: number; problems: string[] };
@@ -87,6 +87,10 @@ test('settings and administration share one layout, and their forms line up', as
   // the forms: a new connection, a model's tuning and an article (Assistant), a new account (Users)
   await page.goto('/admin/assistant');
   await page.getByRole('button', { name: 'Add a connection' }).click();
+  // the provider first (Phase 26, U12); "Other" shows every field
+  await expect(page.getByRole('radiogroup', { name: 'Provider' })).toBeVisible();
+  await look('admin/assistant: providers');
+  await page.getByRole('radio', { name: /^Other/ }).click();
   await expect(page.getByRole('form', { name: 'Connection' })).toBeVisible();
   await look('admin/assistant: new connection');
   await page.getByRole('form', { name: 'Connection' }).getByRole('button', { name: 'Cancel' }).click();

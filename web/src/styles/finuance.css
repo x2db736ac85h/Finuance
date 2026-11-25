@@ -1256,6 +1256,60 @@ textarea.inp.ins-note {
   font-weight: 500;
 }
 
+/* Adding a connection: the provider cards, and the fields a provider already knows (Phase 26, U12) */
+.prov-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.5rem;
+}
+.prov-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border-2);
+  border-radius: 0.5rem;
+  background: var(--elev);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+.prov-card:hover {
+  border-color: var(--accent);
+}
+.prov-card.later {
+  cursor: default;
+  color: var(--text-2);
+}
+.prov-card.later:hover {
+  border-color: var(--border-2);
+}
+.prov-card .tag {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+.conn-more {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.conn-more > summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+.conn-more[open] > summary {
+  margin-bottom: 0.625rem;
+}
+.conn-more > * + * {
+  margin-top: 0.625rem;
+}
+
 /* Administration (/admin, Phase 19): the settings layout; its wide tables scroll sideways. */
 .adm-scroll {
   overflow-x: auto;
@@ -1694,7 +1748,22 @@ textarea.inp.ins-note {
   outline-offset: -2px;
 }
 
-/* Settings → Friends (Phase 19) */
+/* Friends, a part of the Shared page (Phase 19; moved from Settings in Phase 26) */
+.sh-friends {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  scroll-margin-top: 1rem;
+}
+.sh-friends-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.sh-friends .set-card {
+  margin-bottom: 0;
+}
 .fr-code {
   display: flex;
   flex-wrap: wrap;
@@ -1773,6 +1842,14 @@ textarea.inp.ins-note {
 }
 .nt-list button:hover {
   background: var(--hover);
+}
+/* the assistant's entries carry its sparkle (Phase 26, U10) */
+.nt-list .ico {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-right: 0.375rem;
+  vertical-align: -0.125rem;
+  color: var(--accent);
 }
 .nt-list li.new button {
   box-shadow: inset 2px 0 0 var(--accent);

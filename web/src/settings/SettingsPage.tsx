@@ -1,16 +1,14 @@
 // /settings/:section (PLAN §7.3, task 8.9): a section list on the left, the section on the right.
 
-import { useEffect } from 'react';
-import { Navigate, NavLink, useLocation, useOutletContext, useParams } from 'react-router';
+import { Navigate, NavLink, useOutletContext, useParams } from 'react-router';
 
-import { useMeta } from '../api/hooks/me';
+import { useScrollToHash } from '../lib/useScrollToHash';
 import type { ShellContext } from '../shell/AppShell';
 import { Icon } from '../ui/Icon';
 import { RulesSettings } from '../rules/RulesSettings';
 import { ActivitySettings } from './Activity';
 import { CategoriesSettings } from './Categories';
 import { DataSettings } from './Data';
-import { FriendsSettings } from './Friends';
 import { GeneralSettings } from './General';
 import { ProfileSettings } from './Profile';
 import { SECTIONS, type SectionId } from './sections';
@@ -36,7 +34,6 @@ const BODY: Record<SectionId, () => React.JSX.Element> = {
     </>
   ),
   activity: ActivitySettings,
-  friends: FriendsSettings,
   categories: CategoriesSettings,
   rules: RulesSettings,
   data: DataSettings,
@@ -52,17 +49,9 @@ const MOVED: Record<string, { section: SectionId; hash: string }> = {
 export function SettingsPage() {
   const { user } = useOutletContext<ShellContext>();
   const { section } = useParams();
-  const meta = useMeta().data;
-  // Friends only where the instance has them: switched on, and not a demo (ADR 0027)
-  const sections = SECTIONS.filter((s) => s.id !== 'friends' || (meta?.features.friends !== false && !meta?.demoMode));
+  const sections = SECTIONS;
   const current = sections.find((s) => s.id === section);
-  // a link to a part of a page (#sessions) brings that part into view once it is drawn
-  const { hash } = useLocation();
-  useEffect(() => {
-    const part = hash.length > 1 ? document.getElementById(hash.slice(1)) : null;
-    // (the test environment's elements can't scroll)
-    if (part && typeof part.scrollIntoView === 'function') part.scrollIntoView({ block: 'start' });
-  }, [hash, section]);
+  useScrollToHash(section);
   const moved = section ? MOVED[section] : undefined;
   if (moved) return <Navigate to={{ pathname: `/settings/${moved.section}`, hash: moved.hash }} replace />;
   if (!current) return <Navigate to="/settings/general" replace />;

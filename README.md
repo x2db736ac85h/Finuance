@@ -113,7 +113,7 @@ Finuance runs on a single-node k3s cluster at home, deployed by Argo CD from thi
 | End to end | Playwright against a fresh Compose stack, accessibility checks with axe |
 | Parity | The prototype and the new app on the same data, number by number ([report](docs/parity-report.md)) |
 | Cluster rehearsal | Weekly on a kind cluster: install the charts, kill pods under load, restore a backup, run the simulator against a lab |
-| Simulator | Every one of its 57 actions against a real stack in one test; its page in Playwright against the Compose lab |
+| Simulator | Every one of its 58 actions against a real stack in one test; its page in Playwright against the Compose lab |
 | Security | gitleaks, Trivy (images, repository, charts), `npm audit`, govulncheck on every push; ZAP weekly |
 
 ```sh

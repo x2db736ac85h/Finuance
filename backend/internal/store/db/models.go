@@ -200,17 +200,32 @@ type Budget struct {
 }
 
 type Category struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Name      string
-	NameN     string
-	CreatedAt time.Time
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	Name       string
+	NameN      string
+	CreatedAt  time.Time
+	ArchivedAt *time.Time
 }
 
 type CategoryAlias struct {
 	UserID     uuid.UUID
 	NameN      string
 	CategoryID *uuid.UUID
+}
+
+type CategoryArchiveItem struct {
+	ID          int64
+	UserID      uuid.UUID
+	CategoryID  uuid.UUID
+	Kind        string
+	RefID       *uuid.UUID
+	AccountID   *uuid.UUID
+	Fingerprint []byte
+	Occurrence  *int32
+	SplitScope  *uuid.UUID
+	NameN       *string
+	AmountMinor *int64
 }
 
 type DedupeOverride struct {

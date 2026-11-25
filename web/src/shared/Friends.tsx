@@ -1,4 +1,5 @@
-// Settings → Friends (Phase 19, ADR 0027): show your code to someone, enter theirs, and the list.
+// Friends, on the Shared page (Phase 19, ADR 0027; moved from Settings in Phase 26, U8): show your
+// code to someone, enter theirs, and the list.
 // A code is 8 characters, works once, and only until the end of this clock hour plus 10 minutes;
 // the server keeps only its hash, so it is shown here once (in memory) and a new one replaces it.
 // Friends see your display name, never your e-mail address.
@@ -22,24 +23,28 @@ import { TextInput } from '../ui/inputs';
 import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
 
-export function FriendsSettings() {
+/** The Shared page's Friends part (`/shared#friends`): the people shared groups can be shared with. */
+export function FriendsPanel() {
   const me = useMe().data;
-  if (me && !me.displayName.trim())
-    return (
-      <div className="set-card">
-        <div className="lbl">A display name first</div>
-        <p className="hint">
-          Friends see each other by display name, never by e-mail address.{' '}
-          <Link to="/settings/profile">Set yours in Profile</Link>, then come back.
-        </p>
-      </div>
-    );
   return (
-    <>
-      <MyCode />
-      <AddFriend />
-      <FriendList />
-    </>
+    <section id="friends" className="sh-friends" aria-label="Friends">
+      <h2>Friends</h2>
+      {me && !me.displayName.trim() ? (
+        <div className="set-card">
+          <div className="lbl">A display name first</div>
+          <p className="hint">
+            Friends see each other by display name, never by e-mail address.{' '}
+            <Link to="/settings/profile">Set yours in Profile</Link>, then come back.
+          </p>
+        </div>
+      ) : (
+        <div className="sh-friends-cards">
+          <MyCode />
+          <AddFriend />
+          <FriendList />
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -651,6 +651,17 @@ func fillEveryTable(t *testing.T, st *store.Store, u uuid.UUID) {
 		if err := q.SetCategoryAlias(ctx, db.SetCategoryAliasParams{UserID: u, NameN: "kawa", CategoryID: &cats[0].ID}); err != nil {
 			return err
 		}
+		// an archived category with one thing it took away (migration 00030)
+		arch, err := q.CreateCategory(ctx, db.CreateCategoryParams{ID: platform.NewID(), UserID: u, Name: "Archiwum", NameN: "archiwum"})
+		if err != nil {
+			return err
+		}
+		if err := q.ArchiveCategoryOwnName(ctx, db.ArchiveCategoryOwnNameParams{UserID: u, ID: arch.ID, NameN: arch.NameN}); err != nil {
+			return err
+		}
+		if err := q.SetCategoryArchived(ctx, db.SetCategoryArchivedParams{UserID: u, ID: arch.ID, ArchivedAt: &now}); err != nil {
+			return err
+		}
 		if err := q.CreateRule(ctx, db.CreateRuleParams{ID: platform.NewID(), UserID: u, Name: "Kawa", Enabled: true,
 			Match: []byte(`{"search":"kawa"}`), SetCategoryID: &cats[0].ID, Now: now}); err != nil {
 			return err

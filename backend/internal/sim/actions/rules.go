@@ -11,7 +11,8 @@ import (
 )
 
 // Rules and categories: a rule from one of the suggestions, a rule's preview, a run of every
-// rule (the server recomputes categories), a new category, two categories merged (rare).
+// rule (the server recomputes categories), a new category, two categories merged (rare), a
+// category archived and brought back (rare).
 func rules() []sim.Action {
 	return []sim.Action{
 		{Name: "rules.suggestion", Area: "rules", Needs: sim.NeedData, Run: ruleFromSuggestion},
@@ -19,6 +20,7 @@ func rules() []sim.Action {
 		{Name: "rules.apply", Area: "rules", Cost: sim.Heavy, Needs: sim.NeedData, Recomputes: true, Run: rulesApply},
 		{Name: "rules.category", Area: "rules", Run: categoryCreate},
 		{Name: "rules.merge", Area: "rules", Recomputes: true, Run: categoryMerge},
+		{Name: "rules.archive", Area: "rules", Recomputes: true, Run: categoryArchive},
 	}
 }
 
@@ -114,4 +116,47 @@ func categoryMerge(ctx context.Context, a *sim.Actor) error {
 		return err
 	}
 	return nil
+}
+
+// categoryArchive archives one of the categories personas make, finds it in the archived list and
+// brings it back, as someone who archived the wrong one would; once a week at most per persona.
+func categoryArchive(ctx context.Context, a *sim.Actor) error {
+	r, err := a.API.ListCategoriesWithResponse(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if err := sim.Expect("categories", r.HTTPResponse, http.StatusOK); err != nil {
+		return err
+	}
+	var mine []gen.Category
+	for _, c := range *r.JSON200 {
+		for _, n := range simCategories {
+			if c.Name == n {
+				mine = append(mine, c)
+			}
+		}
+	}
+	if len(mine) == 0 || !a.Every("rules.archive", 7*24*time.Hour) {
+		return sim.ErrNothingToDo
+	}
+	c := mine[a.IntN(len(mine))]
+	ar, err := a.API.ArchiveCategoryWithResponse(ctx, c.Id)
+	if err != nil {
+		return err
+	}
+	if err := sim.Expect("archive "+c.Name, ar.HTTPResponse, http.StatusNoContent); err != nil {
+		return err
+	}
+	list, err := a.API.ArchivedCategoriesWithResponse(ctx)
+	if err != nil {
+		return err
+	}
+	if err := sim.Expect("archived categories", list.HTTPResponse, http.StatusOK); err != nil {
+		return err
+	}
+	un, err := a.API.UnarchiveCategoryWithResponse(ctx, c.Id)
+	if err != nil {
+		return err
+	}
+	return sim.Expect("unarchive "+c.Name, un.HTTPResponse, http.StatusOK)
 }

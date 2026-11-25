@@ -18,7 +18,7 @@ database enforces this with row-level security by membership; see [ARCHITECTURE]
   are copied in, and every transaction you put into the group later is shared too.
 - **An empty group**: the Shared tab (title bar ⇄, or `S`) → *New shared group*. Add expenses as you
   go, without transactions.
-- Only friends can be invited (Settings → Friends). An invited friend sees the group and its
+- Only friends can be invited (Friends, on the Shared page). An invited friend sees the group and its
   members, and the invitation arrives in their notifications; once they **join**, a personal group
   of the same name is made for them (or "… (shared)" when the name is taken), so they can put their
   own transactions in.

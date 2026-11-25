@@ -1,14 +1,18 @@
-// The bell in the title bar (Phase 19, 19.8): what other people did that concerns you, and the
-// assistant's digests (Phase 20), newest first, with the unread count. Checked every minute and
+// The bell in the title bar (Phase 19, 19.8): what other people did that concerns you, the
+// assistant's digests (Phase 20) and its answers that ended while you weren't looking (Phase 26,
+// U10; kept in this browser only), newest first, with the unread count. Everything of the
+// assistant's carries its sparkle. Checked every minute and
 // when the window gets focus; opening the list marks everything read. In the app only, never
 // e-mail. The words come from the kind and the data (display names, never e-mail addresses).
 
 import { useNavigate } from 'react-router';
 
 import { useMarkNotificationsRead, useNotifications, type Notification } from '../api/hooks/friends';
+import { useAnswerNotes, type AnswerNote } from '../assistant/answerNotes';
 import { useChat } from '../assistant/chatStore';
 import { fmtAgo } from '../lib/dates';
 import { useUi } from '../stores/uiStore';
+import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
 import { Popover, usePopover } from '../ui/Popover';
 import { toast } from '../ui/toastStore';
@@ -39,8 +43,8 @@ const SAY: Record<Notification['kind'], (d: Record<string, string>) => string> =
 
 /** Where a notification leads. */
 const LINK: Record<Notification['kind'], string> = {
-  'friend.added': '/settings/friends',
-  'friend.removed': '/settings/friends',
+  'friend.added': `${sharedPath()}#friends`,
+  'friend.removed': `${sharedPath()}#friends`,
   'shared.invited': sharedPath(),
   'shared.joined': sharedPath(),
   'shared.left': sharedPath(),
@@ -59,7 +63,7 @@ function openDigest(n: Notification) {
       .getState()
       .open(id)
       .catch(() => {
-        toast('This digest is gone (expired or deleted)', { kind: 'error' });
+        toast('This digest is gone (expired or deleted)', { kind: 'error', icon: 'ai' });
       });
 }
 
@@ -73,13 +77,41 @@ export function describeNotification(n: Notification): string {
   return SAY[n.kind](n.data);
 }
 
+/** What an answer's note says: the question tells the chats apart. */
+export function describeAnswer(n: AnswerNote): string {
+  return n.failed ? `The assistant couldn't answer “${n.question}”` : `The assistant answered “${n.question}”`;
+}
+
+/** An answer's note opens its chat in the assistant panel, which also takes the note away. */
+function openAnswer(n: AnswerNote) {
+  useUi.getState().setAiOpen(true);
+  void useChat
+    .getState()
+    .open(n.chatId)
+    .then(() => {
+      useAnswerNotes.getState().drop(n.chatId);
+    })
+    .catch(() => {
+      useAnswerNotes.getState().drop(n.chatId);
+      toast('This chat is gone (expired or deleted)', { kind: 'error', icon: 'ai' });
+    });
+}
+
 export function NotificationsButton() {
   const list = useNotifications();
   const read = useMarkNotificationsRead();
   const pop = usePopover();
   const navigate = useNavigate();
-  const unread = list.data?.unread ?? 0;
+  const answers = useAnswerNotes((s) => s.notes);
+  const unreadServer = list.data?.unread ?? 0;
+  const unread = unreadServer + answers.filter((a) => !a.seen).length;
   const items = list.data?.items ?? [];
+  // an answer's note stops counting once the list was looked at: marked when the list closes, so
+  // it shows as new while the list is open
+  const closeList = () => {
+    useAnswerNotes.getState().markSeen();
+    pop.close();
+  };
   const label = unread ? `Notifications, ${String(unread)} unread` : 'Notifications';
   return (
     <>
@@ -90,8 +122,9 @@ export function NotificationsButton() {
           aria-label={label}
           aria-expanded={pop.open}
           onClick={(e) => {
-            if (!pop.open && unread) read.mutate();
-            pop.toggle(e);
+            if (!pop.open && unreadServer) read.mutate();
+            if (pop.open) closeList();
+            else pop.toggle(e);
           }}
         />
         {unread > 0 && (
@@ -100,15 +133,34 @@ export function NotificationsButton() {
           </span>
         )}
       </span>
-      <Popover open={pop.open} anchor={pop.anchor} onClose={pop.close} label="Notifications" width={320}>
+      <Popover open={pop.open} anchor={pop.anchor} onClose={closeList} label="Notifications" width={320}>
         <div className="nt">
           <div className="nt-h">Notifications</div>
-          {items.length === 0 ? (
+          {items.length + answers.length === 0 ? (
             <p className="hint nt-empty">
-              Nothing yet. Friends, shared groups and the assistant's digests tell you here.
+              Nothing yet. Friends, shared groups and the assistant (its digests, and answers that finished while you
+              were elsewhere) tell you here.
             </p>
           ) : (
             <ul className="nt-list">
+              {answers.map((a) => (
+                <li key={`answer-${a.chatId}`} className={a.seen ? undefined : 'new'}>
+                  <button
+                    type="button"
+                    className="ai"
+                    onClick={() => {
+                      pop.close();
+                      openAnswer(a);
+                    }}
+                  >
+                    <span>
+                      <Icon name="ai" />
+                      {describeAnswer(a)}
+                    </span>
+                    <span className="hint">{fmtAgo(a.at)}</span>
+                  </button>
+                </li>
+              ))}
               {items.map((n) => (
                 <li key={n.id} className={n.readAt ? undefined : 'new'}>
                   <button
@@ -119,7 +171,10 @@ export function NotificationsButton() {
                       else void navigate(linkOf(n));
                     }}
                   >
-                    <span>{describeNotification(n)}</span>
+                    <span>
+                      {n.kind.startsWith('assistant.') && <Icon name="ai" />}
+                      {describeNotification(n)}
+                    </span>
                     <span className="hint">{fmtAgo(n.createdAt)}</span>
                   </button>
                 </li>

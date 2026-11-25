@@ -643,6 +643,126 @@ describe('administration', () => {
     ).toBeTruthy();
   });
 
+  it('adds a connection for a provider with its key alone, and keeps models and the dialog apart (U12)', async () => {
+    const ctl = { enabled: true, unloadAfterMinutes: null, defaultModel: '', photoModel: '', version: 0 };
+    let conns: Schemas['AdminConnection'][] = [
+      {
+        name: 'anthropic',
+        label: 'Claude (file)',
+        api: 'anthropic',
+        baseUrl: 'https://api.anthropic.com',
+        cloud: true,
+        defaultModel: '',
+        models: [],
+        contextTokens: 0,
+        source: 'file',
+        hasKey: true,
+        keyUnreadable: false,
+        version: 0,
+        controls: ctl,
+      },
+    ];
+    const posted: Schemas['AdminConnectionInput'][] = [];
+    server.use(
+      http.get(`${API}/admin/settings`, () =>
+        HttpResponse.json({
+          version: 1,
+          defaults: {},
+          features: {},
+          limits: {},
+        } satisfies Schemas['InstanceSettingsDoc']),
+      ),
+      http.get(`${API}/admin/advice`, () => HttpResponse.json([])),
+      http.get(`${API}/admin/assistant/tuning`, () => HttpResponse.json([])),
+      http.get(`${API}/admin/assistant/connections`, () => HttpResponse.json(conns)),
+      http.get(`${API}/admin/assistant/connections/:name/models`, () =>
+        HttpResponse.json({
+          server: 'other',
+          reachable: true,
+          canManage: false,
+          models: [{ id: 'claude-sonnet-5-5', offered: true, tools: true, vision: true }],
+        } satisfies Schemas['AdminModelServer']),
+      ),
+      http.post(`${API}/admin/assistant/connections`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AdminConnectionInput'];
+        posted.push(body);
+        const { apiKey, ...rest } = body;
+        conns = [
+          ...conns,
+          { ...rest, source: 'panel', hasKey: !!apiKey, keyUnreadable: false, version: 1, controls: ctl },
+        ];
+        return HttpResponse.json(conns.at(-1), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/admin/assistant');
+    const list = await screen.findByRole('list', { name: 'Connections' });
+    // the list names the provider, not the wire format
+    expect(await within(list).findByText('Anthropic')).toBeTruthy();
+
+    // Models first, then Add: the dialog takes over, the models panel goes
+    await user.click(within(list).getByRole('button', { name: 'Models' }));
+    expect(await screen.findByRole('form', { name: 'Models and use of Claude (file)' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Add a connection' }));
+    const dlg = await screen.findByRole('dialog', { name: 'Add a connection' });
+    expect(screen.queryByRole('form', { name: 'Models and use of Claude (file)' })).toBeNull();
+
+    const providers = within(dlg).getByRole('radiogroup', { name: 'Provider' });
+    expect(
+      within(providers)
+        .getAllByRole('radio')
+        .map((b) => b.querySelector('b')?.textContent),
+    ).toEqual(['Anthropic', 'OpenAI', 'Google', 'Local server', 'Other']);
+    // Google comes with the cloud AI tasks: shown, not yet to be chosen
+    const google = within(providers).getByRole('radio', { name: /^Google/ });
+    expect(google.getAttribute('aria-disabled')).toBe('true');
+    await user.click(google);
+    expect(within(dlg).queryByRole('form', { name: 'Connection' })).toBeNull();
+
+    // OpenAI, then back, then Anthropic: the form starts from the provider chosen last
+    await user.click(within(providers).getByRole('radio', { name: /^OpenAI/ }));
+    expect(
+      within(await within(dlg).findByRole('form', { name: 'Connection' })).getByLabelText<HTMLInputElement>('Address')
+        .value,
+    ).toBe('https://api.openai.com/v1');
+    await user.click(within(dlg).getByRole('button', { name: 'Provider' }));
+    await user.click(
+      within(within(dlg).getByRole('radiogroup', { name: 'Provider' })).getByRole('radio', { name: /^Anthropic/ }),
+    );
+    const form = await within(dlg).findByRole('form', { name: 'Connection' });
+    // its key is all it asks for; without one there is nothing to save
+    const save = within(form).getByRole<HTMLButtonElement>('button', { name: 'Save' });
+    expect(save.disabled).toBe(true);
+    // the name "anthropic" is taken by the file's connection
+    expect(within(form).getByLabelText<HTMLInputElement>('Name').value).toBe('anthropic-2');
+    fireEvent.change(within(form).getByLabelText(/^API key/), { target: { value: 'sk-ant-1' } });
+    // a default model the offered patterns leave out is refused here, before saving
+    fireEvent.change(within(form).getByLabelText(/^Models offered/), { target: { value: 'claude-haiku*' } });
+    fireEvent.change(within(form).getByLabelText('Default model'), { target: { value: 'claude-sonnet-5-5' } });
+    expect(within(form).getByRole('alert').textContent).toContain('fits none of the models offered');
+    expect(save.disabled).toBe(true);
+    fireEvent.change(within(form).getByLabelText(/^Models offered/), { target: { value: 'claude-*' } });
+    expect(within(form).queryByRole('alert')).toBeNull();
+    await user.click(save);
+    await waitFor(() => {
+      expect(posted[0]).toEqual({
+        name: 'anthropic-2',
+        label: 'Claude',
+        api: 'anthropic',
+        baseUrl: 'https://api.anthropic.com',
+        cloud: true,
+        defaultModel: 'claude-sonnet-5-5',
+        models: ['claude-*'],
+        contextTokens: 0,
+        apiKey: 'sk-ant-1',
+      });
+    });
+    // on to its models
+    const models = await screen.findByRole('form', { name: 'Models and use of Claude' });
+    expect(within(models).getByRole('combobox', { name: 'Default model' })).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Add a connection' })).toBeNull();
+  });
+
   it('adds and changes connections with a key that never comes back, and tunes a model (ADR 0035)', async () => {
     const conn = (over: Partial<Schemas['AdminConnection']>): Schemas['AdminConnection'] => ({
       name: 'lmstudio',
@@ -688,6 +808,16 @@ describe('administration', () => {
         conns = conns.map((c) => (c.name === 'gpu' ? { ...c, label: body.label, version: 2 } : c));
         return HttpResponse.json(conns[1]);
       }),
+      // a new connection goes on to its models: the server answers with one model
+      http.get(`${API}/admin/assistant/connections/:name/models`, () =>
+        HttpResponse.json({
+          server: 'ollama',
+          reachable: true,
+          latencyMs: 12,
+          canManage: false,
+          models: [{ id: 'qwen3:4b', offered: true, tools: true, vision: false }],
+        } satisfies Schemas['AdminModelServer']),
+      ),
       http.get(`${API}/admin/assistant/tuning`, () => HttpResponse.json(tuned.at(-1) ? [tuned.at(-1)] : [])),
       http.put(`${API}/admin/assistant/tuning`, async ({ request }) => {
         const body = (await request.json()) as Schemas['ModelTuning'];
@@ -700,6 +830,11 @@ describe('administration', () => {
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull(); // the file's are read only
 
     await userEvent.click(screen.getByRole('button', { name: 'Add a connection' }));
+    // the provider first (Phase 26, U12); "Other" asks for everything
+    const dlg = await screen.findByRole('dialog', { name: 'Add a connection' });
+    await userEvent.click(
+      within(within(dlg).getByRole('radiogroup', { name: 'Provider' })).getByRole('radio', { name: /^Other/ }),
+    );
     const form = await screen.findByRole('form', { name: 'Connection' });
     // nothing for the browser to fill in: it put the account's e-mail into Models offered and a saved
     // password into the API key (found at the Phase 20 gate)
@@ -730,9 +865,18 @@ describe('administration', () => {
       });
     });
     expect(await screen.findByText(/API key stored/)).toBeTruthy();
+    // the dialog is gone and the new connection's models are open, with what the server said
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Add a connection' })).toBeNull();
+    });
+    const models = await screen.findByRole('form', { name: 'Models and use of GPU box' });
+    expect(await within(models).findByText(/Connected to Ollama · 1 model/)).toBeTruthy();
 
     // a label change keeps the key, and sends none
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    // one thing open at a time: the dialog takes the models' place
+    expect(await screen.findByRole('dialog', { name: 'Change GPU box' })).toBeTruthy();
+    expect(screen.queryByRole('form', { name: 'Models and use of GPU box' })).toBeNull();
     const edit = await screen.findByRole('form', { name: 'Connection' });
     expect(within(edit).queryByLabelText(/New API key/)).toBeNull();
     fireEvent.change(within(edit).getByLabelText('Label'), { target: { value: 'GPU box (Ollama)' } });

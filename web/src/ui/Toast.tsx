@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useToasts } from './toastStore';
+import { Icon } from './Icon';
 
 /** Fade-out time of `.toast` (legacy transition 0.18 s). */
 const FADE_MS = 180;
@@ -41,6 +42,7 @@ export function Toaster() {
       role={head?.kind === 'error' ? 'alert' : 'status'}
       aria-live={head?.kind === 'error' ? 'assertive' : 'polite'}
     >
+      {head?.icon && <Icon name={head.icon} />}
       {head?.msg}
       {head?.actions.map((a) => (
         <button

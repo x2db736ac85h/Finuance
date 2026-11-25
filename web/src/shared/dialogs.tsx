@@ -25,6 +25,7 @@ import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
 import { KIND_LABEL } from './text';
 import { sharedPath } from '../lib/paths';
+import { ColorSwatches } from '../groups/ColorSwatches';
 
 const KINDS = (Object.keys(KIND_LABEL) as SharedKind[]).map((k) => ({ value: k, label: KIND_LABEL[k] }));
 
@@ -266,7 +267,9 @@ export function ShareDialog({ from, onClose }: ShareProps) {
               ))}
             </ul>
           ) : (
-            <p className="hint">No friends yet: add them in Settings → Friends, then invite them from the group.</p>
+            <p className="hint">
+              No friends yet: add them under Friends on the Shared page, then invite them from the group.
+            </p>
           )}
         </fieldset>
         {error && (
@@ -284,6 +287,7 @@ export function GroupSettingsDialog({ group, onClose }: { group: SharedGroup; on
   const update = useUpdateShared();
   const [name, setName] = useState(group.name);
   const [kind, setKind] = useState<SharedKind>(group.kind);
+  const [color, setColor] = useState(group.color);
   const [startsOn, setStartsOn] = useState(group.startsOn ?? '');
   const [endsOn, setEndsOn] = useState(group.endsOn ?? '');
   const [budget, setBudget] = useState(group.budgetMinor ? moneyInputText(group.budgetMinor, group.currency) : '');
@@ -300,7 +304,7 @@ export function GroupSettingsDialog({ group, onClose }: { group: SharedGroup; on
         body: {
           name: name.trim(),
           kind,
-          color: group.color,
+          color,
           archived: group.archived,
           ...(startsOn ? { startsOn } : {}),
           ...(endsOn ? { endsOn } : {}),
@@ -378,6 +382,10 @@ export function GroupSettingsDialog({ group, onClose }: { group: SharedGroup; on
               }}
             />
           </label>
+        </div>
+        <div className="st-col">
+          <span>Colour</span>
+          <ColorSwatches value={color} onChange={setColor} />
         </div>
         <label className="st-col">
           Budget ({group.currency})

@@ -20,6 +20,9 @@ beforeEach(() => {
   db.user = { ...db.user, displayName: 'Alex' };
   db.friends = [{ id: '00000000-0000-4000-8000-0000000000e1', displayName: 'Bo', since: '2026-11-01T10:00:00Z' }];
   server.use(
+    // the Shared page's own lists: nothing shared yet
+    http.get(`${API}/shared-groups`, () => HttpResponse.json([])),
+    http.get(`${API}/groups/timeline`, () => HttpResponse.json({ groups: [], years: [], hints: [] })),
     http.post(`${API}/friends/code`, () =>
       HttpResponse.json(
         { code: 'K7Q4-9MZD', expiresAt: new Date(Date.now() + 15 * 60_000).toISOString() },
@@ -52,7 +55,7 @@ afterAll(() => {
 describe('friends', () => {
   it('shows a code with a countdown, adds a friend by code and removes one', async () => {
     const user = userEvent.setup();
-    renderApp('/settings/friends');
+    renderApp('/shared');
     await user.click(await screen.findByRole('button', { name: 'Show my code' }));
     expect((await screen.findByLabelText('Your friend code')).textContent).toBe('K7Q4-9MZD');
     expect(screen.getByRole('timer').textContent).toMatch(/^1[45]:\d\d left$/);
@@ -83,7 +86,7 @@ describe('friends', () => {
 
   it('asks for a display name first', async () => {
     db.user = { ...db.user, displayName: '' };
-    renderApp('/settings/friends');
+    renderApp('/shared');
     expect(await screen.findByText('A display name first')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Set yours in Profile' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Show my code' })).toBeNull();
@@ -91,9 +94,30 @@ describe('friends', () => {
 
   it('is not offered when the instance switched friends off', async () => {
     db.features = { ...db.features, friends: false };
-    renderApp('/settings/friends');
-    await screen.findByRole('heading', { name: 'General' });
-    expect(screen.queryByRole('link', { name: 'Friends' })).toBeNull();
+    renderApp('/shared');
+    await screen.findByRole('region', { name: 'Timeline' });
+    expect(screen.queryByRole('region', { name: 'Friends' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Friends' })).toBeNull();
+  });
+
+  it('lives on the Shared page: Settings has no Friends section and its old address leads here (U8)', async () => {
+    const { router, unmount } = renderApp('/settings/friends');
+    await waitFor(() => {
+      expect(router.state.location.pathname + router.state.location.hash).toBe('/shared#friends');
+    });
+    expect(await screen.findByRole('region', { name: 'Friends' })).toBeTruthy();
+    unmount();
+    renderApp('/settings/general');
+    const nav = await screen.findByRole('navigation', { name: 'Settings' });
+    expect(within(nav).queryByRole('link', { name: 'Friends' })).toBeNull();
+  });
+
+  it('is the whole page on an instance with friends but without shared groups', async () => {
+    db.features = { ...db.features, sharedGroups: false };
+    const { router } = renderApp('/shared');
+    expect(await screen.findByRole('button', { name: 'Show my code' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Timeline' })).toBeNull();
+    expect(router.state.location.pathname).toBe('/shared');
   });
 });
 

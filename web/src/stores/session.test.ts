@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { useAnswerNotes } from '../assistant/answerNotes';
 import { useChat } from '../assistant/chatStore';
 import { useImportQueue } from '../import/queue';
 import { resetSession, startPrefsSync } from './persist';
@@ -24,6 +25,9 @@ function leaveTraces() {
     ],
     applied: ['proposal-1'],
   });
+  useAnswerNotes
+    .getState()
+    .add({ chatId: 'chat-of-alex', question: 'What did I pay at the pharmacy?', at: '', failed: false });
   useSelection.setState({
     viewId: 'all',
     rows: new Map([['tx-1', { amountMinor: -3013, grouped: false }]]),
@@ -36,6 +40,7 @@ function expectEmpty() {
   expect(useChat.getState().chatId).toBeNull();
   expect(useChat.getState().turns).toEqual([]);
   expect(useChat.getState().applied).toEqual([]);
+  expect(useAnswerNotes.getState().notes).toEqual([]);
   expect(useSelection.getState().rows.size).toBe(0);
   expect(useSelection.getState().viewId).toBeNull();
   expect(useImportQueue.getState().items).toEqual([]);

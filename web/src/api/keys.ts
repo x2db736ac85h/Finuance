@@ -16,6 +16,7 @@ export const keys = {
   importRows: (id: string, onlyErrors: boolean) => ['importRows', id, onlyErrors] as const,
   categories: ['categories'] as const,
   categoryStats: ['categoryStats'] as const,
+  archivedCategories: ['archivedCategories'] as const,
   rules: ['rules'] as const,
   rulePreview: (matchKey: string) => ['rulePreview', matchKey] as const,
   ruleSuggestions: ['ruleSuggestions'] as const,

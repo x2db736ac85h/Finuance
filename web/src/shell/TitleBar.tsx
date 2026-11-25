@@ -81,14 +81,8 @@ export function TitleBar({ user, viewId, hasData, searchRef, mode, onToggleMode,
           }}
         />
       )}
-      {features?.sharedGroups !== false && !user.isDemo && (
-        <IconButton
-          icon="swap"
-          title="Shared with friends (S)"
-          on={inShared}
-          aria-pressed={inShared}
-          onClick={onToggleShared}
-        />
+      {(features?.sharedGroups !== false || features.friends) && !user.isDemo && (
+        <IconButton icon="swap" title="Shared (S)" on={inShared} aria-pressed={inShared} onClick={onToggleShared} />
       )}
       <div className="brand">
         <Logo />

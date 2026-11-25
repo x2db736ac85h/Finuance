@@ -5,6 +5,7 @@ import { create } from 'zustand';
 
 import { putPrefs, type Preferences } from '../api/hooks/prefs';
 import { useChat } from '../assistant/chatStore';
+import { useAnswerNotes } from '../assistant/answerNotes';
 import { useCashDialogs } from '../cash/store';
 import { useDupDialog } from '../duplicates/store';
 import { resetQueue } from '../import/queue';
@@ -38,6 +39,7 @@ export function resetStores(): void {
 export function resetSession(): void {
   useChat.getState().ctrl?.abort(); // an answer still streaming belongs to the session that ends
   useChat.setState(useChat.getInitialState(), true);
+  useAnswerNotes.getState().reset();
   useSelection.setState(useSelection.getInitialState(), true);
   useCashDialogs.setState(useCashDialogs.getInitialState(), true);
   useDupDialog.setState(useDupDialog.getInitialState(), true);

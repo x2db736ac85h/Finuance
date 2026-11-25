@@ -82,7 +82,7 @@ reload (`409`).
   everything a person hasn't changed yet; their own choices always win.
 - **Features**: switching Overview or the Assistant off hides it for everyone and its API answers
   `404`. Switching **Assistant digests** off (or the Assistant) stops every digest and hides the
-  setting (ADR 0033). Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
+  setting (ADR 0033). Switching **Friends** off hides Friends on the Shared page and its routes (ADR 0027); switching
   **Shared groups** off hides the Shared tab, *Share…* and their routes ([sharing.md](sharing.md)).
 - **Signing in**: *Administrators must use two-step sign-in* (ADR 0040). An administrator who
   hasn't set it up can still sign in and use their own data, but Administration stays closed and the
@@ -123,8 +123,13 @@ the same in every theme.
 ### Assistant
 
 - **Connections**: the model servers people pick from (ADR 0035). The configuration file's are
-  listed read only; *Add a connection* stores another one (name, label, API, address, cloud or
-  not, default model, the models offered, a context size, an API key). The key is stored sealed
+  listed read only; *Add a connection* stores another one. It starts with the **provider**:
+  Anthropic or OpenAI (their own address, so only a label and an API key are asked for), Google
+  (Vertex AI, with the cloud AI part of 0.7), a local server (Ollama, LM Studio: its address on
+  your network), or *Other* for any OpenAI- or Anthropic-compatible address (name, label, API,
+  address, cloud or not, default model, the models offered, a context size, an API key). After a
+  save the new connection's **Models** open. One thing is open at a time: a connection's models
+  under the list, or the dialog that adds or changes one. The key is stored sealed
   under `FINUANCE_INSTANCE_KEY` and never shown again ("stored", "none", or "unreadable" when it
   was sealed under another instance key); changing the address drops it, so enter it again. Other
   api replicas and the worker pick a change up within a minute.

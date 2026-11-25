@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs';
+
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Schemas } from '../api/client';
+import { useViews, viewOf } from '../stores/viewStore';
 import { renderApp, warmUpApp } from '../test/render';
 import { API, db, resetDb, server } from '../test/server';
 import { previewShares, toApiSplit, type SplitState } from './split';
@@ -59,6 +62,8 @@ const expense = (over: Partial<Schemas['SharedExpense']> = {}): Schemas['SharedE
 });
 
 let detail: Schemas['SharedGroupDetail'];
+// the stylesheet as written (the test bundler leaves CSS out)
+const appCss = readFileSync('src/styles/app.css', 'utf8');
 let posted: { path: string; body: unknown }[];
 
 const report = (): Schemas['SharedGroupReport'] => ({
@@ -243,6 +248,48 @@ describe('the Shared tab', () => {
     expect(await screen.findByRole('region', { name: 'Balances' })).toBeTruthy();
   });
 
+  it('opens a personal group as its transactions in the table (U9)', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/shared');
+    const timeline = await screen.findByRole('region', { name: 'Timeline' });
+    // every group has its colour dot (the class is sized by app.css's `.gdot-i`, anywhere)
+    const row = (await within(timeline).findByRole('button', { name: 'Gdańsk' })).closest('tr') as HTMLElement;
+    expect(row.querySelector<HTMLElement>('.gdot-i')?.style.background).toBe('var(--s2)');
+    expect(appCss).toMatch(/^\.gdot-i \{[^}]*width: 0\.65rem/m);
+    expect(appCss).not.toMatch(/\.gr \.gdot-i/);
+    await user.click(within(timeline).getByRole('button', { name: 'Gdańsk' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/transactions/all');
+    });
+    const view = viewOf(useViews.getState().views, 'all');
+    expect(view.filters).toEqual({ group: { cond: '=Gdańsk', excluded: [] } });
+    expect(view.period).toBe('all');
+    expect(view.hidden).not.toContain('group');
+  });
+
+  it("lets the owner change a shared group's colour in its settings (U9)", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.patch(`${API}/shared-groups/:id`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['SharedGroupInput'];
+        posted.push({ path: 'update', body });
+        return HttpResponse.json({ ...detail.group, ...body });
+      }),
+    );
+    renderApp(`/shared/${GID}`);
+    await screen.findByRole('region', { name: 'Balances' });
+    await user.click(screen.getByRole('button', { name: 'Group menu' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Group settings…' }));
+    const dlg = await screen.findByRole('dialog', { name: 'Group settings' });
+    const colours = within(dlg).getByRole('radiogroup', { name: 'Colour' });
+    expect(within(colours).getByRole('radio', { name: 'Colour 3' }).getAttribute('aria-checked')).toBe('true');
+    await user.click(within(colours).getByRole('radio', { name: 'Colour 6' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(posted.find((p) => p.path === 'update')?.body).toMatchObject({ name: 'Kraków', color: 5 });
+    });
+  });
+
   it('shows balances, who owes whom and records a payment with Settle up', async () => {
     const user = userEvent.setup();
     renderApp(`/shared/${GID}`);
@@ -334,8 +381,9 @@ describe('the Shared tab', () => {
     expect(posted[1]?.body).toEqual({ friendId: '00000000-0000-4000-8000-0000000000e1' });
   });
 
-  it('is gone when the instance switches shared groups off', async () => {
-    db.features = { ...db.features, sharedGroups: false };
+  it('is gone when the instance switches shared groups and friends off', async () => {
+    // the page holds both since Phase 26 (U8): with friends still on it stays, for them
+    db.features = { ...db.features, sharedGroups: false, friends: false };
     renderApp('/transactions/all');
     await screen.findByRole('button', { name: 'Toggle sidebar' });
     expect(screen.queryByRole('button', { name: /^Shared/ })).toBeNull();

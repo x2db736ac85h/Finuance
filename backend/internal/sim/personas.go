@@ -37,7 +37,7 @@ var (
 var Characters = map[string]Character{
 	"otter": {Animal: "otter", Says: "the tidy one: imports each month, categorises everything, opens the overview daily",
 		Hours: earlyBird, Think: [2]time.Duration{20 * time.Second, 3 * time.Minute},
-		Weights: map[string]int{"imports.month": 25, "insights.overview": 30, "table.window": 15, "labels.category": 15, "labels.note": 5, "rules.suggestion": 8, "rules.preview": 4, "rules.apply": 3, "rules.category": 1, "rules.merge": 1, "budgets.read": 5, "duplicates.list": 2, "account.notifications": 5, "account.preferences": 3}},
+		Weights: map[string]int{"imports.month": 25, "insights.overview": 30, "table.window": 15, "labels.category": 15, "labels.note": 5, "rules.suggestion": 8, "rules.preview": 4, "rules.apply": 3, "rules.category": 1, "rules.merge": 1, "rules.archive": 1, "budgets.read": 5, "duplicates.list": 2, "account.notifications": 5, "account.preferences": 3}},
 	"owl": {Animal: "owl", Says: "the analyst: long periods, every chart, the filter language, CSV exports",
 		Hours: nightOwl, Think: [2]time.Duration{10 * time.Second, 90 * time.Second},
 		Weights: map[string]int{"insights.charts": 30, "table.filter": 25, "table.search": 15, "table.distinct": 10, "table.range": 5, "table.window": 10, "insights.overview": 5, "groups.timeline": 3, "imports.month": 5, "account.export": 1}},
