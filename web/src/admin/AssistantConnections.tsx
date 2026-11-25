@@ -1,6 +1,11 @@
 // Administration → Assistant (ADR 0035): the model servers users can pick, and per-model tuning.
 // The connections file's are shown read only; those added here can be changed. An API key is
 // entered once and never shown again; a new address needs it again.
+//
+// One thing is open at a time (Phase 26, U12): a connection's models under the list, or the dialog
+// that adds or changes a connection. Adding starts with the provider (Anthropic, OpenAI, Google, a
+// local server, other), which fills in the wire format and the address; after a save the new
+// connection's models open, so adding and choosing a model is one flow.
 
 import { useState } from 'react';
 
@@ -24,7 +29,9 @@ import { errorMessage } from '../lib/errors';
 import { fmtBytes } from '../lib/format';
 import { Button } from '../ui/Button';
 import { Checkbox, Select, TextInput, type Option } from '../ui/inputs';
+import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
+import { freeName, mayOffer, providerById, providerOf, PROVIDERS, providerTag, type ProviderId } from './providers';
 
 const fail = (e: unknown) => {
   toast(errorMessage(e), { kind: 'error' });
@@ -35,13 +42,14 @@ function keyState(c: AdminConnection): string {
   return c.hasKey ? 'API key stored' : 'no API key';
 }
 
+/** What is open under or over the list: one connection's models, or the dialog for one connection. */
+type Open = { kind: 'models' | 'edit'; name: string } | { kind: 'add' } | null;
+
 export function Connections() {
   const list = useConnections();
   const del = useDeleteConnection();
-  const [editing, setEditing] = useState<string | null>(null);
-  const [managing, setManaging] = useState<string | null>(null);
-  const current = list.data?.find((c) => c.name === editing);
-  const managed = list.data?.find((c) => c.name === managing);
+  const [open, setOpen] = useState<Open>(null);
+  const named = open && open.kind !== 'add' ? list.data?.find((c) => c.name === open.name) : undefined;
   return (
     <div className="set-card">
       <div className="lbl">Connections</div>
@@ -50,12 +58,12 @@ export function Connections() {
         servers must be on a private address; a cloud service needs each person's agreement before it gets data.
       </p>
       {list.isError && <p className="set-err">{errorMessage(list.error)}</p>}
-      <ul className="set-list">
+      <ul className="set-list" aria-label="Connections">
         {list.data?.map((c) => (
-          <li key={c.name} className={editing === c.name ? 'on' : undefined}>
+          <li key={c.name} className={open && open.kind !== 'add' && open.name === c.name ? 'on' : undefined}>
             <div className="set-li-main">
               <b>{c.label}</b>
-              <span className="tag">{c.api}</span>
+              <span className="tag">{providerTag(c)}</span>
               {c.cloud && <span className="tag">cloud</span>}
               <span className="tag src">{c.source === 'file' ? 'configuration file' : 'added here'}</span>
               {!c.controls.enabled && <span className="tag off">off</span>}
@@ -66,9 +74,9 @@ export function Connections() {
             </div>
             <Button
               size="sm"
-              aria-expanded={managing === c.name}
+              aria-expanded={open?.kind === 'models' && open.name === c.name}
               onClick={() => {
-                setManaging(managing === c.name ? null : c.name);
+                setOpen(open?.kind === 'models' && open.name === c.name ? null : { kind: 'models', name: c.name });
               }}
             >
               Models
@@ -78,7 +86,7 @@ export function Connections() {
                 <Button
                   size="sm"
                   onClick={() => {
-                    setEditing(c.name);
+                    setOpen({ kind: 'edit', name: c.name });
                   }}
                 >
                   Edit
@@ -91,7 +99,7 @@ export function Connections() {
                     del.mutate(c.name, {
                       onSuccess: () => {
                         toast(`Deleted the connection ${c.label}`);
-                        if (editing === c.name) setEditing(null);
+                        if (open && open.kind !== 'add' && open.name === c.name) setOpen(null);
                       },
                       onError: fail,
                     });
@@ -104,34 +112,37 @@ export function Connections() {
           </li>
         ))}
       </ul>
-      {managed && (
+      {open?.kind === 'models' && named && (
         <ConnectionControls
           // by name only: a save refetches the list with a new version, and remounting would drop
           // the save's confirmation (the version is read from the latest list when saving)
-          key={managed.name}
-          connection={managed}
+          key={named.name}
+          connection={named}
           onDone={() => {
-            setManaging(null);
+            setOpen(null);
           }}
         />
       )}
-      {editing === null ? (
-        <div className="set-actions">
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing('');
-            }}
-          >
-            Add a connection
-          </Button>
-        </div>
-      ) : (
-        <ConnectionForm
-          key={editing}
-          connection={current}
-          onDone={() => {
-            setEditing(null);
+      <div className="set-actions">
+        <Button
+          variant="primary"
+          onClick={() => {
+            setOpen({ kind: 'add' });
+          }}
+        >
+          Add a connection
+        </Button>
+      </div>
+      {(open?.kind === 'add' || (open?.kind === 'edit' && named)) && (
+        <ConnectionDialog
+          connection={open.kind === 'edit' ? named : undefined}
+          taken={list.data?.map((c) => c.name) ?? []}
+          onClose={() => {
+            setOpen(null);
+          }}
+          onSaved={(name, added) => {
+            // a new connection goes on to its models: is the server there, which model answers
+            setOpen(added ? { kind: 'models', name } : null);
           }}
         />
       )}
@@ -326,15 +337,104 @@ const APIS: Option<'openai' | 'anthropic'>[] = [
   { value: 'anthropic', label: 'Anthropic Messages' },
 ];
 
-function ConnectionForm({ connection, onDone }: { connection: AdminConnection | undefined; onDone: () => void }) {
+/** Step one of adding a connection: whose models. Each card says what it is in a line. */
+function ProviderPicker({ onPick }: { onPick: (id: ProviderId) => void }) {
+  return (
+    <div className="adm-form" role="radiogroup" aria-label="Provider">
+      <p className="hint">Whose models is this connection for? The choice fills in the address and the format.</p>
+      <div className="prov-cards">
+        {PROVIDERS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={false}
+            aria-disabled={p.later ? true : undefined}
+            className={p.later ? 'prov-card later' : 'prov-card'}
+            title={p.later}
+            onClick={() => {
+              if (!p.later) onPick(p.id);
+            }}
+          >
+            <b>{p.label}</b>
+            <span className="hint">{p.about}</span>
+            {p.later && <span className="tag">soon</span>}
+          </button>
+        ))}
+      </div>
+      {PROVIDERS.filter((p) => p.later).map((p) => (
+        <p key={p.id} className="hint">
+          {p.label}: {p.later}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+type DialogProps = {
+  connection: AdminConnection | undefined;
+  /** The names in use, so a provider's suggested name is free. */
+  taken: string[];
+  onClose: () => void;
+  onSaved: (name: string, added: boolean) => void;
+};
+
+/** The dialog that adds a connection (provider first) or changes one. */
+function ConnectionDialog({ connection, taken, onClose, onSaved }: DialogProps) {
+  const [provider, setProvider] = useState<ProviderId | null>(connection ? providerOf(connection) : null);
+  const title = connection ? `Change ${connection.label}` : 'Add a connection';
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={title}
+      sub={provider && !connection ? providerById(provider).label : undefined}
+      size="sm"
+      dismissOnBackdrop={false}
+    >
+      {provider === null ? (
+        <ProviderPicker onPick={setProvider} />
+      ) : (
+        <ConnectionForm
+          key={provider}
+          provider={provider}
+          connection={connection}
+          taken={taken}
+          onCancel={onClose}
+          onBack={
+            connection
+              ? undefined
+              : () => {
+                  setProvider(null);
+                }
+          }
+          onSaved={onSaved}
+        />
+      )}
+    </Modal>
+  );
+}
+
+type FormProps = {
+  provider: ProviderId;
+  connection: AdminConnection | undefined;
+  taken: string[];
+  onCancel: () => void;
+  /** Back to the provider choice (adding only). */
+  onBack: (() => void) | undefined;
+  onSaved: (name: string, added: boolean) => void;
+};
+
+function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved }: FormProps) {
   const create = useCreateConnection();
   const update = useUpdateConnection();
+  const prov = providerById(provider);
   const [c, setC] = useState({
-    name: connection?.name ?? '',
-    label: connection?.label ?? '',
-    api: connection?.api ?? ('openai' as const),
-    baseUrl: connection?.baseUrl ?? '',
-    cloud: connection?.cloud ?? false,
+    name: connection?.name ?? freeName(prov.preset.name, taken),
+    label: connection?.label ?? prov.preset.label,
+    api: connection?.api ?? prov.preset.api,
+    baseUrl: connection?.baseUrl ?? prov.preset.baseUrl,
+    cloud: connection?.cloud ?? prov.preset.cloud,
     defaultModel: connection?.defaultModel ?? '',
     models: (connection?.models ?? []).join(', '),
     contextTokens: connection?.contextTokens ? String(connection.contextTokens) : '',
@@ -342,6 +442,14 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
   const [keyAction, setKeyAction] = useState<'keep' | 'replace' | 'remove'>(connection ? 'keep' : 'replace');
   const [apiKey, setApiKey] = useState('');
   const busy = create.isPending || update.isPending;
+  const patterns = c.models
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean);
+  // a default model the patterns leave out would be a connection whose own default nobody may use
+  const defaultLeftOut = c.defaultModel.trim() !== '' && !mayOffer(patterns, c.defaultModel.trim());
+  // a provider's own service needs its key; a local server usually has none
+  const needsKey = !connection && prov.fixedAddress && !apiKey.trim();
   const save = () => {
     const body = {
       label: c.label.trim(),
@@ -349,10 +457,7 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
       baseUrl: c.baseUrl.trim(),
       cloud: c.cloud,
       defaultModel: c.defaultModel.trim(),
-      models: c.models
-        .split(',')
-        .map((m) => m.trim())
-        .filter(Boolean),
+      models: patterns,
       contextTokens: Number(c.contextTokens) || 0,
     };
     if (connection) {
@@ -367,125 +472,71 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
         {
           onSuccess: () => {
             toast(`Saved the connection ${body.label}`);
-            onDone();
+            onSaved(connection.name, false);
           },
           onError: fail,
         },
       );
     } else {
+      const name = c.name.trim();
       create.mutate(
-        { name: c.name.trim(), ...body, ...(apiKey ? { apiKey } : {}) },
+        { name, ...body, ...(apiKey ? { apiKey } : {}) },
         {
           onSuccess: () => {
-            toast(`Added the connection ${body.label || c.name}`);
-            onDone();
+            toast(`Added the connection ${body.label || name}. Now choose its model.`);
+            onSaved(name, true);
           },
           onError: fail,
         },
       );
     }
   };
-  return (
-    <form
-      className="adm-form"
-      aria-label="Connection"
-      autoComplete="off"
-      onSubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
-    >
-      <div className="form-row">
-        <label className="st-col">
-          Name
-          <TextInput
-            autoComplete="off"
-            mono
-            value={c.name}
-            disabled={!!connection}
-            maxLength={40}
-            placeholder="gpu-box"
-            onChange={(e) => {
-              setC({ ...c, name: e.target.value });
-            }}
-          />
-        </label>
-        <label className="st-col">
-          Label
-          <TextInput
-            autoComplete="off"
-            value={c.label}
-            maxLength={80}
-            onChange={(e) => {
-              setC({ ...c, label: e.target.value });
-            }}
-          />
-        </label>
-      </div>
-      <label className="st-col">
-        API
-        <Select
-          value={c.api}
-          options={APIS}
-          onChange={(api) => {
-            setC({ ...c, api });
-          }}
-        />
-      </label>
-      <label className="st-col">
-        Address
-        <TextInput
-          autoComplete="off"
-          mono
-          value={c.baseUrl}
-          maxLength={500}
-          placeholder="http://192.168.1.20:11434/v1"
-          onChange={(e) => {
-            setC({ ...c, baseUrl: e.target.value });
-          }}
-        />
-      </label>
-      <Checkbox
-        label="A cloud service (public address; people agree before their data is sent; https only)"
-        checked={c.cloud}
-        onChange={(cloud) => {
-          setC({ ...c, cloud });
+  const nameField = (
+    <label className="st-col">
+      Name
+      <TextInput
+        autoComplete="off"
+        mono
+        value={c.name}
+        disabled={!!connection}
+        maxLength={40}
+        placeholder="gpu-box"
+        onChange={(e) => {
+          setC({ ...c, name: e.target.value });
         }}
       />
-      <div className="form-row">
-        <label className="st-col">
-          Default model
-          <TextInput
-            autoComplete="off"
-            value={c.defaultModel}
-            maxLength={200}
-            onChange={(e) => {
-              setC({ ...c, defaultModel: e.target.value });
-            }}
-          />
-        </label>
-        <label className="st-col">
-          Context tokens <span className="hint">(empty: the server's or 8,192)</span>
-          <TextInput
-            autoComplete="off"
-            inputMode="numeric"
-            value={c.contextTokens}
-            onChange={(e) => {
-              setC({ ...c, contextTokens: e.target.value });
-            }}
-          />
-        </label>
-      </div>
-      <label className="st-col">
-        Models offered <span className="hint">(comma-separated patterns such as qwen3*; empty: every chat model)</span>
-        <TextInput
-          autoComplete="off"
-          value={c.models}
-          onChange={(e) => {
-            setC({ ...c, models: e.target.value });
-          }}
-        />
-      </label>
+    </label>
+  );
+  const labelField = (
+    <label className="st-col">
+      Label
+      <TextInput
+        autoComplete="off"
+        value={c.label}
+        maxLength={80}
+        onChange={(e) => {
+          setC({ ...c, label: e.target.value });
+        }}
+      />
+    </label>
+  );
+  const addressField = (
+    <label className="st-col">
+      Address
+      <TextInput
+        autoComplete="off"
+        mono
+        value={c.baseUrl}
+        maxLength={500}
+        placeholder="http://192.168.1.20:11434/v1"
+        onChange={(e) => {
+          setC({ ...c, baseUrl: e.target.value });
+        }}
+      />
+    </label>
+  );
+  const keyField = (
+    <>
       {connection && (
         <label className="st-col">
           API key <span className="hint">({keyState(connection)})</span>
@@ -519,9 +570,137 @@ function ConnectionForm({ connection, onDone }: { connection: AdminConnection | 
           />
         </label>
       )}
+    </>
+  );
+  const modelFields = (
+    <>
+      <div className="form-row">
+        <label className="st-col">
+          Default model
+          <TextInput
+            autoComplete="off"
+            value={c.defaultModel}
+            maxLength={200}
+            aria-invalid={defaultLeftOut || undefined}
+            onChange={(e) => {
+              setC({ ...c, defaultModel: e.target.value });
+            }}
+          />
+        </label>
+        <label className="st-col">
+          Context tokens <span className="hint">(empty: the server's or 8,192)</span>
+          <TextInput
+            autoComplete="off"
+            inputMode="numeric"
+            value={c.contextTokens}
+            onChange={(e) => {
+              setC({ ...c, contextTokens: e.target.value });
+            }}
+          />
+        </label>
+      </div>
+      <label className="st-col">
+        Models offered <span className="hint">(comma-separated patterns such as qwen3*; empty: every chat model)</span>
+        <TextInput
+          autoComplete="off"
+          value={c.models}
+          onChange={(e) => {
+            setC({ ...c, models: e.target.value });
+          }}
+        />
+      </label>
+      {defaultLeftOut && (
+        <p className="set-err" role="alert">
+          The default model “{c.defaultModel.trim()}” fits none of the models offered. Add a pattern for it, or leave
+          one of the two empty.
+        </p>
+      )}
+    </>
+  );
+  return (
+    <form
+      className="adm-form"
+      aria-label="Connection"
+      autoComplete="off"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!defaultLeftOut && !needsKey) save();
+      }}
+    >
+      {provider === 'other' || provider === 'google' ? (
+        // everything, as typed: nothing about the server is known
+        <>
+          <div className="form-row">
+            {nameField}
+            {labelField}
+          </div>
+          <label className="st-col">
+            API
+            <Select
+              value={c.api}
+              options={APIS}
+              onChange={(api) => {
+                setC({ ...c, api });
+              }}
+            />
+          </label>
+          {addressField}
+          <Checkbox
+            label="A cloud service (public address; people agree before their data is sent; https only)"
+            checked={c.cloud}
+            onChange={(cloud) => {
+              setC({ ...c, cloud });
+            }}
+          />
+          {modelFields}
+          {keyField}
+        </>
+      ) : provider === 'local' ? (
+        <>
+          <div className="form-row">
+            {nameField}
+            {labelField}
+          </div>
+          {addressField}
+          <p className="hint">
+            A private address on your network. Ollama answers at <code>http://&lt;host&gt;:11434/v1</code>, LM Studio at{' '}
+            <code>http://&lt;host&gt;:1234/v1</code>.
+          </p>
+          <details className="conn-more">
+            <summary>More options</summary>
+            {modelFields}
+            {keyField}
+          </details>
+        </>
+      ) : (
+        // the provider's own service: its label and key; the rest is known
+        <>
+          {labelField}
+          {keyField}
+          <p className="hint">
+            {prov.label} is a cloud service: each person agrees before their data is sent there, and long numbers are
+            shortened first.
+          </p>
+          <details className="conn-more">
+            <summary>More options</summary>
+            {!connection && nameField}
+            {addressField}
+            {modelFields}
+          </details>
+        </>
+      )}
       <div className="set-actions">
-        <Button onClick={onDone}>Cancel</Button>
-        <Button type="submit" variant="primary" disabled={busy || !c.baseUrl.trim() || (!connection && !c.name.trim())}>
+        {onBack && (
+          <Button variant="ghost" icon="left" onClick={onBack}>
+            Provider
+          </Button>
+        )}
+        <Button onClick={onCancel}>Cancel</Button>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={busy || !c.baseUrl.trim() || (!connection && !c.name.trim()) || defaultLeftOut || needsKey}
+        >
           Save
         </Button>
       </div>
