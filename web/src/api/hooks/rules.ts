@@ -106,7 +106,9 @@ function invalidateArchive(qc: QueryClient): void {
 export function useArchiveCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => data(await api.POST('/categories/{id}/archive', { params: { path: { id } } })),
+    mutationFn: async (id: string) => {
+      data(await api.POST('/categories/{id}/archive', { params: { path: { id } } }));
+    },
     onSuccess: () => {
       invalidateArchive(qc);
     },
