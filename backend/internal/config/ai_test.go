@@ -170,3 +170,16 @@ func TestAIConnectionsFileGoogle(t *testing.T) {
 		}
 	}
 }
+
+// TestVertexExampleFile: the example in deploy/assistant for a Google connection is a file the
+// server accepts as it is.
+func TestVertexExampleFile(t *testing.T) {
+	c, err := Load(env(map[string]string{"FINUANCE_AI_CONNECTIONS_FILE": "../../../deploy/assistant/connections.vertex.example.json"}), ForHealthcheck)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := c.AIConnections[0]
+	if !v.Google() || v.Location != "europe-west4" || v.DefaultModel != "google/gemini-3.5-flash-lite" || len(v.Caps) != 1 {
+		t.Errorf("connection = %+v", v)
+	}
+}

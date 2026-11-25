@@ -66,8 +66,9 @@ flowchart TB
 | **admin CLI** | `create-user`, `set-password`, `grant-admin`, `revoke-admin`, `remove-second-factor`, `llm-probe`, `synthetic-users` (a lab only, ADR 0043); `seed-demo` | `internal/app/admin.go` | Run by hand in a pod or locally | PostgreSQL |
 | **PostgreSQL** | All data and the job queue; forced row-level security; roles `finuance_owner` and `finuance_app` | `deploy/db/bootstrap.sql`, `deploy/k8s/db` | CloudNativePG cluster ×2, or one Compose container | The backup bucket |
 | **Model server** | Answers the assistant; optional | `internal/llm` (client side), `deploy/assistant/` | Outside the cluster (ADR 0020) | — |
+| **Cloud model (Vertex AI)** | A connection with `auth: google`: short-lived tokens from the workload's own Google credentials, no stored key, Vertex AI's hosts only, a daily budget (ADR 0045); synthetic data only for now | `internal/llm/googleauth`, `internal/llm/google.go`, `deploy/assistant/connections.vertex.example.json` | A provider's endpoint, outside any cluster | — |
 | **`finuance-sim`** | The traffic simulator: ten synthetic users with characters play 58 actions against a lab through its front door; the tuning page, its control API and its own metrics (ADR 0043, [simulator.md](simulator.md)) | `backend/cmd/finuance-sim`, `internal/sim`, `web/sim/`, `api/sim.openapi.yaml` | Its own image; Compose (`make sim-up`) or `deploy/helm/finuance-sim` in its own namespace; never on an instance with real data | A lab's web server or ingress, as a browser does |
-| **`llmmock`** | A scripted model server for tests, CI, the rehearsal and labs; its history is bounded | `backend/testutil/llmmock`, `cmd/llmmock` | Compose profile; the image `finuance-llmmock` in a lab's namespace | — |
+| **`llmmock`** | A scripted model server for tests, CI, the rehearsal and labs; its history is bounded; a Vertex mode with expiring tokens and the metadata server's token path | `backend/testutil/llmmock`, `cmd/llmmock` | Compose profile; the image `finuance-llmmock` in a lab's namespace | — |
 | **Monitoring** | Metrics with exemplars, SLO rules, alerts by e-mail, the daily digest, dashboards, traces, collected logs | `deploy/k8s/observability`, `deploy/k8s/tempo`, `deploy/k8s/telemetry` | kube-prometheus-stack, Tempo, Grafana Alloy, Loki | Scrapes api, worker, database, Traefik; Alloy reads the app's pod logs and passes its traces on (ADR 0042) |
 | **Admission** | Pods in Finuance's namespaces only with the exact repositories that namespace may run (the lab's images only in the lab's namespaces); Finuance's own only with the release workflow's signed build provenance | `deploy/k8s/admission`, `deploy/k8s/policy-controller` | A `ValidatingAdmissionPolicy`; Sigstore policy-controller in `cosign-system` (ADRs 0024, 0039) | The Kubernetes API, the registry's signatures |
 
@@ -75,7 +76,6 @@ Not there yet:
 
 | Planned component | Phase |
 |---|---|
-| A Vertex AI connection (token source in `internal/llm`) | 26 |
 | A lab on GKE Autopilot built by Terraform (`deploy/terraform/`), Gateway API in the chart | 27 |
 | The public demo host | 29 |
 
@@ -105,7 +105,7 @@ flowchart TB
 
     subgraph ai["Assistant"]
         assistant["assistant<br/>connections, tools, run loop,<br/>chats, digests, budget"]
-        llm["llm<br/>OpenAI and Anthropic formats,<br/>dial guard, capabilities"]
+        llm["llm<br/>OpenAI and Anthropic formats,<br/>dial guard, capabilities,<br/>Google token source"]
         aiother["goals · aichanges · advice ·<br/>secret · images"]
     end
 
