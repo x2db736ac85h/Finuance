@@ -129,7 +129,10 @@ the same in every theme.
   `docs/assistant.md` "Using a cloud model"), a local server (Ollama, LM Studio: its address on
   your network), or *Other* for any OpenAI- or Anthropic-compatible address (name, label, API,
   address, cloud or not, default model, the models offered, a context size, an API key). After a
-  save the new connection's **Models** open. One thing is open at a time: a connection's models
+  save the new connection's **Models** open. For Anthropic, OpenAI and Google the form lists the
+  provider's models by name, ticked, with a field for any other id and a default among them
+  (with none chosen, Anthropic and OpenAI offer every chat model they list; Vertex AI has no list,
+  so at least one is needed). One thing is open at a time: a connection's models
   under the list, or the dialog that adds or changes one. The key is stored sealed
   under `FINUANCE_INSTANCE_KEY` and never shown again ("stored", "none", or "unreadable" when it
   was sealed under another instance key); changing the address drops it, so enter it again. Other

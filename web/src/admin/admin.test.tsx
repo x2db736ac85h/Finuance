@@ -751,9 +751,27 @@ describe('administration', () => {
     const gSave = within(g).getByRole<HTMLButtonElement>('button', { name: 'Save' });
     expect(gSave.disabled).toBe(true);
     fireEvent.change(within(g).getByLabelText('Google Cloud project'), { target: { value: 'demo-project' } });
-    fireEvent.change(within(g).getByLabelText(/^Models offered/), {
-      target: { value: 'google/gemini-3.5-flash-lite' },
-    });
+    // the family's models are there to tick, the known ones ticked already (Phase 26)
+    const gModels = within(g).getByRole('group', { name: 'Models offered' });
+    expect(
+      within(gModels)
+        .getAllByRole<HTMLInputElement>('checkbox')
+        .map((b) => [b.closest('label')?.querySelector('b')?.textContent, b.checked]),
+    ).toEqual([
+      ['Gemini 3.5 Flash-Lite', true],
+      ['Gemini 3.8 Flash', true],
+    ]);
+    // the other family has its own: Claude's, and none of Gemini's stay behind
+    fireEvent.change(within(g).getByLabelText('Models'), { target: { value: 'anthropic' } });
+    expect(within(gModels).getAllByRole('checkbox')).toHaveLength(4);
+    expect(within(gModels).getByRole<HTMLInputElement>('checkbox', { name: /Claude Haiku 5\.5/ }).checked).toBe(true);
+    fireEvent.change(within(g).getByLabelText('Models'), { target: { value: 'openai' } });
+    await user.click(within(gModels).getByRole('checkbox', { name: /Gemini 3\.8 Flash/ }));
+    // with none left there is nothing to offer: Vertex AI has no list of its own
+    await user.click(within(gModels).getByRole('checkbox', { name: /Gemini 3\.5 Flash-Lite/ }));
+    expect(gModels.textContent).toContain('Tick at least one');
+    expect(gSave.disabled).toBe(true);
+    await user.click(within(gModels).getByRole('checkbox', { name: /Gemini 3\.5 Flash-Lite/ }));
     // no location, no connection: there is no default
     expect(gSave.disabled).toBe(true);
     fireEvent.change(within(g).getByLabelText('Location'), { target: { value: 'global' } });
@@ -803,13 +821,36 @@ describe('administration', () => {
     // the name "anthropic" is taken by the file's connection
     expect(within(form).getByLabelText<HTMLInputElement>('Name').value).toBe('anthropic-2');
     fireEvent.change(within(form).getByLabelText(/^API key/), { target: { value: 'sk-ant-1' } });
-    // a default model the offered patterns leave out is refused here, before saving
-    fireEvent.change(within(form).getByLabelText(/^Models offered/), { target: { value: 'claude-haiku*' } });
-    fireEvent.change(within(form).getByLabelText('Default model'), { target: { value: 'claude-sonnet-5-5' } });
-    expect(within(form).getByRole('alert').textContent).toContain('fits none of the models offered');
-    expect(save.disabled).toBe(true);
-    fireEvent.change(within(form).getByLabelText(/^Models offered/), { target: { value: 'claude-*' } });
-    expect(within(form).queryByRole('alert')).toBeNull();
+    // Claude's models by name, all ticked; the default is one of the ticked ones
+    const picks = within(form).getByRole('group', { name: 'Models offered' });
+    expect(
+      within(picks)
+        .getAllByRole<HTMLInputElement>('checkbox')
+        .map((b) => [b.closest('label')?.querySelector('b')?.textContent, b.checked]),
+    ).toEqual([
+      ['Claude Haiku 5.5', true],
+      ['Claude Sonnet 5.5', true],
+      ['Claude Opus 5.5', true],
+      ['Claude Fable 5.2', true],
+    ]);
+    const def = within(form).getByRole<HTMLSelectElement>('combobox', { name: 'Default model' });
+    expect([...def.options].map((o) => o.textContent)).toEqual([
+      'Choose later',
+      'Claude Haiku 5.5',
+      'Claude Sonnet 5.5',
+      'Claude Opus 5.5',
+      'Claude Fable 5.2',
+    ]);
+    await user.selectOptions(def, 'claude-sonnet-5-5');
+    await user.click(within(picks).getByRole('checkbox', { name: /Claude Opus 5\.5/ }));
+    await user.click(within(picks).getByRole('checkbox', { name: /Claude Fable 5\.2/ }));
+    // a model that isn't offered any more can't stay the default
+    await user.click(within(picks).getByRole('checkbox', { name: /Claude Sonnet 5\.5/ }));
+    expect(def.value).toBe('');
+    await user.click(within(picks).getByRole('checkbox', { name: /Claude Sonnet 5\.5/ }));
+    await user.selectOptions(def, 'claude-sonnet-5-5');
+    // a newer id is typed next to the list, commas and all
+    await user.type(within(picks).getByLabelText(/^Other models/), 'claude-next-6, claude-haiku-5-5');
     await user.click(save);
     await waitFor(() => {
       expect(posted[1]).toEqual({
@@ -819,7 +860,7 @@ describe('administration', () => {
         baseUrl: 'https://api.anthropic.com',
         cloud: true,
         defaultModel: 'claude-sonnet-5-5',
-        models: ['claude-*'],
+        models: ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-next-6'],
         contextTokens: 0,
         auth: 'key',
         apiKey: 'sk-ant-1',

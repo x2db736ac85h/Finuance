@@ -149,3 +149,51 @@ export function googleBaseUrl(project: string, location: string, api: 'openai' |
 
 export const GOOGLE_PROJECT = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 export const GOOGLE_LOCATION = /^(global|[a-z]{2,12}|[a-z]+(-[a-z]+)*[0-9]+)$/;
+
+/** A model a provider is known to have, offered by name when a connection is added. */
+export type KnownModel = { id: string; label: string; about: string };
+
+const CLAUDE: readonly KnownModel[] = [
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', about: 'the fastest and cheapest' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', about: 'the balanced one' },
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', about: 'for the hardest questions' },
+  { id: 'claude-fable-5-2', label: 'Claude Fable 5.2', about: 'the most capable, the most expensive' },
+];
+
+/**
+ * The models to tick for a provider (and, for Google, a family: each has its own wire format).
+ * A list that ages: an id the provider no longer has is simply not offered to anyone, and a newer
+ * one can always be typed next to the list. Local servers and "other" have none: their models are
+ * whatever the server holds.
+ */
+export function knownModels(provider: ProviderId, api: 'openai' | 'anthropic'): readonly KnownModel[] {
+  switch (provider) {
+    case 'anthropic':
+      return CLAUDE;
+    case 'openai':
+      return [
+        { id: 'gpt-5-mini', label: 'GPT-5 mini', about: 'fast and cheap' },
+        { id: 'gpt-5', label: 'GPT-5', about: 'the larger one' },
+      ];
+    case 'google':
+      return api === 'anthropic'
+        ? CLAUDE
+        : [
+            { id: 'google/gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', about: 'the fastest and cheapest' },
+            { id: 'google/gemini-3.8-flash', label: 'Gemini 3.8 Flash', about: 'the balanced one' },
+          ];
+    default:
+      return [];
+  }
+}
+
+/** A comma-separated list of ids and patterns, as the forms keep it. */
+export function splitModels(text: string): string[] {
+  return text
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean);
+}
+
+/** True for a pattern (`claude-*`), false for one model's id. */
+export const isPattern = (m: string): boolean => /[*?[]/.test(m);
