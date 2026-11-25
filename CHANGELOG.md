@@ -14,6 +14,10 @@ model server for the usage of a streamed answer (`stream_options.include_usage`)
 
 ### Added
 
+- **A provider's models to tick.** Adding a connection to Anthropic, OpenAI or Google lists the
+  provider's models by name (Claude Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2; Gemini on Vertex
+  AI), ticked, with a field for any other id and a default chosen among them, instead of typed
+  patterns.
 - **Google Cloud's models without a stored key** (ADR 0045,
   [docs/assistant.md](docs/assistant.md) "Using a cloud model"). A connection with `auth: google`
   names a project and a location and gets short-lived tokens from the instance's own Google

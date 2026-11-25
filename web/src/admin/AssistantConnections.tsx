@@ -31,6 +31,8 @@ import { Button } from '../ui/Button';
 import { Checkbox, Select, TextInput, type Option } from '../ui/inputs';
 import { Modal } from '../ui/Modal';
 import { toast } from '../ui/toastStore';
+
+import { ModelPicker } from './ModelPicker';
 import {
   freeName,
   GOOGLE_LOCATION,
@@ -43,6 +45,7 @@ import {
   PROVIDERS,
   providerTag,
   type ProviderId,
+  knownModels,
 } from './providers';
 
 const fail = (e: unknown) => {
@@ -490,7 +493,8 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
     baseUrl: connection?.baseUrl ?? prov.preset.baseUrl,
     cloud: connection?.cloud ?? prov.preset.cloud,
     defaultModel: connection?.defaultModel ?? '',
-    models: (connection?.models ?? []).join(', '),
+    // a new connection to a provider starts with the provider's models ticked
+    models: (connection?.models ?? knownModels(provider, prov.preset.api).map((k) => k.id)).join(', '),
     contextTokens: connection?.contextTokens ? String(connection.contextTokens) : '',
     project: connection?.project ?? '',
     location: connection?.location ?? '',
@@ -640,6 +644,19 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
       )}
     </>
   );
+  const contextField = (
+    <label className="st-col">
+      Context tokens <span className="hint">(empty: the server's or 8,192)</span>
+      <TextInput
+        autoComplete="off"
+        inputMode="numeric"
+        value={c.contextTokens}
+        onChange={(e) => {
+          setC({ ...c, contextTokens: e.target.value });
+        }}
+      />
+    </label>
+  );
   const modelFields = (
     <>
       <div className="form-row">
@@ -706,7 +723,15 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
                 value={c.api}
                 options={GOOGLE_FAMILIES}
                 onChange={(api) => {
-                  setC({ ...c, api });
+                  // each family has its own models: the other family's are of no use here
+                  setC({
+                    ...c,
+                    api,
+                    defaultModel: '',
+                    models: knownModels('google', api)
+                      .map((k) => k.id)
+                      .join(', '),
+                  });
                 }}
               />
             </label>
@@ -760,20 +785,16 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
               in one place.
             </p>
           )}
-          <label className="st-col">
-            Models offered{' '}
-            <span className="hint">(their ids, comma-separated; Vertex AI has no list to read them from)</span>
-            <TextInput
-              autoComplete="off"
-              value={c.models}
-              placeholder={
-                c.api === 'anthropic' ? 'claude-sonnet-5-5' : 'google/gemini-3.5-flash-lite, google/gemini-3.8-flash'
-              }
-              onChange={(e) => {
-                setC({ ...c, models: e.target.value });
-              }}
-            />
-          </label>
+          <ModelPicker
+            known={knownModels('google', c.api)}
+            patterns={false}
+            models={c.models}
+            defaultModel={c.defaultModel}
+            emptyHint="Tick at least one, or type its id: Vertex AI has no list to read them from."
+            onChange={(next) => {
+              setC({ ...c, ...next });
+            }}
+          />
           <p className="hint">
             No key is stored: this instance asks Google for a short-lived token with its own credentials (workload
             identity on Google Cloud, or the credentials file its environment names), which need the role{' '}
@@ -787,36 +808,7 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
           <details className="conn-more">
             <summary>More options</summary>
             {!connection && nameField}
-            <div className="form-row">
-              <label className="st-col">
-                Default model
-                <TextInput
-                  autoComplete="off"
-                  value={c.defaultModel}
-                  maxLength={200}
-                  aria-invalid={defaultLeftOut || undefined}
-                  onChange={(e) => {
-                    setC({ ...c, defaultModel: e.target.value });
-                  }}
-                />
-              </label>
-              <label className="st-col">
-                Context tokens <span className="hint">(empty: 8,192)</span>
-                <TextInput
-                  autoComplete="off"
-                  inputMode="numeric"
-                  value={c.contextTokens}
-                  onChange={(e) => {
-                    setC({ ...c, contextTokens: e.target.value });
-                  }}
-                />
-              </label>
-            </div>
-            {defaultLeftOut && (
-              <p className="set-err" role="alert">
-                The default model “{c.defaultModel.trim()}” fits none of the models offered.
-              </p>
-            )}
+            {contextField}
           </details>
         </>
       ) : provider === 'other' ? (
@@ -869,6 +861,16 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
         <>
           {labelField}
           {keyField}
+          <ModelPicker
+            known={knownModels(provider, c.api)}
+            patterns
+            models={c.models}
+            defaultModel={c.defaultModel}
+            emptyHint={`With none chosen, every chat model ${prov.label} lists is offered.`}
+            onChange={(next) => {
+              setC({ ...c, ...next });
+            }}
+          />
           <p className="hint">
             {prov.label} is a cloud service: each person agrees before their data is sent there, and long numbers are
             shortened first.
@@ -877,7 +879,7 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
             <summary>More options</summary>
             {!connection && nameField}
             {addressField}
-            {modelFields}
+            {contextField}
           </details>
         </>
       )}
