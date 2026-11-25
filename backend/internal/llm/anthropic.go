@@ -72,15 +72,16 @@ type anMessage struct {
 
 type anRequest struct {
 	// Model is left out on Vertex AI (it is in the address); Version is sent there instead.
-	Model       string      `json:"model,omitempty"`
-	Version     string      `json:"anthropic_version,omitempty"`
-	MaxTokens   int         `json:"max_tokens"`
-	System      string      `json:"system,omitempty"`
-	Messages    []anMessage `json:"messages"`
-	Tools       []anTool    `json:"tools,omitempty"`
-	Temperature *float64    `json:"temperature,omitempty"`
-	Thinking    *anThinking `json:"thinking,omitempty"`
-	Stream      bool        `json:"stream"`
+	Model        string          `json:"model,omitempty"`
+	Version      string          `json:"anthropic_version,omitempty"`
+	MaxTokens    int             `json:"max_tokens"`
+	System       string          `json:"system,omitempty"`
+	Messages     []anMessage     `json:"messages"`
+	Tools        []anTool        `json:"tools,omitempty"`
+	Temperature  *float64        `json:"temperature,omitempty"`
+	Thinking     *anThinking     `json:"thinking,omitempty"`
+	OutputConfig *anOutputConfig `json:"output_config,omitempty"`
+	Stream       bool            `json:"stream"`
 }
 
 type anTool struct {
@@ -90,9 +91,21 @@ type anTool struct {
 }
 
 type anThinking struct {
-	Type         string `json:"type"`
-	BudgetTokens int    `json:"budget_tokens"`
+	Type         string `json:"type"` // enabled (with a budget) or adaptive
+	BudgetTokens int    `json:"budget_tokens,omitempty"`
+	// Display asks for a readable summary of the reasoning: current models return empty thinking
+	// blocks otherwise, and the panel shows what the model thought about.
+	Display string `json:"display,omitempty"`
 }
+
+// anOutputConfig carries the effort of a current model: how thoroughly it works and thinks.
+type anOutputConfig struct {
+	Effort string `json:"effort"`
+}
+
+// adaptiveMaxTokens is the answer budget of a model that thinks adaptively when the caller names
+// none: its thinking counts against max_tokens, and the request streams.
+const adaptiveMaxTokens = 16000
 
 // thinkingBudget maps a level to Anthropic's token budget (≥ 1024).
 var thinkingBudget = map[Thinking]int{ThinkAuto: 2048, ThinkLow: 1024, ThinkMedium: 4096, ThinkHigh: 16000}
@@ -107,10 +120,33 @@ func (a *anthropicClient) body(req Request) ([]byte, error) {
 	if a.c.Vertex {
 		r.Model, r.Version = "", vertexVersion
 	}
+	current := ClaudeGeneration(req.Model) == ClaudeCurrent
+	if current {
+		// Current Claude models (4.6 and later; issue 97) answer 400 to a token budget, and from
+		// 4.7 on to a temperature; several refuse thinking "disabled" as well. So: no sampling
+		// parameter, thinking adaptive (the model decides), and the run's level as an effort.
+		// "Off" becomes the lowest effort, which is as little thinking as every one of them allows.
+		r.Temperature = nil
+		if req.Caps.Reasoning == ReasonAdaptive {
+			r.Thinking = &anThinking{Type: "adaptive", Display: "summarized"}
+			switch req.Thinking {
+			case ThinkOff, ThinkLow:
+				r.OutputConfig = &anOutputConfig{Effort: "low"}
+			case ThinkMedium:
+				r.OutputConfig = &anOutputConfig{Effort: "medium"}
+			case ThinkHigh:
+				r.OutputConfig = &anOutputConfig{Effort: "high"}
+			}
+			if r.MaxTokens <= 0 {
+				r.MaxTokens = adaptiveMaxTokens
+			}
+		}
+	}
 	if r.MaxTokens <= 0 {
 		r.MaxTokens = 4096
 	}
-	if req.Caps.Reasoning == ReasonBudget && req.Thinking != ThinkOff {
+	// a token budget only for the generations that take one, whatever the capabilities say
+	if req.Caps.Reasoning == ReasonBudget && req.Thinking != ThinkOff && !current {
 		b := thinkingBudget[req.Thinking]
 		if b == 0 {
 			b = thinkingBudget[ThinkAuto]

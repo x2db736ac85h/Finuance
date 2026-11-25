@@ -246,9 +246,9 @@ func (p *parser) aiConnections(defaultContext int) []AIConnection {
 			}
 			if o.Reasoning != nil {
 				switch *o.Reasoning {
-				case llm.ReasonNone, llm.ReasonEffort, llm.ReasonBudget, llm.ReasonSwitch:
+				case llm.ReasonNone, llm.ReasonEffort, llm.ReasonBudget, llm.ReasonSwitch, llm.ReasonAdaptive:
 				default:
-					bad(fmt.Sprintf("caps: reasoning must be none, effort, budget or switch, got %q", *o.Reasoning))
+					bad(fmt.Sprintf("caps: reasoning must be none, effort, budget, switch or adaptive, got %q", *o.Reasoning))
 				}
 			}
 		}
@@ -404,9 +404,9 @@ func NewConnection(s ConnectionSpec, defaultContext int) (AIConnection, map[stri
 		}
 		if o.Reasoning != nil {
 			switch *o.Reasoning {
-			case llm.ReasonNone, llm.ReasonEffort, llm.ReasonBudget, llm.ReasonSwitch:
+			case llm.ReasonNone, llm.ReasonEffort, llm.ReasonBudget, llm.ReasonSwitch, llm.ReasonAdaptive:
 			default:
-				problems["caps"] = "reasoning must be none, effort, budget or switch"
+				problems["caps"] = "reasoning must be none, effort, budget, switch or adaptive"
 			}
 		}
 		if o.ContextTokens != nil && (*o.ContextTokens < 0 || *o.ContextTokens > 10_000_000) {

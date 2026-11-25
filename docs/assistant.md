@@ -81,7 +81,7 @@ To offer several servers, point `FINUANCE_AI_CONNECTIONS_FILE` at a JSON file in
 | `defaultModel` | Used when the user picks none |
 | `models` | Allowlist of model ids (globs, case-insensitive). If omitted, every chat model is offered; embedding models are never offered. |
 | `contextTokens` | Context size when the server doesn't report one (default `FINUANCE_AI_CONTEXT_TOKENS`, 8192). LM Studio reports the loaded size itself. |
-| `caps` | Corrections per model glob: `tools` (false = plan mode), `reasoning` (`none`, `effort`, `budget`, `switch`), `contextTokens` |
+| `caps` | Corrections per model glob: `tools` (false = plan mode), `reasoning` (`none`, `effort`, `budget`, `adaptive`, `switch`), `contextTokens` |
 
 An invalid file stops the api at startup and names every problem at once.
 
@@ -102,7 +102,8 @@ For each model the assistant works out whether it calls tools, how its thinking 
 | Style | Models | How "thinking" is set |
 |---|---|---|
 | `effort` | gpt-oss, OpenAI o-series and GPT-5, *reasoner*, Magistral | `reasoning_effort` low / medium / high |
-| `budget` | Claude (Anthropic API) | a thinking token budget (1k / 4k / 16k) |
+| `adaptive` | current Claude (4.6 and later, and any newer id), on Anthropic's API and on Vertex AI | the model decides when to think (`thinking: adaptive`); low / medium / high become `output_config.effort`, and "off" is the lowest effort. No token budget and no temperature are sent: these models answer `400` to both |
+| `budget` | Claude 3.7, 4, 4.1 and 4.5 (Haiku 4.5, Sonnet 4.5, …) | a thinking token budget (1k / 4k / 16k) |
 | `switch` | Qwen 3 | "off" appends `/no_think` to the question |
 | `none` | everything else | not controlled; reasoning the model prints is still shown |
 

@@ -186,6 +186,11 @@ type request struct {
 	Stream   bool              `json:"stream"`
 	// Vertex AI's variant of the Messages API: the version in the body, the model in the path
 	AnthropicVersion string `json:"anthropic_version"`
+	// what the current Claude models are strict about (claude.go)
+	// (kept raw: the two formats give tool_choice and thinking different shapes)
+	Temperature *float64        `json:"temperature"`
+	Thinking    json.RawMessage `json:"thinking"`
+	ToolChoice  json.RawMessage `json:"tool_choice"`
 	// like the real servers, usage is part of a stream only when it is asked for
 	StreamOptions struct {
 		IncludeUsage bool `json:"include_usage"`
@@ -214,6 +219,15 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request, anthropic bool) {
 			return
 		}
 		req.Model = strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, s.Vertex.Claude()), ":streamRawPredict")
+	}
+	if anthropic {
+		// as Anthropic's API: a body a current model refuses is a 400, whatever is scripted
+		if msg := claudeRefuses(req); msg != "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]any{"type": "error", "error": map[string]string{"type": "invalid_request_error", "message": msg}})
+			return
+		}
 	}
 	reply, ok := s.next()
 	if !ok {

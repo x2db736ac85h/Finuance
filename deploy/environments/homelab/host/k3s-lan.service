@@ -8,6 +8,9 @@ After=network-pre.target
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/bin/nft -f /etc/k3s-lan.nft
+# A changed file is loaded in one transaction (it deletes and re-creates its own table). A restart
+# would run ExecStop first and leave the pods without the table for a moment.
+ExecReload=/usr/bin/nft -f /etc/k3s-lan.nft
 ExecStop=/usr/bin/nft delete table inet k3s_lan
 
 [Install]
