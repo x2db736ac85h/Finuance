@@ -22,6 +22,10 @@ describe('providers', () => {
     expect(providerOf(c('openai', 'https://openrouter.ai/api/v1', true))).toBe('other');
     // a look-alike host is not the provider
     expect(providerOf(c('anthropic', 'https://api.anthropic.com.example.test', true))).toBe('other');
+    expect(providerOf(c('openai', 'https://evilaiplatform.googleapis.com/v1', true))).toBe('other');
+    expect(providerOf(c('openai', 'https://aiplatform.googleapis.com.example.test/v1', true))).toBe('other');
+    expect(providerOf(c('openai', 'https://aiplatform.googleapis.com/v1', true))).toBe('google');
+    expect(providerOf(c('openai', 'https://aiplatform.eu.rep.googleapis.com/v1', true))).toBe('google');
     expect(providerOf(c('openai', 'not an address', true))).toBe('other');
     expect(providerTag(c('openai', 'https://openrouter.ai/api/v1', true))).toBe('OpenAI-compatible');
     expect(providerTag(c('anthropic', 'https://proxy.example.test', true))).toBe('Anthropic-compatible');

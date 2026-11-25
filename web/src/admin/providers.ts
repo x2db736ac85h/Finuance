@@ -59,6 +59,14 @@ export const PROVIDERS: readonly Provider[] = [
 export const providerById = (id: ProviderId): Provider =>
   PROVIDERS.find((p) => p.id === id) ?? (PROVIDERS[4] as Provider);
 
+/**
+ * Google's hosts for model APIs, whole names only: Vertex AI (`aiplatform.googleapis.com`, a
+ * location in front as `europe-west4-aiplatform…`, or a multi-region `aiplatform.eu.rep…`) and the
+ * Gemini API. A name that merely ends like one (`evil-aiplatform.googleapis.com.example`) is not.
+ */
+const GOOGLE_HOST =
+  /^(?:(?:[a-z0-9]+(?:-[a-z0-9]+)*-)?aiplatform\.googleapis\.com|aiplatform\.[a-z0-9-]+\.rep\.googleapis\.com|generativelanguage\.googleapis\.com)$/;
+
 function hostOf(url: string): string {
   try {
     return new URL(url).hostname.toLowerCase();
@@ -72,7 +80,7 @@ export function providerOf(c: { api: string; baseUrl: string; cloud: boolean }):
   const host = hostOf(c.baseUrl);
   if (host === 'api.anthropic.com') return 'anthropic';
   if (host === 'api.openai.com') return 'openai';
-  if (host.endsWith('aiplatform.googleapis.com') || host === 'generativelanguage.googleapis.com') return 'google';
+  if (GOOGLE_HOST.test(host)) return 'google';
   return c.cloud ? 'other' : 'local';
 }
 
@@ -98,10 +106,11 @@ export function mayOffer(patterns: readonly string[], model: string): boolean {
   if (!patterns.length || model.includes('/')) return true;
   return patterns.some((p) => {
     if (/[?[\]\\]/.test(p)) return true;
+    // every character of the pattern stands for itself, except `*`
     const re = new RegExp(
       `^${p
         .split('*')
-        .map((part) => part.replace(/[.+^${}()|]/g, '\\$&'))
+        .map((part) => part.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&'))
         .join('.*')}$`,
       'i',
     );
