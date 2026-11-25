@@ -53,6 +53,8 @@ export const routes: RouteObject[] = [
             lazy: async () => ({ Component: (await import('./shared/SharedPage')).SharedPage }),
           },
           { path: '/settings', element: <Navigate to="/settings/general" replace /> },
+          // friends live on the Shared page since Phase 26 (U8)
+          { path: '/settings/friends', element: <Moved to={sharedPath} hash="#friends" /> },
           { path: '/settings/:section', element: <SettingsPage /> },
           { path: '/admin', element: <Navigate to="/admin/users" replace /> },
           // the admin panel is its own chunk (Phase 19)

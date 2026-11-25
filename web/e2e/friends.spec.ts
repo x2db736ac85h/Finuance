@@ -19,13 +19,15 @@ test('two people become friends by code, and one removes the other', async ({ br
   const alex = await person(browser, 'Alex');
   const bo = await person(browser, 'Bo');
 
+  // friends are a part of the Shared page since Phase 26; the old Settings address leads there
   await alex.goto('/settings/friends');
+  await expect(alex).toHaveURL(/\/shared#friends$/);
   await alex.getByRole('button', { name: 'Show my code' }).click();
   const code = (await alex.getByLabel('Your friend code').textContent()) ?? '';
   expect(code).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
   await expect(alex.getByRole('timer')).toContainText('left');
 
-  await bo.goto('/settings/friends');
+  await bo.goto('/shared');
   await bo.getByLabel('Their code').fill(code.toLowerCase().replace('-', ' '));
   await bo.getByRole('button', { name: 'Add friend' }).click();
   await expect(bo.getByText('You and Alex are friends now')).toBeVisible();
@@ -39,7 +41,7 @@ test('two people become friends by code, and one removes the other', async ({ br
   await alex.goto('/transactions/all');
   await alex.getByRole('button', { name: 'Notifications, 1 unread' }).click();
   await expect(alex.getByRole('dialog', { name: 'Notifications' })).toContainText('Bo entered your code');
-  await alex.goto('/settings/friends');
+  await alex.goto('/shared');
   const list = alex.getByRole('list', { name: 'Friends' });
   await expect(list).toContainText('Bo');
   await expect(list).not.toContainText('@');

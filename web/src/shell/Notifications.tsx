@@ -39,8 +39,8 @@ const SAY: Record<Notification['kind'], (d: Record<string, string>) => string> =
 
 /** Where a notification leads. */
 const LINK: Record<Notification['kind'], string> = {
-  'friend.added': '/settings/friends',
-  'friend.removed': '/settings/friends',
+  'friend.added': `${sharedPath()}#friends`,
+  'friend.removed': `${sharedPath()}#friends`,
   'shared.invited': sharedPath(),
   'shared.joined': sharedPath(),
   'shared.left': sharedPath(),

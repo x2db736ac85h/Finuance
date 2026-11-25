@@ -1,6 +1,7 @@
-// The Shared tab (Phase 19, ADR 0028): /s is the timeline of personal and shared groups with
-// invitations, per-year sums, a comparison of the groups and "next time" hints; /s/:groupId is one
-// shared group. Its own chunk, loaded when the tab first opens.
+// The Shared page (Phase 19, ADR 0028): /shared is the timeline of personal and shared groups with
+// invitations, per-year sums, a comparison of the groups and "next time" hints, and since Phase 26
+// (U8) the friends they can be shared with; /shared/:groupId is one shared group. Its own chunk,
+// loaded when the page first opens.
 
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
@@ -14,7 +15,9 @@ import { errorMessage } from '../lib/errors';
 import { fmtInt, fmtShare, plural } from '../lib/format';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/inputs';
+import { useScrollToHash } from '../lib/useScrollToHash';
 import { ShareDialog } from './dialogs';
+import { FriendsPanel } from './Friends';
 import { GroupPage } from './GroupPage';
 import { hintText, TIMELINE_KIND_LABEL } from './text';
 import { sharedPath } from '../lib/paths';
@@ -22,8 +25,28 @@ import { sharedPath } from '../lib/paths';
 export function SharedPage() {
   const { groupId } = useParams();
   const meta = useMeta();
-  if (meta.data && !meta.data.features.sharedGroups) return <Navigate to="/" replace />;
-  return groupId ? <GroupPage key={groupId} id={groupId} /> : <Timeline />;
+  const groupsOn = meta.data?.features.sharedGroups !== false;
+  // friends only where the instance has them: switched on, and not a demo (ADR 0027)
+  const friendsOn = meta.data?.features.friends !== false && !meta.data?.demoMode;
+  if (meta.data && !groupsOn && !friendsOn) return <Navigate to="/" replace />;
+  if (meta.data && !groupsOn) return groupId ? <Navigate to="/shared" replace /> : <FriendsOnly />;
+  return groupId ? <GroupPage key={groupId} id={groupId} /> : <Timeline friends={friendsOn} />;
+}
+
+/** An instance with friends but without shared groups: the page is the friends alone. */
+function FriendsOnly() {
+  useScrollToHash();
+  return (
+    <div className="sh-page">
+      <header className="sh-head">
+        <div className="sh-title">
+          <h1>Shared</h1>
+          <span className="muted">Your friends on this instance</span>
+        </div>
+      </header>
+      <FriendsPanel />
+    </div>
+  );
 }
 
 type KindFilter = 'all' | TimelineGroup['kind'];
@@ -33,8 +56,9 @@ function span(g: TimelineGroup): string {
   return g.firstOn === g.lastOn ? fmtDay(g.firstOn) : `${fmtDay(g.firstOn)} – ${fmtDay(g.lastOn)}`;
 }
 
-function Timeline() {
+function Timeline({ friends }: { friends: boolean }) {
   const tl = useTimeline();
+  useScrollToHash(tl.isSuccess);
   const shared = useSharedGroups();
   const navigate = useNavigate();
   const [kind, setKind] = useState<KindFilter>('all');
@@ -54,6 +78,17 @@ function Timeline() {
           <h1>Shared</h1>
           <span className="muted">Trips and groups, yours and shared with friends</span>
           <span className="sh-tools">
+            {friends && (
+              <Button
+                size="sm"
+                icon="users"
+                onClick={() => {
+                  void navigate({ hash: '#friends' });
+                }}
+              >
+                Friends
+              </Button>
+            )}
             <Button
               size="sm"
               icon="plus"
@@ -195,6 +230,7 @@ function Timeline() {
           </p>
         )}
       </section>
+      {friends && <FriendsPanel />}
       {creating && (
         <ShareDialog
           onClose={() => {

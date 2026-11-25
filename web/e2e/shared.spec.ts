@@ -17,10 +17,10 @@ async function person(browser: Browser, name: string): Promise<Page> {
 }
 
 async function befriend(a: Page, b: Page) {
-  await a.goto('/settings/friends');
+  await a.goto('/shared');
   await a.getByRole('button', { name: 'Show my code' }).click();
   const code = (await a.getByLabel('Your friend code').textContent()) ?? '';
-  await b.goto('/settings/friends');
+  await b.goto('/shared');
   await b.getByLabel('Their code').fill(code);
   await b.getByRole('button', { name: 'Add friend' }).click();
   await expect(b.getByRole('list', { name: 'Friends' })).toContainText(/Alex|Bo/);

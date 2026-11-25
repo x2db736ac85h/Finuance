@@ -266,7 +266,9 @@ export function ShareDialog({ from, onClose }: ShareProps) {
               ))}
             </ul>
           ) : (
-            <p className="hint">No friends yet: add them in Settings → Friends, then invite them from the group.</p>
+            <p className="hint">
+              No friends yet: add them under Friends on the Shared page, then invite them from the group.
+            </p>
           )}
         </fieldset>
         {error && (

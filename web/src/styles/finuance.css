@@ -1694,7 +1694,22 @@ textarea.inp.ins-note {
   outline-offset: -2px;
 }
 
-/* Settings → Friends (Phase 19) */
+/* Friends, a part of the Shared page (Phase 19; moved from Settings in Phase 26) */
+.sh-friends {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  scroll-margin-top: 1rem;
+}
+.sh-friends-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.sh-friends .set-card {
+  margin-bottom: 0;
+}
 .fr-code {
   display: flex;
   flex-wrap: wrap;

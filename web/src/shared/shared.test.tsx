@@ -334,8 +334,9 @@ describe('the Shared tab', () => {
     expect(posted[1]?.body).toEqual({ friendId: '00000000-0000-4000-8000-0000000000e1' });
   });
 
-  it('is gone when the instance switches shared groups off', async () => {
-    db.features = { ...db.features, sharedGroups: false };
+  it('is gone when the instance switches shared groups and friends off', async () => {
+    // the page holds both since Phase 26 (U8): with friends still on it stays, for them
+    db.features = { ...db.features, sharedGroups: false, friends: false };
     renderApp('/transactions/all');
     await screen.findByRole('button', { name: 'Toggle sidebar' });
     expect(screen.queryByRole('button', { name: /^Shared/ })).toBeNull();

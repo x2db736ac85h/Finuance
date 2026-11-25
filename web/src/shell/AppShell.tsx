@@ -89,7 +89,9 @@ export function AppShell({ user }: { user: User }) {
   const inSettings = location.pathname.startsWith('/settings') || location.pathname.startsWith('/admin');
   // the Shared tab (Phase 19): a page of its own, like the overview, without the table's parts
   const inShared = inSharedPath(location.pathname);
-  const sharedOn = useMeta().data?.features.sharedGroups !== false && !user.isDemo;
+  // the Shared page holds shared groups and, since Phase 26, friends: it exists while either is on
+  const features = useMeta().data?.features;
+  const sharedOn = (features?.sharedGroups !== false || features.friends !== false) && !user.isDemo;
   const lastView = useRef(txPath());
   useEffect(() => {
     if (!inShared && !inSettings && isViewPath(location.pathname)) lastView.current = location.pathname;

@@ -82,7 +82,7 @@ reload (`409`).
   everything a person hasn't changed yet; their own choices always win.
 - **Features**: switching Overview or the Assistant off hides it for everyone and its API answers
   `404`. Switching **Assistant digests** off (or the Assistant) stops every digest and hides the
-  setting (ADR 0033). Switching **Friends** off hides Settings → Friends and its routes (ADR 0027); switching
+  setting (ADR 0033). Switching **Friends** off hides Friends on the Shared page and its routes (ADR 0027); switching
   **Shared groups** off hides the Shared tab, *Share…* and their routes ([sharing.md](sharing.md)).
 - **Signing in**: *Administrators must use two-step sign-in* (ADR 0040). An administrator who
   hasn't set it up can still sign in and use their own data, but Administration stays closed and the
