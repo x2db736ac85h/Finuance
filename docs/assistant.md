@@ -256,7 +256,7 @@ It lists each connection's chat models with their detected capabilities. Then it
 
 ## Measuring quality: `make eval-assistant`
 
-`make eval-assistant CONNECTION=… MODEL=… [THINK=…]` runs the 46 golden questions in `evals/assistant/` against a real model and rebuilds `docs/evals.md`. See `evals/assistant/README.md`.
+`make eval-assistant CONNECTION=… MODEL=… [THINK=…]` runs the 72 golden questions in `evals/assistant/` against a real model and rebuilds `docs/evals.md`. See `evals/assistant/README.md`.
 
 Against Vertex AI (synthetic demo data, your own Google login, no key anywhere):
 
