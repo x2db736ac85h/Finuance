@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	neturl "net/url"
 	"strings"
 )
 
@@ -20,9 +21,26 @@ func (a *anthropicClient) url(p string) string {
 	return strings.TrimSuffix(a.c.BaseURL, "/v1") + "/v1/" + p
 }
 
+// vertexVersion is the Messages API version Vertex AI takes, in the body instead of a header.
+const vertexVersion = "vertex-2023-10-16"
+
+// chatURL is where a message goes. On Vertex AI (PLAN 26.9) the model is part of the address,
+// {base}/publishers/anthropic/models/{model}:streamRawPredict, and not of the body.
+func (a *anthropicClient) chatURL(model string) string {
+	if a.c.Vertex {
+		return a.c.BaseURL + "/publishers/anthropic/models/" + neturl.PathEscape(model) + ":streamRawPredict"
+	}
+	return a.url("messages")
+}
+
 func (a *anthropicClient) header() http.Header {
 	h := http.Header{"Content-Type": {"application/json"}, "Accept": {"text/event-stream, application/json"},
 		"Anthropic-Version": {"2023-06-01"}}
+	if a.c.Vertex {
+		// the version travels in the body there, and the bearer token comes from the token source
+		h.Del("Anthropic-Version")
+		return h
+	}
 	if a.c.APIKey != "" {
 		h.Set("X-Api-Key", a.c.APIKey)
 	}
@@ -53,7 +71,9 @@ type anMessage struct {
 }
 
 type anRequest struct {
-	Model       string      `json:"model"`
+	// Model is left out on Vertex AI (it is in the address); Version is sent there instead.
+	Model       string      `json:"model,omitempty"`
+	Version     string      `json:"anthropic_version,omitempty"`
 	MaxTokens   int         `json:"max_tokens"`
 	System      string      `json:"system,omitempty"`
 	Messages    []anMessage `json:"messages"`
@@ -84,6 +104,9 @@ func mustJSON(v any) json.RawMessage {
 
 func (a *anthropicClient) body(req Request) ([]byte, error) {
 	r := anRequest{Model: req.Model, System: req.System, Temperature: req.Temperature, Stream: true, MaxTokens: req.MaxTokens}
+	if a.c.Vertex {
+		r.Model, r.Version = "", vertexVersion
+	}
 	if r.MaxTokens <= 0 {
 		r.MaxTokens = 4096
 	}
@@ -149,7 +172,7 @@ func (a *anthropicClient) Chat(ctx context.Context, req Request, onDelta func(De
 	if err != nil {
 		return Result{}, &Error{Kind: KindBadResponse, Message: "can't encode the request"}
 	}
-	res, done, err := a.c.call(ctx, http.MethodPost, a.url("messages"), a.header(), body)
+	res, done, err := a.c.call(ctx, http.MethodPost, a.chatURL(req.Model), a.header(), body)
 	if err != nil {
 		return Result{}, err
 	}
@@ -348,6 +371,16 @@ func (a *anthropicClient) Chat(ctx context.Context, req Request, onDelta func(De
 
 // Models lists the server's models (GET /v1/models).
 func (a *anthropicClient) Models(ctx context.Context) ([]Model, error) {
+	if a.c.Vertex {
+		// Vertex AI has no list of the Claude models a project may use: the connection's own ids
+		out := make([]Model, 0, len(a.c.StaticModels))
+		for _, id := range a.c.StaticModels {
+			if id != "" && !strings.ContainsAny(id, "*?[") {
+				out = append(out, Model{ID: id})
+			}
+		}
+		return out, nil
+	}
 	res, done, err := a.c.call(ctx, http.MethodGet, a.url("models?limit=100"), a.header(), nil)
 	if err != nil {
 		return nil, err

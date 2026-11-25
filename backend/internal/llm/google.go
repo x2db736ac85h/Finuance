@@ -33,9 +33,12 @@ func GoogleLocation(s string) bool { return googleLocation.MatchString(s) }
 // GoogleProject reports whether s can be a Google Cloud project id.
 func GoogleProject(s string) bool { return googleProject.MatchString(s) }
 
-// GoogleBaseURL is the OpenAI-compatible endpoint of Vertex AI for a project and a location: the
-// client appends /chat/completions. Callers check both with GoogleProject and GoogleLocation.
-func GoogleBaseURL(project, location string) string {
+// GoogleBaseURL is Vertex AI's address for a project and a location in a wire format. For the
+// openai format it is the OpenAI-compatible endpoint (the client appends /chat/completions); for
+// the anthropic format it is the location itself (the client appends
+// /publishers/anthropic/models/{model}:streamRawPredict). Callers check project and location with
+// GoogleProject and GoogleLocation.
+func GoogleBaseURL(api API, project, location string) string {
 	host := location + "-aiplatform.googleapis.com"
 	switch {
 	case location == "global":
@@ -43,5 +46,9 @@ func GoogleBaseURL(project, location string) string {
 	case !strings.ContainsAny(location, "-0123456789"): // a multi-region: eu, us
 		host = "aiplatform." + location + ".rep.googleapis.com"
 	}
-	return fmt.Sprintf("https://%s/v1/projects/%s/locations/%s/endpoints/openapi", host, project, location)
+	base := fmt.Sprintf("https://%s/v1/projects/%s/locations/%s", host, project, location)
+	if api == Anthropic {
+		return base
+	}
+	return base + "/endpoints/openapi"
 }

@@ -385,6 +385,12 @@ const APIS: Option<'openai' | 'anthropic'>[] = [
   { value: 'anthropic', label: 'Anthropic Messages' },
 ];
 
+/** What a Google connection talks to: each family has its own wire format on Vertex AI. */
+const GOOGLE_FAMILIES: Option<'openai' | 'anthropic'>[] = [
+  { value: 'openai', label: 'Gemini and open models' },
+  { value: 'anthropic', label: 'Claude (Anthropic on Vertex AI)' },
+];
+
 /** Step one of adding a connection: whose models. Each card says what it is in a line. */
 function ProviderPicker({ onPick }: { onPick: (id: ProviderId) => void }) {
   return (
@@ -692,7 +698,19 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
       {google ? (
         // Vertex AI: which project pays, where the data is processed, which models; no key
         <>
-          {labelField}
+          <div className="form-row">
+            {labelField}
+            <label className="st-col">
+              Models
+              <Select
+                value={c.api}
+                options={GOOGLE_FAMILIES}
+                onChange={(api) => {
+                  setC({ ...c, api });
+                }}
+              />
+            </label>
+          </div>
           <div className="form-row">
             <label className="st-col">
               Google Cloud project
@@ -748,7 +766,9 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
             <TextInput
               autoComplete="off"
               value={c.models}
-              placeholder="google/gemini-3.5-flash-lite, google/gemini-3.8-flash"
+              placeholder={
+                c.api === 'anthropic' ? 'claude-sonnet-5-5' : 'google/gemini-3.5-flash-lite, google/gemini-3.8-flash'
+              }
               onChange={(e) => {
                 setC({ ...c, models: e.target.value });
               }}
@@ -760,8 +780,8 @@ function ConnectionForm({ provider, connection, taken, onCancel, onBack, onSaved
             <code>roles/aiplatform.user</code> on the project. Each person agrees before their data is sent.
           </p>
           {projectOk && locationOk && (
-            <p className="hint">
-              Address: <code>{googleBaseUrl(c.project.trim(), c.location.trim())}</code>
+            <p className="hint conn-addr">
+              Address: <code>{googleBaseUrl(c.project.trim(), c.location.trim(), c.api)}</code>
             </p>
           )}
           <details className="conn-more">

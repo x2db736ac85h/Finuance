@@ -17,6 +17,9 @@ notes of their version.
   *Add a connection* → **Google**, or in the connections file (`auth`, `project`, `location`).
   A cloud model sees synthetic data only for now: nothing changes for an instance without such a
   connection.
+- **Claude on Vertex AI** through the same kind of connection (`"api": "anthropic"` with
+  `"auth": "google"`, or *Claude* in the Google form): the Messages API in Vertex AI's variant.
+  Migration 00033.
 - **A daily token budget per connection**, for everyone together (Administration → Assistant →
   Models): once used up, questions on that connection answer `limit_reached` until the next UTC
   day. The count is the provider's own: requests now ask for the usage of a streamed answer.

@@ -32,6 +32,9 @@ type Config struct {
 	// 26.3): nothing beside the base address is probed for LM Studio or Ollama, and there is
 	// nothing to load or unload.
 	Hosted bool
+	// Vertex makes the Anthropic client speak Vertex AI's variant of the Messages API (PLAN 26.9):
+	// the model in the address, the version in the body, a bearer token from Auth.
+	Vertex bool
 	// StaticModels is the model list of an endpoint that has none of its own (GET {base}/models
 	// answers 404, as Vertex AI's OpenAI-compatible endpoint does): the connection's own list.
 	StaticModels []string

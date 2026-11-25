@@ -90,6 +90,25 @@ test('settings and administration share one layout, and their forms line up', as
   // the provider first (Phase 26, U12); "Other" shows every field
   await expect(page.getByRole('radiogroup', { name: 'Provider' })).toBeVisible();
   await look('admin/assistant: providers');
+  // Google: a long project and location make the longest address; nothing runs past the dialog
+  await page.getByRole('radio', { name: /^Google/ }).click();
+  const google = page.getByRole('form', { name: 'Connection' });
+  await google.getByLabel('Google Cloud project').fill('demo-project-with-a-long-name1');
+  await google.getByLabel('Location').fill('northamerica-northeast1');
+  await expect(google.getByText(/^Address:/)).toBeVisible();
+  const past = await page.evaluate(() => {
+    const card = document.querySelector('.modal-card');
+    if (!card) return -1;
+    const right = card.getBoundingClientRect().right;
+    let worst = 0;
+    for (const e of card.querySelectorAll('*')) {
+      const b = e.getBoundingClientRect();
+      if (b.width > 0) worst = Math.max(worst, b.right - right);
+    }
+    return Math.round(worst);
+  });
+  expect(past, 'something in the Google form runs past the dialog').toBe(0);
+  await google.getByRole('button', { name: 'Provider' }).click();
   await page.getByRole('radio', { name: /^Other/ }).click();
   await expect(page.getByRole('form', { name: 'Connection' })).toBeVisible();
   await look('admin/assistant: new connection');

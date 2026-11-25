@@ -184,6 +184,8 @@ type request struct {
 	Messages []json.RawMessage `json:"messages"`
 	Tools    []json.RawMessage `json:"tools"`
 	Stream   bool              `json:"stream"`
+	// Vertex AI's variant of the Messages API: the version in the body, the model in the path
+	AnthropicVersion string `json:"anthropic_version"`
 	// like the real servers, usage is part of a stream only when it is asked for
 	StreamOptions struct {
 		IncludeUsage bool `json:"include_usage"`
@@ -204,6 +206,14 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request, anthropic bool) {
 	if err := json.Unmarshal(body, &req); err != nil {
 		http.Error(w, `{"error":{"message":"bad json"}}`, http.StatusBadRequest)
 		return
+	}
+	if s.Vertex != nil && anthropic {
+		// as Vertex AI: the version belongs in the body and the model in the address, not the other way
+		if req.AnthropicVersion != "vertex-2023-10-16" || req.Model != "" {
+			http.Error(w, `{"error":{"message":"anthropic_version must be vertex-2023-10-16 and model must not be set"}}`, http.StatusBadRequest)
+			return
+		}
+		req.Model = strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, s.Vertex.Claude()), ":streamRawPredict")
 	}
 	reply, ok := s.next()
 	if !ok {
