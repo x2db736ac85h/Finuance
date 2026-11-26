@@ -21,9 +21,11 @@ The assistant's part of the maintainer's list of 2026-11-26.
   without a control). An administrator can keep the level for everyone (Administration →
   Assistant → *People may change the thinking level*); questions then run at the model's default.
 
-## [0.7.1] - unreleased
+## [0.7.1] - 2026-11-26
 
-Interface corrections from the maintainer's list of 2026-11-26. No migration.
+The interface part of the maintainer's list of 2026-11-26: a darker default theme, themes as files,
+the Shared page, *Add* on every account, and pictures and PDFs for the assistant by drag and drop.
+No migration and no API change. One new dependency in the web app, `pdfjs-dist`.
 
 ### Changed
 

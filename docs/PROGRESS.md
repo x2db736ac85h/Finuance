@@ -52,7 +52,7 @@ Phase 27 — The corrections first, then the Google Cloud lab, prepared (PLAN §
 Pull requests (merged by the agent when CI and the local checks are green; the maintainer approves the releases):
 - **1** `phase/27-ui-fixes`: F1, F2, F6, F9, F16, F17, F18, F19.
 - **2** `phase/27-add-and-drop`: F7, F8, F3.
-- **Releases:** `v0.7.1-rc.1`, then `v0.7.1`, the homelab by digest.
+- **Releases:** `v0.7.1-rc.1` (pull requests 107 and 108, and 111 for the changelog's heading; tagged before pull request 3 so that it holds the interface part only), then `v0.7.1`, the homelab by digest.
 - **3** `phase/27-chat`: F4, F5, F11, F14.
 - **4** `phase/27-assistant-actions`: F10, F12, F13.
 - **5** `phase/27-memory`: F15.
