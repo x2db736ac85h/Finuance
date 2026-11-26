@@ -1,6 +1,6 @@
 # Component map
 
-Every part of Finuance as it is built at `v0.6.0` (written 2026-11-16, brought up to date 2026-11-22 at the end of Phase 25), where its code lives and what it talks to. Parts that are planned and not built yet are marked **planned** with their phase (`docs/PLAN.md` §9). [ARCHITECTURE.md](ARCHITECTURE.md) explains the request path, the deployment, the data model, tenant isolation and the query engine in depth; this page is the map.
+Every part of Finuance as it is built at `v0.8.0` (written 2026-11-16, brought up to date 2026-11-26 at the end of Phase 27), where its code lives and what it talks to. Parts that are planned and not built yet are marked **planned** with their phase (`docs/PLAN.md` §9). [ARCHITECTURE.md](ARCHITECTURE.md) explains the request path, the deployment, the data model, tenant isolation and the query engine in depth; this page is the map.
 
 ## 1. What runs
 
@@ -60,9 +60,9 @@ flowchart TB
 | **React app** | The whole interface; typed API client; no HTML built from strings | `web/src/` | Static files in the browser | `/api/v1/*` on the same origin, session cookie |
 | **`fin`** | Command line for people and agents (JSON, CSV, table output) | `backend/cmd/fin`, `internal/fincli`, `internal/client/gen` | A local binary | The API with an access token (ADR 0036) |
 | **web** | Serves the app with a strict CSP; proxies `/api/` under Compose | `deploy/docker/Dockerfile.web`, `nginx.conf` | Deployment ×2, unprivileged nginx | The api |
-| **api** | Every HTTP endpoint (120 paths, 163 operations), sessions, access tokens, two-step sign-in, CSRF, rate limits, the assistant's run loop, the browser's error reports | `backend/cmd/finuance`, `internal/app`, `internal/httpapi` | Deployment ×2–4 (HPA), `finuance serve` | PostgreSQL, the model server, the OTLP endpoint |
+| **api** | Every HTTP endpoint (123 paths, 166 operations), sessions, access tokens, two-step sign-in, CSRF, rate limits, the assistant's run loop, the browser's error reports | `backend/cmd/finuance`, `internal/app`, `internal/httpapi` | Deployment ×2–4 (HPA), `finuance serve` | PostgreSQL, the model server, the OTLP endpoint |
 | **worker** | Background jobs: committing imports, reclassifying, legacy imports, digests, cleanups | `internal/jobs` | Deployment ×1, `finuance worker` | PostgreSQL, the model server |
-| **migrate** | Schema migrations (goose, 29 files) | `internal/store/migrations` | Job before each rollout, owner role | PostgreSQL |
+| **migrate** | Schema migrations (goose, 34 files) | `internal/store/migrations` | Job before each rollout, owner role | PostgreSQL |
 | **admin CLI** | `create-user`, `set-password`, `grant-admin`, `revoke-admin`, `remove-second-factor`, `llm-probe`, `synthetic-users` (a lab only, ADR 0043); `seed-demo` | `internal/app/admin.go` | Run by hand in a pod or locally | PostgreSQL |
 | **PostgreSQL** | All data and the job queue; forced row-level security; roles `finuance_owner` and `finuance_app` | `deploy/db/bootstrap.sql`, `deploy/k8s/db` | CloudNativePG cluster ×2, or one Compose container | The backup bucket |
 | **Model server** | Answers the assistant; optional | `internal/llm` (client side), `deploy/assistant/` | Outside the cluster (ADR 0020) | — |

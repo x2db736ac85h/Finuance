@@ -73,7 +73,7 @@ The full list, with the filter language and how duplicates are recognised: [docs
 | | |
 |---|---|
 | Vertex AI (0.7.0, not yet run against Google: tested against a mock) | Gemini through the OpenAI-compatible endpoint and Claude through `streamRawPredict`, with short-lived tokens from Application Default Credentials (the metadata server, workload identity, a developer's login). No Google key is stored; a token is sent only to Vertex AI's own hosts. On synthetic data only for now ([ADR 0045](docs/adr/0045-cloud-model-providers.md)) |
-| Google Cloud lab (planned) | An on-demand lab created and destroyed with Terraform: GKE Autopilot, Gateway API with Certificate Manager and Cloud Armor, Secret Manager, workload identity, Private Google Access, CloudNativePG with backups to Cloud Storage, Argo CD. Synthetic data only |
+| Google Cloud lab (0.8.0, prepared, not yet run: checked without a Google account) | An on-demand lab created and destroyed with Terraform (`make gcp-up`, `gcp-install`, `gcp-down`, `gcp-verify-empty`): GKE Autopilot with private nodes, a Gateway with Certificate Manager and Cloud Armor, Cloud NAT on one address, Secret Manager, workload identity and no service-account key, Private Google Access, CloudNativePG (backups to Cloud Storage prepared), Argo CD with the lab's own applications. Synthetic data only ([docs/gcp.md](docs/gcp.md), [ADR 0047](docs/adr/0047-google-cloud-lab.md)) |
 | Today | A single-node k3s cluster at home; the public demo is planned on a small VPS |
 
 More in [docs/assistant.md](docs/assistant.md).
@@ -155,7 +155,7 @@ All test data is synthetic.
 
 ## Roadmap
 
-Released: **0.7.0** (cloud models for the assistant: Anthropic, OpenAI and Google Cloud's Vertex AI without a stored key, a token budget per connection; before it, signed images enforced, two-step sign-in, collected logs and complete traces, the traffic simulator, category archive). Next: an on-demand Google Cloud lab, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
+Released: **0.8.0** (the assistant asks again, edits a question, keeps a memory note and offers a prompt gallery and a thinking level; the Google Cloud lab prepared, not yet run; before it, cloud models for the assistant with no stored key, signed images enforced, two-step sign-in, collected logs and complete traces, the traffic simulator). Next: a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
 
 ## How it was built
 

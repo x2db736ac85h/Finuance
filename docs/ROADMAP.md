@@ -17,19 +17,22 @@ What has shipped, what is being worked on and what comes later. The task list of
 | **0.6.0** | A traffic simulator: ten animal-named synthetic users with their own characters use every feature of a lab instance all day through its front door, tuned from a page of their own; a lab on one machine (`make sim-up`) and on Kubernetes; the load test's users synthetic too |
 | **0.6.1** | Interface corrections: readable addresses (`/transactions`, `/overview`, `/shared`), Settings regrouped, quick settings with a dark-mode switch, categories archived and unarchived instead of deleted, friends on the Shared page, the assistant's answers in the bell, a half-window layout check; connections added by choosing a provider |
 | **0.7.0** | Cloud models for the assistant: Anthropic, OpenAI and Google Cloud's Vertex AI (Gemini and Claude with short-lived credentials, no stored key) as connections chosen from a list with their models to tick; a daily token budget per connection; consent that names the provider and the place; current Claude models with adaptive thinking; evals on Claude Haiku, Sonnet and Opus 5.5. The Vertex AI path is tested against a mock only so far |
+| **0.7.1** | Interface corrections: a darker default theme, themes exported and imported as files, the Shared page with two friend cards and a cost curve, *Add* on every account, pictures and PDFs dropped on the assistant, *Export* as CSV, TXT or JSON, `T` and `O` |
+| **0.8.0** | The assistant: ask again, edit a question, a prompt gallery, a thinking-level button an administrator can lock, proposals that take things away, undo several, transactions in any account, and a memory note per person; the second question to a current Claude model fixed. The Google Cloud lab prepared (Terraform, GKE Autopilot, a Gateway, Argo CD per environment), checked without a Google account and not yet run |
 
 The repository became public in November 2026 with synthetic test data only and a README for people who are new to the project.
 
 ## Now
 
-**A lab on Google Cloud.** Terraform and GKE Autopilot, created and destroyed on demand, with the simulator as its traffic; the first run of the Vertex AI connection against Google belongs here too.
+**A new interface that works on a phone (0.9.0).** Several design directions and prototypes first, then the build: a bottom tab bar, a two-line transaction list, windows that fit small screens, installing the app on a home screen.
 
 ## Next
 
 
 ## Later
 
-- **A new interface that works on a phone (0.8.0).** Several design directions and prototypes first, then the build: a bottom tab bar, a two-line transaction list, windows that fit small screens, installing the app on a home screen.
 - **1.0.** A public demo with made-up data, and write-ups of the parts worth explaining: the import pipeline and de-duplication, row-level security, the assistant's tools and undo, running it like production on one machine, synthetic users, a cluster you can delete.
+
+**When there is a Google Cloud project:** the lab's first real run (`docs/gcp.md` has the checklist) and the Vertex AI evals; prepared in 0.8.0.
 
 **Ideas without a date** are in the backlog at the end of [PROGRESS.md](PROGRESS.md): currency conversion, per-month budgets with rollover, restoring a data export into a new instance, the CLI as an MCP server, passkeys.
