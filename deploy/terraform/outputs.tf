@@ -24,5 +24,8 @@ output "lab_values" {
     control_secret           = google_secret_manager_secret.control.secret_id
     vertex_location          = var.region
     google_apis_egress_range = "199.36.153.8/30"
+    # with var.backups: objectStore.destinationPath (gs://<bucket>/) and the database's identity
+    backup_bucket      = one(google_storage_bucket.backups[*].name)
+    db_service_account = one(google_service_account.db[*].email)
   }
 }

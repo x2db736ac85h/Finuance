@@ -1,0 +1,30 @@
+# The lab's PostgreSQL cluster (deploy/k8s/db) with the lab's values and the GKE layer on top.
+# Synced automatically, unlike the homelab's: a lab holds synthetic data only and is made again
+# rather than repaired. Its two role passwords are made by `tools/gcp-lab.sh install`.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance-db
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: finuance
+  source:
+    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/k8s/db
+    helm:
+      releaseName: finuance-db
+      valueFiles:
+        - ../../environments/lab/db-values.yaml
+        - ../../environments/gke-lab/db-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: finuance-lab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

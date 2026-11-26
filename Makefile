@@ -382,11 +382,15 @@ check-terraform: ## The Google Cloud lab's Terraform without any cloud account: 
 
 # The Google Cloud lab (docs/gcp.md). It is billed while it is up: `gcp-up` and `gcp-down` ask for
 # the project id to be typed. Values: deploy/terraform/lab.tfvars (never committed), GCP_STATE_BUCKET.
-.PHONY: gcp-plan gcp-up gcp-down gcp-verify-empty
+.PHONY: gcp-plan gcp-up gcp-install gcp-outputs gcp-down gcp-verify-empty
 gcp-plan: ## What `make gcp-up` would create (reads the state bucket, changes nothing)
 	@tools/gcp-lab.sh plan
 gcp-up: ## Create the Google Cloud lab's infrastructure (billed until gcp-down; asks for the project id)
 	@tools/gcp-lab.sh up
+gcp-install: ## After gcp-up: Argo CD, the lab's Secrets and its root application on the new cluster (ENV_DEPLOY_KEY=<file>)
+	@tools/gcp-lab.sh install
+gcp-outputs: ## The values the lab's private overlay needs (Terraform's outputs as JSON)
+	@tools/gcp-lab.sh outputs
 gcp-down: ## Destroy the Google Cloud lab and everything in it (asks for the project id)
 	@tools/gcp-lab.sh down
 gcp-verify-empty: ## After gcp-down: list anything of the lab that is left and would cost money (needs gcloud)

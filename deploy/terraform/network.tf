@@ -26,8 +26,16 @@ resource "google_compute_subnetwork" "lab" {
   }
 }
 
-# The nodes have no public addresses; this is their way out, for image pulls (ghcr.io, quay.io).
-# The pods' own egress is decided by their NetworkPolicies, not here.
+# The nodes have no public addresses; this is their way out, for image pulls (ghcr.io, quay.io)
+# and for the simulator's requests to the lab's own front door. It leaves from one reserved
+# address, which Cloud Armor admits next to var.allowed_cidrs (edge.tf), so the simulator comes in
+# as a browser would. The pods' own egress is decided by their NetworkPolicies, not here.
+resource "google_compute_address" "nat" {
+  name       = "${var.name}-nat"
+  region     = var.region
+  depends_on = [google_project_service.lab]
+}
+
 resource "google_compute_router" "lab" {
   name    = var.name
   region  = var.region
@@ -38,7 +46,8 @@ resource "google_compute_router_nat" "lab" {
   name                               = var.name
   region                             = var.region
   router                             = google_compute_router.lab.name
-  nat_ip_allocate_option             = "AUTO_ONLY"
+  nat_ip_allocate_option             = "MANUAL_ONLY"
+  nat_ips                            = [google_compute_address.nat.self_link]
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 
   log_config {

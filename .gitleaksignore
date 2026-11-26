@@ -21,3 +21,7 @@ aab9a660daf983aa93e3b274fd55a39d8e6edd01:web/src/settings/activity.test.tsx:gene
 4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/src/lib/qr.fixtures.json:generic-api-key:123
 4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/src/lib/qr.fixtures.json:generic-api-key:166
 4e4a616d3b84f9e5b89935d090d38e87ea691f7c:web/src/lib/qr.fixtures.json:generic-api-key:221
+#
+# 3d50e25 (Phase 27, 27.1): the published SHA-256 of the Gateway API's CRD bundle (a public file)
+# in a variable whose name had "API" in it; the variable is GATEWAY_CRDS_SHA256 since.
+3d50e25cdd70e711c69a3d7965cc36ddf1ad93f6:tools/rehearsal.sh:generic-api-key:60

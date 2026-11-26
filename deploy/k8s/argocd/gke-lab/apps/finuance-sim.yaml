@@ -1,0 +1,34 @@
+# The traffic simulator (deploy/helm/finuance-sim with sim-values.yaml) in its own namespace. It
+# reaches the lab through the lab's own front door, as a browser would: its requests leave through
+# Cloud NAT's reserved address, which Cloud Armor admits (deploy/terraform/edge.tf). The target, its
+# egress to the front door's address and the image digest come from the private overlay.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance-sim
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: finuance
+  sources:
+    - repoURL: https://github.com/x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/helm/finuance-sim
+      helm:
+        releaseName: finuance-sim
+        valueFiles:
+          - ../../environments/lab/sim-values.yaml
+          - $env/gke-lab/sim-values.yaml
+    - repoURL: git@github.com:x2db736ac85h/finuance-env.git
+      targetRevision: main
+      ref: env
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: finuance-sim
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

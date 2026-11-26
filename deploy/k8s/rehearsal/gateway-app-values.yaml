@@ -1,0 +1,15 @@
+# On top of app-values.yaml for the rehearsal's gateway step (PLAN 27.1): the app's front door is a
+# Gateway route instead of the Ingress, attached to the Gateway in finuance-gateway (gateway.yaml) as
+# on Google Cloud. Traefik still delivers the traffic, so the network policy's ingress controller
+# stays Traefik's pods. No request timeout: Traefik doesn't implement HTTPRoute timeouts (its
+# supported features, v3.7) and has no response timeout of its own; Google's is set by the GKE
+# values.
+ingress:
+  enabled: false
+gateway:
+  enabled: true
+  host: localhost
+  parentRef:
+    name: finuance
+    namespace: finuance-gateway
+    sectionName: https

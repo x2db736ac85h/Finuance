@@ -6,3 +6,4 @@ host    = "lab.example.org"
 # the addresses that may open the lab: yours, and nobody else's (documentation ranges here)
 allowed_cidrs = ["192.0.2.10/32"]
 # region = "europe-west4" # the default; another region inside the EU is accepted
+# backups = true          # a bucket for the database's backups, for the restore drill (off by default)

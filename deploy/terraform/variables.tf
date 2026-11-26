@@ -54,6 +54,12 @@ variable "allowed_cidrs" {
   }
 }
 
+variable "backups" {
+  description = "A Cloud Storage bucket for the database's backups and the identity that writes to it (backups.tf), for the restore drill. Off: a lab is made again rather than restored."
+  type        = bool
+  default     = false
+}
+
 variable "namespaces" {
   description = "The Kubernetes namespaces of the lab: the instance's, and the service account in it that may use Vertex AI."
   type = object({
