@@ -16,16 +16,16 @@ What has shipped, what is being worked on and what comes later. The task list of
 | **0.5.1** | Observability: logs joined to traces and collected (Loki and Alloy), so one request can be followed from the browser to its background jobs; panics, model servers, refused requests and errors in the browser counted; synthetic traffic labelled by the server |
 | **0.6.0** | A traffic simulator: ten animal-named synthetic users with their own characters use every feature of a lab instance all day through its front door, tuned from a page of their own; a lab on one machine (`make sim-up`) and on Kubernetes; the load test's users synthetic too |
 | **0.6.1** | Interface corrections: readable addresses (`/transactions`, `/overview`, `/shared`), Settings regrouped, quick settings with a dark-mode switch, categories archived and unarchived instead of deleted, friends on the Shared page, the assistant's answers in the bell, a half-window layout check; connections added by choosing a provider |
+| **0.7.0** | Cloud models for the assistant: Anthropic, OpenAI and Google Cloud's Vertex AI (Gemini and Claude with short-lived credentials, no stored key) as connections chosen from a list with their models to tick; a daily token budget per connection; consent that names the provider and the place; current Claude models with adaptive thinking; evals on Claude Haiku, Sonnet and Opus 5.5. The Vertex AI path is tested against a mock only so far |
 
 The repository became public in November 2026 with synthetic test data only and a README for people who are new to the project.
 
 ## Now
 
-**A cloud model for the assistant (0.7.0).** Anthropic, OpenAI and Google's Vertex AI (short-lived credentials, no stored key) as connections an administrator picks from a list; a local model stays the default. The Vertex AI path is tested against a mock only so far: its first run against Google is in the backlog.
+**A lab on Google Cloud.** Terraform and GKE Autopilot, created and destroyed on demand, with the simulator as its traffic; the first run of the Vertex AI connection against Google belongs here too.
 
 ## Next
 
-- **A lab on Google Cloud.** Terraform and GKE Autopilot, created and destroyed on demand, with the simulator as its traffic.
 
 ## Later
 

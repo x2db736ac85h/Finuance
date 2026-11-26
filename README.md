@@ -155,7 +155,7 @@ All test data is synthetic.
 
 ## Roadmap
 
-Released: **0.6.1** (signed images enforced, two-step sign-in, collected logs and complete traces, the traffic simulator, category archive and a round of interface corrections). In release candidate: **0.7.0**, cloud models (Anthropic, OpenAI, Google Cloud's Vertex AI without a stored key, a token budget per connection). Next: an on-demand Google Cloud lab, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
+Released: **0.7.0** (cloud models for the assistant: Anthropic, OpenAI and Google Cloud's Vertex AI without a stored key, a token budget per connection; before it, signed images enforced, two-step sign-in, collected logs and complete traces, the traffic simulator, category archive). Next: an on-demand Google Cloud lab, a redesigned interface that works on a phone, a public demo and 1.0. Details in [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
 
 ## How it was built
 
