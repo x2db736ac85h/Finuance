@@ -1,0 +1,26 @@
+# The Google Cloud lab's app-of-apps (PLAN 27.2): applied by `tools/gcp-lab.sh install` once Argo CD
+# runs on the new cluster; from then on Argo CD keeps gke-lab/apps in sync with main.
+#
+# One folder per environment: the homelab's applications stay in ../apps, where its root
+# (../root.yaml, applied by hand in Phase 18) points; moving them would leave that root pointing at
+# an empty folder, which with pruning on removes every application. This repository is public, so
+# the lab reads it over https without a key; the private overlay (finuance-env, ADR 0023) over SSH
+# with a deploy key of its own (docs/gcp.md).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance-lab-root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/k8s/argocd/gke-lab/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,27 @@
+# Example of the GKE lab's overlay for the app chart, which lives in the private environment
+# repository (finuance-env: gke-lab/host-values.yaml, ADR 0023). Argo CD applies it after
+# ../lab/app-values.yaml and app-values.yaml, so these values win; tools/check-helm.sh renders the
+# three together. Every value comes from Terraform's outputs (`make gcp-outputs`, lab_values) or the
+# release; the placeholders here name nothing real (<project>, example-project-1, lab.example,
+# digests of 'a').
+
+publicOrigin: https://lab.example
+gateway:
+  host: lab.example
+serviceAccount:
+  annotations:
+    # lab_values.service_account
+    iam.gke.io/gcp-service-account: finuance-lab@<project>.iam.gserviceaccount.com
+assistant:
+  # app-values.yaml's two connections, with the project named (a string can't be patched in part)
+  connectionsFile: |
+    {"connections":[
+      {"name":"mock","label":"Mock model","api":"openai","baseUrl":"http://finuance-llmmock:11434/v1","defaultModel":"mock-tools"},
+      {"name":"vertex","label":"Gemini (Google Cloud)","api":"openai","auth":"google","project":"example-project-1","location":"europe-west4","cloud":true,
+       "defaultModel":"google/gemini-3.5-flash-lite","models":["google/gemini-3.5-flash-lite"],"caps":[{"pattern":"google/*","contextTokens":1000000}]}
+    ]}
+# the release's digests, as on the homelab (ADR 0024)
+image:
+  digests:
+    api: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    web: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

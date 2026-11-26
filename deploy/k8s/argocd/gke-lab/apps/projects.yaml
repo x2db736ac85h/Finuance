@@ -1,0 +1,71 @@
+# The GKE lab's projects, the homelab's three (../../apps/projects.yaml) with the lab's namespaces:
+# "platform" for the operator's chart (cluster-wide resources), "platform-manifests" for the
+# manifests kept in this repository (exactly the kinds they use), "finuance" for the lab instance,
+# its database, its mock model and the simulator (namespaced only). The same limit as there: this
+# file comes from the same repository as the applications it bounds.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: The operator the lab depends on (CloudNativePG).
+  sourceRepos:
+    - https://cloudnative-pg.github.io/charts
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: cnpg-system
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-manifests
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Manifests from this repository (the image admission policy, the lab's Gateway). Only the kinds they use.
+  sourceRepos:
+    - https://github.com/x2db736ac85h/Finuance.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: finuance-gateway
+  # tools/check-helm.sh compares both lists with the manifests under deploy/k8s/admission and
+  # deploy/environments/gke-lab/platform
+  clusterResourceWhitelist:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingAdmissionPolicy
+    - group: admissionregistration.k8s.io
+      kind: ValidatingAdmissionPolicyBinding
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: finuance
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: The lab instance, its PostgreSQL cluster, its mock model and the traffic simulator.
+  sourceRepos:
+    - https://github.com/x2db736ac85h/Finuance.git
+    # the private overlay: the lab's host, the project in annotations, the image digests (ADR 0023)
+    - git@github.com:x2db736ac85h/finuance-env.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: finuance-lab
+    - server: https://kubernetes.default.svc
+      namespace: finuance-sim
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace

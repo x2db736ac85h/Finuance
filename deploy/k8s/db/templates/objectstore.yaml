@@ -18,6 +18,15 @@ spec:
       name: {{ $os.endpointCA.name }}
       key: {{ $os.endpointCA.key }}
     {{- end }}
+    {{- if eq $os.auth "gke" }}
+    {{- if not (hasPrefix "gs://" $os.destinationPath) }}
+    {{- fail "objectStore.auth gke is for Google Cloud Storage: objectStore.destinationPath must start with gs://" }}
+    {{- end }}
+    # Google Cloud Storage with the pods' own identity (workload identity, PLAN 27.1): no key; the
+    # cluster's service account names the Google service account (cluster.serviceAccountAnnotations)
+    googleCredentials:
+      gkeEnvironment: true
+    {{- else }}
     s3Credentials:
       accessKeyId:
         name: {{ $os.credentialsSecret }}
@@ -30,6 +39,7 @@ spec:
         name: {{ $os.credentialsSecret }}
         key: {{ . }}
       {{- end }}
+    {{- end }}
     wal:
       compression: {{ $os.compression }}
       maxParallel: 2

@@ -1,0 +1,8 @@
+# Backups to Google Cloud Storage by workload identity (PLAN 27.1): no key, the instances' service
+# account acts as a Google service account (tools/check-helm.sh checks the render).
+objectStore:
+  destinationPath: gs://finuance-lab-backups-0a1b2c3d/
+  auth: gke
+cluster:
+  serviceAccountAnnotations:
+    iam.gke.io/gcp-service-account: finuance-lab-db@<project>.iam.gserviceaccount.com

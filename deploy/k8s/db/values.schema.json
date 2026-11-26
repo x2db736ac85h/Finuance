@@ -17,7 +17,8 @@
         },
         "parameters": { "type": "object", "additionalProperties": { "type": "string" } },
         "podAntiAffinityType": { "enum": ["preferred", "required"] },
-        "podMonitor": { "type": "boolean" }
+        "podMonitor": { "type": "boolean" },
+        "serviceAccountAnnotations": { "type": "object", "additionalProperties": { "type": "string" } }
       }
     },
     "objectStore": {
@@ -25,6 +26,7 @@
       "properties": {
         "destinationPath": { "type": "string", "pattern": "^$|^(s3|gs|https)://.+" },
         "endpointURL": { "type": "string", "pattern": "^$|^https?://[^/]+" },
+        "auth": { "enum": ["s3", "gke"] },
         "retention": { "type": "string", "pattern": "^[1-9][0-9]*[dwm]$" },
         "compression": { "enum": ["gzip", "bzip2", "snappy", "lz4", "zstd", "xz"] }
       }

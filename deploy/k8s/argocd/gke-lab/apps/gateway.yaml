@@ -1,0 +1,22 @@
+# The lab's Gateway (deploy/environments/gke-lab/platform): Google's load balancer with Terraform's
+# address and certificate map, before the app whose route attaches to it.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: platform-manifests
+  source:
+    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/environments/gke-lab/platform
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: finuance-gateway
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -68,9 +68,16 @@ render db-lab finuance-db "$db" finuance-lab deploy/environments/lab/db-values.y
 render sim-mock finuance-lab-mock "$sim" finuance-lab deploy/environments/lab/mock-values.yaml
 render sim-simulator finuance-sim "$sim" finuance-sim deploy/environments/lab/sim-values.yaml
 for f in "$sim"/ci/*.yaml; do render "sim-ci-$(basename "$f" .yaml)" finuance-sim "$sim" finuance-sim "$f"; done
-# the same lab on Google Kubernetes Engine (PLAN Phase 27): the lab's values with the GKE ones on top
-render app-gke-lab finuance "$app" finuance-lab deploy/environments/lab/app-values.yaml deploy/environments/gke-lab/app-values.yaml
-render db-gke-lab finuance-db "$db" finuance-lab deploy/environments/lab/db-values.yaml deploy/environments/gke-lab/db-values.yaml
+# the same lab on Google Kubernetes Engine (PLAN Phase 27): the lab's values with the GKE ones on top,
+# then as Argo CD layers them with the private overlay (its examples stand in, as for the homelab)
+gl=deploy/environments/gke-lab
+render app-gke-lab finuance "$app" finuance-lab deploy/environments/lab/app-values.yaml "$gl/app-values.yaml"
+render app-gke-lab-overlay finuance "$app" finuance-lab deploy/environments/lab/app-values.yaml "$gl/app-values.yaml" "$gl/host-values.example.yaml"
+render db-gke-lab finuance-db "$db" finuance-lab deploy/environments/lab/db-values.yaml "$gl/db-values.yaml"
+render sim-gke-lab-mock finuance-lab-mock "$sim" finuance-lab deploy/environments/lab/mock-values.yaml "$gl/sim-values.example.yaml"
+render sim-gke-lab-simulator finuance-sim "$sim" finuance-sim deploy/environments/lab/sim-values.yaml "$gl/sim-values.example.yaml"
+# the rehearsal's gateway step (tools/rehearsal.sh gateway): its app values with the route instead of the Ingress
+render app-rehearsal-gateway finuance "$app" finuance deploy/k8s/rehearsal/app-values.yaml deploy/k8s/rehearsal/gateway-app-values.yaml
 # the restore drill on the homelab (tools/homelab-drill.sh)
 render db-homelab-restore finuance-db "$db" finuance-restore deploy/environments/homelab/restore-db-values.yaml
 render app-homelab-restore finuance "$app" finuance-restore deploy/environments/homelab/restore-app-values.yaml
@@ -122,6 +129,47 @@ done
 must_fail "a gateway and an ingress together" "one front door" "$app" -f "$app/ci/minimal-values.yaml" --set gateway.enabled=true --set gateway.host=x.example --set gateway.parentRef.name=gw
 must_fail "a gateway without a host" "gateway.host is required" "$app" -f "$app/ci/minimal-values.yaml" --set ingress.enabled=false --set gateway.enabled=true --set gateway.parentRef.name=gw
 must_fail "a gateway without its Gateway" "gateway.parentRef.name is required" "$app" -f "$app/ci/minimal-values.yaml" --set ingress.enabled=false --set gateway.enabled=true --set gateway.host=x.example
+echo ok
+
+echo "== a backup to Google Cloud Storage by workload identity: no key, the identity on the instances' account (PLAN 27.1)"
+gcs="$out/db-gcs-values.yaml"
+"$YQ" -e 'select(.kind == "ObjectStore") | (.spec.configuration.googleCredentials.gkeEnvironment == true and (.spec.configuration | has("s3Credentials") | not))' "$gcs" >/dev/null ||
+  { echo "check-helm: the Cloud Storage store signs in with something other than the pods' identity"; exit 1; }
+"$YQ" -e 'select(.kind == "Cluster") | .spec.serviceAccountTemplate.metadata.annotations."iam.gke.io/gcp-service-account" | test("^finuance-lab-db@")' "$gcs" >/dev/null ||
+  { echo "check-helm: the database's instances don't act as the Google identity"; exit 1; }
+"$YQ" -e 'select(.kind == "Cluster") | has("spec") and (.spec | has("serviceAccountTemplate") | not)' "$out/db-homelab.yaml" >/dev/null ||
+  { echo "check-helm: the homelab's database gets a service account template"; exit 1; }
+echo ok
+
+echo "== the Gateways the routes attach to: Google's for the lab, Traefik's for the rehearsal"
+validate "$gl/platform/" deploy/k8s/rehearsal/gateway.yaml
+# attaches <rendered app> <Gateway file> <the app's namespace>: the route's parent is that file's
+# Gateway and listener, and the listener admits routes from the app's namespace
+attaches() {
+  local route gw
+  route=$("$YQ" -N 'select(.kind == "HTTPRoute") | .spec.parentRefs[0] | .namespace + "/" + .name + "/" + .sectionName' "$1")
+  gw=$("$YQ" -N 'select(.kind == "Gateway") | .metadata.namespace + "/" + .metadata.name + "/" + .spec.listeners[0].name' "$2")
+  [ "$route" = "$gw" ] || { echo "check-helm: the route of $1 attaches to $route, $2 is $gw"; exit 1; }
+  [ "$("$YQ" -N 'select(.kind == "Gateway") | .spec.listeners[0].allowedRoutes.namespaces | .from + " " + .selector.matchLabels."kubernetes.io/metadata.name"' "$2")" = "Selector $3" ] ||
+    { echo "check-helm: the Gateway in $2 doesn't admit routes from $3 alone"; exit 1; }
+}
+attaches "$out/app-gke-lab-overlay.yaml" "$gl/platform/gateway.yaml" finuance-lab
+attaches "$out/app-rehearsal-gateway.yaml" deploy/k8s/rehearsal/gateway.yaml finuance
+# Google's: HTTPS only, Terraform's address and certificate map by the lab's name, no certificate of
+# its own on the listener (a certificate map and a listener's certificate exclude each other)
+tf_name=$(sed -nE '/^variable "name"/,/^}/ s/^ *default *= *"([^"]+)".*/\1/p' deploy/terraform/variables.tf)
+[ -n "$tf_name" ] || { echo "check-helm: no default lab name in deploy/terraform/variables.tf"; exit 1; }
+"$YQ" -e "select(.kind == \"Gateway\") | (.spec.gatewayClassName == \"gke-l7-global-external-managed\" and
+  .metadata.annotations.\"networking.gke.io/certmap\" == \"$tf_name\" and
+  (.spec.addresses | length) == 1 and .spec.addresses[0].type == \"NamedAddress\" and .spec.addresses[0].value == \"$tf_name\" and
+  (.spec.listeners | length) == 1 and .spec.listeners[0].protocol == \"HTTPS\" and .spec.listeners[0].port == 443 and
+  (.spec.listeners[0] | has(\"tls\") | not))" "$gl/platform/gateway.yaml" >/dev/null ||
+  { echo "check-helm: the lab's Gateway is not Google's HTTPS load balancer with Terraform's $tf_name address and certificate map"; exit 1; }
+# the overlay's digests reach every image of the lab, and the simulator may reach its front door only
+[ "$(grep -E '^ +image: ' "$out/app-gke-lab-overlay.yaml" "$out/sim-gke-lab-mock.yaml" "$out/sim-gke-lab-simulator.yaml" | grep -cvE '@sha256:[0-9a-f]{64}$')" = 0 ] ||
+  { echo "check-helm: an image of the GKE lab is not deployed by digest with the overlay"; exit 1; }
+[ "$("$YQ" -N 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-sim") | .spec.egress[] | select(.to[0].ipBlock) | .to[0].ipBlock.cidr + ":" + (.ports[0].port | tostring)' "$out/sim-gke-lab-simulator.yaml")" = 203.0.113.10/32:443 ] ||
+  { echo "check-helm: the GKE lab's simulator may reach more or less than the front door's address on 443"; exit 1; }
 echo ok
 
 echo "== a lab only where the values say so (PLAN 25.9, ADR 0043)"
@@ -256,17 +304,48 @@ grep -E '^ +image: ' "$out/app-homelab-like-values.yaml" | grep -q '@sha256:' &&
 echo "ok"
 
 echo "== Argo CD applications"
-validate deploy/k8s/argocd/root.yaml deploy/k8s/argocd/apps/
+argo=deploy/k8s/argocd
+validate "$argo/root.yaml" "$argo/apps/" "$argo/gke-lab/"
 
 # A phase may point the apps at its branch to try it on the cluster; what reaches main must follow main.
 branch=${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD)}}
 if [ "$branch" = main ]; then
   echo "== Argo CD apps follow main"
   off=$("$YQ" -N '(.spec.source, .spec.sources[]?) | select(. != null and (.repoURL | test("x2db736ac85h/")) and .targetRevision != "main")
-    | filename + ": " + .repoURL + " @ " + .targetRevision' deploy/k8s/argocd/root.yaml deploy/k8s/argocd/apps/*.yaml)
+    | filename + ": " + .repoURL + " @ " + .targetRevision' "$argo/root.yaml" "$argo"/apps/*.yaml "$argo/gke-lab/root.yaml" "$argo"/gke-lab/apps/*.yaml)
   [ -z "$off" ] || { echo "check-helm: Argo CD apps must follow main on main:"; echo "$off"; exit 1; }
   echo "ok"
 fi
+
+# One folder per environment (PLAN 27.2): the lab's applications name the lab's files only, every
+# values file they name exists (the private overlay's by its example here), and the charts both
+# environments install are at the same version.
+echo "== the GKE lab's Argo CD applications"
+grep -l 'environments/homelab' "$argo"/gke-lab/apps/*.yaml && { echo "check-helm: a GKE lab application names the homelab's files"; exit 1; }
+for a in "$argo"/apps/*.yaml "$argo"/gke-lab/apps/*.yaml; do
+  path=$("$YQ" -N 'select(.kind == "Application") | [.spec.source, .spec.sources[]] | map(select(. != null and has("path"))) | .[0].path' "$a")
+  for f in $("$YQ" -N 'select(.kind == "Application") | [.spec.source, .spec.sources[]] | map(select(. != null)) | .[].helm.valueFiles[]?' "$a"); do
+    case $f in
+      '$env/'*) want="deploy/environments/${f#\$env/}"; want="${want%.yaml}.example.yaml" ;;
+      '$values/'*) want=${f#\$values/} ;;
+      *) want=$(realpath -m --relative-to=. "$path/$f") ;;
+    esac
+    [ -f "$want" ] || { echo "check-helm: $a names $f, and $want doesn't exist"; exit 1; }
+  done
+done
+for a in "$argo"/gke-lab/apps/*.yaml; do
+  name=$(basename "$a")
+  [ -f "$argo/apps/$name" ] || continue
+  [ "$("$YQ" -N 'select(.kind == "Application") | select(.spec.source.chart) | .spec.source.targetRevision' "$a")" = \
+    "$("$YQ" -N 'select(.kind == "Application") | select(.spec.source.chart) | .spec.source.targetRevision' "$argo/apps/$name")" ] ||
+    { echo "check-helm: $name installs another chart version on the GKE lab than on the homelab"; exit 1; }
+done
+# Argo CD itself: tools/gcp-lab.sh install puts the homelab's chart version on the lab
+argocd_home=$(grep -oE 'argo/argo-cd --version [0-9.]+' docs/RUNBOOK.md | head -1 | awk '{print $3}')
+argocd_lab=$(sed -nE 's/^ARGOCD_CHART=([0-9.]+).*/\1/p' tools/gcp-lab.sh)
+[ -n "$argocd_home" ] && [ "$argocd_home" = "$argocd_lab" ] ||
+  { echo "check-helm: Argo CD's chart is $argocd_home on the homelab (RUNBOOK) and '$argocd_lab' in tools/gcp-lab.sh"; exit 1; }
+echo ok
 
 echo "== RustFS (in-cluster backup bucket)"
 validate deploy/k8s/rustfs/
@@ -350,6 +429,8 @@ must_fail "a rate limit is zero" "/ingress/limits/auth/average" "$app" "${o[@]}"
 must_fail "extraEnv sets a non-FINUANCE variable" "^FINUANCE_[A-Z0-9_]+$" "$app" "${o[@]}" --set ingress.tls.mode=none --set extraEnv.PATH=/tmp
 must_fail "the backup has no bucket" "objectStore.destinationPath is required" "$db"
 must_fail "the backup schedule has 5 fields" "/backup/schedule" "$db" --set objectStore.destinationPath=s3://b/ --set "backup.schedule=0 2 * * *"
+must_fail "a Google Cloud Storage identity for an S3 store" "destinationPath must start with gs://" "$db" --set objectStore.destinationPath=s3://b/ --set objectStore.auth=gke
+must_fail "an unknown object store sign-in" "/objectStore/auth" "$db" --set objectStore.destinationPath=s3://b/ --set objectStore.auth=key
 must_fail "a restore archives into its origin's folder" "must archive to another folder" "$db" \
   --set objectStore.destinationPath=s3://b/ --set recovery.enabled=true
 must_fail "profiling is not a boolean" "/profiling" "$app" "${o[@]}" --set ingress.tls.mode=none --set-string profiling=yes
@@ -377,7 +458,19 @@ used=$("$YQ" -N '(.apiVersion | sub("/?[^/]+$", "")) + "/" + .kind' deploy/k8s/a
 for a in admission-policy tempo telemetry; do
   [ "$("$YQ" -N '.spec.project' "deploy/k8s/argocd/apps/$a.yaml")" = platform-manifests ] || { echo "check-helm: application $a is not in the platform-manifests project"; failures=$((failures + 1)); }
 done
-for a in deploy/k8s/argocd/apps/*.yaml; do
+# the GKE lab's project of the same name: the admission policy and the lab's Gateway (whose folder
+# makes its own namespace, which the project allows as everywhere)
+gprojects=$argo/gke-lab/apps/projects.yaml
+"$YQ" -N "$pm | (.clusterResourceWhitelist + .namespaceResourceWhitelist + .destinations)[] | .[]" "$gprojects" | grep -qx '\*' &&
+  { echo "check-helm: the GKE lab's platform-manifests project has a wildcard"; failures=$((failures + 1)); }
+[ "$("$YQ" -N "$pm | .sourceRepos | length" "$gprojects")" = 1 ] || { echo "check-helm: the GKE lab's platform-manifests project reads more than this repository"; failures=$((failures + 1)); }
+allowed=$("$YQ" -N "$pm | (.clusterResourceWhitelist + .namespaceResourceWhitelist)[] | .group + \"/\" + .kind" "$gprojects" | grep -v '/Namespace$' | sort)
+used=$("$YQ" -N '(.apiVersion | sub("/?[^/]+$", "")) + "/" + .kind' deploy/k8s/admission/*.yaml "$gl"/platform/*.yaml | grep -v '/Namespace$' | sort -u)
+[ "$allowed" = "$used" ] || { echo "check-helm: the GKE lab's platform-manifests project and its manifests differ:"; diff <(echo "$allowed") <(echo "$used") || true; failures=$((failures + 1)); }
+for a in admission-policy gateway; do
+  [ "$("$YQ" -N '.spec.project' "$argo/gke-lab/apps/$a.yaml")" = platform-manifests ] || { echo "check-helm: the GKE lab's application $a is not in the platform-manifests project"; failures=$((failures + 1)); }
+done
+for a in deploy/k8s/argocd/apps/*.yaml deploy/k8s/argocd/gke-lab/apps/*.yaml; do
   [ "$("$YQ" -N 'select(.kind == "Application") | select(.spec.project == "platform") | [.spec.source, .spec.sources[]] | map(select(. != null and has("path"))) | map(.path) | map(select(test("policy-controller/policies$|^homelab/monitoring$") | not)) | length' "$a")" = 0 ] 2>/dev/null ||
     [ -z "$("$YQ" -N 'select(.kind == "Application") | select(.spec.project == "platform") | .metadata.name' "$a")" ] ||
     { echo "check-helm: $a (project platform) syncs a folder of manifests; it belongs in platform-manifests"; failures=$((failures + 1)); }

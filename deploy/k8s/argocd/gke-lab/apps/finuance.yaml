@@ -1,0 +1,48 @@
+# The lab instance (deploy/helm/finuance): the lab's values, the GKE layer (the Gateway route, the
+# load balancer's ranges, workload identity, the Vertex AI connection), then the private overlay
+# with what names the project and the host (ADR 0023; host-values.example.yaml shows it).
+# Migrations run first as a PreSync hook, the personas' job after the sync.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: finuance
+  sources:
+    - repoURL: https://github.com/x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/helm/finuance
+      helm:
+        releaseName: finuance
+        valueFiles:
+          - ../../environments/lab/app-values.yaml
+          - ../../environments/gke-lab/app-values.yaml
+          - $env/gke-lab/host-values.yaml
+    - repoURL: git@github.com:x2db736ac85h/finuance-env.git
+      targetRevision: main
+      ref: env
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: finuance-lab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
+  # the HPA owns the api's replica count
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: finuance-api
+      jsonPointers:
+        - /spec/replicas

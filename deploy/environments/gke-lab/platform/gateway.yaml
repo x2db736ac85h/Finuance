@@ -1,0 +1,46 @@
+# The GKE lab's front door (PLAN 27.1, 27.6): the Gateway the app chart's HTTPRoute attaches to
+# (app-values.yaml: gateway.parentRef). Applied after the cluster exists, before the app.
+#
+# It uses what Terraform made (deploy/terraform/edge.tf), all named after the lab (`var.name`,
+# finuance-lab by default): the global address, and the certificate map with Certificate Manager's
+# certificate for the lab's host. The Cloud Armor policy is attached per backend by the app chart
+# (GCPBackendPolicy). Written from Google's documentation and checked by tools/check-helm.sh against
+# the Gateway API's schema; not yet applied to a real cluster (docs/gcp.md, the first run).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finuance-gateway
+  labels:
+    # nothing runs here (Google's load balancer is outside the cluster); a pod that did would be held
+    # to the same level as everywhere else
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: finuance-lab
+  namespace: finuance-gateway
+  annotations:
+    # the certificate comes from this map, so the listener names no certificate of its own
+    networking.gke.io/certmap: finuance-lab
+spec:
+  # Google's global external Application Load Balancer, the one Cloud Armor and a certificate map
+  # work with
+  gatewayClassName: gke-l7-global-external-managed
+  addresses:
+    # Terraform's address, so the DNS record survives the Gateway being made again
+    - type: NamedAddress
+      value: finuance-lab
+  listeners:
+    # HTTPS only: no listener on port 80, so nothing answers in plain text
+    - name: https
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        # only the lab's namespace may attach routes
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: finuance-lab

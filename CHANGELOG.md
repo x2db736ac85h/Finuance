@@ -34,8 +34,17 @@ The assistant's part of the maintainer's list of 2026-11-26.
 - **A Google Cloud lab, prepared** (ADR 0047, `docs/gcp.md`): Terraform for a network, a GKE
   Autopilot cluster, identities without keys, a front door with a certificate and an allowlist,
   and secrets that are never stored; `make gcp-plan`, `gcp-up`, `gcp-down`, `gcp-verify-empty`
-  behind three confirmations; `make check-terraform` in CI without any credentials. Not yet
-  applied to a real project.
+  behind three confirmations; `make check-terraform` in CI without any credentials. `make
+  gcp-install` puts Argo CD on the new cluster with the lab's own applications
+  (`deploy/k8s/argocd/gke-lab/`), its Gateway and its secrets; `make gcp-down` removes the load
+  balancer and the disks Google made for the cluster before it destroys the rest. Not yet applied
+  to a real project.
+- **The deployment rehearsal** proves the chart's Gateway route with traffic (Traefik as the
+  implementation: the smoke scripts, a streamed answer and the HSTS header through it) and that no
+  pod of the app reaches an address outside the cluster. `tools/rehearsal.sh target` runs its
+  checks against a cluster it didn't make, such as the Google Cloud lab.
+- **Database backups to Google Cloud Storage by workload identity** (`objectStore.auth: gke`): no
+  key, the instances' service account acts as a Google identity.
 - **The chart can attach to a Gateway** instead of an Ingress (`gateway.enabled`): one Gateway API
   `HTTPRoute`, the HSTS header as a route filter, nothing Traefik-specific; `gateway.gke` adds
   Google Kubernetes Engine's health check and backend policies; `networkPolicy.frontDoorCIDRs`

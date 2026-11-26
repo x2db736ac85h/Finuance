@@ -2,7 +2,8 @@
 # Checks the Google Cloud lab's Terraform (deploy/terraform, PLAN 27.4) without any cloud account:
 # its formatting, that it is valid against the pinned providers' real schemas, its tests on a plan
 # with made-up providers, that no service-account key is created anywhere, that no value of a
-# real project is committed, and a misconfiguration scan with nothing of HIGH or above.
+# real project is committed, that tools/gcp-lab.sh refuses what it must, and a misconfiguration scan
+# with nothing of HIGH or above.
 # Needs: tools/bin-tools.sh terraform and trivy (installed here when missing). Network: the
 # providers are downloaded once from the registry (checked against the committed lock file).
 set -euo pipefail
@@ -42,6 +43,9 @@ if grep -nE '^\s*default\s*=' "$dir/variables.tf" | grep -iE 'project|[0-9]+\.[0
   fail "variables.tf has a default that looks like a project or an address (see above)"
 fi
 echo "   ok"
+
+echo "== the locks of tools/gcp-lab.sh (each refusal, no Google account)"
+tools/gcp-lab-test.sh | sed 's/^/   /'
 
 echo "== misconfiguration scan (HIGH and CRITICAL fail)"
 "$trivy" config --severity HIGH,CRITICAL --exit-code 1 --disable-telemetry --quiet "$dir"

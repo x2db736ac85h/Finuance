@@ -56,3 +56,34 @@ proven without an account, and the phase may close without a real rollout.
 - **Cloud SQL**: ruled out above.
 - **Waiting with all of it until an account exists**: the chart work and the checks are the
   larger part and need none.
+
+## Addendum (2026-11-26, the lab's installation)
+
+Decided while preparing the install, still without a Google account:
+
+- **Argo CD per environment, in folders.** The lab's applications live in
+  `deploy/k8s/argocd/gke-lab/` with a root of their own; the homelab's stay in
+  `deploy/k8s/argocd/apps/`. Moving the homelab's into an `envs/` folder, as PLAN 27.2 suggested,
+  would leave its root application (applied by hand in Phase 18) pointing at an empty path, and
+  with pruning on that removes every application; an ApplicationSet would need its controller,
+  which the homelab runs at zero. `tools/check-helm.sh` keeps the two folders apart (the lab names
+  no homelab file) and their shared charts at one version.
+- **Secrets are made at install, not synced.** `make gcp-install` makes the database's two
+  passwords in the cluster from random values on standard input and copies the simulator's two
+  from Secret Manager with the operator's own login. No Secret Manager add-on and no External
+  Secrets Operator: four values for a cluster that lives hours don't need a controller, and nothing
+  new is installed. Sealed Secrets don't fit a cluster that gets a new key each time.
+- **Cloud NAT on one reserved address, admitted by Cloud Armor.** The simulator reaches the lab
+  through its front door as a browser does (PLAN's decision), so its requests must pass Cloud Armor;
+  an address picked by NAT at random can't be listed. Cloud Armor's second rule admits exactly that
+  address.
+- **The repository is read over https.** It is public, so the lab's Argo CD needs no key for it;
+  the private overlay is read over SSH with a read-only deploy key that exists for the lab only.
+- **`make gcp-down` cleans up through Kubernetes first.** Google makes the Gateway's load balancer
+  and the volumes' disks outside Terraform and removes them when their Kubernetes objects go;
+  destroying the cluster first would leave both behind and billed. `make gcp-verify-empty` looks
+  for the lab's name inside Google's generated names and in disks' descriptions as well.
+- **Backups are prepared, not switched on.** `backups = true` makes a bucket and the database's
+  identity, and the database chart can write to Cloud Storage by workload identity; the lab's
+  applications don't include the Barman Cloud plugin and cert-manager yet, so the restore drill
+  (PLAN 27.9's last check) waits for a first run that wants it. Monitoring likewise.

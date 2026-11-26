@@ -29,7 +29,7 @@ resource "google_certificate_manager_certificate_map_entry" "lab" {
   hostname     = var.host
 }
 
-# Cloud Armor: the allowed ranges, then everything else refused. The chart attaches it to both
+# Cloud Armor: the allowed ranges and the lab's own NAT address, then everything else refused. The chart attaches it to both
 # backends (gateway.gke.securityPolicy).
 resource "google_compute_security_policy" "lab" {
   name        = var.name
@@ -43,6 +43,18 @@ resource "google_compute_security_policy" "lab" {
       versioned_expr = "SRC_IPS_V1"
       config {
         src_ip_ranges = var.allowed_cidrs
+      }
+    }
+  }
+
+  rule {
+    action      = "allow"
+    priority    = 1001
+    description = "The lab's own way out (Cloud NAT): the simulator comes in through the front door"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["${google_compute_address.nat.address}/32"]
       }
     }
   }

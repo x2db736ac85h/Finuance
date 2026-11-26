@@ -20,11 +20,26 @@
 #   - the lab (PLAN 25.9): a second instance, its mock model and the simulator in its own namespace,
 #     five minutes at 3x through Traefik with no 5xx and every persona's request counted synthetic;
 #   - image admission: each namespace admits only the image repositories it runs (the lab's
-#     simulator and mock model nowhere near the instance's namespace).
+#     simulator and mock model nowhere near the instance's namespace);
+#   - egress: the app's pods can't reach an address outside the cluster, while a pod without a
+#     policy can (PLAN 27.8);
+#   - the Gateway (PLAN 27.1): the app switched from its Ingress to the chart's HTTPRoute on a
+#     Gateway laid out as on Google Cloud, Traefik as the implementation; the smoke scripts, the
+#     streamed answer and the HSTS header through it, then back to the Ingress.
 # Timings go to $SUMMARY (and the GitHub job summary). Needs docker, kind, kubectl, helm, kubeseal,
 # mikefarah's yq ($YQ), curl, openssl and python3.
 #
-#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|logs|netpol|sse|podkill|restore|limits|signatures|summary|diagnostics|report|down]
+#   tools/rehearsal.sh [all|images|cluster|platform|deploy|smoke|logs|netpol|egress|sse|podkill|restore|limits|gateway|signatures|summary|diagnostics|report|down]
+#
+# Target mode (PLAN 27.9): against a cluster this script didn't make, such as the Google Cloud lab
+# after `make gcp-up` and its install (docs/gcp.md), with the caller's kubeconfig:
+#
+#   TARGET_BASE=https://<lab host> TARGET_NAMESPACE=finuance-lab tools/rehearsal.sh target
+#
+# It creates nothing but probe pods and throwaway users (sign-up may be off): the smoke scripts,
+# the streamed answer, the egress probes and the load while pods are deleted and rolled, all
+# through the lab's own front door with its public certificate. Written for the first real run;
+# not yet run against a real cluster.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -39,6 +54,13 @@ CERT_MANAGER_CHART=v1.21.3
 K6_IMAGE=grafana/k6:2.4.0@sha256:d41bb79cd8de5a7ad619b53570e3712633e8bff0937010a5c6c57a4747e7a276
 AWS_CLI_IMAGE=amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868ddee1f611b73be795a9cc2e706bfd
 BUSYBOX_IMAGE=busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+# The Gateway API's standard CRDs, the version Traefik's provider is built against (v3.7.16:
+# sigs.k8s.io/gateway-api v1.6.3), checked by checksum (the gateway step)
+GATEWAY_API_URL=https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml
+GATEWAY_API_SHA256=356c2b8e286a964dc20995435659ad1095386329974793af10bbfe3eff977fe5
+# an address outside the cluster that answers on 443, for the egress probes (an address, not a
+# name: a pod without a policy of its own can't resolve anything)
+OUTSIDE=${OUTSIDE:-1.1.1.1}
 # an image this repository's release workflow never signed (the signatures step)
 PAUSE_IMAGE=registry.k8s.io/pause:3.10.1@sha256:278fb9dbcca9518083ad1e11276933a2e96f23de604a3a08cc3c80002767d24c
 API_IMAGE=ghcr.io/x2db736ac85h/finuance-api:rehearsal
@@ -47,9 +69,13 @@ MOCK_IMAGE=finuance-llmmock:rehearsal
 # the lab's two images (PLAN 25.9), named as the lab's charts name them
 SIM_IMAGE=ghcr.io/x2db736ac85h/finuance-sim:rehearsal
 LAB_MOCK_IMAGE=ghcr.io/x2db736ac85h/finuance-llmmock:rehearsal
-BASE=https://localhost:8443
+TARGET_BASE=${TARGET_BASE:-}
+# the app's namespace and address: kind's, or the target's
+NS=${TARGET_NAMESPACE:-finuance}
+BASE=${TARGET_BASE:-https://localhost:8443}
 RESTORE_BASE=https://restore.localhost:8443
-export KUBECONFIG=${KUBECONFIG:-$WORK/kubeconfig}
+# kind's own kubeconfig; a target is reached with the caller's
+[ -n "$TARGET_BASE" ] || export KUBECONFIG=${KUBECONFIG:-$WORK/kubeconfig}
 mkdir -p "$WORK"
 
 log() { printf '\n== %s\n' "$*"; }
@@ -72,7 +98,8 @@ psql_in() { # psql_in <namespace> <sql>: on the cluster's primary, as postgres o
   primary=$(kubectl -n "$1" get cluster finuance-db -o jsonpath='{.status.currentPrimary}')
   kubectl -n "$1" exec "$primary" -c postgres -- psql -U postgres -d finuance -XAtqc "$2"
 }
-curl_ca() { curl -sS --cacert "$WORK/ca.pem" "$@"; }
+# the rehearsal's throwaway authority on kind; a target has a public certificate
+curl_ca() { if [ -n "$TARGET_BASE" ]; then curl -sS "$@"; else curl -sS --cacert "$WORK/ca.pem" "$@"; fi; }
 # archived_since <epoch>: the primary of finuance has archived a WAL file since then
 archived_since() {
   local t
@@ -259,23 +286,30 @@ run_smoke() {
 }
 
 smoke() {
-  log "smoke scripts through the ingress"
+  log "smoke scripts through the front door"
   local t0; t0=$(date +%s)
-  run_smoke "$BASE" finuance
+  if [ -n "$TARGET_BASE" ]; then
+    # sign-up may be off: a throwaway user per script, made in the cluster
+    BASE_URL=$BASE NAMESPACE=$NS scripts/smoke-k8s.sh
+    timing "smoke scripts (auth, import, query) through $BASE" $(($(date +%s) - t0))
+    return
+  fi
+  run_smoke "$BASE" "$NS"
   timing "smoke scripts (auth, import, query) through Traefik" $(($(date +%s) - t0))
+}
+
+# probe <namespace> <name> <labels> <shell command>: the command's exit status in a throwaway pod
+# that passes the restricted Pod Security level
+probe() {
+  kubectl -n "$1" run "$2" --rm -i --restart=Never --quiet --image "$BUSYBOX_IMAGE" --labels "$3" --override-type=strategic \
+    --overrides "{\"spec\":{\"securityContext\":{\"runAsNonRoot\":true,\"runAsUser\":65534,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"containers\":[{\"name\":\"$2\",\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]}}}]}}" \
+    -- sh -c "$4" >/dev/null 2>&1
 }
 
 netpol() {
   log "NetworkPolicies: pods outside the app, without its labels, and with labels that are not enough"
   local ns
   for ns in netpol-probe monitoring; do kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f - >/dev/null; done
-  # probe <namespace> <name> <labels> <shell command>: the command's exit status in a throwaway
-  # pod that passes the restricted Pod Security level
-  probe() {
-    kubectl -n "$1" run "$2" --rm -i --restart=Never --quiet --image "$BUSYBOX_IMAGE" --labels "$3" --override-type=strategic \
-      --overrides "{\"spec\":{\"securityContext\":{\"runAsNonRoot\":true,\"runAsUser\":65534,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"containers\":[{\"name\":\"$2\",\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]}}}]}}" \
-      -- sh -c "$4" >/dev/null 2>&1
-  }
   # addresses, not names: a pod without a policy of its own can't resolve anything
   local db api s3 as_api='app.kubernetes.io/name=finuance,app.kubernetes.io/instance=finuance,app.kubernetes.io/component=api'
   db=$(kubectl -n finuance get pod finuance-db-1 -o jsonpath='{.status.podIP}')
@@ -323,11 +357,49 @@ EOF
   fact "NetworkPolicies" "blocked: an outside pod from PostgreSQL 5432, api 8080 and metrics 9090; the api's labels in another namespace and the chart's name without a database component from 5432; a pod of monitoring that is not Prometheus from 9090; an unlabelled pod in the app's namespace from PostgreSQL, the api and a service outside. Controls: an outside pod reached RustFS, Prometheus's label reached 9090"
 }
 
+# Egress (PLAN 27.8): no pod of the app reaches an address outside the cluster, with each
+# component's labels and with none. The control first: a pod in a namespace without policies
+# reaches the address, so a refusal is the policy's and not a cluster without a way out. Each
+# probe waits before it tries, as in netpol (a policy reaches a new pod a moment after it starts).
+egress() {
+  log "egress: the app's pods can't reach $OUTSIDE:443 outside the cluster"
+  kubectl create namespace egress-probe --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  kubectl label namespace egress-probe --overwrite pod-security.kubernetes.io/enforce=restricted >/dev/null
+  local status=0 c blocked=()
+  if ! probe egress-probe control probe=control "nc -z -w 5 $OUTSIDE 443"; then
+    echo "a pod without a policy can't reach $OUTSIDE:443 either: the probe proves nothing here (set OUTSIDE)" >&2
+    status=1
+  else
+    for c in api worker web migrate; do
+      if probe "$NS" "egress-$c" "app.kubernetes.io/name=finuance,app.kubernetes.io/instance=finuance,app.kubernetes.io/component=$c" \
+        "sleep 8; nc -z -w 5 $OUTSIDE 443"; then
+        echo "a pod with the $c's labels in $NS reached $OUTSIDE:443" >&2; status=1
+      else blocked+=("$c"); fi
+    done
+    if probe "$NS" egress-stray probe=stray "sleep 8; nc -z -w 5 $OUTSIDE 443"; then
+      echo "an unlabelled pod in $NS reached $OUTSIDE:443" >&2; status=1
+    else blocked+=(unlabelled); fi
+  fi
+  kubectl delete namespace egress-probe --wait=false >/dev/null
+  [ $status -ne 0 ] || fact "Egress" "blocked from $OUTSIDE:443: the ${blocked[*]} pods of $NS. Control: a pod without a policy reached it"
+  return $status
+}
+
+# sse [front door]: the name of what the answer streams through, for the summary
 sse() {
-  log "assistant answer streamed through Traefik"
+  local front=${1:-Traefik}
+  [ -z "$TARGET_BASE" ] || front=$BASE
+  log "assistant answer streamed through $front"
   local jar="$WORK/sse.jar" h=(-H "X-Finuance-Client: web" -H "Origin: $BASE" -H "Content-Type: application/json")
   rm -f "$jar"
-  curl_ca -f -o /dev/null -c "$jar" "${h[@]}" -d "{\"email\":\"sse-$(date +%s)@example.test\",\"password\":\"sse password here\"}" "$BASE/api/v1/auth/signup"
+  if [ -n "$TARGET_BASE" ]; then
+    # the target's throwaway user (target), signed in with a body on standard input
+    # shellcheck disable=SC1091
+    (. "$WORK/target.env" && jq -cn --arg e "$K6_EMAIL" --arg p "$K6_PASSWORD" '{email: $e, password: $p}') |
+      curl_ca -f -o /dev/null -c "$jar" "${h[@]}" --data @- "$BASE/api/v1/auth/login"
+  else
+    curl_ca -f -o /dev/null -c "$jar" "${h[@]}" -d "{\"email\":\"sse-$(date +%s)@example.test\",\"password\":\"sse password here\"}" "$BASE/api/v1/auth/signup"
+  fi
   local chat
   chat=$(curl_ca -f -b "$jar" "${h[@]}" -X POST "$BASE/api/v1/assistant/chats" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
   # the mock streams its "slow" answer in ~170 pieces, 100 ms apart
@@ -352,28 +424,32 @@ print(f"{events}\t{first:.1f}\t{done:.1f}")
   # buffered, everything would arrive at once at the end
   python3 -c "import sys; sys.exit(0 if $first < 3 and $done - $first > 5 and $events > 20 else 1)" ||
     { echo "the stream was buffered: $events content events, first after ${first}s, done after ${done}s" >&2; return 1; }
-  fact "SSE through Traefik" "$events content events; first after ${first} s, done after ${done} s (not buffered)"
+  fact "SSE through $front" "$events content events; first after ${first} s, done after ${done} s (not buffered)"
 }
 
 podkill() {
   log "load while api and web pods are deleted and rolled"
   mkdir -p "$WORK/k6" # k6 runs as this user (--user), so the folder needs no wider rights
-  docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD/$R:/scripts:ro" -v "$WORK/k6:/out" -e BASE_URL="$BASE" -e DURATION=90s -e SKIP_TLS_VERIFY=true \
+  # on kind every virtual user signs up and the certificate is the throwaway one; a target's users
+  # share its throwaway user (sign-up may be off), in an env file so the password is on no command line
+  local who=(-e SKIP_TLS_VERIFY=true)
+  [ -z "$TARGET_BASE" ] || who=(--env-file "$WORK/target.env")
+  docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD/$R:/scripts:ro" -v "$WORK/k6:/out" -e BASE_URL="$BASE" -e DURATION=90s "${who[@]}" \
     "$K6_IMAGE" run --quiet --summary-export=/out/summary.json /scripts/podkill.js >"$WORK/k6/out.txt" 2>&1 &
   local k6=$!
   sleep 15
   local pod
-  pod=$(kubectl -n finuance get pods -l app.kubernetes.io/component=api -o jsonpath='{.items[0].metadata.name}')
-  echo "   delete $pod"; kubectl -n finuance delete pod "$pod" --wait=false
+  pod=$(kubectl -n "$NS" get pods -l app.kubernetes.io/component=api -o jsonpath='{.items[0].metadata.name}')
+  echo "   delete $pod"; kubectl -n "$NS" delete pod "$pod" --wait=false
   sleep 10
-  echo "   roll the api"; kubectl -n finuance rollout restart deploy/finuance-api
-  kubectl -n finuance rollout status deploy/finuance-api --timeout=180s
-  pod=$(kubectl -n finuance get pods -l app.kubernetes.io/component=web -o jsonpath='{.items[0].metadata.name}')
-  echo "   delete $pod"; kubectl -n finuance delete pod "$pod" --wait=false
+  echo "   roll the api"; kubectl -n "$NS" rollout restart deploy/finuance-api
+  kubectl -n "$NS" rollout status deploy/finuance-api --timeout=180s
+  pod=$(kubectl -n "$NS" get pods -l app.kubernetes.io/component=web -o jsonpath='{.items[0].metadata.name}')
+  echo "   delete $pod"; kubectl -n "$NS" delete pod "$pod" --wait=false
   sleep 5
-  echo "   roll web and the worker"; kubectl -n finuance rollout restart deploy/finuance-web deploy/finuance-worker
-  kubectl -n finuance rollout status deploy/finuance-web --timeout=180s
-  kubectl -n finuance rollout status deploy/finuance-worker --timeout=180s
+  echo "   roll web and the worker"; kubectl -n "$NS" rollout restart deploy/finuance-web deploy/finuance-worker
+  kubectl -n "$NS" rollout status deploy/finuance-web --timeout=180s
+  kubectl -n "$NS" rollout status deploy/finuance-worker --timeout=180s
   local status=0
   wait "$k6" || status=$?
   tail -40 "$WORK/k6/out.txt"
@@ -460,6 +536,51 @@ limits() {
   curl_ca -f -o /dev/null "$BASE/api/v1/meta" || { echo "the API is limited outside /api/v1/auth/ after the sign-in burst" >&2; return 1; }
   fact "Ingress limits" "smoke scripts and the streamed answer pass with the limits on; 60 sign-ins in a row:$codes the rest of the API still answers"
   timing "ingress limits (upgrade, smoke, stream, burst)" $(($(date +%s) - t0))
+}
+
+# condition <kind> <namespace> <name> <jsonpath to the conditions> <type>: the condition is True
+condition() { [ "$(kubectl -n "$2" get "$1" "$3" -o jsonpath="{$4[?(@.type==\"$5\")].status}")" = True ]; }
+
+# The chart's Gateway routes (PLAN 27.1), with Traefik as the Gateway API implementation: the
+# standard CRDs, Traefik's Gateway provider, a Gateway in finuance-gateway laid out as on Google
+# Cloud (gateway.yaml), and the app switched from its Ingress to its HTTPRoute. Then the smoke
+# scripts, the streamed answer and the HSTS header (the route's own filter: the Ingress's Traefik
+# middleware is not rendered) through it; afterwards the app goes back to its Ingress, which the
+# steps after use. The limits step left them on; both upgrades here leave them off. Like every step
+# it stops at the first failure (CI stops the job there too).
+gateway() {
+  log "the chart's Gateway routes, Traefik as the implementation (PLAN 27.1)"
+  local t0 p; t0=$(date +%s)
+  curl -fsSL -o "$WORK/gateway-api.yaml" "$GATEWAY_API_URL"
+  echo "$GATEWAY_API_SHA256  $WORK/gateway-api.yaml" | sha256sum -c --quiet - ||
+    { echo "the Gateway API's CRDs don't match their checksum" >&2; return 1; }
+  kubectl apply --server-side -f "$WORK/gateway-api.yaml" >/dev/null
+  kubectl wait --for=condition=Established --timeout=60s crd/gatewayclasses.gateway.networking.k8s.io \
+    crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io
+  helm upgrade traefik traefik/traefik --version "$TRAEFIK_CHART" -n kube-system -f "$R/traefik-values.yaml" -f "$R/traefik-gateway-values.yaml" --wait
+  kubectl apply -f "$R/gateway.yaml"
+  kubectl -n finuance-gateway create secret tls finuance-tls --cert "$WORK/tls.crt" --key "$WORK/tls.key" --dry-run=client -o yaml | kubectl apply -f -
+  wait_for 120 "the Gateway programmed" condition gateway finuance-gateway finuance .status.conditions Programmed ||
+    { kubectl -n finuance-gateway get gateway finuance -o yaml >&2; return 1; }
+  helm upgrade finuance deploy/helm/finuance -n finuance -f "$R/app-values.yaml" -f "$R/gateway-app-values.yaml" --wait --timeout 5m
+  [ -z "$(kubectl -n finuance get ingress -o name)" ] || { echo "an Ingress is left with the gateway on" >&2; return 1; }
+  for p in Accepted ResolvedRefs; do
+    wait_for 120 "the route $p" condition httproute finuance finuance '.status.parents[0].conditions' "$p" ||
+      { kubectl -n finuance get httproute finuance -o yaml >&2; return 1; }
+  done
+  wait_for 120 "the api through the Gateway" curl_ca -f -o /dev/null "$BASE/api/v1/meta"
+  for p in / /api/v1/meta; do
+    curl_ca -f -D - -o /dev/null "$BASE$p" | tr -d '\r' | grep -qix 'strict-transport-security: max-age=31536000' ||
+      { echo "no HSTS header on $p through the Gateway" >&2; return 1; }
+  done
+  run_smoke "$BASE" finuance
+  sse "the Gateway (Traefik)"
+  timing "Gateway: CRDs, Traefik's provider, the route, smoke scripts and stream" $(($(date +%s) - t0))
+  # back to the Ingress
+  helm upgrade finuance deploy/helm/finuance -n finuance -f "$R/app-values.yaml" --wait --timeout 5m
+  [ -z "$(kubectl -n finuance get httproute -o name)" ] || { echo "the route is left with the Ingress back" >&2; return 1; }
+  wait_for 120 "the api through the Ingress again" curl_ca -f -o /dev/null "$BASE/api/v1/meta"
+  fact "Gateway" "the app's HTTPRoute on a Gateway in another namespace (Traefik ${TRAEFIK_CHART}'s provider, Gateway API v1.6.3): accepted, no Ingress; HSTS from the route's filter on / and /api/; smoke scripts and the streamed answer through it; back to the Ingress afterwards"
 }
 
 # try_image <namespace> <image>: would a pod with this image be created? (a server-side dry run goes
@@ -696,15 +817,40 @@ admission() {
 
 down() { kind delete cluster --name "$CLUSTER" || true; }
 
+# target: the checks that apply to a cluster this script didn't make (the header's target mode).
+# One throwaway user for the stream and the load, made in the cluster and removed at the end; each
+# check runs as its own process, so that `set -e` holds inside it.
+target() {
+  [ -n "$TARGET_BASE" ] || { echo "target needs TARGET_BASE (the lab's https address) and TARGET_NAMESPACE" >&2; return 2; }
+  log "target $BASE, namespace $NS, context $(kubectl config current-context)"
+  rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
+  local email pass status=0 s h=(-H "X-Finuance-Client: web" -H "Origin: $BASE" -H "Content-Type: application/json")
+  email="rehearsal-$(date +%s)-$RANDOM@example.test" pass=$(openssl rand -base64 24)
+  printf '%s' "$pass" | kubectl -n "$NS" exec -i deploy/finuance-api -- \
+    /finuance admin create-user -email="$email" -display-name=Rehearsal -password-stdin >/dev/null
+  (umask 077 && printf 'K6_EMAIL=%s\nK6_PASSWORD=%s\n' "$email" "$pass" >"$WORK/target.env")
+  for s in smoke sse egress podkill; do "$PWD/tools/rehearsal.sh" "$s" || status=1; done
+  # bodies on standard input: a command line is visible to every user of the machine
+  if jq -cn --arg e "$email" --arg p "$pass" '{email: $e, password: $p}' |
+    curl_ca -f -o /dev/null -c "$WORK/target.jar" "${h[@]}" --data @- "$BASE/api/v1/auth/login"; then
+    jq -cn --arg p "$pass" '{password: $p}' | curl_ca -f -o /dev/null -b "$WORK/target.jar" -X DELETE "${h[@]}" --data @- "$BASE/api/v1/me" ||
+      echo "could not remove the throwaway user $email" >&2
+  else echo "could not sign in to remove the throwaway user $email" >&2; fi
+  rm -f "$WORK/target.env" "$WORK/target.jar"
+  summary
+  return $status
+}
+
 case ${1:-all} in
   all)
     rm -f "$WORK/timings.tsv" "$WORK/facts.tsv"
-    images; cluster; platform; deploy; smoke; logs; netpol; sse; podkill; restore; limits; signatures; lab; admission; summary
+    images; cluster; platform; deploy; smoke; logs; netpol; egress; sse; podkill; restore; limits; gateway; signatures; lab; admission; summary
     ;;
-  images | cluster | platform | deploy | smoke | logs | netpol | sse | podkill | restore | limits | signatures | lab | admission)
+  target) target ;;
+  images | cluster | platform | deploy | smoke | logs | netpol | egress | sse | podkill | restore | limits | gateway | signatures | lab | admission)
     mkdir -p "$WORK/logs"
     "$1" 2>&1 | tee "$WORK/logs/$1.log"
     ;;
   summary | diagnostics | report | down) "$1" ;;
-  *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '/^set -euo/q; 2,$p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

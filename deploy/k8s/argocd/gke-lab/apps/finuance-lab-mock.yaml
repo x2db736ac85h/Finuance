@@ -1,0 +1,32 @@
+# The lab's mock model (deploy/helm/finuance-sim with mock-values.yaml), next to the instance; its
+# image digest comes from the private overlay.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: finuance-lab-mock
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: finuance
+  sources:
+    - repoURL: https://github.com/x2db736ac85h/Finuance.git
+      targetRevision: main
+      path: deploy/helm/finuance-sim
+      helm:
+        releaseName: finuance-lab-mock
+        valueFiles:
+          - ../../environments/lab/mock-values.yaml
+          - $env/gke-lab/sim-values.yaml
+    - repoURL: git@github.com:x2db736ac85h/finuance-env.git
+      targetRevision: main
+      ref: env
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: finuance-lab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
