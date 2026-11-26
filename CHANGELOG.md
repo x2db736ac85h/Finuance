@@ -4,9 +4,11 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
-## [0.7.1] - unreleased
+## [0.7.1] - 2026-11-26
 
-Interface corrections from the maintainer's list of 2026-11-26. No migration.
+The interface part of the maintainer's list of 2026-11-26: a darker default theme, themes as files,
+the Shared page, *Add* on every account, and pictures and PDFs for the assistant by drag and drop.
+No migration and no API change. One new dependency in the web app, `pdfjs-dist`.
 
 ### Changed
 
