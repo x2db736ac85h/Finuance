@@ -4,6 +4,9 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { account, API, db, problem, resetDb, server } from '../test/server';
+import { useChatDrops } from '../assistant/drops';
+import { useImportQueue } from '../import/queue';
+import { useUi } from '../stores/uiStore';
 import { renderApp, warmUpApp } from '../test/render';
 
 beforeAll(async () => {
@@ -84,6 +87,53 @@ describe('shell', () => {
     await waitFor(() => {
       expect(at()).toBe('/transactions/all');
     });
+  });
+
+  it('takes dropped files on the transactions list only, and sends pictures and PDFs to the assistant (Phase 27)', async () => {
+    db.accounts = [account({ txCount: 3 })];
+    useImportQueue.setState({ items: [] });
+    useChatDrops.setState({ files: [] });
+    renderApp('/transactions/all');
+    const list = await screen.findByRole('region', { name: 'Transactions' });
+    const drag = (type: string, on: Element, files: File[]) => {
+      const dataTransfer = {
+        types: ['Files'],
+        files,
+        items: files.map((f) => ({ kind: 'file', type: f.type })),
+        dropEffect: 'none',
+      };
+      fireEvent(on, Object.assign(new Event(type, { bubbles: true, cancelable: true }), { dataTransfer }));
+      return dataTransfer;
+    };
+    const png = new File(['x'], 'paragon.png', { type: 'image/png' });
+    const pdf = new File(['x'], 'faktura.pdf', { type: 'application/pdf' });
+    const csv = new File(['a;b'], 'wyciag.csv', { type: 'text/csv' });
+    // over the list: the overlay shows and says where the files go
+    expect(drag('dragover', list, [png]).dropEffect).toBe('copy');
+    expect(document.body.classList.contains('dragging')).toBe(true);
+    expect(document.querySelector('.overlay-card b')?.textContent).toBe('Drop for the assistant');
+    drag('dragover', list, [csv]);
+    await waitFor(() => {
+      expect(document.querySelector('.overlay-card b')?.textContent).toBe('Drop to import');
+    });
+    // over the title bar (as over the charts pane or Settings): no drop, no overlay
+    const elsewhere = screen.getByRole('banner');
+    expect(drag('dragover', elsewhere, [png]).dropEffect).toBe('none');
+    expect(document.body.classList.contains('dragging')).toBe(false);
+    drag('drop', elsewhere, [png, csv]);
+    expect(useChatDrops.getState().files).toEqual([]);
+    expect(useImportQueue.getState().items).toEqual([]);
+    expect(useUi.getState().ai.open).toBe(false);
+    // dropped on the list: the statement is imported, the picture and the PDF wait for the
+    // assistant, whose panel opens
+    drag('drop', list, [png, csv, pdf]);
+    expect(useImportQueue.getState().items.map((i) => i.name)).toEqual(['wyciag.csv']);
+    expect(useUi.getState().ai.open).toBe(true);
+    expect(document.body.classList.contains('dragging')).toBe(false);
+    // … where its panel takes them (assistant.test.tsx)
+    expect(useChatDrops.getState().files).toEqual([png, pdf]);
+    useChatDrops.setState({ files: [] });
+    useUi.getState().setAiOpen(false);
   });
 
   it('opens the transactions first, and the addresses used before Phase 26 lead to the new ones', async () => {

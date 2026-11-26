@@ -14,9 +14,22 @@ import { renderApp, warmUpApp } from '../test/render';
 import { account, API, db, problem, resetDb, server } from '../test/server';
 import { useAnswerNotes } from './answerNotes';
 import { applyEvent, useChat, type AiTurn } from './chatStore';
+import { useChatDrops } from './drops';
 
 // jsdom has no canvas: the browser-side re-encoding is replaced by a fixed JPEG (photos.test.ts
 // tests its scaling)
+// pdf.js draws on a real canvas in a worker; here a PDF "has" five pages and gives as many pictures as asked for
+vi.mock('./pdf', () => ({
+  MAX_PDF_PAGES: 3,
+  pdfToImages: (_file: Blob, max: number) =>
+    Promise.resolve({
+      images: Array.from(
+        { length: max },
+        () => new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }),
+      ),
+      pages: 5,
+    }),
+}));
 vi.mock('./photos', async (orig) => ({
   ...(await orig<typeof import('./photos')>()),
   reencodePhoto: () => Promise.resolve(new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' })),
@@ -292,7 +305,7 @@ describe('ChatPanel', () => {
     expect(within(p).getByText(/917 transactions/)).toBeTruthy();
     expect(await within(p).findByText('qwen3-14b')).toBeTruthy();
     // this model doesn't read images: no photos
-    expect(within(p).queryByRole('button', { name: 'Attach a photo of a receipt' })).toBeNull();
+    expect(within(p).queryByRole('button', { name: 'Attach a photo or a PDF of a receipt' })).toBeNull();
 
     fireEvent.click(within(p).getByText('Which subscriptions or regular bills do I pay?'));
     expect(
@@ -336,7 +349,7 @@ describe('ChatPanel', () => {
     );
     renderApp('/transactions/all');
     const p = await panel();
-    const camera = await within(p).findByRole('button', { name: 'Attach a photo of a receipt' });
+    const camera = await within(p).findByRole('button', { name: 'Attach a photo or a PDF of a receipt' });
     expect(camera).toBeTruthy();
     fireEvent.change(within(p).getByLabelText('Photo of a receipt'), {
       target: { files: [new File(['raw'], 'receipt.jpg', { type: 'image/jpeg' })] },
@@ -351,6 +364,58 @@ describe('ChatPanel', () => {
     expect(st.sent[0]).toMatchObject({ text: 'Here is a receipt.', attachmentIds: ['p1'] });
     expect(await within(p).findByAltText('Attached photo')).toBeTruthy();
     expect(within(p).queryByAltText('Photo to send')).toBeNull();
+  });
+
+  it('takes pictures and PDFs dropped on the transactions: a PDF as its first pages, 10 MB a file, three pictures a question (Phase 27)', async () => {
+    st.status = status([
+      { models: [{ id: 'qwen3-14b', tools: true, reasoning: 'switch', contextTokens: 8192, vision: true }] },
+    ]);
+    let n = 0;
+    server.use(
+      http.post(`${API}/assistant/chats/:id/attachments`, () =>
+        HttpResponse.json({ id: `p${String(++n)}`, width: 800, height: 1200 }, { status: 201 }),
+      ),
+      http.get(`${API}/assistant/chats/:id/attachments/:aid`, () => new HttpResponse(new Uint8Array([0xff, 0xd8]))),
+    );
+    renderApp('/transactions/all');
+    const p = await panel();
+    await within(p).findByRole('button', { name: 'Attach a photo or a PDF of a receipt' });
+    // what the shell hands over after a drop: too large a file, a photo, a PDF of five pages, one more photo
+    const big = new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'skan.png', { type: 'image/png' });
+    act(() => {
+      useChatDrops
+        .getState()
+        .give([
+          big,
+          new File(['x'], 'paragon.jpg', { type: 'image/jpeg' }),
+          new File(['x'], 'faktura.pdf', { type: 'application/pdf' }),
+          new File(['x'], 'drugi.jpg', { type: 'image/jpeg' }),
+        ]);
+    });
+    // the photo, then the PDF's first two pages: three pictures, which is all a question takes
+    await waitFor(() => {
+      expect(within(p).getAllByAltText('Photo to send')).toHaveLength(3);
+    });
+    expect(n).toBe(3);
+    // one message for all of it
+    expect(
+      await screen.findByText(
+        'skan.png: larger than 10 MB. faktura.pdf: the first 2 pages of 5 attached. drugi.jpg: left out, a question takes 3 pictures at most.',
+      ),
+    ).toBeTruthy();
+    expect(useChatDrops.getState().files).toEqual([]);
+  });
+
+  it('says so when dropped pictures meet a model that reads none', async () => {
+    renderApp('/transactions/all');
+    const p = await panel();
+    await within(p).findByText('Ask about your money');
+    act(() => {
+      useChatDrops.getState().give([new File(['x'], 'paragon.jpg', { type: 'image/jpeg' })]);
+    });
+    expect(await screen.findByText(/This model can’t read pictures/)).toBeTruthy();
+    expect(within(p).queryByAltText('Photo to send')).toBeNull();
+    expect(useChatDrops.getState().files).toEqual([]);
   });
 
   it('shows a proposal as a card; Apply creates the category and sends the change marked with the chat and proposal', async () => {
@@ -1107,7 +1172,7 @@ describe("connection checks and the administrator's choice (Phase 20 follow-ups)
     st.status = status([{ photoModel: 'gemma-3-12b' }]); // qwen3-14b is chosen and can't read images
     renderApp('/transactions/all');
     const p = await panel();
-    expect(await within(p).findByRole('button', { name: 'Attach a photo of a receipt' })).toBeTruthy();
+    expect(await within(p).findByRole('button', { name: 'Attach a photo or a PDF of a receipt' })).toBeTruthy();
   });
 });
 

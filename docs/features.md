@@ -4,7 +4,7 @@ What Finuance does, in detail. The short list is in the [README](../README.md); 
 
 ## What you can do
 
-- **Import bank exports.** Drag and drop CSV files, or press ⌘/Ctrl O. An import window shows the raw file and a preview before anything is saved. The encoding (UTF-8 or Windows-1250), the delimiter, the header row (even after a long preamble, as in mBank exports), date order, amount columns (one signed column or separate debit/credit) and summary rows are detected for you, and every guess can be changed. A layout you have mapped once is remembered, so the next file from the same bank goes in with one click, or straight away with the fast path.
+- **Import bank exports.** Drag and drop CSV files on the transactions list, or press ⌘/Ctrl O. An import window shows the raw file and a preview before anything is saved. The encoding (UTF-8 or Windows-1250), the delimiter, the header row (even after a long preamble, as in mBank exports), date order, amount columns (one signed column or separate debit/credit) and summary rows are detected for you, and every guess can be changed. A layout you have mapped once is remembered, so the next file from the same bank goes in with one click, or straight away with the fast path.
 - **Keep one history across overlapping exports.** Import January–March and then February–April: the overlap is recognised and kept once. A duplicates window shows every version side by side, with the differences highlighted, and lets you pick a version or keep both.
 - **Explore every transaction.** A fast, keyboard-friendly table built for histories of 100,000 rows and more: `T` opens the transactions, `O` the overview and `S` the Shared page, from anywhere.
   - accent-insensitive search (`platnosc` finds `PŁATNOŚĆ`);

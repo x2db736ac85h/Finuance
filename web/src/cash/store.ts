@@ -1,9 +1,13 @@
-// Which cash dialog is open (ADR 0029): a new cash account, or adding/editing a transaction typed
-// by hand. The toolbar, the inspector, the sidebar and the `N` key open them; the shell renders them.
+// Which of these dialogs is open (ADR 0029): a new cash account, or adding/editing a transaction
+// typed by hand (into any account since Phase 27). The toolbar, the inspector, the sidebar and the `N` key open them; the shell renders them.
 
 import { create } from 'zustand';
 
-export type TransactionDialog = { accountId: string; currency: string; editId?: string };
+/**
+ * `pick`: opened where no one account is in view (All accounts), so the form asks which account;
+ * `accountId` is then only the one it starts on.
+ */
+export type TransactionDialog = { accountId: string; currency: string; editId?: string; pick?: boolean };
 
 type CashDialogs = {
   newAccount: boolean;

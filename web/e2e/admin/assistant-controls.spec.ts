@@ -65,7 +65,7 @@ test('administrators load and unload models, pick the model and switch a connect
   await panel.getByRole('button', { name: 'Test', exact: true }).click();
   await expect(panel.getByText(/Connected to ai-mock · 4 models/)).toBeVisible();
   await panel.getByRole('button', { name: 'Done' }).click();
-  await expect(panel.getByRole('button', { name: 'Attach a photo of a receipt' })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Attach a photo or a PDF of a receipt' })).toBeVisible();
 
   // switched off: the assistant isn't available for people any more
   await page.reload();

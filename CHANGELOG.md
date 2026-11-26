@@ -19,6 +19,8 @@ Interface corrections from the maintainer's list of 2026-11-26. No migration.
 - The assistant's history button reads **History** and is never cut; in its list the summary is
   on top in bold and the date under it.
 - A connection's **Models** open directly under that connection, in one framed block with it.
+- **Files are dropped on the transactions list** (or the start screen and the sidebar's drop
+  zone), no longer anywhere in the window: the charts pane and Settings take none.
 
 ### Added
 
@@ -28,6 +30,13 @@ Interface corrections from the maintainer's list of 2026-11-26. No migration.
 - **Export** in the table's toolbar asks for **CSV, TXT or JSON**: the same rows, columns and
   values in each.
 - Keys **`T`** (transactions) and **`O`** (overview), next to `S`.
+- **Add on every account**: *Add* (and `N`) types a transaction into any account, bank accounts
+  too; with all accounts in view the form asks which. A row typed by hand carries a green plus.
+- **Pictures and PDFs for the assistant by drag and drop**: dropped on the transactions list or on
+  the assistant's panel, a picture or a PDF goes to the assistant (10 MB a file, three pictures a
+  question). A PDF's first pages are drawn to pictures in the browser with pdf.js, so any model
+  that reads pictures can read them and the PDF itself never leaves the device. New dependency:
+  `pdfjs-dist` (Apache-2.0), loaded only when a PDF arrives.
 
 ### Fixed
 

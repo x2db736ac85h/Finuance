@@ -3,7 +3,7 @@
 // resizes it (double-click resets) and the header maximises it.
 
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useAccounts } from '../api/hooks/accounts';
@@ -22,6 +22,7 @@ import {
 } from '../api/hooks/assistant';
 import { keys } from '../api/keys';
 import { fmtDateTime, fmtDay } from '../lib/dates';
+import { ApiError } from '../api/client';
 import { errorMessage } from '../lib/errors';
 import { fmtInt, plural } from '../lib/format';
 import { useUi } from '../stores/uiStore';
@@ -36,6 +37,8 @@ import { aiToast as toast } from '../ui/toastStore';
 import { useChat, type AiTurn } from './chatStore';
 import { ChatSettings, pick, readsPhotos } from './ChatSettings';
 import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';
+import { dropKind, MAX_CHAT_FILE_BYTES, useChatDrops } from './drops';
+import { MAX_PDF_PAGES, pdfToImages } from './pdf';
 import { reencodePhoto } from './photos';
 import { TurnView } from './Turn';
 import { txPath } from '../lib/paths';
@@ -148,28 +151,82 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     );
   };
 
-  // photos are re-encoded in the browser (no EXIF or location leaves the device), then uploaded
-  const attach = async (files: FileList | null) => {
-    const list = [...(files ?? [])].slice(0, Math.max(0, MAX_PHOTOS - photos.length));
-    if (!list.length) return;
-    setUploading((n) => n + list.length);
+  // Photos are re-encoded in the browser (no EXIF or location leaves the device), then uploaded.
+  // A PDF's first pages are drawn to pictures first (Phase 27), so they go the same way.
+  const attach = async (files: FileList | readonly File[] | null) => {
+    const picked = [...(files ?? [])];
+    if (!picked.length) return;
+    let room = Math.max(0, MAX_PHOTOS - photos.length - uploading);
+    if (!room) {
+      toast(`A question takes ${String(MAX_PHOTOS)} pictures at most. Remove one first.`, { kind: 'error' });
+      return;
+    }
+    // what went wrong or was left out, said once at the end (toasts come one at a time)
+    const notes: string[] = [];
+    let failed = false;
+    setUploading((n) => n + 1);
     try {
       const id = await ensureChat({ onChanged: () => void qc.invalidateQueries({ queryKey: keys.chats }) });
-      for (const f of list) {
+      for (const f of picked) {
+        const kind = dropKind(f);
+        let problem = '';
+        if (!room) problem = `left out, a question takes ${String(MAX_PHOTOS)} pictures at most`;
+        else if (f.size > MAX_CHAT_FILE_BYTES) problem = 'larger than 10 MB';
+        else if (kind !== 'photo' && kind !== 'pdf') problem = 'not a picture or a PDF';
+        if (problem) {
+          failed = true;
+          notes.push(`${f.name}: ${problem}`);
+          continue;
+        }
         try {
-          const a = await uploadAttachment(id, await reencodePhoto(f));
-          setPhotos((p) => [...p, a]);
+          let pictures: Blob[];
+          if (kind === 'pdf') {
+            const pdf = await pdfToImages(f, Math.min(MAX_PDF_PAGES, room));
+            pictures = pdf.images;
+            if (pdf.pages > pictures.length)
+              notes.push(`${f.name}: the first ${plural(pictures.length, 'page')} of ${String(pdf.pages)} attached`);
+          } else pictures = [await reencodePhoto(f)];
+          for (const picture of pictures) {
+            const a = await uploadAttachment(id, picture);
+            setPhotos((p) => [...p, a]);
+            room--;
+          }
         } catch (e) {
-          toast(`${f.name}: ${errorMessage(e)}`, { kind: 'error' });
-        } finally {
-          setUploading((n) => n - 1);
+          failed = true;
+          // the server's words for a refused upload; the file's own problem otherwise (a PDF that
+          // can't be read, a picture the browser can't decode)
+          notes.push(
+            `${f.name}: ${e instanceof ApiError ? errorMessage(e) : e instanceof Error ? e.message : 'could not be read'}`,
+          );
         }
       }
     } catch (e) {
-      setUploading(0);
-      toast(errorMessage(e), { kind: 'error' });
+      failed = true;
+      notes.push(errorMessage(e));
+    } finally {
+      setUploading((n) => Math.max(0, n - 1));
     }
+    if (notes.length) toast(`${notes.join('. ')}.`, { kind: failed ? 'error' : 'ok', ms: 6000 });
   };
+  // pictures and PDFs dropped on the transactions list or on this panel (Phase 27)
+  const dropped = useChatDrops((d) => d.files);
+  const attachDropped = useEffectEvent(() => {
+    const files = useChatDrops.getState().take();
+    if (!files.length) return;
+    if (!enabled) toast('The assistant is not set up, so it can’t read files.', { kind: 'error' });
+    else if (!vision)
+      toast('This model can’t read pictures. Choose one that can in the assistant’s settings.', { kind: 'error' });
+    else void attach(files);
+  });
+  useEffect(() => {
+    // once the status is known: before that nobody can say whether the model reads pictures
+    if (!dropped.length || !status.data) return;
+    // after this render, like any other event that brings files
+    const t = setTimeout(attachDropped, 0);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [dropped, status.data]);
 
   // the proposals of the kinds the user lets the panel apply by itself (ADR 0030): never one
   // touching more than AUTO_APPLY_MAX_ROWS transactions, never one applied already
@@ -233,7 +290,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
   const cfgShown = showCfg || (enabled && !conn);
 
   return (
-    <aside className="chat" id="chat" aria-label="Assistant" style={width ? { width } : undefined}>
+    <aside className="chat" id="chat" aria-label="Assistant" data-drop="chat" style={width ? { width } : undefined}>
       <div
         className="chat-rz"
         title="Drag to resize · double-click to reset"
@@ -394,14 +451,14 @@ export function ChatPanel({ viewId }: { viewId: string }) {
             <>
               <IconButton
                 icon="camera"
-                title="Attach a photo of a receipt"
+                title="Attach a photo or a PDF of a receipt"
                 disabled={busy || photos.length + uploading >= MAX_PHOTOS}
                 onClick={() => picker.current?.click()}
               />
               <input
                 ref={picker}
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf,.pdf"
                 multiple
                 hidden
                 aria-label="Photo of a receipt"

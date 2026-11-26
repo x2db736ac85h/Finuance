@@ -63,7 +63,7 @@ export function Sidebar({ accounts, total, email }: Props) {
           <Icon name="plus" />
           <span>New cash account</span>
         </button>
-        <button type="button" className="mini-drop" onClick={openFilePicker}>
+        <button type="button" className="mini-drop" data-drop="files" onClick={openFilePicker}>
           <Icon name="upload" />
           <span>
             Drop CSV files or <span className="accent-t">browse</span>

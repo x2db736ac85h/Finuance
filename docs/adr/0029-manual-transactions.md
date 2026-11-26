@@ -47,3 +47,14 @@ deleting an import removes exactly its rows, and duplicate decisions rebuild fro
   Phase 20 brings.
 - **Keeping typed rows away from the reclassify job** (the plan's first wording): rules would then
   never categorise cash, and a withdrawal could never pair with its cash.
+
+## Addendum (Phase 27, 2026-11-26)
+
+The web app's *Add* (and `N`) is offered in every account, not only cash accounts, and with all
+accounts in view the form asks which one. The API has accepted a typed row in a bank account since
+Phase 20 (ADR 0032), for a card payment the bank's file doesn't have yet; when an import brings
+the bank's own row, the merge suggestion offers to keep that one. A row typed by hand shows a
+green plus beside its payee, as the sparkle marks a row the assistant changed (the sparkle alone
+when both apply). Nothing of the import guarantees changes: typed rows still carry
+`origin = 'manual'` and a random fingerprint.
+

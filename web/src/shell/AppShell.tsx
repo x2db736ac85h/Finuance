@@ -16,6 +16,7 @@ import { TableStatus } from '../table/TableStatus';
 import { useMeta, type User } from '../api/hooks/me';
 import { sidebarShown, useUi } from '../stores/uiStore';
 import { useViews, viewOf } from '../stores/viewStore';
+import { addTarget } from './Views';
 import { TooltipLayer } from '../ui/Tooltip';
 import { Toaster } from '../ui/Toast';
 import { CashAccountDialog } from '../cash/CashAccountDialog';
@@ -142,8 +143,10 @@ export function AppShell({ user }: { user: User }) {
       return true;
     },
     addTransaction: () => {
-      if (!viewCash || inSettings || inShared || mode !== 'table') return false;
-      useCashDialogs.getState().openTransaction({ accountId: viewCash.id, currency: viewCash.currency });
+      // in any account's table, and with all accounts in view (the form then asks which)
+      const target = addTarget(list, viewId === 'all' ? undefined : list.find((a) => a.id === viewId));
+      if (!target || inSettings || inShared || mode !== 'table') return false;
+      useCashDialogs.getState().openTransaction(target);
       return true;
     },
     move: moveSelection,
@@ -199,7 +202,7 @@ export function AppShell({ user }: { user: User }) {
       <StatusBar hasData={hasData} rows={rows} accounts={list.length}>
         {tableShown ? <TableStatus key={viewId} viewId={viewId} all={rows} /> : null}
       </StatusBar>
-      <DropOverlay onFiles={importFiles} />
+      <DropOverlay onFiles={importFiles} assistant={assistantOn} />
       <KeyboardShortcuts />
       <DuplicatesDialog />
       <CashAccountDialog />
