@@ -2576,6 +2576,9 @@ type ActionProposal struct {
 	CategoryId   *openapi_types.UUID  `json:"categoryId,omitempty"`
 	CategoryName *string              `json:"categoryName,omitempty"`
 
+	// ClearCategory set_category: take a category set by hand off again, back to the bank's or a rule's (never applied automatically).
+	ClearCategory *bool `json:"clearCategory,omitempty"`
+
 	// Date add_expense: the day of the payment.
 	Date            *openapi_types.Date `json:"date,omitempty"`
 	ExpenseCategory *string             `json:"expenseCategory,omitempty"`
@@ -2609,9 +2612,12 @@ type ActionProposal struct {
 	ReceiptLine *string `json:"receiptLine,omitempty"`
 
 	// RemoveBudget set_budget: remove the category's own budget (back to the default from earlier months).
-	RemoveBudget *bool         `json:"removeBudget,omitempty"`
-	RuleName     *string       `json:"ruleName,omitempty"`
-	Sample       []ProposalRow `json:"sample"`
+	RemoveBudget *bool `json:"removeBudget,omitempty"`
+
+	// RemoveGroup set_group: take the transactions out of the group they are in, instead of putting them into one (never applied automatically).
+	RemoveGroup *bool         `json:"removeGroup,omitempty"`
+	RuleName    *string       `json:"ruleName,omitempty"`
+	Sample      []ProposalRow `json:"sample"`
 
 	// SharedGroupId add_to_shared_group: the shared group (groupId is the user's personal group linked to it).
 	SharedGroupId   *openapi_types.UUID `json:"sharedGroupId,omitempty"`

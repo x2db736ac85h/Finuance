@@ -19,9 +19,13 @@ export const AUTO_APPLY_MAX_ROWS = 50;
 export function proposalTitle(p: Proposal): string {
   switch (p.action) {
     case 'set_category':
-      return `Set the category “${p.categoryName ?? ''}” for ${plural(p.matched, 'transaction')}`;
+      return p.clearCategory
+        ? `Take the hand-set category off ${plural(p.matched, 'transaction')} (back to the bank’s or a rule’s)`
+        : `Set the category “${p.categoryName ?? ''}” for ${plural(p.matched, 'transaction')}`;
     case 'set_group':
-      return `Add ${plural(p.matched, 'transaction')} to the group “${p.groupName ?? ''}”`;
+      return p.removeGroup
+        ? `Take ${plural(p.matched, 'transaction')} out of ${p.matched === 1 ? 'its group' : 'their group'}`
+        : `Add ${plural(p.matched, 'transaction')} to the group “${p.groupName ?? ''}”`;
     case 'create_rule': {
       const parts = [
         p.match?.search ? `words “${p.match.search}”` : '',
@@ -131,16 +135,18 @@ export function ProposalCard({ proposal: p, chatId, onShow }: Props) {
   const mine = changes.data?.pages[0]?.changes.find((c) => c.chatId === chatId && c.proposalKey === p.key);
   const undone = done && mine?.revertedAt !== undefined;
   const creates =
-    p.action === 'set_group'
-      ? p.groupId
-        ? ''
-        : 'The group is new and is created first.'
-      : (p.action === 'set_category' ||
-            p.action === 'create_rule' ||
-            ((p.action === 'add_expense' || p.action === 'attach_receipt') && p.categoryName)) &&
-          !p.categoryId
-        ? 'The category is new and is created first.'
-        : '';
+    p.removeGroup || p.clearCategory
+      ? ''
+      : p.action === 'set_group'
+        ? p.groupId
+          ? ''
+          : 'The group is new and is created first.'
+        : (p.action === 'set_category' ||
+              p.action === 'create_rule' ||
+              ((p.action === 'add_expense' || p.action === 'attach_receipt') && p.categoryName)) &&
+            !p.categoryId
+          ? 'The category is new and is created first.'
+          : '';
   const run = () => {
     if (!chatId) return;
     apply.mutate(

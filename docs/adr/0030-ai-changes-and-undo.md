@@ -66,3 +66,20 @@ that a proposal was applied, not what it replaced.
   of categories and groups to recompute from.
 - **A server-side "apply proposal" endpoint that also records**: a second write path (rejected in
   ADR 0019 already).
+
+## Addendum (Phase 27, 2026-11-26)
+
+- **Two proposals that take away**: `set_group` with `removeGroup` (out of the group the
+  transactions are in) and `set_category` with `clearCategory` (a hand-set category off again).
+  They are variants of the two existing kinds, applied through the same bulk request (`groupId:
+  null`, `category.reset`) and recorded like them. `MayAutoApply` refuses both: a change that takes
+  something away always waits for a click.
+- **`add_expense` for any account and for money in**, with a check before it is proposed: a payment
+  of the same amount in the same account within two days is said to the model instead of a
+  proposal (`add_anyway` after the person confirmed a second payment).
+- **Undo several**: Settings → Activity undoes the changes of a period or all of them, newest
+  first, with the existing `POST /ai-changes/{id}/revert` once per change. A change that answers
+  `409` (something it touched was changed since) is left and counted. No new endpoint: a bulk
+  route would repeat the per-change checks on the server for a list a person has dozens of.
+- The assistant still writes nothing itself (the maintainer, 2026-11-26).
+

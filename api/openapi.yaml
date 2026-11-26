@@ -7348,6 +7348,12 @@ components:
         receiptLine:
           type: string
           description: "attach_receipt: the line added to the matched transaction's note (`note` is the whole note after it)."
+        removeGroup:
+          type: boolean
+          description: "set_group: take the transactions out of the group they are in, instead of putting them into one (never applied automatically)."
+        clearCategory:
+          type: boolean
+          description: "set_category: take a category set by hand off again, back to the bank's or a rule's (never applied automatically)."
         toolFilter:
           $ref: "#/components/schemas/ToolFilter"
     ProposalRow:

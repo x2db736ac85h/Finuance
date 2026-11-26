@@ -4667,6 +4667,10 @@ export interface components {
             goalBefore?: components["schemas"]["ProposalGoal"];
             /** @description attach_receipt: the line added to the matched transaction's note (`note` is the whole note after it). */
             receiptLine?: string;
+            /** @description set_group: take the transactions out of the group they are in, instead of putting them into one (never applied automatically). */
+            removeGroup?: boolean;
+            /** @description set_category: take a category set by hand off again, back to the bank's or a rule's (never applied automatically). */
+            clearCategory?: boolean;
             toolFilter?: components["schemas"]["ToolFilter"];
         };
         ProposalRow: {

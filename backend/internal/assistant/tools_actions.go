@@ -115,6 +115,11 @@ type Proposal struct {
 	// attach_receipt (ADR 0032): the line added to the matched transaction's note (Note is the
 	// whole note after it; IDs the transaction; Date, AmountMinor, Payee and AccountName its values)
 	ReceiptLine string `json:"receiptLine,omitempty"`
+	// Phase 27: the opposite of the two set_* actions. RemoveGroup takes the transactions out of
+	// whatever group they are in; ClearCategory takes a category set by hand off again (back to the
+	// bank's or a rule's). Neither is ever applied by the panel itself.
+	RemoveGroup   bool `json:"removeGroup,omitempty"`
+	ClearCategory bool `json:"clearCategory,omitempty"`
 }
 
 // ProposalSplit is a split_expense's new split, in the API's SharedSplit form plus names.
@@ -175,6 +180,8 @@ type proposalResult struct {
 	Budget          json.Number   `json:"budget,omitempty"`
 	BudgetBefore    json.Number   `json:"budget_before,omitempty"`
 	RemovesBudget   bool          `json:"removes_budget,omitempty"`
+	RemovesGroup    bool          `json:"removes_from_group,omitempty"`
+	ClearsCategory  bool          `json:"clears_category,omitempty"`
 	Account         string        `json:"account,omitempty"`
 	Date            string        `json:"date,omitempty"`
 	Amount          json.Number   `json:"amount,omitempty"`
@@ -227,6 +234,12 @@ func (t *Tools) propose(ctx context.Context, userID uuid.UUID, sc Scope, a args)
 	}
 	switch action {
 	case ActionSetCategory, ActionCreateRule:
+		if action == ActionSetCategory && a.truthy("clear_category") {
+			if a.str("to_category") != "" {
+				return proposalError("Give either to_category (set it) or clear_category (take it off), not both"), nil
+			}
+			return t.proposeRows(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, ClearCategory: true, Sample: []ProposalRow{}})
+		}
 		name, ok := cleanText(a.str("to_category"), maxProposalName)
 		if !ok {
 			return proposalError(fmt.Sprintf("to_category must be a category name of 1–%d characters", maxProposalName)), nil
@@ -247,6 +260,13 @@ func (t *Tools) propose(ctx context.Context, userID uuid.UUID, sc Scope, a args)
 		}
 		return t.proposeRows(ctx, userID, sc, a, p)
 	case ActionSetGroup:
+		if a.truthy("remove_from_group") {
+			if a.str("to_group") != "" {
+				return proposalError("Give either to_group (put them in it) or remove_from_group (take them out), not both. " +
+					"To take transactions out of a group, select them with the group filter and the others that narrow them down"), nil
+			}
+			return t.proposeRows(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, RemoveGroup: true, Sample: []ProposalRow{}})
+		}
 		name, ok := cleanText(a.str("to_group"), maxProposalGroup)
 		if !ok {
 			return proposalError(fmt.Sprintf("to_group must be a group name of 1–%d characters", maxProposalGroup)), nil
@@ -373,6 +393,10 @@ func proposalOutcome(sc Scope, p *Proposal, label string) Outcome {
 	r := proposalResult{Status: proposedStatus, Action: p.Action, Matched: p.Matched, RuleName: p.RuleName, Sample: []sampleOut{}}
 	switch p.Action {
 	case ActionSetGroup:
+		if p.RemoveGroup {
+			r.RemovesGroup = true
+			break
+		}
 		r.ToGroup, r.CreatesGroup = p.GroupName, p.GroupID == nil
 	case ActionAddToSharedGroup:
 		r.SharedGroup = p.SharedGroupName
@@ -409,6 +433,10 @@ func proposalOutcome(sc Scope, p *Proposal, label string) Outcome {
 			r.ToCategory, r.CreatesCategory = p.CategoryName, p.CategoryID == nil
 		}
 	default:
+		if p.ClearCategory {
+			r.ClearsCategory = true
+			break
+		}
 		r.ToCategory, r.CreatesCategory = p.CategoryName, p.CategoryID == nil
 	}
 	for _, s := range p.Sample {

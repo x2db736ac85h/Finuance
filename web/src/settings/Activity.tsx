@@ -2,16 +2,26 @@
 // the account's activity log, newest first, with the address and browser of each action. The
 // server keeps the log for a year; nothing here can change it.
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useActivity, type ActivityAction, type ActivityEvent } from '../api/hooks/activity';
-import { useAIChanges, useRevertAIChange, type AIChange } from '../api/hooks/assistant';
+import {
+  openChangesIn,
+  useAIChanges,
+  useAllAIChanges,
+  useRevertAIChange,
+  useRevertAIChanges,
+  type AIChange,
+} from '../api/hooks/assistant';
 import { useViews } from '../stores/viewStore';
 import { toast } from '../ui/toastStore';
 import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
 import { fmtInt, plural } from '../lib/format';
 import { Button } from '../ui/Button';
+import { TextInput } from '../ui/inputs';
+import { Modal } from '../ui/Modal';
 import { txPath } from '../lib/paths';
 
 type Meta = NonNullable<ActivityEvent['meta']>;
@@ -138,11 +148,100 @@ function describeChange(c: AIChange): string {
   return what.charAt(0).toUpperCase() + what.slice(1) + ` · ${plural(c.items, 'item')}`;
 }
 
+/**
+ * Undo many of the assistant's changes at once (Phase 27): all of them, or the ones applied in a
+ * period. It says how many before anything happens, and afterwards how many it had to leave.
+ */
+function UndoSeveral({ onClose }: { onClose: () => void }) {
+  const all = useAllAIChanges();
+  const revert = useRevertAIChanges();
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const chosen = openChangesIn(all.data ?? [], from, to);
+  const period = from || to;
+  return (
+    <Modal
+      open
+      size="sm"
+      title="Undo the assistant’s changes"
+      onClose={onClose}
+      actions={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            variant="danger"
+            disabled={revert.isPending || chosen.length === 0}
+            onClick={() => {
+              revert.mutate(chosen, {
+                onSuccess: ({ undone, left }) => {
+                  toast(
+                    left
+                      ? `Undone ${plural(undone, 'change')}. ${plural(left, 'change')} left as ${left === 1 ? 'it is' : 'they are'}: something ${left === 1 ? 'it' : 'they'} touched was changed since.`
+                      : `Undone ${plural(undone, 'change')}`,
+                    { ms: 6000 },
+                  );
+                  onClose();
+                },
+                onError: (e) => {
+                  toast(errorMessage(e), { kind: 'error' });
+                },
+              });
+            }}
+          >
+            {revert.isPending ? 'Undoing…' : `Undo ${plural(chosen.length, 'change')}`}
+          </Button>
+        </>
+      }
+    >
+      <div className="adm-form">
+        <p className="hint">
+          Leave both days empty for everything the assistant ever changed, or give a period. Each change is put back as
+          Undo does it one by one, the newest first; a change is left alone when something it touched was changed since.
+        </p>
+        <div className="form-row">
+          <label className="st-col">
+            From
+            <TextInput
+              type="date"
+              value={from}
+              max={to || undefined}
+              onChange={(e) => {
+                setFrom(e.target.value);
+              }}
+            />
+          </label>
+          <label className="st-col">
+            To
+            <TextInput
+              type="date"
+              value={to}
+              min={from || undefined}
+              onChange={(e) => {
+                setTo(e.target.value);
+              }}
+            />
+          </label>
+        </div>
+        <p role="status">
+          {all.isError
+            ? errorMessage(all.error)
+            : all.isLoading
+              ? 'Counting…'
+              : chosen.length
+                ? `${plural(chosen.length, 'change')} in effect ${period ? 'in this period' : 'in all'}.`
+                : `Nothing to undo ${period ? 'in this period' : ''}`.trim() + '.'}
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
 function AssistantChanges() {
   const q = useAIChanges();
   const revert = useRevertAIChange();
   const navigate = useNavigate();
   const patch = useViews((s) => s.patch);
+  const [bulk, setBulk] = useState(false);
   const changes = q.data?.pages.flatMap((p) => p.changes) ?? [];
   // only once the assistant changed something (a failed read stays quiet: the log below works)
   if (changes.length === 0) return null;
@@ -198,6 +297,22 @@ function AssistantChanges() {
         >
           Show what the assistant changed
         </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setBulk(true);
+          }}
+        >
+          Undo several…
+        </Button>
+        {bulk && (
+          <UndoSeveral
+            onClose={() => {
+              setBulk(false);
+            }}
+          />
+        )}
         {q.hasNextPage && (
           <Button size="sm" disabled={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
             {q.isFetchingNextPage ? 'Loading…' : 'Load more'}

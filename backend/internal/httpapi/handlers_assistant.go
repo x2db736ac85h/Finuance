@@ -429,6 +429,12 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	}
 	// Phase 20 proposals (ADR 0030)
 	out.AccountId, out.SharedGroupId = p.AccountID, p.SharedGroupID
+	if p.RemoveGroup {
+		out.RemoveGroup = &p.RemoveGroup
+	}
+	if p.ClearCategory {
+		out.ClearCategory = &p.ClearCategory
+	}
 	if p.RemoveBudget {
 		out.RemoveBudget = &p.RemoveBudget
 	}

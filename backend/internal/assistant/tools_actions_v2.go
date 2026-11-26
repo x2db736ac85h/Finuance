@@ -94,6 +94,10 @@ func (t *Tools) proposeBudget(ctx context.Context, userID uuid.UUID, sc Scope, a
 	return proposalOutcome(sc, p, "budget "+c.Name), nil
 }
 
+// expenseTwinDays is how far from its date an existing payment of the same amount counts as the
+// same payment when add_expense is asked for.
+const expenseTwinDays = 2
+
 // proposeExpense: add_expense types a payment into one of the user's cash accounts, or into a bank
 // account named for a card payment its file doesn't have yet (ADR 0032).
 func (t *Tools) proposeExpense(ctx context.Context, userID uuid.UUID, sc Scope, a args, p *Proposal) (Outcome, error) {
@@ -149,8 +153,28 @@ func (t *Tools) proposeExpense(ctx context.Context, userID uuid.UUID, sc Scope, 
 	if !ok {
 		return proposalError(fmt.Sprintf("payee must say who was paid, 1–%d characters", maxExpensePayee)), nil
 	}
+	income := a.truthy("income")
+	// A payment that is there already must not be typed in a second time (Phase 27): the same
+	// amount out of the same account within two days is said to the model, which then asks the
+	// user or attaches a receipt instead. "add_anyway" is for two real payments of one amount.
+	if !income && !a.truthy("add_anyway") {
+		rows, err := t.eng.ReceiptCandidates(ctx, userID, v, *d, expenseTwinDays)
+		if err != nil {
+			return Outcome{}, err
+		}
+		for i := range rows {
+			if r := &rows[i]; r.AccountID == acc.ID {
+				return proposalError(fmt.Sprintf("%s already has a payment of this amount on %s (%s). If it is the same payment, don't add it "+
+					"(for a receipt, propose attach_receipt). If it is a second payment, call again with add_anyway: true.",
+					sc.mask(acc.Name), r.BookedOn.String(), sc.mask(ingest.Collapse(r.Payee)))), nil
+			}
+		}
+	}
 	p.AccountID, p.AccountName, p.Currency = &acc.ID, acc.Name, acc.Currency
 	p.Date, p.AmountMinor, p.Payee = d.String(), -v, payee
+	if income {
+		p.AmountMinor = v // money in: a refund, a gift, wages paid in cash
+	}
 	if note, ok := cleanText(a.str("note"), 500); ok {
 		p.Note = note
 	}

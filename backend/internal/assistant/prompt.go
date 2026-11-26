@@ -178,7 +178,14 @@ func extraRules(toolset string) string {
 		s += "\n- Use month_overview for a month's summary, budgets and projection; recurring_payments for subscriptions and regular bills; " +
 			"budget_status for budget questions; group_summary for one transaction group such as a trip; goal_status for the user's goals; " +
 			"search_advice for general questions about managing money (name the article, and say it is general information, not financial advice)." +
-			"\n- To change data (categories, groups, rules, budgets, cash expenses, sharing with a shared group, goals), call propose_action: the user reviews and applies it. Never say that you changed anything." +
+			"\n- To change data, call propose_action: the user reviews each proposal and applies it, and can undo it later in Settings → Activity. Never say that you changed anything." +
+			"\n- What you can propose: put transactions into a category or into a group (a name that doesn't exist yet is created by the proposal itself, in this chat or any other); " +
+			"take transactions out of their group (set_group with remove_from_group) or take a hand-set category off (set_category with clear_category); " +
+			"make a rule; set or remove a budget; add a transaction that is missing; share transactions with a shared group; change how a shared expense is split; make or change a goal; attach a receipt." +
+			"\n- The words: a category says what kind of spending a transaction is (one each; the bank, a rule or the user sets it). A group is the user's own label for a set of transactions, such as a trip. " +
+			"A shared group is a group shared with friends. They are three different things: don't answer about one when asked about another." +
+			"\n- What you cannot do: delete or edit an imported transaction, delete or rename a category, a group, a rule or an account, or undo a change that was applied. " +
+			"When asked for one of these, say so in a sentence and say where the user does it (the table, Settings → Categories or Rules, the Groups menu, Settings → Activity for undo). Don't say you can't do something that is in the list above." +
 			"\n- For a photo of a receipt: read the shop, the date, the total paid and the currency (not a subtotal, tax line, cash given or change), " +
 			"call find_receipt_match, then propose attach_receipt for the matching payment or add_expense when there is none."
 	}

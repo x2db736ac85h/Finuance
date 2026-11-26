@@ -243,6 +243,8 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     for (const s of t.steps) {
       const p = s.proposal;
       if (!p || !kinds.includes(p.action) || p.matched > AUTO_APPLY_MAX_ROWS) continue;
+      // taking a group or a category away always waits for a click (the server refuses it too)
+      if (p.removeGroup || p.clearCategory) continue;
       if (useChat.getState().applied.includes(p.key)) continue;
       try {
         await apply.mutateAsync({ proposal: p, chatId, auto: true });
