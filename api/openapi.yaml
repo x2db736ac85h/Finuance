@@ -7082,6 +7082,8 @@ components:
             enum: [set_category, set_group, create_rule, set_budget, add_expense, create_goal, update_goal]
         digest:
           $ref: "#/components/schemas/AssistantDigest"
+        memory:
+          $ref: "#/components/schemas/AssistantMemory"
         digestNextAt:
           type: string
           format: date-time
@@ -7091,6 +7093,23 @@ components:
           type: integer
           format: int64
           description: Tokens used today (UTC), questions and digests together. Ignored in a PUT.
+    AssistantMemory:
+      type: object
+      additionalProperties: false
+      required: [enabled, auto, text]
+      description: >-
+        The assistant's memory (ADR 0046): one note of the person's, added to the system prompt of their
+        questions while `enabled`. With `auto` a line the assistant proposes to remember is added without
+        a click. Left out of a PUT, the stored memory stays.
+      properties:
+        enabled:
+          type: boolean
+        auto:
+          type: boolean
+        text:
+          type: string
+          maxLength: 4000
+          description: At most 4,000 characters (about 1,000 tokens); '' for none.
     AssistantDigest:
       type: object
       additionalProperties: false
@@ -7266,7 +7285,7 @@ components:
             X-Assistant-Proposal when it is applied.
         action:
           type: string
-          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal, attach_receipt]
+          enum: [set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal, attach_receipt, remember]
         reason:
           type: string
         matched:
@@ -7348,6 +7367,10 @@ components:
         receiptLine:
           type: string
           description: "attach_receipt: the line added to the matched transaction's note (`note` is the whole note after it)."
+        memoryLine:
+          type: string
+          maxLength: 300
+          description: "remember: the line to add to the person's memory."
         removeGroup:
           type: boolean
           description: "set_group: take the transactions out of the group they are in, instead of putting them into one (never applied automatically)."

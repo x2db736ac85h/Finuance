@@ -198,6 +198,7 @@ type Run struct {
 	model    ModelInfo
 	images   []llm.Image // the question's photos
 	extra    string      // the administrator's instructions, read when the run starts
+	memory   string      // the person's note for the assistant, when it is on (ADR 0046)
 	released sync.Once
 }
 
@@ -478,6 +479,10 @@ func (run *Run) Execute(ctx context.Context, emit func(Event)) {
 	sc.MultiAccount = facts != nil && facts.Accounts > 1
 	if r.cfg.Instructions != nil {
 		run.extra = r.cfg.Instructions(ctx)
+	}
+	// the person's own note, when they keep one and it is on (a failed read costs the note, not the answer)
+	if st, err := r.cfg.Chats.Settings(ctx, run.userID); err == nil && st.Memory != nil && st.Memory.Enabled {
+		run.memory = st.Memory.Text
 	}
 	if t := run.model.Tuning; t != nil && strings.TrimSpace(t.ExtraPrompt) != "" {
 		run.extra = strings.TrimSpace(run.extra + "\n" + t.ExtraPrompt)
@@ -767,7 +772,7 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 	if toolset == "" {
 		toolset = ToolsetFull
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset, run.conn.Cloud) + instructionsBlock(run.extra)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset, run.conn.Cloud) + instructionsBlock(run.extra) + run.memoryBlock()
 	defs := ToolDefs(toolset)
 	var conv []llm.Message // this turn's assistant and tool messages
 	for range maxRounds {
@@ -887,7 +892,7 @@ func (run *Run) runPlan(ctx context.Context, emit func(Event), sc Scope, facts *
 	if toolset == "" {
 		toolset = ToolsetCompact
 	}
-	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset, run.conn.Cloud) + instructionsBlock(run.extra)
+	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset, run.conn.Cloud) + instructionsBlock(run.extra) + run.memoryBlock()
 	hist := trimHistory(history, true, run.noThink(), system, run.budget())
 	zero := 0.0
 	plan, err := run.complete(ctx, emit, t, llm.Request{System: system + planInstructions(ToolDefs(toolset)), Messages: hist, Temperature: &zero, KeepAlive: run.keepAlive()}, false)

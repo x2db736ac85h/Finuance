@@ -2320,3 +2320,14 @@ textarea.inp.ins-note {
     margin-left: 0;
   }
 }
+
+/* the assistant's memory (Settings → General): a note of a few lines */
+textarea.inp.memory-text {
+  height: auto;
+  min-height: 7rem;
+  padding: 0.5rem 0.625rem;
+  line-height: 1.45;
+  resize: vertical;
+  font: inherit;
+  font-size: 0.8125rem;
+}

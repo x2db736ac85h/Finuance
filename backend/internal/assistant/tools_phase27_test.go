@@ -1,11 +1,14 @@
 package assistant
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/x2db736ac85h/finuance/backend/internal/ledger"
+	"github.com/x2db736ac85h/finuance/backend/internal/platform"
+	"github.com/x2db736ac85h/finuance/backend/testutil/llmmock"
 )
 
 // Phase 27: the opposites of set_group and set_category, money in, and a payment that is there
@@ -93,5 +96,91 @@ func TestProposalsPhase27(t *testing.T) {
 		if out.Proposal != nil || !strings.Contains(fmt.Sprint(m["error"]), want) {
 			t.Errorf("%s = %s", args, out.JSON)
 		}
+	}
+}
+
+// The memory (ADR 0046): stored with the person's settings, added to the system prompt while it is
+// on, shortened for a cloud model; and a line the assistant proposes to remember.
+func TestMemory(t *testing.T) {
+	re := newRunEnv(t, 2)
+	chat := re.newChat()
+	system := func() string {
+		t.Helper()
+		reqs := re.mock.Requests()
+		return string(reqs[len(reqs)-1])
+	}
+	// nothing kept: nothing added
+	s, err := re.chats.Settings(re.ctx, re.user)
+	if err != nil || s.Memory == nil || !s.Memory.Enabled || s.Memory.Auto || s.Memory.Text != "" {
+		t.Fatalf("the default memory = %+v (%v)", s.Memory, err)
+	}
+	re.mock.Push(llmmock.Reply{Content: "Hello."})
+	re.ask(chat, "Hi", nil)
+	if strings.Contains(system(), "asked you to keep in mind") {
+		t.Error("an empty memory is in the prompt")
+	}
+	// kept and on: in the prompt, after the rules
+	note := "I am paid on the 10th. Answer in Polish. My account is PL00000000000000000000000001."
+	if _, err := re.chats.SaveSettings(re.ctx, re.user, Settings{CloudConsent: []string{}, Memory: &Memory{Enabled: true, Text: "  " + note + "\r\n"}}); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = re.chats.Settings(re.ctx, re.user)
+	if s.Memory.Text != note {
+		t.Errorf("stored memory = %q", s.Memory.Text)
+	}
+	re.mock.Push(llmmock.Reply{Content: "Hello."})
+	re.ask(chat, "Hi again", nil)
+	if got := system(); !strings.Contains(got, "asked you to keep in mind") || !strings.Contains(got, "I am paid on the 10th") {
+		t.Errorf("the memory is not in the prompt: %s", got)
+	}
+	// a save without the memory keeps it (the panel's other settings don't send it)
+	if _, err := re.chats.SaveSettings(re.ctx, re.user, Settings{CloudConsent: []string{}}); err != nil {
+		t.Fatal(err)
+	}
+	if s, _ = re.chats.Settings(re.ctx, re.user); s.Memory.Text != note {
+		t.Errorf("a save without the memory changed it: %q", s.Memory.Text)
+	}
+	// switched off: kept, not sent
+	if _, err := re.chats.SaveSettings(re.ctx, re.user, Settings{CloudConsent: []string{}, Memory: &Memory{Enabled: false, Text: note}}); err != nil {
+		t.Fatal(err)
+	}
+	re.mock.Push(llmmock.Reply{Content: "Hello."})
+	re.ask(chat, "And now", nil)
+	if strings.Contains(system(), "I am paid on the 10th") {
+		t.Error("a memory that is switched off is in the prompt")
+	}
+	// too long is refused
+	var ve *platform.ValidationError
+	if _, err := re.chats.SaveSettings(re.ctx, re.user, Settings{CloudConsent: []string{}, Memory: &Memory{Enabled: true,
+		Text: strings.Repeat("ż", MaxMemoryChars+1)}}); !errors.As(err, &ve) {
+		t.Errorf("a note over the limit: %v", err)
+	}
+	if _, err := re.chats.SaveSettings(re.ctx, re.user, Settings{CloudConsent: []string{}, Memory: &Memory{Enabled: true,
+		Text: strings.Repeat("ż", MaxMemoryChars)}}); err != nil {
+		t.Errorf("a note at the limit: %v", err)
+	}
+
+	// for a cloud model long digit runs are shortened, as in everything else that leaves
+	cloud := &Run{memory: note, conn: &Connection{Cloud: true}}
+	if b := cloud.memoryBlock(); strings.Contains(b, "00000000000000000000000001") || !strings.Contains(b, "paid on the 10th") {
+		t.Errorf("the memory for a cloud model: %s", b)
+	}
+	local := &Run{memory: note, conn: &Connection{}}
+	if b := local.memoryBlock(); !strings.Contains(b, "00000000000000000000000001") {
+		t.Errorf("the memory for a local model: %s", b)
+	}
+
+	// a line to remember is a proposal like any other: nothing is stored by the tool
+	tools := NewTools(re.q)
+	out, err := tools.Run(re.ctx, re.user, Scope{MaxRows: 50}, ToolPropose, `{"action":"remember","memory_line":"  Prefers answers   in Polish ","reason":"You asked me to"}`)
+	if err != nil || out.Proposal == nil || out.Proposal.Action != ActionRemember || out.Proposal.MemoryLine != "Prefers answers in Polish" {
+		t.Fatalf("remember = %+v (%v) %s", out.Proposal, err, out.JSON)
+	}
+	if err := MayAutoApply(out.Proposal, "chat", AutoApplyActions); err == nil {
+		t.Error("a remember proposal passes the server's auto-apply check, which is for changes to data")
+	}
+	out, _ = tools.Run(re.ctx, re.user, Scope{MaxRows: 50}, ToolPropose, `{"action":"remember","memory_line":"`+strings.Repeat("x", 201)+`"}`)
+	if out.Proposal != nil || !strings.Contains(out.JSON, "memory_line must be") {
+		t.Errorf("a line too long = %s", out.JSON)
 	}
 }

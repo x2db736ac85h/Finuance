@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import type { Schemas } from '../api/client';
 import { renderApp, warmUpApp } from '../test/render';
+import { useToasts } from '../ui/toastStore';
 import { API, db, problem, resetDb, server } from '../test/server';
 import { themeFileText } from '../styles/themeFile';
 import { BUILTIN_THEMES } from '../styles/themes';
@@ -208,6 +210,71 @@ describe('colour themes', () => {
         .getByRole('radio', { name: /Indigo/ })
         .getAttribute('aria-checked'),
     ).toBe('true');
+  });
+
+  it('keeps the assistant’s memory: a note to write, switch off and clear (Phase 27)', async () => {
+    let stored: Schemas['AssistantSettings'] = {
+      retentionDays: 2,
+      cloudConsent: ['claude'],
+      memory: { enabled: true, auto: true, text: 'Paid on the 10th.' },
+    };
+    const puts: Schemas['AssistantSettings'][] = [];
+    server.use(
+      http.get(`${API}/assistant/settings`, () => HttpResponse.json(stored)),
+      http.put(`${API}/assistant/settings`, async ({ request }) => {
+        stored = (await request.json()) as Schemas['AssistantSettings'];
+        puts.push(stored);
+        return HttpResponse.json(stored);
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/settings/general');
+    // the form starts again from what is stored after every save, so everything is looked up each time
+    const note = () => screen.getByRole<HTMLTextAreaElement>('textbox', { name: /^The note/ });
+    const card = () => note().closest('.set-card') as HTMLElement;
+    const save = () => within(card()).getByRole<HTMLButtonElement>('button', { name: 'Save' });
+    await screen.findByRole('textbox', { name: /^The note/ });
+    expect(note().value).toBe('Paid on the 10th.');
+    expect(card().textContent).toContain('17 of 4,000 characters, about 5 tokens');
+    expect(save().disabled).toBe(true);
+    // a longer note: saved with everything else of the settings as it was
+    await user.type(note(), ' Answer in Polish.');
+    await user.click(save());
+    await waitFor(() => {
+      expect(puts).toHaveLength(1);
+    });
+    expect(puts[0]).toEqual({
+      retentionDays: 2,
+      cloudConsent: ['claude'],
+      memory: { enabled: true, auto: true, text: 'Paid on the 10th. Answer in Polish.' },
+    });
+    await waitFor(() => {
+      expect(note().value).toBe('Paid on the 10th. Answer in Polish.');
+    });
+    // too long: said, and Save is closed
+    fireEvent.change(note(), { target: { value: 'x'.repeat(4001) } });
+    expect(save().disabled).toBe(true);
+    expect(note().getAttribute('aria-invalid')).toBe('true');
+    fireEvent.change(note(), { target: { value: 'Paid on the 10th. Answer in Polish.' } });
+    // switched off: kept, not used
+    await user.click(within(card()).getByRole('checkbox', { name: 'Use this note in my questions' }));
+    await waitFor(() => {
+      expect(puts.at(-1)?.memory).toEqual({ enabled: false, auto: true, text: 'Paid on the 10th. Answer in Polish.' });
+    });
+    await waitFor(() => {
+      expect(
+        within(card()).getByRole<HTMLInputElement>('checkbox', { name: 'Use this note in my questions' }).checked,
+      ).toBe(false);
+    });
+    // cleared
+    await user.click(within(card()).getByRole('button', { name: 'Clear' }));
+    await waitFor(() => {
+      expect(puts.at(-1)?.memory?.text).toBe('');
+    });
+    // each step said so (toasts come one at a time, so the queue is read, not the screen)
+    await waitFor(() => {
+      expect(useToasts.getState().queue.map((t) => t.msg)).toContain('Memory cleared');
+    });
   });
 
   it('starts from the instance default theme', async () => {

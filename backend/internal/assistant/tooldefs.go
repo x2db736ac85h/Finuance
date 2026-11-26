@@ -60,12 +60,13 @@ var toolDefs = []llm.Tool{
 		"add a transaction that is not in the list yet: a cash payment into a cash account, or a payment or money received into any account by its name (add_expense; income: true for money in), share transactions with a shared group (add_to_shared_group), " +
 		"change how one of the user's expenses in a shared group is split (split_expense), " +
 		"set a goal (create_goal: save an amount by a deadline, or spend reduce_pct % less on a category) or change one (update_goal), " +
-		"or write a receipt into the note of the transaction find_receipt_match found (attach_receipt). " +
+		"write a receipt into the note of the transaction find_receipt_match found (attach_receipt), " +
+		"or keep one line about the user for later chats (remember: memory_line), when they ask you to remember something or state a lasting preference. " +
 		"You never change data yourself: the user sees a card and applies it. Select transactions with the usual filters; a rule uses payee and/or query; " +
 		"add_expense uses account, date, amount, payee and optionally to_category; split_expense uses shared_group, payee (and date), split_mode and members; " +
 		"create_goal uses goal_name, deadline and amount (save) or to_category and reduce_pct (reduce); update_goal names the goal and what changes; " +
 		"attach_receipt uses the receipt's amount, date, shop and items (and account when several fit).",
-		Parameters: json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["set_category","set_group","create_rule","set_budget","add_expense","add_to_shared_group","split_expense","create_goal","update_goal","attach_receipt"]},` +
+		Parameters: json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["set_category","set_group","create_rule","set_budget","add_expense","add_to_shared_group","split_expense","create_goal","update_goal","attach_receipt","remember"]},` +
 			`"to_category":{"type":"string","description":"set_category, create_rule, set_budget, add_expense: the category name (an existing one, or a new one to create; set_budget needs an existing one); create_goal, update_goal: the existing category to spend less on"},` +
 			`"to_group":{"type":"string","description":"set_group: the group name (an existing one, or a new one to create)"},` +
 			`"remove_from_group":{"type":"boolean","description":"set_group: true to take the selected transactions out of the group they are in (select them with the group filter and whatever narrows them down); leave to_group out"},` +
@@ -85,6 +86,7 @@ var toolDefs = []llm.Tool{
 			`"goal_status":{"type":"string","enum":["active","done","archived"],"description":"update_goal: close or reopen a goal"},` +
 			`"date":{"type":"string","description":"add_expense: the day of the payment; attach_receipt: the receipt's date; YYYY-MM-DD"},` +
 			`"note":{"type":"string","description":"add_expense: an optional note"},` +
+			`"memory_line":{"type":"string","description":"remember: one short sentence about the user or how they want answers, in their language (never an account number, a password or anything they did not say)"},` +
 			`"income":{"type":"boolean","description":"add_expense: true when the money came in (a refund, a gift, cash wages); the amount stays positive"},` +
 			`"add_anyway":{"type":"boolean","description":"add_expense: true only after the tool said a payment of this amount exists already and the user confirmed it is a second one"},` +
 			`"shared_group":{"type":"string","description":"add_to_shared_group, split_expense: the shared group's name"},` +

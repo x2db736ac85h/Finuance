@@ -521,6 +521,8 @@ type Querier interface {
 	SearchAdvice(ctx context.Context, arg SearchAdviceParams) ([]SearchAdviceRow, error)
 	// Mirror a manual transfer decision into tx_annotations (it survives delete + re-import).
 	SetAnnotationTransfer(ctx context.Context, arg SetAnnotationTransferParams) error
+	// The memory alone (Phase 27): the other settings of a new row take their defaults.
+	SetAssistantMemory(ctx context.Context, arg SetAssistantMemoryParams) error
 	// Budgets are global per category (legacy behaviour).
 	SetBudget(ctx context.Context, arg SetBudgetParams) error
 	// name_n now means category_id (NULL: uncategorised).

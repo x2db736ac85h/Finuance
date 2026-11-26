@@ -26,6 +26,11 @@ The assistant's part of the maintainer's list of 2026-11-26.
   newest first; a change whose rows were changed since is left and counted.
 - The assistant's rules now say exactly what it can propose and what it cannot do (and where you
   do that yourself), and tell categories, groups and shared groups apart.
+- **A memory for the assistant** (ADR 0046): a note of yours in Settings → General (at most 4,000
+  characters, about 1,000 tokens) that goes with every question while it is on; switch it off or
+  clear it there. The assistant can propose a line to remember; with *Automatic memories* (its
+  settings, off by default) the line is added without a click. For a cloud model the note is
+  masked like everything else, and the agreement names it. Migration 00034 (three columns).
 - **Thinking level beside Send**: a button with the levels the chosen model has (none for a model
   without a control). An administrator can keep the level for everyone (Administration →
   Assistant → *People may change the thinking level*); questions then run at the model's default.

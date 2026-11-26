@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { Schemas } from '../api/client';
 import { ApiError } from '../api/client';
-import { applyProposal, missingTarget, type Proposal } from '../api/hooks/assistant';
+import { addMemoryLine, applyProposal, MEMORY_MAX_CHARS, missingTarget, type Proposal } from '../api/hooks/assistant';
 import { API, server } from '../test/server';
 import { proposalTitle } from './Proposal';
 
@@ -404,5 +404,60 @@ describe('the opposites of set_group and set_category (Phase 27)', () => {
       ['POST', '/transactions/bulk', '00000000000000b1', { ids: ['1', '2'], set: { groupId: null } }],
       ['POST', '/transactions/bulk', '00000000000000b2', { ids: ['3'], category: { reset: true } }],
     ]);
+  });
+});
+
+describe('the assistant’s memory (ADR 0046)', () => {
+  it('adds a line once, to an empty note or under what is there, and says when the note is full', () => {
+    expect(addMemoryLine('', '  Prefers   Polish ')).toBe('Prefers Polish');
+    expect(addMemoryLine('Paid on the 10th.', 'Prefers Polish')).toBe('Paid on the 10th.\nPrefers Polish');
+    // the same line again (a proposal applied a second time after a reload) changes nothing
+    expect(addMemoryLine('Paid on the 10th.\nPrefers Polish', 'prefers polish')).toBe(
+      'Paid on the 10th.\nPrefers Polish',
+    );
+    expect(addMemoryLine('Kept', '   ')).toBe('Kept');
+    expect(() => addMemoryLine('x'.repeat(MEMORY_MAX_CHARS - 3), 'too long')).toThrow(/memory is full/);
+  });
+
+  it('a remember proposal is named by its line and goes into the settings, not through a data request', async () => {
+    const p = base({
+      key: '00000000000000c1',
+      action: 'remember',
+      memoryLine: 'Prefers answers in Polish',
+      matched: 1,
+    });
+    expect(proposalTitle(p)).toBe('Remember: “Prefers answers in Polish”');
+    expect(missingTarget(p)).toBeNull();
+    expect(missingTarget(base({ action: 'remember', memoryLine: ' ' }))).toBe('the line to remember');
+    let stored: Schemas['AssistantSettings'] = {
+      retentionDays: 2,
+      cloudConsent: [],
+      memory: { enabled: true, auto: false, text: 'Paid on the 10th.' },
+    };
+    const puts: { headers: (string | null)[]; body: Schemas['AssistantSettings'] }[] = [];
+    server.use(
+      http.get(`${API}/assistant/settings`, () => HttpResponse.json(stored)),
+      http.put(`${API}/assistant/settings`, async ({ request }) => {
+        const body = (await request.json()) as Schemas['AssistantSettings'];
+        puts.push({
+          headers: [request.headers.get('X-Assistant-Chat'), request.headers.get('X-Assistant-Auto')],
+          body,
+        });
+        stored = body;
+        return HttpResponse.json(stored);
+      }),
+    );
+    await applyProposal(p, CHAT, true);
+    expect(puts).toHaveLength(1);
+    // the person's other settings travel unchanged; no header marks it as a change to their data
+    expect(puts[0]?.body).toEqual({
+      retentionDays: 2,
+      cloudConsent: [],
+      memory: { enabled: true, auto: false, text: 'Paid on the 10th.\nPrefers answers in Polish' },
+    });
+    expect(puts[0]?.headers).toEqual([null, null]);
+    // applied again: nothing is sent
+    await applyProposal(p, CHAT);
+    expect(puts).toHaveLength(1);
   });
 });
