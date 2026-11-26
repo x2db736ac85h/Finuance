@@ -902,6 +902,22 @@ simulator's image.
 **On Kubernetes:** [`deploy/environments/lab`](../deploy/environments/lab) says what a cluster adds.
 The rehearsal's `lab` stage is the working example.
 
+**On Google Cloud** (prepared, not yet run; ADR 0047): [gcp.md](gcp.md) is the whole procedure,
+from the one-time steps to `make gcp-verify-empty`. In short:
+
+| | |
+|---|---|
+| Up | `make gcp-up`, the DNS record, the overlay's two files in `finuance-env/gke-lab/`, `ENV_DEPLOY_KEY=<file> make gcp-install` |
+| Check it | `TARGET_BASE=https://<host> TARGET_NAMESPACE=finuance-lab tools/rehearsal.sh target` (smoke, stream, egress, pod kills) |
+| Reach the cluster | `gcloud container clusters get-credentials finuance-lab --region <region> --dns-endpoint` (no address endpoint) |
+| Down | `make gcp-down` (the lab's namespaces first, so the load balancer and the disk go too), then `make gcp-verify-empty` |
+| Billed while up | the cluster's pods, the load balancer, the NAT and its address, the zone, Vertex AI's tokens; check the billing report afterwards |
+
+If `make gcp-down` stops at "namespaces are still being deleted", a finalizer is waiting on
+Google (usually the Gateway's load balancer): run it again a few minutes later. If the cluster was
+already gone, `make gcp-verify-empty` lists what Google left behind; delete it by name in the
+console or with `gcloud`, then run `make gcp-verify-empty` again.
+
 **When something is off:**
 
 - **The simulator restarts and logs "not a lab":** its target's `GET /meta` does not report

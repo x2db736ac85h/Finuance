@@ -78,6 +78,8 @@ jobs:
         run: tools/rehearsal.sh logs
       - name: NetworkPolicies
         run: tools/rehearsal.sh netpol
+      - name: Egress (the app's pods can't reach outside the cluster)
+        run: tools/rehearsal.sh egress
       - name: Assistant stream through Traefik
         run: tools/rehearsal.sh sse
       - name: Pod kills under load (k6, zero failed requests)
@@ -86,6 +88,8 @@ jobs:
         run: tools/rehearsal.sh restore
       - name: Limits at the ingress (normal use passes, a burst of sign-ins gets 429)
         run: tools/rehearsal.sh limits
+      - name: The chart's Gateway routes (Traefik as the implementation; smoke, stream, HSTS)
+        run: tools/rehearsal.sh gateway
       - name: Image signatures (policy-controller admits the released images, refuses the rest)
         run: tools/rehearsal.sh signatures
       - name: The lab (the simulator at 3x for five minutes, no 5xx, its traffic synthetic)

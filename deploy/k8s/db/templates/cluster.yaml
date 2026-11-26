@@ -15,6 +15,13 @@ spec:
   primaryUpdateStrategy: unsupervised
   # No superuser secret: nothing logs in as postgres (kubectl cnpg psql uses the pod's socket).
   enableSuperuserAccess: false
+  {{- with $c.serviceAccountAnnotations }}
+  # the instances' service account, e.g. workload identity for a Google Cloud Storage backup
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        {{- toYaml . | nindent 8 }}
+  {{- end }}
   postgresql:
     parameters:
       {{- range $k, $v := $c.parameters }}

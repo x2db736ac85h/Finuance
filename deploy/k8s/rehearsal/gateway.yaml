@@ -1,0 +1,35 @@
+# The rehearsal's Gateway (tools/rehearsal.sh gateway, PLAN 27.1): laid out as on Google Cloud
+# (deploy/environments/gke-lab/platform/gateway.yaml), a Gateway in a namespace of its own that
+# admits routes from the app's namespace only, with Traefik as the implementation. Traefik maps a
+# listener to the entry point with the same port: 8443 is the websecure entry point, which kind
+# publishes as https://localhost:8443. The certificate is the rehearsal's own (copied into this
+# namespace by the step).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finuance-gateway
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: finuance
+  namespace: finuance-gateway
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 8443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: finuance-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: finuance

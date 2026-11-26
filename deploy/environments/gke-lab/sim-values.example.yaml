@@ -1,0 +1,17 @@
+# Example of the GKE lab's overlay for the simulator's chart, which lives in the private environment
+# repository (finuance-env: gke-lab/sim-values.yaml, ADR 0023). Both releases of the chart read it:
+# the simulator (after ../lab/sim-values.yaml) and the mock model (after ../lab/mock-values.yaml,
+# which leaves the simulator off, so only the mock's digest matters there). Placeholders name
+# nothing real (lab.example, an address of TEST-NET-3, digests of 'a').
+
+simulator:
+  # the lab's own front door, as a browser reaches it
+  target: https://lab.example
+  # the front door's address (Terraform's `address` output) on 443, besides DNS
+  egress:
+    - cidr: 203.0.113.10/32
+      ports: [443]
+image:
+  digests:
+    sim: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    mock: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -1,0 +1,11 @@
+# On top of traefik-values.yaml for the rehearsal's gateway step (PLAN 27.1): Traefik also as a
+# Gateway API implementation, with its GatewayClass `traefik`. The chart's own default Gateway stays
+# off: the step applies one laid out as on Google Cloud (gateway.yaml). The Ingress provider stays on,
+# so the steps before and after are unchanged.
+providers:
+  kubernetesGateway:
+    enabled: true
+gateway:
+  enabled: false
+gatewayClass:
+  enabled: true

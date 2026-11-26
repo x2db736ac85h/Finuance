@@ -32,6 +32,10 @@ cluster:
   # enablePodMonitor is deprecated since CloudNativePG 1.26). Dashboards and alert rules:
   # deploy/k8s/observability.
   podMonitor: false
+  # Annotations on the instances' service account (CloudNativePG makes it, named after the
+  # cluster), e.g. iam.gke.io/gcp-service-account for a backup to Google Cloud Storage by workload
+  # identity (objectStore.auth gke).
+  serviceAccountAnnotations: {}
 
 roles:
   # Basic-auth secrets (keys username and password), sealed in deploy/environments/<env>/secrets.
@@ -54,7 +58,10 @@ objectStore:
   endpointCA:
     name: ""
     key: ca.crt
-  # A secret with the keys ACCESS_KEY_ID and ACCESS_SECRET_KEY.
+  # How the plugin signs in to the store: "s3" (credentialsSecret's two keys) or "gke" (Google Cloud
+  # Storage, gs://…, with the pods' own identity by workload identity: no key exists).
+  auth: s3
+  # A secret with the keys ACCESS_KEY_ID and ACCESS_SECRET_KEY (auth s3).
   credentialsSecret: finuance-db-backup
   # A key of that secret holding the region, for stores that need one. Empty: none.
   regionKey: ""

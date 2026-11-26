@@ -1,0 +1,24 @@
+# The image admission policy (deploy/k8s/admission), as on the homelab: before anything that starts
+# pods, so every pod of finuance-lab and finuance-sim is checked from the start. GKE Autopilot runs
+# Kubernetes' own ValidatingAdmissionPolicy like any cluster.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: admission-policy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-8"
+spec:
+  project: platform-manifests
+  source:
+    repoURL: https://github.com/x2db736ac85h/Finuance.git
+    targetRevision: main
+    path: deploy/k8s/admission
+  destination:
+    server: https://kubernetes.default.svc
+    # the policy is cluster-scoped; an application needs a namespace its project allows
+    namespace: finuance-gateway
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
