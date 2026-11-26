@@ -47,11 +47,13 @@ export function ThinkButton({ reasoning, value, locked, onChange }: Props) {
   if (!levels.length) return null;
   // a level the model doesn't have (chosen for another model) runs as its default
   const shown = levels.includes(value) ? value : 'auto';
-  if (locked) return <IconButton icon="brain" title="Thinking: set by the administrator" disabled />;
+  if (locked)
+    return <IconButton icon="brain" className="think-btn" title="Thinking: set by the administrator" disabled />;
   return (
     <>
       <IconButton
         icon="brain"
+        className="think-btn"
         title={`Thinking: ${LABEL[shown][0]}`}
         aria-haspopup="menu"
         aria-expanded={pop.open}
