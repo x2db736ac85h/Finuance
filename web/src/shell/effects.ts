@@ -15,12 +15,13 @@ import { NARROW_PX, useUi } from '../stores/uiStore';
 export function useAppearance(): void {
   const themePref = useUi((s) => s.themePref);
   const themeId = useUi((s) => s.themeId);
+  const myThemes = useUi((s) => s.myThemes);
   const scalePref = useUi((s) => s.uiScalePref);
   const step = useUi((s) => s.uiStep);
   const meta = useMeta().data;
   const look = useMemo(
-    () => resolveLook(themeId, meta?.themes ?? [], meta?.defaults.themeId),
-    [themeId, meta?.themes, meta?.defaults.themeId],
+    () => resolveLook(themeId, meta?.themes ?? [], meta?.defaults.themeId, myThemes),
+    [themeId, meta?.themes, meta?.defaults.themeId, myThemes],
   );
   useEffect(() => watchTheme(themePref, document.documentElement, look), [themePref, look]);
   useEffect(() => {

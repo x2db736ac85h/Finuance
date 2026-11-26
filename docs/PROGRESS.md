@@ -1,6 +1,6 @@
 # Progress
 
-**Current phase:** 27 — Google Cloud lab · **Branch:** none yet · **Status:** not started (`/phase-start 27`). Phase 26 is closed: `v0.7.0` released (2026-11-26, approved by the maintainer), verified from outside (both digests' provenance from the tag at `4f4e1ec`) and on the homelab by digest (pull request 105): every application synced and healthy, no alert besides `Watchdog`, no error line.
+**Current phase:** 27 — The corrections of 2026-11-26, then the Google Cloud lab (prepared; its rollout optional) · **Branch:** `phase/27-ui-fixes` (pull request 1) · **Status:** started on 2026-11-26 (the plan approved by the maintainer). Phase 26 is closed: `v0.7.0` released (2026-11-26, approved by the maintainer), verified from outside (both digests' provenance from the tag at `4f4e1ec`) and on the homelab by digest (pull request 105): every application synced and healthy, no alert besides `Watchdog`, no error line.
 
 **Released:** `v0.7.0` (2026-11-26). Phases 0–26 are complete; what each delivered is in [ROADMAP.md](ROADMAP.md) and the [CHANGELOG](../CHANGELOG.md). The detailed record of Phases 0–20 (every task, decision, deviation and session) is kept outside this repository; this file starts again with Phase 21.
 
@@ -46,6 +46,30 @@ Deployment
 - `make check` before every commit; `make test-integration` and the E2E suite before a pull request.
 
 ## Current phase tasks
+
+Phase 27 — The corrections first, then the Google Cloud lab, prepared (PLAN §9, "27.F" and 27.1–27.11). Confirmed on 2026-11-26.
+
+Pull requests (merged by the agent when CI and the local checks are green; the maintainer approves the releases):
+- **1** `phase/27-ui-fixes`: F1, F2, F6, F9, F16, F17, F18, F19.
+- **2** `phase/27-add-and-drop`: F7, F8, F3.
+- **Releases:** `v0.7.1-rc.1`, then `v0.7.1`, the homelab by digest.
+- **3** `phase/27-chat`: F4, F5, F11, F14.
+- **4** `phase/27-assistant-actions`: F10, F12, F13.
+- **5** `phase/27-memory`: F15.
+- **6–8** `phase/27-gcp-chart`, `phase/27-gcp-terraform`, `phase/27-gcp-lab`: 27.1–27.11.
+- **Releases:** `v0.8.0-rc.1`, then `v0.8.0`. **9** `phase/27-close`.
+
+Decisions at the phase start (the maintainer, 2026-11-26): the twenty corrections of the maintainer's list come first; the Google Cloud lab is prepared and its real rollout is optional (the account and its payment are not arranged), so the phase can close without it; PDFs dropped on the assistant are drawn to pictures in the browser with **`pdfjs-dist`** (Apache-2.0, a new dependency, approved; no MIT tool renders a PDF); the assistant's new actions stay proposals a person applies (ADR 0030 stands, no direct writes); two releases, `v0.7.1` and `v0.8.0` (Phase 28's becomes `v0.9.0`); merges and tags approved in advance as in Phase 26.
+
+- [x] 27.0 `.trivyignore` read (the standing first task) — 2026-11-26: empty, nothing to revisit
+- [x] F1 Indigo's dark variant darker — 2026-11-26 (pull request 1): the surfaces of `tokens.css` and `themes.ts` (`bg #13141a`, `panel #181a22`, `elev #1d1f29`, `input #0c0d12`, `border #262935`, and the chart grid's greys to match); text and accents unchanged, so every pair of the contrast contract gained (`themes.test.ts`). Looked at on the lab in dark and light
+- [x] F2 themes as files — 2026-11-26 (pull request 1): `styles/themeFile.ts` (JSON: `format`, `version`, `name`, both variants with exactly the contract's keys, hex colours only, 16 KiB at most); Settings → General: *Export theme*, *Import theme*, the imported ones listed with *Remove*; an imported theme is kept in the person's preferences (`myThemes`, eight at most, checked again whenever the document is read) and resolved before an administrator's of the same id; low-contrast pairs are counted in a warning, not refused. `themeFile.test.ts`, a settings test (import, applied, saved, removed), the preferences test
+- [x] F6 from Settings to the transactions — 2026-11-26 (pull request 1): the cause was the title bar's button doing "toggle the charts pane" whenever the mode read "table", which it does inside Settings and Administration; it now navigates from any page that is not a view (`away`), and neither button looks pressed there. A shell test clicks both from Settings and Shared
+- [x] F9 the History button — 2026-11-26 (pull request 1): always the word *History*, never cut (the model's name gives way); in the list the summary on top in bold, the date under it
+- [x] F16 a connection's models in its place — 2026-11-26 (pull request 1): the panel opens inside the row of the connection clicked, the two framed as one block
+- [x] F17 the export's formats — 2026-11-26 (pull request 1): *Export* opens a menu: CSV (the server's stream, as before), TXT (an aligned table) and JSON (objects keyed by the header), the two others made from the CSV in the browser, so all three hold the same rows (`lib/exportFormats.ts` with tests; the E2E case downloads CSV and JSON)
+- [x] F18 the Shared page — 2026-11-26 (pull request 1): the *Friends* button gone; two cards on top (the scrollable list; the code with *Add a friend* under it); *Per year* with one step curve of what all groups cost over time (`shared/SpendCurve.tsx`, from the timeline's own figures, groups in another currency left out); the timeline's switch: all, personal, shared, with icons. Tests for the order, the curve and the switch
+- [x] F19 `T` and `O` — 2026-11-26 (pull request 1): the transactions and the overview from any page, in the shortcuts window; Ctrl/⌘ O still opens files
 
 Phase 26 — Cloud AI, with the interface corrections first (PLAN §9, "26.U" and 26.0–26.9). Confirmed on 2026-11-25.
 
@@ -351,6 +375,9 @@ In `docs/PLAN.md` §9, each with its findings, decisions, tasks, acceptance crit
 ## Deviations from the plan (with reason)
 
 - 26.7 and the gate (2026-11-25, the maintainer): the Vertex AI evals moved to the Backlog, so the gate's first acceptance criterion (the suite completes against Gemini on Vertex) is not shown, and neither is 26.9's first real run. Everything else of the phase is shown without Google, against the mock's Vertex mode.
+- 27.F, F2: an imported theme is checked in the browser, at import and every time the preferences are read, not on the server as first planned: the preferences document is the web app's own (the server stores it without reading it), and the colours only ever reach that person's own browser, applied with `style.setProperty` after the hex check.
+- 27.F, F18: the timeline's switch is all / personal / shared (by where a group lives), not all / personal / trips: a shared group can also be a household or an event.
+- 27.F, F17: TXT and JSON are made in the browser from the server's CSV, so their values are the CSV's text (amounts like `-79,99`), not numbers.
 - 26.U, U7: the archive records a category's sources (labels, rules, bank names, budget, goals), not its transactions as first planned: a transaction's category is derived from those (ADR 0017), so a per-transaction record would repeat them and go stale with the next import. `DELETE /categories/{id}` keeps deleting a category in use (the API's other clients rely on it); the web app deletes only from the archived list. Category changes are not in the activity log today, so archive and unarchive add no events either. The data export leaves archived categories out.
 - 26.U, U12: no "discard your input?" question: the form is a dialog now, which can't be left by clicking another connection, and Cancel is explicit. The Google card is shown but can't be chosen until 26.2.
 - 26.U, U11: the walk's dialogs are the three reachable without more fixtures (a new shared group, group settings, archive a category), besides the three of pull request 1's inset case; Administration was walked by hand, not in the E2E project for people.
@@ -460,6 +487,7 @@ Still ideas
 
 ## Session log
 
+- 2026-11-26 (evening) — The maintainer listed twenty corrections for Phase 27 and asked for the Google Cloud lab to be prepared with its rollout optional. Planned as F1–F19 and 27.1–27.11 with four decisions (pdf.js, proposals, two releases, approvals as in Phase 26). Pull request 1: the darker theme, themes as files, the navigation fix, History, the models panel, the export's formats, the Shared page, `T` and `O`. Next: pull request 2.
 - 2026-11-26 (later) — Pull request 102 merged (the close). `v0.7.0-rc.3` approved, released and on the homelab (104); `v0.7.0` tagged on the same commit, approved, released and on the homelab (105). Phase 26 closed; the maintainer's approval in advance ended with it. Next: `/phase-start 27`.
 - 2026-11-26 — The evals ran on Anthropic's API in place of Vertex AI (Haiku 5.5 69 of 72, Sonnet 5.5 and Opus 5.5 72 of 72); a provider's models to tick in the connection form (pull request 103); `docs/assistant.md` says what each cloud provider keeps (Anthropic, OpenAI, routers such as OpenRouter; Vertex AI apart). The maintainer read the data terms. The close: `make test-integration` green (43 packages). Next: pull request 102, `v0.7.0-rc.3`, `v0.7.0`.
 - 2026-11-25 (evening) — The maintainer found on the lab that current Claude models answered `400` (issue 97, with three smaller findings); fixed in pull request 98 and proven against Anthropic's API through the lab's own connection (Haiku 5.5: tools and plan mode, thinking auto, off and high). The maintainer approved `v0.6.1`, `v0.7.0-rc.1` and `v0.7.0-rc.2`: `v0.6.1` on the homelab (99), then `v0.7.0-rc.2` (100); `rc.1` skipped. The README brought up to date at the maintainer's request (101). The maintainer then moved the Vertex evals (26.7) to the Backlog; the documents say the Vertex AI path is untested against Google.

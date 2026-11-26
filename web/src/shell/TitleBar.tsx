@@ -31,10 +31,22 @@ type Props = {
   onToggleMode: (mode: 'table' | 'ov') => void;
   /** On the Shared page (/shared…). */
   inShared: boolean;
+  /** On a page that is no view of the transactions: Shared, Settings or Administration. */
+  away: boolean;
   onToggleShared: () => void;
 };
 
-export function TitleBar({ user, viewId, hasData, searchRef, mode, onToggleMode, inShared, onToggleShared }: Props) {
+export function TitleBar({
+  user,
+  viewId,
+  hasData,
+  searchRef,
+  mode,
+  onToggleMode,
+  inShared,
+  away,
+  onToggleShared,
+}: Props) {
   const vizOpen = useUi((s) => s.vizOpen);
   const sbShown = useUi(sidebarShown);
   const aiOpen = useUi((s) => s.ai.open);
@@ -59,12 +71,13 @@ export function TitleBar({ user, viewId, hasData, searchRef, mode, onToggleMode,
       />
       <IconButton
         icon="chart"
-        title="Charts pane (list view)"
-        on={mode !== 'ov' && vizOpen && !inShared}
-        aria-pressed={mode !== 'ov' && vizOpen && !inShared}
+        title="Transactions, with the charts pane (T)"
+        on={mode !== 'ov' && vizOpen && !away}
+        aria-pressed={mode !== 'ov' && vizOpen && !away}
         onClick={() => {
-          // from the overview or the Shared page: back to the table with the pane shown
-          if (mode === 'ov' || inShared) {
+          // from the overview, the Shared page, Settings or Administration: back to the table with
+          // the pane shown (in Settings the mode reads "table", so this used to do nothing)
+          if (mode === 'ov' || away) {
             onToggleMode('table');
             showViz();
           } else toggleViz();
@@ -73,11 +86,11 @@ export function TitleBar({ user, viewId, hasData, searchRef, mode, onToggleMode,
       {features?.overview !== false && (
         <IconButton
           icon="dash"
-          title="Personal finance overview"
-          on={mode === 'ov' && !inShared}
-          aria-pressed={mode === 'ov' && !inShared}
+          title="Personal finance overview (O)"
+          on={mode === 'ov' && !away}
+          aria-pressed={mode === 'ov' && !away}
           onClick={() => {
-            onToggleMode(mode === 'ov' && !inShared ? 'table' : 'ov');
+            onToggleMode(mode === 'ov' && !away ? 'table' : 'ov');
           }}
         />
       )}

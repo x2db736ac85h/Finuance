@@ -56,7 +56,7 @@ describe('friends', () => {
   it('shows a code with a countdown, adds a friend by code and removes one', async () => {
     const user = userEvent.setup();
     renderApp('/shared');
-    await user.click(await screen.findByRole('button', { name: 'Show my code' }));
+    await user.click(await screen.findByRole('button', { name: 'Generate my friend code' }));
     expect((await screen.findByLabelText('Your friend code')).textContent).toBe('K7Q4-9MZD');
     expect(screen.getByRole('timer').textContent).toMatch(/^1[45]:\d\d left$/);
 
@@ -89,7 +89,7 @@ describe('friends', () => {
     renderApp('/shared');
     expect(await screen.findByText('A display name first')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Set yours in Profile' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Show my code' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Generate my friend code' })).toBeNull();
   });
 
   it('is not offered when the instance switched friends off', async () => {
@@ -115,7 +115,7 @@ describe('friends', () => {
   it('is the whole page on an instance with friends but without shared groups', async () => {
     db.features = { ...db.features, sharedGroups: false };
     const { router } = renderApp('/shared');
-    expect(await screen.findByRole('button', { name: 'Show my code' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Generate my friend code' })).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Timeline' })).toBeNull();
     expect(router.state.location.pathname).toBe('/shared');
   });

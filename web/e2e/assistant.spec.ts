@@ -66,7 +66,7 @@ test('answers with a lookup streamed in pieces and shows it in the table', async
   await page.reload();
   await expect(page.getByRole('complementary', { name: 'Assistant' })).toBeVisible();
   await page.locator('.chat-ttl').click();
-  await expect(page.locator('.cm-s', { hasText: 'What did I pay at "kino"?' })).toBeVisible();
+  await expect(page.locator('.cm-t', { hasText: 'What did I pay at "kino"?' })).toBeVisible();
 
   expect(seen.foreign).toEqual([]);
   expect(seen.errors).toEqual([]);
@@ -298,5 +298,6 @@ test('a digest asked for now is written by the worker and opens from the bell (A
   const open = page.getByRole('complementary', { name: 'Assistant' });
   await expect(open.getByText(/^Write my daily digest for today/)).toBeVisible();
   await expect(open.locator('.mdt table')).toBeVisible();
-  await expect(open.locator('.chat-ttl')).toContainText('Daily digest ·');
+  await expect(open.locator('.chat-ttl')).toHaveText('History');
+  await expect(open.locator('.cm-i.on .cm-t')).toContainText('Daily digest ·');
 });

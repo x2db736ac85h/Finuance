@@ -1,3 +1,4 @@
+import { BUILTIN_THEMES } from '../styles/themes';
 import { describe, expect, it } from 'vitest';
 
 import { cardOrder, parsePrefs } from './prefs';
@@ -93,6 +94,13 @@ describe('parsePrefs', () => {
     expect(parsePrefs({ themeId: '' }).themeId).toBe('');
     expect(parsePrefs({ themeId: 'Bad Theme' }).themeId).toBeUndefined();
     expect(parsePrefs({ themeId: 7 }).themeId).toBeUndefined();
+    // imported themes (Phase 27): kept when they are colours only, dropped otherwise
+    const tokens = BUILTIN_THEMES[0]?.tokens;
+    expect(parsePrefs({ myThemes: [{ id: 'my-a', name: 'A', tokens }] }).myThemes).toEqual([
+      { id: 'my-a', name: 'A', tokens },
+    ]);
+    expect(parsePrefs({ myThemes: [{ id: 'my-a', name: 'A', tokens: { dark: { bg: 'red' } } }] }).myThemes).toEqual([]);
+    expect(parsePrefs({}).myThemes).toBeUndefined();
   });
 
   it('returns nothing for a non-object', () => {

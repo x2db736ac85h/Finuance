@@ -14,11 +14,13 @@ import { fmtDay } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
 import { fmtInt, fmtShare, plural } from '../lib/format';
 import { Button } from '../ui/Button';
-import { Select } from '../ui/inputs';
+import { Icon } from '../ui/Icon';
+import type { IconName } from '../ui/icons';
 import { useScrollToHash } from '../lib/useScrollToHash';
 import { ShareDialog } from './dialogs';
 import { FriendsPanel } from './Friends';
 import { GroupPage } from './GroupPage';
+import { SpendCurve } from './SpendCurve';
 import { hintText, TIMELINE_KIND_LABEL } from './text';
 import { sharedPath, txPath } from '../lib/paths';
 import { useViews, viewOf } from '../stores/viewStore';
@@ -50,7 +52,13 @@ function FriendsOnly() {
   );
 }
 
-type KindFilter = 'all' | TimelineGroup['kind'];
+/** The timeline's three positions (Phase 27): everything, your own groups, the ones shared with friends. */
+type Show = 'all' | TimelineGroup['source'];
+const SHOW: readonly { id: Show; label: string; icon: IconName }[] = [
+  { id: 'all', label: 'All', icon: 'layers' },
+  { id: 'personal', label: 'Personal', icon: 'tag' },
+  { id: 'shared', label: 'Shared', icon: 'users' },
+];
 
 function span(g: TimelineGroup): string {
   if (!g.firstOn || !g.lastOn) return 'no expenses yet';
@@ -62,12 +70,12 @@ function Timeline({ friends }: { friends: boolean }) {
   useScrollToHash(tl.isSuccess);
   const shared = useSharedGroups();
   const navigate = useNavigate();
-  const [kind, setKind] = useState<KindFilter>('all');
+  const [show, setShow] = useState<Show>('all');
   const [creating, setCreating] = useState(false);
   const invites = (shared.data ?? []).filter((g) => g.me.state === 'invited');
   const data = tl.data;
-  const groups = (data?.groups ?? []).filter((g) => kind === 'all' || g.kind === kind);
-  const kinds = [...new Set((data?.groups ?? []).map((g) => g.kind))];
+  const groups = (data?.groups ?? []).filter((g) => show === 'all' || g.source === show);
+  const both = new Set((data?.groups ?? []).map((g) => g.source)).size > 1;
   const byId = new Map((data?.groups ?? []).map((g) => [g.id, g]));
   // A shared group opens its page; a personal group opens the table showing exactly its
   // transactions, whenever they were (Phase 26, U9: it used to be a name with nothing behind it).
@@ -94,17 +102,6 @@ function Timeline({ friends }: { friends: boolean }) {
           <h1>Shared</h1>
           <span className="muted">Trips and groups, yours and shared with friends</span>
           <span className="sh-tools">
-            {friends && (
-              <Button
-                size="sm"
-                icon="users"
-                onClick={() => {
-                  void navigate({ hash: '#friends' });
-                }}
-              >
-                Friends
-              </Button>
-            )}
             <Button
               size="sm"
               icon="plus"
@@ -118,6 +115,7 @@ function Timeline({ friends }: { friends: boolean }) {
         </div>
       </header>
       {tl.isError && <p className="set-err">{errorMessage(tl.error)}</p>}
+      {friends && <FriendsPanel />}
       {invites.length > 0 && (
         <section className="sh-invite" aria-label="Invitations">
           <h2>Invitations</h2>
@@ -151,41 +149,52 @@ function Timeline({ friends }: { friends: boolean }) {
       {data && data.years.length > 0 && (
         <section className="sh-years" aria-label="Per year">
           <h2>Per year</h2>
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th className="num">Groups</th>
-                <th className="num">Days</th>
-                <th className="num">Spent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.years.map((y) => (
-                <tr key={y.year}>
-                  <td>{y.year}</td>
-                  <td className="num">{fmtInt(y.groups)}</td>
-                  <td className="num">{fmtInt(y.days)}</td>
-                  <td className="num">{money(y.spentMinor, y.currency)}</td>
+          <div className="sh-years-in">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th className="num">Groups</th>
+                  <th className="num">Days</th>
+                  <th className="num">Spent</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.years.map((y) => (
+                  <tr key={y.year}>
+                    <td>{y.year}</td>
+                    <td className="num">{fmtInt(y.groups)}</td>
+                    <td className="num">{fmtInt(y.days)}</td>
+                    <td className="num">{money(y.spentMinor, y.currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <SpendCurve groups={data.groups} currency={data.years[0]?.currency ?? ''} />
+          </div>
         </section>
       )}
       <section className="sh-timeline" aria-label="Timeline">
         <div className="sh-bal-h">
           <h2>Timeline</h2>
-          {kinds.length > 1 && (
-            <Select
-              aria-label="Show"
-              value={kind}
-              onChange={setKind}
-              options={[
-                { value: 'all', label: 'Every kind' },
-                ...kinds.map((k) => ({ value: k, label: TIMELINE_KIND_LABEL[k] })),
-              ]}
-            />
+          {both && (
+            <span className="seg seg-l sh-show" role="radiogroup" aria-label="Show">
+              {SHOW.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={show === o.id}
+                  className={show === o.id ? 'on' : undefined}
+                  onClick={() => {
+                    setShow(o.id);
+                  }}
+                >
+                  <Icon name={o.icon} />
+                  {o.label}
+                </button>
+              ))}
+            </span>
           )}
         </div>
         {data && !data.groups.length && (
@@ -243,7 +252,6 @@ function Timeline({ friends }: { friends: boolean }) {
           </p>
         )}
       </section>
-      {friends && <FriendsPanel />}
       {creating && (
         <ShareDialog
           onClose={() => {

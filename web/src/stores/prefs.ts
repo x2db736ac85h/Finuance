@@ -7,6 +7,7 @@
 
 import { MANUAL_SCALES, SIZE_STEPS, type SizeStep, type UiScalePref } from '../styles/scale';
 import type { ThemePref } from '../styles/theme';
+import { parseMyThemes, type MyTheme } from '../styles/themeFile';
 
 /** Grid column id (backend ColumnRegistry name, e.g. bookedOn, payee, amount). */
 export type Column = string;
@@ -67,6 +68,8 @@ export type PrefsDoc = {
   theme: ThemePref;
   /** Colour theme (Phase 19): a built-in or approved theme id; '' = the instance's default. */
   themeId: string;
+  /** Colour themes this person imported from files (Phase 27); colours only, checked when read. */
+  myThemes?: MyTheme[];
   ui: UiScalePref;
   /** The size slider's step around the auto size (−2…2; Phase 20, 20.15), used when `ui` is auto. */
   uiStep: SizeStep;
@@ -209,6 +212,7 @@ export function parsePrefs(raw: unknown): ParsedPrefs {
   if (theme) out.theme = theme;
   if (typeof raw['themeId'] === 'string' && /^([a-z0-9][a-z0-9-]{0,31})?$/.test(raw['themeId']))
     out.themeId = raw['themeId'];
+  if (raw['myThemes'] !== undefined) out.myThemes = parseMyThemes(raw['myThemes']);
   const ui = parseScale(raw['ui']);
   if (ui !== undefined) out.ui = ui;
   if ((SIZE_STEPS as readonly unknown[]).includes(raw['uiStep'])) out.uiStep = raw['uiStep'] as SizeStep;

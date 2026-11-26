@@ -76,7 +76,16 @@ export function Connections() {
       {list.isError && <p className="set-err">{errorMessage(list.error)}</p>}
       <ul className="set-list" aria-label="Connections">
         {list.data?.map((c) => (
-          <li key={c.name} className={open && open.kind !== 'add' && open.name === c.name ? 'on' : undefined}>
+          <li
+            key={c.name}
+            className={
+              open?.kind === 'models' && open.name === c.name
+                ? 'on with-panel'
+                : open && open.kind !== 'add' && open.name === c.name
+                  ? 'on'
+                  : undefined
+            }
+          >
             <div className="set-li-main">
               <b>{c.label}</b>
               <span className="tag">{providerTag(c)}</span>
@@ -125,20 +134,24 @@ export function Connections() {
                 </Button>
               </>
             )}
+            {/* its models open right under the connection they belong to, inside its own frame
+                (they used to open under the whole list, Phase 27) */}
+            {open?.kind === 'models' && open.name === c.name && (
+              <div className="conn-panel">
+                <ConnectionControls
+                  // by name only: a save refetches the list with a new version, and remounting would
+                  // drop the save's confirmation (the version is read from the latest list when saving)
+                  key={c.name}
+                  connection={c}
+                  onDone={() => {
+                    setOpen(null);
+                  }}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>
-      {open?.kind === 'models' && named && (
-        <ConnectionControls
-          // by name only: a save refetches the list with a new version, and remounting would drop
-          // the save's confirmation (the version is read from the latest list when saving)
-          key={named.name}
-          connection={named}
-          onDone={() => {
-            setOpen(null);
-          }}
-        />
-      )}
       <div className="set-actions">
         <Button
           variant="primary"

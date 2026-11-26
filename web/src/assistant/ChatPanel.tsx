@@ -512,14 +512,16 @@ function ChatMenu({ enabled }: { enabled: boolean }) {
       <button
         type="button"
         className="chat-ttl"
-        title="Recent chats"
+        title={title ? `Recent chats · this one: ${title}` : 'Recent chats'}
+        aria-label="History: recent chats"
         aria-expanded={state === 'open'}
         onClick={() => {
           setState(state === 'open' ? 'shut' : 'open');
         }}
       >
         <Icon name="ai" />
-        <span>{title ? title : 'Assistant'}</span>
+        {/* always the same word, never cut: the chat's own title is in the list (Phase 27) */}
+        <span>History</span>
         <Icon name="chev" className="chev" />
       </button>
       <div className="chat-menu">
@@ -548,7 +550,10 @@ function ChatMenu({ enabled }: { enabled: boolean }) {
                   if (e.key === 'Enter') e.currentTarget.click();
                 }}
               >
-                <div className="cm-t">{fmtDateTime(c.updatedAt)}</div>
+                {/* what it was about on top, when underneath */}
+                <div className="cm-t">
+                  {c.kind === 'digest' && <span className="tag">digest</span>} {c.title || '…'}
+                </div>
                 <IconButton
                   icon="x"
                   size="sm"
@@ -562,9 +567,7 @@ function ChatMenu({ enabled }: { enabled: boolean }) {
                     });
                   }}
                 />
-                <div className="cm-s">
-                  {c.kind === 'digest' && <span className="tag">digest</span>} {c.title || '…'}
-                </div>
+                <div className="cm-s">{fmtDateTime(c.updatedAt)}</div>
               </div>
             ))
           ) : (

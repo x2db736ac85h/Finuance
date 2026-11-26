@@ -28,14 +28,14 @@ export const BUILTIN_THEMES: readonly BuiltinTheme[] = [
   {
     id: 'indigo',
     name: 'Indigo',
-    description: 'The original look: violet accents on neutral grey.',
+    description: 'The default look: violet accents on deep blue-black.',
     tokens: {
       dark: {
-        bg: '#1e1e1e',
-        panel: '#232325',
-        elev: '#26262a',
-        input: '#141416',
-        border: '#2b2b2f',
+        bg: '#13141a',
+        panel: '#181a22',
+        elev: '#1d1f29',
+        input: '#0c0d12',
+        border: '#262935',
         text: '#d6d6d9',
         muted: '#919198',
         accent: '#9789f7',

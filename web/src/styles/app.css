@@ -3375,6 +3375,8 @@ body.has-qbar .toast {
   border-radius: 0.375rem;
   cursor: pointer;
   white-space: nowrap;
+  /* the word is shown whole, however narrow the panel: the model's name gives way instead */
+  flex: none;
 }
 .chat-ttl:hover,
 .chat-hist.open .chat-ttl {
@@ -3446,6 +3448,9 @@ body.has-qbar .toast {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .cm-t span {
   font: 0.68rem var(--mono);
@@ -3454,11 +3459,9 @@ body.has-qbar .toast {
 }
 .cm-s {
   grid-column: 1 / span 2;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--muted);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .cm-i .ib {
   opacity: 0;

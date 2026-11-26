@@ -3,15 +3,19 @@
 // (`QuickAppearance`, Phase 26: the current theme with a dark-mode switch on its line, and a plain
 // slider). The size is a slider around Auto (Phase 20, 20.15).
 
-import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useMeta } from '../api/hooks/me';
 import { fmtPct } from '../lib/format';
 import { SIZE_STEPS, sliderStep, uiScale, type SizeStep } from '../styles/scale';
 import { LIGHT_QUERY, resolveLook, resolveTheme, type ThemePref } from '../styles/theme';
+import { MY_THEMES_MAX, parseThemeFile, THEME_FILE_MAX_BYTES, themeFileName, themeFileText } from '../styles/themeFile';
 import { BUILTIN_THEMES, type ThemeTokens } from '../styles/themes';
 import { useUi } from '../stores/uiStore';
+import { saveBlob } from '../table/Toolbar';
+import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
+import { toast } from '../ui/toastStore';
 
 const THEMES: [ThemePref, string][] = [
   ['system', 'System'],
@@ -66,10 +70,12 @@ export function ThemePicker({ compact = false, aside }: { compact?: boolean; asi
   const labelId = useId();
   const [open, setOpen] = useState(false);
   const themeId = useUi((s) => s.themeId);
+  const myThemes = useUi((s) => s.myThemes);
   const { setThemeId } = useUi.getState();
   const meta = useMeta().data;
   const choices: ThemeChoice[] = [
     ...BUILTIN_THEMES,
+    ...myThemes.map((t) => ({ id: t.id, name: t.name, description: 'Imported by you', tokens: t.tokens })),
     ...(meta?.themes ?? []).map((t) => ({
       id: t.id,
       name: t.name,
@@ -77,7 +83,7 @@ export function ThemePicker({ compact = false, aside }: { compact?: boolean; asi
       tokens: t.tokens,
     })),
   ];
-  const current = resolveLook(themeId, meta?.themes ?? [], meta?.defaults.themeId).id;
+  const current = resolveLook(themeId, meta?.themes ?? [], meta?.defaults.themeId, myThemes).id;
   const cards = (
     <div className={compact ? 'theme-cards compact' : 'theme-cards'} role="radiogroup" aria-labelledby={labelId}>
       {choices.map((t) => (
@@ -238,6 +244,122 @@ export function QuickAppearance() {
 }
 
 /** Settings → General: every theme, System/Dark/Light and the labelled slider. */
+/**
+ * A theme as a file (Phase 27): save the one in use, read one from somebody else. An imported theme
+ * is this person's alone (it is kept with their preferences) and sets colours only.
+ */
+function ThemeFiles() {
+  const themeId = useUi((s) => s.themeId);
+  const myThemes = useUi((s) => s.myThemes);
+  const meta = useMeta().data;
+  const input = useRef<HTMLInputElement>(null);
+  const [problems, setProblems] = useState<string[]>([]);
+  const all: ThemeChoice[] = [
+    ...BUILTIN_THEMES,
+    ...myThemes.map((t) => ({ ...t, description: '' })),
+    ...(meta?.themes ?? []).map((t) => ({ id: t.id, name: t.name, description: '', tokens: t.tokens })),
+  ];
+  const currentId = resolveLook(themeId, meta?.themes ?? [], meta?.defaults.themeId, myThemes).id;
+  const current = all.find((t) => t.id === currentId) ?? BUILTIN_THEMES[0];
+  const read = async (file: File) => {
+    if (file.size > THEME_FILE_MAX_BYTES) {
+      setProblems(['The file is too large to be a theme.']);
+      return;
+    }
+    const r = parseThemeFile(await file.text());
+    if (!r.ok) {
+      setProblems(r.problems);
+      return;
+    }
+    if (myThemes.length >= MY_THEMES_MAX) {
+      setProblems([`You keep at most ${String(MY_THEMES_MAX)} imported themes. Remove one first.`]);
+      return;
+    }
+    setProblems([]);
+    useUi.getState().addMyTheme(r.name, r.tokens);
+    toast(
+      r.lowContrast
+        ? `Imported ${r.name}. ${String(r.lowContrast)} of its text colours are hard to read on their background.`
+        : `Imported the theme ${r.name}`,
+    );
+  };
+  return (
+    <div className="st-col theme-files">
+      <div className="set-actions">
+        <Button
+          icon="download"
+          onClick={() => {
+            if (!current) return;
+            saveBlob(
+              new Blob([themeFileText(current.name, current.tokens)], { type: 'application/json' }),
+              themeFileName(current.name),
+            );
+          }}
+        >
+          Export theme
+        </Button>
+        <Button
+          icon="upload"
+          onClick={() => {
+            input.current?.click();
+          }}
+        >
+          Import theme
+        </Button>
+        <input
+          ref={input}
+          type="file"
+          accept=".json,application/json"
+          className="sr-only"
+          aria-label="Theme file"
+          tabIndex={-1}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (f) void read(f);
+          }}
+        />
+      </div>
+      <p className="hint">
+        A theme file holds colours only, for the dark and the light variant. An imported theme is yours alone.
+      </p>
+      {problems.length > 0 && (
+        <div className="set-err" role="alert">
+          This file can’t be used as a theme:
+          <ul>
+            {problems.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {myThemes.length > 0 && (
+        <ul className="set-list" aria-label="Imported themes">
+          {myThemes.map((t) => (
+            <li key={t.id}>
+              <div className="set-li-main">
+                <b>{t.name}</b>
+                <span className="tag src">imported</span>
+              </div>
+              <Button
+                size="sm"
+                variant="danger"
+                aria-label={`Remove the theme ${t.name}`}
+                onClick={() => {
+                  useUi.getState().removeMyTheme(t.id);
+                  toast(`Removed the theme ${t.name}`);
+                }}
+              >
+                Remove
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function AppearanceControls() {
   const theme = useUi((s) => s.themePref);
   const { setTheme } = useUi.getState();
@@ -245,6 +367,7 @@ export function AppearanceControls() {
   return (
     <>
       <ThemePicker />
+      <ThemeFiles />
       <div className="st-line">
         <span id={modeId}>Mode</span>
         <span className="seg seg-l" role="group" aria-labelledby={modeId}>

@@ -45,6 +45,47 @@ describe('shell', () => {
     expect(chip.title).toMatch(/synthetic users/);
   });
 
+  it('leaves Settings, Administration and Shared with the title bar and with T and O (Phase 27)', async () => {
+    db.accounts = [account({ txCount: 3 })];
+    const { router } = renderApp('/settings/general');
+    const at = () => router.state.location.pathname;
+    const user = userEvent.setup();
+    // the transactions button did nothing here: in Settings the mode read "table" already
+    await user.click(await screen.findByRole('button', { name: 'Transactions, with the charts pane (T)' }));
+    await waitFor(() => {
+      expect(at()).toBe('/transactions/all');
+    });
+    await router.navigate('/settings/security');
+    await user.click(screen.getByRole('button', { name: 'Personal finance overview (O)' }));
+    await waitFor(() => {
+      expect(at()).toBe('/overview/all');
+    });
+    // neither button looks pressed away from the views
+    await router.navigate('/shared');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Personal finance overview (O)' }).getAttribute('aria-pressed')).toBe(
+        'false',
+      );
+    });
+    expect(
+      screen.getByRole('button', { name: 'Transactions, with the charts pane (T)' }).getAttribute('aria-pressed'),
+    ).toBe('false');
+    // the keys, from anywhere
+    await user.keyboard('t');
+    await waitFor(() => {
+      expect(at()).toBe('/transactions/all');
+    });
+    await user.keyboard('o');
+    await waitFor(() => {
+      expect(at()).toBe('/overview/all');
+    });
+    await router.navigate('/settings/general');
+    await user.keyboard('t');
+    await waitFor(() => {
+      expect(at()).toBe('/transactions/all');
+    });
+  });
+
   it('opens the transactions first, and the addresses used before Phase 26 lead to the new ones', async () => {
     db.accounts = [account({ txCount: 3 })];
     const first = renderApp('/');

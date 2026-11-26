@@ -5,11 +5,13 @@ import { useState } from 'react';
 
 import { exportCsv } from '../api/hooks/transactions';
 import { errorMessage } from '../lib/errors';
+import { convertExport, EXPORT_FORMATS, type ExportFormat } from '../lib/exportFormats';
 import { fmtInt, plural } from '../lib/format';
 import { useViews, viewOf, type ViewState } from '../stores/viewStore';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
+import { Menu, MenuItem } from '../ui/Menu';
 import { usePopover } from '../ui/Popover';
 import { toast } from '../ui/toastStore';
 import { chipsOf, cleared, withoutChip } from './chips';
@@ -49,15 +51,16 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
   const v = useViews((s) => viewOf(s.views, viewId));
   const patch = useViews((s) => s.patch);
   const cols = usePopover();
+  const exp = usePopover();
   const [exporting, setExporting] = useState(false);
   const [ruleDraft, setRuleDraft] = useState<RuleDraft | null>(null);
   const chips = chipsOf(viewId, v, periodLabel);
   const draft = ruleDraftOf(v);
 
-  const doExport = async () => {
+  const doExport = async (format: ExportFormat) => {
     setExporting(true);
     try {
-      const { blob, filename } = await exportCsv({
+      const csv = await exportCsv({
         context: q.context,
         ...(q.sort ? { sort: q.sort } : {}),
         columns: visible.map((c) => c.id),
@@ -68,8 +71,10 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
             .replace(/^-+|-+$/g, '')
             .toLowerCase() || 'transactions',
       });
+      // the server writes CSV; the other two are the same rows in another shape
+      const { blob, filename } = await convertExport(csv.blob, csv.filename, format);
       saveBlob(blob, filename);
-      toast(`Exported ${plural(total ?? 0, 'row')}`);
+      toast(`Exported ${plural(total ?? 0, 'row')} as ${format.toUpperCase()}`);
     } catch (e) {
       toast(errorMessage(e), { kind: 'error' });
     } finally {
@@ -142,13 +147,29 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
         </Button>
         <Button
           icon="download"
-          onClick={() => void doExport()}
+          onClick={exp.toggle}
+          aria-expanded={exp.open}
+          aria-haspopup="menu"
           disabled={exporting || !visible.length || !total}
-          title="Export the rows shown (filters, sort and visible columns) as CSV"
+          title="Export the rows shown (filters, sort and visible columns)"
         >
           Export
         </Button>
       </div>
+      <Menu open={exp.open} onClose={exp.close} anchor={exp.anchor} label="Export as" width={220}>
+        {EXPORT_FORMATS.map((f) => (
+          <MenuItem
+            key={f.id}
+            hint={f.about}
+            onSelect={() => {
+              exp.close();
+              void doExport(f.id);
+            }}
+          >
+            {f.label}
+          </MenuItem>
+        ))}
+      </Menu>
       {cols.anchor && <ColumnsMenu viewId={viewId} columns={columns} anchor={cols.anchor} onClose={cols.close} />}
       {ruleDraft && (
         <RuleEditor

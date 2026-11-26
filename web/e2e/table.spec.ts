@@ -146,9 +146,11 @@ test('export: the rows shown, as CSV', async ({ page }) => {
   await setup(page);
   await condition(page, 'Payee', 'kino');
   await expect(shown(page)).toHaveText(`10 of ${String(TOTAL)} rows`);
+  // Export asks for the format (Phase 27): CSV, TXT or JSON, the same rows in each
+  await page.getByRole('button', { name: 'Export' }).click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Export' }).click(),
+    page.getByRole('menuitem', { name: /^CSV/ }).click(),
   ]);
   expect(download.suggestedFilename()).toMatch(/^finuance-demo-\d{4}-\d{2}-\d{2}\.csv$/);
   const text = readFileSync(await download.path(), 'utf8');
@@ -157,7 +159,17 @@ test('export: the rows shown, as CSV', async ({ page }) => {
   expect(lines[0]).toBe('Date;Payee;Description;Amount;Category');
   expect(lines).toHaveLength(11);
   expect(lines.slice(1).every((l) => l.includes(';KINO POD GWIAZDAMI'))).toBe(true);
-  await expect(page.getByText('Exported 10 rows')).toBeVisible();
+  await expect(page.getByText('Exported 10 rows as CSV')).toBeVisible();
+  // the same rows as JSON
+  await page.getByRole('button', { name: 'Export' }).click();
+  const [asJson] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('menuitem', { name: /^JSON/ }).click(),
+  ]);
+  expect(asJson.suggestedFilename()).toMatch(/^finuance-demo-\d{4}-\d{2}-\d{2}\.json$/);
+  const rows = JSON.parse(readFileSync(await asJson.path(), 'utf8')) as Record<string, string>[];
+  expect(rows).toHaveLength(10);
+  expect(Object.keys(rows[0] ?? {})).toEqual(['Date', 'Payee', 'Description', 'Amount', 'Category']);
 });
 
 test('keyboard moves the selection across a window boundary', async ({ page }) => {

@@ -18,7 +18,7 @@ async function person(browser: Browser, name: string): Promise<Page> {
 
 async function befriend(a: Page, b: Page) {
   await a.goto('/shared');
-  await a.getByRole('button', { name: 'Show my code' }).click();
+  await a.getByRole('button', { name: 'Generate my friend code' }).click();
   const code = (await a.getByLabel('Your friend code').textContent()) ?? '';
   await b.goto('/shared');
   await b.getByLabel('Their code').fill(code);
