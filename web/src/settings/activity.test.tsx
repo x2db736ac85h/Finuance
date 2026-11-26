@@ -1,11 +1,12 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import type { Schemas } from '../api/client';
 import type { ActivityAction, ActivityEvent } from '../api/hooks/activity';
 import { renderApp, warmUpApp } from '../test/render';
-import { account, API, db, resetDb, server, txRow } from '../test/server';
+import { account, API, db, problem, resetDb, server, txRow } from '../test/server';
 import { useViews, viewOf } from '../stores/viewStore';
 import { describeActivity } from './Activity';
 
@@ -75,6 +76,63 @@ describe('activity', () => {
     expect(viewOf(useViews.getState().views, 'all').aiOnly).toBe(true);
     expect(await screen.findByRole('button', { name: 'Remove ✦ AI assisted' })).toBeTruthy();
     expect(db.queries.at(-1)?.context.aiAssisted).toBe(true);
+  });
+
+  it('undoes several of the assistant’s changes: a period or all, leaving what was changed since (Phase 27)', async () => {
+    const change = (n: number, day: string, over: Partial<Schemas['AIChange']> = {}): Schemas['AIChange'] => ({
+      id: `00000000-0000-4000-8000-0000000000e${String(n)}`,
+      chatId: '00000000-0000-4000-8000-0000000000f1',
+      proposalKey: `00000000000000e${String(n)}`,
+      action: 'set_category',
+      auto: false,
+      appliedAt: `${day}T11:00:00Z`,
+      items: n,
+      ...over,
+    });
+    db.aiChanges = [
+      change(4, '2026-11-20'),
+      change(3, '2026-11-12'),
+      change(2, '2026-11-10'),
+      change(1, '2026-11-01', { revertedAt: '2026-11-02T08:00:00Z' }),
+    ];
+    // the change of the 12th can't be undone any more: something it touched was changed since
+    const asked: string[] = [];
+    server.use(
+      http.post(`${API}/ai-changes/:id/revert`, ({ params }) => {
+        const id = String(params['id']);
+        asked.push(id.slice(-2));
+        if (id.endsWith('e3')) return problem(409, 'changed_since', 'Something it touched was changed since.');
+        const c = db.aiChanges.find((x) => x.id === id);
+        if (c) c.revertedAt = '2026-11-26T09:00:00Z';
+        return HttpResponse.json({ change: c, rows: 1, deleted: 0, kept: 0 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/settings/activity');
+    await screen.findByRole('list', { name: 'Assistant changes' });
+    await user.click(screen.getByRole('button', { name: 'Undo several…' }));
+    const dlg = await screen.findByRole('dialog', { name: 'Undo the assistant’s changes' });
+    // everything still in effect: three (the one undone already doesn't count)
+    expect(await within(dlg).findByText('3 changes in effect in all.')).toBeTruthy();
+    // a period
+    fireEvent.change(within(dlg).getByLabelText('From'), { target: { value: '2026-11-10' } });
+    fireEvent.change(within(dlg).getByLabelText('To'), { target: { value: '2026-11-12' } });
+    expect(within(dlg).getByRole('status').textContent).toBe('2 changes in effect in this period.');
+    fireEvent.change(within(dlg).getByLabelText('To'), { target: { value: '2026-11-09' } });
+    expect(within(dlg).getByRole('status').textContent).toBe('Nothing to undo in this period.');
+    expect(within(dlg).getByRole<HTMLButtonElement>('button', { name: 'Undo 0 changes' }).disabled).toBe(true);
+    fireEvent.change(within(dlg).getByLabelText('To'), { target: { value: '2026-11-12' } });
+    await user.click(within(dlg).getByRole('button', { name: 'Undo 2 changes' }));
+    // newest first; one undone, one left and said so
+    expect(
+      await screen.findByText('Undone 1 change. 1 change left as it is: something it touched was changed since.'),
+    ).toBeTruthy();
+    expect(asked).toEqual(['e3', 'e2']);
+    expect(db.aiChanges.find((c) => c.id.endsWith('e2'))?.revertedAt).toBeTruthy();
+    expect(db.aiChanges.find((c) => c.id.endsWith('e4'))?.revertedAt).toBeUndefined();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Undo the assistant’s changes' })).toBeNull();
+    });
   });
 
   it('shows no assistant section before the assistant changed anything', async () => {

@@ -380,3 +380,29 @@ describe('proposals v2 (ADR 0030)', () => {
     ]);
   });
 });
+
+describe('the opposites of set_group and set_category (Phase 27)', () => {
+  it('names them and sends no group and a category reset, creating nothing first', async () => {
+    const out = base({ key: '00000000000000b1', action: 'set_group', ids: ['1', '2'], matched: 2, removeGroup: true });
+    const clear = base({
+      key: '00000000000000b2',
+      action: 'set_category',
+      ids: ['3'],
+      matched: 1,
+      clearCategory: true,
+    });
+    expect(proposalTitle(out)).toBe('Take 2 transactions out of their group');
+    expect(proposalTitle(clear)).toBe('Take the hand-set category off 1 transaction (back to the bank’s or a rule’s)');
+    expect(missingTarget(out)).toBeNull();
+    expect(missingTarget(clear)).toBeNull();
+    const calls: Call[] = [];
+    record(calls);
+    expect(await applyProposal(out, CHAT)).toBe(2);
+    await applyProposal(clear, CHAT);
+    // one request each: no POST /groups or /categories comes first
+    expect(calls.map((c) => [c.method, c.path, c.key, c.body])).toEqual([
+      ['POST', '/transactions/bulk', '00000000000000b1', { ids: ['1', '2'], set: { groupId: null } }],
+      ['POST', '/transactions/bulk', '00000000000000b2', { ids: ['3'], category: { reset: true } }],
+    ]);
+  });
+});

@@ -26,6 +26,8 @@ The assistant never changes your data. When you ask it to ("put these in Groceri
 
 Since Phase 20 the assistant can also propose a category's budget, a cash expense typed into a cash account, sharing transactions with a shared group, a new split of one of your shared expenses, and a new or changed goal. Every applied proposal is recorded with what it replaced (ADR 0030): the table marks the rows with ✦ (*Source* says Assistant for a row it added; "Only what the assistant changed" in the Columns menu filters them), and **Undo** on the card or in Settings → Activity → *Assistant changes* puts everything back, as long as nothing was changed since (otherwise it says so and changes nothing). In the panel's settings, *Apply by itself* lists the kinds of proposals the panel may apply without the click (none by default); it never does so for more than 50 transactions, and the card says *Applied automatically* with Undo.
 
+Since 0.8 it can also propose the opposite of two of these: taking transactions **out of their group**, and taking a **hand-set category off** again (back to the bank's or a rule's). It can add a transaction to **any account** by its name, money in as well as out, and it is told when a payment of that amount is in the account already (within two days), so that a payment isn't typed in twice; for a receipt it then proposes attaching it instead. A proposal that takes something away is never applied by itself, whatever kinds you switched on. What it cannot do, and says so: delete or edit an imported transaction, delete or rename a category, a group, a rule or an account, or undo an applied change (you do that in Settings → Activity, one change at a time or with **Undo several…** for a period or for everything).
+
 ### Receipts by photo
 
 With a model that reads images (the model list in the panel's settings and `llm-probe` show `vision`), the panel has a camera button: pick or take a photo of a receipt, and ask (or just send it: "Here is a receipt."). The browser shrinks the photo to at most 1,600 px and saves it as a new JPEG, so the camera's EXIF data (location, device, time) never leaves the device; the server checks it and encodes it again. The photo goes to the model with that question only and is kept with the chat (its retention deletes it).
@@ -144,7 +146,7 @@ The 72 questions on 2026-11-25, thinking on auto, tools mode (`docs/evals.md`):
 | `claude-sonnet-5-5` | 72 / 72 | 3.5 s | 10.1 s |
 | `claude-opus-5-5` | 72 / 72 | 5.2 s | 12.7 s |
 
-Haiku missed one Polish question on a month's income and two on splitting an expense. For
+Haiku missed one Polish question on a month's income and two on splitting an expense. On 2026-11-26, with four questions added (taking rows out of a group, clearing a category, a new group), Haiku answered 73 of 76: the four new ones, and the same three misses. Sonnet and Opus were not run again. For
 comparison, the best local model on the reference machine reached 83 % at a median of 143 s. These
 runs used synthetic demo data; the decision that a cloud model sees synthetic data only still
 stands.
@@ -358,7 +360,7 @@ It lists each connection's chat models with their detected capabilities. Then it
 
 ## Measuring quality: `make eval-assistant`
 
-`make eval-assistant CONNECTION=… MODEL=… [THINK=…]` runs the 72 golden questions in `evals/assistant/` against a real model and rebuilds `docs/evals.md`. See `evals/assistant/README.md`.
+`make eval-assistant CONNECTION=… MODEL=… [THINK=…]` runs the 76 golden questions in `evals/assistant/` against a real model and rebuilds `docs/evals.md`. See `evals/assistant/README.md`.
 
 Against Vertex AI (synthetic demo data, your own Google login, no key anywhere):
 

@@ -17,6 +17,15 @@ The assistant's part of the maintainer's list of 2026-11-26.
   The API's message request takes `replaceFrom` for both (the n-th question of the chat).
 - **Prompt gallery** under the example questions: actions, questions and budget planning. A
   prompt fills the question field, to be changed before it is sent.
+- **The assistant can take things away, with your click**: it can propose taking transactions out
+  of their group and taking a hand-set category off again. Neither is ever applied by itself.
+- **Transactions through the assistant in any account**, money in as well as out. Before it
+  proposes one, it is told when a payment of that amount is already in the account (within two
+  days), so that a payment isn't typed in twice.
+- **Undo several** in Settings → Activity: the assistant's changes of a period, or all of them,
+  newest first; a change whose rows were changed since is left and counted.
+- The assistant's rules now say exactly what it can propose and what it cannot do (and where you
+  do that yourself), and tell categories, groups and shared groups apart.
 - **Thinking level beside Send**: a button with the levels the chosen model has (none for a model
   without a control). An administrator can keep the level for everyone (Administration →
   Assistant → *People may change the thinking level*); questions then run at the model's default.

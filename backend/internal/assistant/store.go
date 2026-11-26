@@ -449,6 +449,9 @@ func MayAutoApply(p *Proposal, chatKind string, allowed []string) error {
 		return fmt.Errorf("this change touches more than %d transactions, so it waits for your click: %w", AutoApplyMaxRows, platform.ErrForbidden)
 	case chatKind == KindDigest:
 		return fmt.Errorf("a digest's suggestions wait for your click: %w", platform.ErrForbidden)
+	case p.RemoveGroup || p.ClearCategory:
+		// taking something away is never done without a click, whatever kind is switched on
+		return fmt.Errorf("a change that takes a group or a category away waits for your click: %w", platform.ErrForbidden)
 	}
 	return nil
 }

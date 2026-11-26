@@ -266,6 +266,14 @@ export async function applyProposal(p: Proposal, chatId: string, auto = false): 
   };
   switch (p.action) {
     case 'set_category': {
+      // take a hand-set category off again (Phase 27): back to the bank's or a rule's
+      if (p.clearCategory) {
+        const r = await api.POST('/transactions/bulk', {
+          params: { header },
+          body: { ids: p.ids ?? [], category: { reset: true } },
+        });
+        return data(r).updated;
+      }
       const id = await categoryFor(p, header);
       const r = await api.POST('/transactions/bulk', {
         params: { header },
@@ -274,7 +282,8 @@ export async function applyProposal(p: Proposal, chatId: string, auto = false): 
       return data(r).updated;
     }
     case 'set_group': {
-      const groupId = await groupFor(p, header);
+      // out of whatever group they are in; nothing is created for it
+      const groupId = p.removeGroup ? null : await groupFor(p, header);
       const r = await api.POST('/transactions/bulk', {
         params: { header },
         body: { ids: p.ids ?? [], set: { groupId } },
@@ -443,6 +452,67 @@ export function useRevertAIChange() {
       void qc.invalidateQueries({ queryKey: keys.accounts });
       void qc.invalidateQueries({ queryKey: keys.shared });
       void qc.invalidateQueries({ queryKey: keys.goals });
+    },
+  });
+}
+
+/** Every change of the assistant's, newest first (all pages; a person has dozens, not thousands). */
+export async function fetchAllAIChanges(): Promise<AIChange[]> {
+  const out: AIChange[] = [];
+  let cursor = '';
+  // a bound on the pages, so a server that kept answering "there is more" can't hold the page
+  for (let page = 0; page < 200; page++) {
+    const r = data(await api.GET('/ai-changes', { params: { query: cursor ? { cursor } : {} } }));
+    out.push(...r.changes);
+    if (!r.next) break;
+    cursor = r.next;
+  }
+  return out;
+}
+
+/** All of the assistant's changes, read afresh each time it is asked for (the bulk undo counts them). */
+export function useAllAIChanges() {
+  return useQuery({ queryKey: [...keys.aiChanges, 'all'], queryFn: fetchAllAIChanges, staleTime: 0, gcTime: 0 });
+}
+
+/** The changes still in effect that were applied on the days from..to (either end may be open). */
+export function openChangesIn(changes: readonly AIChange[], from: string, to: string): AIChange[] {
+  return changes.filter((c) => {
+    if (c.revertedAt) return false;
+    const day = c.appliedAt.slice(0, 10);
+    return (!from || day >= from) && (!to || day <= to);
+  });
+}
+
+/**
+ * Undoes several changes, newest first, one request each (Phase 27). A change that can't be undone
+ * because something it touched was changed since is left as it is and counted; any other failure
+ * stops the run. Everything that shows what a change touched refetches at the end.
+ */
+export function useRevertAIChanges() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (changes: readonly AIChange[]) => {
+      let undone = 0;
+      let left = 0;
+      const order = [...changes].sort((a, b) => b.appliedAt.localeCompare(a.appliedAt));
+      for (const c of order) {
+        try {
+          data(await api.POST('/ai-changes/{id}/revert', { params: { path: { id: c.id } } }));
+          undone++;
+        } catch (e) {
+          // 409: something it touched was changed since, or it was undone meanwhile. It stays.
+          if (e instanceof ApiError && e.status === 409) left++;
+          else throw e;
+        }
+      }
+      return { undone, left };
+    },
+    onSettled: () => {
+      invalidateClassified(qc);
+      invalidateGroups(qc);
+      for (const key of [keys.rules, keys.aiChanges, keys.activity, keys.accounts, keys.shared, keys.goals])
+        void qc.invalidateQueries({ queryKey: key });
     },
   });
 }
