@@ -120,7 +120,7 @@ func TestMemory(t *testing.T) {
 		t.Error("an empty memory is in the prompt")
 	}
 	// kept and on: in the prompt, after the rules
-	note := "I am paid on the 10th. Answer in Polish. My account is PL61109010140000071219812874."
+	note := "I am paid on the 10th. Answer in Polish. My account is PL00000000000000000000000001."
 	if _, err := re.chats.SaveSettings(re.ctx, re.user, Settings{CloudConsent: []string{}, Memory: &Memory{Enabled: true, Text: "  " + note + "\r\n"}}); err != nil {
 		t.Fatal(err)
 	}
@@ -162,11 +162,11 @@ func TestMemory(t *testing.T) {
 
 	// for a cloud model long digit runs are shortened, as in everything else that leaves
 	cloud := &Run{memory: note, conn: &Connection{Cloud: true}}
-	if b := cloud.memoryBlock(); strings.Contains(b, "61109010140000071219812874") || !strings.Contains(b, "paid on the 10th") {
+	if b := cloud.memoryBlock(); strings.Contains(b, "00000000000000000000000001") || !strings.Contains(b, "paid on the 10th") {
 		t.Errorf("the memory for a cloud model: %s", b)
 	}
 	local := &Run{memory: note, conn: &Connection{}}
-	if b := local.memoryBlock(); !strings.Contains(b, "61109010140000071219812874") {
+	if b := local.memoryBlock(); !strings.Contains(b, "00000000000000000000000001") {
 		t.Errorf("the memory for a local model: %s", b)
 	}
 
