@@ -94,6 +94,10 @@ test('the pictures of the README in both themes', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Group name' }).fill('Italy trip');
   await page.keyboard.press('Enter');
   await expect(page.getByText('6 transactions added to “Italy trip”')).toBeVisible();
+  // the same six again: from another row first, so that the first click starts a new selection
+  // (a click on the row that is still the selected one would only take the selection away)
+  await page.keyboard.press('Escape');
+  await row(9).click();
   await row(1).click();
   await row(6).click({ modifiers: ['Shift'] });
   await expect(qbar).toContainText('6 selected');

@@ -330,8 +330,20 @@ test('a PDF and a picture dropped on the transactions reach the assistant as pic
   );
   const pdf = (await printer.pdf({ format: 'A5' })).toString('base64');
   await printer.close();
-  const png =
-    'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFElEQVR4nGP8z8Dwn4EIwDiqEAwAp2AH+Q2U8dMAAAAASUVORK5CYII=';
+  // a small picture, drawn here by the browser so that it is certainly one it can read back
+  const png = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 48;
+    const g = c.getContext('2d');
+    if (g) {
+      g.fillStyle = '#ffffff';
+      g.fillRect(0, 0, 64, 48);
+      g.fillStyle = '#222222';
+      g.fillRect(8, 8, 48, 6);
+    }
+    return c.toDataURL('image/png').split(',')[1] ?? '';
+  });
 
   const drop = async (selector: string, files: { name: string; type: string; b64: string }[]) => {
     const dataTransfer = await page.evaluateHandle((list) => {
@@ -356,7 +368,7 @@ test('a PDF and a picture dropped on the transactions reach the assistant as pic
     { name: 'obraz.png', type: 'image/png', b64: png },
   ]);
   await expect(panel.getByAltText('Photo to send')).toHaveCount(3);
-  // each is a real picture, not an empty canvas: the PDF's pages are far larger than the 8 px picture
+  // each is a real picture, not an empty canvas: the PDF's pages are far larger than the small picture
   const sizes = await panel
     .getByAltText('Photo to send')
     .evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).naturalWidth));
