@@ -56,8 +56,8 @@ AWS_CLI_IMAGE=amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868dd
 BUSYBOX_IMAGE=busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
 # The Gateway API's standard CRDs, the version Traefik's provider is built against (v3.7.16:
 # sigs.k8s.io/gateway-api v1.6.3), checked by checksum (the gateway step)
-GATEWAY_API_URL=https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml
-GATEWAY_API_SHA256=356c2b8e286a964dc20995435659ad1095386329974793af10bbfe3eff977fe5
+GATEWAY_CRDS_URL=https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml
+GATEWAY_CRDS_SHA256=356c2b8e286a964dc20995435659ad1095386329974793af10bbfe3eff977fe5
 # an address outside the cluster that answers on 443, for the egress probes (an address, not a
 # name: a pod without a policy of its own can't resolve anything)
 OUTSIDE=${OUTSIDE:-1.1.1.1}
@@ -551,8 +551,8 @@ condition() { [ "$(kubectl -n "$2" get "$1" "$3" -o jsonpath="{$4[?(@.type==\"$5
 gateway() {
   log "the chart's Gateway routes, Traefik as the implementation (PLAN 27.1)"
   local t0 p; t0=$(date +%s)
-  curl -fsSL -o "$WORK/gateway-api.yaml" "$GATEWAY_API_URL"
-  echo "$GATEWAY_API_SHA256  $WORK/gateway-api.yaml" | sha256sum -c --quiet - ||
+  curl -fsSL -o "$WORK/gateway-api.yaml" "$GATEWAY_CRDS_URL"
+  echo "$GATEWAY_CRDS_SHA256  $WORK/gateway-api.yaml" | sha256sum -c --quiet - ||
     { echo "the Gateway API's CRDs don't match their checksum" >&2; return 1; }
   kubectl apply --server-side -f "$WORK/gateway-api.yaml" >/dev/null
   kubectl wait --for=condition=Established --timeout=60s crd/gatewayclasses.gateway.networking.k8s.io \
