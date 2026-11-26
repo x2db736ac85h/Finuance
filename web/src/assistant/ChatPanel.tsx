@@ -242,7 +242,9 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     const kinds: readonly string[] = settings.data?.autoApply ?? [];
     for (const s of t.steps) {
       const p = s.proposal;
-      if (!p || !kinds.includes(p.action) || p.matched > AUTO_APPLY_MAX_ROWS) continue;
+      // a line to remember goes in by itself when automatic memories are on (its own switch)
+      const remembers = p?.action === 'remember' && settings.data?.memory?.auto === true;
+      if (!p || (!remembers && (!kinds.includes(p.action) || p.matched > AUTO_APPLY_MAX_ROWS))) continue;
       // taking a group or a category away always waits for a click (the server refuses it too)
       if (p.removeGroup || p.clearCategory) continue;
       if (useChat.getState().applied.includes(p.key)) continue;
@@ -646,9 +648,9 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         {consentFor && (
           <div className="modal-form conn">
             <p>
-              <b>{consentFor.label}</b> {cloudWho(consentFor)} Your questions, the photos you attach (receipts) and the
-              transactions the model looks up (payees, amounts, dates, titles) will be sent there. Long numbers such as
-              account numbers are shortened first; photos are sent as they are.
+              <b>{consentFor.label}</b> {cloudWho(consentFor)} Your questions, the photos you attach (receipts), your
+              memory note if you keep one, and the transactions the model looks up (payees, amounts, dates, titles) will
+              be sent there. Long numbers such as account numbers are shortened first; photos are sent as they are.
             </p>
             {status.data?.cloudNote && (
               <p className="cloud-note">

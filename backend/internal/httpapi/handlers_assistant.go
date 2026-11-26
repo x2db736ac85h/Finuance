@@ -171,6 +171,9 @@ func (a *api) PutAssistantSettings(ctx context.Context, req gen.PutAssistantSett
 			return nil, ve
 		}
 	}
+	if m := req.Body.Memory; m != nil {
+		in.Memory = &assistant.Memory{Enabled: m.Enabled, Auto: m.Auto, Text: m.Text}
+	}
 	s, err := c.SaveSettings(ctx, identity(ctx).User.ID, in)
 	if err != nil {
 		return nil, err
@@ -188,6 +191,9 @@ func settingsDTO(s assistant.Settings) gen.AssistantSettings {
 	if d := s.Digest; d != nil {
 		out.Digest = &gen.AssistantDigest{Schedule: gen.AssistantDigestSchedule(d.Schedule), Hour: d.Hour, Weekday: d.Weekday,
 			TimeZone: d.TimeZone, Connection: d.Connection, Model: d.Model}
+	}
+	if m := s.Memory; m != nil {
+		out.Memory = &gen.AssistantMemory{Enabled: m.Enabled, Auto: m.Auto, Text: m.Text}
 	}
 	return out
 }
@@ -431,6 +437,9 @@ func proposalDTO(p *assistant.Proposal) *gen.ActionProposal {
 	out.AccountId, out.SharedGroupId = p.AccountID, p.SharedGroupID
 	if p.RemoveGroup {
 		out.RemoveGroup = &p.RemoveGroup
+	}
+	if p.MemoryLine != "" {
+		out.MemoryLine = &p.MemoryLine
 	}
 	if p.ClearCategory {
 		out.ClearCategory = &p.ClearCategory

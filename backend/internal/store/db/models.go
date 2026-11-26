@@ -177,6 +177,9 @@ type AssistantSetting struct {
 	DigestTimeZone   string
 	DigestConnection string
 	DigestModel      string
+	Memory           string
+	MemoryEnabled    bool
+	MemoryAuto       bool
 }
 
 type AssistantUsage struct {

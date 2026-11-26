@@ -81,6 +81,7 @@ const (
 	ActionProposalActionAttachReceipt    ActionProposalAction = "attach_receipt"
 	ActionProposalActionCreateGoal       ActionProposalAction = "create_goal"
 	ActionProposalActionCreateRule       ActionProposalAction = "create_rule"
+	ActionProposalActionRemember         ActionProposalAction = "remember"
 	ActionProposalActionSetBudget        ActionProposalAction = "set_budget"
 	ActionProposalActionSetCategory      ActionProposalAction = "set_category"
 	ActionProposalActionSetGroup         ActionProposalAction = "set_group"
@@ -100,6 +101,8 @@ func (e ActionProposalAction) Valid() bool {
 	case ActionProposalActionCreateGoal:
 		return true
 	case ActionProposalActionCreateRule:
+		return true
+	case ActionProposalActionRemember:
 		return true
 	case ActionProposalActionSetBudget:
 		return true
@@ -2602,11 +2605,14 @@ type ActionProposal struct {
 	Match *RuleMatch `json:"match,omitempty"`
 
 	// Matched The transactions it changes (set_*) or the rule matches now (create_rule).
-	Matched int                 `json:"matched"`
-	Note    *string             `json:"note,omitempty"`
-	PaidBy  *openapi_types.UUID `json:"paidBy,omitempty"`
-	Payee   *string             `json:"payee,omitempty"`
-	Reason  *string             `json:"reason,omitempty"`
+	Matched int `json:"matched"`
+
+	// MemoryLine remember: the line to add to the person's memory.
+	MemoryLine *string             `json:"memoryLine,omitempty"`
+	Note       *string             `json:"note,omitempty"`
+	PaidBy     *openapi_types.UUID `json:"paidBy,omitempty"`
+	Payee      *string             `json:"payee,omitempty"`
+	Reason     *string             `json:"reason,omitempty"`
 
 	// ReceiptLine attach_receipt: the line added to the matched transaction's note (`note` is the whole note after it).
 	ReceiptLine *string `json:"receiptLine,omitempty"`
@@ -3099,6 +3105,15 @@ type AssistantErrorEvent struct {
 	MessageSeq *int   `json:"messageSeq,omitempty"`
 }
 
+// AssistantMemory The assistant's memory (ADR 0046): one note of the person's, added to the system prompt of their questions while `enabled`. With `auto` a line the assistant proposes to remember is added without a click. Left out of a PUT, the stored memory stays.
+type AssistantMemory struct {
+	Auto    bool `json:"auto"`
+	Enabled bool `json:"enabled"`
+
+	// Text At most 4,000 characters (about 1,000 tokens); '' for none.
+	Text string `json:"text"`
+}
+
 // AssistantMessageRequest defines model for AssistantMessageRequest.
 type AssistantMessageRequest struct {
 	// AttachmentIds Photos attached to this chat (POST …/attachments) that go with this question; the model must read images.
@@ -3213,6 +3228,9 @@ type AssistantSettings struct {
 
 	// DigestNextAt When the next digest is due (null when they are off). Ignored in a PUT.
 	DigestNextAt *time.Time `json:"digestNextAt,omitempty"`
+
+	// Memory The assistant's memory (ADR 0046): one note of the person's, added to the system prompt of their questions while `enabled`. With `auto` a line the assistant proposes to remember is added without a click. Left out of a PUT, the stored memory stays.
+	Memory *AssistantMemory `json:"memory,omitempty"`
 
 	// RetentionDays Days a chat is kept after its last message; null keeps chats until they are deleted.
 	RetentionDays *int `json:"retentionDays"`

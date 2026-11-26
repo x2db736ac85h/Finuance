@@ -81,6 +81,8 @@ export function proposalTitle(p: Proposal): string {
       ].filter(Boolean);
       return `Change the goal “${b.name}”: ${changes.join(', ')}`;
     }
+    case 'remember':
+      return `Remember: “${p.memoryLine ?? ''}”`;
     case 'attach_receipt':
       return (
         `Add the receipt to “${p.payee ?? ''}” (${fmtDay(p.date)}${p.amount ? `, ${fmtMoney(p.amount)}` : ''}) in ${p.accountName ?? ''}: ` +
@@ -116,6 +118,8 @@ function appliedText(p: Proposal, n: number): string {
       return `Goal “${p.goal?.name ?? ''}” changed`;
     case 'attach_receipt':
       return `Receipt added to “${p.payee ?? 'the transaction'}”`;
+    case 'remember':
+      return 'Added to your memory (Settings → General)';
     default:
       return `Applied to ${plural(n, 'transaction')}`;
   }

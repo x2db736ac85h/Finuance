@@ -32,11 +32,13 @@ const (
 	ActionSplitExpense     = "split_expense"
 	ActionCreateGoal       = "create_goal" // 20.4
 	ActionUpdateGoal       = "update_goal"
+	// Phase 27 (ADR 0046): a line for the person's memory
+	ActionRemember = "remember"
 )
 
 // proposalActions are the actions propose_action takes.
 var proposalActions = []string{ActionSetCategory, ActionSetGroup, ActionCreateRule, ActionSetBudget, ActionAddExpense,
-	ActionAddToSharedGroup, ActionSplitExpense, ActionCreateGoal, ActionUpdateGoal, ActionAttachReceipt}
+	ActionAddToSharedGroup, ActionSplitExpense, ActionCreateGoal, ActionUpdateGoal, ActionAttachReceipt, ActionRemember}
 
 // asProposal reads a call named after a proposal's action ("set_budget" called as a tool, which
 // small models do) as propose_action with that action; any other call stays as it is.
@@ -120,6 +122,8 @@ type Proposal struct {
 	// bank's or a rule's). Neither is ever applied by the panel itself.
 	RemoveGroup   bool `json:"removeGroup,omitempty"`
 	ClearCategory bool `json:"clearCategory,omitempty"`
+	// remember (ADR 0046): the line to add to the person's memory
+	MemoryLine string `json:"memoryLine,omitempty"`
 }
 
 // ProposalSplit is a split_expense's new split, in the API's SharedSplit form plus names.
@@ -181,6 +185,7 @@ type proposalResult struct {
 	BudgetBefore    json.Number   `json:"budget_before,omitempty"`
 	RemovesBudget   bool          `json:"removes_budget,omitempty"`
 	RemovesGroup    bool          `json:"removes_from_group,omitempty"`
+	MemoryLine      string        `json:"memory_line,omitempty"`
 	ClearsCategory  bool          `json:"clears_category,omitempty"`
 	Account         string        `json:"account,omitempty"`
 	Date            string        `json:"date,omitempty"`
@@ -220,6 +225,9 @@ func proposalError(msg string) Outcome {
 func sameName(a, b string) bool {
 	return ingest.Collapse(ingest.Norm(a)) == ingest.Collapse(ingest.Norm(b))
 }
+
+// maxMemoryLine is the longest line the assistant may propose to remember.
+const maxMemoryLine = 200
 
 func cleanText(s string, limit int) (string, bool) {
 	s = strings.Join(strings.Fields(s), " ")
@@ -295,8 +303,16 @@ func (t *Tools) propose(ctx context.Context, userID uuid.UUID, sc Scope, a args)
 		return t.proposeGoal(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
 	case ActionAttachReceipt:
 		return t.proposeReceipt(ctx, userID, sc, a, &Proposal{Action: action, Reason: reason, Sample: []ProposalRow{}})
+	case ActionRemember:
+		// one line about the person or how they like answers; the person sees it and keeps it or not
+		line, ok := cleanText(a.str("memory_line"), maxMemoryLine)
+		if !ok {
+			return proposalError(fmt.Sprintf("memory_line must be one short sentence to remember, 1–%d characters", maxMemoryLine)), nil
+		}
+		p := &Proposal{Action: action, Reason: reason, MemoryLine: line, Matched: 1, Sample: []ProposalRow{}}
+		return proposalOutcome(sc, p, "a line to remember"), nil
 	}
-	return proposalError("action must be set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal or attach_receipt"), nil
+	return proposalError("action must be set_category, set_group, create_rule, set_budget, add_expense, add_to_shared_group, split_expense, create_goal, update_goal, attach_receipt or remember"), nil
 }
 
 // proposeRows reads the rows a set_* action would change: the filter within the chat's scope,
@@ -422,6 +438,8 @@ func proposalOutcome(sc Scope, p *Proposal, label string) Outcome {
 		}
 	case ActionCreateGoal, ActionUpdateGoal:
 		r.Goal, r.GoalBefore = goalProposedOf(sc, p.Goal), goalProposedOf(sc, p.GoalBefore)
+	case ActionRemember:
+		r.MemoryLine = p.MemoryLine
 	case ActionAttachReceipt:
 		r.Account, r.Date, r.Amount, r.Payee = sc.mask(p.AccountName), p.Date, amount(p.AmountMinor, p.Currency), sc.mask(p.Payee)
 		if p.CategoryName != "" {

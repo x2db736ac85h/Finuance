@@ -16,6 +16,14 @@ SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_con
     digest_model = excluded.digest_model, updated_at = excluded.updated_at
 RETURNING *;
 
+-- name: SetAssistantMemory :exec
+-- The memory alone (Phase 27): the other settings of a new row take their defaults.
+INSERT INTO assistant_settings (user_id, memory, memory_enabled, memory_auto, updated_at)
+VALUES (@user_id, @memory, @memory_enabled, @memory_auto, @now)
+ON CONFLICT (user_id) DO UPDATE
+SET memory = excluded.memory, memory_enabled = excluded.memory_enabled, memory_auto = excluded.memory_auto,
+    updated_at = excluded.updated_at;
+
 -- name: CreateAssistantChat :one
 INSERT INTO assistant_chats (id, user_id, title, connection, model, kind, created_at, updated_at)
 VALUES (@id, @user_id, @title, @connection, @model, @kind, @now, @now)

@@ -3,6 +3,7 @@
 // settings (saved in the preferences) and the chat retention (a server setting).
 
 import { useState } from 'react';
+import { Link } from 'react-router';
 
 import {
   useAssistantSettings,
@@ -420,6 +421,28 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
             {label}
           </label>
         ))}
+      </fieldset>
+      {/* the memory: the note itself is in Settings → General; here only whether the assistant may add to it */}
+      <fieldset className="auto-apply" disabled={!settings.data || save.isPending}>
+        <legend>Memory</legend>
+        <label className="chk">
+          <input
+            type="checkbox"
+            checked={settings.data?.memory?.auto ?? false}
+            onChange={(e) => {
+              if (!settings.data) return;
+              const m = settings.data.memory ?? { enabled: true, auto: false, text: '' };
+              save.mutate({ ...settings.data, memory: { ...m, auto: e.target.checked } });
+            }}
+          />
+          Automatic memories
+        </label>
+        <p className="hint">
+          When you tell it something lasting about yourself, the assistant proposes a line to remember. On: the line is
+          added by itself. Off: you add it with a click. Read, change or clear the note in{' '}
+          <Link to="/settings/general#memory">Settings → General</Link>
+          {settings.data?.memory && !settings.data.memory.enabled ? ' (the note is switched off there now).' : '.'}
+        </p>
       </fieldset>
       {meta.data?.features.assistantDigests && settings.data && (
         <DigestSettings

@@ -181,7 +181,7 @@ func extraRules(toolset string) string {
 			"\n- To change data, call propose_action: the user reviews each proposal and applies it, and can undo it later in Settings → Activity. Never say that you changed anything." +
 			"\n- What you can propose: put transactions into a category or into a group (a name that doesn't exist yet is created by the proposal itself, in this chat or any other); " +
 			"take transactions out of their group (set_group with remove_from_group) or take a hand-set category off (set_category with clear_category); " +
-			"make a rule; set or remove a budget; add a transaction that is missing; share transactions with a shared group; change how a shared expense is split; make or change a goal; attach a receipt." +
+			"make a rule; set or remove a budget; add a transaction that is missing; share transactions with a shared group; change how a shared expense is split; make or change a goal; attach a receipt; keep a line about the user for later chats (remember), only when they ask you to remember something or state a lasting preference about themselves or about how they want answers." +
 			"\n- The words: a category says what kind of spending a transaction is (one each; the bank, a rule or the user sets it). A group is the user's own label for a set of transactions, such as a trip. " +
 			"A shared group is a group shared with friends. They are three different things: don't answer about one when asked about another." +
 			"\n- What you cannot do: delete or edit an imported transaction, delete or rename a category, a group, a rule or an account, or undo a change that was applied. " +
@@ -201,6 +201,21 @@ func counted(vs []query.Counted) string {
 		parts[i] = fmt.Sprintf("%s (%d)", v.Value, v.Count)
 	}
 	return strings.Join(parts, "; ")
+}
+
+// memoryBlock is the person's own note for the assistant (ADR 0046), last in the system prompt. It
+// is theirs to write, so it is said to be about them and their wishes, below the app's rules and
+// the administrator's. For a cloud model long digit runs and e-mail addresses in it are shortened
+// like everything else that leaves.
+func (run *Run) memoryBlock() string {
+	m := strings.TrimSpace(run.memory)
+	if m == "" {
+		return ""
+	}
+	if run.conn.Cloud {
+		m = MaskDigits(m)
+	}
+	return "\n\nWhat the user asked you to keep in mind (their own notes about themselves and how they like answers; the rules above come first):\n" + m
 }
 
 // instructionsBlock is the administrator's addition to the system prompt (ADR 0034), after the app's

@@ -235,6 +235,8 @@ export function missingTarget(p: Proposal): string | null {
       return p.goal?.id ? null : 'the goal';
     case 'attach_receipt':
       return p.ids?.[0] ? null : 'the transaction';
+    case 'remember':
+      return p.memoryLine?.trim() ? null : 'the line to remember';
     default:
       return null;
   }
@@ -403,7 +405,42 @@ export async function applyProposal(p: Proposal, chatId: string, auto = false): 
       );
       return 1;
     }
+    case 'remember': {
+      // The person's memory is one of their settings, not a change to their data: the line is
+      // added through the settings' own request, without the headers that record a data change
+      // (ADR 0046). They read, change and clear it in Settings → General.
+      const cur = data(await api.GET('/assistant/settings'));
+      const memory = cur.memory ?? { enabled: true, auto: false, text: '' };
+      const text = addMemoryLine(memory.text, p.memoryLine ?? '');
+      if (text !== memory.text)
+        data(await api.PUT('/assistant/settings', { body: { ...cur, memory: { ...memory, text } } }));
+      return 1;
+    }
   }
+}
+
+/** The longest memory, as the server has it. */
+export const MEMORY_MAX_CHARS = 4000;
+
+/**
+ * A memory with one more line. The same line twice stays once (a proposal applied again after a
+ * reload). Throws with a sentence for the person when the note would get too long.
+ */
+export function addMemoryLine(text: string, line: string): string {
+  const add = line.replace(/\s+/g, ' ').trim();
+  if (!add) return text;
+  const has = text.split('\n').some((l) => l.trim().toLocaleLowerCase() === add.toLocaleLowerCase());
+  if (has) return text;
+  const next = text.trim() ? `${text.trim()}\n${add}` : add;
+  if (next.length > MEMORY_MAX_CHARS)
+    throw new ApiError({
+      type: '/problems/validation_failed',
+      code: 'validation_failed',
+      status: 422,
+      title: 'Validation failed',
+      detail: 'Your memory is full. Shorten it in Settings → General, then apply this again.',
+    });
+  return next;
 }
 
 /** applyProposal as a mutation; afterwards everything that shows categories, groups or rules refetches. */
@@ -413,6 +450,7 @@ export function useApplyProposal() {
     mutationFn: async ({ proposal, chatId, auto }: { proposal: Proposal; chatId: string; auto?: boolean }) =>
       applyProposal(proposal, chatId, auto ?? false),
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.assistantSettings });
       invalidateClassified(qc);
       invalidateGroups(qc);
       void qc.invalidateQueries({ queryKey: keys.rules });

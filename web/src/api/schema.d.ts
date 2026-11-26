@@ -4518,6 +4518,7 @@ export interface components {
             /** @description Proposal actions the panel applies by itself (ADR 0030); never a digest's proposals or one touching more than 50 transactions. Sharing with a shared group and changing a shared split always wait for a click. Left out of a PUT, the stored list stays. */
             autoApply?: ("set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "create_goal" | "update_goal")[];
             digest?: components["schemas"]["AssistantDigest"];
+            memory?: components["schemas"]["AssistantMemory"];
             /**
              * Format: date-time
              * @description When the next digest is due (null when they are off). Ignored in a PUT.
@@ -4528,6 +4529,13 @@ export interface components {
              * @description Tokens used today (UTC), questions and digests together. Ignored in a PUT.
              */
             tokensToday?: number;
+        };
+        /** @description The assistant's memory (ADR 0046): one note of the person's, added to the system prompt of their questions while `enabled`. With `auto` a line the assistant proposes to remember is added without a click. Left out of a PUT, the stored memory stays. */
+        AssistantMemory: {
+            enabled: boolean;
+            auto: boolean;
+            /** @description At most 4,000 characters (about 1,000 tokens); '' for none. */
+            text: string;
         };
         /** @description The digest schedule (ADR 0033): off, daily, or weekly on a weekday, at an hour of the time zone, written with the connection and model named (else the instance's default). Left out of a PUT, the stored schedule stays. */
         AssistantDigest: {
@@ -4612,7 +4620,7 @@ export interface components {
             /** @description Identifies the proposal within its chat (a hash of its content); sent back as X-Assistant-Proposal when it is applied. */
             key: string;
             /** @enum {string} */
-            action: "set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal" | "attach_receipt";
+            action: "set_category" | "set_group" | "create_rule" | "set_budget" | "add_expense" | "add_to_shared_group" | "split_expense" | "create_goal" | "update_goal" | "attach_receipt" | "remember";
             reason?: string;
             /** @description The transactions it changes (set_*) or the rule matches now (create_rule). */
             matched: number;
@@ -4667,6 +4675,8 @@ export interface components {
             goalBefore?: components["schemas"]["ProposalGoal"];
             /** @description attach_receipt: the line added to the matched transaction's note (`note` is the whole note after it). */
             receiptLine?: string;
+            /** @description remember: the line to add to the person's memory. */
+            memoryLine?: string;
             /** @description set_group: take the transactions out of the group they are in, instead of putting them into one (never applied automatically). */
             removeGroup?: boolean;
             /** @description set_category: take a category set by hand off again, back to the bank's or a rule's (never applied automatically). */

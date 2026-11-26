@@ -330,7 +330,7 @@ func (q *Queries) GetAssistantChat(ctx context.Context, arg GetAssistantChatPara
 
 const getAssistantSettings = `-- name: GetAssistantSettings :one
 
-SELECT user_id, retention_days, cloud_consent, updated_at, auto_apply, digest, digest_hour, digest_weekday, digest_time_zone, digest_connection, digest_model FROM assistant_settings WHERE user_id = $1
+SELECT user_id, retention_days, cloud_consent, updated_at, auto_apply, digest, digest_hour, digest_weekday, digest_time_zone, digest_connection, digest_model, memory, memory_enabled, memory_auto FROM assistant_settings WHERE user_id = $1
 `
 
 // The assistant's settings, chats and messages (PLAN §4.8; migration 00006).
@@ -349,6 +349,9 @@ func (q *Queries) GetAssistantSettings(ctx context.Context, userID uuid.UUID) (A
 		&i.DigestTimeZone,
 		&i.DigestConnection,
 		&i.DigestModel,
+		&i.Memory,
+		&i.MemoryEnabled,
+		&i.MemoryAuto,
 	)
 	return i, err
 }
@@ -641,6 +644,34 @@ func (q *Queries) MarkAssistantAttachmentsSent(ctx context.Context, arg MarkAssi
 	return err
 }
 
+const setAssistantMemory = `-- name: SetAssistantMemory :exec
+INSERT INTO assistant_settings (user_id, memory, memory_enabled, memory_auto, updated_at)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id) DO UPDATE
+SET memory = excluded.memory, memory_enabled = excluded.memory_enabled, memory_auto = excluded.memory_auto,
+    updated_at = excluded.updated_at
+`
+
+type SetAssistantMemoryParams struct {
+	UserID        uuid.UUID
+	Memory        string
+	MemoryEnabled bool
+	MemoryAuto    bool
+	Now           time.Time
+}
+
+// The memory alone (Phase 27): the other settings of a new row take their defaults.
+func (q *Queries) SetAssistantMemory(ctx context.Context, arg SetAssistantMemoryParams) error {
+	_, err := q.db.Exec(ctx, setAssistantMemory,
+		arg.UserID,
+		arg.Memory,
+		arg.MemoryEnabled,
+		arg.MemoryAuto,
+		arg.Now,
+	)
+	return err
+}
+
 const setDigestDueAt = `-- name: SetDigestDueAt :exec
 UPDATE users SET digest_due_at = $1 WHERE id = $2
 `
@@ -761,7 +792,7 @@ SET retention_days = excluded.retention_days, cloud_consent = excluded.cloud_con
     digest = excluded.digest, digest_hour = excluded.digest_hour, digest_weekday = excluded.digest_weekday,
     digest_time_zone = excluded.digest_time_zone, digest_connection = excluded.digest_connection,
     digest_model = excluded.digest_model, updated_at = excluded.updated_at
-RETURNING user_id, retention_days, cloud_consent, updated_at, auto_apply, digest, digest_hour, digest_weekday, digest_time_zone, digest_connection, digest_model
+RETURNING user_id, retention_days, cloud_consent, updated_at, auto_apply, digest, digest_hour, digest_weekday, digest_time_zone, digest_connection, digest_model, memory, memory_enabled, memory_auto
 `
 
 type UpsertAssistantSettingsParams struct {
@@ -806,6 +837,9 @@ func (q *Queries) UpsertAssistantSettings(ctx context.Context, arg UpsertAssista
 		&i.DigestTimeZone,
 		&i.DigestConnection,
 		&i.DigestModel,
+		&i.Memory,
+		&i.MemoryEnabled,
+		&i.MemoryAuto,
 	)
 	return i, err
 }

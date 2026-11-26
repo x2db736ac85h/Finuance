@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -33,10 +35,24 @@ type Settings struct {
 	AutoApply []string
 	// Digest is the digest schedule (ADR 0033); nil when saving keeps the stored one.
 	Digest *DigestSettings
+	// Memory is the person's note for the assistant (ADR 0046); nil when saving keeps the stored one.
+	Memory *Memory
 	// Read only: when the next digest is due (nil: none) and the tokens used today (UTC).
 	DigestNextAt *time.Time
 	TokensToday  int64
 }
+
+// Memory is what a person asked the assistant to keep in mind: one note, added to the system
+// prompt of their questions while Enabled. With Auto a line the assistant proposes to remember is
+// added by the panel without a click.
+type Memory struct {
+	Enabled bool
+	Auto    bool
+	Text    string
+}
+
+// MaxMemoryChars bounds the note: about 1,000 tokens, which is what it costs every question.
+const MaxMemoryChars = 4000
 
 // AutoApplyActions are the proposal actions a user can let the panel apply by itself. Sharing with a
 // shared group and changing a shared split are not among them: other people read the result, so
@@ -206,14 +222,14 @@ func settings(ctx context.Context, q *db.Queries, userID uuid.UUID) (Settings, e
 	row, err := q.GetAssistantSettings(ctx, userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		d, dg := DefaultRetentionDays, DefaultDigest()
-		return Settings{RetentionDays: &d, CloudConsent: []string{}, AutoApply: []string{}, Digest: &dg}, nil
+		return Settings{RetentionDays: &d, CloudConsent: []string{}, AutoApply: []string{}, Digest: &dg, Memory: &Memory{Enabled: true}}, nil
 	}
 	if err != nil {
 		return Settings{}, err
 	}
 	s := Settings{CloudConsent: row.CloudConsent, AutoApply: row.AutoApply, Digest: &DigestSettings{Schedule: row.Digest,
 		Hour: int(row.DigestHour), Weekday: int(row.DigestWeekday), TimeZone: row.DigestTimeZone, Connection: row.DigestConnection,
-		Model: row.DigestModel}}
+		Model: row.DigestModel}, Memory: &Memory{Enabled: row.MemoryEnabled, Auto: row.MemoryAuto, Text: row.Memory}}
 	if s.AutoApply == nil {
 		s.AutoApply = []string{}
 	}
@@ -250,6 +266,12 @@ func (c *Chats) SaveSettings(ctx context.Context, userID uuid.UUID, s Settings) 
 	}
 	if s.Digest != nil {
 		s.Digest.validate(ve)
+	}
+	if m := s.Memory; m != nil {
+		m.Text = strings.TrimSpace(strings.ReplaceAll(m.Text, "\r\n", "\n"))
+		if utf8.RuneCountInString(m.Text) > MaxMemoryChars || strings.ContainsRune(m.Text, 0) {
+			ve.Add("memory.text", fmt.Sprintf("must be at most %d characters", MaxMemoryChars))
+		}
 	}
 	if err := ve.Err(); err != nil {
 		return Settings{}, err
@@ -288,6 +310,12 @@ func (c *Chats) SaveSettings(ctx context.Context, userID uuid.UUID, s Settings) 
 		if s.Digest != nil && *s.Digest != *cur.Digest { // a new schedule starts from now
 			next, on := NextDigest(dg, c.clock.Now())
 			if err := q.SetDigestDueAt(ctx, db.SetDigestDueAtParams{ID: userID, DueAt: timePtr(next, on)}); err != nil {
+				return err
+			}
+		}
+		if m := s.Memory; m != nil { // sent: replace it (after the row exists)
+			if err := q.SetAssistantMemory(ctx, db.SetAssistantMemoryParams{UserID: userID, Memory: m.Text, MemoryEnabled: m.Enabled,
+				MemoryAuto: m.Auto, Now: c.clock.Now()}); err != nil {
 				return err
 			}
 		}
