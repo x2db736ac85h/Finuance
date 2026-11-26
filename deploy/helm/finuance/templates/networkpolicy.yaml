@@ -46,8 +46,13 @@ spec:
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
-        - namespaceSelector: {{- toYaml $np.ingressController.namespaceSelector | nindent 12 }}
-          podSelector: {{- toYaml $np.ingressController.podSelector | nindent 12 }}
+        {{- with $np.ingressController }}
+        - namespaceSelector: {{- toYaml .namespaceSelector | nindent 12 }}
+          podSelector: {{- toYaml .podSelector | nindent 12 }}
+        {{- end }}
+        {{- range $np.frontDoorCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
       ports: [{ port: 8080, protocol: TCP }]
   egress:
     - to:
@@ -70,8 +75,13 @@ spec:
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
-        - namespaceSelector: {{- toYaml $np.ingressController.namespaceSelector | nindent 12 }}
-          podSelector: {{- toYaml $np.ingressController.podSelector | nindent 12 }}
+        {{- with $np.ingressController }}
+        - namespaceSelector: {{- toYaml .namespaceSelector | nindent 12 }}
+          podSelector: {{- toYaml .podSelector | nindent 12 }}
+        {{- end }}
+        {{- range $np.frontDoorCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
         - podSelector:
             matchLabels:
               {{- include "finuance.selector" (dict "root" . "component" "web") | nindent 14 }}

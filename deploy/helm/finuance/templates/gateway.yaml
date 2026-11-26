@@ -1,0 +1,127 @@
+{{- /*
+Gateway API routes (PLAN 27.1), for clusters whose front door is a Gateway and not an Ingress
+with Traefik's annotations: Google Kubernetes Engine's gateway controller, or any other
+implementation. The Gateway itself (its address, listener and certificate) belongs to the
+platform (Terraform on Google Cloud); this chart only attaches its routes to it.
+*/ -}}
+{{- if .Values.gateway.enabled }}
+{{- if .Values.ingress.enabled }}
+{{- fail "gateway.enabled and ingress.enabled are both set: a release has one front door. Set ingress.enabled: false to use the Gateway." }}
+{{- end }}
+{{- $name := include "finuance.fullname" . -}}
+{{- $gw := .Values.gateway -}}
+{{- $host := required "gateway.host is required when the gateway is enabled" $gw.host -}}
+{{- $parent := required "gateway.parentRef.name is required: the Gateway the routes attach to" $gw.parentRef.name -}}
+{{- $hsts := $gw.hsts.enabled -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ $parent | quote }}
+      {{- with $gw.parentRef.namespace }}
+      namespace: {{ . | quote }}
+      {{- end }}
+      {{- with $gw.parentRef.sectionName }}
+      sectionName: {{ . | quote }}
+      {{- end }}
+  hostnames: [{{ $host | quote }}]
+  rules:
+    # The API directly (streamed assistant answers need no buffering); the rest is the SPA.
+    - matches:
+        - path: { type: PathPrefix, value: /api/ }
+      {{- if $hsts }}
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: Strict-Transport-Security
+                value: {{ printf "max-age=%d" (int $gw.hsts.maxAge) | quote }}
+      {{- end }}
+      {{- with $gw.apiTimeout }}
+      # a streamed answer, an export or an upload outlives the usual request timeout
+      timeouts:
+        request: {{ . | quote }}
+      {{- end }}
+      backendRefs:
+        - name: {{ $name }}-api
+          port: 8080
+    - matches:
+        - path: { type: PathPrefix, value: / }
+      {{- if $hsts }}
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: Strict-Transport-Security
+                value: {{ printf "max-age=%d" (int $gw.hsts.maxAge) | quote }}
+      {{- end }}
+      backendRefs:
+        - name: {{ $name }}-web
+          port: 8080
+{{- if $gw.gke.enabled }}
+{{- /* Google's load balancer checks each backend itself and has its own timeout per backend
+service; both are set per Service with GKE's policy kinds (networking.gke.io). */ -}}
+{{- range $c := list (dict "n" "api" "path" "/readyz") (dict "n" "web" "path" "/healthz") }}
+---
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: {{ $name }}-{{ $c.n }}
+  labels:
+    {{- include "finuance.labels" $ | nindent 4 }}
+spec:
+  default:
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+    config:
+      type: HTTP
+      httpHealthCheck:
+        portSpecification: USE_SERVING_PORT
+        requestPath: {{ $c.path }}
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ $name }}-{{ $c.n }}
+{{- end }}
+---
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: {{ $name }}-api
+  labels:
+    {{- include "finuance.labels" . | nindent 4 }}
+spec:
+  default:
+    # the load balancer's own limit on one response: long enough for a streamed answer
+    timeoutSec: {{ int $gw.gke.apiTimeoutSec }}
+    {{- with $gw.gke.securityPolicy }}
+    securityPolicy: {{ . | quote }}
+    {{- end }}
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ $name }}-api
+{{- with $gw.gke.securityPolicy }}
+---
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: {{ $name }}-web
+  labels:
+    {{- include "finuance.labels" $ | nindent 4 }}
+spec:
+  default:
+    securityPolicy: {{ . | quote }}
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ $name }}-web
+{{- end }}
+{{- end }}
+{{- end }}

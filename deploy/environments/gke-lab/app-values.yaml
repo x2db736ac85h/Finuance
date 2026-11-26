@@ -1,0 +1,59 @@
+# The lab on Google Kubernetes Engine (README.md, PLAN Phase 27): the app chart in finuance-lab,
+# on top of ../lab/app-values.yaml (a lab instance, the personas' job, the mock model). What is
+# different on Google Cloud: the front door is a Gateway, the load balancer reaches the pods
+# directly, and the assistant has a second connection to Vertex AI with the pods' own identity.
+#
+# Placeholders in <angle brackets> come from the environment's private overlay or from Terraform's
+# outputs (deploy/terraform: `terraform output -json lab_values`); nothing here names a project.
+ingress:
+  enabled: false
+gateway:
+  enabled: true
+  host: lab.example
+  parentRef:
+    # the Gateway Terraform's bootstrap step makes, with its certificate from Certificate Manager
+    name: finuance-lab
+    namespace: finuance-gateway
+    sectionName: https
+  # a streamed answer or an export may take minutes
+  apiTimeout: 3600s
+  gke:
+    enabled: true
+    apiTimeoutSec: 3600
+    # the Cloud Armor policy that admits the allowlisted addresses only (Terraform output)
+    securityPolicy: finuance-lab
+networkPolicy:
+  # no ingress controller runs in the cluster: Google's load balancer is the front door
+  ingressController: null
+  # Google's load balancers and health checks talk to the pods from these two ranges; a regional
+  # gateway adds its proxy-only subnet (the overlay names it)
+  frontDoorCIDRs:
+    - 35.191.0.0/16
+    - 130.211.0.0/22
+serviceAccount:
+  annotations:
+    # workload identity: this Kubernetes service account acts as a Google service account that has
+    # roles/aiplatform.user on the project and nothing else (ADR 0045). No key, no Secret.
+    iam.gke.io/gcp-service-account: finuance-lab@<project>.iam.gserviceaccount.com
+assistant:
+  enabled: true
+  # the mock stays the default (what the animals use all day); Vertex AI is the second connection,
+  # which one animal asks within the simulator's daily cap
+  connectionsFile: |
+    {"connections":[
+      {"name":"mock","label":"Mock model","api":"openai","baseUrl":"http://finuance-llmmock:11434/v1","defaultModel":"mock-tools"},
+      {"name":"vertex","label":"Gemini (Google Cloud)","api":"openai","auth":"google","project":"<project>","location":"europe-west4","cloud":true,
+       "defaultModel":"google/gemini-3.5-flash-lite","models":["google/gemini-3.5-flash-lite"],"caps":[{"pattern":"google/*","contextTokens":1000000}]}
+    ]}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: finuance-sim, app.kubernetes.io/component: mock }
+      ports: [11434]
+    # Google's APIs through Private Google Access: *.googleapis.com resolves to these four
+    # addresses (a private DNS zone, made by Terraform), so the policy can name them
+    - cidr: 199.36.153.8/30
+      ports: [443]
+    # the metadata server, which hands the pod its short-lived token (GKE's own address)
+    - cidr: 169.254.169.254/32
+      ports: [80]

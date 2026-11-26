@@ -31,9 +31,20 @@ The assistant's part of the maintainer's list of 2026-11-26.
   clear it there. The assistant can propose a line to remember; with *Automatic memories* (its
   settings, off by default) the line is added without a click. For a cloud model the note is
   masked like everything else, and the agreement names it. Migration 00034 (three columns).
+- **The chart can attach to a Gateway** instead of an Ingress (`gateway.enabled`): one Gateway API
+  `HTTPRoute`, the HSTS header as a route filter, nothing Traefik-specific; `gateway.gke` adds
+  Google Kubernetes Engine's health check and backend policies; `networkPolicy.frontDoorCIDRs`
+  admits a load balancer that reaches the pods directly; `serviceAccount.annotations` carries a
+  cloud identity. Prepared for the Google Cloud lab and not yet run on a real cluster.
 - **Thinking level beside Send**: a button with the levels the chosen model has (none for a model
   without a control). An administrator can keep the level for everyone (Administration →
   Assistant → *People may change the thinking level*); questions then run at the model's default.
+
+### Fixed
+
+- **The api and the worker no longer restart once at every rollout.** A starting process keeps
+  trying to reach the database for up to 30 seconds instead of exiting at the first refused
+  connection; an answer from the database itself (a wrong password) still ends it at once.
 
 ## [0.7.1] - 2026-11-26
 
