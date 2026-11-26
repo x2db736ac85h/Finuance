@@ -31,6 +31,11 @@ The assistant's part of the maintainer's list of 2026-11-26.
   clear it there. The assistant can propose a line to remember; with *Automatic memories* (its
   settings, off by default) the line is added without a click. For a cloud model the note is
   masked like everything else, and the agreement names it. Migration 00034 (three columns).
+- **A Google Cloud lab, prepared** (ADR 0047, `docs/gcp.md`): Terraform for a network, a GKE
+  Autopilot cluster, identities without keys, a front door with a certificate and an allowlist,
+  and secrets that are never stored; `make gcp-plan`, `gcp-up`, `gcp-down`, `gcp-verify-empty`
+  behind three confirmations; `make check-terraform` in CI without any credentials. Not yet
+  applied to a real project.
 - **The chart can attach to a Gateway** instead of an Ingress (`gateway.enabled`): one Gateway API
   `HTTPRoute`, the HSTS header as a route filter, nothing Traefik-specific; `gateway.gke` adds
   Google Kubernetes Engine's health check and backend policies; `networkPolicy.frontDoorCIDRs`

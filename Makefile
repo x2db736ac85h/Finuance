@@ -376,6 +376,22 @@ helm-lint: ## Lint, render and validate the Helm charts, Argo CD manifests, dash
 	@tools/check-helm.sh
 	@tools/check-observability.sh
 
+.PHONY: check-terraform
+check-terraform: ## The Google Cloud lab's Terraform without any cloud account: format, validity, tests on a mocked plan, no keys, a scan (needs network for the providers)
+	@tools/check-terraform.sh
+
+# The Google Cloud lab (docs/gcp.md). It is billed while it is up: `gcp-up` and `gcp-down` ask for
+# the project id to be typed. Values: deploy/terraform/lab.tfvars (never committed), GCP_STATE_BUCKET.
+.PHONY: gcp-plan gcp-up gcp-down gcp-verify-empty
+gcp-plan: ## What `make gcp-up` would create (reads the state bucket, changes nothing)
+	@tools/gcp-lab.sh plan
+gcp-up: ## Create the Google Cloud lab's infrastructure (billed until gcp-down; asks for the project id)
+	@tools/gcp-lab.sh up
+gcp-down: ## Destroy the Google Cloud lab and everything in it (asks for the project id)
+	@tools/gcp-lab.sh down
+gcp-verify-empty: ## After gcp-down: list anything of the lab that is left and would cost money (needs gcloud)
+	@tools/gcp-lab.sh verify-empty
+
 .PHONY: loadtest
 loadtest: ## k6 load test against the running stack (PROFILE=load|smoke|ramp, LOADTEST_BASE_URL, LOADTEST_USERS); needs make loadtest-seed
 	mkdir -p loadtest/results

@@ -50,3 +50,4 @@ One file per decision, numbered in the order they were taken. A record is not re
 | [0044](0044-load-mode.md) | Load mode: the animals load a lab within ceilings of their own and replace the load-test users | accepted | 2026-11-23 |
 | [0045](0045-cloud-model-providers.md) | Cloud model providers: a connection that authenticates with Google's credentials, where its token may go, a budget per connection | accepted | 2026-11-25 |
 | [0046](0046-assistant-memory.md) | The assistant's memory: one note per person, added to the system prompt, never written by the assistant itself | accepted | 2026-11-26 |
+| [0047](0047-google-cloud-lab.md) | The Google Cloud lab: Terraform, GKE Autopilot, identities without keys, prepared before it is run | accepted | 2026-11-26 |
