@@ -46,7 +46,7 @@ new interface gets its own design-led phase, and the release is last:
 | **25** (new) | The traffic simulator: ten animal-named synthetic users on a lab instance, a separate service with its own tuning page; `v0.6.0` |
 | **26** (new) | Cloud AI: a Vertex AI connection for the assistant (short-lived tokens, no keys), on synthetic data only; `v0.7.0` |
 | **27** (new) | Google Cloud lab: Terraform and GKE Autopilot, brought up and destroyed on demand, synthetic data only |
-| **28** (was 22) | New interface and phone: design exploration with several directions and prototypes first, then the build; `v0.8.0` |
+| **28** (was 22) | New interface and phone: design exploration with several directions and prototypes first, then the build; `v0.9.0` (was `v0.8.0` until 2026-11-26, when Phase 27 shipped `v0.7.1` and `v0.8.0`) |
 | **29** (was 23) | Release 1.0: the public demo host, write-ups, screenshots, `v1.0.0` (its security tasks moved to Phases 22 and 23) |
 
 The decisions, the findings behind each phase and the task lists are in §9 (from
@@ -2112,7 +2112,7 @@ Write `docs/THREAT-MODEL.md` in Phase 5 and update it in Phase 16. Baseline cont
 | **M7 Going public** | 21 Synthetic test data, neutral wording, fail-closed defaults, README | The repository is public |
 | **M8 Secure and observable** (Rev 5) | 22 Security I: patches, pins, scanners · 23 Security II: runtime, cluster, privacy, two-step sign-in · 24 Observability and the synthetic marker | Every known finding closed; signed images enforced; one request can be followed through logs, traces and jobs (`v0.5.0`) |
 | **M9 Lab and cloud** (Rev 5) | 25 Traffic simulator · 26 Cloud AI (Vertex AI) · 27 Google Cloud lab (Terraform, GKE) | A lab instance with ten synthetic users, also on GKE on demand, with a cloud model on synthetic data (`v0.7.0`) |
-| **M10 Interface and release** (Rev 5) | 28 New interface and phone · 29 Release 1.0 | A redesigned interface that works on a phone (`v0.8.0`), then `v1.0.0` with a public demo |
+| **M10 Interface and release** (Rev 5) | 28 New interface and phone · 29 Release 1.0 | A redesigned interface that works on a phone (`v0.9.0`), then `v1.0.0` with a public demo |
 
 Each phase below lists: **Goal · Size · Read first · Tasks · Acceptance criteria · Gate**. Tasks are ordered. Each numbered task should be its own commit, or a few commits.
 
@@ -4865,7 +4865,7 @@ screen without offline data) inside the new design.
 
 **E — Prove.** The E2E suite at phone and desk sizes, touch included; axe on every screen, theme
 and mode; the performance budgets of §7.12 on a mid-range phone profile; screenshots; release
-**`v0.8.0`**.
+**`v0.9.0`**.
 
 **Backlog items that belong here:** a thinking toggle next to the question field; the duplicates
 window's first render of many groups; a cheaper first render for the Vitest files that time out.
