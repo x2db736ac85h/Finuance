@@ -25,11 +25,11 @@ type Props = {
   viewId: string;
   title: string;
   icon: 'layers' | 'folder';
-  /** A cash account's view: its toolbar adds transactions by hand (ADR 0029). */
-  cash?: { accountId: string; currency: string } | undefined;
+  /** Where the toolbar's Add puts a transaction typed by hand (ADR 0029; any account since Phase 27). */
+  add?: { accountId: string; currency: string; pick?: boolean } | undefined;
 };
 
-export function Table({ viewId, title, icon, cash }: Props) {
+export function Table({ viewId, title, icon, add }: Props) {
   const q = useQueryContext(viewId);
   const statColumn = useViews((s) => viewOf(s.views, viewId).statColumn);
   const hidden = useViews((s) => viewOf(s.views, viewId).hidden);
@@ -92,7 +92,7 @@ export function Table({ viewId, title, icon, cash }: Props) {
         periodLabel={head.data?.period?.label}
         columns={columns}
         visible={visible}
-        cash={cash}
+        add={add}
       />
       <MergeSuggestionCard viewId={viewId} />
       <RuleSuggestionCard />

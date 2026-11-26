@@ -3,7 +3,7 @@
 
 import { Navigate, useOutletContext, useParams } from 'react-router';
 
-import { useAccounts } from '../api/hooks/accounts';
+import { useAccounts, type Account } from '../api/hooks/accounts';
 import { useMeta } from '../api/hooks/me';
 import { Overview } from '../overview/Overview';
 import { Table } from '../table/Table';
@@ -37,8 +37,24 @@ function View({ mode }: { mode: 'table' | 'ov' }) {
         viewId={viewId}
         title={name}
         icon={account ? 'folder' : 'layers'}
-        cash={account?.kind === 'cash' ? { accountId: account.id, currency: account.currency } : undefined}
+        add={addTarget(accounts.data, account)}
       />
     );
   return <Overview key={viewId} viewId={viewId} />;
+}
+
+/**
+ * Where *Add* puts a transaction typed by hand (Phase 27: every account, not cash accounts only):
+ * the account in view, or with all accounts in view the first one that takes them, with the form
+ * asking which. An archived account takes none.
+ */
+export function addTarget(
+  accounts: readonly Account[],
+  inView: Account | undefined,
+): { accountId: string; currency: string; pick?: boolean } | undefined {
+  const takes = (a: Account) => !a.archived;
+  if (inView) return takes(inView) ? { accountId: inView.id, currency: inView.currency } : undefined;
+  // cash first: that is where most typed expenses go
+  const first = accounts.find((a) => takes(a) && a.kind === 'cash') ?? accounts.find(takes);
+  return first ? { accountId: first.id, currency: first.currency, pick: true } : undefined;
 }

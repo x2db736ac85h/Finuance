@@ -150,7 +150,7 @@ export function Grid(props: Props) {
   const ncol = columns.length + 1;
 
   return (
-    <div className="grid-wrap" ref={wrap} role="region" aria-label="Transactions">
+    <div className="grid-wrap" ref={wrap} role="region" aria-label="Transactions" data-drop="files">
       <table className="grid" style={{ width: tableWidth }} aria-rowcount={total}>
         <colgroup>
           <col style={{ width: gw }} />
@@ -277,7 +277,15 @@ const DataRow = memo(function DataRow({
               void copyText(text);
             }}
           >
-            {cell(c, text, tokens, row.group && groupColor(row.group.id), row.isTransfer, row.ai)}
+            {cell(
+              c,
+              text,
+              tokens,
+              row.group && groupColor(row.group.id),
+              row.isTransfer,
+              row.ai,
+              row.source === 'Manual',
+            )}
           </td>
         );
       })}
@@ -292,8 +300,9 @@ function cell(
   color: string | undefined,
   transfer: boolean,
   ai: boolean,
+  manual: boolean,
 ): ReactNode {
-  if (c.id === 'payee' && (transfer || ai)) {
+  if (c.id === 'payee' && (transfer || ai || manual)) {
     return (
       <>
         {ai && (
@@ -302,6 +311,14 @@ function cell(
           </span>
         )}
         {ai && ' '}
+        {/* typed by hand (Phase 27): a green plus, as the sparkle marks the assistant's; a row the
+            assistant changed shows the sparkle alone */}
+        {manual && !ai && (
+          <span className="tag manual" title="Added by hand">
+            +
+          </span>
+        )}
+        {manual && !ai && ' '}
         {transfer && (
           <span className="tag xfer" title="A transfer between your own accounts: left out of charts and the overview">
             Transfer

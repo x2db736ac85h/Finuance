@@ -7,8 +7,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png">
-  <img alt="The monthly overview: KPIs, highlights, cash flow, budgets and recurring payments" src="docs/screenshots/overview-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/assistant-dark.png">
+  <img alt="The assistant panel next to the table: a lookup, what was sent to the model, and the answer" src="docs/screenshots/assistant-light.png">
 </picture>
 
 Finuance is a Go API and worker, PostgreSQL and a React app. I built it to replace a single-file prototype I had been using for my own statements, and to learn what it takes to run a small product properly: several users, real deployments, backups that have been restored, alerts, security scans.
@@ -34,8 +34,8 @@ Finuance is a Go API and worker, PostgreSQL and a React app. I built it to repla
 The full list, with the filter language and how duplicates are recognised: [docs/features.md](docs/features.md).
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/assistant-dark.png">
-  <img alt="The assistant panel next to the table: a lookup, what was sent to the model, and the answer" src="docs/screenshots/assistant-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png">
+  <img alt="The monthly overview: KPIs, highlights, cash flow, budgets and recurring payments" src="docs/screenshots/overview-light.png">
 </picture>
 
 ## Tech stack

@@ -29,7 +29,7 @@ export function EmptyState() {
     });
   };
   return (
-    <div className="empty">
+    <div className="empty" data-drop="files">
       {/* The whole zone opens the picker; the buttons inside are the keyboard route. */}
       <div
         className="dz"

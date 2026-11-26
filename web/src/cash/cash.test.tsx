@@ -158,14 +158,35 @@ describe('cash accounts', () => {
     });
   });
 
-  it('asks for the amount and the payee, and N opens the form only in a cash account', async () => {
+  it('asks for the amount and the payee; Add and N work in every account, with a choice when all are in view', async () => {
     db.accounts = [account({ txCount: 1 }), account({ id: WALLET, name: 'Portfel', kind: 'cash', txCount: 0 })];
+    db.transactions = [txRow(1, { payee: 'Sklep Żabka', source: 'Manual' }), txRow(2, { payee: 'Kino Helios' })];
     const user = userEvent.setup();
     renderApp('/transactions/all');
-    await screen.findByText('Sklep Żabka');
+    // a row typed by hand carries a green plus; a bank's row doesn't (Phase 27)
+    const typed = (await screen.findByText('Sklep Żabka')).closest('td') as HTMLElement;
+    expect(within(typed).getByTitle('Added by hand').textContent).toBe('+');
+    expect(
+      within((await screen.findByText('Kino Helios')).closest('td') as HTMLElement).queryByTitle('Added by hand'),
+    ).toBeNull();
+    // with all accounts in view the form asks which one, starting on the cash account
     await user.keyboard('n');
-    expect(screen.queryByRole('dialog', { name: 'Add a transaction' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
+    const any = await screen.findByRole('dialog', { name: 'Add a transaction' });
+    const which = within(any).getByLabelText<HTMLSelectElement>('Account');
+    expect(which.value).toBe(WALLET);
+    expect([...which.options].map((o) => o.textContent)).toEqual([db.accounts[0]?.name, 'Portfel (cash)']);
+    // a bank account: said what happens when the bank's file brings the same payment
+    expect(within(any).queryByText(/offered to\s+merge the two/)).toBeNull();
+    await user.selectOptions(which, db.accounts[0]?.id ?? '');
+    expect(within(any).getByText(/offered to\s+merge the two/)).toBeTruthy();
+    await user.type(within(any).getByLabelText('Amount (PLN)'), '12,50');
+    await user.type(within(any).getByLabelText('Paid to'), 'Piekarnia');
+    await user.click(within(any).getByRole('button', { name: 'Add' }));
+    await waitFor(() => {
+      expect(added).toHaveLength(1);
+    });
+    expect(added[0]).toMatchObject({ accountId: db.accounts[0]?.id, amountMinor: -1250, payee: 'Piekarnia' });
+    added = [];
 
     await user.click(screen.getByRole('link', { name: /Portfel/ }));
     await screen.findByRole('button', { name: 'Add' });

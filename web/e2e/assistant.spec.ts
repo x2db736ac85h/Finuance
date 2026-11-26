@@ -301,3 +301,82 @@ test('a digest asked for now is written by the worker and opens from the bell (A
   await expect(open.locator('.chat-ttl')).toHaveText('History');
   await expect(open.locator('.cm-i.on .cm-t')).toContainText('Daily digest ·');
 });
+
+test('a PDF and a picture dropped on the transactions reach the assistant as pictures; the charts pane takes none (Phase 27)', async ({
+  page,
+  baseURL,
+}) => {
+  const seen = watch(page, baseURL ?? '');
+  // anything the Content-Security-Policy refuses is said on the console (pdf.js runs under it:
+  // a worker of this origin through a Trusted Types policy, no WebAssembly)
+  const refused: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Content Security Policy|TrustedScriptURL|Trusted Type/i.test(m.text()))
+      refused.push(m.text());
+  });
+  const panel = await setup(page);
+  await panel.getByRole('button', { name: 'Assistant settings' }).click();
+  await panel
+    .locator('label', { hasText: /^Model/ })
+    .locator('select')
+    .selectOption('mock-vl');
+  await panel.getByRole('button', { name: 'Done' }).click();
+
+  // a two-page PDF with embedded fonts, printed here by the browser (no fixture file)
+  const printer = await page.context().newPage();
+  await printer.setContent(
+    '<h1>Faktura 2025/03/17</h1><p>Piekarnia Ziarno — chleb, masło: 98,07 zł</p>' +
+      '<p style="break-before: page">Strona druga: razem 98,07 zł</p>',
+  );
+  const pdf = (await printer.pdf({ format: 'A5' })).toString('base64');
+  await printer.close();
+  // a small picture, drawn here by the browser so that it is certainly one it can read back
+  const png = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 48;
+    const g = c.getContext('2d');
+    if (g) {
+      g.fillStyle = '#ffffff';
+      g.fillRect(0, 0, 64, 48);
+      g.fillStyle = '#222222';
+      g.fillRect(8, 8, 48, 6);
+    }
+    return c.toDataURL('image/png').split(',')[1] ?? '';
+  });
+
+  const drop = async (selector: string, files: { name: string; type: string; b64: string }[]) => {
+    const dataTransfer = await page.evaluateHandle((list) => {
+      const dt = new DataTransfer();
+      for (const f of list) {
+        const bytes = Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0));
+        dt.items.add(new File([bytes], f.name, { type: f.type }));
+      }
+      return dt;
+    }, files);
+    await page.locator(selector).dispatchEvent('dragover', { dataTransfer });
+    await page.locator(selector).dispatchEvent('drop', { dataTransfer });
+  };
+
+  // the charts pane is no drop area: nothing happens
+  await drop('.viz', [{ name: 'obraz.png', type: 'image/png', b64: png }]);
+  await expect(panel.getByAltText('Photo to send')).toHaveCount(0);
+
+  // the list: the PDF's two pages and the picture
+  await drop('.grid-wrap', [
+    { name: 'faktura.pdf', type: 'application/pdf', b64: pdf },
+    { name: 'obraz.png', type: 'image/png', b64: png },
+  ]);
+  await expect(panel.getByAltText('Photo to send')).toHaveCount(3);
+  // each is a real picture, not an empty canvas: the PDF's pages are far larger than the small picture
+  const sizes = await panel
+    .getByAltText('Photo to send')
+    .evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).naturalWidth));
+  expect(sizes.filter((w) => w >= 1000)).toHaveLength(2);
+  expect(refused).toEqual([]);
+  expect(seen.errors).toEqual([]);
+  expect(seen.foreign).toEqual([]);
+
+  await ask(page, 'receipt 98.07 "Piekarnia Ziarno" on 2025-03-17');
+  await expect(panel.getByAltText('Attached photo')).toHaveCount(3);
+});

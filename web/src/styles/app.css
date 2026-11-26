@@ -1154,6 +1154,16 @@ table.grid {
 body.dragging .overlay {
   display: grid;
 }
+/* over the place the files would land in (its box is set while dragging), not the whole window */
+.overlay.zone {
+  inset: auto;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.overlay.zone .overlay-card {
+  max-width: calc(100% - 1.5rem);
+  padding: 1.5rem 1.75rem;
+}
 .overlay-card {
   border: 2px dashed var(--accent);
   border-radius: 1.125rem;

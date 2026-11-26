@@ -819,6 +819,13 @@ textarea.inp.ins-note {
   border-color: transparent;
   padding-inline: 0;
 }
+/* a row typed by hand: a green plus where the assistant's rows have their sparkle */
+.tag.manual {
+  color: var(--pos);
+  border-color: transparent;
+  padding-inline: 0;
+  font-weight: 700;
+}
 .otab .tag.cad {
   margin-left: 0.375rem;
 }

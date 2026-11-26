@@ -1,9 +1,11 @@
-// Add or change a transaction typed into a cash account (ADR 0029). Money out is the default; the
+// Add or change a transaction typed by hand (ADR 0029): into a cash account, or since Phase 27 into
+// any account (a bank account's typed row is offered for merging when the bank's file brings its own). Money out is the default; the
 // amount is typed as a positive number and the kind decides the sign. The category is a name: a
 // new one is created, like typing one into the inspector.
 
 import { useState, type ReactNode } from 'react';
 
+import { useAccounts } from '../api/hooks/accounts';
 import { useGroups } from '../api/hooks/groups';
 import {
   useAddTransaction,
@@ -52,13 +54,18 @@ function Form({
   const [groupId, setGroupId] = useState(detail?.group?.id ?? '');
   const [note, setNote] = useState(detail?.note ?? '');
   const [error, setError] = useState('');
+  // which account: the one in view, or a choice when all accounts were in view
+  const accounts = (useAccounts().data ?? []).filter((a) => !a.archived);
+  const [accountId, setAccountId] = useState(dialog.accountId);
+  const account = accounts.find((a) => a.id === accountId);
+  const currency = account?.currency ?? dialog.currency;
   const cats = useCategories().data ?? [];
   const groups = useGroups().data ?? [];
   const add = useAddTransaction();
   const edit = useEditTransaction();
   const pending = add.isPending || edit.isPending;
 
-  const parsed = parseMoneyInput(amount, dialog.currency);
+  const parsed = parseMoneyInput(amount, currency);
   const minor = parsed === null ? null : Math.abs(parsed) * (kind === 'out' ? -1 : 1);
   const valid = minor !== null && minor !== 0 && payee.trim() !== '' && /^\d{4}-\d{2}-\d{2}$/.test(bookedOn);
 
@@ -84,7 +91,7 @@ function Form({
     if (!detail) {
       add.mutate(
         {
-          accountId: dialog.accountId,
+          accountId,
           bookedOn,
           amountMinor: minor,
           payee: payee.trim(),
@@ -95,7 +102,7 @@ function Form({
         },
         {
           onSuccess: (t) => {
-            useViews.getState().patch(dialog.accountId, { selectedId: t.id });
+            useViews.getState().patch(dialog.pick ? 'all' : accountId, { selectedId: t.id });
             done('Added');
           },
           onError: fail,
@@ -152,6 +159,22 @@ function Form({
           submit();
         }}
       >
+        {dialog.pick && !detail && accounts.length > 0 && (
+          <label className="st-col">
+            Account
+            <Select
+              value={accountId}
+              options={accounts.map((a) => ({ value: a.id, label: a.kind === 'cash' ? `${a.name} (cash)` : a.name }))}
+              onChange={setAccountId}
+            />
+          </label>
+        )}
+        {!detail && account?.kind === 'bank' && (
+          <p className="hint">
+            For a payment the bank’s file doesn’t have yet. When an import brings the bank’s own row, you are offered to
+            merge the two.
+          </p>
+        )}
         <div className="cash-kind" role="radiogroup" aria-label="Kind">
           {(['out', 'in'] as const).map((k) => (
             <label key={k} className={kind === k ? 'on' : undefined}>
@@ -169,7 +192,7 @@ function Form({
         </div>
         <div className="form-row">
           {field(
-            `Amount (${dialog.currency})`,
+            `Amount (${currency})`,
             <TextInput
               mono
               inputMode="decimal"

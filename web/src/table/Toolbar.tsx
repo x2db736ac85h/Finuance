@@ -31,7 +31,7 @@ type Props = {
   periodLabel: string | undefined;
   columns: readonly ColumnDef[];
   visible: readonly ColumnDef[];
-  cash?: { accountId: string; currency: string } | undefined;
+  add?: { accountId: string; currency: string; pick?: boolean } | undefined;
 };
 
 /** Saves a Blob under a file name (an <a download> made with the DOM API, never HTML strings). */
@@ -47,7 +47,7 @@ export function saveBlob(blob: Blob, filename: string): void {
   }, 2000);
 }
 
-export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, visible, cash }: Props) {
+export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, visible, add }: Props) {
   const v = useViews((s) => viewOf(s.views, viewId));
   const patch = useViews((s) => s.patch);
   const cols = usePopover();
@@ -118,13 +118,13 @@ export function Toolbar({ viewId, title, icon, q, total, periodLabel, columns, v
         )}
       </div>
       <div className="tools">
-        {cash && (
+        {add && (
           <Button
             variant="primary"
             icon="plus"
-            title="Add a transaction to this cash account (N)"
+            title="Add a transaction by hand (N)"
             onClick={() => {
-              useCashDialogs.getState().openTransaction(cash);
+              useCashDialogs.getState().openTransaction(add);
             }}
           >
             Add
