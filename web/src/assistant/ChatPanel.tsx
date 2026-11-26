@@ -34,12 +34,14 @@ import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
 import { Modal } from '../ui/Modal';
 import { aiToast as toast } from '../ui/toastStore';
-import { useChat, type AiTurn } from './chatStore';
+import { questionIndex, questionNumber, useChat, type AiTurn } from './chatStore';
 import { ChatSettings, pick, readsPhotos } from './ChatSettings';
 import { AUTO_APPLY_MAX_ROWS, proposalTitle } from './Proposal';
 import { dropKind, MAX_CHAT_FILE_BYTES, useChatDrops } from './drops';
 import { MAX_PDF_PAGES, pdfToImages } from './pdf';
 import { reencodePhoto } from './photos';
+import { PROMPT_GALLERY } from './prompts';
+import { ThinkButton } from './ThinkButton';
 import { TurnView } from './Turn';
 import { txPath } from '../lib/paths';
 import { cloudWhere, cloudWho } from './cloud';
@@ -71,6 +73,9 @@ export function ChatPanel({ viewId }: { viewId: string }) {
   // the question that was refused for want of agreement: asked again once the person agrees
   const refused = useRef<{ text: string; photos: Attachment[] } | null>(null);
   const [text, setText] = useState('');
+  // the question being edited (which one of the chat, 0 = the first), or none
+  const [editing, setEditing] = useState<number | null>(null);
+  const [gallery, setGallery] = useState(false);
   // photos waiting for the next question (uploaded into the chat already)
   const [photos, setPhotos] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(0);
@@ -107,7 +112,8 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     .sort()
     .at(-1);
 
-  const ask = (typed: string, withPhotos: Attachment[] = photos) => {
+  /** `replaceFrom`: ask again from that question of the chat (a retry, or an edited question). */
+  const ask = (typed: string, withPhotos: Attachment[] = photos, replaceFrom?: number) => {
     // a photo alone asks about the receipt
     const q = typed.trim() || (vision && withPhotos.length > 0 ? 'Here is a receipt.' : '');
     if (!q || busy) return;
@@ -120,6 +126,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     const sent = vision ? withPhotos : [];
     setText('');
     setPhotos([]);
+    setEditing(null);
     near.current = true;
     void send(
       q,
@@ -127,6 +134,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         scope: view ? 'view' : 'all',
         ...(view ? { context: withoutTransfers(contextOf(viewId, v)) } : {}),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(replaceFrom === undefined ? {} : { replaceFrom }),
         settings: {
           connection: conn.name,
           ...(model ? { model } : {}),
@@ -255,10 +263,48 @@ export function ChatPanel({ viewId }: { viewId: string }) {
     if (s.matched !== undefined) toast(`Showing ${plural(s.matched, 'matching row')}`);
   };
 
+  // Run a failed question again (Phase 27): it and its failed answer leave the chat, here and on
+  // the server, and the same words and photos go out once more.
+  const retry = (n: number) => {
+    const q = useChat.getState().cutFrom(n);
+    if (q) ask(q.content, q.attachments ?? [], n);
+  };
+  // Edit a question: its words come back to the field; sending replaces it and what followed.
+  const startEdit = (n: number) => {
+    const at = questionIndex(turns, n);
+    const q = at < 0 ? undefined : turns[at];
+    if (busy || q?.role !== 'user') return;
+    setEditing(n);
+    setText(q.content);
+    setPhotos([]);
+    input.current?.focus();
+  };
+  const submit = () => {
+    if (editing === null) {
+      ask(text);
+      return;
+    }
+    if (!text.trim() || busy) return;
+    const q = useChat.getState().cutFrom(editing);
+    // its photos go with the edited question again
+    ask(text, q?.attachments ?? [], editing);
+  };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      ask(text);
+      submit();
+    } else if (e.key === 'ArrowUp' && !text && editing === null && !busy) {
+      // the last question back into the empty field, as a terminal does
+      const n = turns.filter((t) => t.role === 'user').length - 1;
+      if (n >= 0) {
+        e.preventDefault();
+        startEdit(n);
+      }
+    } else if (e.key === 'Escape' && editing !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditing(null);
+      setText('');
     }
   };
 
@@ -409,12 +455,50 @@ export function ChatPanel({ viewId }: { viewId: string }) {
                   {q}
                 </button>
               ))}
+              {/* more to ask, to be filled in first (Phase 27) */}
+              <button
+                type="button"
+                className="sugg-more"
+                onClick={() => {
+                  setGallery(true);
+                }}
+              >
+                <Icon name="book" />
+                Prompt gallery
+              </button>
             </div>
           </div>
         ) : (
-          turns.map((t, i) => (
-            <TurnView key={i} turn={t} last={i === turns.length - 1} chatId={chatId} onShow={showInTable} />
-          ))
+          turns.map((t, i) => {
+            const n = questionNumber(turns, i);
+            const lastOne = i === turns.length - 1;
+            return (
+              <TurnView
+                key={i}
+                turn={t}
+                last={lastOne}
+                chatId={chatId}
+                onShow={showInTable}
+                // a question can be edited while nothing is being written; the newest failed answer
+                // can be run again (the agreement to a cloud connection has its own dialog)
+                {...(t.role === 'user' && !busy
+                  ? {
+                      editing: editing === n,
+                      onEdit: () => {
+                        startEdit(n);
+                      },
+                    }
+                  : {})}
+                {...(t.role === 'assistant' && lastOne && t.error && !busy && t.error.code !== 'consent_required'
+                  ? {
+                      onRetry: () => {
+                        retry(n);
+                      },
+                    }
+                  : {})}
+              />
+            );
+          })
         )}
       </div>
       <form
@@ -424,7 +508,7 @@ export function ChatPanel({ viewId }: { viewId: string }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (busy) void stop();
-          else ask(text);
+          else submit();
         }}
       >
         {photos.length + uploading > 0 && (
@@ -473,22 +557,82 @@ export function ChatPanel({ viewId }: { viewId: string }) {
             ref={input}
             rows={1}
             value={text}
-            placeholder="Ask about your transactions…"
+            placeholder={editing === null ? 'Ask about your transactions…' : 'Change your question…'}
             aria-label="Question"
             onChange={(e) => {
               setText(e.target.value);
             }}
             onKeyDown={onKey}
           />
+          <ThinkButton
+            reasoning={conn?.models.find((m) => m.id === model)?.reasoning}
+            value={ai.thinking}
+            locked={status.data?.thinkingLocked === true}
+            onChange={(thinking) => {
+              setAi({ thinking });
+            }}
+          />
           <IconButton icon={busy ? 'stop' : 'send'} title={busy ? 'Stop' : 'Send (Enter)'} type="submit" />
         </div>
         <div className="chat-hint">
+          {editing !== null && (
+            <span className="chat-editing" role="status">
+              Editing your question: sending it replaces it and what followed.{' '}
+              <button
+                type="button"
+                className="adm-link"
+                onClick={() => {
+                  setEditing(null);
+                  setText('');
+                }}
+              >
+                Cancel
+              </button>{' '}
+              ·{' '}
+            </span>
+          )}
           {`${ai.scope === 'view' ? 'Current view' : 'All data'} · ${plural(rows, 'row')} · Enter to send, Shift+Enter for a new line`}
           {chatId && settings.data?.retentionDays != null
             ? ` · kept ${plural(settings.data.retentionDays, 'day')}`
             : ''}
         </div>
       </form>
+      <Modal
+        open={gallery}
+        title="Prompt gallery"
+        sub="Choose one, change the words in [brackets], then send it."
+        onClose={() => {
+          setGallery(false);
+        }}
+      >
+        <div className="modal-form prompt-gallery">
+          {PROMPT_GALLERY.map((g) => (
+            <section key={g.id} aria-label={g.title}>
+              <h3>{g.title}</h3>
+              <p className="hint">{g.about}</p>
+              <ul>
+                {g.prompts.map((pr) => (
+                  <li key={pr.title}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGallery(false);
+                        setEditing(null);
+                        setText(pr.text);
+                        // after the window has given the focus back
+                        setTimeout(() => input.current?.focus(), 0);
+                      }}
+                    >
+                      <b>{pr.title}</b>
+                      <span>{pr.text}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </Modal>
       <Modal
         open={!!consentFor}
         size="sm"

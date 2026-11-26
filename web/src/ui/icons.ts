@@ -147,6 +147,22 @@ export const ICONS = {
  * 1.75 stroke, round caps. Kept apart so ICONS stays the exact legacy set (Icon.test.tsx).
  */
 export const APP_ICONS = {
+  // a circle with an arrow: run again (Phase 27, a failed question)
+  retry: [
+    ['path', { d: 'M20 12a8 8 0 1 1-2.6-5.9' }],
+    ['path', { d: 'M20 4v5h-5' }],
+  ],
+  // a brain, in two halves: how hard the model thinks (Phase 27)
+  brain: [
+    [
+      'path',
+      { d: 'M12 5a3 3 0 0 0-5.6-1.2A3 3 0 0 0 4 8.5a3.2 3.2 0 0 0 .5 5.6A3.5 3.5 0 0 0 9 19.5a3 3 0 0 0 3-2.9z' },
+    ],
+    [
+      'path',
+      { d: 'M12 5a3 3 0 0 1 5.6-1.2A3 3 0 0 1 20 8.5a3.2 3.2 0 0 1-.5 5.6A3.5 3.5 0 0 1 15 19.5a3 3 0 0 1-3-2.9z' },
+    ],
+  ],
   // the command key's looped square: keyboard shortcuts (Phase 26, U4)
   cmd: [
     [

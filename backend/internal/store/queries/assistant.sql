@@ -58,6 +58,20 @@ RETURNING id, seq;
 -- name: ListAssistantMessages :many
 SELECT * FROM assistant_messages WHERE user_id = @user_id AND chat_id = @chat_id ORDER BY seq;
 
+-- name: DeleteAssistantMessagesFrom :execrows
+-- A question asked again or edited (Phase 27): it, its answer and everything after leave the chat.
+DELETE FROM assistant_messages WHERE user_id = @user_id AND chat_id = @chat_id AND seq >= @seq::integer;
+
+-- name: FreeAssistantAttachmentsOf :exec
+-- The photos of the replaced question wait for the next one again.
+UPDATE assistant_attachments SET message_seq = NULL
+WHERE user_id = @user_id AND chat_id = @chat_id AND message_seq = @seq::integer;
+
+-- name: DeleteAssistantAttachmentsAfter :exec
+-- The photos of the questions that followed it go with them.
+DELETE FROM assistant_attachments
+WHERE user_id = @user_id AND chat_id = @chat_id AND message_seq > @seq::integer;
+
 -- name: ListUserIDsAfter :many
 -- Users in id order, a page at a time (the retention job visits every user under its own RLS
 -- context; users is not under RLS).

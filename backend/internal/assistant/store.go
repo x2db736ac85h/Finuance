@@ -478,6 +478,24 @@ type RunUsage struct {
 	Digest bool
 }
 
+// truncate removes a chat's messages from seq on: a question that is asked again or was edited,
+// its answer and everything after. The photos of that question wait for the next one again;
+// those of later questions go with them. What its proposals changed stays changed and stays in
+// the activity log (ADR 0030): the chat's text goes, not what was done.
+func (c *Chats) truncate(ctx context.Context, userID, chatID uuid.UUID, seq int) error {
+	return c.st.WithUser(ctx, userID, func(q *db.Queries, _ pgx.Tx) error {
+		s := int32(seq) //nolint:gosec // a stored sequence number
+		if err := q.DeleteAssistantAttachmentsAfter(ctx, db.DeleteAssistantAttachmentsAfterParams{UserID: userID, ChatID: chatID, Seq: s}); err != nil {
+			return err
+		}
+		if err := q.FreeAssistantAttachmentsOf(ctx, db.FreeAssistantAttachmentsOfParams{UserID: userID, ChatID: chatID, Seq: s}); err != nil {
+			return err
+		}
+		_, err := q.DeleteAssistantMessagesFrom(ctx, db.DeleteAssistantMessagesFromParams{UserID: userID, ChatID: chatID, Seq: s})
+		return err
+	})
+}
+
 // Append stores messages at the end of a chat and updates the chat, in one transaction. It
 // returns the sequence number of the last message.
 func (c *Chats) Append(ctx context.Context, userID, chatID uuid.UUID, msgs []Message, up ChatUpdate) (int, error) {

@@ -122,9 +122,13 @@ type Querier interface {
 	DeleteAccount(ctx context.Context, arg DeleteAccountParams) (int64, error)
 	DeleteAdviceArticle(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteAnnotation(ctx context.Context, arg DeleteAnnotationParams) error
+	// The photos of the questions that followed it go with them.
+	DeleteAssistantAttachmentsAfter(ctx context.Context, arg DeleteAssistantAttachmentsAfterParams) error
 	DeleteAssistantChat(ctx context.Context, arg DeleteAssistantChatParams) (int64, error)
 	// Retention: chats whose last message is older than the cutoff.
 	DeleteAssistantChatsBefore(ctx context.Context, arg DeleteAssistantChatsBeforeParams) (int64, error)
+	// A question asked again or edited (Phase 27): it, its answer and everything after leave the chat.
+	DeleteAssistantMessagesFrom(ctx context.Context, arg DeleteAssistantMessagesFromParams) (int64, error)
 	DeleteBudget(ctx context.Context, arg DeleteBudgetParams) (int64, error)
 	// Transactions keep existing with category_id NULL; budgets of the category go with it.
 	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error)
@@ -231,6 +235,8 @@ type Querier interface {
 	FingerprintsWithRows(ctx context.Context, arg FingerprintsWithRowsParams) ([][]byte, error)
 	// The end of a run: the report (or the error), and the manifest and files are no longer needed.
 	FinishLegacyImport(ctx context.Context, arg FinishLegacyImportParams) error
+	// The photos of the replaced question wait for the next one again.
+	FreeAssistantAttachmentsOf(ctx context.Context, arg FreeAssistantAttachmentsOfParams) error
 	// The display name of a user (friends never see each other's e-mail).
 	FriendDisplayName(ctx context.Context, id uuid.UUID) (string, error)
 	// Whether two users are of the same kind: a person and a synthetic user never become friends

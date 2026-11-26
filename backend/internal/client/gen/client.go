@@ -3096,11 +3096,14 @@ type AssistantErrorEvent struct {
 // AssistantMessageRequest defines model for AssistantMessageRequest.
 type AssistantMessageRequest struct {
 	// AttachmentIds Photos attached to this chat (POST …/attachments) that go with this question; the model must read images.
-	AttachmentIds *[]openapi_types.UUID         `json:"attachmentIds,omitempty"`
-	Context       *QueryContext                 `json:"context,omitempty"`
-	Scope         *AssistantMessageRequestScope `json:"scope,omitempty"`
-	Settings      *AssistantRunSettings         `json:"settings,omitempty"`
-	Text          string                        `json:"text"`
+	AttachmentIds *[]openapi_types.UUID `json:"attachmentIds,omitempty"`
+	Context       *QueryContext         `json:"context,omitempty"`
+
+	// ReplaceFrom Ask again from a question of this chat: 0 is its first question, 1 its second, and so on. That question, its answer and everything after are removed from the chat before this message is stored, and the removed question's photos can be sent again with `attachmentIds`. For running a failed question again, or after editing one. The number of questions the chat has (nothing to remove) is accepted; a larger one is `422`.
+	ReplaceFrom *int32                        `json:"replaceFrom,omitempty"`
+	Scope       *AssistantMessageRequestScope `json:"scope,omitempty"`
+	Settings    *AssistantRunSettings         `json:"settings,omitempty"`
+	Text        string                        `json:"text"`
 
 	// TimeZone The browser's IANA time zone, for "today" (default Europe/Warsaw).
 	//
@@ -3231,6 +3234,9 @@ type AssistantStatus struct {
 	//
 	// Example: 50
 	MaxRowsLimit int `json:"maxRowsLimit"`
+
+	// ThinkingLocked The administrator keeps the thinking level: a question's `settings.think` is ignored and the model's default applies. Absent when people may choose.
+	ThinkingLocked *bool `json:"thinkingLocked,omitempty"`
 }
 
 // AssistantStatusChoice Who picks the connection and model: the administrator (questions use the default connection and its default model, whatever they ask for) or each person.
@@ -4214,6 +4220,9 @@ type InstanceAssistant struct {
 
 	// Instructions Added to every system prompt after the app's rules (ADR 0034).
 	Instructions *string `json:"instructions,omitempty"`
+
+	// LockThinking People can't choose how hard the model thinks: every question runs at the model's default (its tuning's level, or auto). Absent or false: people choose.
+	LockThinking *bool `json:"lockThinking,omitempty"`
 
 	// ModelChoice Who picks the connection and model; absent = admin (the administrator's defaults).
 	ModelChoice *InstanceAssistantModelChoice `json:"modelChoice,omitempty"`

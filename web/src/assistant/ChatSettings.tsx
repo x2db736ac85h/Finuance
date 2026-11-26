@@ -238,6 +238,7 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
   const meta = useMeta();
   const { conn, model } = pick(status, ai);
   const locked = status?.choice === 'admin';
+  const thinkingLocked = status?.thinkingLocked === true;
   const [tested, setTested] = useState(false);
   const line = conn ? testLine(conn) : undefined;
   const consented = !!conn && (settings.data?.cloudConsent ?? []).includes(conn.name);
@@ -354,11 +355,13 @@ export function ChatSettings({ status, onCloud, onDone }: Props) {
         <Select
           value={ai.thinking}
           options={THINKING.map((t) => ({ value: t, label: THINK_LABEL[t] }))}
+          disabled={thinkingLocked}
           onChange={(thinking) => {
             setAi({ thinking });
           }}
         />
       </label>
+      {thinkingLocked && <p className="hint">The administrator set the thinking level for everyone.</p>}
       {info?.reasoning === 'none' && ai.thinking !== 'auto' && (
         <p className="hint">This model has no thinking control; if it reasons anyway, its reasoning is shown.</p>
       )}

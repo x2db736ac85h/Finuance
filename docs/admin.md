@@ -141,6 +141,9 @@ the same in every theme.
   every question and digest runs on the **default connection** (the first one that is on, unless
   you choose one) and its default model; people see which one in the assistant's settings but
   can't change it, and their own earlier choices come back if you let them pick again.
+- **People may change the thinking level** (in *Who picks the model*): on by default. Off, the
+  button beside Send offers nothing and every question runs at the model's default, which is the
+  level you set for that model under *Tune a model*, or the model's own.
 - **What a cloud provider keeps**: one paragraph of yours, shown where a person agrees to a cloud
   connection (retention, logging, what you switched off). Finuance can't know it; you can.
   `docs/assistant.md` "Cloud providers: what leaves and what they keep" lists what to look at for

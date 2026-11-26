@@ -24,7 +24,7 @@ import { Connections, Tuning } from './AssistantConnections';
 import { fmtDateTime } from '../lib/dates';
 import { errorMessage } from '../lib/errors';
 import { Button } from '../ui/Button';
-import { Select, TextInput } from '../ui/inputs';
+import { Checkbox, Select, TextInput } from '../ui/inputs';
 import { toast } from '../ui/toastStore';
 
 const MAX_INSTRUCTIONS = 2000;
@@ -59,9 +59,13 @@ function ModelChoiceForm({ doc }: { doc: InstanceSettings }) {
   const conns = useConnections();
   const [choice, setChoice] = useState<'admin' | 'people'>(doc.assistant?.modelChoice ?? 'admin');
   const [conn, setConn] = useState(doc.assistant?.defaultConnection ?? '');
+  // people choose how hard the model thinks unless this is off (Phase 27)
+  const [freeThinking, setFreeThinking] = useState(!doc.assistant?.lockThinking);
   const on = (conns.data ?? []).filter((c) => c.controls.enabled || c.name === conn);
   const unchanged =
-    choice === (doc.assistant?.modelChoice ?? 'admin') && conn === (doc.assistant?.defaultConnection ?? '');
+    choice === (doc.assistant?.modelChoice ?? 'admin') &&
+    conn === (doc.assistant?.defaultConnection ?? '') &&
+    freeThinking === !doc.assistant?.lockThinking;
   return (
     <div className="set-card">
       <div className="lbl">Who picks the model</div>
@@ -94,13 +98,31 @@ function ModelChoiceForm({ doc }: { doc: InstanceSettings }) {
           />
         </label>
       </div>
+      <Checkbox
+        label="People may change the thinking level (the button beside Send)"
+        checked={freeThinking}
+        onChange={setFreeThinking}
+      />
+      <p className="hint">
+        Off: every question runs at the model’s default, which you set per model under a connection’s Models (Tune a
+        model). More thinking is slower and, on a paid model, costs more.
+      </p>
       <div className="set-actions">
         <Button
           variant="primary"
           disabled={put.isPending || unchanged}
           onClick={() => {
             void put
-              .mutateAsync({ ...doc, assistant: { ...doc.assistant, modelChoice: choice, defaultConnection: conn } })
+              .mutateAsync({
+                ...doc,
+                // the lock is written only when it is on, so a document without it stays as it was
+                assistant: {
+                  ...withoutLock(doc.assistant),
+                  modelChoice: choice,
+                  defaultConnection: conn,
+                  ...(freeThinking ? {} : { lockThinking: true }),
+                },
+              })
               .then(
                 () => {
                   toast(choice === 'admin' ? 'Saved: you pick the model' : 'Saved: each person picks the model');
@@ -116,6 +138,13 @@ function ModelChoiceForm({ doc }: { doc: InstanceSettings }) {
       </div>
     </div>
   );
+}
+
+/** The assistant's settings without the thinking lock (it is put back when it is on). */
+function withoutLock(a: InstanceSettings['assistant']): NonNullable<InstanceSettings['assistant']> {
+  const rest = { ...a };
+  delete rest.lockThinking;
+  return rest;
 }
 
 function Instructions() {

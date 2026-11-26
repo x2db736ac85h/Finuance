@@ -58,6 +58,10 @@ func (a *api) AssistantStatus(ctx context.Context, req gen.AssistantStatusReques
 		if note := a.ai.Runner.Choice(ctx).CloudNote; note != "" {
 			out.CloudNote = &note
 		}
+		if a.ai.Runner.Choice(ctx).LockThinking {
+			locked := true
+			out.ThinkingLocked = &locked
+		}
 	}
 	if a.ai != nil && !a.ai.Runner.Choice(ctx).People {
 		out.Choice = gen.AssistantStatusChoiceAdmin
@@ -563,6 +567,10 @@ func (a *api) SendAssistantMessage(ctx context.Context, req gen.SendAssistantMes
 	b := req.Body
 	r := assistant.Request{ChatID: req.Id, Text: b.Text, TimeZone: deref(b.TimeZone), AttachmentIDs: deref(b.AttachmentIds),
 		TokensPerDay: a.effectiveLimits(ctx, identity(ctx).User).AssistantTokensPerDay}
+	if b.ReplaceFrom != nil {
+		n := int(*b.ReplaceFrom)
+		r.ReplaceFrom = &n
+	}
 	if s := b.Settings; s != nil {
 		r.Connection, r.Model, r.Temperature = deref(s.Connection), deref(s.Model), s.Temperature
 		if s.Mode != nil {

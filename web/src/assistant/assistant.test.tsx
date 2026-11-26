@@ -15,6 +15,7 @@ import { account, API, db, problem, resetDb, server } from '../test/server';
 import { useAnswerNotes } from './answerNotes';
 import { applyEvent, useChat, type AiTurn } from './chatStore';
 import { useChatDrops } from './drops';
+import { thinkLevels } from './ThinkButton';
 
 // jsdom has no canvas: the browser-side re-encoding is replaced by a fixed JPEG (photos.test.ts
 // tests its scaling)
@@ -404,6 +405,144 @@ describe('ChatPanel', () => {
       ),
     ).toBeTruthy();
     expect(useChatDrops.getState().files).toEqual([]);
+  });
+
+  it('runs a failed question again with the round button, replacing it in the chat (Phase 27)', async () => {
+    const answer = st.answer;
+    let fail = true;
+    st.answer = () => (fail ? problem(502, 'upstream', 'The model server reported an error.') : answer());
+    renderApp('/transactions/all');
+    const p = await panel();
+    fireEvent.click(await within(p).findByText('Which subscriptions or regular bills do I pay?'));
+    const again = await within(p).findByRole('button', { name: 'Ask again' });
+    expect(within(p).getByRole('alert').textContent).toContain('The model server reported an error.');
+    fail = false;
+    fireEvent.click(again);
+    expect(
+      await within(p).findByText((_, el) => el?.tagName === 'P' && el.textContent === 'Found 10 visits.'),
+    ).toBeTruthy();
+    // the same words went out again, saying which question of the chat they replace
+    expect(st.sent).toHaveLength(2);
+    expect(st.sent[1]).toMatchObject({ text: 'Which subscriptions or regular bills do I pay?', replaceFrom: 0 });
+    // one question on screen, no error left, nothing to run again
+    expect(p.querySelectorAll('.msg.user')).toHaveLength(1);
+    expect(within(p).queryByRole('alert')).toBeNull();
+    expect(within(p).queryByRole('button', { name: 'Ask again' })).toBeNull();
+  });
+
+  it('edits a question with the pencil or Arrow Up, and sending replaces it and what followed (Phase 27)', async () => {
+    const user = userEvent.setup();
+    renderApp('/transactions/all');
+    const p = await panel();
+    const box = await within(p).findByRole<HTMLTextAreaElement>('textbox', { name: 'Question' });
+    await user.type(box, 'First question{Enter}');
+    await within(p).findByText((_, el) => el?.tagName === 'P' && el.textContent === 'Found 10 visits.');
+    await user.type(box, 'Second question{Enter}');
+    await waitFor(() => {
+      expect(st.sent).toHaveLength(2);
+    });
+    await waitFor(() => {
+      expect(useChat.getState().busy).toBe(false);
+    });
+    // Arrow Up in the empty field: the last question comes back
+    await user.click(box);
+    await user.keyboard('{ArrowUp}');
+    expect(box.value).toBe('Second question');
+    expect(within(p).getByRole('status').textContent).toContain('Editing your question');
+    // Esc gives it up
+    await user.keyboard('{Escape}');
+    expect(box.value).toBe('');
+    expect(within(p).queryByRole('status')).toBeNull();
+    // the pencil on the first question
+    const pencils = within(p).getAllByRole('button', { name: /^Edit this question/ });
+    expect(pencils).toHaveLength(2);
+    await user.click(pencils[0] as HTMLElement);
+    expect(box.value).toBe('First question');
+    await user.clear(box);
+    await user.type(box, 'First question, better{Enter}');
+    await waitFor(() => {
+      expect(st.sent).toHaveLength(3);
+    });
+    expect(st.sent[2]).toMatchObject({ text: 'First question, better', replaceFrom: 0 });
+    // the old first question and the second are gone from the screen
+    await waitFor(() => {
+      expect([...p.querySelectorAll('.msg.user .bub')].map((b) => b.textContent)).toEqual(['First question, better']);
+    });
+  });
+
+  it('offers a prompt gallery in three groups; a prompt fills the question field and sends nothing (Phase 27)', async () => {
+    const user = userEvent.setup();
+    renderApp('/transactions/all');
+    const p = await panel();
+    await user.click(await within(p).findByRole('button', { name: 'Prompt gallery' }));
+    const dlg = await screen.findByRole('dialog', { name: 'Prompt gallery' });
+    expect(
+      within(dlg)
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label')),
+    ).toEqual(['Actions', 'Questions', 'Budget planning']);
+    await user.click(
+      within(within(dlg).getByRole('region', { name: 'Budget planning' })).getByRole('button', {
+        name: /^A savings goal/,
+      }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Prompt gallery' })).toBeNull();
+    });
+    const box = within(p).getByRole<HTMLTextAreaElement>('textbox', { name: 'Question' });
+    expect(box.value).toBe(
+      'I want to save [10 000] by [December]. Make it a goal and tell me how much that is a month.',
+    );
+    expect(st.sent).toHaveLength(0);
+  });
+
+  it('offers the model’s thinking levels beside Send, and none when the administrator keeps them (Phase 27)', async () => {
+    const user = userEvent.setup();
+    // a model with a switch: the default or off
+    renderApp('/transactions/all');
+    const p = await panel();
+    await user.click(await within(p).findByRole('button', { name: 'Thinking: Model default' }));
+    const menu = await screen.findByRole('menu', { name: 'Thinking' });
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((i) => i.querySelector('span')?.textContent),
+    ).toEqual(['Model default', 'Off']);
+    await user.click(within(menu).getByRole('menuitem', { name: /^Off/ }));
+    expect(useUi.getState().ai.thinking).toBe('off');
+    expect(within(p).getByRole('button', { name: 'Thinking: Off' })).toBeTruthy();
+    // the question carries it
+    await user.type(within(p).getByRole('textbox', { name: 'Question' }), 'Hi{Enter}');
+    await waitFor(() => {
+      expect(st.sent).toHaveLength(1);
+    });
+    expect((st.sent[0] as { settings?: { think?: string } }).settings?.think).toBe('off');
+  });
+
+  it('shows every level for a model with them, no button for a model without a control, and a locked one', async () => {
+    expect(thinkLevels('adaptive')).toEqual(['auto', 'off', 'low', 'medium', 'high']);
+    expect(thinkLevels('effort')).toHaveLength(5);
+    expect(thinkLevels('budget')).toHaveLength(5);
+    expect(thinkLevels('switch')).toEqual(['auto', 'off']);
+    expect(thinkLevels('none')).toEqual([]);
+    expect(thinkLevels(undefined)).toEqual([]);
+    st.status = {
+      ...status([
+        { models: [{ id: 'qwen3-14b', tools: true, reasoning: 'none', contextTokens: 8192, vision: false }] },
+      ]),
+    };
+    const first = renderApp('/transactions/all');
+    const p = await panel();
+    await within(p).findByRole('button', { name: 'Send (Enter)' });
+    expect(within(p).queryByRole('button', { name: /^Thinking/ })).toBeNull();
+    first.unmount();
+    // kept by the administrator: there, but it offers nothing
+    st.status = { ...status(), thinkingLocked: true };
+    renderApp('/transactions/all');
+    const locked = await within(await panel()).findByRole<HTMLButtonElement>('button', {
+      name: 'Thinking: set by the administrator',
+    });
+    expect(locked.disabled).toBe(true);
   });
 
   it('says so when dropped pictures meet a model that reads none', async () => {

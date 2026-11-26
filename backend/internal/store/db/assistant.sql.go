@@ -96,6 +96,23 @@ func (q *Queries) CreateAssistantChat(ctx context.Context, arg CreateAssistantCh
 	return i, err
 }
 
+const deleteAssistantAttachmentsAfter = `-- name: DeleteAssistantAttachmentsAfter :exec
+DELETE FROM assistant_attachments
+WHERE user_id = $1 AND chat_id = $2 AND message_seq > $3::integer
+`
+
+type DeleteAssistantAttachmentsAfterParams struct {
+	UserID uuid.UUID
+	ChatID uuid.UUID
+	Seq    int32
+}
+
+// The photos of the questions that followed it go with them.
+func (q *Queries) DeleteAssistantAttachmentsAfter(ctx context.Context, arg DeleteAssistantAttachmentsAfterParams) error {
+	_, err := q.db.Exec(ctx, deleteAssistantAttachmentsAfter, arg.UserID, arg.ChatID, arg.Seq)
+	return err
+}
+
 const deleteAssistantChat = `-- name: DeleteAssistantChat :execrows
 DELETE FROM assistant_chats WHERE user_id = $1 AND id = $2
 `
@@ -125,6 +142,25 @@ type DeleteAssistantChatsBeforeParams struct {
 // Retention: chats whose last message is older than the cutoff.
 func (q *Queries) DeleteAssistantChatsBefore(ctx context.Context, arg DeleteAssistantChatsBeforeParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteAssistantChatsBefore, arg.UserID, arg.Cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteAssistantMessagesFrom = `-- name: DeleteAssistantMessagesFrom :execrows
+DELETE FROM assistant_messages WHERE user_id = $1 AND chat_id = $2 AND seq >= $3::integer
+`
+
+type DeleteAssistantMessagesFromParams struct {
+	UserID uuid.UUID
+	ChatID uuid.UUID
+	Seq    int32
+}
+
+// A question asked again or edited (Phase 27): it, its answer and everything after leave the chat.
+func (q *Queries) DeleteAssistantMessagesFrom(ctx context.Context, arg DeleteAssistantMessagesFromParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteAssistantMessagesFrom, arg.UserID, arg.ChatID, arg.Seq)
 	if err != nil {
 		return 0, err
 	}
@@ -220,6 +256,23 @@ func (q *Queries) ExportAssistantAttachments(ctx context.Context, userID uuid.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const freeAssistantAttachmentsOf = `-- name: FreeAssistantAttachmentsOf :exec
+UPDATE assistant_attachments SET message_seq = NULL
+WHERE user_id = $1 AND chat_id = $2 AND message_seq = $3::integer
+`
+
+type FreeAssistantAttachmentsOfParams struct {
+	UserID uuid.UUID
+	ChatID uuid.UUID
+	Seq    int32
+}
+
+// The photos of the replaced question wait for the next one again.
+func (q *Queries) FreeAssistantAttachmentsOf(ctx context.Context, arg FreeAssistantAttachmentsOfParams) error {
+	_, err := q.db.Exec(ctx, freeAssistantAttachmentsOf, arg.UserID, arg.ChatID, arg.Seq)
+	return err
 }
 
 const getAssistantAttachment = `-- name: GetAssistantAttachment :one
