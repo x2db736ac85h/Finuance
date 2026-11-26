@@ -4,9 +4,13 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
-## [0.8.0] - unreleased
+## [0.8.0] - 2026-11-26
 
-The assistant's part of the maintainer's list of 2026-11-26.
+The assistant's part of the maintainer's list of 2026-11-26: ask again, edit a question, a prompt
+gallery, a thinking-level button, new kinds of proposals, undo several, and a memory. And the Google
+Cloud lab, prepared and checked without a Google account (not yet run against Google). One
+migration (00034: the memory's three columns in `assistant_settings`). The API's message request
+takes `replaceFrom`; the instance settings take `assistant.lockThinking`.
 
 ### Added
 
