@@ -129,7 +129,7 @@ Every capability of the legacy single-file app (`legacy/finuance.html`, Finuance
 | Streaming completions; `reasoning_content` / `<think>`; Qwen `<tool_call>` text fallback (server side, OpenAI and Anthropic wire formats, recorded-stream tests) | §29.2 `complete` | 13 | ported |
 | Native tool loop (max 6 rounds) | §29.2 `runTools` | 13 | ported |
 | Plan mode for models without tools; auto fallback on HTTP 400/422/500 | §29.2 `runPlan` | 13 | ported |
-| History trimming (30 messages, 2.5k tool results, `/no_think` for Qwen 3 only), plus the model's context size | §29.2 `trimHistory` | 13 | ported |
+| History trimming (30 messages, 2.5k tool results, `/no_think` for Qwen 3 only), plus the model's context size | §29.2 `trimHistory` | 13 | ported; trimmed once per question, not before every tool round, and earlier questions' thinking blocks are not sent back (issue 109: a current Claude model binds each block to what came before it) |
 | Chat history: menu with date and time, title, delete, New chat; stored on the server, 25 chats, kept 48 h by default (1–7 days or forever) | §29.2 `renderChatMenu` | 13 | ported |
 | Panel: resizable width, maximise, persisted | §29.2 `applyChatLayout` | 13 | ported |
 | Steps (collapsible, exactly what was sent), *Show in table* chip "✦ …" (the stored `toolFilter`, so it works in restored chats), per-answer meta | §29.2 `showAiSelection` | 13 | ported |

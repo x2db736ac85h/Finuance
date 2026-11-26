@@ -24,6 +24,7 @@ import (
 type runEnv struct {
 	*env
 	mock   *llmmock.Server
+	srv    *httptest.Server // the mock's address (tests that make connections of their own)
 	clock  *fakeClock
 	chats  *Chats
 	runner *Runner
@@ -55,7 +56,7 @@ func newRunEnv(t *testing.T, maxConcurrent int) *runEnv {
 	// each test gets its own user with the demo data (copy of the shared demo user's file)
 	user := e.user()
 	e.importFile(user, "Demo", fixture(t, "fixtures/demo/demo-legacy.csv"))
-	return &runEnv{env: e, mock: mock, clock: clock, chats: chats, runner: runner, conns: conns, user: user}
+	return &runEnv{env: e, mock: mock, srv: srv, clock: clock, chats: chats, runner: runner, conns: conns, user: user}
 }
 
 // ask runs one question to the end and returns its events.
@@ -228,7 +229,7 @@ func TestRunAnthropicProtocol(t *testing.T) {
 	}
 	reqs := re.mock.Requests()
 	// the second request replays the thinking block and sends the result as a tool_result block
-	if !strings.Contains(string(reqs[1]), `"type":"thinking"`) || !strings.Contains(string(reqs[1]), `"signature":"mock-signature"`) ||
+	if !strings.Contains(string(reqs[1]), `"type":"thinking"`) || !strings.Contains(string(reqs[1]), `"signature":"mock-sig-`) ||
 		!strings.Contains(string(reqs[1]), `"type":"tool_result"`) {
 		t.Errorf("second request = %s", reqs[1])
 	}

@@ -16,6 +16,15 @@ const (
 // historyOf turns stored messages into the model history. A turn that failed (its last assistant
 // message has an error) or never finished (no final message, e.g. the process stopped) is left
 // out with its question, as the legacy popped them.
+//
+// Earlier questions' thinking blocks (Replay) stay behind (issue 109). A current Claude model
+// binds each block to everything sent before it (the system prompt, the tools, the earlier
+// messages), and all of that changes between questions: the date and the facts in the system
+// prompt, the panel's scope, the masking and trimming of earlier turns. A block sent back after
+// such a change is refused with 400. The API needs a block only while its own tool round is open,
+// which is within one question (runTools keeps those), and removing earlier blocks from the front
+// is allowed. The model still sees the earlier questions, tool calls, results and answers; it no
+// longer sees its own reasoning about them.
 func historyOf(msgs []Message) []llm.Message {
 	var out []llm.Message
 	for i := 0; i < len(msgs); {
@@ -32,7 +41,7 @@ func historyOf(msgs []Message) []llm.Message {
 		if last.Role == llm.RoleAssistant && last.Meta != nil && last.Error == nil {
 			for k := range turn {
 				m := &turn[k]
-				out = append(out, llm.Message{Role: m.Role, Content: m.Content, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, Replay: m.Replay})
+				out = append(out, llm.Message{Role: m.Role, Content: m.Content, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID})
 			}
 		}
 		i = j
@@ -115,6 +124,8 @@ func estTokens(system string, msgs []llm.Message) int {
 const (
 	stoppedNote = "_Stopped._"
 	roundsNote  = "_Stopped after 6 lookups._"
+	// a question whose own lookups filled the model's context (runTools)
+	fullNote = "_Stopped: this question's lookups filled the model's context._"
 )
 
 func appendNote(content, note string) string {

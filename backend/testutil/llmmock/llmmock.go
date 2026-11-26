@@ -240,7 +240,7 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request, anthropic bool) {
 		return
 	}
 	if anthropic {
-		streamAnthropic(w, r, reply)
+		streamAnthropic(w, r, reply, thinkingSignature(req, len(req.Messages)))
 		return
 	}
 	streamOpenAI(w, r, reply, req.StreamOptions.IncludeUsage)
@@ -549,7 +549,9 @@ func streamOpenAI(w http.ResponseWriter, r *http.Request, rep Reply, usage bool)
 	_, _ = io.WriteString(w, "data: [DONE]\n\n")
 }
 
-func streamAnthropic(w http.ResponseWriter, r *http.Request, rep Reply) {
+// streamAnthropic streams rep as the Messages API does; a thinking block carries sig, bound to the
+// request it answers (claude.go).
+func streamAnthropic(w http.ResponseWriter, r *http.Request, rep Reply, sig string) {
 	s := newSSE(w, r, rep.Delay)
 	if !s.send("message_start", map[string]any{"type": "message_start", "message": map[string]any{"usage": map[string]int{"input_tokens": 100}}}) {
 		return
@@ -573,7 +575,7 @@ func streamAnthropic(w http.ResponseWriter, r *http.Request, rep Reply) {
 		for _, p := range chunks(rep.Reasoning, rep.Chunk) {
 			ds = append(ds, map[string]any{"type": "thinking_delta", "thinking": p})
 		}
-		ds = append(ds, map[string]any{"type": "signature_delta", "signature": "mock-signature"})
+		ds = append(ds, map[string]any{"type": "signature_delta", "signature": sig})
 		if !block(map[string]any{"type": "thinking", "thinking": ""}, ds) {
 			return
 		}

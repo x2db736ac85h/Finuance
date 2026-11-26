@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -579,7 +580,7 @@ func (run *Run) finish(ctx context.Context, emit func(Event), span trace.Span, f
 	case fallback:
 		result = "fallback_plan"
 	}
-	run.observe(ctx, span, mode, result, "", t, t0)
+	run.observe(ctx, span, mode, result, "", nil, t, t0)
 }
 
 func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, code string, err error, mode string, t0 time.Time, t *turn) {
@@ -603,7 +604,7 @@ func (run *Run) fail(ctx context.Context, emit func(Event), span trace.Span, cod
 	if code == "internal" {
 		observability.LoggerOr(ctx, run.r.cfg.Logger).ErrorContext(ctx, "assistant run failed", "error", err)
 	}
-	run.observe(ctx, span, mode, "error", code, t, t0)
+	run.observe(ctx, span, mode, "error", code, err, t, t0)
 }
 
 func (run *Run) store(ctx context.Context, msgs []Message, use *RunUsage) (int, error) {
@@ -634,8 +635,10 @@ func (run *Run) usage(t *turn, final Message) *RunUsage {
 	return u
 }
 
-// observe records the run's metrics and its one log line (no prompt, answer or tool data).
-func (run *Run) observe(ctx context.Context, span trace.Span, mode, result, errKind string, t *turn, t0 time.Time) {
+// observe records the run's metrics and its one log line (no prompt, answer or tool data). A
+// failed model request adds the provider's status and error type, which are its fixed words, not
+// its message (issue 109, AI-4).
+func (run *Run) observe(ctx context.Context, span trace.Span, mode, result, errKind string, err error, t *turn, t0 time.Time) {
 	m := run.r.cfg.Metrics
 	d := run.r.cfg.Clock.Now().Sub(t0)
 	m.Runs.WithLabelValues(mode, result, observability.Traffic(ctx)).Inc()
@@ -647,9 +650,14 @@ func (run *Run) observe(ctx context.Context, span trace.Span, mode, result, errK
 	m.Rounds.Observe(float64(rounds))
 	m.Tokens.Observe(float64(sent))
 	span.SetAttributes(attribute.String("assistant.mode", mode), attribute.String("assistant.result", result), attribute.Int("assistant.rounds", rounds))
-	observability.LoggerOr(ctx, run.r.cfg.Logger).InfoContext(ctx, "assistant run", "user", platform.UserHash(run.userID), "connection", run.conn.Name, "model", run.model.ID,
+	attrs := []any{"user", platform.UserHash(run.userID), "connection", run.conn.Name, "model", run.model.ID,
 		"mode", mode, "result", result, "error_kind", errKind, "rounds", rounds, "tools", tools, "approx_tokens", sent,
-		"duration_ms", d.Milliseconds())
+		"duration_ms", d.Milliseconds()}
+	var le *llm.Error
+	if errors.As(err, &le) && le.Status > 0 {
+		attrs = append(attrs, "upstream_status", le.Status, "upstream_error_type", le.Type)
+	}
+	observability.LoggerOr(ctx, run.r.cfg.Logger).InfoContext(ctx, "assistant run", attrs...)
 }
 
 // budget is the prompt size the history is trimmed to: the model's context minus room for the
@@ -726,6 +734,15 @@ func (run *Run) complete(ctx context.Context, emit func(Event), t *turn, req llm
 		result = kindOf(err)
 		span.SetStatus(codes.Error, result)
 		span.SetAttributes(attribute.String("error.type", result))
+		// what the provider said in its fixed words: the status and its error type (issue 109);
+		// never its message, which can quote the request (AI-4)
+		var le *llm.Error
+		if errors.As(err, &le) && le.Status > 0 {
+			span.SetAttributes(attribute.Int("http.response.status_code", le.Status))
+			if le.Type != "" {
+				span.SetAttributes(attribute.String("assistant.upstream.error_type", le.Type))
+			}
+		}
 	}
 	m := run.r.cfg.Metrics
 	m.LLMDuration.WithLabelValues(run.conn.Name).Observe(time.Since(sent).Seconds())
@@ -756,6 +773,9 @@ func retryWithout(err error, req *llm.Request) bool {
 	if !errors.As(err, &le) || le.Status != 400 {
 		return false
 	}
+	if llm.ThinkingBlockRefused(err) {
+		return false // the block's conversation changed (issue 109): sending it without thinking changes nothing
+	}
 	switch {
 	case req.Temperature != nil && tempRe.MatchString(le.Message):
 		req.Temperature = nil
@@ -774,9 +794,24 @@ func (run *Run) runTools(ctx context.Context, emit func(Event), sc Scope, facts 
 	}
 	system := SystemPrompt(UserTime(run.r.cfg.Clock.Now(), run.req.TimeZone), facts, sc, toolset, run.conn.Cloud) + instructionsBlock(run.extra) + run.memoryBlock()
 	defs := ToolDefs(toolset)
+	// The history is trimmed once, before the first round (issue 109): a round's thinking block goes
+	// back in the next one, and the model binds it to everything sent before it, so what came
+	// before must not move between rounds. When this question's own rounds outgrow the budget, the
+	// window moves only if no round carries a block (nothing is bound then); otherwise the question
+	// ends with a note rather than cut what came before.
+	hist := trimHistory(history, false, run.noThink(), system, run.budget())
 	var conv []llm.Message // this turn's assistant and tool messages
-	for range maxRounds {
-		msgs := trimHistory(append(append([]llm.Message{}, history...), conv...), false, run.noThink(), system, run.budget())
+	for round := range maxRounds {
+		msgs := append(append([]llm.Message{}, hist...), conv...)
+		if round > 0 && run.budget() > 0 && estTokens(system, msgs) > run.budget() {
+			if slices.ContainsFunc(conv, func(m llm.Message) bool { return len(m.Replay) > 0 }) {
+				t.content.Reset()
+				t.reasoning.Reset()
+				emit(Event{"content", DeltaEvent{Delta: fullNote}})
+				return Message{Role: llm.RoleAssistant, Content: fullNote}, nil
+			}
+			msgs = trimHistory(msgs, false, false, system, run.budget()) // /no_think is on the question already
+		}
 		res, err := run.complete(ctx, emit, t, llm.Request{System: system, Messages: msgs, Tools: defs, Temperature: run.temperature(), KeepAlive: run.keepAlive()}, true)
 		if err != nil {
 			return Message{}, err

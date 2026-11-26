@@ -47,6 +47,13 @@ The assistant's part of the maintainer's list of 2026-11-26.
 
 ### Fixed
 
+- **The second question to a current Claude model no longer fails** after a first that looked
+  something up (issue 109). Whenever anything changed in between (an applied proposal, an import,
+  the day, the panel's scope), the answer was "The model server reported an error": those models
+  refuse their own earlier reasoning sent back after the conversation before it changed. Earlier
+  questions' reasoning is no longer sent back, the history is cut once per question, and such a
+  refusal no longer switches the chat to plan mode. The assistant's log line now names the
+  provider's status and error type.
 - **The api and the worker no longer restart once at every rollout.** A starting process keeps
   trying to reach the database for up to 30 seconds instead of exiting at the first refused
   connection; an answer from the database itself (a wrong password) still ends it at once.
