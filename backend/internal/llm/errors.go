@@ -32,6 +32,10 @@ type Error struct {
 	Kind    Kind
 	Status  int // HTTP status, 0 when there was no response
 	Message string
+	// Type is the provider's own name for the error when it gives one (Anthropic's
+	// invalid_request_error, OpenAI's type or code): a word of its fixed vocabulary, never the
+	// request's text, so it may go on a log line and a span (issue 109). "" otherwise.
+	Type string
 }
 
 func (e *Error) Error() string {
@@ -52,20 +56,32 @@ func KindOf(err error) Kind {
 
 // ToolsMayBeRejected reports whether a failed request with tools may mean the server or model
 // doesn't support them (legacy: HTTP 400, 422 or 500 before any step), so plan mode is worth a
-// try.
+// try. A thinking block refused for its signature is not about tools: plan mode would hide it and
+// teach the connection that the model has none (issue 109).
 func ToolsMayBeRejected(err error) bool {
 	var e *Error
-	if !errors.As(err, &e) {
+	if !errors.As(err, &e) || ThinkingBlockRefused(err) {
 		return false
 	}
 	return e.Kind == KindToolsRejected || (e.Kind == KindUpstream || e.Kind == KindBadResponse) &&
 		(e.Status == 400 || e.Status == 422 || e.Status == 500)
 }
 
+// ThinkingBlockRefused reports whether the provider refused a thinking block sent back, for its
+// signature: the conversation before the block is not what it was when the block was made.
+func ThinkingBlockRefused(err error) bool {
+	var e *Error
+	return errors.As(err, &e) && e.Status == 400 && signatureRe.MatchString(e.Message)
+}
+
 var (
 	contextRe = regexp.MustCompile(`(?i)context (length|window|size)|too many tokens|maximum context|exceeds? .*context|prompt is too long|n_ctx|context_length_exceeded`)
 	toolsRe   = regexp.MustCompile(`(?i)(does not|doesn't|not) support (tools|function|tool)|tools? (are|is) not supported|tool_choice|unknown (field|parameter).*tools`)
 	notFound  = regexp.MustCompile(`(?i)model .*(not found|not loaded|does not exist)|no (such )?model|model_not_found`)
+	// Anthropic: "Invalid `signature` in `thinking` block. The block is bound to a different conversation."
+	signatureRe = regexp.MustCompile("(?i)signature.{0,8}in.{0,8}thinking|thinking.{0,40}bound to a different")
+	// a provider's error type is a word: anything else is left out
+	errTypeRe = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`)
 )
 
 // Public is what a user who is not an administrator is told about the error: one fixed sentence
@@ -98,7 +114,7 @@ func (e *Error) Public() string {
 // statusError classifies a non-2xx answer from its status and body.
 func statusError(status int, body []byte) *Error {
 	msg := errorText(body)
-	e := &Error{Status: status, Message: msg}
+	e := &Error{Status: status, Message: msg, Type: errorType(body)}
 	switch {
 	case status == 401 || status == 403:
 		e.Kind = KindAuth
@@ -145,6 +161,28 @@ func errorText(body []byte) string {
 		msg = strings.TrimSpace(string(body))
 	}
 	return clip(msg, 300)
+}
+
+// errorType is the provider's error type in an Anthropic ({error:{type}}) or OpenAI
+// ({error:{type}} or {error:{code}}) body, when it is a word; "" otherwise.
+func errorType(body []byte) string {
+	var j struct {
+		Error struct {
+			Type string          `json:"type"`
+			Code json.RawMessage `json:"code"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(body, &j) != nil {
+		return ""
+	}
+	t := j.Error.Type
+	if t == "" {
+		_ = json.Unmarshal(j.Error.Code, &t) // a string code; a number is left out
+	}
+	if !errTypeRe.MatchString(t) {
+		return ""
+	}
+	return t
 }
 
 // transportError classifies an error that happened before or while reading a response.

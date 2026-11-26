@@ -362,6 +362,8 @@ func TestErrorsAreClassified(t *testing.T) {
 		{500, `Internal Server Error`, KindUpstream, true},
 		{422, `{"detail":"bad request"}`, KindUpstream, true},
 		{503, `{"error":{"message":"busy"}}`, KindUpstream, false},
+		// issue 109: a thinking block refused for its signature is not a model without tools
+		{400, `{"type":"error","error":{"type":"invalid_request_error","message":"messages.1.content.0: Invalid ` + "`signature`" + ` in ` + "`thinking`" + ` block. The block is bound to a different conversation."}}`, KindUpstream, false},
 	}
 	for _, c := range cases {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -533,5 +535,27 @@ func TestSplitterHoldsBackPartialTags(t *testing.T) {
 	s.close()
 	if s.answer.String() != "x <tool_call>{broken</tool_call> y" || len(s.calls) != 0 {
 		t.Errorf("broken call: %q %+v", s.answer.String(), s.calls)
+	}
+}
+
+// TestErrorType (issue 109): the provider's own name for an error is kept when it is a word, so
+// that a failure says more than "upstream" on its log line and span; anything that could be text
+// of the request is left out.
+func TestErrorType(t *testing.T) {
+	for body, want := range map[string]string{
+		`{"type":"error","error":{"type":"invalid_request_error","message":"x"}}`: "invalid_request_error",
+		`{"error":{"message":"x","type":"api_error"}}`:                            "api_error",
+		`{"error":{"message":"x","code":"context_length_exceeded"}}`:              "context_length_exceeded",
+		`{"error":{"message":"x","type":"what the user wrote: my salary"}}`:       "",
+		`{"error":{"message":"x","code":429}}`:                                    "",
+		`Internal Server Error`:                                                   "",
+	} {
+		if got := statusError(400, []byte(body)).Type; got != want {
+			t.Errorf("%s: type %q, want %q", body, got, want)
+		}
+	}
+	refused := statusError(400, []byte(`{"type":"error","error":{"type":"invalid_request_error","message":"messages.3.content.0: Invalid `+"`signature`"+` in `+"`thinking`"+` block. The block is bound to a different conversation."}}`))
+	if !ThinkingBlockRefused(refused) || ThinkingBlockRefused(statusError(400, []byte(`{"error":{"message":"thinking.type.disabled is not supported for this model."}}`))) {
+		t.Error("ThinkingBlockRefused must tell a refused block from another thinking error")
 	}
 }
