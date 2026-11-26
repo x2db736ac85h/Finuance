@@ -13,6 +13,7 @@ const actions = () =>
     escape: vi.fn(() => true),
     addTransaction: vi.fn(() => true),
     toggleShared: vi.fn(() => true),
+    goTo: vi.fn<KeyActions['goTo']>(() => true),
   }) satisfies KeyActions;
 
 const key = (k: string, init: KeyboardEventInit = {}) =>
@@ -45,6 +46,15 @@ describe('handleKey', () => {
     handleKey(s, a, none);
     expect(a.toggleShared).toHaveBeenCalled();
     expect(s.defaultPrevented).toBe(true);
+    // T and O: the transactions and the overview (Phase 27); Ctrl+O still opens files
+    const t = key('t');
+    handleKey(t, a, none);
+    expect(a.goTo).toHaveBeenLastCalledWith('table');
+    expect(t.defaultPrevented).toBe(true);
+    handleKey(key('O'), a, none);
+    expect(a.goTo).toHaveBeenLastCalledWith('ov');
+    expect(a.goTo).toHaveBeenCalledTimes(2);
+    expect(a.openFiles).toHaveBeenCalledTimes(1);
     // not with ⌘/Ctrl (the browser's save) and not while typing
     handleKey(key('s', { ctrlKey: true }), a, none);
     expect(a.toggleShared).toHaveBeenCalledTimes(1);

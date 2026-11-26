@@ -4,6 +4,36 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
+## [0.7.1] - unreleased
+
+Interface corrections from the maintainer's list of 2026-11-26. No migration.
+
+### Changed
+
+- **Indigo's dark variant is darker**: deeper surfaces with a little blue in them. The text and
+  accent colours are unchanged, so every text/surface pair gained contrast. The light variant and
+  the other themes are as they were.
+- **The Shared page**: two friend cards on top (the list, and your code with *Add a friend* under
+  it), the years with one curve of what all groups cost over time, and the timeline with a
+  three-way switch (all, personal, shared). The *Friends* button, which led nowhere, is gone.
+- The assistant's history button reads **History** and is never cut; in its list the summary is
+  on top in bold and the date under it.
+- A connection's **Models** open directly under that connection, in one framed block with it.
+
+### Added
+
+- **Themes as files**: Settings → General exports the theme in use as JSON and imports one. An
+  imported theme is yours alone, sets colours only, and is checked when read (both variants,
+  the known colours, hex values); hard-to-read pairs are counted in a warning.
+- **Export** in the table's toolbar asks for **CSV, TXT or JSON**: the same rows, columns and
+  values in each.
+- Keys **`T`** (transactions) and **`O`** (overview), next to `S`.
+
+### Fixed
+
+- From Settings and Administration the title bar's transactions button did nothing (the page's
+  mode already read "table"). Both buttons now lead to their page from anywhere.
+
 ## [0.7.0] - 2026-11-25
 
 Cloud AI: the assistant can use Google Cloud's models with short-lived credentials and no stored

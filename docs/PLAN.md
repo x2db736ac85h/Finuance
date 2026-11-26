@@ -4679,6 +4679,44 @@ account issuer, with the key set uploaded); stronger masking than long numbers; 
 identities, the lab instance, the simulator, monitoring, the Vertex AI connection),
 `make gcp-down` removes all of it, and nothing with a cost is left behind. Synthetic data only.
 
+**Changed on 2026-11-26 (the maintainer):** two things come before and around this goal.
+
+1. **27.F, the corrections first.** A list of twenty fixes and features (below), shipped as
+   `v0.7.1` (the interface) and `v0.8.0` (the assistant, with this phase's lab work). Phase 28's
+   release becomes `v0.9.0`.
+2. **The lab is prepared, its rollout is optional.** Everything of 27.1–27.11 that can be built and
+   proven without a Google account is done; running it against a real project (`make gcp-up`, the
+   rehearsal on GKE, the Vertex AI evals of 26.7, the cost) is the maintainer's, on demand, and the
+   phase can close without it: the Google account and its payment are not arranged yet. The first
+   four acceptance criteria below are therefore "the maintainer's, on demand"; the phase's own are
+   that CI's Terraform job and the rehearsal's Gateway stage are green and that `docs/gcp.md` has
+   the checklist for the first real run.
+
+**27.F The corrections (the maintainer's list of 2026-11-26; its numbering restarted, so F1–F19).**
+Decisions with it: PDFs are drawn to pictures in the browser by `pdfjs-dist` (Apache-2.0, a new
+dependency, approved); the assistant's new actions stay proposals that the person applies
+(ADR 0030 stands); releases as above.
+
+- **F1** Indigo's dark variant gets deeper, slightly blue surfaces. **F2** A theme can be exported
+  to and imported from a JSON file; an imported theme is the person's own. **F3** The README's
+  screenshots are taken again; its first picture is the assistant.
+- **F4** A failed question can be run again. **F5** A question can be edited (a pencil, or Arrow
+  Up in the empty field) and sent again.
+- **F6** From Settings the title bar leads back to the transactions and the overview.
+- **F7** *Add* on every account, bank accounts too; rows typed by hand carry a green plus.
+- **F8** Pictures and PDFs dropped on the transactions list go to the assistant (10 MB a file);
+  CSV files are imported as before; the charts pane is no drop area.
+- **F9** The assistant's history button reads *History*; in its list the summary is above the date.
+- **F10** The assistant can propose a transaction in any account, or attach a receipt to one that
+  exists. **F11** A prompt gallery under the example questions. **F12** It can propose removing
+  rows from a group and clearing a category; Activity undoes its changes for a period or all.
+  **F13** The system prompt and the tool descriptions say exactly what it can change.
+- **F14** A thinking-level button beside Send, which the administrator can lock.
+- **F15** A memory note per person (about 1,000 tokens), editable, with automatic memories as an option.
+- **F16** A connection's *Models* open under that connection, framed. **F17** *Export* asks for
+  CSV, TXT or JSON. **F18** The Shared page: two friend cards on top, the years with one spending
+  curve, the timeline with a three-way switch. **F19** `T` and `O` open the transactions and the overview.
+
 **Read first:** Phase 16, `docs/RUNBOOK.md`, ADR 0022, ADR 0023, ADR 0024, Phases 25 and 26,
 `deploy/helm/finuance/` (every template), `deploy/k8s/db/`, `deploy/k8s/argocd/`,
 `deploy/environments/homelab/`, `tools/rehearsal.sh`, `tools/seal-secrets.sh`,

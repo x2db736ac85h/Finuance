@@ -733,7 +733,10 @@ describe('administration', () => {
 
     // Models first, then Add: the dialog takes over, the models panel goes
     await user.click(within(list).getByRole('button', { name: 'Models' }));
-    expect(await screen.findByRole('form', { name: 'Models and use of Claude (file)' })).toBeTruthy();
+    const itsModels = await screen.findByRole('form', { name: 'Models and use of Claude (file)' });
+    // inside the row of the connection it belongs to, not under the whole list (Phase 27)
+    expect(itsModels.closest('li')?.querySelector('b')?.textContent).toBe('Claude (file)');
+    expect(itsModels.closest('li')?.className).toContain('with-panel');
     await user.click(screen.getByRole('button', { name: 'Add a connection' }));
     const dlg = await screen.findByRole('dialog', { name: 'Add a connection' });
     expect(screen.queryByRole('form', { name: 'Models and use of Claude (file)' })).toBeNull();
@@ -1071,7 +1074,7 @@ describe('one-time passwords and switched-off features', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/transactions/all');
     });
-    expect(screen.queryByRole('button', { name: 'Personal finance overview' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Personal finance overview (O)' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Assistant/ })).toBeNull();
   });
 

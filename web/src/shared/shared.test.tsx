@@ -248,6 +248,44 @@ describe('the Shared tab', () => {
     expect(await screen.findByRole('region', { name: 'Balances' })).toBeTruthy();
   });
 
+  it('puts the friends on top, one curve beside the years, and a three-way switch on the timeline (Phase 27)', async () => {
+    const user = userEvent.setup();
+    renderApp('/shared');
+    const timeline = await screen.findByRole('region', { name: 'Timeline' });
+    await within(timeline).findByText(/Gdańsk/);
+    // the order of the page: friends, per year, timeline; and no Friends button that leads nowhere
+    const friends = screen.getByRole('region', { name: 'Friends' });
+    const years = screen.getByRole('region', { name: 'Per year' });
+    const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(friends, years)).toBe(true);
+    expect(before(years, timeline)).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Friends' })).toBeNull();
+    // two cards: the list, then the code and the form together
+    const cards = friends.querySelectorAll('.sh-friends-cards > .set-card');
+    expect(cards).toHaveLength(2);
+    expect(within(cards[0] as HTMLElement).getByText('Friends')).toBeTruthy();
+    expect(within(cards[1] as HTMLElement).getByRole('button', { name: 'Generate my friend code' })).toBeTruthy();
+    expect(within(cards[1] as HTMLElement).getByLabelText('Their code')).toBeTruthy();
+    // the curve: 400 zł from Gdańsk, then 490 zł with Kraków
+    const curve = within(years).getByRole('img', { name: /^Spent in all groups over time: / });
+    expect(curve.getAttribute('aria-label')).toMatch(/490[.,]00/);
+    expect(curve.querySelectorAll('circle')).toHaveLength(2);
+    // all, personal, shared
+    const show = within(timeline).getByRole('radiogroup', { name: 'Show' });
+    expect(
+      within(show)
+        .getAllByRole('radio')
+        .map((b) => b.textContent),
+    ).toEqual(['All', 'Personal', 'Shared']);
+    await user.click(within(show).getByRole('radio', { name: 'Personal' }));
+    expect(within(timeline).queryByRole('button', { name: 'Kraków' })).toBeNull();
+    expect(within(timeline).getByRole('button', { name: 'Gdańsk' })).toBeTruthy();
+    await user.click(within(show).getByRole('radio', { name: 'Shared' }));
+    expect(within(timeline).queryByRole('button', { name: 'Gdańsk' })).toBeNull();
+    expect(within(timeline).getByRole('button', { name: 'Kraków' })).toBeTruthy();
+    expect(within(show).getByRole('radio', { name: 'Shared' }).getAttribute('aria-checked')).toBe('true');
+  });
+
   it('opens a personal group as its transactions in the table (U9)', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/shared');

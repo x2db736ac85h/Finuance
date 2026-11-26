@@ -22,7 +22,7 @@ test('two people become friends by code, and one removes the other', async ({ br
   // friends are a part of the Shared page since Phase 26; the old Settings address leads there
   await alex.goto('/settings/friends');
   await expect(alex).toHaveURL(/\/shared#friends$/);
-  await alex.getByRole('button', { name: 'Show my code' }).click();
+  await alex.getByRole('button', { name: 'Generate my friend code' }).click();
   const code = (await alex.getByLabel('Your friend code').textContent()) ?? '';
   expect(code).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
   await expect(alex.getByRole('timer')).toContainText('left');

@@ -28,7 +28,6 @@ export function FriendsPanel() {
   const me = useMe().data;
   return (
     <section id="friends" className="sh-friends" aria-label="Friends">
-      <h2>Friends</h2>
       {me && !me.displayName.trim() ? (
         <div className="set-card">
           <div className="lbl">A display name first</div>
@@ -38,10 +37,13 @@ export function FriendsPanel() {
           </p>
         </div>
       ) : (
+        // two cards (Phase 27): who is there on the left, how to get another on the right
         <div className="sh-friends-cards">
-          <MyCode />
-          <AddFriend />
           <FriendList />
+          <div className="set-card fr-new">
+            <MyCode />
+            <AddFriend />
+          </div>
         </div>
       )}
     </section>
@@ -80,8 +82,8 @@ function MyCode() {
     });
   };
   return (
-    <div className="set-card">
-      <div className="lbl">Your code</div>
+    <div className="fr-part">
+      <div className="lbl">Your friend code</div>
       <p className="hint">
         Give it to someone you want as a friend. It works once, until the end of this hour plus 10 minutes. A new code
         replaces the previous one.
@@ -111,7 +113,7 @@ function MyCode() {
       ) : (
         <div className="set-actions">
           <Button variant="primary" disabled={make.isPending} onClick={show}>
-            {expired ? 'Show a new code' : 'Show my code'}
+            {expired ? 'Generate a new code' : 'Generate my friend code'}
           </Button>
         </div>
       )}
@@ -125,7 +127,7 @@ function AddFriend() {
   const [error, setError] = useState('');
   return (
     <form
-      className="set-card"
+      className="fr-part"
       onSubmit={(e) => {
         e.preventDefault();
         setError('');
@@ -172,7 +174,7 @@ function FriendList() {
   const remove = useRemoveFriend();
   const list = friends.data ?? [];
   return (
-    <div className="set-card">
+    <div className="set-card fr-list">
       <div className="lbl">Friends</div>
       {friends.isError ? (
         <p className="set-err">{errorMessage(friends.error)}</p>

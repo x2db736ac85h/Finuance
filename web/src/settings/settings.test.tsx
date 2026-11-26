@@ -1,10 +1,12 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { renderApp, warmUpApp } from '../test/render';
 import { API, db, problem, resetDb, server } from '../test/server';
+import { themeFileText } from '../styles/themeFile';
+import { BUILTIN_THEMES } from '../styles/themes';
 import { browserName } from './Sessions';
 
 beforeAll(async () => {
@@ -169,6 +171,43 @@ describe('colour themes', () => {
     });
     await userEvent.click(within(group).getByRole('radio', { name: /Sea/ }));
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#ffff00');
+  });
+
+  it('imports a theme from a file, keeps it with the preferences and removes it again (Phase 27)', async () => {
+    renderApp('/settings/general');
+    const group = await screen.findByRole('radiogroup', { name: 'Colour theme' });
+    const input = screen.getByLabelText<HTMLInputElement>('Theme file');
+    const upload = (text: string) => {
+      fireEvent.change(input, { target: { files: [new File([text], 'x.json', { type: 'application/json' })] } });
+    };
+    // not a theme: said, and nothing changes
+    upload('{"format":"other"}');
+    expect((await screen.findByRole('alert')).textContent).toContain('not a Finuance theme file');
+    // Ember's colours under a name of its own
+    const ember = BUILTIN_THEMES.find((t) => t.id === 'ember');
+    if (!ember) throw new Error('no Ember theme');
+    upload(themeFileText('Campfire', ember.tokens));
+    const mine = await within(group).findByRole('radio', { name: /Campfire/ });
+    expect(screen.queryByRole('alert')).toBeNull();
+    // chosen at once, applied as colours, and saved
+    expect(mine.getAttribute('aria-checked')).toBe('true');
+    expect(document.documentElement.style.getPropertyValue('--bg')).toBe(ember.tokens.dark['bg']);
+    await waitFor(() => {
+      expect(db.puts.at(-1)?.prefs['themeId']).toBe('my-campfire');
+    });
+    expect(db.puts.at(-1)?.prefs['myThemes']).toEqual([{ id: 'my-campfire', name: 'Campfire', tokens: ember.tokens }]);
+    const list = screen.getByRole('list', { name: 'Imported themes' });
+    await userEvent.click(within(list).getByRole('button', { name: 'Remove the theme Campfire' }));
+    await waitFor(() => {
+      expect(within(group).queryByRole('radio', { name: /Campfire/ })).toBeNull();
+    });
+    // back to the default look, with the imported colours taken off again
+    expect(document.documentElement.style.getPropertyValue('--bg')).toBe('');
+    expect(
+      within(group)
+        .getByRole('radio', { name: /Indigo/ })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
   });
 
   it('starts from the instance default theme', async () => {

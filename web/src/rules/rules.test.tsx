@@ -434,7 +434,7 @@ describe('the table', () => {
       if (app.classList.contains('mode-ov') && screen.queryByRole('region', { name: 'Rule suggestion' })) together++;
     });
     seen.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
-    await user.click(screen.getByRole('button', { name: 'Personal finance overview' }));
+    await user.click(screen.getByRole('button', { name: 'Personal finance overview (O)' }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/overview/all');
       expect(app.classList.contains('mode-ov')).toBe(true);

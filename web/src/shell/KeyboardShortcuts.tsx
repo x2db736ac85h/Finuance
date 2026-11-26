@@ -14,6 +14,8 @@ export const KEYS: [section: string, rows: Row[]][] = [
       [['/'], 'Search (when not typing)'],
       [[MOD, 'O'], 'Open CSV files'],
       [[MOD, 'J'], 'Show / hide the assistant'],
+      [['T'], 'Transactions'],
+      [['O'], 'Overview'],
       [['S'], 'Shared tab: trips and groups shared with friends'],
       [['?'], 'This list of shortcuts'],
       [['Esc'], 'Close a window or menu · clear the search · clear the selection'],

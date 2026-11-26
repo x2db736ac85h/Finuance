@@ -129,6 +129,13 @@ export function AppShell({ user }: { user: User }) {
     openShortcuts: () => {
       useUi.getState().setKeysOpen(true);
     },
+    goTo: (m) => {
+      if (m === 'ov' && features?.overview === false) return false;
+      // already there: nothing to do, and the key stays free for the page
+      if (!inSettings && !inShared && mode === m) return false;
+      setMode(m);
+      return true;
+    },
     toggleShared: () => {
       if (!sharedOn) return false;
       toggleShared();
@@ -174,6 +181,7 @@ export function AppShell({ user }: { user: User }) {
         mode={mode}
         onToggleMode={setMode}
         inShared={inShared}
+        away={inShared || inSettings}
         onToggleShared={toggleShared}
       />
       <div className="main">

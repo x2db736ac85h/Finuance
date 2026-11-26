@@ -20,18 +20,20 @@ export function resolveTheme(pref: ThemePref, prefersLight: boolean): Theme {
 }
 
 /**
- * The look for a chosen theme id: a built-in theme, an approved one (from GET /meta), else the
+ * The look for a chosen theme id: a built-in theme, one the person imported, an approved one (from GET /meta), else the
  * instance's default, else Indigo. A retired or unknown theme therefore falls back quietly.
  */
 export function resolveLook(
   id: string | undefined,
   approved: readonly { id: string; tokens: ThemeTokens }[],
   instanceDefault?: string,
+  mine: readonly { id: string; tokens: ThemeTokens }[] = [],
 ): ThemeLook {
   for (const candidate of [id, instanceDefault]) {
     if (!candidate) continue;
     if (isBuiltin(candidate)) return { id: candidate };
-    const t = approved.find((a) => a.id === candidate);
+    // a person's own imported theme (Phase 27) before an administrator's of the same id
+    const t = mine.find((a) => a.id === candidate) ?? approved.find((a) => a.id === candidate);
     if (t) return { id: candidate, custom: t.tokens };
   }
   return { id: DEFAULT_THEME_ID };

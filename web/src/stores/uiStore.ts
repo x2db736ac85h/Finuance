@@ -6,6 +6,8 @@ import { create } from 'zustand';
 
 import type { SizeStep, UiScalePref } from '../styles/scale';
 import type { ThemePref } from '../styles/theme';
+import { MY_THEMES_MAX, myThemeId, type MyTheme } from '../styles/themeFile';
+import type { ThemeTokens } from '../styles/themes';
 import {
   CARD_KEYS,
   DEFAULT_AI,
@@ -25,6 +27,8 @@ export type UiState = {
   themePref: ThemePref;
   /** Colour theme id ('' = the instance's default). */
   themeId: string;
+  /** Colour themes this person imported (Phase 27). */
+  myThemes: MyTheme[];
   uiScalePref: UiScalePref;
   /** The size slider's step around the auto size (used while uiScalePref is auto). */
   uiStep: SizeStep;
@@ -46,6 +50,10 @@ export type UiState = {
 
   setTheme: (t: ThemePref) => void;
   setThemeId: (id: string) => void;
+  /** Keeps an imported theme, chooses it and returns its id. */
+  addMyTheme: (name: string, tokens: ThemeTokens) => string;
+  /** Drops an imported theme; the instance's default takes over if it was the chosen one. */
+  removeMyTheme: (id: string) => void;
   setUiScale: (s: UiScalePref) => void;
   /** The size slider: auto, moved by a step (replaces a fixed size from older documents). */
   setUiStep: (step: SizeStep) => void;
@@ -74,6 +82,7 @@ export type UiState = {
 export const uiDefaults = {
   themePref: 'system',
   themeId: '',
+  myThemes: [],
   uiScalePref: 'auto',
   uiStep: 0,
   sidebarOpen: false,
@@ -90,13 +99,24 @@ export const uiDefaults = {
   keysOpen: false,
 } satisfies Partial<UiState>;
 
-export const useUi = create<UiState>()((set) => ({
+export const useUi = create<UiState>()((set, get) => ({
   ...uiDefaults,
   setTheme: (themePref) => {
     set({ themePref });
   },
   setThemeId: (themeId) => {
     set({ themeId });
+  },
+  addMyTheme: (name, tokens) => {
+    const id = myThemeId(
+      name,
+      get().myThemes.map((t) => t.id),
+    );
+    set((s) => ({ myThemes: [...s.myThemes, { id, name, tokens }].slice(-MY_THEMES_MAX), themeId: id }));
+    return id;
+  },
+  removeMyTheme: (id) => {
+    set((s) => ({ myThemes: s.myThemes.filter((t) => t.id !== id), themeId: s.themeId === id ? '' : s.themeId }));
   },
   setUiScale: (uiScalePref) => {
     set({ uiScalePref });
@@ -158,6 +178,7 @@ export const useUi = create<UiState>()((set) => ({
     set((s) => ({
       themePref: p.theme ?? s.themePref,
       themeId: p.themeId ?? s.themeId,
+      myThemes: p.myThemes ?? s.myThemes,
       uiScalePref: p.ui ?? s.uiScalePref,
       uiStep: p.uiStep ?? s.uiStep,
       sidebarOpen: p.sbOpen ?? s.sidebarOpen,
@@ -181,6 +202,7 @@ export function collectUi(s: UiState): Omit<PrefsDoc, 'v' | 'views'> {
   return {
     theme: s.themePref,
     themeId: s.themeId,
+    ...(s.myThemes.length ? { myThemes: s.myThemes } : {}),
     ui: s.uiScalePref,
     uiStep: s.uiStep,
     vizH: s.paneHeight,

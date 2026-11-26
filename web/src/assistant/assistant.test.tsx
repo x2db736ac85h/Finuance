@@ -625,6 +625,11 @@ describe('ChatPanel', () => {
     ];
     renderApp('/transactions/all');
     const p = await panel();
+    // the button says History, whole; in the list the summary comes first, the date under it
+    expect(within(p).getByRole('button', { name: 'History: recent chats' }).textContent).toBe('History');
+    const item = await within(p).findByTitle('Earlier question');
+    expect([...item.querySelectorAll('.cm-t, .cm-s')].map((e) => e.className)).toEqual(['cm-t', 'cm-s']);
+    expect(item.querySelector('.cm-t')?.textContent).toContain('Earlier question');
     fireEvent.click(await within(p).findByTitle('Earlier question'));
     const cards = await within(p).findAllByRole('group', { name: 'Proposed change' });
     expect(cards).toHaveLength(2);

@@ -7,13 +7,15 @@
   --row-h: 1.875rem;
 }
 [data-theme='dark'] {
-  --bg: #1e1e1e;
-  --bg-2: #181818;
-  --panel: #232325;
-  --elev: #26262a;
-  --input: #141416;
-  --border: #2b2b2f;
-  --border-2: #3a3a40;
+  /* Indigo dark since Phase 27: deeper surfaces with a little blue in them (they were neutral greys
+     around #1e1e1e); the text and accent colours are unchanged, so every pair gained contrast */
+  --bg: #13141a;
+  --bg-2: #0f1015;
+  --panel: #181a22;
+  --elev: #1d1f29;
+  --input: #0c0d12;
+  --border: #262935;
+  --border-2: #343849;
   --line: rgba(255, 255, 255, 0.045);
   --text: #d6d6d9;
   --text-2: #a3a3aa;
@@ -48,9 +50,9 @@
   --c-prev: #77756f;
   --inc: #3987e5;
   --exp: #e66767;
-  --gridl: #2c2c2e;
-  --axis: #3a3a3d;
-  --h0: #2a2a2e;
+  --gridl: #232632;
+  --axis: #33374a;
+  --h0: #20232e;
   --h1: #184f95;
   --h2: #256abf;
   --h3: #3987e5;
