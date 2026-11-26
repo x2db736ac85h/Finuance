@@ -4,11 +4,13 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -56,11 +58,38 @@ func Open(ctx context.Context, dsn string, maxConns int32, tp trace.TracerProvid
 	if err != nil {
 		return nil, fmt.Errorf("create pool: %w", err)
 	}
-	if err := pool.Ping(ctx); err != nil {
+	if err := firstPing(ctx, pool.Ping, FirstConnectWait, time.Sleep); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 	return pool, nil
+}
+
+// FirstConnectWait is how long a starting process keeps trying to reach the database before it
+// gives up (PLAN 27.10). A pod often starts a moment before the database's address answers or
+// before its network policy reaches it: the first connection was refused, the process exited and
+// Kubernetes started it again, on every rollout. Thirty seconds covers that; a database that is
+// really gone still ends the process, so that the restart count shows it.
+var FirstConnectWait = 30 * time.Second
+
+// firstPing pings until it succeeds, the database itself answers with an error, the wait is over
+// or ctx ends. Only failures to connect are tried again: an answer from PostgreSQL (a wrong
+// password, a database that doesn't exist) will not get better by waiting.
+func firstPing(ctx context.Context, ping func(context.Context) error, wait time.Duration, sleep func(time.Duration)) error {
+	deadline := time.Now().Add(wait)
+	pause := 250 * time.Millisecond
+	for {
+		err := ping(ctx)
+		if err == nil {
+			return nil
+		}
+		var pg *pgconn.PgError
+		if errors.As(err, &pg) || ctx.Err() != nil || !time.Now().Add(pause).Before(deadline) {
+			return err
+		}
+		sleep(pause)
+		pause = min(2*pause, 4*time.Second)
+	}
 }
 
 // errRedacted drops the error text of DSN parse errors, which can echo the password.

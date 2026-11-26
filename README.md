@@ -110,7 +110,7 @@ To run a released version instead of building, or to deploy on Kubernetes, see [
 
 ## Design decisions
 
-Each of the main choices has a short record of the context, the decision and what it costs ([46 so far](docs/adr/)). A few that shaped the code:
+Each of the main choices has a short record of the context, the decision and what it costs ([47 so far](docs/adr/)). A few that shaped the code:
 
 - **Row-level security, forced, as the second line of defence** behind the application's own filters ([ADR 0007](docs/adr/0007-multi-tenancy-rls.md)).
 - **Money is `int64` minor units, never floating point**, and a CI check keeps floats out of the money path ([ADR 0004](docs/adr/0004-money-minor-units.md)).

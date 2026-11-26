@@ -57,3 +57,11 @@ query-smoke-export.csv
 .claude/settings.local.json
 # the lab's secrets (make sim-up)
 .env.lab
+
+# Terraform's working directory and local state (deploy/terraform; the lock file is committed)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+

@@ -199,6 +199,42 @@ ingress:
     inFlight: 50
   annotations: {}
 
+# The pods' Kubernetes service account. Its annotations are how a cloud gives the pods an identity
+# without a key (on Google Kubernetes Engine: iam.gke.io/gcp-service-account, for the assistant's
+# connection to Vertex AI, ADR 0045). The pods never get a token for the Kubernetes API.
+serviceAccount:
+  annotations: {}
+
+# The front door as Gateway API routes instead of the Ingress above (PLAN 27.1): for a cluster whose
+# gateway controller is not Traefik, such as Google Kubernetes Engine's. Set ingress.enabled: false
+# with it. The Gateway (address, listener, certificate) is the platform's; the chart attaches an
+# HTTPRoute for /api/ and / to it. Limits per client address are then the gateway's or the cloud's
+# (ingress.limits are Traefik middlewares and don't apply).
+gateway:
+  enabled: false
+  # The host name the routes answer for. Required when enabled.
+  host: ""
+  # The Gateway to attach to: its name, its namespace when it is not the release's, and the
+  # listener (sectionName) when the routes should use only one of several.
+  parentRef:
+    name: ""
+    namespace: ""
+    sectionName: ""
+  # Strict-Transport-Security, added to every response by the route itself.
+  hsts:
+    enabled: true
+    maxAge: 31536000
+  # The longest /api/ request the gateway lets through (a Gateway API duration such as 3600s);
+  # empty: the implementation's default. A streamed answer or an export can take minutes.
+  apiTimeout: ""
+  # Google Kubernetes Engine: its load balancer checks every backend itself and has its own timeout
+  # per backend, set with GKE's policy kinds (networking.gke.io/v1).
+  gke:
+    enabled: false
+    apiTimeoutSec: 3600
+    # The name of a Cloud Armor security policy to put in front of both backends; empty: none.
+    securityPolicy: ""
+
 networkPolicy:
   enabled: true
   # The default deny selects every pod of the release's namespace, not only this chart's: a pod
@@ -215,12 +251,17 @@ networkPolicy:
       matchLabels: { kubernetes.io/metadata.name: kube-system }
     podSelector:
       matchLabels: { k8s-app: kube-dns }
-  # Who may reach web and api: the ingress controller's pods.
+  # Who may reach web and api: the ingress controller's pods. Null where there are none (a cloud
+  # load balancer in front of a Gateway: see frontDoorCIDRs).
   ingressController:
     namespaceSelector:
       matchLabels: { kubernetes.io/metadata.name: kube-system }
     podSelector:
       matchLabels: { app.kubernetes.io/name: traefik }
+  # Address ranges that may also reach web and api: a cloud load balancer that talks to the pods
+  # directly has no pods of its own to select (on Google Cloud: the load balancer's and health
+  # checks' ranges, and the proxy-only subnet of a regional gateway). Empty: the pods above only.
+  frontDoorCIDRs: []
   # The database pods (CloudNativePG labels its instances with cnpg.io/cluster). An empty
   # namespaceSelector means the release's own namespace; name another one with matchLabels.
   database:

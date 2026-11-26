@@ -185,6 +185,45 @@
         "annotations": { "type": "object" }
       }
     },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "gateway": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "host": { "type": "string" },
+        "parentRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "namespace": { "type": "string" },
+            "sectionName": { "type": "string" }
+          }
+        },
+        "hsts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "enabled": { "type": "boolean" }, "maxAge": { "type": "integer", "minimum": 0 } }
+        },
+        "apiTimeout": { "type": "string", "pattern": "^([0-9]+(h|m|s|ms))*$" },
+        "gke": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "apiTimeoutSec": { "type": "integer", "minimum": 1, "maximum": 86400 },
+            "securityPolicy": { "type": "string", "pattern": "^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)?$" }
+          }
+        }
+      }
+    },
     "networkPolicy": { "type": "object" },
     "podMonitor": { "type": "object" }
   },

@@ -68,6 +68,9 @@ render db-lab finuance-db "$db" finuance-lab deploy/environments/lab/db-values.y
 render sim-mock finuance-lab-mock "$sim" finuance-lab deploy/environments/lab/mock-values.yaml
 render sim-simulator finuance-sim "$sim" finuance-sim deploy/environments/lab/sim-values.yaml
 for f in "$sim"/ci/*.yaml; do render "sim-ci-$(basename "$f" .yaml)" finuance-sim "$sim" finuance-sim "$f"; done
+# the same lab on Google Kubernetes Engine (PLAN Phase 27): the lab's values with the GKE ones on top
+render app-gke-lab finuance "$app" finuance-lab deploy/environments/lab/app-values.yaml deploy/environments/gke-lab/app-values.yaml
+render db-gke-lab finuance-db "$db" finuance-lab deploy/environments/lab/db-values.yaml deploy/environments/gke-lab/db-values.yaml
 # the restore drill on the homelab (tools/homelab-drill.sh)
 render db-homelab-restore finuance-db "$db" finuance-restore deploy/environments/homelab/restore-db-values.yaml
 render app-homelab-restore finuance "$app" finuance-restore deploy/environments/homelab/restore-app-values.yaml
@@ -77,6 +80,48 @@ render app-homelab-restore finuance "$app" finuance-restore deploy/environments/
 echo "== profiling is off unless the value says so (PLAN 24.9)"
 pprof() { helm template t "$app" --kube-version "$K8S" -f "$app/ci/minimal-values.yaml" "$@" | "$YQ" -N 'select(.kind == "ConfigMap") | .data.FINUANCE_PPROF | select(. != null)'; }
 [ "$(pprof)" = false ] && [ "$(pprof --set profiling=true)" = true ] || { echo "check-helm: FINUANCE_PPROF does not follow the profiling value"; exit 1; }
+echo ok
+
+echo "== a Gateway instead of the Ingress where the values say so (PLAN 27.1)"
+gke="$out/app-gke-lab.yaml"
+kinds() { "$YQ" -N '.kind' "$1" | sort | uniq -c | tr -s ' ' | tr '\n' ';'; }
+# one HTTPRoute, no Ingress, nothing of Traefik's
+[ "$("$YQ" -N 'select(.kind == "HTTPRoute") | .metadata.name' "$gke")" = finuance ] || { echo "check-helm: the GKE lab has no HTTPRoute"; exit 1; }
+[ -z "$("$YQ" -N 'select(.kind == "Ingress" or .kind == "Middleware") | .kind' "$gke")" ] ||
+  { echo "check-helm: the GKE lab still renders an Ingress or a Traefik Middleware: $(kinds "$gke")"; exit 1; }
+grep -q 'traefik' "$gke" && { echo "check-helm: the GKE lab's manifests name Traefik"; exit 1; }
+# /api/ goes to the api and / to the web server, both with the HSTS header; the api's rule has the long timeout
+"$YQ" -e 'select(.kind == "HTTPRoute") | ((.spec.rules | length) == 2 and
+  (.spec.rules[0].matches[0].path.value == "/api/") and (.spec.rules[0].backendRefs[0].name == "finuance-api") and
+  (.spec.rules[0].timeouts.request == "3600s") and
+  (.spec.rules[1].matches[0].path.value == "/") and (.spec.rules[1].backendRefs[0].name == "finuance-web") and
+  (.spec.rules[0].filters[0].responseHeaderModifier.set[0].name == "Strict-Transport-Security") and
+  (.spec.rules[1].filters[0].responseHeaderModifier.set[0].value == "max-age=31536000") and
+  (.spec.parentRefs[0].name == "finuance-lab") and (.spec.parentRefs[0].namespace == "finuance-gateway"))' "$gke" >/dev/null ||
+  { echo "check-helm: the GKE lab's HTTPRoute is not what it should be"; exit 1; }
+# Google's load balancer checks both backends, and both sit behind the Cloud Armor policy
+[ "$("$YQ" -N 'select(.kind == "HealthCheckPolicy") | .spec.targetRef.name' "$gke" | sort | tr '\n' ' ')" = "finuance-api finuance-web " ] ||
+  { echo "check-helm: the GKE lab lacks a health check policy per backend"; exit 1; }
+[ "$("$YQ" -N 'select(.kind == "GCPBackendPolicy") | .spec.default.securityPolicy' "$gke" | sort -u)" = finuance-lab ] ||
+  { echo "check-helm: a backend of the GKE lab is not behind the security policy"; exit 1; }
+# the load balancer's ranges may reach the web server and the api, and nothing else may
+for c in web api; do
+  [ "$("$YQ" -N "select(.kind == \"NetworkPolicy\" and .metadata.name == \"finuance-$c\") | .spec.ingress[0].from[] | select(.ipBlock) | .ipBlock.cidr" "$gke" | tr '\n' ' ')" = "35.191.0.0/16 130.211.0.0/22 " ] ||
+    { echo "check-helm: the GKE lab's $c policy doesn't admit exactly the load balancer's ranges"; exit 1; }
+done
+[ -z "$("$YQ" -N 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-worker") | .spec.ingress[]?.from[]? | select(.ipBlock) | .ipBlock.cidr' "$gke")" ] ||
+  { echo "check-helm: the worker admits the load balancer"; exit 1; }
+# the pods' identity for Vertex AI is an annotation, and the api may reach Google's APIs and the metadata server only
+"$YQ" -e 'select(.kind == "ServiceAccount") | (.metadata.annotations["iam.gke.io/gcp-service-account"] | test("^finuance-lab@"))' "$gke" >/dev/null ||
+  { echo "check-helm: the GKE lab's service account has no workload identity annotation"; exit 1; }
+[ "$("$YQ" -N 'select(.kind == "NetworkPolicy" and .metadata.name == "finuance-api") | .spec.egress[] | select(.to[0].ipBlock) | .to[0].ipBlock.cidr' "$gke" | sort | tr '\n' ' ')" = "169.254.169.254/32 199.36.153.8/30 " ] ||
+  { echo "check-helm: the GKE lab's api egress is not Google's API range and the metadata server alone"; exit 1; }
+# without the values: an Ingress and no route; and never both
+[ -z "$("$YQ" -N 'select(.kind == "HTTPRoute" or .kind == "HealthCheckPolicy" or .kind == "GCPBackendPolicy") | .kind' "$out/app-homelab.yaml")" ] ||
+  { echo "check-helm: the homelab renders Gateway or GKE kinds"; exit 1; }
+must_fail "a gateway and an ingress together" "one front door" "$app" -f "$app/ci/minimal-values.yaml" --set gateway.enabled=true --set gateway.host=x.example --set gateway.parentRef.name=gw
+must_fail "a gateway without a host" "gateway.host is required" "$app" -f "$app/ci/minimal-values.yaml" --set ingress.enabled=false --set gateway.enabled=true --set gateway.parentRef.name=gw
+must_fail "a gateway without its Gateway" "gateway.parentRef.name is required" "$app" -f "$app/ci/minimal-values.yaml" --set ingress.enabled=false --set gateway.enabled=true --set gateway.host=x.example
 echo ok
 
 echo "== a lab only where the values say so (PLAN 25.9, ADR 0043)"

@@ -1,0 +1,12 @@
+# The GKE lab's database (README.md): the lab's one small instance (../lab/db-values.yaml), with
+# what Google Kubernetes Engine Autopilot needs said. No backups in the first step: a lab is made
+# again, not restored; the restore drill of PLAN 27.9 switches them on with a bucket of its own.
+cluster:
+  # Autopilot bills what a pod asks for and sets limits equal to requests; say them outright
+  resources:
+    requests: { cpu: 250m, memory: 1Gi }
+    limits: { cpu: 250m, memory: 1Gi }
+  storage:
+    size: 10Gi
+    # Autopilot's default class (balanced persistent disk); named so that a change is deliberate
+    storageClass: standard-rwo

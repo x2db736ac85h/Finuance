@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs pinned, checksum-verified binaries into backend/bin/ (gitignored).
-# Usage: tools/bin-tools.sh sqlc|golangci-lint|trivy|actionlint|zizmor|osv-scanner
+# Usage: tools/bin-tools.sh sqlc|golangci-lint|trivy|actionlint|zizmor|osv-scanner|terraform
 # Update a version: change it here and the four checksums. They come from each release's checksum
 # file; sqlc publishes none and zizmor none as a file, so theirs were computed from the release
 # archives when the version was pinned (zizmor's match the digests GitHub shows for its assets).
@@ -19,6 +19,10 @@ ACTIONLINT_VERSION=1.7.12
 ZIZMOR_VERSION=1.32.0
 # renovate: datasource=github-releases depName=google/osv-scanner
 OSV_SCANNER_VERSION=2.7.1
+# The Google Cloud lab's Terraform (deploy/terraform, PLAN Phase 27). Its checksums are the ones of
+# releases.hashicorp.com's SHA256SUMS file for the version.
+# renovate: datasource=github-releases depName=hashicorp/terraform
+TERRAFORM_VERSION=1.17.2
 
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 arch="$(uname -m)"
@@ -27,6 +31,10 @@ plat="${os}_${arch}"
 
 checksum() {
   case "$1:$plat" in
+    terraform:linux_amd64)       echo e6f16b2f0b137ee5729caa8c4e79a3bae4ee261acd198a1fcfa8584a6296605b ;;
+    terraform:linux_arm64)       echo 858e08c181a76b6b223e8c767a8e983922eebe2d062db949a2de66ce040c368c ;;
+    terraform:darwin_amd64)      echo 66b472dcc36cf770d83757ed4d002c476174842c05c68637b40a7e99519cf3e1 ;;
+    terraform:darwin_arm64)      echo da0c7ef278a911347862758e7573a5907365e66485c2637cf5c217c5e227992e ;;
     sqlc:linux_amd64)            echo 497ae4fcdfa64c5b0c311ffe4c2bd991e43991e82e5367792ed78bc2dca27354 ;;
     sqlc:linux_arm64)            echo b7cae247740d0c51a1e657479e5b2d21e6fef428f596682a01bc55bf4ab8a23d ;;
     sqlc:darwin_amd64)           echo c5af76772e3785d21663a62697056b383f07629979b1bd25b93872e73dbd519b ;;
@@ -82,6 +90,9 @@ case "$tool" in
   osv-scanner)
     url="https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_${plat}"
     member="" ;; # a plain binary, not an archive
+  terraform)
+    url="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${plat}.zip"
+    member="zip:terraform" ;; # a zip archive with the one binary
   *) echo "bin-tools: unknown tool $tool" >&2; exit 1 ;;
 esac
 
@@ -89,7 +100,10 @@ curl -sSfL -o "$tmp/archive.tar.gz" "$url"
 want="$(checksum "$tool")"
 if command -v sha256sum >/dev/null; then got="$(sha256sum "$tmp/archive.tar.gz" | cut -d' ' -f1)"; else got="$(shasum -a 256 "$tmp/archive.tar.gz" | cut -d' ' -f1)"; fi
 if [ "$got" != "$want" ]; then echo "bin-tools: checksum mismatch for $tool ($got != $want)" >&2; exit 1; fi
-if [ -n "$member" ]; then
+if [ "${member#zip:}" != "$member" ]; then
+  unzip -q -o "$tmp/archive.tar.gz" "${member#zip:}" -d "$tmp"
+  install -m 0755 "$tmp/${member#zip:}" "$bin/$tool"
+elif [ -n "$member" ]; then
   tar -xzf "$tmp/archive.tar.gz" -C "$tmp" "$member"
   install -m 0755 "$tmp/$member" "$bin/$tool"
 else

@@ -359,6 +359,12 @@ jobs:
         run: |
           tools/bin-tools.sh trivy
           backend/bin/trivy config --severity HIGH,CRITICAL --exit-code 1 --disable-telemetry "$RUNNER_TEMP/rendered"
+      # The Google Cloud lab's Terraform (PLAN 27.4): checked without any cloud credentials. A pull
+      # request from anyone gets the same checks, because none of them needs a secret.
+      - name: Terraform (format, validate against the locked providers, tests on a mocked plan, no keys, scan)
+        run: |
+          tools/bin-tools.sh terraform
+          make check-terraform
       - name: GitOps bump (tools/bump-homelab-tag.sh changes only the tag and the two digests)
         run: |
           set -euo pipefail
