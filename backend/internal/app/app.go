@@ -270,6 +270,7 @@ func choice(adm *admin.Service) func(context.Context) assistant.Choice {
 		c := assistant.Choice{People: s.Assistant.PeopleChoose(), Connection: s.Assistant.Connection()}
 		if s.Assistant != nil {
 			c.CloudNote = s.Assistant.CloudNote
+			c.LockThinking = s.Assistant.LockThinking
 		}
 		return c
 	}

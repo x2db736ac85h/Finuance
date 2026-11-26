@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { fmtInt, plural } from '../lib/format';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/IconButton';
 import { attachmentUrl, type Step } from '../api/hooks/assistant';
 import { AdviceWindow, adviceRefs, type AdviceRef } from './Advice';
 import type { AiTurn, UiTurn } from './chatStore';
@@ -112,16 +113,25 @@ export function TurnView({
   last,
   chatId,
   onShow,
+  onEdit,
+  editing,
+  onRetry,
 }: {
   turn: UiTurn;
   last: boolean;
   /** The chat the turn belongs to (proposals are applied with it). */
   chatId: string | null;
   onShow: (s: Step, t: AiTurn) => void;
+  /** A question: put it back into the field to be changed and sent again (Phase 27). */
+  onEdit?: () => void;
+  /** This question is the one being changed. */
+  editing?: boolean;
+  /** A failed answer: ask its question again. */
+  onRetry?: () => void;
 }) {
   if (turn.role === 'user') {
     return (
-      <div className="msg user">
+      <div className={editing ? 'msg user editing' : 'msg user'}>
         {chatId && turn.attachments && turn.attachments.length > 0 && (
           <div className="photos">
             {turn.attachments.map((a) => (
@@ -136,6 +146,14 @@ export function TurnView({
           </div>
         )}
         <div className="bub">{turn.content}</div>
+        {onEdit && (
+          <IconButton
+            icon="pen"
+            size="sm"
+            title="Edit this question (↑ in the empty field edits the last one)"
+            onClick={onEdit}
+          />
+        )}
       </div>
     );
   }
@@ -184,7 +202,8 @@ export function TurnView({
       </div>
       {turn.error && (
         <div className="conn-err" role="alert">
-          {errorText(turn.error.message, turn.error.code)}
+          <span>{errorText(turn.error.message, turn.error.code)}</span>
+          {onRetry && <IconButton icon="retry" title="Ask again" onClick={onRetry} />}
         </div>
       )}
       {turn.meta && <div className="meta">{metaLine(turn)}</div>}

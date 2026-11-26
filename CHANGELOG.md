@@ -4,6 +4,23 @@ All notable changes to Finuance. The format follows [Keep a Changelog](https://k
 and the project uses [Semantic Versioning](https://semver.org/). Release candidates (`vX.Y.Z-rc.N`) use the
 notes of their version.
 
+## [0.8.0] - unreleased
+
+The assistant's part of the maintainer's list of 2026-11-26.
+
+### Added
+
+- **Ask again.** A failed answer has a round button that sends its question once more; the
+  failed pair leaves the chat, on the screen and on the server.
+- **Edit a question.** A pencil on each of your questions, and Arrow Up in the empty field for the
+  last one, put its words back into the field; sending replaces that question and what followed.
+  The API's message request takes `replaceFrom` for both (the n-th question of the chat).
+- **Prompt gallery** under the example questions: actions, questions and budget planning. A
+  prompt fills the question field, to be changed before it is sent.
+- **Thinking level beside Send**: a button with the levels the chosen model has (none for a model
+  without a control). An administrator can keep the level for everyone (Administration →
+  Assistant → *People may change the thinking level*); questions then run at the model's default.
+
 ## [0.7.1] - unreleased
 
 Interface corrections from the maintainer's list of 2026-11-26. No migration.

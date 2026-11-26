@@ -65,6 +65,13 @@ type ChatStore = {
    * False when the chat doesn't end with such a refusal (the person went on to something else).
    */
   dropRefused: () => boolean;
+  /**
+   * Takes the n-th question (0 = the first) and everything after it off the screen, to be asked
+   * again: after an error, or edited. The request that follows says the same to the server
+   * (`replaceFrom`), which removes them from the stored chat. Null while a run is going or when
+   * there is no such question.
+   */
+  cutFrom: (n: number) => UserTurn | null;
   stop: () => Promise<void>;
 };
 
@@ -100,6 +107,24 @@ export function turnsOf(c: ChatDetail, viewId = 'all'): UiTurn[] {
       scope,
     };
   });
+}
+
+/** Where in the turns the n-th question is (0 = the first); -1 when the chat has fewer. */
+export function questionIndex(turns: readonly UiTurn[], n: number): number {
+  let seen = 0;
+  for (let i = 0; i < turns.length; i++) {
+    if (turns[i]?.role !== 'user') continue;
+    if (seen === n) return i;
+    seen++;
+  }
+  return -1;
+}
+
+/** Which question a turn is or answers: how many questions come before it. */
+export function questionNumber(turns: readonly UiTurn[], at: number): number {
+  let n = -1;
+  for (let i = 0; i <= at && i < turns.length; i++) if (turns[i]?.role === 'user') n++;
+  return Math.max(0, n);
 }
 
 /** Applies a stream event to the answer being written. */
@@ -232,6 +257,16 @@ export const useChat = create<ChatStore>()((set, get) => ({
       return false;
     set({ turns: s.turns.slice(0, -2) });
     return true;
+  },
+
+  cutFrom: (n) => {
+    const s = get();
+    if (s.busy) return null;
+    const at = questionIndex(s.turns, n);
+    const question = at < 0 ? undefined : s.turns[at];
+    if (question?.role !== 'user') return null;
+    set({ turns: s.turns.slice(0, at) });
+    return question;
   },
 
   stop: async () => {

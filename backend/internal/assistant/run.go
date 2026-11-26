@@ -79,6 +79,10 @@ type Request struct {
 	TokensPerDay int64
 	// Digest marks a background digest (counted as one in the usage).
 	Digest bool
+	// ReplaceFrom asks again from the chat's n-th question (0 = the first): that question, its
+	// answer and everything after leave the chat before this one is stored (Phase 27: a failed
+	// question run again, or a question edited). nil = add to the end.
+	ReplaceFrom *int
 }
 
 // Event is one server-sent event of a run (PLAN §6.3 AssistantEvent): step, reasoning, content,
@@ -142,6 +146,9 @@ type Choice struct {
 	// CloudNote is the administrator's sentence on what a cloud provider keeps, for the consent
 	// dialog (PLAN 26.5); it travels with the other instance settings of the assistant.
 	CloudNote string
+	// LockThinking: people can't choose how hard the model thinks; a question's level is ignored
+	// and the model's default applies (Phase 27).
+	LockThinking bool
 }
 
 // Runner runs questions: one at a time per user, at most MaxConcurrent per process.
@@ -263,6 +270,9 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 	}
 	connName, model := req.Connection, req.Model
 	choice := r.Choice(ctx)
+	if choice.LockThinking {
+		req.Think = llm.ThinkAuto // the administrator's default for the model takes over below
+	}
 	locked := !choice.People
 	if locked {
 		// the administrator picks: the default connection and its default model, whatever was asked
@@ -319,27 +329,66 @@ func (r *Runner) Prepare(ctx context.Context, userID uuid.UUID, req Request) (*R
 			return nil, ErrConsent
 		}
 	}
-	var imgs []llm.Image
-	if len(req.AttachmentIDs) > 0 {
-		if !info.Caps.Vision {
-			return nil, fieldError("attachmentIds", fmt.Sprintf("%s doesn't read images; pick a model that does", info.ID))
-		}
-		if imgs, err = r.cfg.Chats.unsentImages(ctx, userID, req.ChatID, req.AttachmentIDs); err != nil {
+	if len(req.AttachmentIDs) > 0 && !info.Caps.Vision {
+		return nil, fieldError("attachmentIds", fmt.Sprintf("%s doesn't read images; pick a model that does", info.ID))
+	}
+	cut := len(msgs)
+	if req.ReplaceFrom != nil {
+		if cut, err = questionAt(msgs, *req.ReplaceFrom); err != nil {
 			return nil, err
 		}
 	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if _, ok := r.active[userID]; ok {
+		r.mu.Unlock()
 		return nil, ErrRunning
 	}
 	select {
 	case r.sem <- struct{}{}:
 	default:
+		r.mu.Unlock()
 		return nil, ErrBusy
 	}
 	r.active[userID] = nil
-	return &Run{r: r, userID: userID, req: req, chat: chat, history: historyOf(msgs), conn: conn, model: info, images: imgs}, nil
+	r.mu.Unlock()
+	run := &Run{r: r, userID: userID, req: req, chat: chat, conn: conn, model: info}
+	// With the slot held (no other run of this user can be writing the chat): the replaced
+	// question and what followed leave the chat, which also frees that question's photos for
+	// this one. Nothing before this point changed anything, so a refused run leaves the chat whole.
+	if cut < len(msgs) {
+		if err := r.cfg.Chats.truncate(ctx, userID, req.ChatID, msgs[cut].Seq); err != nil {
+			run.Release()
+			return nil, err
+		}
+		msgs = msgs[:cut]
+	}
+	if len(req.AttachmentIDs) > 0 {
+		if run.images, err = r.cfg.Chats.unsentImages(ctx, userID, req.ChatID, req.AttachmentIDs); err != nil {
+			run.Release()
+			return nil, err
+		}
+	}
+	run.history = historyOf(msgs)
+	return run, nil
+}
+
+// questionAt is the index in msgs of the chat's n-th question (0 = the first), or len(msgs) when
+// n is exactly the number of questions (nothing to replace: the chat was cut there before).
+func questionAt(msgs []Message, n int) (int, error) {
+	seen := 0
+	for i := range msgs {
+		if msgs[i].Role != llm.RoleUser {
+			continue
+		}
+		if seen == n {
+			return i, nil
+		}
+		seen++
+	}
+	if n == seen {
+		return len(msgs), nil
+	}
+	return 0, fieldError("replaceFrom", fmt.Sprintf("this chat has %d questions", seen))
 }
 
 // Release gives the slot back (Execute does it itself).

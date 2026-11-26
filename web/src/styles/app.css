@@ -3476,6 +3476,32 @@ body.has-qbar .toast {
 .cm-i .ib {
   opacity: 0;
 }
+/* a question's pencil: there on hover or focus, beside its bubble */
+.msg.user > .ib {
+  opacity: 0;
+}
+.msg.user:hover > .ib,
+.msg.user > .ib:focus-visible,
+.msg.user.editing > .ib {
+  opacity: 1;
+}
+.msg.user.editing .bub {
+  outline: 1px dashed var(--accent);
+  outline-offset: 2px;
+}
+/* a failed answer: its words, and the button that asks again */
+.msg.ai > .conn-err {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.msg.ai > .conn-err > span {
+  flex: 1;
+  min-width: 0;
+}
+.chat-editing {
+  color: var(--accent);
+}
 .cm-i:hover .ib {
   opacity: 1;
 }
@@ -3548,4 +3574,62 @@ body.has-qbar .toast {
   .vt-title {
     max-width: 12.5rem;
   }
+}
+
+/* the prompt gallery (Phase 27): three groups of things to ask */
+.sugg .sugg-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-style: dashed;
+  color: var(--accent);
+}
+.sugg .sugg-more .ico {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.prompt-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+.prompt-gallery h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+.prompt-gallery .hint {
+  margin: 0.125rem 0 0.5rem;
+}
+.prompt-gallery ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.5rem;
+}
+.prompt-gallery li button {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.prompt-gallery li button:hover,
+.prompt-gallery li button:focus-visible {
+  border-color: var(--accent);
+}
+.prompt-gallery li button span {
+  color: var(--muted);
+  line-height: 1.4;
 }

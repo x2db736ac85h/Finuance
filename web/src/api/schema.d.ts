@@ -4456,6 +4456,8 @@ export interface components {
             maxRowsLimit: number;
             /** @description The administrator's sentence on what a cloud provider keeps, shown where a person agrees. */
             cloudNote?: string;
+            /** @description The administrator keeps the thinking level: a question's `settings.think` is ignored and the model's default applies. Absent when people may choose. */
+            thinkingLocked?: boolean;
         };
         AssistantConnection: {
             /** @example lmstudio */
@@ -4714,6 +4716,11 @@ export interface components {
              */
             timeZone?: string;
             settings?: components["schemas"]["AssistantRunSettings"];
+            /**
+             * Format: int32
+             * @description Ask again from a question of this chat: 0 is its first question, 1 its second, and so on. That question, its answer and everything after are removed from the chat before this message is stored, and the removed question's photos can be sent again with `attachmentIds`. For running a failed question again, or after editing one. The number of questions the chat has (nothing to remove) is accepted; a larger one is `422`.
+             */
+            replaceFrom?: number;
             /** @description Photos attached to this chat (POST …/attachments) that go with this question; the model must read images. */
             attachmentIds?: string[];
         };
@@ -5217,6 +5224,8 @@ export interface components {
             defaultConnection?: string;
             /** @description One paragraph on what a cloud provider keeps (retention, logging), shown where a person agrees to a cloud connection. */
             cloudNote?: string;
+            /** @description People can't choose how hard the model thinks: every question runs at the model's default (its tuning's level, or auto). Absent or false: people choose. */
+            lockThinking?: boolean;
         };
         AdviceInput: {
             slug: string;

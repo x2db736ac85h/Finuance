@@ -619,6 +619,16 @@ describe('administration', () => {
         defaultConnection: 'homelab',
       });
     });
+    // people choose the thinking level unless the administrator keeps it (Phase 27)
+    const free = within(choiceCard).getByRole<HTMLInputElement>('checkbox', {
+      name: /People may change the thinking level/,
+    });
+    expect(free.checked).toBe(true);
+    await userEvent.click(free);
+    await userEvent.click(within(choiceCard).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(settingsPuts.at(-1)?.assistant).toMatchObject({ modelChoice: 'people', lockThinking: true });
+    });
 
     // a connection's models and use
     await userEvent.click(screen.getByRole('button', { name: 'Models' }));

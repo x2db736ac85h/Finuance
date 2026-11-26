@@ -54,6 +54,9 @@ type Assistant struct {
 	// CloudNote is the administrator's sentence on what a cloud provider keeps (retention, logging),
 	// shown where a person agrees to a cloud connection (PLAN 26.5).
 	CloudNote string `json:"cloudNote,omitempty"`
+	// LockThinking takes the thinking level out of people's hands (Phase 27): every question then
+	// runs at the model's default (the administrator's tuning for it, or the app's "auto").
+	LockThinking bool `json:"lockThinking,omitempty"`
 }
 
 // MaxCloudNote is the longest note on a cloud provider's retention.
